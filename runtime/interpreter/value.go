@@ -3612,6 +3612,56 @@ func saturatingDivSigned[T constraints.Signed, V BoundedSignedValue[T]](interpre
 	return v.Constructor(interpreter, valueGetter)
 }
 
+func saturatingDivSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C:
+		//   if o == 0 {
+		//       ...
+		//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
+		//       ...
+		//   }
+		underlying := v.Underlying()
+		otherUnderlying := o.Underlying()
+		if otherUnderlying.Cmp(res) == 0 {
+			panic(DivisionByZeroError{locationRange})
+		}
+		res.SetInt64(-1)
+		if (underlying.Cmp(v.MinValue()) == 0) && (otherUnderlying.Cmp(res) == 0) {
+			return v.MaxValue()
+		}
+		res.Div(underlying, otherUnderlying)
+
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func saturatingDivUnsigned[T Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
+			})
+		}
+	}()
+
+	return v.Div(interpreter, other, locationRange)
+}
+
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
 	switch name {
 
@@ -4441,27 +4491,7 @@ func (v Int8Value) Div(interpreter *Interpreter, other NumberValue, locationRang
 }
 
 func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int8 {
-		// INT33-C
-		// https://golang.org/ref/spec#Integer_operators
-		if o == 0 {
-			panic(DivisionByZeroError{locationRange})
-		} else if (v == math.MinInt8) && (o == -1) {
-			return math.MaxInt8
-		}
-		return int8(v / o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return saturatingDivSigned[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -4838,27 +4868,7 @@ func (v Int16Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int16 {
-		// INT33-C
-		// https://golang.org/ref/spec#Integer_operators
-		if o == 0 {
-			panic(DivisionByZeroError{locationRange})
-		} else if (v == math.MinInt16) && (o == -1) {
-			return math.MaxInt16
-		}
-		return int16(v / o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return saturatingDivSigned[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -5237,28 +5247,7 @@ func (v Int32Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int32 {
-		// INT33-C
-		// https://golang.org/ref/spec#Integer_operators
-		if o == 0 {
-			panic(DivisionByZeroError{locationRange})
-		} else if (v == math.MinInt32) && (o == -1) {
-			return math.MaxInt32
-		}
-
-		return int32(v / o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return saturatingDivSigned[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -5634,27 +5623,7 @@ func (v Int64Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		// INT33-C
-		// https://golang.org/ref/spec#Integer_operators
-		if o == 0 {
-			panic(DivisionByZeroError{locationRange})
-		} else if (v == math.MinInt64) && (o == -1) {
-			return math.MaxInt64
-		}
-		return int64(v / o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return saturatingDivSigned[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -6055,36 +6024,7 @@ func (v Int128Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		// INT33-C:
-		//   if o == 0 {
-		//       ...
-		//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
-		//       ...
-		//   }
-		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
-		}
-		res.SetInt64(-1)
-		if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-			return sema.Int128TypeMaxIntBig
-		}
-		res.Div(v.BigInt, o.BigInt)
-
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return saturatingDivSignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -6524,35 +6464,7 @@ func (v Int256Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		// INT33-C:
-		//   if o == 0 {
-		//       ...
-		//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
-		//       ...
-		//   }
-		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
-		}
-		res.SetInt64(-1)
-		if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-			return sema.Int256TypeMaxIntBig
-		}
-		res.Div(v.BigInt, o.BigInt)
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return saturatingDivSignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -7547,18 +7459,7 @@ func (v UInt8Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	defer func() {
-		r := recover()
-		if _, ok := r.(InvalidOperandsError); ok {
-			panic(InvalidOperandsError{
-				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(interpreter),
-				RightType:    other.StaticType(interpreter),
-			})
-		}
-	}()
-
-	return v.Div(interpreter, other, locationRange)
+	return saturatingDivUnsigned[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -7966,18 +7867,7 @@ func (v UInt16Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	defer func() {
-		r := recover()
-		if _, ok := r.(InvalidOperandsError); ok {
-			panic(InvalidOperandsError{
-				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(interpreter),
-				RightType:    other.StaticType(interpreter),
-			})
-		}
-	}()
-
-	return v.Div(interpreter, other, locationRange)
+	return saturatingDivUnsigned[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -8344,18 +8234,7 @@ func (v UInt32Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	defer func() {
-		r := recover()
-		if _, ok := r.(InvalidOperandsError); ok {
-			panic(InvalidOperandsError{
-				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(interpreter),
-				RightType:    other.StaticType(interpreter),
-			})
-		}
-	}()
-
-	return v.Div(interpreter, other, locationRange)
+	return saturatingDivUnsigned[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -8746,18 +8625,7 @@ func (v UInt64Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	defer func() {
-		r := recover()
-		if _, ok := r.(InvalidOperandsError); ok {
-			panic(InvalidOperandsError{
-				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(interpreter),
-				RightType:    other.StaticType(interpreter),
-			})
-		}
-	}()
-
-	return v.Div(interpreter, other, locationRange)
+	return saturatingDivUnsigned[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -9153,18 +9021,7 @@ func (v UInt128Value) Div(interpreter *Interpreter, other NumberValue, locationR
 }
 
 func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	defer func() {
-		r := recover()
-		if _, ok := r.(InvalidOperandsError); ok {
-			panic(InvalidOperandsError{
-				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(interpreter),
-				RightType:    other.StaticType(interpreter),
-			})
-		}
-	}()
-
-	return v.Div(interpreter, other, locationRange)
+	return saturatingDivUnsigned[*big.Int](interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
@@ -9606,18 +9463,7 @@ func (v UInt256Value) Div(interpreter *Interpreter, other NumberValue, locationR
 }
 
 func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	defer func() {
-		r := recover()
-		if _, ok := r.(InvalidOperandsError); ok {
-			panic(InvalidOperandsError{
-				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(interpreter),
-				RightType:    other.StaticType(interpreter),
-			})
-		}
-	}()
-
-	return v.Div(interpreter, other, locationRange)
+	return saturatingDivUnsigned[*big.Int](interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
