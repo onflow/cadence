@@ -3365,6 +3365,124 @@ func mulUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interprete
 	)
 }
 
+func saturatingMulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	valueGetter := func() T {
+		// INT32-C
+		if underlying > 0 {
+			if otherUnderlying > 0 {
+				// positive * positive = positive. overflow?
+				if underlying > (v.MaxValue() / otherUnderlying) {
+					return v.MaxValue()
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if otherUnderlying < (v.MinValue() / underlying) {
+					return v.MinValue()
+				}
+			}
+		} else {
+			if otherUnderlying > 0 {
+				// negative * positive = negative. underflow?
+				if underlying < (v.MinValue() / otherUnderlying) {
+					return v.MinValue()
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (underlying != 0) && (otherUnderlying < (v.MaxValue() / underlying)) {
+					return v.MaxValue()
+				}
+			}
+		}
+
+		return T(underlying * otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func saturatingMulSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Mul(v.Underlying(), o.Underlying())
+		if res.Cmp(v.MinValue()) < 0 {
+			return v.MinValue()
+		} else if res.Cmp(v.MaxValue()) > 0 {
+			return v.MaxValue()
+		}
+
+		return res
+	}
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func saturatingMulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
+		})
+	}
+
+	return v.Constructor(
+		interpreter,
+		func() T {
+			underlying := v.Underlying()
+			otherUnderlying := o.Underlying()
+			// INT30-C
+			if (underlying > 0) && (otherUnderlying > 0) && (underlying > (v.MaxValue() / otherUnderlying)) {
+				return v.MaxValue()
+			}
+			return T(underlying * otherUnderlying)
+		},
+	)
+}
+
+func saturatingMulUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
+		})
+	}
+
+	return v.Constructor(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.Underlying(), o.Underlying())
+			if res.Cmp(v.MaxValue()) > 0 {
+				return v.MaxValue()
+			}
+			return res
+		},
+	)
+}
+
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
 	switch name {
 
@@ -4186,47 +4304,7 @@ func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue, locationRang
 }
 
 func (v Int8Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int8 {
-		// INT32-C
-		if v > 0 {
-			if o > 0 {
-				// positive * positive = positive. overflow?
-				if v > (math.MaxInt8 / o) {
-					return math.MaxInt8
-				}
-			} else {
-				// positive * negative = negative. underflow?
-				if o < (math.MinInt8 / v) {
-					return math.MinInt8
-				}
-			}
-		} else {
-			if o > 0 {
-				// negative * positive = negative. underflow?
-				if v < (math.MinInt8 / o) {
-					return math.MinInt8
-				}
-			} else {
-				// negative * negative = positive. overflow?
-				if (v != 0) && (o < (math.MaxInt8 / v)) {
-					return math.MaxInt8
-				}
-			}
-		}
-
-		return int8(v * o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return saturatingMulSigned[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4644,46 +4722,7 @@ func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v Int16Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int16 {
-		// INT32-C
-		if v > 0 {
-			if o > 0 {
-				// positive * positive = positive. overflow?
-				if v > (math.MaxInt16 / o) {
-					return math.MaxInt16
-				}
-			} else {
-				// positive * negative = negative. underflow?
-				if o < (math.MinInt16 / v) {
-					return math.MinInt16
-				}
-			}
-		} else {
-			if o > 0 {
-				// negative * positive = negative. underflow?
-				if v < (math.MinInt16 / o) {
-					return math.MinInt16
-				}
-			} else {
-				// negative * negative = positive. overflow?
-				if (v != 0) && (o < (math.MaxInt16 / v)) {
-					return math.MaxInt16
-				}
-			}
-		}
-		return int16(v * o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return saturatingMulSigned[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5103,46 +5142,7 @@ func (v Int32Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v Int32Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int32 {
-		// INT32-C
-		if v > 0 {
-			if o > 0 {
-				// positive * positive = positive. overflow?
-				if v > (math.MaxInt32 / o) {
-					return math.MaxInt32
-				}
-			} else {
-				// positive * negative = negative. underflow?
-				if o < (math.MinInt32 / v) {
-					return math.MinInt32
-				}
-			}
-		} else {
-			if o > 0 {
-				// negative * positive = negative. underflow?
-				if v < (math.MinInt32 / o) {
-					return math.MinInt32
-				}
-			} else {
-				// negative * negative = positive. overflow?
-				if (v != 0) && (o < (math.MaxInt32 / v)) {
-					return math.MaxInt32
-				}
-			}
-		}
-		return int32(v * o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return saturatingMulSigned[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5560,46 +5560,7 @@ func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v Int64Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		// INT32-C
-		if v > 0 {
-			if o > 0 {
-				// positive * positive = positive. overflow?
-				if v > (math.MaxInt64 / o) {
-					return math.MaxInt64
-				}
-			} else {
-				// positive * negative = negative. underflow?
-				if o < (math.MinInt64 / v) {
-					return math.MinInt64
-				}
-			}
-		} else {
-			if o > 0 {
-				// negative * positive = negative. underflow?
-				if v < (math.MinInt64 / o) {
-					return math.MinInt64
-				}
-			} else {
-				// negative * negative = positive. overflow?
-				if (v != 0) && (o < (math.MaxInt64 / v)) {
-					return math.MaxInt64
-				}
-			}
-		}
-		return int64(v * o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return saturatingMulSigned[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6041,28 +6002,7 @@ func (v Int128Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v Int128Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Mul(v.BigInt, o.BigInt)
-		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-			return sema.Int128TypeMinIntBig
-		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			return sema.Int128TypeMaxIntBig
-		}
-
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return saturatingMulSignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6560,28 +6500,7 @@ func (v Int256Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v Int256Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Mul(v.BigInt, o.BigInt)
-		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			return sema.Int256TypeMinIntBig
-		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-			return sema.Int256TypeMaxIntBig
-		}
-
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return saturatingMulSignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -7632,25 +7551,7 @@ func (v UInt8Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v UInt8Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt8Value(
-		interpreter,
-		func() uint8 {
-			// INT30-C
-			if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
-				return math.MaxUint8
-			}
-			return uint8(v * o)
-		},
-	)
+	return saturatingMulUnsigned[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8086,25 +7987,7 @@ func (v UInt16Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v UInt16Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			// INT30-C
-			if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
-				return math.MaxUint16
-			}
-			return uint16(v * o)
-		},
-	)
+	return saturatingMulUnsigned[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8499,26 +8382,7 @@ func (v UInt32Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v UInt32Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-
-			// INT30-C
-			if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
-				return math.MaxUint32
-			}
-			return uint32(v * o)
-		},
-	)
+	return saturatingMulUnsigned[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8937,25 +8801,7 @@ func (v UInt64Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v UInt64Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			// INT30-C
-			if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
-				return math.MaxUint64
-			}
-			return uint64(v * o)
-		},
-	)
+	return saturatingMulUnsigned[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9379,26 +9225,7 @@ func (v UInt128Value) Mul(interpreter *Interpreter, other NumberValue, locationR
 }
 
 func (v UInt128Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			res.Mul(v.BigInt, o.BigInt)
-			if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				return sema.UInt128TypeMaxIntBig
-			}
-			return res
-		},
-	)
+	return saturatingMulUnsignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9870,26 +9697,7 @@ func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue, locationR
 }
 
 func (v UInt256Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			res.Mul(v.BigInt, o.BigInt)
-			if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-				return sema.UInt256TypeMaxIntBig
-			}
-			return res
-		},
-	)
+	return saturatingMulUnsignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
