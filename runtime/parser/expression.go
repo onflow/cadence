@@ -818,17 +818,18 @@ func defineIdentifierExpression() {
 				// if `view` is followed by `fun`, then it denotes a view function expression
 
 				current := p.current
-				if current.Is(lexer.TokenSpace) {
-					cursor := p.tokens.Cursor()
-					p.next()
-					if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
-						p.nextSemanticToken()
-						return parseFunctionExpression(p, token, ast.FunctionPurityView)
-					} else {
-						p.tokens.Revert(cursor)
-						p.current = current
-					}
+				cursor := p.tokens.Cursor()
+
+				p.skipSpaceAndComments()
+
+				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
+					// skip the `fun` keyword
+					p.nextSemanticToken()
+					return parseFunctionExpression(p, token, ast.FunctionPurityView)
 				}
+
+				p.tokens.Revert(cursor)
+				p.current = current
 
 				// otherwise, we treat it as an identifier called "view"
 				break

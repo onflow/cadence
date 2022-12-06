@@ -2977,6 +2977,49 @@ func TestParseFunctionExpression(t *testing.T) {
 	})
 }
 
+func TestParseAdjacentViewKeyword(t *testing.T) {
+	// ensure that spaces and comments between adjacent keywords are treated the same, i.e. ignored
+
+	t.Parallel()
+
+	code := `
+		view /* UwU */ fun(){}
+	`
+
+	result, errs := testParseExpression(code)
+
+	require.Empty(t, errs)
+
+	expected := &ast.FunctionExpression{
+		Purity: ast.FunctionPurityView,
+		ParameterList: &ast.ParameterList{
+			Range: ast.NewUnmeteredRange(
+				ast.Position{Line: 2, Column: 20, Offset: 21},
+				ast.Position{Line: 2, Column: 21, Offset: 22},
+			),
+		},
+		ReturnTypeAnnotation: &ast.TypeAnnotation{
+			Type: &ast.NominalType{
+				Identifier: ast.Identifier{
+					Pos: ast.Position{Line: 2, Column: 21, Offset: 22},
+				},
+			},
+			StartPos: ast.Position{Line: 2, Column: 21, Offset: 22},
+		},
+		FunctionBlock: &ast.FunctionBlock{
+			Block: &ast.Block{
+				Range: ast.NewUnmeteredRange(
+					ast.Position{Line: 2, Column: 22, Offset: 23},
+					ast.Position{Line: 2, Column: 23, Offset: 24},
+				),
+			},
+		},
+		StartPos: ast.Position{Line: 2, Column: 2, Offset: 3},
+	}
+	utils.AssertEqualWithDiff(t, expected, result)
+
+}
+
 func TestParseIntegerLiterals(t *testing.T) {
 
 	t.Parallel()
