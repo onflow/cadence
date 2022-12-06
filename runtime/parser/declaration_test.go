@@ -6023,7 +6023,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier for composite",
+					Message: "invalid static modifier for structure",
 					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
@@ -6067,7 +6067,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for composite",
+					Message: "invalid native modifier for structure",
 					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
