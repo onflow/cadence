@@ -91,7 +91,7 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 
 	elaboration := interpreter.Program.Elaboration
 
-	indexExpressionTypes := elaboration.IndexExpressionTypes[indexExpression]
+	indexExpressionTypes := elaboration.IndexExpressionTypes(indexExpression)
 	indexedType := indexExpressionTypes.IndexedType
 	indexingType := indexExpressionTypes.IndexingType
 
@@ -105,7 +105,7 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 		},
 	)
 
-	_, isNestedResourceMove := elaboration.IsNestedResourceMoveExpression[indexExpression]
+	isNestedResourceMove := elaboration.IsNestedResourceMoveExpression(indexExpression)
 
 	return getterSetter{
 		target: target,
@@ -136,7 +136,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 		HasPosition: memberExpression,
 	}
 
-	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[memberExpression]
+	isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression(memberExpression)
 
 	return getterSetter{
 		target: target,
@@ -196,7 +196,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	target Value,
 	locationRange LocationRange,
 ) {
-	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[memberExpression]
+	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
 	switch expectedType := expectedType.(type) {
@@ -443,7 +443,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 		value := rightValue()
 
-		binaryExpressionTypes := interpreter.Program.Elaboration.BinaryExpressionTypes[expression]
+		binaryExpressionTypes := interpreter.Program.Elaboration.BinaryExpressionTypes(expression)
 		rightType := binaryExpressionTypes.RightType
 		resultType := binaryExpressionTypes.ResultType
 
@@ -538,7 +538,7 @@ func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) Value {
 }
 
 func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerExpression) Value {
-	typ := interpreter.Program.Elaboration.IntegerExpressionType[expression]
+	typ := interpreter.Program.Elaboration.IntegerExpressionType(expression)
 
 	value := expression.Value
 
@@ -630,7 +630,7 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) Value {
 	// TODO: adjust once/if we support more fixed point types
 
-	fixedPointSubType := interpreter.Program.Elaboration.FixedPointExpression[expression]
+	fixedPointSubType := interpreter.Program.Elaboration.FixedPointExpression(expression)
 
 	value := fixedpoint.ConvertToFixedPointBigInt(
 		expression.Negative,
@@ -656,7 +656,7 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 }
 
 func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpression) Value {
-	stringType := interpreter.Program.Elaboration.StringExpressionType[expression]
+	stringType := interpreter.Program.Elaboration.StringExpressionType(expression)
 
 	switch stringType {
 	case sema.CharacterType:
@@ -670,7 +670,7 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {
 	values := interpreter.visitExpressionsNonCopying(expression.Values)
 
-	arrayExpressionTypes := interpreter.Program.Elaboration.ArrayExpressionTypes[expression]
+	arrayExpressionTypes := interpreter.Program.Elaboration.ArrayExpressionTypes(expression)
 	argumentTypes := arrayExpressionTypes.ArgumentTypes
 	arrayType := arrayExpressionTypes.ArrayType
 	elementType := arrayType.ElementType(false)
@@ -706,7 +706,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) Value {
 	values := interpreter.visitEntries(expression.Entries)
 
-	dictionaryExpressionTypes := interpreter.Program.Elaboration.DictionaryExpressionTypes[expression]
+	dictionaryExpressionTypes := interpreter.Program.Elaboration.DictionaryExpressionTypes(expression)
 	entryTypes := dictionaryExpressionTypes.EntryTypes
 	dictionaryType := dictionaryExpressionTypes.DictionaryType
 
@@ -850,7 +850,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	elaboration := interpreter.Program.Elaboration
 
-	invocationExpressionTypes := elaboration.InvocationExpressionTypes[invocationExpression]
+	invocationExpressionTypes := elaboration.InvocationExpressionTypes(invocationExpression)
 
 	typeParameterTypes := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
@@ -914,7 +914,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
-	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType[expression]
+	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType(expression)
 
 	var preConditions ast.Conditions
 	if expression.FunctionBlock.PreConditions != nil {
@@ -926,7 +926,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	if expression.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[expression.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(expression.FunctionBlock.PostConditions)
 
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 		beforeStatements = postConditionsRewrite.BeforeStatements
@@ -954,7 +954,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		HasPosition: expression.Expression,
 	}
 
-	expectedType := interpreter.Program.Elaboration.CastingTargetTypes[expression]
+	expectedType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -996,7 +996,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 
 	case ast.OperationCast:
-		staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
+		staticValueType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).StaticValueType
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
 		return interpreter.ConvertAndBox(locationRange, value, staticValueType, expectedType)
 
@@ -1026,7 +1026,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) Value {
 
-	borrowType := interpreter.Program.Elaboration.ReferenceExpressionBorrowTypes[referenceExpression]
+	borrowType := interpreter.Program.Elaboration.ReferenceExpressionBorrowType(referenceExpression)
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 

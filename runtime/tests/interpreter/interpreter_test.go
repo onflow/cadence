@@ -4690,7 +4690,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		var inter *interpreter.Interpreter
 
 		getType := func(name string) sema.Type {
-			variable, ok := inter.Program.Elaboration.GlobalTypes.Get(name)
+			variable, ok := inter.Program.Elaboration.GetGlobalType(name)
 			require.True(t, ok, "missing global type %s", name)
 			return variable.Type
 		}

@@ -3344,20 +3344,26 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(nil, argument, targetType, checker.report) {
 				if checker.Config.ExtendedElaborationEnabled {
-					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
-						Type  Type
-						Range ast.Range
-					}{Type: targetType, Range: invocationRange}
+					checker.Elaboration.SetNumberConversionArgumentTypes(
+						argument,
+						NumberConversionArgumentTypes{
+							Type:  targetType,
+							Range: invocationRange,
+						},
+					)
 				}
 			}
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(nil, argument, targetType, checker.report) {
 				if checker.Config.ExtendedElaborationEnabled {
-					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
-						Type  Type
-						Range ast.Range
-					}{Type: targetType, Range: invocationRange}
+					checker.Elaboration.SetNumberConversionArgumentTypes(
+						argument,
+						NumberConversionArgumentTypes{
+							Type:  targetType,
+							Range: invocationRange,
+						},
+					)
 				}
 			}
 		}

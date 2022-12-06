@@ -28,7 +28,7 @@ import (
 
 func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) StatementResult {
 
-	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations[declaration]
+	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations(declaration)
 
 	for _, resolvedLocation := range resolvedLocations {
 		interpreter.importResolvedLocation(resolvedLocation)

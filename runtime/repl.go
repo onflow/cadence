@@ -258,7 +258,7 @@ type REPLSuggestion struct {
 func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	names := map[string]string{}
 
-	r.checker.Elaboration.GlobalValues.Foreach(func(name string, variable *sema.Variable) {
+	r.checker.Elaboration.ForEachGlobalValue(func(name string, variable *sema.Variable) {
 		if names[name] != "" {
 			return
 		}
