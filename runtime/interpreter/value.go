@@ -2733,7 +2733,7 @@ func negateSigned[T constraints.Signed](interpreter *Interpreter, v BoundedSigne
 	}
 
 	valueGetter := func() T {
-		return T(-underlying)
+		return -underlying
 	}
 
 	return v.Constructor(interpreter, valueGetter)
@@ -2772,7 +2772,7 @@ func genericPlusSigned[T constraints.Signed, V BoundedSignedValue[T]](interprete
 			return v.MinValue()
 		}
 
-		return T(underlying + otherUnderlying)
+		return underlying + otherUnderlying
 	}
 
 	return v.Constructor(interpreter, valueGetter)
@@ -2816,7 +2816,7 @@ func genericPlusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](inte
 			}
 			return v.MaxValue()
 		}
-		return T(sum)
+		return sum
 	})
 }
 
@@ -2980,7 +2980,7 @@ func genericMinusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpret
 			}
 			return v.MaxValue()
 		}
-		return T(underlying - otherUnderlying)
+		return underlying - otherUnderlying
 	}
 
 	return v.Constructor(interpreter, valueGetter)
@@ -3027,7 +3027,7 @@ func genericMinusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
 				}
 				return 0
 			}
-			return T(diff)
+			return diff
 		},
 	)
 }
@@ -3219,7 +3219,7 @@ func genericMulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter
 				}
 			}
 		}
-		return T(underlying * otherUnderlying)
+		return underlying * otherUnderlying
 	}
 
 	return v.Constructor(interpreter, valueGetter)
@@ -3266,7 +3266,7 @@ func genericMulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
 				}
 				return v.MaxValue()
 			}
-			return T(underlying * otherUnderlying)
+			return underlying * otherUnderlying
 		},
 	)
 }
@@ -3415,7 +3415,7 @@ func genericDivSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter
 			return v.MaxValue()
 		}
 
-		return T(underlying / otherUnderlying)
+		return underlying / otherUnderlying
 	}
 
 	return v.Constructor(interpreter, valueGetter)
@@ -3488,7 +3488,7 @@ func divUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter 
 			if otherUnderlying == 0 {
 				panic(DivisionByZeroError{locationRange})
 			}
-			return T(underlying / otherUnderlying)
+			return underlying / otherUnderlying
 		},
 	)
 }
@@ -3578,7 +3578,7 @@ func mod[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, 
 	}
 
 	valueGetter := func() T {
-		return T(underlying % otherUnderlying)
+		return underlying % otherUnderlying
 	}
 
 	return v.Constructor(interpreter, valueGetter)
@@ -3728,7 +3728,7 @@ func bitwiseOr[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpr
 	}
 
 	valueGetter := func() T {
-		return T(v.Underlying() | o.Underlying())
+		return v.Underlying() | o.Underlying()
 	}
 
 	return v.Constructor(interpreter, valueGetter).(IntegerValue)
@@ -3764,7 +3764,7 @@ func bitwiseXor[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interp
 	}
 
 	valueGetter := func() T {
-		return T(v.Underlying() ^ o.Underlying())
+		return v.Underlying() ^ o.Underlying()
 	}
 
 	return v.Constructor(interpreter, valueGetter).(IntegerValue)
@@ -3800,7 +3800,7 @@ func bitwiseAnd[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interp
 	}
 
 	valueGetter := func() T {
-		return T(v.Underlying() & o.Underlying())
+		return v.Underlying() & o.Underlying()
 	}
 
 	return v.Constructor(interpreter, valueGetter).(IntegerValue)
@@ -3836,7 +3836,7 @@ func bitwiseLeftShift[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *
 	}
 
 	valueGetter := func() T {
-		return T(v.Underlying() << o.Underlying())
+		return v.Underlying() << o.Underlying()
 	}
 
 	return v.Constructor(interpreter, valueGetter).(IntegerValue)
@@ -3880,7 +3880,7 @@ func bitwiseRightShift[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter 
 	}
 
 	valueGetter := func() T {
-		return T(v.Underlying() >> o.Underlying())
+		return v.Underlying() >> o.Underlying()
 	}
 
 	return v.Constructor(interpreter, valueGetter).(IntegerValue)
