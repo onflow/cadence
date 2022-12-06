@@ -2240,31 +2240,38 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		programGets = locationAccessCounts{}
 		programSets = locationAccessCounts{}
 
+		setProgram := func(location Location, program *interpreter.Program) error {
+
+			programSets[location]++
+
+			runtimeInterface.programs[location] = program
+
+			return nil
+		}
+
 		runtimeInterface = &testRuntimeInterface{
-			getProgram: func(location Location) (*interpreter.Program, error) {
+			programs:   map[Location]*interpreter.Program{},
+			setProgram: setProgram,
+			getOrLoadProgram: func(location Location, load func(Location) (*interpreter.Program, error)) (*interpreter.Program, error) {
 
-				if runtimeInterface.programs == nil {
-					runtimeInterface.programs = map[Location]*interpreter.Program{}
-				}
-
-				program := runtimeInterface.programs[location]
-				if program != nil {
+				p := runtimeInterface.programs[location]
+				if p != nil {
 					programGets[location]++
+
+					return p, nil
 				}
 
-				return program, nil
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-
-				programSets[location]++
-
-				if runtimeInterface.programs == nil {
-					runtimeInterface.programs = map[Location]*interpreter.Program{}
+				p, err := load(location)
+				if err != nil {
+					return nil, err
 				}
 
-				runtimeInterface.programs[location] = program
+				err = setProgram(location, p)
+				if err != nil {
+					return nil, err
+				}
 
-				return nil
+				return p, nil
 			},
 			getCode: func(location Location) (bytes []byte, err error) {
 				return accountCodes[location], nil

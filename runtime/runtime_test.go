@@ -137,8 +137,8 @@ func newTestInterpreterRuntime() Runtime {
 type testRuntimeInterface struct {
 	resolveLocation           func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	getCode                   func(_ Location) ([]byte, error)
-	getProgram                func(Location) (*interpreter.Program, error)
 	setProgram                func(Location, *interpreter.Program) error
+	getOrLoadProgram          func(Location, func(Location) (*interpreter.Program, error)) (*interpreter.Program, error)
 	setInterpreterSharedState func(state *interpreter.SharedState)
 	getInterpreterSharedState func() *interpreter.SharedState
 	storage                   testLedger
@@ -188,6 +188,7 @@ type testRuntimeInterface struct {
 	getStorageUsed             func(_ Address) (uint64, error)
 	getStorageCapacity         func(_ Address) (uint64, error)
 	programs                   map[Location]*interpreter.Program
+	programsMU                 sync.RWMutex
 	implementationDebugLog     func(message string) error
 	validatePublicKey          func(publicKey *stdlib.PublicKey) error
 	bLSVerifyPOP               func(pk *stdlib.PublicKey, s []byte) (bool, error)
@@ -220,27 +221,43 @@ func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
 	return i.getCode(location)
 }
 
-func (i *testRuntimeInterface) GetProgram(location Location) (*interpreter.Program, error) {
-	if i.getProgram == nil {
-		if i.programs == nil {
-			i.programs = map[Location]*interpreter.Program{}
-		}
-		return i.programs[location], nil
-	}
-
-	return i.getProgram(location)
-}
-
 func (i *testRuntimeInterface) SetProgram(location Location, program *interpreter.Program) error {
 	if i.setProgram == nil {
 		if i.programs == nil {
 			i.programs = map[Location]*interpreter.Program{}
 		}
+
 		i.programs[location] = program
 		return nil
 	}
 
 	return i.setProgram(location, program)
+}
+
+func (i *testRuntimeInterface) GetOrLoadProgram(
+	location Location,
+	load func(location Location) (*interpreter.Program, error),
+) (
+	*interpreter.Program,
+	error,
+) {
+	if i.getOrLoadProgram == nil {
+		if i.programs == nil {
+			i.programs = map[Location]*interpreter.Program{}
+		}
+
+		p, ok := i.programs[location]
+		if !ok {
+			var err error
+			p, err = load(location)
+			if err != nil {
+				return nil, err
+			}
+			i.programs[location] = p
+		}
+		return p, nil
+	}
+	return i.getOrLoadProgram(location, load)
 }
 
 func (i *testRuntimeInterface) SetInterpreterSharedState(state *interpreter.SharedState) {
@@ -679,6 +696,15 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 	var programsLock sync.RWMutex
 	programs := map[Location]*interpreter.Program{}
 
+	setProgram := func(location Location, program *interpreter.Program) error {
+		programsLock.Lock()
+		defer programsLock.Unlock()
+
+		programs[location] = program
+
+		return nil
+	}
+
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -691,21 +717,26 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 		programChecked: func(location Location, duration time.Duration) {
 			atomic.AddUint64(&checkCount, 1)
 		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programsLock.Lock()
-			defer programsLock.Unlock()
-
-			programs[location] = program
-
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
+		setProgram: setProgram,
+		getOrLoadProgram: func(location Location, load func(Location) (*interpreter.Program, error)) (*interpreter.Program, error) {
 			programsLock.RLock()
-			defer programsLock.RUnlock()
+			p := programs[location]
+			programsLock.RUnlock()
 
-			program := programs[location]
+			if p != nil {
+				return p, nil
+			}
 
-			return program, nil
+			p, err := load(location)
+			if err != nil {
+				return nil, err
+			}
+
+			err = setProgram(location, p)
+			if err != nil {
+				return nil, err
+			}
+			return p, nil
 		},
 	}
 
@@ -743,7 +774,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 	//   however, currently the imported program gets re-checked if it is currently being checked.
 	//   This can probably be optimized by synchronizing the checking of a program using `sync`.
 	//
-	//require.Equal(t, concurrency+1, checkCount)
+	// require.Equal(t, concurrency+1, checkCount)
 }
 
 func TestRuntimeProgramSetAndGet(t *testing.T) {
@@ -762,18 +793,32 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	importedScriptLocation := common.StringLocation("imported")
 
 	runtime := newTestInterpreterRuntime()
+
+	setProgram := func(location Location, program *interpreter.Program) error {
+		programs[location] = program
+		return nil
+	}
+
 	runtimeInterface := &testRuntimeInterface{
-		getProgram: func(location Location) (*interpreter.Program, error) {
+		setProgram: setProgram,
+		getOrLoadProgram: func(location Location, load func(Location) (*interpreter.Program, error)) (*interpreter.Program, error) {
 			program, found := programs[location]
 			programsHits[location] = found
-			if !found {
-				return nil, nil
+
+			if program != nil {
+				return program, nil
+			}
+
+			program, err := load(location)
+			if err != nil {
+				return nil, err
+			}
+
+			err = setProgram(location, program)
+			if err != nil {
+				return nil, err
 			}
 			return program, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location] = program
-			return nil
 		},
 		getCode: func(location Location) ([]byte, error) {
 			switch location {
@@ -6290,6 +6335,11 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 
 	var programsHits []Location
 
+	setProgram := func(location Location, program *interpreter.Program) error {
+		programs[location] = program
+		return nil
+	}
+
 	runtimeInterface := &testRuntimeInterface{
 		createAccount: func(payer Address) (address Address, err error) {
 			accountCounter++
@@ -6298,13 +6348,26 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
+		setProgram: setProgram,
+		getOrLoadProgram: func(location Location, load func(Location) (*interpreter.Program, error)) (*interpreter.Program, error) {
 			programsHits = append(programsHits, location)
-			return programs[location], nil
+			p := programs[location]
+
+			if p != nil {
+				return p, nil
+			}
+
+			p, err := load(location)
+			if err != nil {
+				return nil, err
+			}
+
+			err = setProgram(location, p)
+			if err != nil {
+				return nil, err
+			}
+
+			return p, nil
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {

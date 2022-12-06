@@ -515,28 +515,63 @@ func (e *interpreterEnvironment) getProgram(
 	err error,
 ) {
 	wrapPanic(func() {
-		program, err = e.runtimeInterface.GetProgram(location)
+		program, err = e.runtimeInterface.GetOrLoadProgram(
+			location,
+			func(location Location) (*interpreter.Program, error) {
+
+				var code []byte
+				var err error
+				code, err = e.getCode(location)
+				if err != nil {
+					return nil, err
+				}
+
+				wrapError := func(err error) error {
+					return &ParsingCheckingError{
+						Err:      err,
+						Location: location,
+					}
+				}
+
+				e.codesAndPrograms.setCode(location, code)
+
+				// Parse
+
+				var parse *ast.Program
+				reportMetric(
+					func() {
+						parse, err = parser.ParseProgram(e, code, parser.Config{})
+					},
+					e.runtimeInterface,
+					func(metrics Metrics, duration time.Duration) {
+						metrics.ProgramParsed(location, duration)
+					},
+				)
+				if err != nil {
+					return nil, wrapError(err)
+				}
+
+				e.codesAndPrograms.setProgram(location, parse)
+
+				// Check
+
+				elaboration, err := e.check(location, parse, checkedImports)
+				if err != nil {
+					return nil, wrapError(err)
+				}
+
+				// Return
+
+				program := &interpreter.Program{
+					Program:     parse,
+					Elaboration: elaboration,
+				}
+
+				return program, nil
+			})
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	if program == nil {
-		var code []byte
-		code, err = e.getCode(location)
-		if err != nil {
-			return nil, err
-		}
-
-		program, err = e.parseAndCheckProgram(
-			code,
-			location,
-			true,
-			checkedImports,
-		)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	e.codesAndPrograms.setProgram(location, program.Program)

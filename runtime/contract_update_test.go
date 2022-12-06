@@ -45,6 +45,18 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 
 	var checkGetSetProgram, getProgramCalled, setProgramCalled bool
 
+	setProgram := func(location Location, program *interpreter.Program) error {
+
+		_, isTransactionLocation := location.(common.TransactionLocation)
+
+		if checkGetSetProgram && !isTransactionLocation {
+			require.Equal(t, location, fooLocation)
+			require.False(t, setProgramCalled)
+			setProgramCalled = true
+		}
+		return nil
+	}
+
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
@@ -75,24 +87,27 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
+		setProgram: setProgram,
+		getOrLoadProgram: func(location Location, load func(Location) (*interpreter.Program, error)) (*interpreter.Program, error) {
 			_, isTransactionLocation := location.(common.TransactionLocation)
 			if checkGetSetProgram && !isTransactionLocation {
 				require.Equal(t, location, fooLocation)
 				require.False(t, getProgramCalled)
 				getProgramCalled = true
 			}
+
 			// Always force to get the old program from the source during the update.
-			return nil, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			_, isTransactionLocation := location.(common.TransactionLocation)
-			if checkGetSetProgram && !isTransactionLocation {
-				require.Equal(t, location, fooLocation)
-				require.False(t, setProgramCalled)
-				setProgramCalled = true
+			p, err := load(location)
+			if err != nil {
+				return nil, err
 			}
-			return nil
+
+			err = setProgram(location, p)
+			if err != nil {
+				return nil, err
+			}
+
+			return p, nil
 		},
 	}
 
