@@ -3483,6 +3483,135 @@ func saturatingMulUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *
 	)
 }
 
+func divSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	// INT33-C
+	// https://golang.org/ref/spec#Integer_operators
+	if otherUnderlying == 0 {
+		panic(DivisionByZeroError{locationRange})
+	} else if (underlying == v.MinValue()) && (otherUnderlying == -1) {
+		panic(OverflowError{locationRange})
+	}
+
+	valueGetter := func() T {
+		return T(underlying / otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func divSignedBigint[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		underlying := v.Underlying()
+		otherUnderlying := o.Underlying()
+		if otherUnderlying.Cmp(res) == 0 {
+			panic(DivisionByZeroError{locationRange})
+		}
+		res.SetInt64(-1)
+		if (underlying.Cmp(v.MinValue()) == 0) && (otherUnderlying.Cmp(res) == 0) {
+			panic(OverflowError{locationRange})
+		}
+		res.Div(underlying, otherUnderlying)
+
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func divUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return v.Constructor(
+		interpreter,
+		func() T {
+			underlying := v.Underlying()
+			otherUnderlying := o.Underlying()
+			if otherUnderlying == 0 {
+				panic(DivisionByZeroError{locationRange})
+			}
+			return T(underlying / otherUnderlying)
+		},
+	)
+}
+
+func divUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return v.Constructor(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			otherUnderlying := o.Underlying()
+			if otherUnderlying.Cmp(res) == 0 {
+				panic(DivisionByZeroError{locationRange})
+			}
+			return res.Div(v.Underlying(), otherUnderlying)
+		},
+	)
+}
+
+func saturatingDivSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() T {
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		underlying := v.Underlying()
+		otherUnderlying := o.Underlying()
+		if otherUnderlying == 0 {
+			panic(DivisionByZeroError{locationRange})
+		} else if (underlying == v.MinValue()) && (otherUnderlying == -1) {
+			return v.MaxValue()
+		}
+		return T(underlying / otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
 	switch name {
 
@@ -4308,28 +4437,7 @@ func (v Int8Value) SaturatingMul(interpreter *Interpreter, other NumberValue, lo
 }
 
 func (v Int8Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	} else if (v == math.MinInt8) && (o == -1) {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() int8 {
-		return int8(v / o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return divSigned[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4726,28 +4834,7 @@ func (v Int16Value) SaturatingMul(interpreter *Interpreter, other NumberValue, l
 }
 
 func (v Int16Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	} else if (v == math.MinInt16) && (o == -1) {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() int16 {
-		return int16(v / o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return divSigned[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5146,28 +5233,7 @@ func (v Int32Value) SaturatingMul(interpreter *Interpreter, other NumberValue, l
 }
 
 func (v Int32Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	} else if (v == math.MinInt32) && (o == -1) {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() int32 {
-		return int32(v / o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return divSigned[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5564,28 +5630,7 @@ func (v Int64Value) SaturatingMul(interpreter *Interpreter, other NumberValue, l
 }
 
 func (v Int64Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	} else if (v == math.MinInt64) && (o == -1) {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() int64 {
-		return int64(v / o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return divSigned[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6006,36 +6051,7 @@ func (v Int128Value) SaturatingMul(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v Int128Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		// INT33-C:
-		//   if o == 0 {
-		//       ...
-		//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
-		//       ...
-		//   }
-		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
-		}
-		res.SetInt64(-1)
-		if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-			panic(OverflowError{locationRange})
-		}
-		res.Div(v.BigInt, o.BigInt)
-
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return divSignedBigint(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6504,35 +6520,7 @@ func (v Int256Value) SaturatingMul(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v Int256Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		// INT33-C:
-		//   if o == 0 {
-		//       ...
-		//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
-		//       ...
-		//   }
-		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
-		}
-		res.SetInt64(-1)
-		if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-			panic(OverflowError{locationRange})
-		}
-		res.Div(v.BigInt, o.BigInt)
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return divSignedBigint(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -7555,24 +7543,7 @@ func (v UInt8Value) SaturatingMul(interpreter *Interpreter, other NumberValue, l
 }
 
 func (v UInt8Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt8Value(
-		interpreter,
-		func() uint8 {
-			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return uint8(v / o)
-		},
-	)
+	return divUnsigned[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -7991,24 +7962,7 @@ func (v UInt16Value) SaturatingMul(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v UInt16Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return uint16(v / o)
-		},
-	)
+	return divUnsigned[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8386,24 +8340,7 @@ func (v UInt32Value) SaturatingMul(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v UInt32Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return uint32(v / o)
-		},
-	)
+	return divUnsigned[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8805,24 +8742,7 @@ func (v UInt64Value) SaturatingMul(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v UInt64Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return uint64(v / o)
-		},
-	)
+	return divUnsigned[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9229,26 +9149,7 @@ func (v UInt128Value) SaturatingMul(interpreter *Interpreter, other NumberValue,
 }
 
 func (v UInt128Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return res.Div(v.BigInt, o.BigInt)
-		},
-	)
-
+	return divUnsignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9701,25 +9602,7 @@ func (v UInt256Value) SaturatingMul(interpreter *Interpreter, other NumberValue,
 }
 
 func (v UInt256Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return res.Div(v.BigInt, o.BigInt)
-		},
-	)
+	return divUnsignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -10141,24 +10024,7 @@ func (v Word8Value) SaturatingMul(*Interpreter, NumberValue, LocationRange) Numb
 }
 
 func (v Word8Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() uint8 {
-		return uint8(v / o)
-	}
-
-	return NewWord8Value(interpreter, valueGetter)
+	return divUnsigned[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -10513,24 +10379,7 @@ func (v Word16Value) SaturatingMul(*Interpreter, NumberValue, LocationRange) Num
 }
 
 func (v Word16Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() uint16 {
-		return uint16(v / o)
-	}
-
-	return NewWord16Value(interpreter, valueGetter)
+	return divUnsigned[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -10888,24 +10737,7 @@ func (v Word32Value) SaturatingMul(*Interpreter, NumberValue, LocationRange) Num
 }
 
 func (v Word32Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() uint32 {
-		return uint32(v / o)
-	}
-
-	return NewWord32Value(interpreter, valueGetter)
+	return divUnsigned[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -11287,24 +11119,7 @@ func (v Word64Value) SaturatingMul(*Interpreter, NumberValue, LocationRange) Num
 }
 
 func (v Word64Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() uint64 {
-		return uint64(v / o)
-	}
-
-	return NewWord64Value(interpreter, valueGetter)
+	return divUnsigned[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
