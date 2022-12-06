@@ -1237,6 +1237,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			NewIntValueFromInt64(interpreter, int64(i)),
 			intType,
 			compositeType.EnumRawType,
+			LocationRange{
+				Location:    location,
+				HasPosition: enumCase,
+			},
 		).(IntegerValue)
 
 		caseValueFields := []CompositeField{
@@ -1595,11 +1599,11 @@ func (interpreter *Interpreter) ConvertAndBox(
 	value Value,
 	valueType, targetType sema.Type,
 ) Value {
-	value = interpreter.convert(value, valueType, targetType)
+	value = interpreter.convert(value, valueType, targetType, locationRange)
 	return interpreter.BoxOptional(locationRange, value, targetType)
 }
 
-func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.Type) Value {
+func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.Type, locationRange LocationRange) Value {
 	if valueType == nil {
 		return value
 	}
@@ -1613,114 +1617,114 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	switch unwrappedTargetType {
 	case sema.IntType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt(interpreter, value)
+			return ConvertInt(interpreter, value, locationRange)
 		}
 
 	case sema.UIntType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt(interpreter, value)
+			return ConvertUInt(interpreter, value, locationRange)
 		}
 
 	// Int*
 	case sema.Int8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt8(interpreter, value)
+			return ConvertInt8(interpreter, value, locationRange)
 		}
 
 	case sema.Int16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt16(interpreter, value)
+			return ConvertInt16(interpreter, value, locationRange)
 		}
 
 	case sema.Int32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt32(interpreter, value)
+			return ConvertInt32(interpreter, value, locationRange)
 		}
 
 	case sema.Int64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt64(interpreter, value)
+			return ConvertInt64(interpreter, value, locationRange)
 		}
 
 	case sema.Int128Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt128(interpreter, value)
+			return ConvertInt128(interpreter, value, locationRange)
 		}
 
 	case sema.Int256Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt256(interpreter, value)
+			return ConvertInt256(interpreter, value, locationRange)
 		}
 
 	// UInt*
 	case sema.UInt8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt8(interpreter, value)
+			return ConvertUInt8(interpreter, value, locationRange)
 		}
 
 	case sema.UInt16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt16(interpreter, value)
+			return ConvertUInt16(interpreter, value, locationRange)
 		}
 
 	case sema.UInt32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt32(interpreter, value)
+			return ConvertUInt32(interpreter, value, locationRange)
 		}
 
 	case sema.UInt64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt64(interpreter, value)
+			return ConvertUInt64(interpreter, value, locationRange)
 		}
 
 	case sema.UInt128Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt128(interpreter, value)
+			return ConvertUInt128(interpreter, value, locationRange)
 		}
 
 	case sema.UInt256Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt256(interpreter, value)
+			return ConvertUInt256(interpreter, value, locationRange)
 		}
 
 	// Word*
 	case sema.Word8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord8(interpreter, value)
+			return ConvertWord8(interpreter, value, locationRange)
 		}
 
 	case sema.Word16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord16(interpreter, value)
+			return ConvertWord16(interpreter, value, locationRange)
 		}
 
 	case sema.Word32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord32(interpreter, value)
+			return ConvertWord32(interpreter, value, locationRange)
 		}
 
 	case sema.Word64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord64(interpreter, value)
+			return ConvertWord64(interpreter, value, locationRange)
 		}
 
 	// Fix*
 
 	case sema.Fix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertFix64(interpreter, value)
+			return ConvertFix64(interpreter, value, locationRange)
 		}
 
 	case sema.UFix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUFix64(interpreter, value)
+			return ConvertUFix64(interpreter, value, locationRange)
 		}
 	}
 
 	switch unwrappedTargetType.(type) {
 	case *sema.AddressType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertAddress(interpreter, value)
+			return ConvertAddress(interpreter, value, locationRange)
 		}
 	}
 
@@ -2350,7 +2354,7 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 
 type ValueConverterDeclaration struct {
 	name         string
-	convert      func(*Interpreter, Value) Value
+	convert      func(*Interpreter, Value, LocationRange) Value
 	min          Value
 	max          Value
 	functionType *sema.FunctionType
@@ -2361,23 +2365,23 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.IntTypeName,
 		functionType: sema.NumberConversionFunctionType(sema.IntType),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt(interpreter, value, locationRange)
 		},
 	},
 	{
 		name:         sema.UIntTypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UIntType),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUIntValueFromBigInt(sema.UIntTypeMin),
 	},
 	{
 		name:         sema.Int8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int8Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt8(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt8(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt8Value(math.MinInt8),
 		max: NewUnmeteredInt8Value(math.MaxInt8),
@@ -2385,8 +2389,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int16Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt16(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt16(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt16Value(math.MinInt16),
 		max: NewUnmeteredInt16Value(math.MaxInt16),
@@ -2394,8 +2398,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int32Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt32(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt32(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt32Value(math.MinInt32),
 		max: NewUnmeteredInt32Value(math.MaxInt32),
@@ -2403,8 +2407,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int64Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt64(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt64(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt64Value(math.MinInt64),
 		max: NewUnmeteredInt64Value(math.MaxInt64),
@@ -2412,8 +2416,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int128Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt128(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt128(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
 		max: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
@@ -2421,8 +2425,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int256TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int256Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt256(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt256(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
 		max: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
@@ -2430,8 +2434,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt8Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt8(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt8(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt8Value(0),
 		max: NewUnmeteredUInt8Value(math.MaxUint8),
@@ -2439,8 +2443,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt16Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt16(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt16(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt16Value(0),
 		max: NewUnmeteredUInt16Value(math.MaxUint16),
@@ -2448,8 +2452,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt32Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt32(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt32(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt32Value(0),
 		max: NewUnmeteredUInt32Value(math.MaxUint32),
@@ -2457,8 +2461,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt64Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt64(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt64(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt64Value(0),
 		max: NewUnmeteredUInt64Value(math.MaxUint64),
@@ -2466,8 +2470,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt128Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt128(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt128(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt128ValueFromUint64(0),
 		max: NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
@@ -2475,8 +2479,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt256TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt256Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt256(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt256(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt256ValueFromUint64(0),
 		max: NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
@@ -2484,8 +2488,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word8Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertWord8(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord8(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredWord8Value(0),
 		max: NewUnmeteredWord8Value(math.MaxUint8),
@@ -2493,8 +2497,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word16Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertWord16(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord16(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredWord16Value(0),
 		max: NewUnmeteredWord16Value(math.MaxUint16),
@@ -2502,8 +2506,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word32Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertWord32(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord32(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredWord32Value(0),
 		max: NewUnmeteredWord32Value(math.MaxUint32),
@@ -2511,8 +2515,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word64Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertWord64(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord64(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredWord64Value(0),
 		max: NewUnmeteredWord64Value(math.MaxUint64),
@@ -2520,8 +2524,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Fix64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Fix64Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertFix64(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertFix64(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredFix64Value(math.MinInt64),
 		max: NewUnmeteredFix64Value(math.MaxInt64),
@@ -2529,8 +2533,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UFix64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UFix64Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUFix64(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUFix64(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUFix64Value(0),
 		max: NewUnmeteredUFix64Value(math.MaxUint64),
@@ -2538,24 +2542,30 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.AddressTypeName,
 		functionType: sema.AddressConversionFunctionType,
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertAddress(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertAddress(interpreter, value, locationRange)
 		},
 	},
 	{
 		name:         sema.PublicPathType.Name,
 		functionType: sema.PublicPathConversionFunctionType,
-		convert:      ConvertPublicPath,
+		convert: func(interpreter *Interpreter, value Value, _ LocationRange) Value {
+			return ConvertPublicPath(interpreter, value)
+		},
 	},
 	{
 		name:         sema.PrivatePathType.Name,
 		functionType: sema.PrivatePathConversionFunctionType,
-		convert:      ConvertPrivatePath,
+		convert: func(interpreter *Interpreter, value Value, _ LocationRange) Value {
+			return ConvertPrivatePath(interpreter, value)
+		},
 	},
 	{
 		name:         sema.StoragePathType.Name,
 		functionType: sema.StoragePathConversionFunctionType,
-		convert:      ConvertStoragePath,
+		convert: func(interpreter *Interpreter, value Value, _ LocationRange) Value {
+			return ConvertStoragePath(interpreter, value)
+		},
 	},
 }
 
@@ -2879,7 +2889,7 @@ var converterFunctionValues = func() []converterFunction {
 		convert := declaration.convert
 		converterFunctionValue := NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
-				return convert(invocation.Interpreter, invocation.Arguments[0])
+				return convert(invocation.Interpreter, invocation.Arguments[0], invocation.LocationRange)
 			},
 			declaration.functionType,
 		)
@@ -2987,7 +2997,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					NewConstantSizedStaticType(
 						invocation.Interpreter,
 						typeValue.Type,
-						int64(sizeValue.ToInt()),
+						int64(sizeValue.ToInt(invocation.LocationRange)),
 					),
 				)
 			},

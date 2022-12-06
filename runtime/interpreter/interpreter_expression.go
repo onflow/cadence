@@ -257,15 +257,17 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		return interpreter.evalExpression(expression.Right)
 	}
 
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
+
 	error := func(right Value) {
 		panic(InvalidOperandsError{
-			Operation: expression.Operation,
-			LeftType:  leftValue.StaticType(interpreter),
-			RightType: right.StaticType(interpreter),
-			LocationRange: LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: expression,
-			},
+			Operation:     expression.Operation,
+			LeftType:      leftValue.StaticType(interpreter),
+			RightType:     right.StaticType(interpreter),
+			LocationRange: locationRange,
 		})
 	}
 
@@ -276,7 +278,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Plus(interpreter, right)
+		return left.Plus(interpreter, right, locationRange)
 
 	case ast.OperationMinus:
 		left, leftOk := leftValue.(NumberValue)
@@ -284,7 +286,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Minus(interpreter, right)
+		return left.Minus(interpreter, right, locationRange)
 
 	case ast.OperationMod:
 		left, leftOk := leftValue.(NumberValue)
@@ -292,7 +294,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Mod(interpreter, right)
+		return left.Mod(interpreter, right, locationRange)
 
 	case ast.OperationMul:
 		left, leftOk := leftValue.(NumberValue)
@@ -300,7 +302,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Mul(interpreter, right)
+		return left.Mul(interpreter, right, locationRange)
 
 	case ast.OperationDiv:
 		left, leftOk := leftValue.(NumberValue)
@@ -308,7 +310,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Div(interpreter, right)
+		return left.Div(interpreter, right, locationRange)
 
 	case ast.OperationBitwiseOr:
 		left, leftOk := leftValue.(IntegerValue)
@@ -316,7 +318,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseOr(interpreter, right)
+		return left.BitwiseOr(interpreter, right, locationRange)
 
 	case ast.OperationBitwiseXor:
 		left, leftOk := leftValue.(IntegerValue)
@@ -324,7 +326,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseXor(interpreter, right)
+		return left.BitwiseXor(interpreter, right, locationRange)
 
 	case ast.OperationBitwiseAnd:
 		left, leftOk := leftValue.(IntegerValue)
@@ -332,7 +334,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseAnd(interpreter, right)
+		return left.BitwiseAnd(interpreter, right, locationRange)
 
 	case ast.OperationBitwiseLeftShift:
 		left, leftOk := leftValue.(IntegerValue)
@@ -340,7 +342,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseLeftShift(interpreter, right)
+		return left.BitwiseLeftShift(interpreter, right, locationRange)
 
 	case ast.OperationBitwiseRightShift:
 		left, leftOk := leftValue.(IntegerValue)
@@ -348,7 +350,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseRightShift(interpreter, right)
+		return left.BitwiseRightShift(interpreter, right, locationRange)
 
 	case ast.OperationLess:
 		left, leftOk := leftValue.(NumberValue)
@@ -356,7 +358,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Less(interpreter, right)
+		return left.Less(interpreter, right, locationRange)
 
 	case ast.OperationLessEqual:
 		left, leftOk := leftValue.(NumberValue)
@@ -364,7 +366,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.LessEqual(interpreter, right)
+		return left.LessEqual(interpreter, right, locationRange)
 
 	case ast.OperationGreater:
 		left, leftOk := leftValue.(NumberValue)
@@ -372,7 +374,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Greater(interpreter, right)
+		return left.Greater(interpreter, right, locationRange)
 
 	case ast.OperationGreaterEqual:
 		left, leftOk := leftValue.(NumberValue)
@@ -380,7 +382,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.GreaterEqual(interpreter, right)
+		return left.GreaterEqual(interpreter, right, locationRange)
 
 	case ast.OperationEqual:
 		return interpreter.testEqual(leftValue, rightValue(), expression)
@@ -506,7 +508,10 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return integerValue.Negate(interpreter)
+		return integerValue.Negate(interpreter, LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression,
+		})
 
 	case ast.OperationMove:
 		interpreter.invalidateResource(value)

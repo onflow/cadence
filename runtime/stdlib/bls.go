@@ -218,7 +218,7 @@ func newBLSAggregateSignaturesFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature)
+				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature, invocation.LocationRange)
 				if err != nil {
 					panic(err)
 				}

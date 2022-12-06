@@ -156,6 +156,7 @@ func NewBlockValue(
 		func() uint64 {
 			return uint64(time.Unix(0, block.Timestamp).Unix())
 		},
+		locationRange,
 	)
 
 	return interpreter.NewBlockValue(

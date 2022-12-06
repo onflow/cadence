@@ -535,7 +535,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected).(IntValue)
+			expected = expected.Mul(inter, expected, EmptyLocationRange).(IntValue)
 		}
 
 		testEncodeDecode(t,
@@ -1493,7 +1493,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected).(UIntValue)
+			expected = expected.Mul(inter, expected, EmptyLocationRange).(UIntValue)
 		}
 
 		testEncodeDecode(t,
