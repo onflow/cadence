@@ -3662,6 +3662,114 @@ func saturatingDivUnsigned[T Unsigned, V BoundedUnsignedValue[T]](interpreter *I
 	return v.Div(interpreter, other, locationRange)
 }
 
+func less[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.Underlying() < o.Underlying())
+}
+
+func lessBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.Underlying().Cmp(o.Underlying())
+	return AsBoolValue(cmp == -1)
+}
+
+func lessEqual[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.Underlying() <= o.Underlying())
+}
+
+func lessEqualBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.Underlying().Cmp(o.Underlying())
+	return AsBoolValue(cmp <= 0)
+}
+
+func greater[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.Underlying() > o.Underlying())
+}
+
+func greaterBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.Underlying().Cmp(o.Underlying())
+	return AsBoolValue(cmp == 1)
+}
+
+func greaterEqual[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.Underlying() >= o.Underlying())
+}
+
+func greaterEqualBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.Underlying().Cmp(o.Underlying())
+	return AsBoolValue(cmp >= 0)
+}
+
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
 	switch name {
 
@@ -4495,55 +4603,19 @@ func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 }
 
 func (v Int8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -4872,55 +4944,19 @@ func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 }
 
 func (v Int16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -5251,55 +5287,19 @@ func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 }
 
 func (v Int32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -5627,56 +5627,19 @@ func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 }
 
 func (v Int64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
-
+	return greater[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -6028,59 +5991,19 @@ func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v Int128Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == -1)
+	return lessBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp <= 0)
+	return lessEqualBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == 1)
+	return greaterBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp >= 0)
+	return greaterEqualBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -6468,59 +6391,19 @@ func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v Int256Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == -1)
+	return lessBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp <= 0)
+	return lessEqualBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == 1)
+	return greaterBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp >= 0)
+	return greaterEqualBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -7463,55 +7346,19 @@ func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 }
 
 func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -7871,55 +7718,19 @@ func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -8238,55 +8049,19 @@ func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -8629,55 +8404,19 @@ func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -9025,59 +8764,19 @@ func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue,
 }
 
 func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == -1)
+	return lessBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp <= 0)
+	return lessEqualBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == 1)
+	return greaterBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp >= 0)
+	return greaterEqualBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -9467,59 +9166,19 @@ func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue,
 }
 
 func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == -1)
+	return lessBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp <= 0)
+	return lessEqualBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == 1)
+	return greaterBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp >= 0)
+	return greaterEqualBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -9878,55 +9537,19 @@ func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Numb
 }
 
 func (v Word8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -10233,55 +9856,19 @@ func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 }
 
 func (v Word16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -10591,55 +10178,19 @@ func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 }
 
 func (v Word32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -10973,55 +10524,19 @@ func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 }
 
 func (v Word64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -11493,55 +11008,19 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Fix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[int64](interpreter, v, other, locationRange)
 }
 
 func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Fix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[int64](interpreter, v, other, locationRange)
 }
 
 func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Fix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[int64](interpreter, v, other, locationRange)
 }
 
 func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(Fix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[int64](interpreter, v, other, locationRange)
 }
 
 func (v Fix64Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -11933,55 +11412,19 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UFix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v < o)
+	return less[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UFix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v <= o)
+	return lessEqual[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UFix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v > o)
+	return greater[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
-	o, ok := other.(UFix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return AsBoolValue(v >= o)
+	return greaterEqual[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UFix64Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
