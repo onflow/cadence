@@ -2723,6 +2723,8 @@ type BoundedSignedValue[T Signed] interface {
 	MinValue() T
 }
 
+// Negation
+
 func negateSigned[T constraints.Signed](interpreter *Interpreter, v BoundedSignedValue[T], locationRange LocationRange) NumberValue {
 	// INT32-C
 	underlying := v.Underlying()
@@ -2751,6 +2753,93 @@ func negateSignedBigInt(interpreter *Interpreter, v BoundedSignedValue[*big.Int]
 	return v.Constructor(interpreter, valueGetter)
 }
 
+// Addition
+
+func genericPlusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	valueGetter := func() T {
+		underlying := v.Underlying()
+		otherUnderlying := o.Underlying()
+		// INT32-C
+		if (otherUnderlying > 0) && (underlying > (v.MaxValue() - otherUnderlying)) {
+			if errorOnOverflow {
+				panic(OverflowError{locationRange})
+			}
+			return v.MaxValue()
+		} else if (otherUnderlying < 0) && (underlying < (v.MinValue() - otherUnderlying)) {
+			if errorOnOverflow {
+				panic(UnderflowError{locationRange})
+			}
+			return v.MinValue()
+		}
+
+		return T(underlying + otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func genericPlusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Add(underlying, otherUnderlying)
+		if res.Cmp(v.MinValue()) < 0 {
+			if errorOnOverflow {
+				panic(UnderflowError{locationRange})
+			}
+			return v.MinValue()
+		} else if res.Cmp(v.MaxValue()) > 0 {
+			if errorOnOverflow {
+				panic(OverflowError{locationRange})
+			}
+			return v.MaxValue()
+		}
+
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func genericPlusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, o V, checkOverflow, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	return v.Constructor(interpreter, func() T {
+		sum := underlying + otherUnderlying
+		// INT30-C
+		if checkOverflow && sum < underlying {
+			if errorOnOverflow {
+				panic(OverflowError{locationRange})
+			}
+			return v.MaxValue()
+		}
+		return T(sum)
+	})
+}
+
+func genericPlusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	return v.Constructor(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(underlying, otherUnderlying)
+			if sum.Cmp(v.MaxValue()) > 0 {
+				if errorOnOverflow {
+					panic(OverflowError{locationRange})
+				}
+				return v.MaxValue()
+			}
+			return sum
+		},
+	)
+}
+
 func plusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(V)
 	if !ok {
@@ -2761,21 +2850,7 @@ func plusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Inte
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	// INT32-C
-	if (otherUnderlying > 0) && (underlying > (v.MaxValue() - otherUnderlying)) {
-		panic(OverflowError{locationRange})
-	} else if (otherUnderlying < 0) && (underlying < (v.MinValue() - otherUnderlying)) {
-		panic(UnderflowError{locationRange})
-	}
-
-	valueGetter := func() T {
-		return T(underlying + otherUnderlying)
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericPlusSigned[T](interpreter, v, o, true, locationRange)
 }
 
 // Given that this value is backed by an arbitrary size integer,
@@ -2793,22 +2868,7 @@ func plusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, 
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Add(underlying, otherUnderlying)
-		if res.Cmp(v.MinValue()) < 0 {
-			panic(UnderflowError{locationRange})
-		} else if res.Cmp(v.MaxValue()) > 0 {
-			panic(OverflowError{locationRange})
-		}
-
-		return res
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericPlusSignedBigInt(interpreter, v, o, true, locationRange)
 }
 
 func plusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, checkOverflow bool, locationRange LocationRange) NumberValue {
@@ -2821,17 +2881,7 @@ func plusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	return v.Constructor(interpreter, func() T {
-		sum := underlying + otherUnderlying
-		// INT30-C
-		if checkOverflow && sum < underlying {
-			panic(OverflowError{locationRange})
-		}
-		return T(sum)
-	})
+	return genericPlusUnsigned[T](interpreter, v, o, checkOverflow, true, locationRange)
 }
 
 // Given that this value is backed by an arbitrary size integer,
@@ -2848,20 +2898,7 @@ func plusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpret
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	return v.Constructor(
-		interpreter,
-		func() *big.Int {
-			sum := new(big.Int)
-			sum.Add(underlying, otherUnderlying)
-			if sum.Cmp(v.MaxValue()) > 0 {
-				panic(OverflowError{locationRange})
-			}
-			return sum
-		},
-	)
+	return genericPlusUnsignedBigInt(interpreter, v, o, true, locationRange)
 }
 
 func saturatingPlusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -2874,20 +2911,7 @@ func saturatingPlusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpr
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	valueGetter := func() T {
-		// INT32-C
-		if (otherUnderlying > 0) && (underlying > (v.MaxValue() - otherUnderlying)) {
-			return v.MaxValue()
-		} else if (otherUnderlying < 0) && (underlying < (v.MinValue() - otherUnderlying)) {
-			return v.MinValue()
-		}
-		return T(underlying + otherUnderlying)
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericPlusSigned[T](interpreter, v, o, false, locationRange)
 }
 
 // Given that this value is backed by an arbitrary size integer,
@@ -2905,22 +2929,7 @@ func saturatingPlusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Int
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Add(underlying, otherUnderlying)
-		if res.Cmp(v.MinValue()) < 0 {
-			return v.MinValue()
-		} else if res.Cmp(v.MaxValue()) > 0 {
-			return v.MaxValue()
-		}
-
-		return res
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericPlusSignedBigInt(interpreter, v, o, false, locationRange)
 }
 
 func saturatingPlusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -2933,17 +2942,7 @@ func saturatingPlusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](i
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	return v.Constructor(interpreter, func() T {
-		sum := underlying + otherUnderlying
-		// INT30-C
-		if sum < underlying {
-			return v.MaxValue()
-		}
-		return T(sum)
-	})
+	return genericPlusUnsigned[T](interpreter, v, o, true, false, locationRange)
 }
 
 // Given that this value is backed by an arbitrary size integer,
@@ -2960,18 +2959,96 @@ func saturatingPlusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter 
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
+	return genericPlusUnsignedBigInt(interpreter, v, o, false, locationRange)
+}
 
+// Subtraction
+
+func genericMinusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	valueGetter := func() T {
+		underlying := v.Underlying()
+		otherUnderlying := o.Underlying()
+		// INT32-C
+		if (otherUnderlying > 0) && (underlying < (v.MinValue() + otherUnderlying)) {
+			if errorOnOverflow {
+				panic(UnderflowError{locationRange})
+			}
+			return v.MinValue()
+		} else if (otherUnderlying < 0) && (underlying > (v.MaxValue() + otherUnderlying)) {
+			if errorOnOverflow {
+				panic(OverflowError{locationRange})
+			}
+			return v.MaxValue()
+		}
+		return T(underlying - otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func genericMinusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Sub(v.Underlying(), o.Underlying())
+		if res.Cmp(v.MinValue()) < 0 {
+			if errorOnOverflow {
+				panic(UnderflowError{locationRange})
+			}
+			return v.MinValue()
+		} else if res.Cmp(v.MaxValue()) > 0 {
+			if errorOnOverflow {
+				panic(OverflowError{locationRange})
+			}
+			return v.MaxValue()
+		}
+
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func genericMinusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
+	interpreter *Interpreter,
+	v, o V,
+	checkOverflow, errorOnOverflow bool,
+	locationRange LocationRange,
+) NumberValue {
+	return v.Constructor(
+		interpreter,
+		func() T {
+			underlying := v.Underlying()
+			otherUnderlying := o.Underlying()
+			diff := underlying - otherUnderlying
+			// INT30-C
+			if checkOverflow && diff > underlying {
+				if errorOnOverflow {
+					panic(UnderflowError{locationRange})
+				}
+				return 0
+			}
+			return T(diff)
+		},
+	)
+}
+
+// Given that this value is backed by an arbitrary size integer,
+// we can just subtract and check the range of the result.
+//
+// If Go gains a native uint128 and uint256 type, we can switch this to `minusUnsigned`
+func genericMinusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
 	return v.Constructor(
 		interpreter,
 		func() *big.Int {
-			sum := new(big.Int)
-			sum.Add(underlying, otherUnderlying)
-			if sum.Cmp(v.MaxValue()) > 0 {
-				return v.MaxValue()
+			diff := new(big.Int)
+			diff.Sub(v.Underlying(), o.Underlying())
+			if diff.Cmp(sema.UIntTypeMin) < 0 {
+				if errorOnOverflow {
+					panic(UnderflowError{locationRange})
+				}
+				return sema.UIntTypeMin
 			}
-			return sum
+			return diff
 		},
 	)
 }
@@ -2986,21 +3063,7 @@ func minusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Int
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	// INT32-C
-	if (otherUnderlying > 0) && (underlying < (v.MinValue() + otherUnderlying)) {
-		panic(OverflowError{locationRange})
-	} else if (otherUnderlying < 0) && (underlying > (v.MaxValue() + otherUnderlying)) {
-		panic(UnderflowError{locationRange})
-	}
-
-	valueGetter := func() T {
-		return T(underlying - otherUnderlying)
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericMinusSigned[T](interpreter, v, o, true, locationRange)
 }
 
 // Given that this value is backed by an arbitrary size integer,
@@ -3018,19 +3081,7 @@ func minusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter,
 		})
 	}
 
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Sub(v.Underlying(), o.Underlying())
-		if res.Cmp(v.MinValue()) < 0 {
-			panic(UnderflowError{locationRange})
-		} else if res.Cmp(v.MaxValue()) > 0 {
-			panic(OverflowError{locationRange})
-		}
-
-		return res
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericMinusSignedBigInt(interpreter, v, o, true, locationRange)
 }
 
 func minusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, checkOverflow bool, locationRange LocationRange) NumberValue {
@@ -3043,19 +3094,7 @@ func minusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interprete
 		})
 	}
 
-	return v.Constructor(
-		interpreter,
-		func() T {
-			underlying := v.Underlying()
-			otherUnderlying := o.Underlying()
-			diff := underlying - otherUnderlying
-			// INT30-C
-			if checkOverflow && diff > underlying {
-				panic(UnderflowError{locationRange})
-			}
-			return T(diff)
-		},
-	)
+	return genericMinusUnsigned[T](interpreter, v, o, checkOverflow, true, locationRange)
 }
 
 // Given that this value is backed by an arbitrary size integer,
@@ -3072,17 +3111,7 @@ func minusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpre
 		})
 	}
 
-	return v.Constructor(
-		interpreter,
-		func() *big.Int {
-			diff := new(big.Int)
-			diff.Sub(v.Underlying(), o.Underlying())
-			if diff.Cmp(sema.UIntTypeMin) < 0 {
-				panic(UnderflowError{locationRange})
-			}
-			return diff
-		},
-	)
+	return genericMinusUnsignedBigInt(interpreter, v, o, true, locationRange)
 }
 
 func saturatingMinusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3095,20 +3124,7 @@ func saturatingMinusSigned[T constraints.Signed, V BoundedSignedValue[T]](interp
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	valueGetter := func() T {
-		// INT32-C
-		if (otherUnderlying > 0) && (underlying < (v.MinValue() + otherUnderlying)) {
-			return v.MinValue()
-		} else if (otherUnderlying < 0) && (underlying > (v.MaxValue() + otherUnderlying)) {
-			return v.MaxValue()
-		}
-		return T(underlying - otherUnderlying)
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericMinusSigned[T](interpreter, v, o, false, locationRange)
 }
 
 // Given that this value is backed by an arbitrary size integer,
@@ -3124,19 +3140,8 @@ func saturatingMinusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *In
 			RightType:    other.StaticType(interpreter),
 		})
 	}
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Sub(v.Underlying(), o.Underlying())
-		if res.Cmp(v.MinValue()) < 0 {
-			return v.MinValue()
-		} else if res.Cmp(v.MaxValue()) > 0 {
-			return v.MaxValue()
-		}
 
-		return res
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericMinusSignedBigInt(interpreter, v, o, false, locationRange)
 }
 
 func saturatingMinusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3149,19 +3154,7 @@ func saturatingMinusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
 		})
 	}
 
-	return v.Constructor(
-		interpreter,
-		func() T {
-			underlying := v.Underlying()
-			otherUnderlying := o.Underlying()
-			diff := underlying - otherUnderlying
-			// INT30-C
-			if diff > underlying {
-				return 0
-			}
-			return T(diff)
-		},
-	)
+	return genericMinusUnsigned[T](interpreter, v, o, true, false, locationRange)
 }
 
 // Given that this value is backed by an arbitrary size integer,
@@ -3178,67 +3171,121 @@ func saturatingMinusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter
 		})
 	}
 
+	return genericMinusUnsignedBigInt(interpreter, v, o, false, locationRange)
+}
+
+// Multiplication
+
+func genericMulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	valueGetter := func() T {
+		underlying := v.Underlying()
+		otherUnderlying := o.Underlying()
+
+		// INT32-C
+		if v.Underlying() > 0 {
+			if otherUnderlying > 0 {
+				// positive * positive = positive. overflow?
+				if underlying > (v.MaxValue() / otherUnderlying) {
+					if errorOnOverflow {
+						panic(OverflowError{locationRange})
+					}
+					return v.MaxValue()
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if otherUnderlying < (v.MinValue() / underlying) {
+					if errorOnOverflow {
+						panic(UnderflowError{locationRange})
+					}
+					return v.MinValue()
+				}
+			}
+		} else {
+			if otherUnderlying > 0 {
+				// negative * positive = negative. underflow?
+				if underlying < (v.MinValue() / otherUnderlying) {
+					if errorOnOverflow {
+						panic(UnderflowError{locationRange})
+					}
+					return v.MinValue()
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (v.Underlying() != 0) && (otherUnderlying < (v.MaxValue() / underlying)) {
+					if errorOnOverflow {
+						panic(OverflowError{locationRange})
+					}
+					return v.MaxValue()
+				}
+			}
+		}
+		return T(underlying * otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func genericMulSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Mul(v.Underlying(), o.Underlying())
+		if res.Cmp(v.MinValue()) < 0 {
+			if errorOnOverflow {
+				panic(UnderflowError{locationRange})
+			}
+			return v.MinValue()
+		} else if res.Cmp(v.MaxValue()) > 0 {
+			if errorOnOverflow {
+				panic(OverflowError{locationRange})
+			}
+			return v.MaxValue()
+		}
+
+		return res
+	}
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func genericMulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
+	interpreter *Interpreter,
+	v V,
+	o V,
+	checkOverflow bool,
+	errorOnOverflow bool,
+	locationRange LocationRange,
+) NumberValue {
 	return v.Constructor(
 		interpreter,
-		func() *big.Int {
-			diff := new(big.Int)
-			diff.Sub(v.Underlying(), o.Underlying())
-			if diff.Cmp(sema.UIntTypeMin) < 0 {
-				return sema.UIntTypeMin
+		func() T {
+			underlying := v.Underlying()
+			otherUnderlying := o.Underlying()
+			// INT30-C
+			if checkOverflow && (underlying > 0) && (otherUnderlying > 0) && (underlying > (v.MaxValue() / otherUnderlying)) {
+				if errorOnOverflow {
+					panic(OverflowError{locationRange})
+				}
+				return v.MaxValue()
 			}
-			return diff
+			return T(underlying * otherUnderlying)
 		},
 	)
 }
 
-func mod[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(V)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	// INT33-C
-	if otherUnderlying == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() T {
-		return T(underlying % otherUnderlying)
-	}
-
-	return v.Constructor(interpreter, valueGetter)
-}
-
-func modBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(V)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		// INT33-C
-		otherUnderlying := o.Underlying()
-		if otherUnderlying.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
-		}
-		res.Rem(v.Underlying(), otherUnderlying)
-
-		return res
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+func genericMulUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	return v.Constructor(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.Underlying(), o.Underlying())
+			if res.Cmp(v.MaxValue()) > 0 {
+				if errorOnOverflow {
+					panic(OverflowError{locationRange})
+				}
+				return v.MaxValue()
+			}
+			return res
+		},
+	)
 }
 
 func mulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3251,41 +3298,7 @@ func mulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Inter
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	// INT32-C
-	if v.Underlying() > 0 {
-		if otherUnderlying > 0 {
-			// positive * positive = positive. overflow?
-			if underlying > (v.MaxValue() / otherUnderlying) {
-				panic(OverflowError{locationRange})
-			}
-		} else {
-			// positive * negative = negative. underflow?
-			if otherUnderlying < (v.MinValue() / underlying) {
-				panic(UnderflowError{locationRange})
-			}
-		}
-	} else {
-		if otherUnderlying > 0 {
-			// negative * positive = negative. underflow?
-			if underlying < (v.MinValue() / otherUnderlying) {
-				panic(UnderflowError{locationRange})
-			}
-		} else {
-			// negative * negative = positive. overflow?
-			if (v.Underlying() != 0) && (otherUnderlying < (v.MaxValue() / underlying)) {
-				panic(OverflowError{locationRange})
-			}
-		}
-	}
-
-	valueGetter := func() T {
-		return T(underlying * otherUnderlying)
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericMulSigned[T](interpreter, v, o, true, locationRange)
 }
 
 func mulSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3298,18 +3311,7 @@ func mulSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v
 		})
 	}
 
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Mul(v.Underlying(), o.Underlying())
-		if res.Cmp(v.MinValue()) < 0 {
-			panic(UnderflowError{locationRange})
-		} else if res.Cmp(v.MaxValue()) > 0 {
-			panic(OverflowError{locationRange})
-		}
-
-		return res
-	}
-	return v.Constructor(interpreter, valueGetter)
+	return genericMulSignedBigInt(interpreter, v, o, true, locationRange)
 }
 
 func mulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
@@ -3328,18 +3330,7 @@ func mulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
 		})
 	}
 
-	return v.Constructor(
-		interpreter,
-		func() T {
-			underlying := v.Underlying()
-			otherUnderlying := o.Underlying()
-			// INT30-C
-			if checkOverflow && (underlying > 0) && (otherUnderlying > 0) && (underlying > (v.MaxValue() / otherUnderlying)) {
-				panic(OverflowError{locationRange})
-			}
-			return T(underlying * otherUnderlying)
-		},
-	)
+	return genericMulUnsigned[T](interpreter, v, o, checkOverflow, true, locationRange)
 }
 
 func mulUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3352,17 +3343,7 @@ func mulUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interprete
 		})
 	}
 
-	return v.Constructor(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			res.Mul(v.Underlying(), o.Underlying())
-			if res.Cmp(v.MaxValue()) > 0 {
-				panic(OverflowError{locationRange})
-			}
-			return res
-		},
-	)
+	return genericMulUnsignedBigInt(interpreter, v, o, true, locationRange)
 }
 
 func saturatingMulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3375,41 +3356,7 @@ func saturatingMulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpre
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	valueGetter := func() T {
-		// INT32-C
-		if underlying > 0 {
-			if otherUnderlying > 0 {
-				// positive * positive = positive. overflow?
-				if underlying > (v.MaxValue() / otherUnderlying) {
-					return v.MaxValue()
-				}
-			} else {
-				// positive * negative = negative. underflow?
-				if otherUnderlying < (v.MinValue() / underlying) {
-					return v.MinValue()
-				}
-			}
-		} else {
-			if otherUnderlying > 0 {
-				// negative * positive = negative. underflow?
-				if underlying < (v.MinValue() / otherUnderlying) {
-					return v.MinValue()
-				}
-			} else {
-				// negative * negative = positive. overflow?
-				if (underlying != 0) && (otherUnderlying < (v.MaxValue() / underlying)) {
-					return v.MaxValue()
-				}
-			}
-		}
-
-		return T(underlying * otherUnderlying)
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericMulSigned[T](interpreter, v, o, false, locationRange)
 }
 
 func saturatingMulSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3422,18 +3369,7 @@ func saturatingMulSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Inte
 		})
 	}
 
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Mul(v.Underlying(), o.Underlying())
-		if res.Cmp(v.MinValue()) < 0 {
-			return v.MinValue()
-		} else if res.Cmp(v.MaxValue()) > 0 {
-			return v.MaxValue()
-		}
-
-		return res
-	}
-	return v.Constructor(interpreter, valueGetter)
+	return genericMulSignedBigInt(interpreter, v, o, false, locationRange)
 }
 
 func saturatingMulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3446,18 +3382,7 @@ func saturatingMulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](in
 		})
 	}
 
-	return v.Constructor(
-		interpreter,
-		func() T {
-			underlying := v.Underlying()
-			otherUnderlying := o.Underlying()
-			// INT30-C
-			if (underlying > 0) && (otherUnderlying > 0) && (underlying > (v.MaxValue() / otherUnderlying)) {
-				return v.MaxValue()
-			}
-			return T(underlying * otherUnderlying)
-		},
-	)
+	return genericMulUnsigned[T](interpreter, v, o, true, false, locationRange)
 }
 
 func saturatingMulUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3470,17 +3395,53 @@ func saturatingMulUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *
 		})
 	}
 
-	return v.Constructor(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			res.Mul(v.Underlying(), o.Underlying())
-			if res.Cmp(v.MaxValue()) > 0 {
-				return v.MaxValue()
+	return genericMulUnsignedBigInt(interpreter, v, o, false, locationRange)
+}
+
+// Division
+
+func genericDivSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	valueGetter := func() T {
+		underlying := v.Underlying()
+		otherUnderlying := o.Underlying()
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		if otherUnderlying == 0 {
+			panic(DivisionByZeroError{locationRange})
+		} else if (underlying == v.MinValue()) && (otherUnderlying == -1) {
+			if errorOnOverflow {
+				panic(OverflowError{locationRange})
 			}
-			return res
-		},
-	)
+			return v.MaxValue()
+		}
+
+		return T(underlying / otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func genericDivSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		underlying := v.Underlying()
+		otherUnderlying := o.Underlying()
+		if otherUnderlying.Cmp(res) == 0 {
+			panic(DivisionByZeroError{locationRange})
+		}
+		res.SetInt64(-1)
+		if (underlying.Cmp(v.MinValue()) == 0) && (otherUnderlying.Cmp(res) == 0) {
+			if errorOnOverflow {
+				panic(OverflowError{locationRange})
+			}
+			return v.MaxValue()
+		}
+		res.Div(underlying, otherUnderlying)
+
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter)
 }
 
 func divSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3493,22 +3454,7 @@ func divSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Inter
 		})
 	}
 
-	underlying := v.Underlying()
-	otherUnderlying := o.Underlying()
-
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if otherUnderlying == 0 {
-		panic(DivisionByZeroError{locationRange})
-	} else if (underlying == v.MinValue()) && (otherUnderlying == -1) {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() T {
-		return T(underlying / otherUnderlying)
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericDivSigned[T](interpreter, v, o, true, locationRange)
 }
 
 func divSignedBigint[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3521,23 +3467,7 @@ func divSignedBigint[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v
 		})
 	}
 
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		underlying := v.Underlying()
-		otherUnderlying := o.Underlying()
-		if otherUnderlying.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
-		}
-		res.SetInt64(-1)
-		if (underlying.Cmp(v.MinValue()) == 0) && (otherUnderlying.Cmp(res) == 0) {
-			panic(OverflowError{locationRange})
-		}
-		res.Div(underlying, otherUnderlying)
-
-		return res
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericDivSignedBigInt(interpreter, v, o, true, locationRange)
 }
 
 func divUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3596,20 +3526,7 @@ func saturatingDivSigned[T constraints.Signed, V BoundedSignedValue[T]](interpre
 		})
 	}
 
-	valueGetter := func() T {
-		// INT33-C
-		// https://golang.org/ref/spec#Integer_operators
-		underlying := v.Underlying()
-		otherUnderlying := o.Underlying()
-		if otherUnderlying == 0 {
-			panic(DivisionByZeroError{locationRange})
-		} else if (underlying == v.MinValue()) && (otherUnderlying == -1) {
-			return v.MaxValue()
-		}
-		return T(underlying / otherUnderlying)
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericDivSigned[T](interpreter, v, o, false, locationRange)
 }
 
 func saturatingDivSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3622,29 +3539,7 @@ func saturatingDivSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Inte
 		})
 	}
 
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		// INT33-C:
-		//   if o == 0 {
-		//       ...
-		//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
-		//       ...
-		//   }
-		underlying := v.Underlying()
-		otherUnderlying := o.Underlying()
-		if otherUnderlying.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
-		}
-		res.SetInt64(-1)
-		if (underlying.Cmp(v.MinValue()) == 0) && (otherUnderlying.Cmp(res) == 0) {
-			return v.MaxValue()
-		}
-		res.Div(underlying, otherUnderlying)
-
-		return res
-	}
-
-	return v.Constructor(interpreter, valueGetter)
+	return genericDivSignedBigInt(interpreter, v, o, false, locationRange)
 }
 
 func saturatingDivUnsigned[T Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3660,6 +3555,58 @@ func saturatingDivUnsigned[T Unsigned, V BoundedUnsignedValue[T]](interpreter *I
 	}()
 
 	return v.Div(interpreter, other, locationRange)
+}
+
+// Other binary operators
+
+func mod[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	// INT33-C
+	if otherUnderlying == 0 {
+		panic(DivisionByZeroError{locationRange})
+	}
+
+	valueGetter := func() T {
+		return T(underlying % otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func modBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C
+		otherUnderlying := o.Underlying()
+		if otherUnderlying.Cmp(res) == 0 {
+			panic(DivisionByZeroError{locationRange})
+		}
+		res.Rem(v.Underlying(), otherUnderlying)
+
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter)
 }
 
 func less[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) BoolValue {
