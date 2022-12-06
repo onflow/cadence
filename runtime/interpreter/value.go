@@ -3770,6 +3770,202 @@ func greaterEqualBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V,
 	return AsBoolValue(cmp >= 0)
 }
 
+func bitwiseOr[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() T {
+		return T(v.Underlying() | o.Underlying())
+	}
+
+	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+}
+
+func bitwiseOrBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Or(v.Underlying(), o.Underlying())
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+}
+
+func bitwiseXor[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() T {
+		return T(v.Underlying() ^ o.Underlying())
+	}
+
+	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+}
+
+func bitwiseXorBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Xor(v.Underlying(), o.Underlying())
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+}
+
+func bitwiseAnd[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() T {
+		return T(v.Underlying() & o.Underlying())
+	}
+
+	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+}
+
+func bitwiseAndBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.And(v.Underlying(), o.Underlying())
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+}
+
+func bitwiseLeftShift[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() T {
+		return T(v.Underlying() << o.Underlying())
+	}
+
+	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+}
+
+func bitwiseLeftShiftBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	otherUnderlying := o.Underlying()
+
+	if otherUnderlying.Sign() < 0 {
+		panic(UnderflowError{locationRange})
+	}
+	if !otherUnderlying.IsUint64() {
+		panic(OverflowError{locationRange})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Lsh(v.Underlying(), uint(otherUnderlying.Uint64()))
+		return res
+	}
+	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+}
+
+func bitwiseRightShift[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() T {
+		return T(v.Underlying() >> o.Underlying())
+	}
+
+	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+}
+
+func bitwiseRightShiftBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	otherUnderlying := o.Underlying()
+
+	if otherUnderlying.Sign() < 0 {
+		panic(UnderflowError{locationRange})
+	}
+	if !otherUnderlying.IsUint64() {
+		panic(OverflowError{locationRange})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Rsh(v.Underlying(), uint(otherUnderlying.Uint64()))
+		return res
+	}
+	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+}
+
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
 	switch name {
 
@@ -4666,88 +4862,23 @@ func ConvertInt8(memoryGauge common.MemoryGauge, value Value, locationRange Loca
 }
 
 func (v Int8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int8 {
-		return int8(v | o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return bitwiseOr[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int8 {
-		return int8(v ^ o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return bitwiseXor[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int8 {
-		return int8(v & o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return bitwiseAnd[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int8 {
-		return int8(v << o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return bitwiseLeftShift[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int8 {
-		return int8(v >> o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return bitwiseRightShift[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -5007,88 +5138,23 @@ func ConvertInt16(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 }
 
 func (v Int16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int16 {
-		return int16(v | o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return bitwiseOr[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int16 {
-		return int16(v ^ o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return bitwiseXor[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int16 {
-		return int16(v & o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return bitwiseAnd[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int16 {
-		return int16(v << o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return bitwiseLeftShift[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int16 {
-		return int16(v >> o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return bitwiseRightShift[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -5349,88 +5415,23 @@ func ConvertInt32(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 }
 
 func (v Int32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int32 {
-		return int32(v | o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return bitwiseOr[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int32 {
-		return int32(v ^ o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return bitwiseXor[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int32 {
-		return int32(v & o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return bitwiseAnd[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int32 {
-		return int32(v << o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return bitwiseLeftShift[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int32 {
-		return int32(v >> o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return bitwiseRightShift[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -5684,88 +5685,23 @@ func ConvertInt64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 }
 
 func (v Int64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		return int64(v | o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return bitwiseOr[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		return int64(v ^ o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return bitwiseXor[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		return int64(v & o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return bitwiseAnd[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		return int64(v << o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return bitwiseLeftShift[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		return int64(v >> o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return bitwiseRightShift[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -6062,112 +5998,23 @@ func ConvertInt128(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 }
 
 func (v Int128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Or(v.BigInt, o.BigInt)
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return bitwiseOrBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Xor(v.BigInt, o.BigInt)
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return bitwiseXorBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.And(v.BigInt, o.BigInt)
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return bitwiseAndBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{locationRange})
-	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return bitwiseLeftShiftBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{locationRange})
-	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return bitwiseRightShiftBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -6462,111 +6309,23 @@ func ConvertInt256(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 }
 
 func (v Int256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Or(v.BigInt, o.BigInt)
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return bitwiseOrBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.Xor(v.BigInt, o.BigInt)
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return bitwiseXorBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		res.And(v.BigInt, o.BigInt)
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return bitwiseAndBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		if o.BigInt.Sign() < 0 {
-			panic(UnderflowError{locationRange})
-		}
-		if !o.BigInt.IsUint64() {
-			panic(OverflowError{locationRange})
-		}
-		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return bitwiseLeftShiftBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		if o.BigInt.Sign() < 0 {
-			panic(UnderflowError{locationRange})
-		}
-		if !o.BigInt.IsUint64() {
-			panic(OverflowError{locationRange})
-		}
-		res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return bitwiseRightShiftBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -7442,93 +7201,23 @@ func ConvertUInt8(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 }
 
 func (v UInt8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt8Value(
-		interpreter,
-		func() uint8 {
-			return uint8(v | o)
-		},
-	)
+	return bitwiseOr[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt8Value(
-		interpreter,
-		func() uint8 {
-			return uint8(v ^ o)
-		},
-	)
+	return bitwiseXor[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt8Value(
-		interpreter,
-		func() uint8 {
-			return uint8(v & o)
-		},
-	)
+	return bitwiseAnd[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt8Value(
-		interpreter,
-		func() uint8 {
-			return uint8(v << o)
-		},
-	)
+	return bitwiseLeftShift[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt8Value(
-		interpreter,
-		func() uint8 {
-			return uint8(v >> o)
-		},
-	)
+	return bitwiseRightShift[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -7766,93 +7455,23 @@ func ConvertUInt16(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 }
 
 func (v UInt16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			return uint16(v | o)
-		},
-	)
+	return bitwiseOr[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			return uint16(v ^ o)
-		},
-	)
+	return bitwiseXor[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			return uint16(v & o)
-		},
-	)
+	return bitwiseAnd[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			return uint16(v << o)
-		},
-	)
+	return bitwiseLeftShift[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			return uint16(v >> o)
-		},
-	)
+	return bitwiseRightShift[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -8097,93 +7716,23 @@ func ConvertUInt32(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 }
 
 func (v UInt32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-			return uint32(v | o)
-		},
-	)
+	return bitwiseOr[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-			return uint32(v ^ o)
-		},
-	)
+	return bitwiseXor[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-			return uint32(v & o)
-		},
-	)
+	return bitwiseAnd[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-			return uint32(v << o)
-		},
-	)
+	return bitwiseLeftShift[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-			return uint32(v >> o)
-		},
-	)
+	return bitwiseRightShift[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -8452,93 +8001,23 @@ func ConvertUInt64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 }
 
 func (v UInt64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			return uint64(v | o)
-		},
-	)
+	return bitwiseOr[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			return uint64(v ^ o)
-		},
-	)
+	return bitwiseXor[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			return uint64(v & o)
-		},
-	)
+	return bitwiseAnd[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			return uint64(v << o)
-		},
-	)
+	return bitwiseLeftShift[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			return uint64(v >> o)
-		},
-	)
+	return bitwiseRightShift[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -8837,111 +8316,23 @@ func ConvertUInt128(memoryGauge common.MemoryGauge, value Value, locationRange L
 }
 
 func (v UInt128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Or(v.BigInt, o.BigInt)
-		},
-	)
+	return bitwiseOrBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Xor(v.BigInt, o.BigInt)
-		},
-	)
+	return bitwiseXorBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			return res.And(v.BigInt, o.BigInt)
-		},
-	)
-
+	return bitwiseAndBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{locationRange})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{locationRange})
-			}
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		},
-	)
+	return bitwiseLeftShiftBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{locationRange})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{locationRange})
-			}
-			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-		},
-	)
+	return bitwiseRightShiftBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -9238,110 +8629,23 @@ func ConvertUInt256(memoryGauge common.MemoryGauge, value Value, locationRange L
 }
 
 func (v UInt256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Or(v.BigInt, o.BigInt)
-		},
-	)
+	return bitwiseOrBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Xor(v.BigInt, o.BigInt)
-		},
-	)
+	return bitwiseXorBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			return res.And(v.BigInt, o.BigInt)
-		},
-	)
+	return bitwiseAndBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{locationRange})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{locationRange})
-			}
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		},
-	)
+	return bitwiseLeftShiftBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{locationRange})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{locationRange})
-			}
-			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-		},
-	)
+	return bitwiseRightShiftBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -9579,88 +8883,23 @@ func ConvertWord8(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 }
 
 func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint8 {
-		return uint8(v | o)
-	}
-
-	return NewWord8Value(interpreter, valueGetter)
+	return bitwiseOr[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint8 {
-		return uint8(v ^ o)
-	}
-
-	return NewWord8Value(interpreter, valueGetter)
+	return bitwiseXor[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint8 {
-		return uint8(v & o)
-	}
-
-	return NewWord8Value(interpreter, valueGetter)
+	return bitwiseAnd[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint8 {
-		return uint8(v << o)
-	}
-
-	return NewWord8Value(interpreter, valueGetter)
+	return bitwiseLeftShift[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint8 {
-		return uint8(v >> o)
-	}
-
-	return NewWord8Value(interpreter, valueGetter)
+	return bitwiseRightShift[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -9898,88 +9137,23 @@ func ConvertWord16(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 }
 
 func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint16 {
-		return uint16(v | o)
-	}
-
-	return NewWord16Value(interpreter, valueGetter)
+	return bitwiseOr[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint16 {
-		return uint16(v ^ o)
-	}
-
-	return NewWord16Value(interpreter, valueGetter)
+	return bitwiseXor[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint16 {
-		return uint16(v & o)
-	}
-
-	return NewWord16Value(interpreter, valueGetter)
+	return bitwiseAnd[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint16 {
-		return uint16(v << o)
-	}
-
-	return NewWord16Value(interpreter, valueGetter)
+	return bitwiseLeftShift[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint16 {
-		return uint16(v >> o)
-	}
-
-	return NewWord16Value(interpreter, valueGetter)
+	return bitwiseRightShift[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -10220,88 +9394,23 @@ func ConvertWord32(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 }
 
 func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint32 {
-		return uint32(v | o)
-	}
-
-	return NewWord32Value(interpreter, valueGetter)
+	return bitwiseOr[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint32 {
-		return uint32(v ^ o)
-	}
-
-	return NewWord32Value(interpreter, valueGetter)
+	return bitwiseXor[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint32 {
-		return uint32(v & o)
-	}
-
-	return NewWord32Value(interpreter, valueGetter)
+	return bitwiseAnd[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint32 {
-		return uint32(v << o)
-	}
-
-	return NewWord32Value(interpreter, valueGetter)
+	return bitwiseLeftShift[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint32 {
-		return uint32(v >> o)
-	}
-
-	return NewWord32Value(interpreter, valueGetter)
+	return bitwiseRightShift[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -10566,88 +9675,23 @@ func ConvertWord64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 }
 
 func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint64 {
-		return uint64(v | o)
-	}
-
-	return NewWord64Value(interpreter, valueGetter)
+	return bitwiseOr[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint64 {
-		return uint64(v ^ o)
-	}
-
-	return NewWord64Value(interpreter, valueGetter)
+	return bitwiseXor[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint64 {
-		return uint64(v & o)
-	}
-
-	return NewWord64Value(interpreter, valueGetter)
+	return bitwiseAnd[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint64 {
-		return uint64(v << o)
-	}
-
-	return NewWord64Value(interpreter, valueGetter)
+	return bitwiseLeftShift[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint64 {
-		return uint64(v >> o)
-	}
-
-	return NewWord64Value(interpreter, valueGetter)
+	return bitwiseRightShift[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
