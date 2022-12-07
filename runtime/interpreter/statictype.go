@@ -868,8 +868,8 @@ func (t FunctionStaticType) Equal(other StaticType) bool {
 }
 
 type TypeParameter struct {
-	Name      string
 	TypeBound StaticType
+	Name      string
 	Optional  bool
 }
 

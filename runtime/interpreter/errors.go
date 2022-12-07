@@ -756,11 +756,11 @@ func (e InterfaceMissingLocationError) Error() string {
 
 // InvalidOperandsError
 type InvalidOperandsError struct {
-	Operation    ast.Operation
-	FunctionName string
+	LocationRange
 	LeftType     StaticType
 	RightType    StaticType
-	LocationRange
+	FunctionName string
+	Operation    ast.Operation
 }
 
 var _ errors.UserError = InvalidOperandsError{}
@@ -843,8 +843,8 @@ func (StorageMutatedDuringIterationError) Error() string {
 
 // InvalidHexByteError
 type InvalidHexByteError struct {
-	Byte byte
 	LocationRange
+	Byte byte
 }
 
 var _ errors.UserError = InvalidHexByteError{}

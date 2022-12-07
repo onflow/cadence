@@ -890,14 +890,14 @@ func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Val
 // StringValue
 
 type StringValue struct {
-	Str string
-	// length is the cached length of the string, based on grapheme clusters.
-	// a negative value indicates the length has not been initialized, see Length()
-	length int
 	// graphemes is a grapheme cluster segmentation iterator,
 	// which is initialized lazily and reused/reset in functions
 	// that are based on grapheme clusters
 	graphemes *uniseg.Graphemes
+	Str       string
+	// length is the cached length of the string, based on grapheme clusters.
+	// a negative value indicates the length has not been initialized, see Length()
+	length int
 }
 
 func NewUnmeteredStringValue(str string) *StringValue {
