@@ -2016,7 +2016,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 							interpreter.invalidateResource(value)
 							interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
 						}
-						return ReturnResult{returnValue}
+						return ReturnResult{Value: returnValue}
 					}
 				}
 

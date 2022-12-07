@@ -147,8 +147,8 @@ func TestWASMWriter_writeFunctionSection(t *testing.T) {
 					ValueTypeI32,
 				},
 				Instructions: []Instruction{
-					InstructionLocalGet{0},
-					InstructionLocalGet{1},
+					InstructionLocalGet{LocalIndex: 0},
+					InstructionLocalGet{LocalIndex: 1},
 					InstructionI32Add{},
 				},
 			},
@@ -301,8 +301,8 @@ func TestWASMWriter_writeCodeSection(t *testing.T) {
 					ValueTypeI32,
 				},
 				Instructions: []Instruction{
-					InstructionLocalGet{0},
-					InstructionLocalGet{1},
+					InstructionLocalGet{LocalIndex: 0},
+					InstructionLocalGet{LocalIndex: 1},
 					InstructionI32Add{},
 				},
 			},
