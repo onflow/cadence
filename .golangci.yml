@@ -5,14 +5,12 @@ linters:
     - gosimple
     - errcheck
     - staticcheck
-    - structcheck
-    - varcheck
     - ineffassign
     - typecheck
     - misspell
     - maprange
+    - unkeyed
     - unused
-    - deadcode
     - exportloopref
     - gocritic
     - gofmt
@@ -25,6 +23,7 @@ issues:
     - path: _test\.go
       linters:
         - maprange
+        - unkeyed
         - constructorcheck
   max-issues-per-linter: 0
   max-same-issues: 0
@@ -42,11 +41,13 @@ linters-settings:
   custom:
     maprange:
       path: tools/maprange/maprange.so
-      description: reports range statements over maps
+      description: reports for-range statements over maps
       original-url: github.com/onflow/cadence/tools/maprange
+    unkeyed:
+      path: tools/unkeyed/unkeyed.so
+      description: reports unkeyed composite literals
+      original-url: github.com/onflow/cadence/tools/unkeyed
     constructorcheck:
       path: tools/constructorcheck/constructorcheck.so
       description: reports range statements over maps
       original-url: github.com/onflow/cadence/tools/constructorcheck
-
-

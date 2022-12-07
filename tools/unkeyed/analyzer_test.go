@@ -16,9 +16,20 @@
  * limitations under the License.
  */
 
-package lint
+package main
 
 import (
-	_ "github.com/golangci/golangci-lint/pkg/commands"
-	_ "github.com/golangci/golangci-lint/pkg/lint"
+	"testing"
+
+	"golang.org/x/exp/typeparams"
+	"golang.org/x/tools/go/analysis/analysistest"
 )
+
+func TestAll(t *testing.T) {
+	testdata := analysistest.TestData()
+	pkgs := []string{"a"}
+	if typeparams.Enabled() {
+		pkgs = append(pkgs, "typeparams")
+	}
+	analysistest.RunWithSuggestedFixes(t, testdata, Analyzer, pkgs...)
+}

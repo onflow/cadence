@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package testdata
+package a
 
 func testVariable() {
 	var m map[string]int

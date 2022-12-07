@@ -70,10 +70,13 @@ fix-lint: build-linter
 	tools/golangci-lint/golangci-lint run -v --fix --timeout=5m  $(LINTERS) ./...
 
 .PHONY: build-linter
-build-linter: tools/golangci-lint/golangci-lint tools/maprange/maprange.so tools/constructorcheck/constructorcheck.so
+build-linter: tools/golangci-lint/golangci-lint tools/maprange/maprange.so tools/unkeyed/unkeyed.so tools/constructorcheck/constructorcheck.so
 
 tools/maprange/maprange.so:
 	(cd tools/maprange && $(MAKE) plugin)
+
+tools/unkeyed/unkeyed.so:
+	(cd tools/unkeyed && $(MAKE) plugin)
 
 tools/constructorcheck/constructorcheck.so:
 	(cd tools/constructorcheck && $(MAKE) plugin)
