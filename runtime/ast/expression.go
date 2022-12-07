@@ -2047,7 +2047,12 @@ func NewVoidExpression(
 	endPos Position,
 ) *VoidExpression {
 	common.UseMemory(gauge, common.VoidExpressionMemoryUsage)
-	return &VoidExpression{Range: Range{startPos, endPos}}
+	return &VoidExpression{
+		Range: Range{
+			StartPos: startPos,
+			EndPos:   endPos,
+		},
+	}
 }
 
 var _ Element = &VoidExpression{}

@@ -137,10 +137,12 @@ func NewChecker(
 
 	functionActivations := FunctionActivations{
 		// Pre-allocate a common function depth
-		make([]FunctionActivation, 0, 2),
+		activations: make([]FunctionActivation, 0, 2),
 	}
-	functionActivations.EnterFunction(&FunctionType{
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
+	functionActivations.EnterFunction(
+		&FunctionType{
+			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+		},
 		0,
 	)
 

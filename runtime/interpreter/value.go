@@ -217,9 +217,9 @@ type ValueIterator interface {
 func safeAdd(a, b int, locationRange LocationRange) int {
 	// INT32-C
 	if (b > 0) && (a > (goMaxInt - b)) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	} else if (b < 0) && (a < (goMinInt - b)) {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 	return a + b
 }
@@ -230,24 +230,24 @@ func safeMul(a, b int, locationRange LocationRange) int {
 		if b > 0 {
 			// positive * positive = positive. overflow?
 			if a > (goMaxInt / b) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 		} else {
 			// positive * negative = negative. underflow?
 			if b < (goMinInt / a) {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 		}
 	} else {
 		if b > 0 {
 			// negative * positive = negative. underflow?
 			if a < (goMinInt / b) {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 		} else {
 			// negative * negative = positive. overflow?
 			if (a != 0) && (b < (goMaxInt / a)) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 		}
 	}
@@ -268,7 +268,7 @@ var _ EquatableValue = TypeValue{}
 var _ MemberAccessibleValue = TypeValue{}
 
 func NewUnmeteredTypeValue(t StaticType) TypeValue {
-	return TypeValue{t}
+	return TypeValue{Type: t}
 }
 
 func NewTypeValue(
@@ -2923,7 +2923,7 @@ func (IntValue) IsImportable(_ *Interpreter) bool {
 
 func (v IntValue) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 	return int(v.BigInt.Int64())
 }
@@ -3052,7 +3052,7 @@ func (v IntValue) Mod(interpreter *Interpreter, other NumberValue, locationRange
 			res := new(big.Int)
 			// INT33-C
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return res.Rem(v.BigInt, o.BigInt)
 		},
@@ -3111,7 +3111,7 @@ func (v IntValue) Div(interpreter *Interpreter, other NumberValue, locationRange
 			res := new(big.Int)
 			// INT33-C
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return res.Div(v.BigInt, o.BigInt)
 		},
@@ -3289,11 +3289,11 @@ func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue,
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	if !o.BigInt.IsUint64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	return NewIntValueFromBigInt(
@@ -3317,11 +3317,11 @@ func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	if !o.BigInt.IsUint64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	return NewIntValueFromBigInt(
@@ -3473,7 +3473,7 @@ func (v Int8Value) ToInt(locationRange LocationRange) int {
 func (v Int8Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt8 {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int8 {
@@ -3495,9 +3495,9 @@ func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue, locationRan
 
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt8 - o)) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	} else if (o < 0) && (v < (math.MinInt8 - o)) {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int8 {
@@ -3542,9 +3542,9 @@ func (v Int8Value) Minus(interpreter *Interpreter, other NumberValue, locationRa
 
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt8 + o)) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int8 {
@@ -3589,7 +3589,7 @@ func (v Int8Value) Mod(interpreter *Interpreter, other NumberValue, locationRang
 
 	// INT33-C
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int8 {
@@ -3614,24 +3614,24 @@ func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue, locationRang
 		if o > 0 {
 			// positive * positive = positive. overflow?
 			if v > (math.MaxInt8 / o) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 		} else {
 			// positive * negative = negative. underflow?
 			if o < (math.MinInt8 / v) {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 		}
 	} else {
 		if o > 0 {
 			// negative * positive = negative. underflow?
 			if v < (math.MinInt8 / o) {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 		} else {
 			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt8 / v)) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 		}
 	}
@@ -3700,9 +3700,9 @@ func (v Int8Value) Div(interpreter *Interpreter, other NumberValue, locationRang
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	} else if (v == math.MinInt8) && (o == -1) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int8 {
@@ -3726,7 +3726,7 @@ func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 		// INT33-C
 		// https://golang.org/ref/spec#Integer_operators
 		if o == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		} else if (v == math.MinInt8) && (o == -1) {
 			return math.MaxInt8
 		}
@@ -3812,18 +3812,18 @@ func ConvertInt8(memoryGauge common.MemoryGauge, value Value, locationRange Loca
 		case BigNumberValue:
 			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int8TypeMaxInt) > 0 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			} else if v.Cmp(sema.Int8TypeMinInt) < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return int8(v.Int64())
 
 		case NumberValue:
 			v := value.ToInt(locationRange)
 			if v > math.MaxInt8 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			} else if v < math.MinInt8 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return int8(v)
 
@@ -4060,7 +4060,7 @@ func (v Int16Value) ToInt(locationRange LocationRange) int {
 func (v Int16Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt16 {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int16 {
@@ -4082,9 +4082,9 @@ func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt16 - o)) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	} else if (o < 0) && (v < (math.MinInt16 - o)) {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int16 {
@@ -4129,9 +4129,9 @@ func (v Int16Value) Minus(interpreter *Interpreter, other NumberValue, locationR
 
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt16 + o)) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int16 {
@@ -4176,7 +4176,7 @@ func (v Int16Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 
 	// INT33-C
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int16 {
@@ -4201,24 +4201,24 @@ func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 		if o > 0 {
 			// positive * positive = positive. overflow?
 			if v > (math.MaxInt16 / o) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 		} else {
 			// positive * negative = negative. underflow?
 			if o < (math.MinInt16 / v) {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 		}
 	} else {
 		if o > 0 {
 			// negative * positive = negative. underflow?
 			if v < (math.MinInt16 / o) {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 		} else {
 			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt16 / v)) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 		}
 	}
@@ -4286,9 +4286,9 @@ func (v Int16Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	} else if (v == math.MinInt16) && (o == -1) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int16 {
@@ -4312,7 +4312,7 @@ func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 		// INT33-C
 		// https://golang.org/ref/spec#Integer_operators
 		if o == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		} else if (v == math.MinInt16) && (o == -1) {
 			return math.MaxInt16
 		}
@@ -4398,18 +4398,18 @@ func ConvertInt16(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 		case BigNumberValue:
 			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int16TypeMaxInt) > 0 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			} else if v.Cmp(sema.Int16TypeMinInt) < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return int16(v.Int64())
 
 		case NumberValue:
 			v := value.ToInt(locationRange)
 			if v > math.MaxInt16 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			} else if v < math.MinInt16 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return int16(v)
 
@@ -4648,7 +4648,7 @@ func (v Int32Value) ToInt(locationRange LocationRange) int {
 func (v Int32Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt32 {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int32 {
@@ -4670,9 +4670,9 @@ func (v Int32Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt32 - o)) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	} else if (o < 0) && (v < (math.MinInt32 - o)) {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int32 {
@@ -4717,9 +4717,9 @@ func (v Int32Value) Minus(interpreter *Interpreter, other NumberValue, locationR
 
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt32 + o)) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int32 {
@@ -4764,7 +4764,7 @@ func (v Int32Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 
 	// INT33-C
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int32 {
@@ -4789,24 +4789,24 @@ func (v Int32Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 		if o > 0 {
 			// positive * positive = positive. overflow?
 			if v > (math.MaxInt32 / o) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 		} else {
 			// positive * negative = negative. underflow?
 			if o < (math.MinInt32 / v) {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 		}
 	} else {
 		if o > 0 {
 			// negative * positive = negative. underflow?
 			if v < (math.MinInt32 / o) {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 		} else {
 			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt32 / v)) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 		}
 	}
@@ -4874,9 +4874,9 @@ func (v Int32Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	} else if (v == math.MinInt32) && (o == -1) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int32 {
@@ -4900,7 +4900,7 @@ func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 		// INT33-C
 		// https://golang.org/ref/spec#Integer_operators
 		if o == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		} else if (v == math.MinInt32) && (o == -1) {
 			return math.MaxInt32
 		}
@@ -4986,18 +4986,18 @@ func ConvertInt32(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 		case BigNumberValue:
 			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int32TypeMaxInt) > 0 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			} else if v.Cmp(sema.Int32TypeMinInt) < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return int32(v.Int64())
 
 		case NumberValue:
 			v := value.ToInt(locationRange)
 			if v > math.MaxInt32 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			} else if v < math.MinInt32 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return int32(v)
 
@@ -5234,7 +5234,7 @@ func (v Int64Value) ToInt(locationRange LocationRange) int {
 func (v Int64Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int64 {
@@ -5247,9 +5247,9 @@ func (v Int64Value) Negate(interpreter *Interpreter, locationRange LocationRange
 func safeAddInt64(a, b int64, locationRange LocationRange) int64 {
 	// INT32-C
 	if (b > 0) && (a > (math.MaxInt64 - b)) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	} else if (b < 0) && (a < (math.MinInt64 - b)) {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 	return a + b
 }
@@ -5306,9 +5306,9 @@ func (v Int64Value) Minus(interpreter *Interpreter, other NumberValue, locationR
 
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt64 + o)) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int64 {
@@ -5353,7 +5353,7 @@ func (v Int64Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 
 	// INT33-C
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int64 {
@@ -5378,24 +5378,24 @@ func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 		if o > 0 {
 			// positive * positive = positive. overflow?
 			if v > (math.MaxInt64 / o) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 		} else {
 			// positive * negative = negative. underflow?
 			if o < (math.MinInt64 / v) {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 		}
 	} else {
 		if o > 0 {
 			// negative * positive = negative. underflow?
 			if v < (math.MinInt64 / o) {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 		} else {
 			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt64 / v)) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 		}
 	}
@@ -5463,9 +5463,9 @@ func (v Int64Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	} else if (v == math.MinInt64) && (o == -1) {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int64 {
@@ -5489,7 +5489,7 @@ func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 		// INT33-C
 		// https://golang.org/ref/spec#Integer_operators
 		if o == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		} else if (v == math.MinInt64) && (o == -1) {
 			return math.MaxInt64
 		}
@@ -5575,9 +5575,9 @@ func ConvertInt64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 		case BigNumberValue:
 			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int64TypeMaxInt) > 0 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			} else if v.Cmp(sema.Int64TypeMinInt) < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return v.Int64()
 
@@ -5812,7 +5812,7 @@ func (Int128Value) IsImportable(_ *Interpreter) bool {
 
 func (v Int128Value) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 	return int(v.BigInt.Int64())
 }
@@ -5850,7 +5850,7 @@ func (v Int128Value) Negate(interpreter *Interpreter, locationRange LocationRang
 	//       ...
 	//   }
 	if v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0 {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() *big.Int {
@@ -5886,9 +5886,9 @@ func (v Int128Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 		res := new(big.Int)
 		res.Add(v.BigInt, o.BigInt)
 		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 
 		return res
@@ -5960,9 +5960,9 @@ func (v Int128Value) Minus(interpreter *Interpreter, other NumberValue, location
 		res := new(big.Int)
 		res.Sub(v.BigInt, o.BigInt)
 		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 
 		return res
@@ -6022,7 +6022,7 @@ func (v Int128Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 		res := new(big.Int)
 		// INT33-C
 		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		}
 		res.Rem(v.BigInt, o.BigInt)
 
@@ -6046,9 +6046,9 @@ func (v Int128Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		res := new(big.Int)
 		res.Mul(v.BigInt, o.BigInt)
 		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 
 		return res
@@ -6101,11 +6101,11 @@ func (v Int128Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 		//       ...
 		//   }
 		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		}
 		res.SetInt64(-1)
 		if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 		res.Div(v.BigInt, o.BigInt)
 
@@ -6134,7 +6134,7 @@ func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 		//       ...
 		//   }
 		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		}
 		res.SetInt64(-1)
 		if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
@@ -6248,9 +6248,9 @@ func ConvertInt128(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 		}
 
 		if v.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		} else if v.Cmp(sema.Int128TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		}
 
 		return v
@@ -6327,10 +6327,10 @@ func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 	if !o.BigInt.IsUint64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() *big.Int {
@@ -6353,10 +6353,10 @@ func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 	if !o.BigInt.IsUint64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() *big.Int {
@@ -6500,7 +6500,7 @@ func (Int256Value) IsImportable(_ *Interpreter) bool {
 
 func (v Int256Value) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 	return int(v.BigInt.Int64())
 }
@@ -6538,7 +6538,7 @@ func (v Int256Value) Negate(interpreter *Interpreter, locationRange LocationRang
 	//       ...
 	//   }
 	if v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0 {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() *big.Int {
@@ -6574,9 +6574,9 @@ func (v Int256Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 		res := new(big.Int)
 		res.Add(v.BigInt, o.BigInt)
 		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 
 		return res
@@ -6648,9 +6648,9 @@ func (v Int256Value) Minus(interpreter *Interpreter, other NumberValue, location
 		res := new(big.Int)
 		res.Sub(v.BigInt, o.BigInt)
 		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 
 		return res
@@ -6710,7 +6710,7 @@ func (v Int256Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 		res := new(big.Int)
 		// INT33-C
 		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		}
 		res.Rem(v.BigInt, o.BigInt)
 
@@ -6734,9 +6734,9 @@ func (v Int256Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		res := new(big.Int)
 		res.Mul(v.BigInt, o.BigInt)
 		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 
 		return res
@@ -6789,11 +6789,11 @@ func (v Int256Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 		//       ...
 		//   }
 		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		}
 		res.SetInt64(-1)
 		if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 		res.Div(v.BigInt, o.BigInt)
 		return res
@@ -6821,7 +6821,7 @@ func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 		//       ...
 		//   }
 		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		}
 		res.SetInt64(-1)
 		if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
@@ -6934,9 +6934,9 @@ func ConvertInt256(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 		}
 
 		if v.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		} else if v.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		}
 
 		return v
@@ -7015,10 +7015,10 @@ func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
 		if o.BigInt.Sign() < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		}
 		if !o.BigInt.IsUint64() {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
 
@@ -7041,10 +7041,10 @@ func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
 		if o.BigInt.Sign() < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		}
 		if !o.BigInt.IsUint64() {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 		res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		return res
@@ -7173,7 +7173,7 @@ func ConvertUInt(memoryGauge common.MemoryGauge, value Value, locationRange Loca
 			func() *big.Int {
 				v := value.ToBigInt(memoryGauge)
 				if v.Sign() < 0 {
-					panic(UnderflowError{locationRange})
+					panic(UnderflowError{LocationRange: locationRange})
 				}
 				return v
 			},
@@ -7182,7 +7182,7 @@ func ConvertUInt(memoryGauge common.MemoryGauge, value Value, locationRange Loca
 	case NumberValue:
 		v := value.ToInt(locationRange)
 		if v < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		}
 		return NewUIntValueFromUint64(
 			memoryGauge,
@@ -7222,7 +7222,7 @@ func (v UIntValue) IsImportable(_ *Interpreter) bool {
 
 func (v UIntValue) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 	return int(v.BigInt.Int64())
 }
@@ -7311,7 +7311,7 @@ func (v UIntValue) Minus(interpreter *Interpreter, other NumberValue, locationRa
 			res.Sub(v.BigInt, o.BigInt)
 			// INT30-C
 			if res.Sign() < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return res
 		},
@@ -7360,7 +7360,7 @@ func (v UIntValue) Mod(interpreter *Interpreter, other NumberValue, locationRang
 			res := new(big.Int)
 			// INT33-C
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			res.Rem(v.BigInt, o.BigInt)
 			return res
@@ -7420,7 +7420,7 @@ func (v UIntValue) Div(interpreter *Interpreter, other NumberValue, locationRang
 			res := new(big.Int)
 			// INT33-C
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return res.Div(v.BigInt, o.BigInt)
 		},
@@ -7597,11 +7597,11 @@ func (v UIntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	if !o.BigInt.IsUint64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	return NewUIntValueFromBigInt(
@@ -7626,10 +7626,10 @@ func (v UIntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 	if !o.BigInt.IsUint64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	return NewUIntValueFromBigInt(
@@ -7795,7 +7795,7 @@ func (v UInt8Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 		sum := v + o
 		// INT30-C
 		if sum < v {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 		return uint8(sum)
 	})
@@ -7837,7 +7837,7 @@ func (v UInt8Value) Minus(interpreter *Interpreter, other NumberValue, locationR
 			diff := v - o
 			// INT30-C
 			if diff > v {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return uint8(diff)
 		},
@@ -7881,7 +7881,7 @@ func (v UInt8Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 		interpreter,
 		func() uint8 {
 			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return uint8(v % o)
 		},
@@ -7903,7 +7903,7 @@ func (v UInt8Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 		func() uint8 {
 			// INT30-C
 			if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return uint8(v * o)
 		},
@@ -7946,7 +7946,7 @@ func (v UInt8Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 		interpreter,
 		func() uint8 {
 			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return uint8(v / o)
 		},
@@ -8048,18 +8048,18 @@ func ConvertUnsigned[T Unsigned](
 	case BigNumberValue:
 		v := value.ToBigInt(memoryGauge)
 		if v.Cmp(maxBigNumber) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		} else if v.Sign() < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		}
 		return T(v.Int64())
 
 	case NumberValue:
 		v := value.ToInt(locationRange)
 		if maxNumber > 0 && v > maxNumber {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		} else if v < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		}
 		return T(v)
 
@@ -8344,7 +8344,7 @@ func (v UInt16Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 			sum := v + o
 			// INT30-C
 			if sum < v {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return uint16(sum)
 		},
@@ -8390,7 +8390,7 @@ func (v UInt16Value) Minus(interpreter *Interpreter, other NumberValue, location
 			diff := v - o
 			// INT30-C
 			if diff > v {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return uint16(diff)
 		},
@@ -8434,7 +8434,7 @@ func (v UInt16Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 		interpreter,
 		func() uint16 {
 			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return uint16(v % o)
 		},
@@ -8456,7 +8456,7 @@ func (v UInt16Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		func() uint16 {
 			// INT30-C
 			if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return uint16(v * o)
 		},
@@ -8499,7 +8499,7 @@ func (v UInt16Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 		interpreter,
 		func() uint16 {
 			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return uint16(v / o)
 		},
@@ -8856,7 +8856,7 @@ func (v UInt32Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 			sum := v + o
 			// INT30-C
 			if sum < v {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return uint32(sum)
 		},
@@ -8902,7 +8902,7 @@ func (v UInt32Value) Minus(interpreter *Interpreter, other NumberValue, location
 			diff := v - o
 			// INT30-C
 			if diff > v {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return uint32(diff)
 		},
@@ -8946,7 +8946,7 @@ func (v UInt32Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 		interpreter,
 		func() uint32 {
 			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return uint32(v % o)
 		},
@@ -8967,7 +8967,7 @@ func (v UInt32Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		interpreter,
 		func() uint32 {
 			if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return uint32(v * o)
 		},
@@ -9011,7 +9011,7 @@ func (v UInt32Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 		interpreter,
 		func() uint32 {
 			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return uint32(v / o)
 		},
@@ -9352,7 +9352,7 @@ func (v UInt64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferen
 
 func (v UInt64Value) ToInt(locationRange LocationRange) int {
 	if v > math.MaxInt64 {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 	return int(v)
 }
@@ -9380,7 +9380,7 @@ func safeAddUint64(a, b uint64, locationRange LocationRange) uint64 {
 	sum := a + b
 	// INT30-C
 	if sum < a {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 	return sum
 }
@@ -9442,7 +9442,7 @@ func (v UInt64Value) Minus(interpreter *Interpreter, other NumberValue, location
 			diff := v - o
 			// INT30-C
 			if diff > v {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return uint64(diff)
 		},
@@ -9486,7 +9486,7 @@ func (v UInt64Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 		interpreter,
 		func() uint64 {
 			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return uint64(v % o)
 		},
@@ -9507,7 +9507,7 @@ func (v UInt64Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		interpreter,
 		func() uint64 {
 			if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return uint64(v * o)
 		},
@@ -9550,7 +9550,7 @@ func (v UInt64Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 		interpreter,
 		func() uint64 {
 			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return uint64(v / o)
 		},
@@ -9884,7 +9884,7 @@ func (UInt128Value) IsImportable(_ *Interpreter) bool {
 
 func (v UInt128Value) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 	return int(v.BigInt.Int64())
 }
@@ -9946,7 +9946,7 @@ func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue, location
 			//  }
 			//
 			if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return sum
 		},
@@ -10012,7 +10012,7 @@ func (v UInt128Value) Minus(interpreter *Interpreter, other NumberValue, locatio
 			//   }
 			//
 			if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return diff
 		},
@@ -10067,7 +10067,7 @@ func (v UInt128Value) Mod(interpreter *Interpreter, other NumberValue, locationR
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return res.Rem(v.BigInt, o.BigInt)
 		},
@@ -10090,7 +10090,7 @@ func (v UInt128Value) Mul(interpreter *Interpreter, other NumberValue, locationR
 			res := new(big.Int)
 			res.Mul(v.BigInt, o.BigInt)
 			if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return res
 		},
@@ -10135,7 +10135,7 @@ func (v UInt128Value) Div(interpreter *Interpreter, other NumberValue, locationR
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return res.Div(v.BigInt, o.BigInt)
 		},
@@ -10261,9 +10261,9 @@ func ConvertUInt128(memoryGauge common.MemoryGauge, value Value, locationRange L
 			}
 
 			if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			} else if v.Sign() < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 
 			return v
@@ -10344,10 +10344,10 @@ func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			if !o.BigInt.IsUint64() {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
@@ -10369,10 +10369,10 @@ func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			if !o.BigInt.IsUint64() {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
@@ -10515,7 +10515,7 @@ func (UInt256Value) IsImportable(_ *Interpreter) bool {
 
 func (v UInt256Value) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	return int(v.BigInt.Int64())
@@ -10578,7 +10578,7 @@ func (v UInt256Value) Plus(interpreter *Interpreter, other NumberValue, location
 			//  }
 			//
 			if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return sum
 		},
@@ -10645,7 +10645,7 @@ func (v UInt256Value) Minus(interpreter *Interpreter, other NumberValue, locatio
 			//   }
 			//
 			if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return diff
 		},
@@ -10701,7 +10701,7 @@ func (v UInt256Value) Mod(interpreter *Interpreter, other NumberValue, locationR
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return res.Rem(v.BigInt, o.BigInt)
 		},
@@ -10724,7 +10724,7 @@ func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue, locationR
 			res := new(big.Int)
 			res.Mul(v.BigInt, o.BigInt)
 			if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return res
 		},
@@ -10769,7 +10769,7 @@ func (v UInt256Value) Div(interpreter *Interpreter, other NumberValue, locationR
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return res.Div(v.BigInt, o.BigInt)
 		},
@@ -10893,9 +10893,9 @@ func ConvertUInt256(memoryGauge common.MemoryGauge, value Value, locationRange L
 			}
 
 			if v.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			} else if v.Sign() < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 
 			return v
@@ -10975,10 +10975,10 @@ func (v UInt256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			if !o.BigInt.IsUint64() {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
@@ -11000,10 +11000,10 @@ func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			if !o.BigInt.IsUint64() {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
@@ -11207,7 +11207,7 @@ func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() uint8 {
@@ -11249,7 +11249,7 @@ func (v Word8Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() uint8 {
@@ -11623,7 +11623,7 @@ func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() uint16 {
@@ -11665,7 +11665,7 @@ func (v Word16Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() uint16 {
@@ -12042,7 +12042,7 @@ func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() uint32 {
@@ -12084,7 +12084,7 @@ func (v Word32Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() uint32 {
@@ -12408,7 +12408,7 @@ func (v Word64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferen
 
 func (v Word64Value) ToInt(locationRange LocationRange) int {
 	if v > math.MaxInt64 {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 	return int(v)
 }
@@ -12485,7 +12485,7 @@ func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() uint64 {
@@ -12527,7 +12527,7 @@ func (v Word64Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() uint64 {
@@ -12805,11 +12805,11 @@ func NewFix64ValueWithInteger(gauge common.MemoryGauge, constructor func() int64
 func NewUnmeteredFix64ValueWithInteger(integer int64, locationRange LocationRange) Fix64Value {
 
 	if integer < sema.Fix64TypeMinInt {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 
 	if integer > sema.Fix64TypeMaxInt {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	return NewUnmeteredFix64Value(integer * sema.Fix64Factor)
@@ -12875,7 +12875,7 @@ func (v Fix64Value) ToInt(locationRange LocationRange) int {
 func (v Fix64Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() int64 {
@@ -12938,9 +12938,9 @@ func (v Fix64Value) Minus(interpreter *Interpreter, other NumberValue, locationR
 	valueGetter := func() int64 {
 		// INT32-C
 		if (o > 0) && (v < (math.MinInt64 + o)) {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		}
 
 		return int64(v - o)
@@ -12993,9 +12993,9 @@ func (v Fix64Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 		result.Div(result, sema.Fix64FactorBig)
 
 		if result.Cmp(minInt64Big) < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		} else if result.Cmp(maxInt64Big) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 
 		return result.Int64()
@@ -13051,9 +13051,9 @@ func (v Fix64Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 		result.Div(result, b)
 
 		if result.Cmp(minInt64Big) < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		} else if result.Cmp(maxInt64Big) > 0 {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 
 		return result.Int64()
@@ -13201,7 +13201,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 
 	case UFix64Value:
 		if value > Fix64MaxValue {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 		return NewFix64Value(
 			memoryGauge,
@@ -13219,7 +13219,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 			// allows us to call `v.Int64()` safely.
 
 			if !v.IsInt64() {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 
 			return v.Int64()
@@ -13344,7 +13344,7 @@ func NewUFix64ValueWithInteger(gauge common.MemoryGauge, constructor func() uint
 
 func NewUnmeteredUFix64ValueWithInteger(integer uint64, locationRange LocationRange) UFix64Value {
 	if integer > sema.UFix64TypeMaxInt {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	return NewUnmeteredUFix64Value(integer * sema.Fix64Factor)
@@ -13465,7 +13465,7 @@ func (v UFix64Value) Minus(interpreter *Interpreter, other NumberValue, location
 
 		// INT30-C
 		if diff > v {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		}
 		return uint64(diff)
 	}
@@ -13514,7 +13514,7 @@ func (v UFix64Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		result.Div(result, sema.Fix64FactorBig)
 
 		if !result.IsUint64() {
-			panic(OverflowError{locationRange})
+			panic(OverflowError{LocationRange: locationRange})
 		}
 
 		return result.Uint64()
@@ -13698,7 +13698,7 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 
 	case Fix64Value:
 		if value < 0 {
-			panic(UnderflowError{locationRange})
+			panic(UnderflowError{LocationRange: locationRange})
 		}
 		return NewUFix64Value(
 			memoryGauge,
@@ -13712,7 +13712,7 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 			v := value.ToBigInt(memoryGauge)
 
 			if v.Sign() < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 
 			// First, check if the value is at least in the uint64 range.
@@ -13720,7 +13720,7 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 			// allows us to call `v.UInt64()` safely.
 
 			if !v.IsUint64() {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 
 			return v.Uint64()
@@ -13733,7 +13733,7 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 		converter := func() uint64 {
 			v := value.ToInt(locationRange)
 			if v < 0 {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 
 			return uint64(v)
@@ -15479,8 +15479,8 @@ func (v *DictionaryValue) MeteredString(memoryGauge common.MemoryGauge, seenRefe
 			Key   string
 			Value string
 		}{
-			MustConvertStoredValue(memoryGauge, key).MeteredString(memoryGauge, seenReferences),
-			MustConvertStoredValue(memoryGauge, value).MeteredString(memoryGauge, seenReferences),
+			Key:   MustConvertStoredValue(memoryGauge, key).MeteredString(memoryGauge, seenReferences),
+			Value: MustConvertStoredValue(memoryGauge, value).MeteredString(memoryGauge, seenReferences),
 		}
 		index++
 		return true, nil
@@ -17744,7 +17744,7 @@ type PathValue struct {
 }
 
 func NewUnmeteredPathValue(domain common.PathDomain, identifier string) PathValue {
-	return PathValue{domain, identifier}
+	return PathValue{Domain: domain, Identifier: identifier}
 }
 
 func NewPathValue(
@@ -18218,7 +18218,7 @@ type PathLinkValue struct {
 }
 
 func NewUnmeteredPathLinkValue(targetPath PathValue, staticType StaticType) PathLinkValue {
-	return PathLinkValue{targetPath, staticType}
+	return PathLinkValue{TargetPath: targetPath, Type: staticType}
 }
 
 func NewPathLinkValue(memoryGauge common.MemoryGauge, targetPath PathValue, staticType StaticType) PathLinkValue {

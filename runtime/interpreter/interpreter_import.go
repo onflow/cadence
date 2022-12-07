@@ -73,7 +73,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 
 	var names []string
 
-	for name := range variables { //nolint:maprangecheck
+	for name := range variables { //nolint:maprange
 		names = append(names, name)
 	}
 
