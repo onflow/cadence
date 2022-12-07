@@ -5353,9 +5353,13 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			switch typedInnerSubType := typedSubType.Type.(type) {
 			case *CompositeType:
 				return typedInnerSubType.ExplicitInterfaceConformanceSet().Contains(typedInnerSuperType)
-			// An interface type is a supertype of a restricted type if the restricted set contains
-			// that explicit interface type. Once interfaces can conform to interfaces, this should instead
-			// check that at least one value in the restriction set is a subtype of the interface supertype
+			// An unauthorized reference to an interface type `&T`
+			// is a supertype of a reference to a restricted type `&{U}`:
+			// if the restriction set contains that explicit interface type. 
+			//
+			// Once interfaces can conform to interfaces, 
+			// this should instead check that at least one value in the restriction set 
+			// is a subtype of the interface supertype
 			case *RestrictedType:
 				return typedInnerSubType.RestrictionSet().Contains(typedInnerSuperType)
 			}
