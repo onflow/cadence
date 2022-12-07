@@ -82,7 +82,7 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 		switch baseType := baseType.(type) {
 		case CompositeKindedType:
 			compositeKind := baseType.GetCompositeKind()
-			if !(compositeKind == common.CompositeKindResource || compositeKind == common.CompositeKindStructure) {
+			if !(compositeKind.SupportsAttachments()) {
 				return reportInvalidBase(baseType)
 			}
 		// these are always resource/structure types

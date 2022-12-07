@@ -4829,6 +4829,9 @@ func (t *ReferenceType) TypeIndexingElementType(indexingType Type) Type {
 func (t *ReferenceType) IsValidIndexingType(ty Type) bool {
 	attachmentType, isComposite := ty.(*CompositeType)
 	return isComposite &&
+		// we can index into reference types only if their referenced type
+		// is a valid base for the attachement;
+		// i.e. (&v)[A] is valid only if `v` is a valid base for `A`
 		IsSubType(t, &ReferenceType{
 			Type: attachmentType.baseType,
 		}) &&
