@@ -20,8 +20,8 @@ package wasm
 
 // Exports represents an export
 type Export struct {
-	Name       string
 	Descriptor ExportDescriptor
+	Name       string
 }
 
 // exportIndicator is the byte used to indicate the kind of export in the WASM binary

@@ -111,10 +111,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 					)
 
 					return interpreter.VirtualImport{
-						Globals: []struct {
-							Name  string
-							Value interpreter.Value
-						}{
+						Globals: []interpreter.VirtualImportGlobal{
 							{
 								Name:  "Foo",
 								Value: value,

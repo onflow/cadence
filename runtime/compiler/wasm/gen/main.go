@@ -323,8 +323,8 @@ func (t ArgumentTypeVector) Write(variable string) string {
 }
 
 type argument struct {
-	Identifier string
 	Type       argumentType
+	Identifier string
 }
 
 func (a argument) Variable() string {
@@ -386,8 +386,8 @@ func (ins instruction) OpcodeIdentifier() string {
 }
 
 type instructionGroup struct {
-	Depth        int
 	Instructions []instruction
+	Depth        int
 }
 
 func (group instructionGroup) GroupByOpcode() map[string]instructionGroup {

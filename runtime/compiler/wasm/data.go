@@ -21,9 +21,9 @@ package wasm
 // Data represents a data segment, which initializes a range of memory,
 // at a given offset, with a static vector of bytes.
 type Data struct {
-	MemoryIndex uint32
 	// must be constant, as defined in the spec
 	// (https://webassembly.github.io/spec/core/valid/instructions.html#constant-expressions)
-	Offset []Instruction
-	Init   []byte
+	Offset      []Instruction
+	Init        []byte
+	MemoryIndex uint32
 }

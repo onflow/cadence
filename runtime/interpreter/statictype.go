@@ -471,11 +471,11 @@ outer:
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
-	Authorized bool
 	// BorrowedType is the type of the usage (T in &T)
 	BorrowedType StaticType
 	// ReferencedType is type of the referenced value (the type of the target)
 	ReferencedType StaticType
+	Authorized     bool
 }
 
 var _ StaticType = ReferenceStaticType{}

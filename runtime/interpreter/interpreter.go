@@ -209,14 +209,14 @@ type Storage interface {
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
-	Program      *Program
 	Location     common.Location
+	statement    ast.Statement
+	Program      *Program
 	SharedState  *SharedState
 	Globals      GlobalVariables
+	activations  *VariableActivations
 	Transactions []*HostFunctionValue
 	interpreted  bool
-	activations  *VariableActivations
-	statement    ast.Statement
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -2353,11 +2353,11 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 }()
 
 type ValueConverterDeclaration struct {
-	name         string
-	convert      func(*Interpreter, Value, LocationRange) Value
 	min          Value
 	max          Value
+	convert      func(*Interpreter, Value, LocationRange) Value
 	functionType *sema.FunctionType
+	name         string
 }
 
 // It would be nice if return types in Go's function types would be covariant
@@ -2875,8 +2875,8 @@ func defineBaseFunctions(activation *VariableActivation) {
 }
 
 type converterFunction struct {
-	name      string
 	converter *HostFunctionValue
+	name      string
 }
 
 // Converter functions are stateless functions. Hence they can be re-used across interpreters.
@@ -2931,8 +2931,8 @@ func defineConverterFunctions(activation *VariableActivation) {
 }
 
 type runtimeTypeConstructor struct {
-	name      string
 	converter *HostFunctionValue
+	name      string
 }
 
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
