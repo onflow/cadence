@@ -34,14 +34,14 @@ const (
 )
 
 type FunctionDeclaration struct {
-	Access               Access
-	Flags                FunctionDeclarationFlags
-	Identifier           Identifier
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
 	DocString            string
+	Identifier           Identifier
 	StartPos             Position `json:"-"`
+	Access               Access
+	Flags                FunctionDeclarationFlags
 }
 
 var _ Element = &FunctionDeclaration{}
@@ -158,12 +158,12 @@ func (d *FunctionDeclaration) Doc() prettier.Doc {
 func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FunctionDeclaration
 	return json.Marshal(&struct {
-		Type     string
+		*Alias
+		Type string
+		Range
 		IsStatic bool
 		IsNative bool
 		Flags    FunctionDeclarationFlags `json:",omitempty"`
-		Range
-		*Alias
 	}{
 		Type:     "FunctionDeclaration",
 		Range:    NewUnmeteredRangeFromPositioned(d),
@@ -189,8 +189,8 @@ func (d *FunctionDeclaration) IsNative() bool {
 // SpecialFunctionDeclaration
 
 type SpecialFunctionDeclaration struct {
-	Kind                common.DeclarationKind
 	FunctionDeclaration *FunctionDeclaration
+	Kind                common.DeclarationKind
 }
 
 var _ Element = &SpecialFunctionDeclaration{}
@@ -266,9 +266,9 @@ func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
 func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias SpecialFunctionDeclaration
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "SpecialFunctionDeclaration",
 		Range: NewUnmeteredRangeFromPositioned(d),
