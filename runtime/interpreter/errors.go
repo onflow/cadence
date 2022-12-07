@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -60,7 +61,14 @@ func (e Error) Unwrap() error {
 }
 
 func (e Error) Error() string {
-	return e.Err.Error()
+	var sb strings.Builder
+	sb.WriteString("Execution failed:\n")
+	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
+		PrettyPrintError(e.Err, e.Location, map[common.Location][]byte{})
+	if printErr != nil {
+		panic(printErr)
+	}
+	return sb.String()
 }
 
 func (e Error) ChildErrors() []error {
