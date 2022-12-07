@@ -67,24 +67,25 @@ type Environment interface {
 	NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value
 }
 
-type interpreterEnvironment struct {
-	config Config
-
-	baseActivation      *interpreter.VariableActivation
-	baseValueActivation *sema.VariableActivation
-
-	InterpreterConfig *interpreter.Config
-	CheckerConfig     *sema.Config
-
-	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-	stackDepthLimiter                     *stackDepthLimiter
-	checkedImports                        importResolutionResults
-
-	// the following fields are re-configurable, see Configure
+// interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
+// that gets reconfigured by interpreterEnvironment.Configure
+type interpreterEnvironmentReconfigured struct {
 	runtimeInterface Interface
 	storage          *Storage
 	coverageReport   *CoverageReport
 	codesAndPrograms codesAndPrograms
+}
+
+type interpreterEnvironment struct {
+	interpreterEnvironmentReconfigured
+	baseActivation                        *interpreter.VariableActivation
+	baseValueActivation                   *sema.VariableActivation
+	InterpreterConfig                     *interpreter.Config
+	CheckerConfig                         *sema.Config
+	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
+	stackDepthLimiter                     *stackDepthLimiter
+	checkedImports                        importResolutionResults
+	config                                Config
 }
 
 var _ Environment = &interpreterEnvironment{}

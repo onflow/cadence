@@ -64,9 +64,9 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 	var tests = []struct {
 		name     string
 		code     string
-		keyCount int
 		args     []cadence.Value
 		expected [][]byte
+		keyCount int
 	}{
 		{
 			name: "Single key",
@@ -1220,11 +1220,11 @@ func newTestAccountKeyStorage() *testAccountKeyStorage {
 }
 
 type testAccountKeyStorage struct {
+	returnedKey       *stdlib.AccountKey
 	events            []cadence.Event
 	keys              []*stdlib.AccountKey
-	unrevokedKeyCount int
-	returnedKey       *stdlib.AccountKey
 	logs              []string
+	unrevokedKeyCount int
 }
 
 func TestRuntimePublicKey(t *testing.T) {

@@ -26,25 +26,29 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type interpreterScriptExecutor struct {
-	runtime *interpreterRuntime
-	script  Script
-	context Context
-
-	// preprocess
-	preprocessOnce         sync.Once
+type interpreterScriptExecutorPreparation struct {
+	environment            Environment
 	preprocessErr          error
 	codesAndPrograms       codesAndPrograms
-	storage                *Storage
-	program                *interpreter.Program
-	environment            Environment
 	functionEntryPointType *sema.FunctionType
+	program                *interpreter.Program
+	storage                *Storage
 	interpret              InterpretFunc
+	preprocessOnce         sync.Once
+}
 
-	// execute
+type interpreterScriptExecutorExecution struct {
 	executeOnce sync.Once
 	executeErr  error
 	result      cadence.Value
+}
+
+type interpreterScriptExecutor struct {
+	context Context
+	runtime *interpreterRuntime
+	script  Script
+	interpreterScriptExecutorPreparation
+	interpreterScriptExecutorExecution
 }
 
 func newInterpreterScriptExecutor(

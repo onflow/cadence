@@ -335,9 +335,9 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		type argumentPassingTest struct {
+			argument      cadence.Value
 			label         string
 			typeSignature string
-			argument      cadence.Value
 			expectErrors  bool
 		}
 
@@ -851,9 +851,9 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		type argumentPassingTest struct {
+			argument      cadence.Value
 			label         string
 			typeSignature string
-			argument      cadence.Value
 			expectErrors  bool
 		}
 
