@@ -61,8 +61,8 @@ type ParseError interface {
 // SyntaxError
 
 type SyntaxError struct {
-	Pos     ast.Position
 	Message string
+	Pos     ast.Position
 }
 
 func NewSyntaxError(pos ast.Position, message string, params ...any) *SyntaxError {
