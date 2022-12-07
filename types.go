@@ -803,8 +803,8 @@ func (t VariableSizedArrayType) Element() Type {
 // ConstantSizedArrayType
 
 type ConstantSizedArrayType struct {
-	Size        uint
 	ElementType Type
+	Size        uint
 }
 
 func NewConstantSizedArrayType(
@@ -875,8 +875,8 @@ func (t DictionaryType) ID() string {
 // Field
 
 type Field struct {
-	Identifier string
 	Type       Type
+	Identifier string
 }
 
 // Fields are always created in an array, which must be metered ahead of time.
@@ -891,9 +891,9 @@ func NewField(identifier string, typ Type) Field {
 // Parameter
 
 type Parameter struct {
+	Type       Type
 	Label      string
 	Identifier string
-	Type       Type
 }
 
 func NewParameter(
@@ -1398,9 +1398,9 @@ func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
 
 // TODO: type parameters
 type FunctionType struct {
+	ReturnType Type
 	typeID     string
 	Parameters []Parameter
-	ReturnType Type
 }
 
 func NewFunctionType(
@@ -1439,8 +1439,8 @@ func (t *FunctionType) WithID(id string) *FunctionType {
 // ReferenceType
 
 type ReferenceType struct {
-	Authorized bool
 	Type       Type
+	Authorized bool
 }
 
 func NewReferenceType(
