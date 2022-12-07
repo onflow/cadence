@@ -2962,3 +2962,81 @@ func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
 		errs,
 	)
 }
+
+func TestParseParenthesizedTypes(t *testing.T) {
+	t.Parallel()
+
+	code := `let x: (Int) = 42`
+	prog, errs := testParseProgram(code)
+	require.Empty(t, errs)
+	expected := []ast.Declaration{
+		&ast.VariableDeclaration{
+			IsConstant: true,
+			Identifier: ast.Identifier{Identifier: "x", Pos: ast.Position{Offset: 4, Line: 1, Column: 4}},
+			TypeAnnotation: &ast.TypeAnnotation{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+				StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+			},
+			Value: &ast.IntegerExpression{
+				PositiveLiteral: []uint8("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+					EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+				},
+			},
+			Transfer: &ast.Transfer{
+				Operation: 1,
+				Pos:       ast.Position{Offset: 13, Line: 1, Column: 13},
+			},
+			StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+		},
+	}
+
+	utils.AssertEqualWithDiff(t, expected, prog.Declarations())
+}
+
+func TestParseNestedParenthesizedTypes(t *testing.T) {
+	t.Parallel()
+
+	code := `let x: (((((((((Int))))))))) = 42`
+	prog, errs := testParseProgram(code)
+	require.Empty(t, errs)
+	expected := []ast.Declaration{
+		&ast.VariableDeclaration{
+			IsConstant: true,
+			Identifier: ast.Identifier{Identifier: "x", Pos: ast.Position{Offset: 4, Line: 1, Column: 4}},
+			TypeAnnotation: &ast.TypeAnnotation{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Offset: 16, Line: 1, Column: 16},
+					},
+				},
+				StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+			},
+			Value: &ast.IntegerExpression{
+				PositiveLiteral: []uint8("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 31, Line: 1, Column: 31},
+					EndPos:   ast.Position{Offset: 32, Line: 1, Column: 32},
+				},
+			},
+			Transfer: &ast.Transfer{
+				Operation: 1,
+				Pos:       ast.Position{Offset: 29, Line: 1, Column: 29},
+			},
+			StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+		},
+	}
+
+	utils.AssertEqualWithDiff(t, expected, prog.Declarations())
+}
