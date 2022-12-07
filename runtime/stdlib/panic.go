@@ -27,8 +27,8 @@ import (
 )
 
 type PanicError struct {
-	Message string
 	interpreter.LocationRange
+	Message string
 }
 
 var _ errors.UserError = PanicError{}
