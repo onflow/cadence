@@ -4079,6 +4079,25 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
+	t.Run("restricted multiply extended base reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct R: I, J {}
+		struct interface I {}
+		struct interface J {}
+		attachment A for I {}
+		pub fun foo(r: &R{J}) {
+			r[A]
+		}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
+	})
+
 	t.Run("restricted multiply restricted base", func(t *testing.T) {
 		t.Parallel()
 

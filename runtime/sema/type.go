@@ -5354,14 +5354,25 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		case *InterfaceType:
 			switch typedInnerSubType := typedSubType.Type.(type) {
+			// An unauthorized reference to an interface type `&U`
+			// is a supertype of a reference to a composite type `&T`:
+			// if that composite type's conformance set includes that interface.
+			//
+			// This is equivalent in principle to the check we would perform to check
+			// if `&T <: &{U}`, the singleton restricted set containing only `U`.
 			case *CompositeType:
 				return typedInnerSubType.ExplicitInterfaceConformanceSet().Contains(typedInnerSuperType)
 			// An unauthorized reference to an interface type `&T`
 			// is a supertype of a reference to a restricted type `&{U}`:
-			// if the restriction set contains that explicit interface type. 
+			// if the restriction set contains that explicit interface type.
 			//
-			// Once interfaces can conform to interfaces, 
-			// this should instead check that at least one value in the restriction set 
+			// Note that this does not check whether the restricted type's restricted type conforms to the interface;
+			// i.e. whether in `&R{X} <: &I`, `R <: I`. This is intentional;
+			// when checking whether an attachment declared for `I` is accessible on a value of type `&R{X}`,
+			// even if `R <: I`, we only want to allow access if `X <: I`
+			//
+			// Once interfaces can conform to interfaces,
+			// this should instead check that at least one value in the restriction set
 			// is a subtype of the interface supertype
 			case *RestrictedType:
 				return typedInnerSubType.RestrictionSet().Contains(typedInnerSuperType)
@@ -5403,6 +5414,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			// `&T <: &AnyStruct` iff `T <: AnyStruct`
 			return IsSubType(typedSubType.Type, typedSuperType.Type)
 		case AnyResourceAttachmentType, AnyStructAttachmentType:
+			// `&T <: &AnyResourceAttachmentType` iff `T <: AnyResourceAttachmentType` and
+			// `&T <: &AnyStructAttachmentType` iff `T <: AnyStructAttachmentType`
 			return IsSubType(typedSubType.Type, typedSuperType.Type)
 		}
 
