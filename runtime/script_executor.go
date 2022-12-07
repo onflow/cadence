@@ -38,17 +38,17 @@ type interpreterScriptExecutorPreparation struct {
 }
 
 type interpreterScriptExecutorExecution struct {
-	executeOnce sync.Once
 	executeErr  error
 	result      cadence.Value
+	executeOnce sync.Once
 }
 
 type interpreterScriptExecutor struct {
 	context Context
-	runtime *interpreterRuntime
-	script  Script
-	interpreterScriptExecutorPreparation
 	interpreterScriptExecutorExecution
+	runtime *interpreterRuntime
+	interpreterScriptExecutorPreparation
+	script Script
 }
 
 func newInterpreterScriptExecutor(
