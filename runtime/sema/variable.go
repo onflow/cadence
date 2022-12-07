@@ -24,20 +24,20 @@ import (
 )
 
 type Variable struct {
-	Identifier      string
-	DeclarationKind common.DeclarationKind
 	// Type is the type of the variable
 	Type Type
-	// Access is the access modifier
-	Access ast.Access
-	// IsConstant indicates if the variable is read-only
-	IsConstant bool
-	// ActivationDepth is the depth of scopes in which the variable was declared
-	ActivationDepth int
-	// ArgumentLabels are the argument labels that must be used in an invocation of the variable
-	ArgumentLabels []string
 	// Pos is the position where the variable was declared
-	Pos *ast.Position
+	Pos        *ast.Position
+	Identifier string
 	// DocString is the optional docstring
 	DocString string
+	// ArgumentLabels are the argument labels that must be used in an invocation of the variable
+	ArgumentLabels  []string
+	DeclarationKind common.DeclarationKind
+	// Access is the access modifier
+	Access ast.Access
+	// ActivationDepth is the depth of scopes in which the variable was declared
+	ActivationDepth int
+	// IsConstant indicates if the variable is read-only
+	IsConstant bool
 }

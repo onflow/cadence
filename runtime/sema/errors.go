@@ -141,10 +141,10 @@ type SemanticError interface {
 // RedeclarationError
 
 type RedeclarationError struct {
-	Kind        common.DeclarationKind
+	PreviousPos *ast.Position
 	Name        string
 	Pos         ast.Position
-	PreviousPos *ast.Position
+	Kind        common.DeclarationKind
 }
 
 var _ SemanticError = &RedeclarationError{}
@@ -203,10 +203,10 @@ func (n RedeclarationNote) Message() string {
 // NotDeclaredError
 
 type NotDeclaredError struct {
-	ExpectedKind common.DeclarationKind
-	Name         string
 	Expression   *ast.IdentifierExpression
+	Name         string
 	Pos          ast.Position
+	ExpectedKind common.DeclarationKind
 }
 
 var _ SemanticError = &NotDeclaredError{}
@@ -293,8 +293,8 @@ func (e *TypeMismatchError) SecondaryError() string {
 // TypeMismatchWithDescriptionError
 
 type TypeMismatchWithDescriptionError struct {
-	ExpectedTypeDescription string
 	ActualType              Type
+	ExpectedTypeDescription string
 	ast.Range
 }
 
@@ -487,10 +487,10 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 // InvalidUnaryOperandError
 
 type InvalidUnaryOperandError struct {
-	Operation    ast.Operation
 	ExpectedType Type
 	ActualType   Type
 	ast.Range
+	Operation ast.Operation
 }
 
 var _ SemanticError = &InvalidUnaryOperandError{}
@@ -524,11 +524,11 @@ func (e *InvalidUnaryOperandError) SecondaryError() string {
 // InvalidBinaryOperandError
 
 type InvalidBinaryOperandError struct {
-	Operation    ast.Operation
-	Side         common.OperandSide
 	ExpectedType Type
 	ActualType   Type
 	ast.Range
+	Operation ast.Operation
+	Side      common.OperandSide
 }
 
 var _ SemanticError = &InvalidBinaryOperandError{}
@@ -563,10 +563,10 @@ func (e *InvalidBinaryOperandError) SecondaryError() string {
 // InvalidBinaryOperandsError
 
 type InvalidBinaryOperandsError struct {
-	Operation ast.Operation
 	LeftType  Type
 	RightType Type
 	ast.Range
+	Operation ast.Operation
 }
 
 var _ SemanticError = &InvalidBinaryOperandsError{}
@@ -629,10 +629,10 @@ func (e *ControlStatementError) Error() string {
 // InvalidAccessModifierError
 
 type InvalidAccessModifierError struct {
-	DeclarationKind common.DeclarationKind
 	Explanation     string
-	Access          ast.Access
 	Pos             ast.Position
+	DeclarationKind common.DeclarationKind
+	Access          ast.Access
 }
 
 var _ SemanticError = &InvalidAccessModifierError{}
@@ -680,9 +680,9 @@ func (e *InvalidAccessModifierError) EndPosition(memoryGauge common.MemoryGauge)
 // MissingAccessModifierError
 
 type MissingAccessModifierError struct {
-	DeclarationKind common.DeclarationKind
 	Explanation     string
 	Pos             ast.Position
+	DeclarationKind common.DeclarationKind
 }
 
 var _ errors.UserError = &MissingAccessModifierError{}
@@ -882,11 +882,11 @@ func (e *MissingInitializerError) EndPosition(memoryGauge common.MemoryGauge) as
 // NotDeclaredMemberError
 
 type NotDeclaredMemberError struct {
-	Name          string
-	suggestMember bool
-	Type          Type
-	Expression    *ast.MemberExpression
+	Type       Type
+	Expression *ast.MemberExpression
+	Name       string
 	ast.Range
+	suggestMember bool
 }
 
 var _ SemanticError = &NotDeclaredMemberError{}
@@ -982,8 +982,8 @@ func (e *FieldReinitializationError) Error() string {
 
 // FieldUninitializedError
 type FieldUninitializedError struct {
-	Name          string
 	ContainerType Type
+	Name          string
 	Pos           ast.Position
 }
 
@@ -1027,12 +1027,9 @@ func (e *FieldUninitializedError) EndPosition(memoryGauge common.MemoryGauge) as
 // whereas a function type is not.
 
 type FieldTypeNotStorableError struct {
-	// Field's name
-	Name string
-	// Field's type
 	Type Type
-	// Start position of the error
-	Pos ast.Position
+	Name string
+	Pos  ast.Position
 }
 
 var _ SemanticError = &FieldTypeNotStorableError{}
@@ -2406,8 +2403,8 @@ func (e *InvalidDestructorParametersError) SecondaryError() string {
 // ResourceFieldNotInvalidatedError
 
 type ResourceFieldNotInvalidatedError struct {
-	FieldName string
 	Type      Type
+	FieldName string
 	Pos       ast.Position
 }
 
@@ -3424,9 +3421,9 @@ func (e *InvalidRestrictedTypeMemberAccessError) Error() string {
 // RestrictionMemberClashError
 
 type RestrictionMemberClashError struct {
-	Name                  string
 	RedeclaringType       *InterfaceType
 	OriginalDeclaringType *InterfaceType
+	Name                  string
 	ast.Range
 }
 
@@ -3817,10 +3814,10 @@ func (e *InvalidEntryPointTypeError) Error() string {
 // ImportedProgramError
 
 type ExternalMutationError struct {
-	Name            string
-	ContainerType   Type
-	DeclarationKind common.DeclarationKind
+	ContainerType Type
+	Name          string
 	ast.Range
+	DeclarationKind common.DeclarationKind
 }
 
 var _ SemanticError = &ExternalMutationError{}
