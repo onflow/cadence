@@ -9727,9 +9727,6 @@ func TestInterpretVoidReturn_(t *testing.T) {
 			returnSnippet = ": " + returnType
 		}
 
-		if returnValue != "" {
-		}
-
 		var name string
 		if testName == "" {
 			name = fmt.Sprintf("%s type, %s value", labelNamed(returnType), labelNamed(returnValue))

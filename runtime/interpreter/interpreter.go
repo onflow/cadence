@@ -619,8 +619,6 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 	for _, variable := range variableDeclarationVariables {
 		_ = variable.GetValue()
 	}
-
-	return
 }
 
 func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) StatementResult {

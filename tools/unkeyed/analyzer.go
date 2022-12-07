@@ -64,7 +64,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				continue
 			}
 
-			//fmt.Fprintf(os.Stderr, ">>> %v\n", under)
 
 			// check if the struct contains an unkeyed field
 			allKeyValue := true

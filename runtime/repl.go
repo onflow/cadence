@@ -154,10 +154,8 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
 				panic(panicResult)
 			case error:
 				err = panicResult
-				break
 			default:
 				err = fmt.Errorf("%s", panicResult)
-				break
 			}
 
 			r.onError(err, r.checker.Location, r.codes)
