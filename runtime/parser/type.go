@@ -1012,14 +1012,10 @@ func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPuri
 		}
 		endPos = returnTypeAnnotation.EndPosition(p.memoryGauge)
 	} else {
-		// if the return type is omitted, infer it to be `Void`
-		voidType := ast.NewNominalType(
+		returnType := ast.NewNominalType(
 			p.memoryGauge,
-			ast.NewIdentifier(
+			ast.NewEmptyIdentifier(
 				p.memoryGauge,
-				"Void",
-				// give the inferred type a fake position at the end of the argument tuple
-				// it would be located if it was explicitly written?
 				endPos,
 			),
 			nil,
@@ -1027,7 +1023,7 @@ func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPuri
 		returnTypeAnnotation = ast.NewTypeAnnotation(
 			p.memoryGauge,
 			false,
-			voidType,
+			returnType,
 			endPos,
 		)
 	}
