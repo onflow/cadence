@@ -31,6 +31,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+const CryptoCheckerLocation = common.IdentifierLocation("Crypto")
+
 var cryptoOnce sync.Once
 
 // Deprecated: Use CryptoChecker instead
@@ -67,11 +69,9 @@ func initCrypto() {
 		panic(err)
 	}
 
-	location := common.IdentifierLocation("Crypto")
-
 	cryptoChecker, err = sema.NewChecker(
 		program,
-		location,
+		CryptoCheckerLocation,
 		nil,
 		&sema.Config{
 			AccessCheckMode: sema.AccessCheckModeStrict,
