@@ -1593,7 +1593,7 @@ func NewTestInterpreterContractValueHandler(
 	) interpreter.ContractValue {
 
 		switch compositeType.Location {
-		case CryptoChecker.Location:
+		case CryptoCheckerLocation:
 			contract, err := NewCryptoContract(
 				inter,
 				constructorGenerator(common.Address{}),
