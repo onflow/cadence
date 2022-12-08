@@ -44,7 +44,7 @@ func TestOverwriteError_Error(t *testing.T) {
 }
 
 func TestErrorOutputIncludesLocationRage(t *testing.T) {
-
+	t.Parallel()
 	require.Equal(t,
 		Error{
 			Location: utils.TestLocation,
