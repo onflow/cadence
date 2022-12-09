@@ -832,7 +832,7 @@ func defineIdentifierExpression() {
 				p.current = current
 
 				// otherwise, we treat it as an identifier called "view"
-				break
+
 			case KeywordFun:
 				return parseFunctionExpression(p, token, ast.FunctionPurityUnspecified)
 			}
