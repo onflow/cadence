@@ -1284,10 +1284,10 @@ func (checker *Checker) functionType(
 
 func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter {
 
-	var parameters []Parameter
+	// TODO: required for initializer conformance checking at the moment, optimize/refactor
+	var parameters = make([]Parameter, len(parameterList.Parameters))
 
 	if len(parameterList.Parameters) > 0 {
-		parameters = make([]Parameter, len(parameterList.Parameters))
 
 		for i, parameter := range parameterList.Parameters {
 			convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)
