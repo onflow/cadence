@@ -3049,7 +3049,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				},
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b",
-					IntegerLiteralKind:        IntegerLiteralKindBinary,
+					IntegerLiteralKind:        common.IntegerLiteralKindBinary,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3144,7 +3144,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b_101010_101010",
-					IntegerLiteralKind:        IntegerLiteralKindBinary,
+					IntegerLiteralKind:        common.IntegerLiteralKindBinary,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3178,7 +3178,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b101010_101010_",
-					IntegerLiteralKind:        IntegerLiteralKindBinary,
+					IntegerLiteralKind:        common.IntegerLiteralKindBinary,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3216,7 +3216,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0o`,
-					IntegerLiteralKind:        IntegerLiteralKindOctal,
+					IntegerLiteralKind:        common.IntegerLiteralKindOctal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3292,7 +3292,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0o_32_45",
-					IntegerLiteralKind:        IntegerLiteralKindOctal,
+					IntegerLiteralKind:        common.IntegerLiteralKindOctal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3326,7 +3326,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0o32_45_",
-					IntegerLiteralKind:        IntegerLiteralKindOctal,
+					IntegerLiteralKind:        common.IntegerLiteralKindOctal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3402,7 +3402,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "1_234_567_890_",
-					IntegerLiteralKind:        IntegerLiteralKindDecimal,
+					IntegerLiteralKind:        common.IntegerLiteralKindDecimal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3440,7 +3440,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0x`,
-					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
+					IntegerLiteralKind:        common.IntegerLiteralKindHexadecimal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3516,7 +3516,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0x_f2_09",
-					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
+					IntegerLiteralKind:        common.IntegerLiteralKindHexadecimal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3550,7 +3550,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   `0xf2_09_`,
-					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
+					IntegerLiteralKind:        common.IntegerLiteralKindHexadecimal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3672,7 +3672,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0z123`,
-					IntegerLiteralKind:        IntegerLiteralKindUnknown,
+					IntegerLiteralKind:        common.IntegerLiteralKindUnknown,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknownPrefix,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},

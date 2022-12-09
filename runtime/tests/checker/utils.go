@@ -192,13 +192,13 @@ func RequireCheckerErrors(t *testing.T, err error, count int) []error {
 }
 
 func RequireGlobalType(t *testing.T, elaboration *sema.Elaboration, name string) sema.Type {
-	variable, ok := elaboration.GlobalTypes.Get(name)
+	variable, ok := elaboration.GetGlobalType(name)
 	require.True(t, ok, "global type '%s' missing", name)
 	return variable.Type
 }
 
 func RequireGlobalValue(t *testing.T, elaboration *sema.Elaboration, name string) sema.Type {
-	variable, ok := elaboration.GlobalValues.Get(name)
+	variable, ok := elaboration.GetGlobalValue(name)
 	require.True(t, ok, "global value '%s' missing", name)
 	return variable.Type
 }

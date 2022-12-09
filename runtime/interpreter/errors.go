@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -60,7 +61,14 @@ func (e Error) Unwrap() error {
 }
 
 func (e Error) Error() string {
-	return e.Err.Error()
+	var sb strings.Builder
+	sb.WriteString("Execution failed:\n")
+	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
+		PrettyPrintError(e.Err, e.Location, map[common.Location][]byte{})
+	if printErr != nil {
+		panic(printErr)
+	}
+	return sb.String()
 }
 
 func (e Error) ChildErrors() []error {
@@ -244,7 +252,9 @@ func (e DereferenceError) Error() string {
 
 // OverflowError
 
-type OverflowError struct{}
+type OverflowError struct {
+	LocationRange
+}
 
 var _ errors.UserError = OverflowError{}
 
@@ -256,7 +266,9 @@ func (e OverflowError) Error() string {
 
 // UnderflowError
 
-type UnderflowError struct{}
+type UnderflowError struct {
+	LocationRange
+}
 
 var _ errors.UserError = UnderflowError{}
 
@@ -268,7 +280,9 @@ func (e UnderflowError) Error() string {
 
 // UnderflowError
 
-type DivisionByZeroError struct{}
+type DivisionByZeroError struct {
+	LocationRange
+}
 
 var _ errors.UserError = DivisionByZeroError{}
 
@@ -343,10 +357,15 @@ var _ errors.UserError = ForceCastTypeMismatchError{}
 func (ForceCastTypeMismatchError) IsUserError() {}
 
 func (e ForceCastTypeMismatchError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"failed to force-cast value: expected type `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
@@ -362,10 +381,15 @@ var _ errors.UserError = TypeMismatchError{}
 func (TypeMismatchError) IsUserError() {}
 
 func (e TypeMismatchError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"type mismatch: expected `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
@@ -643,10 +667,15 @@ var _ errors.UserError = ValueTransferTypeError{}
 func (ValueTransferTypeError) IsUserError() {}
 
 func (e ValueTransferTypeError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"invalid transfer of value: expected `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 

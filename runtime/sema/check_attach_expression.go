@@ -77,7 +77,11 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 	// if the annotatedBaseType is a specific interface or composite, then the above code will already have
 	// checked that the type of the base expression is also a composite. However, if the annotatedBaseType is
 	// anyresource/anystruct, we need to enforce that baseType is a resource or struct, to prevent
-	// permitting code like `attach A to 4`, if `A` was declared for `AnyStruct`
+	// permitting code like `attach A to 4`, if `A` was declared for `AnyStruct`.
+	//
+	// Note that we cannot just check
+	// that the base type is type-indexable, because it could be a reference type, which is indexable for
+	// attachment-access purposes, but is not a valid attach target.
 	if _, annotatedIsCompositeType := declaredBaseType.(CompositeKindedType); !annotatedIsCompositeType {
 		switch baseType := baseType.(type) {
 		case CompositeKindedType:

@@ -69,7 +69,7 @@ If any error is encountered while decoding, the program aborts.
 const rlpDecodeStringFunctionName = "decodeString"
 
 var rlpDecodeStringFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "input",
@@ -107,7 +107,7 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		locationRange := invocation.LocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input, locationRange)
 		if err != nil {
 			panic(RLPDecodeStringError{
 				Msg:           err.Error(),
@@ -143,7 +143,7 @@ If any error is encountered while decoding, the program aborts.
 const rlpDecodeListFunctionName = "decodeList"
 
 var rlpDecodeListFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "input",
@@ -181,7 +181,7 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		locationRange := invocation.LocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input, locationRange)
 		if err != nil {
 			panic(RLPDecodeListError{
 				Msg:           err.Error(),

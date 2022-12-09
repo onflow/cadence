@@ -307,7 +307,7 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.BoolType
 
 	case PrimitiveStaticTypeAddress:
-		return &sema.AddressType{}
+		return sema.TheAddressType
 
 	case PrimitiveStaticTypeString:
 		return sema.StringType

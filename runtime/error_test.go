@@ -140,6 +140,44 @@ func TestRuntimeError(t *testing.T) {
 		)
 	})
 
+	t.Run("execution error with position", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
+			pub fun main() {
+				let x: AnyStruct? = nil
+				let y = x!
+			}
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		location := common.ScriptLocation{0x1}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  location,
+			},
+		)
+		require.EqualError(
+			t,
+			err,
+			"Execution failed:\n"+
+				"error: unexpectedly found nil while forcing an Optional value\n"+
+				" --> 0100000000000000000000000000000000000000000000000000000000000000:4:12\n"+
+				"  |\n"+
+				"4 | 				let y = x!\n"+
+				"  | 				        ^^\n",
+		)
+	})
+
 	t.Run("parse error in import", func(t *testing.T) {
 
 		t.Parallel()

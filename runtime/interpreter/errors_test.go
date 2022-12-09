@@ -23,8 +23,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestOverwriteError_Error(t *testing.T) {
@@ -38,5 +40,24 @@ func TestOverwriteError_Error(t *testing.T) {
 			},
 		},
 		"failed to save object: path /storage/test in account 0x0000000000000001 already stores an object",
+	)
+}
+
+func TestErrorOutputIncludesLocationRage(t *testing.T) {
+	t.Parallel()
+	require.Equal(t,
+		Error{
+			Location: utils.TestLocation,
+			Err: DereferenceError{
+				LocationRange: LocationRange{
+					Location: utils.TestLocation,
+					HasPosition: ast.Range{
+						StartPos: ast.Position{Offset: 0, Column: 0, Line: 0},
+						EndPos:   ast.Position{Offset: 0, Column: 0, Line: 0},
+					},
+				},
+			},
+		}.Error(),
+		"Execution failed:\nerror: dereference failed\n --> test:0:0\n",
 	)
 }

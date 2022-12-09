@@ -28,7 +28,6 @@ const (
 
 	// Values
 
-	MemoryKindBoolValue
 	MemoryKindAddressValue
 	MemoryKindStringValue
 	MemoryKindCharacterValue
@@ -38,13 +37,13 @@ const (
 	MemoryKindCompositeValueBase
 	MemoryKindSimpleCompositeValueBase
 	MemoryKindOptionalValue
-	MemoryKindNilValue
-	MemoryKindVoidValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
-	MemoryKindCapabilityValue
-	MemoryKindLinkValue
+	MemoryKindStorageCapabilityValue
+	MemoryKindPathLinkValue
+	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue
+	MemoryKindAccountReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue
 	MemoryKindHostFunctionValue
@@ -99,10 +98,10 @@ const (
 	MemoryKindCadenceContractValueSize
 	MemoryKindCadenceEnumValueBase
 	MemoryKindCadenceEnumValueSize
-	MemoryKindCadenceLinkValue
+	MemoryKindCadencePathLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
-	MemoryKindCadenceCapabilityValue
+	MemoryKindCadenceStorageCapabilityValue
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
@@ -184,6 +183,7 @@ const (
 	MemoryKindRemoveStatement
 
 	MemoryKindBooleanExpression
+	MemoryKindVoidExpression
 	MemoryKindNilExpression
 	MemoryKindStringExpression
 	MemoryKindIntegerExpression

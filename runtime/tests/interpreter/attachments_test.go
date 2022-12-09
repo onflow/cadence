@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 
 	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
@@ -1285,7 +1286,8 @@ func TestInterpretAttachmentStorage(t *testing.T) {
                 destroy r3
                 return i
             }
-        `)
+        `, sema.Config{},
+		)
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1312,7 +1314,8 @@ func TestInterpretAttachmentStorage(t *testing.T) {
                 let i = r3[A]?.foo()!
                 return i
             }
-        `)
+        `, sema.Config{},
+		)
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1340,7 +1343,8 @@ func TestInterpretAttachmentStorage(t *testing.T) {
                 let i = cap.borrow()![A]?.foo()!
                 return i
             }
-        `)
+        `, sema.Config{},
+		)
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1369,7 +1373,8 @@ func TestInterpretAttachmentStorage(t *testing.T) {
                 let i = cap.borrow()![A]?.foo()!
                 return i
             }
-        `)
+        `, sema.Config{},
+		)
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1594,7 +1599,8 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 authAccount.save(<-r2, to: /storage/foo)
                 let i = a.foo()
             }
-        `)
+        `, sema.Config{},
+		)
 
 		// TODO: in the stable cadence branch, with the new resource reference invalidation,
 		// this should be an error, as `a` shoudl be invalidated after the save
@@ -1629,7 +1635,8 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 let i = a.foo()
             }
         
-        `)
+        `, sema.Config{},
+		)
 
 		// TODO: in the stable cadence branch, with the new resource reference invalidation,
 		// this should be an error, as `a` shoudl be invalidated after the save

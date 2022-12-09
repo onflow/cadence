@@ -38,7 +38,7 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 		return interpreter.identifierExpressionGetterSetter(expression)
 
 	case *ast.IndexExpression:
-		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes[expression]; ok {
+		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
 			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
 		}
 		return interpreter.valueIndexExpressionGetterSetter(expression)
@@ -121,7 +121,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 
 	elaboration := interpreter.Program.Elaboration
 
-	indexExpressionTypes := elaboration.IndexExpressionTypes[indexExpression]
+	indexExpressionTypes := elaboration.IndexExpressionTypes(indexExpression)
 	indexedType := indexExpressionTypes.IndexedType
 	indexingType := indexExpressionTypes.IndexingType
 
@@ -135,7 +135,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 		},
 	)
 
-	_, isNestedResourceMove := elaboration.IsNestedResourceMoveExpression[indexExpression]
+	isNestedResourceMove := elaboration.IsNestedResourceMoveExpression(indexExpression)
 
 	return getterSetter{
 		target: target,
@@ -166,7 +166,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 		HasPosition: memberExpression,
 	}
 
-	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[memberExpression]
+	isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression(memberExpression)
 
 	return getterSetter{
 		target: target,
@@ -226,7 +226,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	target Value,
 	locationRange LocationRange,
 ) {
-	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[memberExpression]
+	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
 	switch expectedType := expectedType.(type) {
@@ -287,15 +287,17 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		return interpreter.evalExpression(expression.Right)
 	}
 
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
+
 	error := func(right Value) {
 		panic(InvalidOperandsError{
-			Operation: expression.Operation,
-			LeftType:  leftValue.StaticType(interpreter),
-			RightType: right.StaticType(interpreter),
-			LocationRange: LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: expression,
-			},
+			Operation:     expression.Operation,
+			LeftType:      leftValue.StaticType(interpreter),
+			RightType:     right.StaticType(interpreter),
+			LocationRange: locationRange,
 		})
 	}
 
@@ -306,7 +308,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Plus(interpreter, right)
+		return left.Plus(interpreter, right, locationRange)
 
 	case ast.OperationMinus:
 		left, leftOk := leftValue.(NumberValue)
@@ -314,7 +316,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Minus(interpreter, right)
+		return left.Minus(interpreter, right, locationRange)
 
 	case ast.OperationMod:
 		left, leftOk := leftValue.(NumberValue)
@@ -322,7 +324,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Mod(interpreter, right)
+		return left.Mod(interpreter, right, locationRange)
 
 	case ast.OperationMul:
 		left, leftOk := leftValue.(NumberValue)
@@ -330,7 +332,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Mul(interpreter, right)
+		return left.Mul(interpreter, right, locationRange)
 
 	case ast.OperationDiv:
 		left, leftOk := leftValue.(NumberValue)
@@ -338,7 +340,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Div(interpreter, right)
+		return left.Div(interpreter, right, locationRange)
 
 	case ast.OperationBitwiseOr:
 		left, leftOk := leftValue.(IntegerValue)
@@ -346,7 +348,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseOr(interpreter, right)
+		return left.BitwiseOr(interpreter, right, locationRange)
 
 	case ast.OperationBitwiseXor:
 		left, leftOk := leftValue.(IntegerValue)
@@ -354,7 +356,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseXor(interpreter, right)
+		return left.BitwiseXor(interpreter, right, locationRange)
 
 	case ast.OperationBitwiseAnd:
 		left, leftOk := leftValue.(IntegerValue)
@@ -362,7 +364,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseAnd(interpreter, right)
+		return left.BitwiseAnd(interpreter, right, locationRange)
 
 	case ast.OperationBitwiseLeftShift:
 		left, leftOk := leftValue.(IntegerValue)
@@ -370,7 +372,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseLeftShift(interpreter, right)
+		return left.BitwiseLeftShift(interpreter, right, locationRange)
 
 	case ast.OperationBitwiseRightShift:
 		left, leftOk := leftValue.(IntegerValue)
@@ -378,7 +380,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseRightShift(interpreter, right)
+		return left.BitwiseRightShift(interpreter, right, locationRange)
 
 	case ast.OperationLess:
 		left, leftOk := leftValue.(NumberValue)
@@ -386,7 +388,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Less(interpreter, right)
+		return left.Less(interpreter, right, locationRange)
 
 	case ast.OperationLessEqual:
 		left, leftOk := leftValue.(NumberValue)
@@ -394,7 +396,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.LessEqual(interpreter, right)
+		return left.LessEqual(interpreter, right, locationRange)
 
 	case ast.OperationGreater:
 		left, leftOk := leftValue.(NumberValue)
@@ -402,7 +404,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Greater(interpreter, right)
+		return left.Greater(interpreter, right, locationRange)
 
 	case ast.OperationGreaterEqual:
 		left, leftOk := leftValue.(NumberValue)
@@ -410,7 +412,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.GreaterEqual(interpreter, right)
+		return left.GreaterEqual(interpreter, right, locationRange)
 
 	case ast.OperationEqual:
 		return interpreter.testEqual(leftValue, rightValue(), expression)
@@ -471,7 +473,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 		value := rightValue()
 
-		binaryExpressionTypes := interpreter.Program.Elaboration.BinaryExpressionTypes[expression]
+		binaryExpressionTypes := interpreter.Program.Elaboration.BinaryExpressionTypes(expression)
 		rightType := binaryExpressionTypes.RightType
 		resultType := binaryExpressionTypes.ResultType
 
@@ -536,7 +538,10 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return integerValue.Negate(interpreter)
+		return integerValue.Negate(interpreter, LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression,
+		})
 
 	case ast.OperationMove:
 		interpreter.invalidateResource(value)
@@ -563,7 +568,7 @@ func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) Value {
 }
 
 func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerExpression) Value {
-	typ := interpreter.Program.Elaboration.IntegerExpressionType[expression]
+	typ := interpreter.Program.Elaboration.IntegerExpressionType(expression)
 
 	value := expression.Value
 
@@ -587,20 +592,10 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 
 	switch integerSubType {
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
-		common.UseMemory(
-			memoryGauge,
-			common.NewBigIntMemoryUsage(
-				common.BigIntByteLength(value),
-			),
-		)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredIntValueFromBigInt(value)
 	case sema.UIntType:
-		common.UseMemory(
-			memoryGauge,
-			common.NewBigIntMemoryUsage(
-				common.BigIntByteLength(value),
-			),
-		)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredUIntValueFromBigInt(value)
 
 	// Int*
@@ -617,10 +612,10 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 		common.UseMemory(memoryGauge, Int64MemoryUsage)
 		return NewUnmeteredInt64Value(value.Int64())
 	case sema.Int128Type:
-		common.UseMemory(memoryGauge, Int128MemoryUsage)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredInt128ValueFromBigInt(value)
 	case sema.Int256Type:
-		common.UseMemory(memoryGauge, Int256MemoryUsage)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredInt256ValueFromBigInt(value)
 
 	// UInt*
@@ -637,10 +632,10 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 		common.UseMemory(memoryGauge, UInt64MemoryUsage)
 		return NewUnmeteredUInt64Value(value.Uint64())
 	case sema.UInt128Type:
-		common.UseMemory(memoryGauge, Uint128MemoryUsage)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredUInt128ValueFromBigInt(value)
 	case sema.UInt256Type:
-		common.UseMemory(memoryGauge, Uint256MemoryUsage)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredUInt256ValueFromBigInt(value)
 
 	// Word*
@@ -665,7 +660,7 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) Value {
 	// TODO: adjust once/if we support more fixed point types
 
-	fixedPointSubType := interpreter.Program.Elaboration.FixedPointExpression[expression]
+	fixedPointSubType := interpreter.Program.Elaboration.FixedPointExpression(expression)
 
 	value := fixedpoint.ConvertToFixedPointBigInt(
 		expression.Negative,
@@ -691,7 +686,7 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 }
 
 func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpression) Value {
-	stringType := interpreter.Program.Elaboration.StringExpressionType[expression]
+	stringType := interpreter.Program.Elaboration.StringExpressionType(expression)
 
 	switch stringType {
 	case sema.CharacterType:
@@ -705,7 +700,7 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {
 	values := interpreter.visitExpressionsNonCopying(expression.Values)
 
-	arrayExpressionTypes := interpreter.Program.Elaboration.ArrayExpressionTypes[expression]
+	arrayExpressionTypes := interpreter.Program.Elaboration.ArrayExpressionTypes(expression)
 	argumentTypes := arrayExpressionTypes.ArgumentTypes
 	arrayType := arrayExpressionTypes.ArrayType
 	elementType := arrayType.ElementType(false)
@@ -741,7 +736,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) Value {
 	values := interpreter.visitEntries(expression.Entries)
 
-	dictionaryExpressionTypes := interpreter.Program.Elaboration.DictionaryExpressionTypes[expression]
+	dictionaryExpressionTypes := interpreter.Program.Elaboration.DictionaryExpressionTypes(expression)
 	entryTypes := dictionaryExpressionTypes.EntryTypes
 	dictionaryType := dictionaryExpressionTypes.DictionaryType
 
@@ -803,7 +798,7 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 	// or `ValueIndexableValue` interfaces. A `*EphemeralReferenceValue` value is both a `TypeIndexableValue`
 	// and a `ValueIndexableValue` statically, but at runtime can only be used as one or the other. Whether
 	// or not an expression is present in this map allows us to disambiguate between these two cases.
-	if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes[expression]; ok {
+	if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
 		typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(TypeIndexableValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -905,7 +900,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 
 	elaboration := interpreter.Program.Elaboration
 
-	invocationExpressionTypes := elaboration.InvocationExpressionTypes[invocationExpression]
+	invocationExpressionTypes := elaboration.InvocationExpressionTypes(invocationExpression)
 
 	typeParameterTypes := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
@@ -975,7 +970,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
-	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType[expression]
+	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType(expression)
 
 	var preConditions ast.Conditions
 	if expression.FunctionBlock.PreConditions != nil {
@@ -987,7 +982,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	if expression.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[expression.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(expression.FunctionBlock.PostConditions)
 
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 		beforeStatements = postConditionsRewrite.BeforeStatements
@@ -1015,7 +1010,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		HasPosition: expression.Expression,
 	}
 
-	expectedType := interpreter.Program.Elaboration.CastingTargetTypes[expression]
+	expectedType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1057,7 +1052,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 
 	case ast.OperationCast:
-		staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
+		staticValueType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).StaticValueType
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
 		return interpreter.ConvertAndBox(locationRange, value, staticValueType, expectedType)
 
@@ -1087,7 +1082,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) Value {
 
-	borrowType := interpreter.Program.Elaboration.ReferenceExpressionBorrowTypes[referenceExpression]
+	borrowType := interpreter.Program.Elaboration.ReferenceExpressionBorrowType(referenceExpression)
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 

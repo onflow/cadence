@@ -77,7 +77,7 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 		)
 	}
 
-	checker.Elaboration.AttachmentRemoveTypes[statement] = nominalType
+	checker.Elaboration.SetAttachmentRemoveTypes(statement, nominalType)
 
 	return
 }
