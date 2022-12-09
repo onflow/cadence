@@ -256,6 +256,10 @@ func (e *AssignmentToConstantError) Error() string {
 	return fmt.Sprintf("cannot assign to constant: `%s`", e.Name)
 }
 
+func (e *AssignmentToConstantError) SecondaryError() string {
+	return fmt.Sprintf("consider changing the declaration of `%s` to be `var`", e.Name)
+}
+
 // TypeMismatchError
 
 type TypeMismatchError struct {
@@ -473,7 +477,7 @@ func (e *IncorrectArgumentLabelError) Error() string {
 }
 
 func (e *IncorrectArgumentLabelError) SecondaryError() string {
-	expected := "none"
+	expected := "no label"
 	if e.ExpectedArgumentLabel != "" {
 		expected = fmt.Sprintf("`%s`", e.ExpectedArgumentLabel)
 	}
@@ -623,6 +627,18 @@ func (e *ControlStatementError) Error() string {
 	return fmt.Sprintf(
 		"invalid control statement: `%s`",
 		e.ControlStatement.Symbol(),
+	)
+}
+
+func (e *ControlStatementError) SecondaryError() string {
+	validLocation := "a loop "
+	if e.ControlStatement == common.ControlStatementBreak {
+		validLocation = validLocation + " or switch statement"
+	}
+	return fmt.Sprintf(
+		"`%s` can only be used within %s body",
+		e.ControlStatement.Symbol(),
+		validLocation,
 	)
 }
 
