@@ -3040,3 +3040,28 @@ func TestParseNestedParenthesizedTypes(t *testing.T) {
 
 	utils.AssertEqualWithDiff(t, expected, prog.Declarations())
 }
+
+func TestSanity(t *testing.T) {
+	code := `
+		let x = fun(s: String): String {return s}
+		let y: AnyStruct = x
+		let z = y as! fun(String):String
+		let w = z("hi")
+		return w
+	`
+
+	code = `
+	fun foo(): Int {
+		let x = 10
+		let y: AnyStruct = x
+		let z = y as! fun(String):String
+		let aaa = 0
+		return 10
+	}
+	`
+
+	out, err := testParseProgram(code)
+	require.Empty(t, err)
+	require.NotNil(t, out)
+	// t.Fail()
+}

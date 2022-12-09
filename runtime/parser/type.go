@@ -955,7 +955,9 @@ func defineIdentifierTypes() {
 
 			case KeywordFun:
 				p.skipSpaceAndComments()
-				return parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified, false)
+				res, err := parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified, false)
+				p.debugPrint("ret fun")
+				return res, err
 
 			case KeywordView:
 
@@ -968,7 +970,9 @@ func defineIdentifierTypes() {
 				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
 					// skip the `fun` keyword
 					p.nextSemanticToken()
-					return parseFunctionType(p, current.StartPos, ast.FunctionPurityView, false)
+					res, err := parseFunctionType(p, current.StartPos, ast.FunctionPurityView, false)
+					p.debugPrint("ret view fn")
+					return res, err
 				} else {
 					// backtrack otherwise - view is a nominal type here
 					p.current = current

@@ -19,6 +19,7 @@
 package parser
 
 import (
+	"fmt"
 	"math/big"
 	"strings"
 	"unicode/utf8"
@@ -1399,6 +1400,7 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 	t := p.current
 	p.next()
 
+	p.debugPrint(fmt.Sprintf("expr before apply: %s -> %s", t.Type.String(), p.current.Type.String()))
 	left, err := applyExprNullDenotation(p, t)
 	if err != nil {
 		return nil, err
@@ -1417,8 +1419,11 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 		current := p.current
 		if current.Is(lexer.TokenSpace) {
 			cursor := p.tokens.Cursor()
+			p.debugPrint(fmt.Sprintf("expr before next: %s", p.current.Type.String()))
 			p.next()
+			p.debugPrint(fmt.Sprintf("expr after next: %s", p.current.Type.String()))
 			if !exprLeftDenotationAllowsNewlineAfterNullDenotation(p.current.Type) {
+				p.debugPrint("revert")
 				p.tokens.Revert(cursor)
 				p.current = current
 			}

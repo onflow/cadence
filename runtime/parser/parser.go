@@ -20,6 +20,7 @@ package parser
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strings"
 
@@ -415,6 +416,12 @@ func (p *parser) skipSpaceAndComments() (containsNewline bool) {
 		skipNewlines: true,
 	})
 	return
+}
+
+func (p *parser) debugPrint(msg string) {
+	position := p.current.StartPos
+	slicedSrc := string(p.tokens.Input()[position.Offset:])
+	fmt.Printf("%s:\n```\n%s\n```\n", msg, slicedSrc)
 }
 
 var blockCommentDocStringPrefix = []byte("/**")
