@@ -804,7 +804,7 @@ func (*UnknownSpecialFunctionError) isSemanticError() {}
 func (*UnknownSpecialFunctionError) IsUserError() {}
 
 func (e *UnknownSpecialFunctionError) Error() string {
-	return "unknown special function. did you mean `init`, `destroy`, or forgot the `fun` keyword?"
+	return "unknown special function. did you mean `init`, `destroy`, or forget the `fun` keyword?"
 }
 
 func (e *UnknownSpecialFunctionError) StartPosition() ast.Position {
@@ -1066,6 +1066,10 @@ func (e *FieldTypeNotStorableError) Error() string {
 	)
 }
 
+func (e *FieldTypeNotStorableError) SecondaryError() string {
+	return "all contract fields must be storable"
+}
+
 func (e *FieldTypeNotStorableError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -1191,6 +1195,10 @@ func (e *InvalidEnumRawTypeError) Error() string {
 		"invalid enum raw type: `%s`",
 		e.Type.QualifiedString(),
 	)
+}
+
+func (e *InvalidEnumRawTypeError) SecondaryError() string {
+	return "only integer types are currently supported for enums"
 }
 
 // MissingEnumRawTypeError
@@ -2200,28 +2208,6 @@ func (e *InvalidResourceFieldError) EndPosition(memoryGauge common.MemoryGauge) 
 	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
-// InvalidIndexingError
-
-type InvalidIndexingError struct {
-	ast.Range
-}
-
-var _ SemanticError = &InvalidIndexingError{}
-var _ errors.UserError = &InvalidIndexingError{}
-var _ errors.SecondaryError = &InvalidIndexingError{}
-
-func (*InvalidIndexingError) isSemanticError() {}
-
-func (*InvalidIndexingError) IsUserError() {}
-
-func (e *InvalidIndexingError) Error() string {
-	return "invalid index"
-}
-
-func (e *InvalidIndexingError) SecondaryError() string {
-	return "expected expression"
-}
-
 // InvalidSwapExpressionError
 
 type InvalidSwapExpressionError struct {
@@ -2501,6 +2487,10 @@ func (*UnreachableStatementError) IsUserError() {}
 
 func (e *UnreachableStatementError) Error() string {
 	return "unreachable statement"
+}
+
+func (e *UnreachableStatementError) SecondaryError() string {
+	return "consider removing this code"
 }
 
 // UninitializedUseError
