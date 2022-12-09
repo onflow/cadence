@@ -59,7 +59,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 		return nil
 	}
 
-	checker.Elaboration.ImportDeclarationsResolvedLocations[declaration] = resolvedLocations
+	checker.Elaboration.SetImportDeclarationsResolvedLocations(declaration, resolvedLocations)
 
 	for _, resolvedLocation := range resolvedLocations {
 		checker.importResolvedLocation(resolvedLocation, locationRange)

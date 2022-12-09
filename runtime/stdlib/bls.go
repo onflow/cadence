@@ -69,7 +69,7 @@ const blsAggregateSignaturesFunctionName = "aggregateSignatures"
 
 var blsAggregateSignaturesFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
-	[]*sema.Parameter{
+	[]sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "signatures",
@@ -95,7 +95,7 @@ const blsAggregatePublicKeysFunctionName = "aggregatePublicKeys"
 
 var blsAggregatePublicKeysFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
-	[]*sema.Parameter{
+	[]sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "keys",
@@ -216,7 +216,7 @@ func newBLSAggregateSignaturesFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature)
+				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature, invocation.LocationRange)
 				if err != nil {
 					panic(err)
 				}

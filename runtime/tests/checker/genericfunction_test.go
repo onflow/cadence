@@ -154,7 +154,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
+		typeArguments := checker.Elaboration.InvocationExpressionTypes(invocationExpression).TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for parameter %#+v", typeParameter)
@@ -178,7 +178,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -203,7 +203,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
+		typeArguments := checker.Elaboration.InvocationExpressionTypes(invocationExpression).TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -227,7 +227,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -265,7 +265,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -303,7 +303,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -338,7 +338,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "first",
@@ -372,7 +372,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypes(invocationExpression).TypeArguments
 
 		ty, present := typeParameterTypes.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -396,7 +396,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "first",
@@ -493,7 +493,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
+		typeArguments := checker.Elaboration.InvocationExpressionTypes(invocationExpression).TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -522,7 +522,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -551,7 +551,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
+		typeArguments := checker.Elaboration.InvocationExpressionTypes(invocationExpression).TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -594,7 +594,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
+		typeArguments := checker.Elaboration.InvocationExpressionTypes(invocationExpression).TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -644,7 +644,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -820,7 +820,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						TypeParameters: []*sema.TypeParameter{
 							typeParameter,
 						},
-						Parameters: []*sema.Parameter{
+						Parameters: []sema.Parameter{
 							{
 								Label:      sema.ArgumentLabelNotRequired,
 								Identifier: "value",
@@ -868,7 +868,7 @@ func TestCheckGenericFunctionIsInvalid(t *testing.T) {
 		TypeParameters: []*sema.TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*sema.Parameter{
+		Parameters: []sema.Parameter{
 			{
 				Label:      sema.ArgumentLabelNotRequired,
 				Identifier: "value",

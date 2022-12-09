@@ -1113,6 +1113,62 @@ func TestCheckAccount_link(t *testing.T) {
 	}
 }
 
+func TestCheckAccount_linkAccount(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(domain common.PathDomain, enabled bool) {
+
+		testName := fmt.Sprintf("%s, %v", domain.Identifier(), enabled)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  resource R {}
+
+                  fun test(authAccount: AuthAccount): Capability<&AuthAccount>? {
+                      return authAccount.linkAccount(/%s/r)
+                  }
+                `,
+				domain.Identifier(),
+			)
+
+			_, err := ParseAndCheckWithOptions(t,
+				code,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						AccountLinkingEnabled: enabled,
+					},
+				},
+			)
+
+			if enabled {
+				switch domain {
+				case common.PathDomainPrivate, common.PathDomainPublic:
+					require.NoError(t, err)
+
+				default:
+					errs := RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
+			} else {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+			}
+		})
+	}
+
+	for _, enabled := range []bool{true, false} {
+		for _, domain := range common.AllPathDomainsByIdentifier {
+			test(domain, enabled)
+		}
+	}
+}
+
 func TestCheckAccount_unlink(t *testing.T) {
 
 	t.Parallel()

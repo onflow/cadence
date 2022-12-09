@@ -78,7 +78,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 	} else {
 		value = interpreter.evalExpression(statement.Expression)
 
-		returnStatementTypes := interpreter.Program.Elaboration.ReturnStatementTypes[statement]
+		returnStatementTypes := interpreter.Program.Elaboration.ReturnStatementTypes(statement)
 		valueType := returnStatementTypes.ValueType
 		returnType := returnStatementTypes.ReturnType
 
@@ -91,7 +91,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		value = interpreter.transferAndConvert(value, valueType, returnType, locationRange)
 	}
 
-	return ReturnResult{value}
+	return ReturnResult{Value: value}
 }
 
 var theBreakResult StatementResult = BreakResult{}
@@ -159,7 +159,7 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 		panic(errors.NewUnreachableError())
 	}
 
-	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes[declaration]
+	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes(declaration)
 	valueType := variableDeclarationTypes.ValueType
 
 	if declaration.SecondValue != nil {
@@ -344,7 +344,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 		}
 
 		if statement.Index != nil {
-			index = index.Plus(interpreter, intOne).(IntValue)
+			index = index.Plus(interpreter, intOne, locationRange).(IntValue)
 		}
 	}
 }
@@ -396,7 +396,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		panic(errors.NewUnreachableError())
 	}
 
-	eventType := interpreter.Program.Elaboration.EmitStatementEventTypes[statement]
+	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
 
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
@@ -450,7 +450,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	valueCallback func(identifier string, value Value),
 ) {
 
-	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes[declaration]
+	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes(declaration)
 	targetType := variableDeclarationTypes.TargetType
 	valueType := variableDeclarationTypes.ValueType
 	secondValueType := variableDeclarationTypes.SecondValueType
@@ -503,7 +503,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 }
 
 func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) StatementResult {
-	assignmentStatementTypes := interpreter.Program.Elaboration.AssignmentStatementTypes[assignment]
+	assignmentStatementTypes := interpreter.Program.Elaboration.AssignmentStatementTypes(assignment)
 	targetType := assignmentStatementTypes.TargetType
 	valueType := assignmentStatementTypes.ValueType
 
@@ -521,7 +521,7 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 }
 
 func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) StatementResult {
-	swapStatementTypes := interpreter.Program.Elaboration.SwapStatementTypes[swap]
+	swapStatementTypes := interpreter.Program.Elaboration.SwapStatementTypes(swap)
 	leftType := swapStatementTypes.LeftType
 	rightType := swapStatementTypes.RightType
 
@@ -578,5 +578,5 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 
 func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) StatementResult {
 	result := interpreter.evalExpression(statement.Expression)
-	return ExpressionResult{result}
+	return ExpressionResult{Value: result}
 }

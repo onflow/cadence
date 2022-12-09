@@ -86,7 +86,7 @@ func (checker *Checker) visitFunctionDeclaration(
 
 	// global functions were previously declared, see `declareFunctionDeclaration`
 
-	functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
+	functionType := checker.Elaboration.FunctionDeclarationFunctionType(declaration)
 	if functionType == nil {
 		functionType = checker.functionType(declaration.Purity, declaration.ParameterList, declaration.ReturnTypeAnnotation)
 
@@ -95,7 +95,7 @@ func (checker *Checker) visitFunctionDeclaration(
 		}
 	}
 
-	checker.Elaboration.FunctionDeclarationFunctionTypes[declaration] = functionType
+	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 
 	checker.checkFunction(
 		declaration.ParameterList,
@@ -146,7 +146,7 @@ func (checker *Checker) checkFunction(
 
 	checker.checkParameters(parameterList, functionType.Parameters)
 
-	if functionType.ReturnTypeAnnotation != nil {
+	if functionType.ReturnTypeAnnotation.Type != nil {
 		checker.checkTypeAnnotation(functionType.ReturnTypeAnnotation, returnTypeAnnotation)
 	}
 
@@ -233,7 +233,7 @@ func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, ret
 	)
 }
 
-func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parameters []*Parameter) {
+func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parameters []Parameter) {
 	for i, parameter := range parameterList.Parameters {
 		parameterTypeAnnotation := parameters[i].TypeAnnotation
 
@@ -276,7 +276,7 @@ func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 // ensuring names are unique and constants don't already exist
 func (checker *Checker) declareParameters(
 	parameterList *ast.ParameterList,
-	parameters []*Parameter,
+	parameters []Parameter,
 ) {
 	depth := checker.valueActivations.Depth()
 
@@ -328,7 +328,7 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 		rewriteResult := checker.rewritePostConditions(*postConditions)
 		rewrittenPostConditions = &rewriteResult
 
-		checker.Elaboration.PostConditionsRewrite[postConditions] = rewriteResult
+		checker.Elaboration.SetPostConditionsRewrite(postConditions, rewriteResult)
 
 		checker.visitStatements(rewriteResult.BeforeStatements)
 	}
@@ -362,24 +362,20 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 	}
 
 	if rewrittenPostConditions != nil {
-		checker.InNewPurityScope(true, func() {
-			checker.visitConditions(rewrittenPostConditions.RewrittenPostConditions)
-		})
+		checker.visitConditions(rewrittenPostConditions.RewrittenPostConditions)
 	}
 }
 
 func (checker *Checker) visitFunctionBlock(
 	functionBlock *ast.FunctionBlock,
-	returnTypeAnnotation *TypeAnnotation,
+	returnTypeAnnotation TypeAnnotation,
 	checkResourceLoss bool,
 ) {
 	checker.enterValueScope()
 	defer checker.leaveValueScope(functionBlock.EndPosition, checkResourceLoss)
 
 	if functionBlock.PreConditions != nil {
-		checker.InNewPurityScope(true, func() {
-			checker.visitConditions(*functionBlock.PreConditions)
-		})
+		checker.visitConditions(*functionBlock.PreConditions)
 	}
 
 	checker.visitWithPostConditions(
@@ -423,7 +419,7 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 		expression.ReturnTypeAnnotation,
 	)
 
-	checker.Elaboration.FunctionExpressionFunctionType[expression] = functionType
+	checker.Elaboration.SetFunctionExpressionFunctionType(expression, functionType)
 
 	checker.checkFunction(
 		expression.ParameterList,

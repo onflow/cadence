@@ -1091,7 +1091,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 
 	checkFunctionType := &sema.FunctionType{
 		Purity: sema.FunctionPurityView,
-		Parameters: []*sema.Parameter{
+		Parameters: []sema.Parameter{
 			{
 				Label:          sema.ArgumentLabelNotRequired,
 				Identifier:     "value",

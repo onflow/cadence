@@ -70,7 +70,7 @@ const rlpDecodeStringFunctionName = "decodeString"
 
 var rlpDecodeStringFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
-	[]*sema.Parameter{
+	[]sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "input",
@@ -104,7 +104,7 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		locationRange := invocation.LocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input, locationRange)
 		if err != nil {
 			panic(RLPDecodeStringError{
 				Msg:           err.Error(),
@@ -141,7 +141,7 @@ const rlpDecodeListFunctionName = "decodeList"
 
 var rlpDecodeListFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
-	[]*sema.Parameter{
+	[]sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "input",
@@ -175,7 +175,7 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		locationRange := invocation.LocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input, locationRange)
 		if err != nil {
 			panic(RLPDecodeListError{
 				Msg:           err.Error(),

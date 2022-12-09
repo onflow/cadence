@@ -168,7 +168,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		assert.False(t,
 			IsSubType(
 				&FunctionType{
-					Parameters: []*Parameter{
+					Parameters: []Parameter{
 						{
 							TypeAnnotation: IntTypeAnnotation,
 						},
@@ -176,7 +176,7 @@ func TestFunctionSubtyping(t *testing.T) {
 					ReturnTypeAnnotation: VoidTypeAnnotation,
 				},
 				&FunctionType{
-					Parameters: []*Parameter{
+					Parameters: []Parameter{
 						{
 							TypeAnnotation: AnyStructTypeAnnotation,
 						},
@@ -191,7 +191,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
-					Parameters: []*Parameter{
+					Parameters: []Parameter{
 						{
 							TypeAnnotation: AnyStructTypeAnnotation,
 						},
@@ -199,7 +199,7 @@ func TestFunctionSubtyping(t *testing.T) {
 					ReturnTypeAnnotation: VoidTypeAnnotation,
 				},
 				&FunctionType{
-					Parameters: []*Parameter{
+					Parameters: []Parameter{
 						{
 							TypeAnnotation: IntTypeAnnotation,
 						},

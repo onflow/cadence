@@ -20,7 +20,7 @@ package parser
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -745,7 +745,7 @@ func ParseProgramFromFile(
 	err error,
 ) {
 	var data []byte
-	data, err = ioutil.ReadFile(filename)
+	data, err = os.ReadFile(filename)
 	if err != nil {
 		return nil, nil, err
 	}

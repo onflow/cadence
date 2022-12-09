@@ -319,9 +319,7 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryFunction(
 		"foo",
 		&sema.FunctionType{
-			ReturnTypeAnnotation: &sema.TypeAnnotation{
-				Type: sema.VoidType,
-			},
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			RequiredArgumentCount: func() *int {
 				// NOTE: important to check *all* arguments are optional
 				var count = 0

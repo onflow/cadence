@@ -52,7 +52,7 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 	ty := &ConstantSizedType{
 		Type: &FunctionType{
 			Purity: FunctionPurityImpure,
-			Parameters: []*Parameter{
+			Parameters: []Parameter{
 				{
 					TypeAnnotation: Int8TypeAnnotation,
 				},
@@ -75,7 +75,7 @@ func TestConstantSizedType_String_OfViewFunctionType(t *testing.T) {
 	ty := &ConstantSizedType{
 		Type: &FunctionType{
 			Purity: FunctionPurityView,
-			Parameters: []*Parameter{
+			Parameters: []Parameter{
 				{
 					TypeAnnotation: Int8TypeAnnotation,
 				},
@@ -114,7 +114,7 @@ func TestVariableSizedType_String_OfFunctionType(t *testing.T) {
 
 	ty := &VariableSizedType{
 		Type: &FunctionType{
-			Parameters: []*Parameter{
+			Parameters: []Parameter{
 				{
 					TypeAnnotation: Int8TypeAnnotation,
 				},
@@ -760,7 +760,9 @@ func TestCommonSuperType(t *testing.T) {
 		_ = newTypeTagFromLowerMask(32)
 	})
 
-	nilType := &OptionalType{NeverType}
+	nilType := &OptionalType{
+		Type: NeverType,
+	}
 
 	resourceType := &CompositeType{
 		Location:   nil,
@@ -1502,7 +1504,7 @@ func TestCommonSuperType(t *testing.T) {
 
 		funcType1 := &FunctionType{
 			Purity: FunctionPurityImpure,
-			Parameters: []*Parameter{
+			Parameters: []Parameter{
 				{
 					TypeAnnotation: StringTypeAnnotation,
 				},
@@ -1513,7 +1515,7 @@ func TestCommonSuperType(t *testing.T) {
 
 		funcType2 := &FunctionType{
 			Purity: FunctionPurityImpure,
-			Parameters: []*Parameter{
+			Parameters: []Parameter{
 				{
 					TypeAnnotation: IntTypeAnnotation,
 				},

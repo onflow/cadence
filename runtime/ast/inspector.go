@@ -59,7 +59,9 @@ type Inspector struct {
 
 // NewInspector returns an Inspector for the specified AST element.
 func NewInspector(element Element) *Inspector {
-	return &Inspector{traverse(element)}
+	return &Inspector{
+		events: traverse(element),
+	}
 }
 
 // An event represents a push or a pop

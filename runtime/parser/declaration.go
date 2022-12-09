@@ -84,14 +84,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			if purity != ast.FunctionPurityUnspecified {
 				return nil, NewSyntaxError(*purityPos, "invalid view modifier for pragma")
 			}
-			if access != ast.AccessNotSpecified {
-				return nil, NewSyntaxError(*accessPos, "invalid access modifier for pragma")
-			}
-			if staticModifierEnabled && staticPos != nil {
-				return nil, NewSyntaxError(*staticPos, "invalid static modifier for pragma")
-			}
-			if nativeModifierEnabled && nativePos != nil {
-				return nil, NewSyntaxError(*nativePos, "invalid native modifier for pragma")
+			err := rejectAllModifiers(p, access, accessPos, staticPos, nativePos, common.DeclarationKindPragma)
+			if err != nil {
+				return nil, err
 			}
 			return parsePragmaDeclaration(p)
 
@@ -99,11 +94,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			switch string(p.currentTokenSource()) {
 
 			case KeywordLet, KeywordVar:
-				if staticModifierEnabled && staticPos != nil {
-					return nil, NewSyntaxError(*staticPos, "invalid static modifier for variable")
-				}
-				if nativeModifierEnabled && nativePos != nil {
-					return nil, NewSyntaxError(*nativePos, "invalid native modifier for variable")
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindVariable)
+				if err != nil {
+					return nil, err
 				}
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable")
@@ -124,11 +117,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				)
 
 			case KeywordImport:
-				if staticModifierEnabled && staticPos != nil {
-					return nil, NewSyntaxError(*staticPos, "invalid static modifier for import")
-				}
-				if nativeModifierEnabled && nativePos != nil {
-					return nil, NewSyntaxError(*nativePos, "invalid native modifier for import")
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindImport)
+				if err != nil {
+					return nil, err
 				}
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for import")
@@ -136,38 +127,59 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				return parseImportDeclaration(p)
 
 			case KeywordEvent:
-				if staticModifierEnabled && staticPos != nil {
-					return nil, NewSyntaxError(*staticPos, "invalid static modifier for event")
-				}
-				if nativeModifierEnabled && nativePos != nil {
-					return nil, NewSyntaxError(*nativePos, "invalid native modifier for event")
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEvent)
+				if err != nil {
+					return nil, err
 				}
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for event")
 				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
-			case KeywordStruct, KeywordResource, KeywordContract, KeywordEnum:
-				if staticModifierEnabled && staticPos != nil {
-					return nil, NewSyntaxError(*staticPos, "invalid static modifier for composite")
-				}
-				if nativeModifierEnabled && nativePos != nil {
-					return nil, NewSyntaxError(*nativePos, "invalid native modifier for composite")
+			case KeywordStruct:
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindStructure)
+				if err != nil {
+					return nil, err
 				}
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for composite")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for struct")
+				}
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+
+			case KeywordResource:
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindResource)
+				if err != nil {
+					return nil, err
+				}
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for resource")
+				}
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+
+			case KeywordContract:
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindContract)
+				if err != nil {
+					return nil, err
+				}
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for contract")
+				}
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+
+			case KeywordEnum:
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEnum)
+				if err != nil {
+					return nil, err
+				}
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for enum")
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
 			case KeywordTransaction:
-				if access != ast.AccessNotSpecified {
-					return nil, NewSyntaxError(*accessPos, "invalid access modifier for transaction")
-				}
-				if staticModifierEnabled && staticPos != nil {
-					return nil, NewSyntaxError(*staticPos, "invalid static modifier for transaction")
-				}
-				if nativeModifierEnabled && nativePos != nil {
-					return nil, NewSyntaxError(*nativePos, "invalid native modifier for transaction")
+				err := rejectAllModifiers(p, access, accessPos, staticPos, nativePos, common.DeclarationKindTransaction)
+				if err != nil {
+					return nil, err
 				}
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for transaction")
@@ -1131,6 +1143,7 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 //	                          | compositeDeclaration
 //	                          | eventDeclaration
 //	                          | enumCase
+//	                          | pragmaDeclaration
 func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 	const functionBlockIsOptional = true
@@ -1181,11 +1194,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for enum case")
 				}
-				if staticModifierEnabled && staticPos != nil {
-					return nil, NewSyntaxError(*staticPos, "invalid static modifier for enum case")
-				}
-				if nativeModifierEnabled && nativePos != nil {
-					return nil, NewSyntaxError(*nativePos, "invalid native modifier for enum case")
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEnumCase)
+				if err != nil {
+					return nil, err
 				}
 				return parseEnumCase(p, access, accessPos, docString)
 
@@ -1206,23 +1217,49 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for event")
 				}
-				if staticModifierEnabled && staticPos != nil {
-					return nil, NewSyntaxError(*staticPos, "invalid static modifier for event")
-				}
-				if nativeModifierEnabled && nativePos != nil {
-					return nil, NewSyntaxError(*nativePos, "invalid native modifier for event")
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEvent)
+				if err != nil {
+					return nil, err
 				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
-			case KeywordStruct, KeywordResource, KeywordContract, KeywordEnum:
+			case KeywordStruct:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for composite")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for struct")
 				}
-				if staticModifierEnabled && staticPos != nil {
-					return nil, NewSyntaxError(*staticPos, "invalid static modifier for composite")
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindStructure)
+				if err != nil {
+					return nil, err
 				}
-				if nativeModifierEnabled && nativePos != nil {
-					return nil, NewSyntaxError(*nativePos, "invalid native modifier for composite")
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+
+			case KeywordResource:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for resource")
+				}
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindResource)
+				if err != nil {
+					return nil, err
+				}
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+
+			case KeywordContract:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for contract")
+				}
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindContract)
+				if err != nil {
+					return nil, err
+				}
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+
+			case KeywordEnum:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for enum")
+				}
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEnum)
+				if err != nil {
+					return nil, err
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
@@ -1290,6 +1327,20 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			p.next()
 			continue
 
+		case lexer.TokenPragma:
+			if previousIdentifierToken != nil {
+				return nil, NewSyntaxError(
+					previousIdentifierToken.StartPos,
+					"unexpected token: %s",
+					previousIdentifierToken.Type,
+				)
+			}
+			err := rejectAllModifiers(p, access, accessPos, staticPos, nativePos, common.DeclarationKindPragma)
+			if err != nil {
+				return nil, err
+			}
+			return parsePragmaDeclaration(p)
+
 		case lexer.TokenColon:
 			if previousIdentifierToken == nil {
 				return nil, p.syntaxError("unexpected %s", p.current.Type)
@@ -1329,6 +1380,35 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 		return nil, nil
 	}
+}
+
+func rejectAllModifiers(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	staticPos *ast.Position,
+	nativePos *ast.Position,
+	kind common.DeclarationKind,
+) error {
+	if access != ast.AccessNotSpecified {
+		return NewSyntaxError(*accessPos, "invalid access modifier for %s", kind.Name())
+	}
+	return rejectStaticAndNativeModifiers(p, staticPos, nativePos, kind)
+}
+
+func rejectStaticAndNativeModifiers(
+	p *parser,
+	staticPos *ast.Position,
+	nativePos *ast.Position,
+	kind common.DeclarationKind,
+) error {
+	if p.config.StaticModifierEnabled && staticPos != nil {
+		return NewSyntaxError(*staticPos, "invalid static modifier for %s", kind.Name())
+	}
+	if p.config.NativeModifierEnabled && nativePos != nil {
+		return NewSyntaxError(*nativePos, "invalid native modifier for %s", kind.Name())
+	}
+	return nil
 }
 
 func parseFieldDeclarationWithoutVariableKind(
