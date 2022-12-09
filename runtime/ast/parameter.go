@@ -18,13 +18,17 @@
 
 package ast
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"encoding/json"
+
+	"github.com/onflow/cadence/runtime/common"
+)
 
 type Parameter struct {
 	Label          string
 	Identifier     Identifier
 	TypeAnnotation *TypeAnnotation
-	Range
+	StartPos       Position `json:"-"`
 }
 
 func NewParameter(
@@ -32,24 +36,45 @@ func NewParameter(
 	label string,
 	identifier Identifier,
 	typeAnnotation *TypeAnnotation,
-	astRange Range,
+	startPos Position,
 ) *Parameter {
 	common.UseMemory(gauge, common.ParameterMemoryUsage)
 	return &Parameter{
 		Label:          label,
 		Identifier:     identifier,
 		TypeAnnotation: typeAnnotation,
-		Range:          astRange,
+		StartPos:       startPos,
 	}
 }
+
+var _ HasPosition = &Parameter{}
 
 // EffectiveArgumentLabel returns the effective argument label that
 // an argument in a call must use:
 // If no argument label is declared for parameter,
 // the parameter name is used as the argument label
-func (p Parameter) EffectiveArgumentLabel() string {
+func (p *Parameter) EffectiveArgumentLabel() string {
 	if p.Label != "" {
 		return p.Label
 	}
 	return p.Identifier.Identifier
+}
+
+func (p *Parameter) StartPosition() Position {
+	return p.StartPos
+}
+
+func (p *Parameter) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return p.TypeAnnotation.EndPosition(memoryGauge)
+}
+
+func (p *Parameter) MarshalJSON() ([]byte, error) {
+	type Alias Parameter
+	return json.Marshal(&struct {
+		Range
+		*Alias
+	}{
+		Range: NewUnmeteredRangeFromPositioned(p),
+		Alias: (*Alias)(p),
+	})
 }

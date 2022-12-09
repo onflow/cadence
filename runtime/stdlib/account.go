@@ -37,7 +37,7 @@ Creates a new account, paid by the given existing account
 `
 
 var authAccountFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Identifier: "payer",
 			TypeAnnotation: sema.NewTypeAnnotation(
@@ -101,7 +101,7 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 			payerValue := payer.GetMember(
 				inter,
 				locationRange,
-				sema.AuthAccountAddressField,
+				sema.AuthAccountTypeAddressFieldName,
 			)
 			if payerValue == nil {
 				panic(errors.NewUnexpectedError("payer address is not set"))
@@ -150,10 +150,10 @@ Returns the AuthAccount for the given address. Only available in scripts
 `
 
 var getAuthAccountFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{{
+	Parameters: []sema.Parameter{{
 		Label:          sema.ArgumentLabelNotRequired,
 		Identifier:     "address",
-		TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+		TypeAnnotation: sema.NewTypeAnnotation(sema.TheAddressType),
 	}},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
 }
@@ -246,6 +246,11 @@ func newAuthAccountContractsValue(
 			true,
 		),
 		newAccountContractsGetFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		newAccountContractsBorrowFunction(
 			gauge,
 			handler,
 			addressValue,
@@ -456,7 +461,9 @@ func newAddPublicKeyFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue)
+			locationRange := invocation.LocationRange
+
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue, locationRange)
 			if err != nil {
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
@@ -469,8 +476,6 @@ func newAddPublicKeyFunction(
 			}
 
 			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
 			handler.EmitEvent(
 				inter,
 				AccountKeyAddedEventType,
@@ -513,7 +518,7 @@ func newRemovePublicKeyFunction(
 			var publicKey []byte
 			var err error
 			wrapPanic(func() {
-				publicKey, err = handler.RevokeEncodedAccountKey(address, index.ToInt())
+				publicKey, err = handler.RevokeEncodedAccountKey(address, index.ToInt(invocation.LocationRange))
 			})
 			if err != nil {
 				panic(err)
@@ -583,7 +588,7 @@ func newAccountKeysAddFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			weight := weightValue.ToInt()
+			weight := weightValue.ToInt(locationRange)
 
 			var accountKey *AccountKey
 			wrapPanic(func() {
@@ -650,7 +655,8 @@ func newAccountKeysGetFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			index := indexValue.ToInt()
+			locationRange := invocation.LocationRange
+			index := indexValue.ToInt(locationRange)
 
 			var err error
 			var accountKey *AccountKey
@@ -670,7 +676,6 @@ func newAccountKeysGetFunction(
 			}
 
 			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
 
 			return interpreter.NewSomeValueNonCopying(
 				inter,
@@ -839,7 +844,8 @@ func newAccountKeysRevokeFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			index := indexValue.ToInt()
+			locationRange := invocation.LocationRange
+			index := indexValue.ToInt(locationRange)
 
 			var err error
 			var accountKey *AccountKey
@@ -858,7 +864,6 @@ func newAccountKeysRevokeFunction(
 			}
 
 			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
 
 			handler.EmitEvent(
 				inter,
@@ -934,6 +939,11 @@ func newPublicAccountContractsValue(
 			handler,
 			addressValue,
 		),
+		newAccountContractsBorrowFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
 		newAccountContractsGetNamesFunction(
 			handler,
 			addressValue,
@@ -952,7 +962,7 @@ func accountInboxPublishFunction(
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value, ok := invocation.Arguments[0].(*interpreter.CapabilityValue)
+			value, ok := invocation.Arguments[0].(*interpreter.StorageCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -1267,7 +1277,86 @@ func newAccountContractsGetFunction(
 				return interpreter.Nil
 			}
 		},
-		sema.AuthAccountContractsTypeGetFunctionType,
+		sema.AccountContractsTypeGetFunctionType,
+	)
+}
+
+func newAccountContractsBorrowFunction(
+	gauge common.MemoryGauge,
+	handler PublicAccountContractsHandler,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			name := nameValue.Str
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+			ty := typeParameterPair.Value
+
+			referenceType, ok := ty.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Check if the contract exists
+
+			var code []byte
+			var err error
+			wrapPanic(func() {
+				code, err = handler.GetAccountContractCode(address, name)
+			})
+			if err != nil {
+				panic(err)
+			}
+			if len(code) == 0 {
+				return interpreter.Nil
+			}
+
+			// Load the contract
+
+			contractLocation := common.NewAddressLocation(gauge, address, name)
+			inter = inter.EnsureLoaded(contractLocation)
+			contractValue, err := inter.GetContractComposite(contractLocation)
+			if err != nil {
+				panic(err)
+			}
+
+			// Check the type
+
+			staticType := contractValue.StaticType(inter)
+			if !inter.IsSubTypeOfSemaType(staticType, referenceType.Type) {
+				return interpreter.Nil
+			}
+
+			reference := interpreter.NewEphemeralReferenceValue(
+				inter,
+				false,
+				contractValue,
+				referenceType.Type,
+			)
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				reference,
+			)
+
+		},
+		sema.AccountContractsTypeBorrowFunctionType,
 	)
 }
 
@@ -1324,7 +1413,7 @@ func newAuthAccountContractsChangeFunction(
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue)
+			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue, locationRange)
 			if err != nil {
 				panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 			}
@@ -1411,7 +1500,7 @@ func newAuthAccountContractsChangeFunction(
 			var contractTypes []*sema.CompositeType
 			var contractInterfaceTypes []*sema.InterfaceType
 
-			program.Elaboration.GlobalTypes.Foreach(func(_ string, variable *sema.Variable) {
+			program.Elaboration.ForEachGlobalType(func(_ string, variable *sema.Variable) {
 				switch ty := variable.Type.(type) {
 				case *sema.CompositeType:
 					if ty.Kind == common.CompositeKindContract {
@@ -1703,6 +1792,30 @@ type DeployedContractConstructorInvocation struct {
 	ParameterTypes       []sema.Type
 }
 
+type InvalidContractArgumentError struct {
+	Index        int
+	ExpectedType sema.Type
+	ActualType   sema.Type
+}
+
+var _ errors.UserError = &InvalidContractArgumentError{}
+
+func (*InvalidContractArgumentError) IsUserError() {}
+
+func (e *InvalidContractArgumentError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"invalid argument at index %d: expected type `%s`, got `%s`",
+		e.Index,
+		expected,
+		actual,
+	)
+}
+
 func instantiateContract(
 	handler AccountContractAdditionHandler,
 	location common.AddressLocation,
@@ -1741,16 +1854,16 @@ func instantiateContract(
 
 	// Check arguments match parameter
 
-	for i := 0; i < argumentCount; i++ {
-		argumentType := argumentTypes[i]
-		parameterTye := parameterTypes[i]
+	for argumentIndex := 0; argumentIndex < argumentCount; argumentIndex++ {
+		argumentType := argumentTypes[argumentIndex]
+		parameterTye := parameterTypes[argumentIndex]
 		if !sema.IsSubType(argumentType, parameterTye) {
-			return nil, errors.NewDefaultUserError(
-				"invalid argument %d: expected type `%s`, got `%s`",
-				i,
-				parameterTye,
-				argumentType,
-			)
+
+			return nil, &InvalidContractArgumentError{
+				Index:        argumentIndex,
+				ExpectedType: parameterTye,
+				ActualType:   argumentType,
+			}
 		}
 	}
 
@@ -1899,12 +2012,12 @@ Returns the public account for the given address
 `
 
 var getAccountFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "address",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.AddressType{},
+				sema.TheAddressType,
 			),
 		},
 	},
@@ -1993,6 +2106,7 @@ func NewAccountKeyValue(
 			inter, func() uint64 {
 				return uint64(accountKey.Weight)
 			},
+			locationRange,
 		),
 		interpreter.AsBoolValue(accountKey.IsRevoked),
 	)
@@ -2012,7 +2126,7 @@ func NewHashAlgorithmFromValue(
 
 	hashAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
-	return sema.HashAlgorithm(hashAlgoRawValue.ToInt())
+	return sema.HashAlgorithm(hashAlgoRawValue.ToInt(locationRange))
 }
 
 func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {

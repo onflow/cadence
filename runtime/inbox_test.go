@@ -176,7 +176,7 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 	)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to force-cast value: expected type `Capability<&[String]>`, got `Capability<&[Int]>")
+	assert.Contains(t, err.Error(), "failed to force-cast value: expected type `Capability<&[String]>`, got `Capability<&[Int]>`")
 
 	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
 

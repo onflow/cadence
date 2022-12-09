@@ -18,7 +18,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -90,7 +89,7 @@ func TestMinify(t *testing.T) {
 	t.Parallel()
 
 	// create an input file with the test cadence script
-	inputFile, err := ioutil.TempFile("", "test_*.cdc")
+	inputFile, err := os.CreateTemp("", "test_*.cdc")
 	require.NoError(t, err)
 	inputFileName := inputFile.Name()
 	_, err = inputFile.WriteString(cadenceTestScript)
@@ -99,7 +98,7 @@ func TestMinify(t *testing.T) {
 	require.NoError(t, err)
 
 	// get a valid output file path
-	outputFile, err := ioutil.TempFile("", "minified_test_*.cdc")
+	outputFile, err := os.CreateTemp("", "minified_test_*.cdc")
 	require.NoError(t, err)
 	err = outputFile.Close()
 	require.NoError(t, err)
@@ -116,7 +115,7 @@ func TestMinify(t *testing.T) {
 	defer os.Remove(outputFileName)
 
 	// read the output file contents and assert the contents
-	actualOutput, err := ioutil.ReadFile(outputFileName)
+	actualOutput, err := os.ReadFile(outputFileName)
 	require.NoError(t, err)
 	assert.Equal(t, expectedOutput, string(actualOutput))
 }

@@ -32,11 +32,13 @@ func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentState
 		false,
 	)
 
-	checker.Elaboration.AssignmentStatementTypes[assignment] =
+	checker.Elaboration.SetAssignmentStatementTypes(
+		assignment,
 		AssignmentStatementTypes{
 			ValueType:  valueType,
 			TargetType: targetType,
-		}
+		},
+	)
 
 	return
 }

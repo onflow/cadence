@@ -69,7 +69,7 @@ func (d *Debugger) RemoveBreakpoint(location common.Location, line uint) {
 }
 
 func (d *Debugger) ClearBreakpoints() {
-	for location := range d.breakpoints { //nolint:maprangecheck
+	for location := range d.breakpoints { //nolint:maprange
 		delete(d.breakpoints, location)
 	}
 }

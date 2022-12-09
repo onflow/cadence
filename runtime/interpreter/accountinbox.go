@@ -40,9 +40,9 @@ func NewAuthAccountInboxValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountInboxPublishField:   publishFunction,
-		sema.AuthAccountInboxUnpublishField: unpublishFunction,
-		sema.AuthAccountInboxClaimField:     claimFunction,
+		sema.AuthAccountTypeInboxPublishFunctionName:   publishFunction,
+		sema.AuthAccountTypeInboxUnpublishFunctionName: unpublishFunction,
+		sema.AuthAccountTypeInboxClaimFunctionName:     claimFunction,
 	}
 
 	var str string

@@ -31,7 +31,7 @@ import (
 
 var allIntegerTypesAndAddressType = append(
 	sema.AllIntegerTypes[:],
-	&sema.AddressType{},
+	sema.TheAddressType,
 )
 
 func TestCheckIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T) {
