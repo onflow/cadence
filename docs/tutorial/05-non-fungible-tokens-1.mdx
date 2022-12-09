@@ -51,10 +51,10 @@ Possible examples of NFTs include:
 CryptoKitties, Top Shot Moments, and tickets to a really fun concert.
 
 Instead of being represented in a central ledger, like in most smart contract languages,
-Cadence represents each NFT as a [resource object](/cadence/language/composite-types)
+Cadence represents each NFT as a [resource object](../language/composite-types)
 that users store in their accounts.
 This allows NFTs to benefit from the resource ownership rules
-that are enforced by the [type system](/cadence/language/values-and-types) -
+that are enforced by the [type system](../language/values-and-types) -
 resources can only have a single owner, they cannot be duplicated,
 and they cannot be lost due to accidental or malicious programming errors.
 These protections ensure that owners know that their NFT is safe and can represent an asset that has real value.
@@ -134,7 +134,7 @@ The contract will:
 2. Declare an ID field, a metadata field and an `init()` function in the NFT resource
 3. Create an `init()` function for the contract that saves an NFT to an account
 
-This contract relies on the [account storage API](/cadence/language/accounts#authaccount) to save NFTs in the
+This contract relies on the [account storage API](../language/accounts#authaccount) to save NFTs in the
 `AuthAccount` object.
 
 ---

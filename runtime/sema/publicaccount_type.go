@@ -23,17 +23,17 @@ import (
 )
 
 const PublicAccountTypeName = "PublicAccount"
-const PublicAccountAddressField = "address"
-const PublicAccountBalanceField = "balance"
-const PublicAccountAvailableBalanceField = "availableBalance"
-const PublicAccountStorageUsedField = "storageUsed"
-const PublicAccountStorageCapacityField = "storageCapacity"
-const PublicAccountGetCapabilityField = "getCapability"
-const PublicAccountGetTargetLinkField = "getLinkTarget"
-const PublicAccountForEachPublicField = "forEachPublic"
-const PublicAccountKeysField = "keys"
-const PublicAccountContractsField = "contracts"
-const PublicAccountPathsField = "publicPaths"
+const PublicAccountTypeAddressFieldName = "address"
+const PublicAccountTypeBalanceFieldName = "balance"
+const PublicAccountTypeAvailableBalanceFieldName = "availableBalance"
+const PublicAccountTypeStorageUsedFieldName = "storageUsed"
+const PublicAccountTypeStorageCapacityFieldName = "storageCapacity"
+const PublicAccountTypeGetCapabilityFieldName = "getCapability"
+const PublicAccountTypeGetTargetLinkFieldName = "getLinkTarget"
+const PublicAccountTypeForEachPublicFieldName = "forEachPublic"
+const PublicAccountTypeKeysFieldName = "keys"
+const PublicAccountTypeContractsFieldName = "contracts"
+const PublicAccountTypePathsFieldName = "publicPaths"
 
 // PublicAccountType represents the publicly accessible portion of an account.
 var PublicAccountType = func() *CompositeType {
@@ -54,67 +54,67 @@ var PublicAccountType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
-			PublicAccountAddressField,
-			&AddressType{},
+			PublicAccountTypeAddressFieldName,
+			TheAddressType,
 			accountTypeAddressFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
-			PublicAccountBalanceField,
+			PublicAccountTypeBalanceFieldName,
 			UFix64Type,
 			accountTypeAccountBalanceFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
-			PublicAccountAvailableBalanceField,
+			PublicAccountTypeAvailableBalanceFieldName,
 			UFix64Type,
 			accountTypeAccountAvailableBalanceFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
-			PublicAccountStorageUsedField,
+			PublicAccountTypeStorageUsedFieldName,
 			UInt64Type,
 			accountTypeStorageUsedFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
-			PublicAccountStorageCapacityField,
+			PublicAccountTypeStorageCapacityFieldName,
 			UInt64Type,
 			accountTypeStorageCapacityFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicAccountType,
-			PublicAccountGetCapabilityField,
+			PublicAccountTypeGetCapabilityFieldName,
 			PublicAccountTypeGetCapabilityFunctionType,
 			publicAccountTypeGetLinkTargetFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicAccountType,
-			PublicAccountGetTargetLinkField,
+			PublicAccountTypeGetTargetLinkFieldName,
 			AccountTypeGetLinkTargetFunctionType,
 			accountTypeGetLinkTargetFunctionDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
-			PublicAccountKeysField,
+			PublicAccountTypeKeysFieldName,
 			PublicAccountKeysType,
 			accountTypeKeysFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
-			PublicAccountContractsField,
+			PublicAccountTypeContractsFieldName,
 			PublicAccountContractsType,
 			accountTypeContractsFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
-			PublicAccountPathsField,
+			PublicAccountTypePathsFieldName,
 			PublicAccountPathsType,
 			publicAccountTypePathsFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicAccountType,
-			PublicAccountForEachPublicField,
+			PublicAccountTypeForEachPublicFieldName,
 			PublicAccountForEachPublicFunctionType,
 			publicAccountForEachPublicDocString,
 		),
@@ -135,7 +135,7 @@ All the public paths of an account
 
 func AccountForEachFunctionType(pathType Type) *FunctionType {
 	iterFunctionType := &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "path",
@@ -150,7 +150,7 @@ func AccountForEachFunctionType(pathType Type) *FunctionType {
 		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
 	}
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "function",
@@ -184,7 +184,7 @@ var PublicAccountKeysType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicFunctionMember(
 			accountKeys,
-			AccountKeysGetFunctionName,
+			AccountKeysTypeGetFunctionName,
 			AccountKeysTypeGetFunctionType,
 			accountKeysTypeGetFunctionDocString,
 		),
@@ -196,7 +196,7 @@ var PublicAccountKeysType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeys,
-			AccountKeysCountFieldName,
+			AccountKeysTypeCountFieldName,
 			AccountKeysTypeCountFieldType,
 			accountKeysTypeCountFieldDocString,
 		),
@@ -226,7 +226,7 @@ var PublicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "capabilityPath",

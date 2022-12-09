@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
-func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error) {
+func parseParameterList(p *parser) (*ast.ParameterList, error) {
 	var parameters []*ast.Parameter
 
 	p.skipSpaceAndComments()
@@ -108,7 +108,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error)
 			startPos,
 			endPos,
 		),
-	), err
+	), nil
 }
 
 func parseParameter(p *parser) (*ast.Parameter, error) {
@@ -156,8 +156,6 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 		return nil, err
 	}
 
-	endPos := typeAnnotation.EndPosition(p.memoryGauge)
-
 	return ast.NewParameter(
 		p.memoryGauge,
 		argumentLabel,
@@ -167,11 +165,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 			parameterPos,
 		),
 		typeAnnotation,
-		ast.NewRange(
-			p.memoryGauge,
-			startPos,
-			endPos,
-		),
+		startPos,
 	), nil
 }
 

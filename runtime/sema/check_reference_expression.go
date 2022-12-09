@@ -77,7 +77,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 		return InvalidType
 	}
 
-	checker.Elaboration.ReferenceExpressionBorrowTypes[referenceExpression] = returnType
+	checker.Elaboration.SetReferenceExpressionBorrowType(referenceExpression, returnType)
 
 	return returnType
 }

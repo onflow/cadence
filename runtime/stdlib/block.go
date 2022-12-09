@@ -43,7 +43,7 @@ Returns the block at the given height. If the given block does not exist the fun
 `
 
 var getBlockFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      "at",
 			Identifier: "height",
@@ -156,6 +156,7 @@ func NewBlockValue(
 		func() uint64 {
 			return uint64(time.Unix(0, block.Timestamp).Unix())
 		},
+		locationRange,
 	)
 
 	return interpreter.NewBlockValue(

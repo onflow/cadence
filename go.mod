@@ -19,12 +19,14 @@ require (
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
 	go.opentelemetry.io/otel v1.8.0
 	go.uber.org/goleak v1.1.10
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
-	golang.org/x/mod v0.6.0-dev.0.20220818022119-ed83ed61efb9
-	golang.org/x/text v0.3.7
-	golang.org/x/tools v0.1.11
+	golang.org/x/crypto v0.1.0
+	golang.org/x/mod v0.6.0
+	golang.org/x/text v0.4.0
+	golang.org/x/tools v0.2.0
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 )
+
+require github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -40,9 +42,10 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
+	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
+	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/term v0.1.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

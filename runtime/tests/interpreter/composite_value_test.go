@@ -149,7 +149,10 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 				BaseTypeActivation:  baseTypeActivation,
 				CheckHandler: func(checker *sema.Checker, check func()) {
 					if checker.Location == TestLocation {
-						checker.Elaboration.CompositeTypes[fruitType.ID()] = fruitType
+						checker.Elaboration.SetCompositeType(
+							fruitType.ID(),
+							fruitType,
+						)
 					}
 					check()
 				},
@@ -185,7 +188,13 @@ func TestInterpretContractTransfer(t *testing.T) {
 		    `,
 			value,
 		)
-		inter, _ := testAccount(t, address, true, code)
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			code,
+			sema.Config{},
+		)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)

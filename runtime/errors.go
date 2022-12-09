@@ -172,7 +172,7 @@ func (*MalformedValueError) IsUserError() {}
 func (e *MalformedValueError) Error() string {
 	return fmt.Sprintf(
 		"value does not conform to expected type `%s`",
-		e.ExpectedType.QualifiedString(),
+		e.ExpectedType.ID(),
 	)
 }
 

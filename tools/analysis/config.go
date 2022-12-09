@@ -62,7 +62,7 @@ func NewSimpleConfig(
 
 		names := make([]string, 0, len(contracts))
 
-		for name := range contracts { //nolint:maprangecheck
+		for name := range contracts { //nolint:maprange
 			names = append(names, name)
 		}
 

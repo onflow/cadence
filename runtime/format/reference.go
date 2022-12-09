@@ -16,14 +16,7 @@
  * limitations under the License.
  */
 
-package main
+package format
 
-import (
-	"testing"
-
-	"golang.org/x/tools/go/analysis/analysistest"
-)
-
-func TestAll(t *testing.T) {
-	analysistest.Run(t, analysistest.TestData(), Analyzer)
-}
+const StorageReference = "StorageReference()"
+const AccountReference = "AccountReference()"

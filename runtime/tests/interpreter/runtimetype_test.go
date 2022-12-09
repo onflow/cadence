@@ -451,8 +451,12 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Parameters:           []*sema.Parameter{{TypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType}}},
-					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.IntType},
+					Parameters: []sema.Parameter{
+						{
+							TypeAnnotation: sema.TypeAnnotation{Type: sema.StringType},
+						},
+					},
+					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.IntType},
 				},
 			},
 		},
@@ -463,11 +467,11 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Parameters: []*sema.Parameter{
-						{TypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType}},
-						{TypeAnnotation: &sema.TypeAnnotation{Type: sema.IntType}},
+					Parameters: []sema.Parameter{
+						{TypeAnnotation: sema.TypeAnnotation{Type: sema.StringType}},
+						{TypeAnnotation: sema.TypeAnnotation{Type: sema.IntType}},
 					},
-					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.BoolType},
+					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.BoolType},
 				},
 			},
 		},
@@ -478,8 +482,7 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Parameters:           []*sema.Parameter{},
-					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType},
+					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.StringType},
 				},
 			},
 		},

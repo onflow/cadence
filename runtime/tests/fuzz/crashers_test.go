@@ -19,7 +19,6 @@
 package fuzz
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -55,7 +54,7 @@ func TestCrashers(t *testing.T) {
 			t.Parallel()
 
 			var data []byte
-			data, err = ioutil.ReadFile(path.Join(crashersDir, name))
+			data, err = os.ReadFile(path.Join(crashersDir, name))
 			if err != nil {
 				t.Fatal(err)
 			}

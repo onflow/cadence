@@ -75,10 +75,10 @@ func TestExpressionExtractorBinaryExpressionNothingExtracted(t *testing.T) {
 			RewrittenExpression: &BinaryExpression{
 				Operation: OperationEqual,
 				Left: &IdentifierExpression{
-					Identifier{Identifier: "x"},
+					Identifier: Identifier{Identifier: "x"},
 				},
 				Right: &IdentifierExpression{
-					Identifier{Identifier: "y"},
+					Identifier: Identifier{Identifier: "y"},
 				},
 			},
 			ExtractedExpressions: nil,
@@ -93,7 +93,7 @@ func TestExpressionExtractorBinaryExpressionIntegerExtracted(t *testing.T) {
 	expression := &BinaryExpression{
 		Operation: OperationEqual,
 		Left: &IdentifierExpression{
-			Identifier{Identifier: "x"},
+			Identifier: Identifier{Identifier: "x"},
 		},
 		Right: &IntegerExpression{
 			Value: big.NewInt(1),
@@ -115,10 +115,10 @@ func TestExpressionExtractorBinaryExpressionIntegerExtracted(t *testing.T) {
 			RewrittenExpression: &BinaryExpression{
 				Operation: OperationEqual,
 				Left: &IdentifierExpression{
-					Identifier{Identifier: "x"},
+					Identifier: Identifier{Identifier: "x"},
 				},
 				Right: &IdentifierExpression{
-					Identifier{Identifier: newIdentifier},
+					Identifier: Identifier{Identifier: newIdentifier},
 				},
 			},
 			ExtractedExpressions: []ExtractedExpression{

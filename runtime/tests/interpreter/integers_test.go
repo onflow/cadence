@@ -108,7 +108,7 @@ func TestInterpretIntegerConversions(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(true),
+				interpreter.TrueValue,
 				inter.Globals.Get("z").GetValue(),
 			)
 
@@ -350,7 +350,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				numberValue.Plus(inter, numberValue),
+				numberValue.Plus(inter, numberValue, interpreter.EmptyLocationRange),
 				inter.Globals.Get("x").GetValue(),
 			)
 		})
@@ -393,7 +393,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(
-					numberValue.Plus(inter, numberValue),
+					numberValue.Plus(inter, numberValue, interpreter.EmptyLocationRange),
 				),
 				inter.Globals.Get("x").GetValue(),
 			)

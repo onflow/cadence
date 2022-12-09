@@ -157,7 +157,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 					Block: &Block{
 						Statements: []Statement{
 							&ExpressionStatement{
-								&StringExpression{
+								Expression: &StringExpression{
 									Value: "xyz",
 								},
 							},
@@ -419,7 +419,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 					Block: &Block{
 						Statements: []Statement{
 							&ExpressionStatement{
-								&StringExpression{
+								Expression: &StringExpression{
 									Value: "xyz",
 								},
 							},

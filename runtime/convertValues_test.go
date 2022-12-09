@@ -149,13 +149,13 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Bool true",
-			value:    interpreter.BoolValue(true),
+			value:    interpreter.TrueValue,
 			expected: cadence.NewBool(true),
 		},
 
 		{
 			label:    "Bool false",
-			value:    interpreter.BoolValue(false),
+			value:    interpreter.FalseValue,
 			expected: cadence.NewBool(false),
 		},
 
@@ -421,7 +421,7 @@ func TestExportValue(t *testing.T) {
 						nil,
 					),
 					hashAlgorithm,
-					interpreter.NewUnmeteredUFix64ValueWithInteger(10),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(10, interpreter.EmptyLocationRange),
 					false,
 				)
 			},
@@ -515,7 +515,7 @@ func TestExportValue(t *testing.T) {
 						blockIDStaticType,
 						common.Address{},
 					),
-					interpreter.NewUnmeteredUFix64ValueWithInteger(1),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(1, interpreter.EmptyLocationRange),
 				)
 			},
 			invalid: true,
@@ -586,11 +586,11 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Bool true",
 			value:    cadence.NewBool(true),
-			expected: interpreter.BoolValue(true),
+			expected: interpreter.TrueValue,
 		},
 		{
 			label:    "Bool false",
-			expected: interpreter.BoolValue(false),
+			expected: interpreter.FalseValue,
 			value:    cadence.NewBool(false),
 		},
 		{
@@ -806,7 +806,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label: "Link (invalid)",
-			value: cadence.Link{
+			value: cadence.PathLink{
 				TargetPath: cadence.Path{
 					Domain:     "storage",
 					Identifier: "test",
@@ -817,7 +817,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label: "Capability (invalid)",
-			value: cadence.Capability{
+			value: cadence.StorageCapability{
 				Path: cadence.Path{
 					Domain:     "public",
 					Identifier: "test",
@@ -1944,13 +1944,13 @@ func TestExportTypeValue(t *testing.T) {
 
 }
 
-func TestExportCapabilityValue(t *testing.T) {
+func TestExportStorageCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("Int", func(t *testing.T) {
 
-		capability := &interpreter.CapabilityValue{
+		capability := &interpreter.StorageCapabilityValue{
 			Address: interpreter.AddressValue{0x1},
 			Path: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -1967,7 +1967,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Capability{
+		expected := cadence.StorageCapability{
 			Path: cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -2004,7 +2004,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		inter := newTestInterpreter(t)
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
-		capability := &interpreter.CapabilityValue{
+		capability := &interpreter.StorageCapabilityValue{
 			Address: interpreter.AddressValue{0x1},
 			Path: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -2021,7 +2021,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Capability{
+		expected := cadence.StorageCapability{
 			Path: cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -2039,7 +2039,7 @@ func TestExportCapabilityValue(t *testing.T) {
 
 	t.Run("no borrow type", func(t *testing.T) {
 
-		capability := &interpreter.CapabilityValue{
+		capability := &interpreter.StorageCapabilityValue{
 			Address: interpreter.AddressValue{0x1},
 			Path: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -2055,7 +2055,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Capability{
+		expected := cadence.StorageCapability{
 			Path: cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -2067,13 +2067,13 @@ func TestExportCapabilityValue(t *testing.T) {
 	})
 }
 
-func TestExportLinkValue(t *testing.T) {
+func TestExportPathLinkValue(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("Int", func(t *testing.T) {
 
-		link := interpreter.LinkValue{
+		link := interpreter.PathLinkValue{
 			TargetPath: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
@@ -2089,7 +2089,7 @@ func TestExportLinkValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Link{
+		expected := cadence.PathLink{
 			TargetPath: cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -2124,7 +2124,7 @@ func TestExportLinkValue(t *testing.T) {
 		inter := newTestInterpreter(t)
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
-		capability := interpreter.LinkValue{
+		capability := interpreter.PathLinkValue{
 			TargetPath: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
@@ -2140,7 +2140,7 @@ func TestExportLinkValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Link{
+		expected := cadence.PathLink{
 			TargetPath: cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -3873,7 +3873,7 @@ func TestTypeValueImport(t *testing.T) {
 	})
 }
 
-func TestCapabilityValueImport(t *testing.T) {
+func TestStorageCapabilityValueImport(t *testing.T) {
 
 	t.Parallel()
 
@@ -3881,7 +3881,7 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.Capability{
+		capabilityValue := cadence.StorageCapability{
 			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
@@ -3935,7 +3935,7 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.Capability{
+		capabilityValue := cadence.StorageCapability{
 			BorrowType: cadence.IntType{},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
@@ -3982,7 +3982,7 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.Capability{
+		capabilityValue := cadence.StorageCapability{
 			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
@@ -4029,7 +4029,7 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.Capability{
+		capabilityValue := cadence.StorageCapability{
 			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
@@ -4085,7 +4085,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			Initializers:        [][]cadence.Parameter{},
 		}
 
-		capabilityValue := cadence.Capability{
+		capabilityValue := cadence.StorageCapability{
 			BorrowType: borrowType,
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
@@ -4765,7 +4765,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	t.Parallel()
 
 	program := interpreter.Program{
-		Elaboration: sema.NewElaboration(nil, false),
+		Elaboration: sema.NewElaboration(nil),
 	}
 
 	inter := newTestInterpreter(t)
@@ -4847,7 +4847,10 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Fields:     []string{"dictionary"},
 	}
 
-	program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+	program.Elaboration.SetCompositeType(
+		semaCompositeType.ID(),
+		semaCompositeType,
+	)
 
 	semaCompositeType.Members.Set(
 		"dictionary",
@@ -4917,13 +4920,16 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		t.Parallel()
 
 		program := interpreter.Program{
-			Elaboration: sema.NewElaboration(nil, false),
+			Elaboration: sema.NewElaboration(nil),
 		}
 
 		inter := newTestInterpreter(t)
 		inter.Program = &program
 
-		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+		program.Elaboration.SetCompositeType(
+			semaCompositeType.ID(),
+			semaCompositeType,
+		)
 
 		actual, err := ImportValue(
 			inter,

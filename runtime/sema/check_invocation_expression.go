@@ -99,11 +99,13 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 			argumentTypes = append(argumentTypes, argumentType)
 		}
 
-		checker.Elaboration.InvocationExpressionTypes[invocationExpression] =
+		checker.Elaboration.SetInvocationExpressionTypes(
+			invocationExpression,
 			InvocationExpressionTypes{
 				ArgumentTypes: argumentTypes,
 				ReturnType:    checker.expectedType,
-			}
+			},
+		)
 
 		return InvalidType
 	}
@@ -207,8 +209,8 @@ func (checker *Checker) checkMemberInvocationResourceInvalidation(invokedExpress
 	// Check that an entry for `IdentifierInInvocationTypes` exists,
 	// because the entry might be missing if the invocation was on a non-existent variable
 
-	valueType, ok := checker.Elaboration.IdentifierInInvocationTypes[invocationIdentifierExpression]
-	if !ok {
+	valueType := checker.Elaboration.IdentifierInInvocationType(invocationIdentifierExpression)
+	if valueType == nil {
 		return
 	}
 
@@ -470,12 +472,15 @@ func (checker *Checker) checkInvocation(
 
 	// Save types in the elaboration
 
-	checker.Elaboration.InvocationExpressionTypes[invocationExpression] = InvocationExpressionTypes{
-		TypeArguments:      typeArguments,
-		TypeParameterTypes: parameterTypes,
-		ReturnType:         returnType,
-		ArgumentTypes:      argumentTypes,
-	}
+	checker.Elaboration.SetInvocationExpressionTypes(
+		invocationExpression,
+		InvocationExpressionTypes{
+			TypeArguments:      typeArguments,
+			TypeParameterTypes: parameterTypes,
+			ReturnType:         returnType,
+			ArgumentTypes:      argumentTypes,
+		},
+	)
 
 	return argumentTypes, returnType
 }

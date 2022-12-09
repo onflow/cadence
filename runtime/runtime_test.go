@@ -3339,6 +3339,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 
 		assert.Equal(t, `"Hello there!"`, loggedMessage)
 	})
+
 	t.Run("function with return type", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
@@ -3361,6 +3362,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 
 		assert.Equal(t, `"Hello return!"`, loggedMessage)
 	})
+
 	t.Run("function with multiple arguments", func(t *testing.T) {
 
 		_, err = runtime.InvokeContractFunction(
@@ -3377,7 +3379,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			[]sema.Type{
 				sema.StringType,
 				sema.IntType,
-				&sema.AddressType{},
+				sema.TheAddressType,
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -3414,6 +3416,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 
 		assert.ErrorAs(t, err, &Error{})
 	})
+
 	t.Run("function with incorrect argument type errors", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
@@ -3436,6 +3439,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 
 		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
+
 	t.Run("function with un-importable argument errors and error propagates", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
@@ -3444,7 +3448,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloArg",
 			[]cadence.Value{
-				cadence.Capability{
+				cadence.StorageCapability{
 					BorrowType: cadence.AddressType{}, // this will error during `importValue`
 				},
 			},
@@ -3460,6 +3464,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 
 		require.ErrorContains(t, err, "cannot import capability")
 	})
+
 	t.Run("function with auth account works", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
@@ -6877,7 +6882,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.Capability{
+			cadence.StorageCapability{
 				Address: cadence.BytesToAddress([]byte{0x1}),
 				Path: cadence.Path{
 					Domain:     "public",
@@ -7502,7 +7507,7 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 		Environment: environment,
 	}
 
-	require.NotNil(b, stdlib.CryptoChecker)
+	require.NotNil(b, stdlib.CryptoChecker())
 
 	runtime := newTestInterpreterRuntime()
 
@@ -7573,4 +7578,131 @@ func TestRuntime(t *testing.T) {
 
 	var subErr *ValueNotExportableError
 	require.ErrorAs(t, err, &subErr)
+}
+
+func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	address1 := common.MustBytesToAddress([]byte{0x1})
+	address2 := common.MustBytesToAddress([]byte{0x2})
+
+	contract := []byte(`
+      pub contract Foo {
+         pub struct Bar {}
+      }
+    `)
+
+	deploy := DeploymentTransaction("Foo", contract)
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	signerAccount := address1
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy same contract to two different accounts
+
+	for _, address := range []Address{address1, address2} {
+		signerAccount = address
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploy,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	// Set up account
+
+	setupTransaction := []byte(`
+      import Foo from 0x1
+
+      transaction {
+
+          prepare(acct: AuthAccount) {
+              acct.save(Foo.Bar(), to: /storage/bar)
+
+              acct.link<&Foo.Bar>(
+                  /public/bar,
+                  target: /storage/bar
+              )
+          }
+      }
+    `)
+
+	signerAccount = address1
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: setupTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Use wrong type
+
+	script := []byte(`
+      import Foo from 0x2
+
+      pub fun main() {
+        getAuthAccount(0x1).borrow<&Foo.Bar>(from: /storage/bar)
+      }
+    `)
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.Error(t, err)
+
+	require.ErrorContains(t, err, "expected type `A.0000000000000002.Foo.Bar`, got `A.0000000000000001.Foo.Bar`")
+
 }
