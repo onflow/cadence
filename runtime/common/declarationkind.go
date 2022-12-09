@@ -137,7 +137,7 @@ func (k DeclarationKind) Name() string {
 	case DeclarationKindTypeParameter:
 		return "type parameter"
 	case DeclarationKindPragma:
-		return "#pragma"
+		return "pragma"
 	case DeclarationKindEnum:
 		return "enum"
 	case DeclarationKindEnumCase:

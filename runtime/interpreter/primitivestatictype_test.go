@@ -29,7 +29,7 @@ func TestPrimitiveStaticTypeSemaTypeConversion(t *testing.T) {
 
 	t.Parallel()
 
-	placeholderTypePattern := regexp.MustCompile("PrimitiveStaticType\\(\\d+\\)")
+	placeholderTypePattern := regexp.MustCompile(`PrimitiveStaticType\(\d+\)`)
 
 	test := func(ty PrimitiveStaticType) {
 		t.Run(ty.String(), func(t *testing.T) {

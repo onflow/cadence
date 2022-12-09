@@ -43,7 +43,9 @@ func OverEstimateNumberStringLength(memoryGauge common.MemoryGauge, value Number
 		)
 
 	case NumberValue:
-		return OverEstimateIntStringLength(value.ToInt())
+		// this is only used for memory metering, so use an `EmptyLocationRange`
+		// here to avoid needing a `LocationRange` argument to `MeteredString`
+		return OverEstimateIntStringLength(value.ToInt(EmptyLocationRange))
 
 	default:
 		panic(errors.NewUnreachableError())

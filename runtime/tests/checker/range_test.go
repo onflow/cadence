@@ -110,19 +110,19 @@ func TestCheckRange(t *testing.T) {
 	ranges = checker.PositionInfo.Ranges.All()
 	sortAndFilterRanges()
 
-	barTypeVariable, ok := checker.Elaboration.GlobalTypes.Get("_TEST_Bar")
+	barTypeVariable, ok := checker.Elaboration.GetGlobalType("_TEST_Bar")
 	require.True(t, ok, "missing global type _TEST_Bar")
 
-	barValueVariable, ok := checker.Elaboration.GlobalValues.Get("_TEST_Bar")
+	barValueVariable, ok := checker.Elaboration.GetGlobalValue("_TEST_Bar")
 	require.True(t, ok, "missing global value _TEST_Bar")
 
-	bazTypeVariable, ok := checker.Elaboration.GlobalTypes.Get("_TEST_Baz")
+	bazTypeVariable, ok := checker.Elaboration.GetGlobalType("_TEST_Baz")
 	require.True(t, ok, "missing global type _TEST_Baz")
 
-	bazValueVariable, ok := checker.Elaboration.GlobalValues.Get("_TEST_Baz")
+	bazValueVariable, ok := checker.Elaboration.GetGlobalValue("_TEST_Baz")
 	require.True(t, ok, "missing global value _TEST_Baz")
 
-	fooValueVariable, ok := checker.Elaboration.GlobalValues.Get("_TEST_foo")
+	fooValueVariable, ok := checker.Elaboration.GetGlobalValue("_TEST_foo")
 	require.True(t, ok, "missing global value _TEST_foo")
 
 	assert.Equal(t,

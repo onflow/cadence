@@ -67,7 +67,7 @@ func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDe
 
 func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDeclaration, kind ContainerKind) (_ struct{}) {
 	checker.visitCompositeLikeDeclaration(declaration, kind)
-	attachmentType := checker.Elaboration.CompositeDeclarationTypes[declaration]
+	attachmentType := checker.Elaboration.CompositeDeclarationType(declaration)
 	checker.checkAttachmentBaseType(attachmentType)
 	return
 }
@@ -83,7 +83,7 @@ func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDe
 // through `declareCompositeMembersAndValue`.
 func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeLikeDeclaration, kind ContainerKind) {
 
-	compositeType := checker.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
 	if compositeType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -268,8 +268,8 @@ func (checker *Checker) declareCompositeLikeNestedTypes(
 	kind ContainerKind,
 	declareConstructors bool,
 ) {
-	compositeType := checker.Elaboration.CompositeDeclarationTypes[declaration]
-	nestedDeclarations := checker.Elaboration.CompositeNestedDeclarations[declaration]
+	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
+	nestedDeclarations := checker.Elaboration.CompositeNestedDeclarations(declaration)
 
 	compositeType.NestedTypes.Foreach(func(name string, nestedType Type) {
 
@@ -543,8 +543,8 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 
 	// Register in elaboration
 
-	checker.Elaboration.CompositeDeclarationTypes[declaration] = compositeType
-	checker.Elaboration.CompositeTypeDeclarations[compositeType] = declaration
+	checker.Elaboration.SetCompositeDeclarationType(declaration, compositeType)
+	checker.Elaboration.SetCompositeTypeDeclaration(compositeType, declaration)
 
 	// Activate new scope for nested declarations
 
@@ -567,7 +567,7 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 			members.Interfaces(),
 		)
 
-	checker.Elaboration.CompositeNestedDeclarations[declaration] = nestedDeclarations
+	checker.Elaboration.SetCompositeNestedDeclarations(declaration, nestedDeclarations)
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
 		compositeType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
@@ -596,7 +596,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 	declaration ast.CompositeLikeDeclaration,
 	kind ContainerKind,
 ) {
-	compositeType := checker.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
 	if compositeType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -969,7 +969,7 @@ func (checker *Checker) declareEnumConstructor(
 func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 	return &FunctionType{
 		IsConstructor: true,
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     EnumRawValueFieldName,
 				TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
@@ -1005,9 +1005,9 @@ func (checker *Checker) checkMemberStorability(members *StringMemberOrderedMap) 
 	})
 }
 
-func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctionDeclaration) []*Parameter {
+func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctionDeclaration) []Parameter {
 	// TODO: support multiple overloaded initializers
-	var parameters []*Parameter
+	var parameters []Parameter
 
 	initializerCount := len(initializers)
 	if initializerCount > 0 {
@@ -1364,8 +1364,8 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 
 			// Functions are covariant in their return type
 
-			if compositeMemberFunctionType.ReturnTypeAnnotation != nil &&
-				interfaceMemberFunctionType.ReturnTypeAnnotation != nil {
+			if compositeMemberFunctionType.ReturnTypeAnnotation.Type != nil &&
+				interfaceMemberFunctionType.ReturnTypeAnnotation.Type != nil {
 
 				if !IsSubType(
 					compositeMemberFunctionType.ReturnTypeAnnotation.Type,
@@ -1375,10 +1375,10 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 				}
 			}
 
-			if (compositeMemberFunctionType.ReturnTypeAnnotation != nil &&
-				interfaceMemberFunctionType.ReturnTypeAnnotation == nil) ||
-				(compositeMemberFunctionType.ReturnTypeAnnotation == nil &&
-					interfaceMemberFunctionType.ReturnTypeAnnotation != nil) {
+			if (compositeMemberFunctionType.ReturnTypeAnnotation.Type != nil &&
+				interfaceMemberFunctionType.ReturnTypeAnnotation.Type == nil) ||
+				(compositeMemberFunctionType.ReturnTypeAnnotation.Type == nil &&
+					interfaceMemberFunctionType.ReturnTypeAnnotation.Type != nil) {
 
 				return false
 			}
@@ -1600,12 +1600,14 @@ func CompositeLikeConstructorType(
 		// NOTE: Don't use `constructorFunctionType`, as it has a return type.
 		//   The initializer itself has a `Void` return type.
 
-		elaboration.ConstructorFunctionTypes[firstInitializer] =
+		elaboration.SetConstructorFunctionType(
+			firstInitializer,
 			&FunctionType{
 				IsConstructor:        true,
 				Parameters:           constructorFunctionType.Parameters,
 				ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-			}
+			},
+		)
 	}
 
 	return constructorFunctionType, argumentLabels
@@ -1927,7 +1929,7 @@ func (checker *Checker) checkInitializers(
 	fields []*ast.FieldDeclaration,
 	containerType CompositeKindedType,
 	containerDocString string,
-	initializerParameters []*Parameter,
+	initializerParameters []Parameter,
 	containerKind ContainerKind,
 	initializationInfo *InitializationInfo,
 ) {
@@ -1998,7 +2000,7 @@ func (checker *Checker) checkSpecialFunction(
 	specialFunction *ast.SpecialFunctionDeclaration,
 	containerType CompositeKindedType,
 	containerDocString string,
-	parameters []*Parameter,
+	parameters []Parameter,
 	containerKind ContainerKind,
 	initializationInfo *InitializationInfo,
 ) {

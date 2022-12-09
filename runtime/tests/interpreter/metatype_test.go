@@ -48,7 +48,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -64,7 +64,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -80,7 +80,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -96,7 +96,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -112,7 +112,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -154,7 +154,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -210,7 +210,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})

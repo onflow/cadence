@@ -44,7 +44,6 @@ func TestFunctionStaticType(t *testing.T) {
 		}
 
 		hostFunctionType := &sema.FunctionType{
-			Parameters:           []*sema.Parameter{},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
 		}
 
@@ -69,7 +68,6 @@ func TestFunctionStaticType(t *testing.T) {
 		}
 
 		hostFunctionType := &sema.FunctionType{
-			Parameters:           []*sema.Parameter{},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
 		}
 

@@ -1400,7 +1400,7 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeStorageSaveCapability(t *testing.T) {
+func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -1476,7 +1476,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Equal(t,
-					cadence.Capability{
+					cadence.StorageCapability{
 						Path: cadence.Path{
 							Domain:     domain.Identifier(),
 							Identifier: "test",

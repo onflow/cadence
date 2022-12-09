@@ -90,6 +90,15 @@
           }
         ]
       },
+        {
+          "title": "Project and Style Guides",
+          "items": [
+            {
+              "title": "Project Management Guide",
+              "href": "style-guide"
+            }
+          ]
+        },      
       {
         "title": "Cadence",
         "items": [

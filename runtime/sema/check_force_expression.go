@@ -41,7 +41,7 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) Ty
 	)
 
 	if checker.Config.ExtendedElaborationEnabled {
-		checker.Elaboration.ForceExpressionTypes[expression] = valueType
+		checker.Elaboration.SetForceExpressionType(expression, valueType)
 	}
 
 	optionalType, ok := valueType.(*OptionalType)

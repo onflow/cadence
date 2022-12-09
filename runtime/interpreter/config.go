@@ -47,6 +47,8 @@ type Config struct {
 	ImportLocationHandler ImportLocationHandlerFunc
 	// PublicAccountHandler is used to handle accounts.
 	PublicAccountHandler PublicAccountHandlerFunc
+	// AuthAccountHandler is used to handle accounts.
+	AuthAccountHandler AuthAccountHandlerFunc
 	// UUIDHandler is used to handle the generation of UUIDs.
 	UUIDHandler UUIDHandlerFunc
 	// AtreeValueValidationEnabled determines if the validation of atree values is enabled.

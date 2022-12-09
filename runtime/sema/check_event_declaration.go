@@ -27,7 +27,7 @@ import (
 // as determined by `isValidEventParameterType`.
 func (checker *Checker) checkEventParameters(
 	parameterList *ast.ParameterList,
-	parameters []*Parameter,
+	parameters []Parameter,
 ) {
 
 	parameterTypeValidationResults := map[*Member]bool{}

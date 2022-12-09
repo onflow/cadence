@@ -169,12 +169,14 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		}
 	}
 
-	checker.Elaboration.VariableDeclarationTypes[declaration] =
+	checker.Elaboration.SetVariableDeclarationTypes(
+		declaration,
 		VariableDeclarationTypes{
 			TargetType:      declarationType,
 			ValueType:       valueType,
 			SecondValueType: secondValueType,
-		}
+		},
+	)
 
 	// Finally, declare the variable in the current value activation
 
@@ -230,6 +232,6 @@ func (checker *Checker) recordVariableDeclarationRange(
 func (checker *Checker) elaborateNestedResourceMoveExpression(expression ast.Expression) {
 	switch expression.(type) {
 	case *ast.IndexExpression, *ast.MemberExpression:
-		checker.Elaboration.IsNestedResourceMoveExpression[expression] = struct{}{}
+		checker.Elaboration.SetIsNestedResourceMoveExpression(expression)
 	}
 }
