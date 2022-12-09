@@ -22,10 +22,12 @@ import (
 	"fmt"
 )
 
-func Link(ty string, targetPath string) string {
+func PathLink(ty string, targetPath string) string {
 	return fmt.Sprintf(
-		"Link<%s>(%s)",
+		"PathLink<%s>(%s)",
 		ty,
 		targetPath,
 	)
 }
+
+const AccountLink = "AccountLink()"

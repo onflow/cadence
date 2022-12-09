@@ -53,7 +53,7 @@ func TestInterpretResourceReferenceInstanceOf(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 }
@@ -85,7 +85,7 @@ func TestInterpretResourceReferenceFieldComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 }
@@ -581,7 +581,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 // Update the reference
                 ref.id = 2
             }`,
-
+			sema.Config{},
 			errorHandler(t),
 		)
 
@@ -619,7 +619,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 // 'Read' a field from the reference
                 let id = ref.id
             }`,
-
+			sema.Config{},
 			errorHandler(t),
 		)
 
@@ -886,6 +886,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 r1Ref.id = 2
                 destroy r2
             }`,
+			sema.Config{},
 		)
 
 		_, err := inter.Invoke("test")
@@ -1188,7 +1189,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
                 // Update the reference
                 ref.id = 2
             }`,
-
+			sema.Config{},
 			errorHandler(t),
 		)
 

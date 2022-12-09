@@ -55,7 +55,7 @@ var beforeType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "value",
@@ -106,7 +106,7 @@ type Checker struct {
 	resources                          *Resources
 	typeActivations                    *VariableActivations
 	containerTypes                     map[Type]bool
-	functionActivations                *FunctionActivations
+	functionActivations                FunctionActivations
 	inCondition                        bool
 	isChecked                          bool
 	inCreate                           bool
@@ -150,16 +150,16 @@ func NewChecker(
 		return nil, errors.NewDefaultUserError("invalid default access check mode")
 	}
 
-	functionActivations := &FunctionActivations{}
+	functionActivations := FunctionActivations{
+		// Pre-allocate a common function depth
+		activations: make([]FunctionActivation, 0, 2),
+	}
 	functionActivations.EnterFunction(
 		baseFunctionType,
 		0,
 	)
 
-	elaboration := NewElaboration(
-		memoryGauge,
-		config.ExtendedElaborationEnabled,
-	)
+	elaboration := NewElaboration(memoryGauge)
 
 	checker := &Checker{
 		Program:             program,
@@ -335,9 +335,9 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	registerInElaboration := func(ty Type) {
 		switch typedType := ty.(type) {
 		case *InterfaceType:
-			checker.Elaboration.InterfaceTypes[typedType.ID()] = typedType
+			checker.Elaboration.SetInterfaceType(typedType.ID(), typedType)
 		case *CompositeType:
-			checker.Elaboration.CompositeTypes[typedType.ID()] = typedType
+			checker.Elaboration.SetCompositeType(typedType.ID(), typedType)
 		default:
 			panic(errors.NewUnreachableError())
 		}
@@ -452,7 +452,7 @@ func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.Functi
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
 	)
-	checker.Elaboration.FunctionDeclarationFunctionTypes[declaration] = functionType
+	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 	checker.declareFunctionDeclaration(declaration, functionType)
 }
 
@@ -493,7 +493,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 
 			return true
 
-		} else if IsSameTypeKind(unwrappedTargetType, &AddressType{}) {
+		} else if IsSameTypeKind(unwrappedTargetType, TheAddressType) {
 			CheckAddressLiteral(checker.memoryGauge, typedExpression, checker.report)
 
 			return true
@@ -723,7 +723,7 @@ func (checker *Checker) declareGlobalValue(name string) {
 	if variable == nil {
 		return
 	}
-	checker.Elaboration.GlobalValues.Set(name, variable)
+	checker.Elaboration.SetGlobalValue(name, variable)
 }
 
 func (checker *Checker) declareGlobalType(name string) {
@@ -731,7 +731,7 @@ func (checker *Checker) declareGlobalType(name string) {
 	if ty == nil {
 		return
 	}
-	checker.Elaboration.GlobalTypes.Set(name, ty)
+	checker.Elaboration.SetGlobalType(name, ty)
 }
 
 func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expression, valueType Type) {
@@ -1097,14 +1097,17 @@ func (checker *Checker) convertOptionalType(t *ast.OptionalType) Type {
 
 // convertFunctionType converts the given AST function type into a sema function type.
 //
-// NOTE: type annotations ar *NOT* checked!
+// NOTE: type annotations are *NOT* checked!
 func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
-	var parameters []*Parameter
+	parameterTypeAnnotations := t.ParameterTypeAnnotations
 
-	for _, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
+	parameters := make([]Parameter, 0, len(parameterTypeAnnotations))
+
+	for _, parameterTypeAnnotation := range parameterTypeAnnotations {
 		convertedParameterTypeAnnotation := checker.ConvertTypeAnnotation(parameterTypeAnnotation)
-		parameters = append(parameters,
-			&Parameter{
+		parameters = append(
+			parameters,
+			Parameter{
 				TypeAnnotation: convertedParameterTypeAnnotation,
 			},
 		)
@@ -1253,10 +1256,10 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 // ConvertTypeAnnotation converts an AST type annotation representation
 // to a sema type annotation
 //
-// NOTE: type annotations ar *NOT* checked!
-func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation) *TypeAnnotation {
+// NOTE: type annotations are *NOT* checked!
+func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation) TypeAnnotation {
 	convertedType := checker.ConvertType(typeAnnotation.Type)
-	return &TypeAnnotation{
+	return TypeAnnotation{
 		IsResource: typeAnnotation.IsResource,
 		Type:       convertedType,
 	}
@@ -1279,23 +1282,27 @@ func (checker *Checker) functionType(
 	}
 }
 
-func (checker *Checker) parameters(parameterList *ast.ParameterList) []*Parameter {
+func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter {
 
-	parameters := make([]*Parameter, len(parameterList.Parameters))
+	var parameters []Parameter
 
-	for i, parameter := range parameterList.Parameters {
-		convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)
+	if len(parameterList.Parameters) > 0 {
+		parameters = make([]Parameter, len(parameterList.Parameters))
 
-		// NOTE: copying resource annotation from source type annotation as-is,
-		// so a potential error is properly reported
+		for i, parameter := range parameterList.Parameters {
+			convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)
 
-		parameters[i] = &Parameter{
-			Label:      parameter.Label,
-			Identifier: parameter.Identifier.Identifier,
-			TypeAnnotation: &TypeAnnotation{
-				IsResource: parameter.TypeAnnotation.IsResource,
-				Type:       convertedParameterType,
-			},
+			// NOTE: copying resource annotation from source type annotation as-is,
+			// so a potential error is properly reported
+
+			parameters[i] = Parameter{
+				Label:      parameter.Label,
+				Identifier: parameter.Identifier.Identifier,
+				TypeAnnotation: TypeAnnotation{
+					IsResource: parameter.TypeAnnotation.IsResource,
+					Type:       convertedParameterType,
+				},
+			}
 		}
 	}
 
@@ -1865,6 +1872,8 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 const ResourceOwnerFieldName = "owner"
 const ResourceUUIDFieldName = "uuid"
 
+const ContractAccountFieldName = "account"
+
 const contractAccountFieldDocString = `
 The account where the contract is deployed in
 `
@@ -1933,7 +1942,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			// which is ignored in serialization
 
 			addPredeclaredMember(
-				"account",
+				ContractAccountFieldName,
 				AuthAccountType,
 				common.DeclarationKindField,
 				ast.AccessPrivate,
@@ -2066,7 +2075,7 @@ func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) P
 	}
 }
 
-func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos ast.HasPosition) {
+func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos ast.HasPosition) {
 
 	switch typeAnnotation.TypeAnnotationState() {
 	case TypeAnnotationStateMissingResourceAnnotation:
@@ -2156,7 +2165,7 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	// even if the instantiated type
 
 	typeArgumentCount := len(t.TypeArguments)
-	typeArgumentAnnotations := make([]*TypeAnnotation, typeArgumentCount)
+	typeArgumentAnnotations := make([]TypeAnnotation, typeArgumentCount)
 
 	for i, rawTypeArgument := range t.TypeArguments {
 		typeArgument := checker.ConvertTypeAnnotation(rawTypeArgument)
@@ -2328,11 +2337,11 @@ func (checker *Checker) declareGlobalRanges() {
 		return nil
 	})
 
-	checker.Elaboration.GlobalTypes.Foreach(func(name string, variable *Variable) {
+	checker.Elaboration.ForEachGlobalType(func(name string, variable *Variable) {
 		checker.PositionInfo.recordGlobalRange(memoryGauge, name, variable)
 	})
 
-	checker.Elaboration.GlobalValues.Foreach(func(name string, variable *Variable) {
+	checker.Elaboration.ForEachGlobalValue(func(name string, variable *Variable) {
 		checker.PositionInfo.recordGlobalRange(memoryGauge, name, variable)
 	})
 }
@@ -2423,4 +2432,15 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 			},
 		)
 	}
+}
+
+func (checker *Checker) isAvailableMember(expressionType Type, identifier string) bool {
+	if !checker.Config.AccountLinkingEnabled &&
+		expressionType == AuthAccountType &&
+		identifier == AuthAccountTypeLinkAccountFunctionName {
+
+		return false
+	}
+
+	return true
 }

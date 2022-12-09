@@ -248,7 +248,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 
@@ -262,7 +262,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("a").GetValue(),
 	)
 
@@ -1401,21 +1401,21 @@ func TestInterpretOrOperatorShortCircuitLeftSuccess(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1444,21 +1444,21 @@ func TestInterpretOrOperatorShortCircuitLeftFailure(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1529,21 +1529,21 @@ func TestInterpretAndOperatorShortCircuitLeftSuccess(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1572,21 +1572,21 @@ func TestInterpretAndOperatorShortCircuitLeftFailure(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1779,28 +1779,28 @@ func TestInterpretUnaryBooleanNegation(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("a").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("b").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("c").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("d").GetValue(),
 	)
 }
@@ -1819,7 +1819,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	testFunction := stdlib.NewStandardLibraryFunction(
 		"test",
 		&sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "a",
@@ -1901,7 +1901,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	testFunction := stdlib.NewStandardLibraryFunction(
 		"test",
 		&sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
@@ -1934,7 +1934,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(true),
+				interpreter.TrueValue,
 				invocation.Arguments[1],
 			)
 
@@ -2416,8 +2416,8 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2461,8 +2461,8 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2503,8 +2503,8 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2545,8 +2545,8 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2594,8 +2594,8 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2631,7 +2631,7 @@ func TestInterpretStructCopyOnPassing(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -2747,7 +2747,7 @@ func TestInterpretMutuallyRecursiveFunctions(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 
@@ -2757,7 +2757,7 @@ func TestInterpretMutuallyRecursiveFunctions(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -3196,14 +3196,14 @@ func TestInterpretNilCoalescingShortCircuitLeftSuccess(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3239,14 +3239,14 @@ func TestInterpretNilCoalescingShortCircuitLeftFailure(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3263,7 +3263,7 @@ func TestInterpretNilCoalescingOptionalAnyStructNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3356,7 +3356,7 @@ func TestInterpretNilsComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 }
@@ -3374,14 +3374,14 @@ func TestInterpretNonOptionalNilComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3398,7 +3398,7 @@ func TestInterpretOptionalNilComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3415,7 +3415,7 @@ func TestInterpretNestedOptionalNilComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3432,7 +3432,7 @@ func TestInterpretOptionalNilComparisonSwapped(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3449,7 +3449,7 @@ func TestInterpretNestedOptionalNilComparisonSwapped(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3467,7 +3467,7 @@ func TestInterpretNestedOptionalComparisonNils(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3485,7 +3485,7 @@ func TestInterpretNestedOptionalComparisonValues(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3503,7 +3503,7 @@ func TestInterpretNestedOptionalComparisonMixed(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3520,7 +3520,7 @@ func TestInterpretOptionalSomeValueComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3537,7 +3537,7 @@ func TestInterpretOptionalNilValueComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3644,14 +3644,14 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(false),
+				interpreter.FalseValue,
 				inter.Globals.Get("y").GetValue(),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(false),
+				interpreter.FalseValue,
 				inter.Globals.Get("z").GetValue(),
 			)
 		})
@@ -4688,7 +4688,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		var inter *interpreter.Interpreter
 
 		getType := func(name string) sema.Type {
-			variable, ok := inter.Program.Elaboration.GlobalTypes.Get(name)
+			variable, ok := inter.Program.Elaboration.GetGlobalType(name)
 			require.True(t, ok, "missing global type %s", name)
 			return variable.Type
 		}
@@ -4705,7 +4705,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		}
 
 		getStorageReferenceFunctionType := &sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:          "authorized",
 					Identifier:     "authorized",
@@ -5620,7 +5620,7 @@ func TestInterpretArrayContains(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 
@@ -5630,7 +5630,7 @@ func TestInterpretArrayContains(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -5663,7 +5663,7 @@ func TestInterpretDictionaryContainsKey(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 
@@ -5673,7 +5673,7 @@ func TestInterpretDictionaryContainsKey(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -5881,7 +5881,7 @@ func TestInterpretDictionaryForEachKey(t *testing.T) {
 				if !ok {
 					return 0, ok
 				}
-				return intVal.ToInt(), true
+				return intVal.ToInt(interpreter.EmptyLocationRange), true
 			}
 
 			entries, ok := dictionaryEntries(inter, dict, toInt, toInt)
@@ -6430,7 +6430,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("ranDestructor").GetValue(),
 	)
 
@@ -6440,7 +6440,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("ranDestructor").GetValue(),
 	)
 }
@@ -6482,14 +6482,14 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("ranDestructorA").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("ranDestructorB").GetValue(),
 	)
 
@@ -6499,14 +6499,14 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("ranDestructorA").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("ranDestructorB").GetValue(),
 	)
 }
@@ -6903,13 +6903,13 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.CharacterType,
 		},
 		"Bool": {
-			value: interpreter.BoolValue(true),
+			value: interpreter.TrueValue,
 			ty:    sema.BoolType,
 		},
 		"Address": {
 			literal: `0x1`,
 			value:   interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-			ty:      &sema.AddressType{},
+			ty:      sema.TheAddressType,
 		},
 		// Int*
 		"Int": {
@@ -9002,24 +9002,24 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 	for _, test := range []test{
 		{
-			sema.Int256Type,
-			"676983016644359394637212096269997871684197836659065544033845082275068334",
-			72,
+			Type:    sema.Int256Type,
+			Literal: "676983016644359394637212096269997871684197836659065544033845082275068334",
+			Count:   72,
 		},
 		{
-			sema.UInt256Type,
-			"676983016644359394637212096269997871684197836659065544033845082275068334",
-			72,
+			Type:    sema.UInt256Type,
+			Literal: "676983016644359394637212096269997871684197836659065544033845082275068334",
+			Count:   72,
 		},
 		{
-			sema.Int128Type,
-			"676983016644359394637212096269997871",
-			36,
+			Type:    sema.Int128Type,
+			Literal: "676983016644359394637212096269997871",
+			Count:   36,
 		},
 		{
-			sema.UInt128Type,
-			"676983016644359394637212096269997871",
-			36,
+			Type:    sema.UInt128Type,
+			Literal: "676983016644359394637212096269997871",
+			Count:   36,
 		},
 	} {
 
@@ -9112,7 +9112,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	logFunction := stdlib.NewStandardLibraryFunction(
 		"log",
 		&sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
@@ -9297,9 +9297,6 @@ func TestInterpretVoidReturn_(t *testing.T) {
 
 		if returnType != "" {
 			returnSnippet = ": " + returnType
-		}
-
-		if returnValue != "" {
 		}
 
 		var name string

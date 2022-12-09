@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -496,4 +497,147 @@ func TestCheckMultipleTypeRequirements(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.ConformanceError{}, errs[0])
+}
+
+func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("initializer notes", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+      pub resource interface I {
+          let x: Int 
+          init(x: Int)
+      }
+
+      pub resource R: I {
+        let x: Int 
+        init() {
+            self.x = 1
+        }
+      }
+    `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+
+		conformanceErr := errs[0].(*sema.ConformanceError)
+		require.NotNil(t, conformanceErr.InitializerMismatch)
+		notes := conformanceErr.ErrorNotes()
+		require.Len(t, notes, 1)
+
+		require.Equal(t, &sema.MemberMismatchNote{
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 142, Line: 9, Column: 8},
+				EndPos:   ast.Position{Offset: 145, Line: 9, Column: 11},
+			},
+		}, notes[0])
+	})
+
+	t.Run("1 missing member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        pub resource interface I {
+            fun foo(): Int
+        }
+
+        pub resource R: I {
+        }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		conformanceErr := errs[0].(*sema.ConformanceError)
+		require.Equal(t, "`R` is missing definitions for members: `foo`", conformanceErr.SecondaryError())
+	})
+
+	t.Run("2 missing member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        pub resource interface I {
+            fun foo(): Int
+            fun bar(): Int
+        }
+
+        pub resource R: I {
+        }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		conformanceErr := errs[0].(*sema.ConformanceError)
+		require.Equal(t, "`R` is missing definitions for members: `foo`, `bar`", conformanceErr.SecondaryError())
+	})
+
+	t.Run("1 missing type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        pub contract interface I {
+            pub struct S {}
+        }
+
+        pub contract C: I {
+        }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		conformanceErr := errs[0].(*sema.ConformanceError)
+		require.Equal(t, "`C` is missing definitions for types: `I.S`", conformanceErr.SecondaryError())
+	})
+
+	t.Run("2 missing type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        pub contract interface I {
+            pub struct S {}
+            pub resource R {}
+        }
+
+        pub contract C: I {
+        }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		conformanceErr := errs[0].(*sema.ConformanceError)
+		require.Equal(t, "`C` is missing definitions for types: `I.S`, `I.R`", conformanceErr.SecondaryError())
+	})
+
+	t.Run("missing type and member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        pub contract interface I {
+            pub struct S {}
+            pub fun foo() 
+        }
+
+        pub contract C: I {
+        }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		conformanceErr := errs[0].(*sema.ConformanceError)
+		require.Equal(t, "`C` is missing definitions for members: `foo`. `C` is also missing definitions for types: `I.S`", conformanceErr.SecondaryError())
+	})
 }

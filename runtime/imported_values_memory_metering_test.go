@@ -409,12 +409,6 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 			TypeInstance: cadence.Character("a"),
 		},
 		{
-			TypeName:     "Bool",
-			MemoryKind:   common.MemoryKindBoolValue,
-			Weight:       0,
-			TypeInstance: cadence.Bool(true),
-		},
-		{
 			TypeName:     "Address",
 			MemoryKind:   common.MemoryKindAddressValue,
 			Weight:       1,
@@ -444,9 +438,9 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		// Verify Capability and its composing values, Path and Type.
 		{
 			TypeName:   "Capability",
-			MemoryKind: common.MemoryKindCapabilityValue,
+			MemoryKind: common.MemoryKindStorageCapabilityValue,
 			Weight:     1,
-			TypeInstance: cadence.Capability{
+			TypeInstance: cadence.StorageCapability{
 				Path: cadence.Path{
 					Domain:     "public",
 					Identifier: "foobarrington",
@@ -462,7 +456,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 			TypeName:   "Capability",
 			MemoryKind: common.MemoryKindPathValue,
 			Weight:     1,
-			TypeInstance: cadence.Capability{
+			TypeInstance: cadence.StorageCapability{
 				Path: cadence.Path{
 					Domain:     "public",
 					Identifier: "foobarrington",
@@ -478,7 +472,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 			TypeName:   "Capability",
 			MemoryKind: common.MemoryKindRawString,
 			Weight:     13 + 1 + 19,
-			TypeInstance: cadence.Capability{
+			TypeInstance: cadence.StorageCapability{
 				Path: cadence.Path{
 					Domain:     "public",
 					Identifier: "foobarrington",

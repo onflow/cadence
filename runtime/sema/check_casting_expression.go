@@ -32,8 +32,6 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 
 	rightHandType := rightHandTypeAnnotation.Type
 
-	checker.Elaboration.CastingTargetTypes[expression] = rightHandType
-
 	// visit the expression
 
 	leftHandExpression := expression.Expression
@@ -50,7 +48,13 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 
 	hasErrors := len(checker.errors) > beforeErrors
 
-	checker.Elaboration.CastingStaticValueTypes[expression] = leftHandType
+	checker.Elaboration.SetCastingExpressionTypes(
+		expression,
+		CastingExpressionTypes{
+			StaticValueType: leftHandType,
+			TargetType:      rightHandType,
+		},
+	)
 
 	if leftHandType.IsResourceType() {
 
@@ -137,11 +141,13 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 					},
 				)
 			} else if checker.Config.ExtendedElaborationEnabled {
-				checker.Elaboration.RuntimeCastTypes[expression] =
+				checker.Elaboration.SetRuntimeCastTypes(
+					expression,
 					RuntimeCastTypes{
 						Left:  leftHandType,
 						Right: rightHandType,
-					}
+					},
+				)
 			}
 		}
 
@@ -153,12 +159,14 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 
 	case ast.OperationCast:
 		if checker.Config.ExtendedElaborationEnabled && !hasErrors {
-			checker.Elaboration.StaticCastTypes[expression] =
+			checker.Elaboration.SetStaticCastTypes(
+				expression,
 				CastTypes{
 					ExprActualType: exprActualType,
 					TargetType:     rightHandType,
 					ExpectedType:   checker.expectedType,
-				}
+				},
+			)
 		}
 
 		return rightHandType

@@ -50,7 +50,7 @@ var MetaTypeAnnotation = NewTypeAnnotation(MetaType)
 
 var MetaTypeIsSubtypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:          "of",
 			Identifier:     "otherType",

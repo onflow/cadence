@@ -55,7 +55,9 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) (_ struct{}
 
 				if castingExpression, ok := test.Value.(*ast.CastingExpression); ok &&
 					castingExpression.Operation == ast.OperationFailableCast {
-					leftHandType := checker.Elaboration.CastingStaticValueTypes[castingExpression]
+
+					castingTypes := checker.Elaboration.CastingExpressionTypes(castingExpression)
+					leftHandType := castingTypes.StaticValueType
 					if leftHandType.IsResourceType() {
 						checker.recordResourceInvalidation(
 							castingExpression.Expression,

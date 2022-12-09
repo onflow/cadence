@@ -16,34 +16,22 @@
  * limitations under the License.
  */
 
-package testdata
+package interpreter
 
-func testVariable() {
-	var m map[string]int
+import "github.com/onflow/cadence/runtime/common"
 
-	for range m { // want "range statement over map: map\\[string\\]int"
-	}
+type CapabilityTarget interface {
+	isCapabilityTarget()
 }
 
-func returnMap() map[int]string {
-	return nil
-}
+type PathCapabilityTarget PathValue
 
-func testFunc() {
-	for range returnMap() { // want "range statement over map: map\\[int\\]string"
-	}
-}
+func (PathCapabilityTarget) isCapabilityTarget() {}
 
-func testTypeDef() {
-	type M map[string]int
-	var m M
-	for range m { // want "range statement over map: map\\[string\\]int"
-	}
-}
+var _ CapabilityTarget = PathCapabilityTarget{}
 
-func testTypeAlias() {
-	type M = map[string]int
-	var m M
-	for range m { // want "range statement over map: map\\[string\\]int"
-	}
-}
+type AccountCapabilityTarget common.Address
+
+var _ CapabilityTarget = AccountCapabilityTarget{}
+
+func (AccountCapabilityTarget) isCapabilityTarget() {}

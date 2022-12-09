@@ -45,7 +45,7 @@ Terminates the program unconditionally and reports a message which explains why 
 
 var panicFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
-	[]*sema.Parameter{
+	[]sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "message",

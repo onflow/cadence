@@ -28,11 +28,13 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 	leftType := checker.VisitExpression(swap.Left, nil)
 	rightType := checker.VisitExpression(swap.Right, nil)
 
-	checker.Elaboration.SwapStatementTypes[swap] =
+	checker.Elaboration.SetSwapStatementTypes(
+		swap,
 		SwapStatementTypes{
 			LeftType:  leftType,
 			RightType: rightType,
-		}
+		},
+	)
 
 	lhsValid := checker.checkSwapStatementExpression(swap.Left, leftType, common.OperandSideLeft)
 	rhsValid := checker.checkSwapStatementExpression(swap.Right, rightType, common.OperandSideRight)

@@ -174,9 +174,7 @@ func TestCheckOptionalChainingFunctionRead(t *testing.T) {
 	expectedType := &sema.OptionalType{
 		Type: &sema.FunctionType{
 			Purity: sema.FunctionPurityImpure,
-			ReturnTypeAnnotation: &sema.TypeAnnotation{
-				Type: sema.IntType,
-			},
+			ReturnTypeAnnotation: sema.IntTypeAnnotation,
 		},
 	}
 
@@ -274,7 +272,6 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
 		assert.Equal(t,
 			&sema.FunctionType{
 				Purity:               sema.FunctionPurityImpure,
-				Parameters:           []*sema.Parameter{},
 				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			RequireGlobalValue(t, checker.Elaboration, "f"),
@@ -295,5 +292,128 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
         `)
 
 		require.NoError(t, err)
+	})
+}
+
+func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+            struct Test {
+                fun foo(): Int { return 3 }
+            }
+
+            let test: Test = Test()
+            let x = test.foop()
+        `, ParseAndCheckOptions{
+			Config: &sema.Config{
+				SuggestionsEnabled: true,
+			},
+		})
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var memberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &memberErr)
+		assert.Equal(t, "did you mean `foo`?", memberErr.SecondaryError())
+	})
+
+	t.Run("without option", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                fun foo(): Int { return 3 }
+            }
+
+            let test: Test = Test()
+            let x = test.foop()
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var memberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &memberErr)
+		assert.Equal(t, "unknown member", memberErr.SecondaryError())
+	})
+
+	t.Run("selects closest", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+            struct Test {
+                fun fou(): Int { return 1 }
+                fun bar(): Int { return 2 }
+                fun foo(): Int { return 3 }
+            }
+
+            let test: Test = Test()
+            let x = test.foop()
+        `, ParseAndCheckOptions{
+			Config: &sema.Config{
+				SuggestionsEnabled: true,
+			},
+		})
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var memberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &memberErr)
+		assert.Equal(t, "did you mean `foo`?", memberErr.SecondaryError())
+	})
+
+	t.Run("no members = no suggestion", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+            struct Test {
+                
+            }
+
+            let test: Test = Test()
+            let x = test.foop()
+        `, ParseAndCheckOptions{
+			Config: &sema.Config{
+				SuggestionsEnabled: true,
+			},
+		})
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var memberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &memberErr)
+		assert.Equal(t, "unknown member", memberErr.SecondaryError())
+	})
+
+	t.Run("no similarity = no suggestion", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+            struct Test {
+                fun bar(): Int { return 1 }
+            }
+
+            let test: Test = Test()
+            let x = test.foop()
+        `, ParseAndCheckOptions{
+			Config: &sema.Config{
+				SuggestionsEnabled: true,
+			},
+		})
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var memberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &memberErr)
+		assert.Equal(t, "unknown member", memberErr.SecondaryError())
 	})
 }
