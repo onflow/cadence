@@ -166,7 +166,7 @@ func TestEncodeDecodeBool(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: BoolValue(false),
+				value: FalseValue,
 				encoded: []byte{
 					// false
 					0xf4,
@@ -181,7 +181,7 @@ func TestEncodeDecodeBool(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: BoolValue(true),
+				value: TrueValue,
 				encoded: []byte{
 					// true
 					0xf5,
@@ -309,7 +309,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 			},
 			common.Address{},
 			expectedString,
-			BoolValue(true),
+			TrueValue,
 		)
 
 		testEncodeDecode(t,
@@ -373,7 +373,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		fields := []CompositeField{
 			{Name: "string", Value: stringValue},
-			{Name: "true", Value: BoolValue(true)},
+			{Name: "true", Value: TrueValue},
 		}
 
 		expected := NewCompositeValue(
@@ -535,7 +535,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected).(IntValue)
+			expected = expected.Mul(inter, expected, EmptyLocationRange).(IntValue)
 		}
 
 		testEncodeDecode(t,
@@ -1493,7 +1493,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected).(UIntValue)
+			expected = expected.Mul(inter, expected, EmptyLocationRange).(UIntValue)
 		}
 
 		testEncodeDecode(t,
@@ -2416,7 +2416,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+				value: NewUnmeteredSomeValueNonCopying(TrueValue),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
@@ -2881,7 +2881,7 @@ func TestEncodeDecodePathValue(t *testing.T) {
 	})
 }
 
-func TestEncodeDecodeCapabilityValue(t *testing.T) {
+func TestEncodeDecodeStorageCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -2889,14 +2889,14 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := &CapabilityValue{
+		value := &StorageCapabilityValue{
 			Address: NewUnmeteredAddressValueFromBytes([]byte{0x2}),
 			Path:    privatePathValue,
 		}
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, CBORTagStorageCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -2905,7 +2905,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			0x41,
 			// address
 			0x02,
-			// tag for address
+			// tag for path
 			0xd8, CBORTagPathValue,
 			// array, 2 items follow
 			0x82,
@@ -2931,7 +2931,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := &CapabilityValue{
+		value := &StorageCapabilityValue{
 			Address:    NewUnmeteredAddressValueFromBytes([]byte{0x2}),
 			Path:       privatePathValue,
 			BorrowType: PrimitiveStaticTypeBool,
@@ -2939,7 +2939,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, CBORTagStorageCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -2948,9 +2948,9 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			0x41,
 			// address
 			0x02,
-			// tag for address
+			// tag for path
 			0xd8, CBORTagPathValue,
-			// aray, 2 items follow
+			// array, 2 items follow
 			0x82,
 			// positive integer 2
 			0x2,
@@ -2958,7 +2958,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			0x63,
 			// f, o, o
 			0x66, 0x6f, 0x6f,
-			// tag
+			// tag for borrow type
 			0xd8, CBORTagPrimitiveStaticType,
 			// bool
 			0x6,
@@ -2976,14 +2976,14 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := &CapabilityValue{
+		value := &StorageCapabilityValue{
 			Address: NewUnmeteredAddressValueFromBytes([]byte{0x3}),
 			Path:    publicPathValue,
 		}
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, CBORTagStorageCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -2992,7 +2992,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			0x41,
 			// address
 			0x03,
-			// tag for address
+			// tag for path
 			0xd8, CBORTagPathValue,
 			// array, 2 items follow
 			0x82,
@@ -3019,7 +3019,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := &CapabilityValue{
+		value := &StorageCapabilityValue{
 			Address:    NewUnmeteredAddressValueFromBytes([]byte{0x3}),
 			Path:       publicPathValue,
 			BorrowType: PrimitiveStaticTypeBool,
@@ -3027,7 +3027,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, CBORTagStorageCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -3036,7 +3036,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			0x41,
 			// address
 			0x03,
-			// tag for address
+			// tag for path
 			0xd8, CBORTagPathValue,
 			// array, 2 items follow
 			0x82,
@@ -3046,7 +3046,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			0x63,
 			// b, a, r
 			0x62, 0x61, 0x72,
-			// tag
+			// tag for borrow type
 			0xd8, CBORTagPrimitiveStaticType,
 			// bool
 			0x6,
@@ -3065,7 +3065,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := &CapabilityValue{
+		capabilityValue := &StorageCapabilityValue{
 			Address:    NewUnmeteredAddressValueFromBytes([]byte{0x3}),
 			Path:       publicPathValue,
 			BorrowType: PrimitiveStaticTypePublicAccount,
@@ -3073,7 +3073,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, CBORTagStorageCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -3082,7 +3082,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			0x41,
 			// address
 			0x03,
-			// tag for address
+			// tag for path
 			0xd8, CBORTagPathValue,
 			// array, 2 items follow
 			0x82,
@@ -3092,7 +3092,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			0x63,
 			// b, a, r
 			0x62, 0x61, 0x72,
-			// tag
+			// tag for borrow type
 			0xd8, CBORTagPrimitiveStaticType,
 			// positive integer to follow
 			0x18,
@@ -3133,7 +3133,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			}
 		}
 
-		expected := &CapabilityValue{
+		expected := &StorageCapabilityValue{
 			Path: path,
 		}
 
@@ -3177,7 +3177,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			}
 		}
 
-		expected := &CapabilityValue{
+		expected := &StorageCapabilityValue{
 			Path: path,
 		}
 
@@ -3195,13 +3195,13 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 	})
 }
 
-func TestEncodeDecodeLinkValue(t *testing.T) {
+func TestEncodeDecodePathLinkValue(t *testing.T) {
 
 	t.Parallel()
 
 	expectedLinkEncodingPrefix := []byte{
 		// tag
-		0xd8, CBORTagLinkValue,
+		0xd8, CBORTagPathLinkValue,
 		// array, 2 items follow
 		0x82,
 		0xd8, CBORTagPathValue,
@@ -3219,7 +3219,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type:       ConvertSemaToPrimitiveStaticType(nil, sema.BoolType),
 		}
@@ -3244,7 +3244,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: OptionalStaticType{
 				Type: PrimitiveStaticTypeBool,
@@ -3277,7 +3277,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: NewCompositeStaticTypeComputeTypeID(
 				nil,
@@ -3317,7 +3317,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: InterfaceStaticType{
 				Location:            utils.TestLocation,
@@ -3356,7 +3356,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: VariableSizedStaticType{
 				Type: PrimitiveStaticTypeBool,
@@ -3385,7 +3385,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeBool,
@@ -3419,7 +3419,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
 				Authorized:   true,
@@ -3453,7 +3453,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
 				Authorized:   false,
@@ -3487,7 +3487,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeBool,
@@ -3522,7 +3522,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: &RestrictedStaticType{
 				Type: NewCompositeStaticTypeComputeTypeID(
@@ -3608,7 +3608,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type:       CapabilityStaticType{},
 		}
@@ -3634,7 +3634,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeBool,
@@ -3671,7 +3671,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			Identifier: identifier,
 		}
 
-		expected := LinkValue{
+		expected := PathLinkValue{
 			TargetPath: path,
 			Type:       PrimitiveStaticTypeNever,
 		}
@@ -3690,6 +3690,23 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			},
 		)
 	})
+}
+
+func TestEncodeDecodeAccountLinkValue(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeDecode(t,
+		encodeDecodeTest{
+			value: EmptyAccountLinkValue,
+			encoded: []byte{
+				// tag
+				0xd8, CBORTagAccountLinkValue,
+				// null
+				0xf6,
+			},
+		},
+	)
 }
 
 func TestEncodeDecodeTypeValue(t *testing.T) {

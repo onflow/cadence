@@ -36,7 +36,7 @@ The message argument is optional.
 `
 
 var assertFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "condition",

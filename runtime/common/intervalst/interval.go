@@ -32,7 +32,7 @@ func NewInterval(min, max Position) Interval {
 	if min.Compare(max) > 0 {
 		panic("illegal interval: min > max")
 	}
-	return Interval{min, max}
+	return Interval{Min: min, Max: max}
 }
 
 func (i Interval) Intersects(other Interval) bool {

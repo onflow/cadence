@@ -1582,6 +1582,326 @@ func TestAuthAccountContracts(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("get existing contract", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(acc: AuthAccount) {
+                    let deployedContract = acc.contracts.get(name: "foo")
+                    assert(deployedContract!.name == "foo")
+                }
+            }
+        `)
+
+		var invoked bool
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractCode: func(address Address, name string) ([]byte, error) {
+				invoked = true
+				return []byte{1, 2}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, invoked)
+	})
+
+	t.Run("get non-existing contract", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(acc: AuthAccount) {
+                    let deployedContract = acc.contracts.get(name: "foo")
+                    assert(deployedContract == nil)
+                }
+            }
+        `)
+
+		var invoked bool
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractCode: func(address Address, name string) ([]byte, error) {
+				invoked = true
+				return nil, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, invoked)
+	})
+
+	t.Run("borrow existing contract", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{0, 0, 0, 0, 0, 0, 0, 0x42}}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy  contract interface
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("HelloInterface", []byte(`
+                  pub contract interface HelloInterface {
+
+                      pub fun hello(): String
+                  }
+                `)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Deploy concrete contract
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("Hello", []byte(`
+                  import HelloInterface from 0x42
+
+                  pub contract Hello: HelloInterface {
+
+                      pub fun hello(): String {
+                          return "Hello!"
+                      }
+                  }
+                `)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Test usage
+
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                  import HelloInterface from 0x42
+
+                  transaction {
+                      prepare(acc: AuthAccount) {
+                          let hello = acc.contracts.borrow<&HelloInterface>(name: "Hello")
+                          assert(hello?.hello() == "Hello!")
+                      }
+                  }
+              `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("borrow existing contract with incorrect type", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{0, 0, 0, 0, 0, 0, 0, 0x42}}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy  contract interface
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("HelloInterface", []byte(`
+                  pub contract interface HelloInterface {
+
+                      pub fun hello(): String
+                  }
+                `)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Deploy concrete contract
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("Hello", []byte(`
+                  pub contract Hello {
+
+                      pub fun hello(): String {
+                          return "Hello!"
+                      }
+                  }
+                `)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Test usage
+
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                  import HelloInterface from 0x42
+
+                  transaction {
+                      prepare(acc: AuthAccount) {
+                          let hello = acc.contracts.borrow<&HelloInterface>(name: "Hello")
+                          assert(hello == nil)
+                      }
+                  }
+              `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("borrow non-existing contract", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{0, 0, 0, 0, 0, 0, 0, 0x42}}, nil
+			},
+			getAccountContractCode: func(address Address, name string) ([]byte, error) {
+				return nil, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                  transaction {
+                      prepare(acc: AuthAccount) {
+                          let hello = acc.contracts.borrow<&AnyStruct>(name: "Hello")
+                          assert(hello == nil)
+                      }
+                  }
+              `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
 	t.Run("get names", func(t *testing.T) {
 		t.Parallel()
 
@@ -1708,7 +2028,7 @@ func TestPublicAccountContracts(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("get contract", func(t *testing.T) {
+	t.Run("get existing contract", func(t *testing.T) {
 		t.Parallel()
 
 		rt := newTestInterpreterRuntime()
@@ -1716,7 +2036,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		script := []byte(`
             pub fun main(): [AnyStruct] {
                 let acc = getAccount(0x02)
-                let deployedContract: DeployedContract? = acc.contracts.get(name: "foo")
+                let deployedContract = acc.contracts.get(name: "foo")
 
                 return [deployedContract!.name, deployedContract!.code]
             }
@@ -1768,7 +2088,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		)
 	})
 
-	t.Run("get non existing contract", func(t *testing.T) {
+	t.Run("get non-existing contract", func(t *testing.T) {
 		t.Parallel()
 
 		rt := newTestInterpreterRuntime()
@@ -2091,4 +2411,183 @@ type fakeError struct{}
 
 func (fakeError) Error() string {
 	return "fake error for testing"
+}
+
+func TestRuntimeAccountLink(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime(Config{
+			AtreeValidationEnabled: true,
+			AccountLinkingEnabled:  false,
+		})
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		accountCodes := map[Location][]byte{}
+		var logs []string
+
+		signerAccount := address
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location] = code
+				return nil
+			},
+			log: func(message string) {
+				logs = append(logs, message)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Set up account
+
+		setupTransaction := []byte(`
+          transaction {
+              prepare(acct: AuthAccount) {
+                  acct.linkAccount(/public/foo)
+              }
+          }
+        `)
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: setupTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.Error(t, err)
+
+		assert.ErrorContains(t, err, "value of type `AuthAccount` has no member `linkAccount`")
+	})
+
+	t.Run("enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime(Config{
+			AtreeValidationEnabled: true,
+			AccountLinkingEnabled:  true,
+		})
+
+		address1 := common.MustBytesToAddress([]byte{0x1})
+		address2 := common.MustBytesToAddress([]byte{0x2})
+
+		accountCodes := map[Location][]byte{}
+		var logs []string
+
+		signerAccount := address1
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location] = code
+				return nil
+			},
+			log: func(message string) {
+				logs = append(logs, message)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Set up account
+
+		setupTransaction := []byte(`
+          transaction {
+              prepare(acct: AuthAccount) {
+                  acct.linkAccount(/public/foo)
+              }
+          }
+        `)
+
+		signerAccount = address1
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: setupTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Access
+
+		accessTransaction := []byte(`
+          transaction {
+              prepare(acct: AuthAccount) {
+                  let ref = getAccount(0x1)
+                      .getCapability<&AuthAccount>(/public/foo)
+                      .borrow()!
+                  log(ref.address)
+              }
+          }
+        `)
+
+		signerAccount = address2
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: accessTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{"0x0000000000000001"},
+			logs,
+		)
+	})
 }

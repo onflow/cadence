@@ -39,13 +39,15 @@ func NewAuthAccountContractsValue(
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
 	getFunction FunctionValue,
+	borrowFunction FunctionValue,
 	removeFunction FunctionValue,
 	namesGetter ContractNamesGetter,
 ) Value {
 
 	fields := map[string]Value{
 		sema.AuthAccountContractsTypeAddFunctionName:                addFunction,
-		sema.AuthAccountContractsTypeGetFunctionName:                getFunction,
+		sema.AccountContractsTypeGetFunctionName:                    getFunction,
+		sema.AccountContractsTypeBorrowFunctionName:                 borrowFunction,
 		sema.AuthAccountContractsTypeRemoveFunctionName:             removeFunction,
 		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName: updateFunction,
 	}
@@ -56,7 +58,7 @@ func NewAuthAccountContractsValue(
 		locationRange LocationRange,
 	) Value {
 		switch name {
-		case sema.AuthAccountContractsTypeNamesField:
+		case sema.AccountContractsTypeNamesFieldName:
 			return namesGetter(interpreter, locationRange)
 		}
 		return nil
@@ -93,11 +95,13 @@ func NewPublicAccountContractsValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	getFunction FunctionValue,
+	borrowFunction FunctionValue,
 	namesGetter ContractNamesGetter,
 ) Value {
 
 	fields := map[string]Value{
-		sema.PublicAccountContractsTypeGetFunctionName: getFunction,
+		sema.AccountContractsTypeGetFunctionName:    getFunction,
+		sema.AccountContractsTypeBorrowFunctionName: borrowFunction,
 	}
 
 	computeField := func(
@@ -106,7 +110,7 @@ func NewPublicAccountContractsValue(
 		locationRange LocationRange,
 	) Value {
 		switch name {
-		case sema.PublicAccountContractsTypeNamesField:
+		case sema.AccountContractsTypeNamesFieldName:
 			return namesGetter(interpreter, locationRange)
 		}
 		return nil

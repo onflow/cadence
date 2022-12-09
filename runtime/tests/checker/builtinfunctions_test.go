@@ -33,7 +33,7 @@ func TestCheckToString(t *testing.T) {
 
 	for _, numberOrAddressType := range append(
 		sema.AllNumberTypes[:],
-		&sema.AddressType{},
+		sema.TheAddressType,
 	) {
 
 		ty := numberOrAddressType

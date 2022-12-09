@@ -20,13 +20,12 @@ package wasm
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 )
 
 func WASM2WAT(binary []byte) string {
-	f, err := ioutil.TempFile("", "wasm")
+	f, err := os.CreateTemp("", "wasm")
 	if err != nil {
 		panic(err)
 	}

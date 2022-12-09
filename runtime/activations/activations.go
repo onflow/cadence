@@ -80,7 +80,7 @@ func (a *Activation[T]) FunctionValues() map[string]T {
 	for current != nil {
 
 		if current.entries != nil {
-			for name, value := range current.entries { //nolint:maprangecheck
+			for name, value := range current.entries { //nolint:maprange
 				if _, ok := values[name]; !ok {
 					values[name] = value
 				}

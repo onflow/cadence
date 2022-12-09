@@ -246,7 +246,7 @@ type TypeAnnotation struct {
 	Type       Type
 }
 
-func (a *TypeAnnotation) TypeAnnotationState() TypeAnnotationState {
+func (a TypeAnnotation) TypeAnnotationState() TypeAnnotationState {
 	if a.Type.IsInvalidType() {
 		return TypeAnnotationStateValid
 	}
@@ -267,7 +267,7 @@ func (a *TypeAnnotation) TypeAnnotationState() TypeAnnotationState {
 	}
 }
 
-func (a *TypeAnnotation) String() string {
+func (a TypeAnnotation) String() string {
 	if a.IsResource {
 		return fmt.Sprintf(
 			"%s%s",
@@ -279,7 +279,7 @@ func (a *TypeAnnotation) String() string {
 	}
 }
 
-func (a *TypeAnnotation) QualifiedString() string {
+func (a TypeAnnotation) QualifiedString() string {
 	qualifiedString := a.Type.QualifiedString()
 	if a.IsResource {
 		return fmt.Sprintf(
@@ -292,13 +292,13 @@ func (a *TypeAnnotation) QualifiedString() string {
 	}
 }
 
-func (a *TypeAnnotation) Equal(other *TypeAnnotation) bool {
+func (a TypeAnnotation) Equal(other TypeAnnotation) bool {
 	return a.IsResource == other.IsResource &&
 		a.Type.Equal(other.Type)
 }
 
-func NewTypeAnnotation(ty Type) *TypeAnnotation {
-	return &TypeAnnotation{
+func NewTypeAnnotation(ty Type) TypeAnnotation {
+	return TypeAnnotation{
 		IsResource: ty.IsResourceType(),
 		Type:       ty,
 	}
@@ -309,7 +309,7 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 const IsInstanceFunctionName = "isInstance"
 
 var IsInstanceFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "type",
@@ -383,7 +383,7 @@ func FromStringFunctionDocstring(ty Type) string {
 
 func FromStringFunctionType(ty Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "input",
@@ -391,7 +391,9 @@ func FromStringFunctionType(ty Type) *FunctionType {
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{ty},
+			&OptionalType{
+				Type: ty,
+			},
 		),
 	}
 }
@@ -447,7 +449,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All number types, addresses, and path types have a `toString` function
 
-	if IsSubType(ty, NumberType) || IsSubType(ty, &AddressType{}) || IsSubType(ty, PathType) {
+	if IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType) {
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
@@ -486,8 +488,12 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 // OptionalType represents the optional variant of another type
 type OptionalType struct {
-	Type Type
+	Type                Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
+
+var _ Type = &OptionalType{}
 
 func NewOptionalType(memoryGauge common.MemoryGauge, typ Type) *OptionalType {
 	common.UseMemory(memoryGauge, common.OptionalSemaTypeMemoryUsage)
@@ -609,37 +615,43 @@ with the value of this optional when it is not nil.
 Returns nil if this optional is nil
 `
 
+const OptionalTypeMapFunctionName = "map"
+
 func (t *OptionalType) GetMembers() map[string]MemberResolver {
+	t.initializeMembers()
+	return t.memberResolvers
 
-	members := map[string]MemberResolver{
-		"map": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+}
+func (t *OptionalType) initializeMembers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			OptionalTypeMapFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
-				// It invalid for an optional of a resource to have a `map` function
+					// It's invalid for an optional of a resource to have a `map` function
 
-				if t.Type.IsResourceType() {
-					report(
-						&InvalidResourceOptionalMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
-						},
+					if t.Type.IsResourceType() {
+						report(
+							&InvalidResourceOptionalMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindFunction,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						OptionalTypeMapFunctionType(t.Type),
+						optionalTypeMapFunctionDocString,
 					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					t,
-					identifier,
-					OptionalTypeMapFunctionType(t.Type),
-					optionalTypeMapFunctionDocString,
-				)
+				},
 			},
-		},
-	}
-
-	return withBuiltinMembers(t, members)
+		})
+	})
 }
 
 func OptionalTypeMapFunctionType(typ Type) *FunctionType {
@@ -655,13 +667,13 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:      ArgumentLabelNotRequired,
 				Identifier: "transform",
 				TypeAnnotation: NewTypeAnnotation(
 					&FunctionType{
-						Parameters: []*Parameter{
+						Parameters: []Parameter{
 							{
 								Label:          ArgumentLabelNotRequired,
 								Identifier:     "value",
@@ -687,6 +699,8 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 type GenericType struct {
 	TypeParameter *TypeParameter
 }
+
+var _ Type = &GenericType{}
 
 func (*GenericType) IsType() {}
 
@@ -846,7 +860,7 @@ self / other, saturating at the numeric bounds instead of overflowing.
 func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[string]MemberResolver) {
 
 	arithmeticFunctionType := &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "other",
@@ -911,7 +925,9 @@ type NumericType struct {
 	isSuperType                bool
 }
 
+var _ Type = &NumericType{}
 var _ IntegerRangedType = &NumericType{}
+var _ SaturatingArithmeticType = &NumericType{}
 
 func NewNumericType(typeName string) *NumericType {
 	return &NumericType{name: typeName}
@@ -1083,7 +1099,10 @@ type FixedPointNumericType struct {
 	isSuperType                bool
 }
 
+var _ Type = &FixedPointNumericType{}
+var _ IntegerRangedType = &FixedPointNumericType{}
 var _ FractionalRangedType = &FixedPointNumericType{}
+var _ SaturatingArithmeticType = &FixedPointNumericType{}
 
 func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
 	return &FixedPointNumericType{
@@ -1937,7 +1956,7 @@ func ArrayRemoveFirstFunctionType(elementType Type) *FunctionType {
 
 func ArrayRemoveFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "at",
 				TypeAnnotation: NewTypeAnnotation(IntegerType),
@@ -1951,7 +1970,7 @@ func ArrayRemoveFunctionType(elementType Type) *FunctionType {
 
 func ArrayInsertFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "at",
 				TypeAnnotation: NewTypeAnnotation(IntegerType),
@@ -1971,7 +1990,7 @@ func ArrayInsertFunctionType(elementType Type) *FunctionType {
 func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	typeAnnotation := NewTypeAnnotation(arrayType)
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "other",
@@ -1984,7 +2003,7 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 
 func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "of",
 				TypeAnnotation: NewTypeAnnotation(elementType),
@@ -1997,7 +2016,7 @@ func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 }
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "element",
@@ -2012,7 +2031,7 @@ func ArrayContainsFunctionType(elementType Type) *FunctionType {
 
 func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "other",
@@ -2025,7 +2044,7 @@ func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
 
 func ArrayAppendFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "element",
@@ -2040,7 +2059,7 @@ func ArrayAppendFunctionType(elementType Type) *FunctionType {
 
 func ArraySliceFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "from",
 				TypeAnnotation: NewTypeAnnotation(IntType),
@@ -2062,6 +2081,10 @@ type VariableSizedType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &VariableSizedType{}
+var _ ArrayType = &VariableSizedType{}
+var _ ValueIndexableType = &VariableSizedType{}
 
 func NewVariableSizedType(memoryGauge common.MemoryGauge, typ Type) *VariableSizedType {
 	common.UseMemory(memoryGauge, common.VariableSizedSemaTypeMemoryUsage)
@@ -2199,6 +2222,10 @@ type ConstantSizedType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &ConstantSizedType{}
+var _ ArrayType = &ConstantSizedType{}
+var _ ValueIndexableType = &ConstantSizedType{}
 
 func NewConstantSizedType(memoryGauge common.MemoryGauge, typ Type, size int64) *ConstantSizedType {
 	common.UseMemory(memoryGauge, common.ConstantSizedSemaTypeMemoryUsage)
@@ -2365,10 +2392,10 @@ func formatParameter(spaces bool, label, identifier, typeAnnotation string) stri
 type Parameter struct {
 	Label          string
 	Identifier     string
-	TypeAnnotation *TypeAnnotation
+	TypeAnnotation TypeAnnotation
 }
 
-func (p *Parameter) String() string {
+func (p Parameter) String() string {
 	return formatParameter(
 		true,
 		p.Label,
@@ -2377,7 +2404,7 @@ func (p *Parameter) String() string {
 	)
 }
 
-func (p *Parameter) QualifiedString() string {
+func (p Parameter) QualifiedString() string {
 	return formatParameter(
 		true,
 		p.Label,
@@ -2390,7 +2417,7 @@ func (p *Parameter) QualifiedString() string {
 // an argument in a call must use:
 // If no argument label is declared for parameter,
 // the parameter name is used as the argument label
-func (p *Parameter) EffectiveArgumentLabel() string {
+func (p Parameter) EffectiveArgumentLabel() string {
 	if p.Label != "" {
 		return p.Label
 	}
@@ -2514,12 +2541,14 @@ func formatFunctionType(
 type FunctionType struct {
 	IsConstructor            bool
 	TypeParameters           []*TypeParameter
-	Parameters               []*Parameter
-	ReturnTypeAnnotation     *TypeAnnotation
+	Parameters               []Parameter
+	ReturnTypeAnnotation     TypeAnnotation
 	RequiredArgumentCount    *int
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
 	Members                  *StringMemberOrderedMap
 }
+
+var _ Type = &FunctionType{}
 
 func RequiredArgumentCount(count int) *int {
 	return &count
@@ -2775,7 +2804,8 @@ func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
 
 	rewrittenParameterTypes := map[*Parameter]Type{}
 
-	for _, parameter := range t.Parameters {
+	for i := range t.Parameters {
+		parameter := &t.Parameters[i]
 		rewrittenType, rewritten := parameter.TypeAnnotation.Type.RewriteWithRestrictedTypes()
 		if rewritten {
 			anyRewritten = true
@@ -2806,19 +2836,20 @@ func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
 			}
 		}
 
-		var rewrittenParameters []*Parameter
+		var rewrittenParameters []Parameter
 		if len(t.Parameters) > 0 {
-			rewrittenParameters = make([]*Parameter, len(t.Parameters))
-			for i, parameter := range t.Parameters {
+			rewrittenParameters = make([]Parameter, len(t.Parameters))
+			for i := range t.Parameters {
+				parameter := &t.Parameters[i]
 				rewrittenParameterType, ok := rewrittenParameterTypes[parameter]
 				if ok {
-					rewrittenParameters[i] = &Parameter{
+					rewrittenParameters[i] = Parameter{
 						Label:          parameter.Label,
 						Identifier:     parameter.Identifier,
 						TypeAnnotation: NewTypeAnnotation(rewrittenParameterType),
 					}
 				} else {
-					rewrittenParameters[i] = parameter
+					rewrittenParameters[i] = *parameter
 				}
 			}
 		}
@@ -2910,7 +2941,7 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 
 	// parameters
 
-	var newParameters []*Parameter
+	var newParameters []Parameter
 
 	for _, parameter := range t.Parameters {
 		newParameterType := parameter.TypeAnnotation.Type.Resolve(typeArguments)
@@ -2918,8 +2949,9 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 			return nil
 		}
 
-		newParameters = append(newParameters,
-			&Parameter{
+		newParameters = append(
+			newParameters,
+			Parameter{
 				Label:          parameter.Label,
 				Identifier:     parameter.Identifier,
 				TypeAnnotation: NewTypeAnnotation(newParameterType),
@@ -2985,7 +3017,7 @@ func init() {
 		BoolType,
 		CharacterType,
 		StringType,
-		&AddressType{},
+		TheAddressType,
 		AuthAccountType,
 		PublicAccountType,
 		PathType,
@@ -3223,7 +3255,7 @@ func init() {
 
 func NumberConversionFunctionType(numberType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "value",
@@ -3256,14 +3288,14 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 }
 
 var AddressConversionFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "value",
 			TypeAnnotation: NewTypeAnnotation(IntegerType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&AddressType{}),
+	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
 	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
 		if len(argumentExpressions) < 1 {
 			return
@@ -3312,20 +3344,26 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(nil, argument, targetType, checker.report) {
 				if checker.Config.ExtendedElaborationEnabled {
-					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
-						Type  Type
-						Range ast.Range
-					}{Type: targetType, Range: invocationRange}
+					checker.Elaboration.SetNumberConversionArgumentTypes(
+						argument,
+						NumberConversionArgumentTypes{
+							Type:  targetType,
+							Range: invocationRange,
+						},
+					)
 				}
 			}
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(nil, argument, targetType, checker.report) {
 				if checker.Config.ExtendedElaborationEnabled {
-					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
-						Type  Type
-						Range ast.Range
-					}{Type: targetType, Range: invocationRange}
+					checker.Elaboration.SetNumberConversionArgumentTypes(
+						argument,
+						NumberConversionArgumentTypes{
+							Type:  targetType,
+							Range: invocationRange,
+						},
+					)
 				}
 			}
 		}
@@ -3334,7 +3372,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 
 func pathConversionFunctionType(pathType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "identifier",
 				TypeAnnotation: NewTypeAnnotation(StringType),
@@ -3435,7 +3473,7 @@ type CompositeType struct {
 	memberResolversOnce                 sync.Once
 	Fields                              []string
 	// TODO: add support for overloaded initializers
-	ConstructorParameters []*Parameter
+	ConstructorParameters []Parameter
 	NestedTypes           *StringTypeOrderedMap
 	containerType         Type
 	EnumRawType           Type
@@ -3456,6 +3494,12 @@ type CompositeType struct {
 	}
 	cachedIdentifiersLock sync.RWMutex
 }
+
+var _ Type = &CompositeType{}
+var _ ContainerType = &CompositeType{}
+var _ ContainedType = &CompositeType{}
+var _ LocatedType = &CompositeType{}
+var _ CompositeKindedType = &CompositeType{}
 
 func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
@@ -3595,11 +3639,6 @@ func (t *CompositeType) Equal(other Type) bool {
 
 	return otherStructure.Kind == t.Kind &&
 		otherStructure.ID() == t.ID()
-}
-
-func (t *CompositeType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -3775,6 +3814,11 @@ func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
 }
 
+func (t *CompositeType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
 func (t *CompositeType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		members := make(map[string]MemberResolver, t.Members.Len())
@@ -3798,7 +3842,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 
 		t.ExplicitInterfaceConformanceSet().
 			ForEach(func(conformance *InterfaceType) {
-				for name, resolver := range conformance.GetMembers() { //nolint:maprangecheck
+				for name, resolver := range conformance.GetMembers() { //nolint:maprange
 					if _, ok := members[name]; !ok {
 						members[name] = resolver
 					}
@@ -3830,7 +3874,7 @@ type Member struct {
 	ContainerType  Type
 	Access         ast.Access
 	Identifier     ast.Identifier
-	TypeAnnotation *TypeAnnotation
+	TypeAnnotation TypeAnnotation
 	// TODO: replace with dedicated MemberKind enum
 	DeclarationKind common.DeclarationKind
 	VariableKind    ast.VariableKind
@@ -4003,7 +4047,7 @@ type InterfaceType struct {
 	memberResolversOnce sync.Once
 	Fields              []string
 	// TODO: add support for overloaded initializers
-	InitializerParameters []*Parameter
+	InitializerParameters []Parameter
 	containerType         Type
 	NestedTypes           *StringTypeOrderedMap
 	cachedIdentifiers     *struct {
@@ -4012,6 +4056,12 @@ type InterfaceType struct {
 	}
 	cachedIdentifiersLock sync.RWMutex
 }
+
+var _ Type = &InterfaceType{}
+var _ ContainerType = &InterfaceType{}
+var _ ContainedType = &InterfaceType{}
+var _ LocatedType = &InterfaceType{}
+var _ CompositeKindedType = &InterfaceType{}
 
 func (*InterfaceType) IsType() {}
 
@@ -4243,6 +4293,9 @@ type DictionaryType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &DictionaryType{}
+var _ ValueIndexableType = &DictionaryType{}
 
 func NewDictionaryType(memoryGauge common.MemoryGauge, keyType, valueType Type) *DictionaryType {
 	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
@@ -4522,7 +4575,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 
 func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "key",
@@ -4537,7 +4590,7 @@ func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 
 func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "key",
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
@@ -4558,7 +4611,7 @@ func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
 
 func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "key",
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
@@ -4577,7 +4630,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 
 	// funcType: K -> Bool
 	funcType := &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "key",
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
@@ -4587,7 +4640,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 	}
 
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "function",
@@ -4658,6 +4711,11 @@ type ReferenceType struct {
 	Authorized bool
 	Type       Type
 }
+
+var _ Type = &ReferenceType{}
+
+// Not all references are indexable, but some, depending on the references type
+var _ ValueIndexableType = &ReferenceType{}
 
 func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorized bool) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
@@ -4808,8 +4866,14 @@ func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 const AddressTypeName = "Address"
 
 // AddressType represents the address type
-type AddressType struct{}
+type AddressType struct {
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
+}
 
+var TheAddressType = &AddressType{}
+
+var _ Type = &AddressType{}
 var _ IntegerRangedType = &AddressType{}
 
 func (*AddressType) IsType() {}
@@ -4903,18 +4967,26 @@ Returns an array containing the byte representation of the address
 `
 
 func (t *AddressType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		AddressTypeToBytesFunctionName: {
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					memoryGauge,
-					t,
-					identifier,
-					AddressTypeToBytesFunctionType,
-					addressTypeToBytesFunctionDocString,
-				)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *AddressType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			AddressTypeToBytesFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						AddressTypeToBytesFunctionType,
+						addressTypeToBytesFunctionDocString,
+					)
+				},
 			},
-		},
+		})
 	})
 }
 
@@ -5322,8 +5394,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		// Functions are covariant in their return type
 
-		if typedSubType.ReturnTypeAnnotation != nil {
-			if typedSuperType.ReturnTypeAnnotation == nil {
+		if typedSubType.ReturnTypeAnnotation.Type != nil {
+			if typedSuperType.ReturnTypeAnnotation.Type == nil {
 				return false
 			}
 
@@ -5333,7 +5405,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			) {
 				return false
 			}
-		} else if typedSuperType.ReturnTypeAnnotation != nil {
+		} else if typedSuperType.ReturnTypeAnnotation.Type != nil {
 			return false
 		}
 
@@ -5629,9 +5701,11 @@ func IsNilType(ty Type) bool {
 type TransactionType struct {
 	Members           *StringMemberOrderedMap
 	Fields            []string
-	PrepareParameters []*Parameter
-	Parameters        []*Parameter
+	PrepareParameters []Parameter
+	Parameters        []Parameter
 }
+
+var _ Type = &TransactionType{}
 
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	return &FunctionType{
@@ -5651,7 +5725,7 @@ func (t *TransactionType) PrepareFunctionType() *FunctionType {
 func (*TransactionType) ExecuteFunctionType() *FunctionType {
 	return &FunctionType{
 		IsConstructor:        true,
-		Parameters:           []*Parameter{},
+		Parameters:           []Parameter{},
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }
@@ -5749,6 +5823,8 @@ type RestrictedType struct {
 	restrictionSet     *InterfaceSet
 	restrictionSetOnce sync.Once
 }
+
+var _ Type = &RestrictedType{}
 
 func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []*InterfaceType) *RestrictedType {
 	common.UseMemory(memoryGauge, common.RestrictedSemaTypeMemoryUsage)
@@ -5929,7 +6005,7 @@ func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 	// but implicitly when the resource declaration's conformances are checked.
 
 	for _, restriction := range t.Restrictions {
-		for name, resolver := range restriction.GetMembers() { //nolint:maprangecheck
+		for name, resolver := range restriction.GetMembers() { //nolint:maprange
 			if _, ok := members[name]; !ok {
 				members[name] = resolver
 			}
@@ -5942,7 +6018,7 @@ func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 	//
 	// The restricted type may be `AnyResource`, in which case there are no members.
 
-	for name, loopResolver := range t.Type.GetMembers() { //nolint:maprangecheck
+	for name, loopResolver := range t.Type.GetMembers() { //nolint:maprange
 
 		if _, ok := members[name]; ok {
 			continue
@@ -5988,6 +6064,9 @@ type CapabilityType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &CapabilityType{}
+var _ ParameterizedType = &CapabilityType{}
 
 func NewCapabilityType(memoryGauge common.MemoryGauge, borrowType Type) *CapabilityType {
 	common.UseMemory(memoryGauge, common.CapabilitySemaTypeMemoryUsage)
@@ -6209,7 +6288,7 @@ const capabilityTypeCheckFunctionDocString = `
 Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
 `
 
-const addressTypeCheckFunctionDocString = `
+const capabilityTypeAddressFieldDocString = `
 The address of the capability
 `
 
@@ -6218,14 +6297,14 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	return t.memberResolvers
 }
 
-const CapabilityTypeBorrowField = "borrow"
-const CapabilityTypeCheckField = "check"
-const CapabilityTypeAddressField = "address"
+const CapabilityTypeBorrowFunctionName = "borrow"
+const CapabilityTypeCheckFunctionName = "check"
+const CapabilityTypeAddressFieldName = "address"
 
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			CapabilityTypeBorrowField: {
+			CapabilityTypeBorrowFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6237,7 +6316,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			CapabilityTypeCheckField: {
+			CapabilityTypeCheckFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6249,15 +6328,15 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			CapabilityTypeAddressField: {
+			CapabilityTypeAddressFieldName: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
 						memoryGauge,
 						t,
 						identifier,
-						&AddressType{},
-						addressTypeCheckFunctionDocString,
+						TheAddressType,
+						capabilityTypeAddressFieldDocString,
 					)
 				},
 			},
@@ -6287,11 +6366,11 @@ func init() {
 }
 
 const AccountKeyTypeName = "AccountKey"
-const AccountKeyKeyIndexField = "keyIndex"
-const AccountKeyPublicKeyField = "publicKey"
-const AccountKeyHashAlgoField = "hashAlgorithm"
-const AccountKeyWeightField = "weight"
-const AccountKeyIsRevokedField = "isRevoked"
+const AccountKeyKeyIndexFieldName = "keyIndex"
+const AccountKeyPublicKeyFieldName = "publicKey"
+const AccountKeyHashAlgoFieldName = "hashAlgorithm"
+const AccountKeyWeightFieldName = "weight"
+const AccountKeyIsRevokedFieldName = "isRevoked"
 
 // AccountKeyType represents the key associated with an account.
 var AccountKeyType = func() *CompositeType {
@@ -6302,7 +6381,7 @@ var AccountKeyType = func() *CompositeType {
 		importable: false,
 	}
 
-	const accountKeyIndexFieldDocString = `The index of the account key`
+	const accountKeyKeyIndexFieldDocString = `The index of the account key`
 	const accountKeyPublicKeyFieldDocString = `The public key of the account`
 	const accountKeyHashAlgorithmFieldDocString = `The hash algorithm used by the public key`
 	const accountKeyWeightFieldDocString = `The weight assigned to the public key`
@@ -6311,31 +6390,31 @@ var AccountKeyType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyKeyIndexField,
+			AccountKeyKeyIndexFieldName,
 			IntType,
-			accountKeyIndexFieldDocString,
+			accountKeyKeyIndexFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyPublicKeyField,
+			AccountKeyPublicKeyFieldName,
 			PublicKeyType,
 			accountKeyPublicKeyFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyHashAlgoField,
+			AccountKeyHashAlgoFieldName,
 			HashAlgorithmType,
 			accountKeyHashAlgorithmFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyWeightField,
+			AccountKeyWeightFieldName,
 			UFix64Type,
 			accountKeyWeightFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyIsRevokedField,
+			AccountKeyIsRevokedFieldName,
 			BoolType,
 			accountKeyIsRevokedFieldDocString,
 		),
@@ -6347,10 +6426,10 @@ var AccountKeyType = func() *CompositeType {
 }()
 
 const PublicKeyTypeName = "PublicKey"
-const PublicKeyPublicKeyField = "publicKey"
-const PublicKeySignAlgoField = "signatureAlgorithm"
-const PublicKeyVerifyFunction = "verify"
-const PublicKeyVerifyPoPFunction = "verifyPoP"
+const PublicKeyTypePublicKeyFieldName = "publicKey"
+const PublicKeyTypeSignAlgoFieldName = "signatureAlgorithm"
+const PublicKeyTypeVerifyFunctionName = "verify"
+const PublicKeyTypeVerifyPoPFunctionName = "verifyPoP"
 
 const publicKeyKeyFieldDocString = `
 The public key
@@ -6385,25 +6464,25 @@ var PublicKeyType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeyPublicKeyField,
+			PublicKeyTypePublicKeyFieldName,
 			ByteArrayType,
 			publicKeyKeyFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeySignAlgoField,
+			PublicKeyTypeSignAlgoFieldName,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
-			PublicKeyVerifyFunction,
+			PublicKeyTypeVerifyFunctionName,
 			PublicKeyVerifyFunctionType,
 			publicKeyVerifyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
-			PublicKeyVerifyPoPFunction,
+			PublicKeyTypeVerifyPoPFunctionName,
 			PublicKeyVerifyPoPFunctionType,
 			publicKeyVerifyPoPFunctionDocString,
 		),
@@ -6421,7 +6500,7 @@ var PublicKeyArrayType = &VariableSizedType{
 
 var PublicKeyVerifyFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{},
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier: "signature",
 			TypeAnnotation: NewTypeAnnotation(
@@ -6448,7 +6527,7 @@ var PublicKeyVerifyFunctionType = &FunctionType{
 
 var PublicKeyVerifyPoPFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{},
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "proof",

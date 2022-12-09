@@ -159,7 +159,7 @@ func (i *PositionInfo) recordGlobalRange(
 func (i *PositionInfo) recordParameterRange(
 	startPos ast.Position,
 	endPos ast.Position,
-	parameter *Parameter,
+	parameter Parameter,
 ) {
 	i.Ranges.Put(
 		startPos,

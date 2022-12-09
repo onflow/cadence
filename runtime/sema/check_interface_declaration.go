@@ -34,7 +34,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 
 	const kind = ContainerKindInterface
 
-	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
+	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
 	if interfaceType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -142,8 +142,8 @@ func (checker *Checker) declareInterfaceNestedTypes(
 	declaration *ast.InterfaceDeclaration,
 ) {
 
-	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
-	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations[declaration]
+	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
+	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations(declaration)
 
 	interfaceType.NestedTypes.Foreach(func(name string, nestedType Type) {
 		nestedDeclaration := nestedDeclarations[name]
@@ -254,8 +254,8 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		)
 	}
 
-	checker.Elaboration.InterfaceDeclarationTypes[declaration] = interfaceType
-	checker.Elaboration.InterfaceTypeDeclarations[interfaceType] = declaration
+	checker.Elaboration.SetInterfaceDeclarationType(declaration, interfaceType)
+	checker.Elaboration.SetInterfaceTypeDeclaration(interfaceType, declaration)
 
 	if !declaration.CompositeKind.SupportsInterfaces() {
 		checker.report(
@@ -285,7 +285,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 			declaration.Members.Interfaces(),
 		)
 
-	checker.Elaboration.InterfaceNestedDeclarations[declaration] = nestedDeclarations
+	checker.Elaboration.SetInterfaceNestedDeclarations(declaration, nestedDeclarations)
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
 		interfaceType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
@@ -308,7 +308,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 // in the elaboration's `InterfaceDeclarationTypes` and `InterfaceNestedDeclarations` fields.
 func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclaration) {
 
-	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
+	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
 	if interfaceType == nil {
 		panic(errors.NewUnreachableError())
 	}

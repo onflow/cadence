@@ -63,7 +63,7 @@ func (r *CoverageReport) MarshalJSON() ([]byte, error) {
 	type Alias CoverageReport
 
 	coverage := make(map[string]*LocationCoverage, len(r.Coverage))
-	for location, locationCoverage := range r.Coverage { // nolint:maprangecheck
+	for location, locationCoverage := range r.Coverage { // nolint:maprange
 		typeID := location.TypeID(nil, "")
 		locationID := typeID[:len(typeID)-1]
 		coverage[string(locationID)] = locationCoverage
