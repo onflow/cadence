@@ -5474,7 +5474,7 @@ func TestParseMissingReturnType(t *testing.T) {
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
-							EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
+							EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
 						},
 					},
 					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},

@@ -1010,7 +1010,7 @@ func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPuri
 		if err != nil {
 			return nil, err
 		}
-		endPos = p.current.EndPos
+		endPos = returnTypeAnnotation.EndPosition(p.memoryGauge)
 	} else if requireReturnType {
 		return nil, NewSyntaxError(p.current.StartPos, "expected return type")
 	} else {

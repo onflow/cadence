@@ -357,7 +357,7 @@ func TestArrayMutation(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): [String] {
-                let array: [AnyStruct] = [nil, nil] as [fun():String?]
+                let array: [AnyStruct] = [nil, nil] as [(fun():String)?]
 
                 array[0] = foo
                 array[1] = bar
@@ -412,7 +412,7 @@ func TestArrayMutation(t *testing.T) {
             }
 
             fun test(): [String] {
-                let array: [AnyStruct] = [nil, nil] as [fun():String?]
+                let array: [AnyStruct] = [nil, nil] as [(fun():String)?]
 
                 let a = Foo()
                 let b = Bar()

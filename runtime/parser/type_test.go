@@ -1031,7 +1031,7 @@ func TestParseFunctionType(t *testing.T) {
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+					EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 				},
 			},
 			result,
@@ -1061,7 +1061,7 @@ func TestParseFunctionType(t *testing.T) {
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-					EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+					EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
 				},
 			},
 			result,
@@ -1121,7 +1121,7 @@ func TestParseFunctionType(t *testing.T) {
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 31, Offset: 31},
+					EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
 				},
 			},
 			result,
@@ -1885,7 +1885,7 @@ func TestParseFunctionTypeInVariableDeclaration(t *testing.T) {
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 12, Line: 2, Column: 11},
-							EndPos:   ast.Position{Offset: 35, Line: 2, Column: 34},
+							EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
 						},
 					},
 					StartPos: ast.Position{Offset: 12, Line: 2, Column: 11},
@@ -1954,7 +1954,7 @@ func TestParseFunctionArrayType(t *testing.T) {
 							},
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
-								EndPos:   ast.Position{Offset: 30, Line: 2, Column: 29},
+								EndPos:   ast.Position{Offset: 29, Line: 2, Column: 28},
 							},
 						},
 						Size: &ast.IntegerExpression{
@@ -2050,7 +2050,7 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
-							EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
+							EndPos:   ast.Position{Offset: 33, Line: 2, Column: 32},
 						},
 					},
 					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
@@ -2144,14 +2144,14 @@ func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
 								},
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
-									EndPos:   ast.Position{Offset: 41, Line: 2, Column: 40},
+									EndPos:   ast.Position{Offset: 40, Line: 2, Column: 39},
 								},
 							},
 							StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
-							EndPos:   ast.Position{Offset: 41, Line: 2, Column: 40},
+							EndPos:   ast.Position{Offset: 40, Line: 2, Column: 39},
 						},
 					},
 					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
@@ -2227,14 +2227,14 @@ func TestParseViewFunctionTypeWithNewSyntax(t *testing.T) {
 							},
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 33, Line: 2, Column: 32},
-								EndPos:   ast.Position{Offset: 50, Line: 2, Column: 49},
+								EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
 							},
 						},
 						StartPos: ast.Position{Offset: 33, Line: 2, Column: 32},
 					},
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
-						EndPos:   ast.Position{Offset: 50, Line: 2, Column: 49},
+						EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
 					},
 				},
 				StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
@@ -2309,14 +2309,14 @@ func TestParseNewSyntaxFunctionType(t *testing.T) {
 							},
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
-								EndPos:   ast.Position{Offset: 41, Line: 2, Column: 40},
+								EndPos:   ast.Position{Offset: 40, Line: 2, Column: 39},
 							},
 						},
 						StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 					},
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
-						EndPos:   ast.Position{Offset: 41, Line: 2, Column: 40},
+						EndPos:   ast.Position{Offset: 40, Line: 2, Column: 39},
 					},
 				},
 				StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
@@ -2425,7 +2425,7 @@ func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-							EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
+							EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
 						},
 					},
 					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
