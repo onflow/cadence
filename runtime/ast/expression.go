@@ -803,6 +803,8 @@ type AccessExpression interface {
 type MemberExpression struct {
 	Expression Expression
 	Identifier Identifier
+	// The position of the token (`.`, `?.`) that separates the accessed expression
+	// and the identifier of the member
 	AccessPos  Position
 	Optional   bool
 }
