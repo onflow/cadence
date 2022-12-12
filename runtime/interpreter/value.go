@@ -13873,7 +13873,6 @@ type CompositeField struct {
 }
 
 const attachmentNamePrefix = "$"
-const attachmentBaseName = "$base"
 
 var _ TypeIndexableValue = &CompositeValue{}
 
@@ -14096,14 +14095,12 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	destructor := v.Destructor
 
-	var base *EphemeralReferenceValue
-	var self MemberAccessibleValue = v
-	if v.Kind == common.CompositeKindAttachment {
-		base = v.getBaseValue(interpreter, locationRange)
-		self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
-	}
-
 	if destructor != nil {
+		var base *EphemeralReferenceValue
+		var self MemberAccessibleValue = v
+		if v.Kind == common.CompositeKindAttachment {
+			base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
+		}
 		invocation := NewInvocation(
 			interpreter,
 			&self,
@@ -14238,9 +14235,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		var base *EphemeralReferenceValue
 		var self MemberAccessibleValue = v
 		if v.Kind == common.CompositeKindAttachment {
-			base = v.getBaseValue(interpreter, locationRange)
-			// in attachment functions, self is a reference value
-			self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
+			base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
 		}
 		return NewBoundFunctionValue(interpreter, function, &self, base)
 	}
@@ -15150,6 +15145,17 @@ func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRa
 	return nil
 }
 
+func attachmentBaseAndSelfValues(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	v *CompositeValue,
+) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
+	base = v.getBaseValue(interpreter, locationRange)
+	// in attachment functions, self is a reference value
+	self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
+	return
+}
+
 func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRange LocationRange, f func(*CompositeValue)) {
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
@@ -15158,7 +15164,9 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRan
 
 	oldSharedState := interpreter.SharedState.inAttachmentIteration(v)
 	interpreter.SharedState.setAttachmentIteration(v, true)
-	defer func() { interpreter.SharedState.setAttachmentIteration(v, oldSharedState) }()
+	defer func() {
+		interpreter.SharedState.setAttachmentIteration(v, oldSharedState)
+	}()
 
 	for {
 		key, value, err := iterator.Next()

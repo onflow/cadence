@@ -24,8 +24,9 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 
-	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretAttachmentStruct(t *testing.T) {
@@ -1603,7 +1604,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		)
 
 		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` shoudl be invalidated after the save
+		// this should be an error, as `a` should be invalidated after the save
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
@@ -1639,7 +1640,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		)
 
 		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` shoudl be invalidated after the save
+		// this should be an error, as `a` should be invalidated after the save
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})

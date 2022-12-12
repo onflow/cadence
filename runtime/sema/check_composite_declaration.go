@@ -2128,11 +2128,8 @@ func (checker *Checker) declareLowerScopedValue(
 func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 	// inside of an attachment, self is a reference to the attachment's type, because
 	// attachments are never first class values, they must always exist inside references
-	switch typedSelfType := selfType.(type) {
-	case *CompositeType:
-		if typedSelfType.Kind == common.CompositeKindAttachment {
-			selfType = NewReferenceType(checker.memoryGauge, typedSelfType, false)
-		}
+	if typedSelfType, ok := selfType.(*CompositeType); ok && typedSelfType.Kind == common.CompositeKindAttachment {
+		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, false)
 	}
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }

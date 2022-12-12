@@ -5423,6 +5423,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		case *InterfaceType:
 			switch typedInnerSubType := typedSubType.Type.(type) {
+
 			// An unauthorized reference to an interface type `&U`
 			// is a supertype of a reference to a composite type `&T`:
 			// if that composite type's conformance set includes that interface.
@@ -5431,15 +5432,23 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			// if `&T <: &{U}`, the singleton restricted set containing only `U`.
 			case *CompositeType:
 				return typedInnerSubType.ExplicitInterfaceConformanceSet().Contains(typedInnerSuperType)
+
 			// An unauthorized reference to an interface type `&T`
 			// is a supertype of a reference to a restricted type `&{U}`:
 			// if the restriction set contains that explicit interface type.
-			//
+
+			// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
+			// resource interface I { /* ... */ }
+			// attachment A for I { /* ... */ }
+
+			// let i : &{I} = ... // some operation constructing `i`
+			// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that &{I} <: &I
+
 			// Note that this does not check whether the restricted type's restricted type conforms to the interface;
 			// i.e. whether in `&R{X} <: &I`, `R <: I`. This is intentional;
 			// when checking whether an attachment declared for `I` is accessible on a value of type `&R{X}`,
 			// even if `R <: I`, we only want to allow access if `X <: I`
-			//
+
 			// Once interfaces can conform to interfaces,
 			// this should instead check that at least one value in the restriction set
 			// is a subtype of the interface supertype
@@ -5716,8 +5725,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
 		// resource interface I { /* ... */ }
 		// attachment A for I { /* ... */ }
-		//
-		// let i : &{I} = ... // some operation constructing `i`
+
+		// let i : {I} = ... // some operation constructing `i`
 		// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
 		case *RestrictedType:
 			return typedSubType.RestrictionSet().Contains(typedSuperType)
