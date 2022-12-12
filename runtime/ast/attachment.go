@@ -38,6 +38,9 @@ type AttachmentDeclaration struct {
 	Range
 }
 
+var _ Element = &AttachmentDeclaration{}
+var _ Declaration = &AttachmentDeclaration{}
+var _ Statement = &AttachmentDeclaration{}
 var _ CompositeLikeDeclaration = &AttachmentDeclaration{}
 
 func NewAttachmentDeclaration(

@@ -49,6 +49,9 @@ type CompositeDeclaration struct {
 	Range
 }
 
+var _ Element = &CompositeDeclaration{}
+var _ Declaration = &CompositeDeclaration{}
+var _ Statement = &CompositeDeclaration{}
 var _ CompositeLikeDeclaration = &CompositeDeclaration{}
 
 func NewCompositeDeclaration(
