@@ -1500,40 +1500,43 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 		return nil, err
 	}
 
-	restrictions := make([]InterfaceStaticType, restrictionSize)
-	for i := 0; i < int(restrictionSize); i++ {
+	var restrictions []InterfaceStaticType
+	if restrictionSize > 0 {
+		restrictions = make([]InterfaceStaticType, restrictionSize)
+		for i := 0; i < int(restrictionSize); i++ {
 
-		number, err := d.decoder.DecodeTagNumber()
-		if err != nil {
-			if e, ok := err.(*cbor.WrongTypeError); ok {
+			number, err := d.decoder.DecodeTagNumber()
+			if err != nil {
+				if e, ok := err.(*cbor.WrongTypeError); ok {
+					return nil, errors.NewUnexpectedError(
+						"invalid restricted static type restriction encoding: expected CBOR tag, got %s",
+						e.ActualType.String(),
+					)
+				}
 				return nil, errors.NewUnexpectedError(
-					"invalid restricted static type restriction encoding: expected CBOR tag, got %s",
-					e.ActualType.String(),
+					"invalid restricted static type restriction encoding: %w",
+					err,
 				)
 			}
-			return nil, errors.NewUnexpectedError(
-				"invalid restricted static type restriction encoding: %w",
-				err,
-			)
-		}
 
-		if number != CBORTagInterfaceStaticType {
-			return nil, errors.NewUnexpectedError(
-				"invalid restricted static type restriction encoding: expected CBOR tag %d, got %d",
-				CBORTagInterfaceStaticType,
-				number,
-			)
-		}
+			if number != CBORTagInterfaceStaticType {
+				return nil, errors.NewUnexpectedError(
+					"invalid restricted static type restriction encoding: expected CBOR tag %d, got %d",
+					CBORTagInterfaceStaticType,
+					number,
+				)
+			}
 
-		restriction, err := d.decodeInterfaceStaticType()
-		if err != nil {
-			return nil, errors.NewUnexpectedError(
-				"invalid restricted static type restriction encoding: %w",
-				err,
-			)
-		}
+			restriction, err := d.decodeInterfaceStaticType()
+			if err != nil {
+				return nil, errors.NewUnexpectedError(
+					"invalid restricted static type restriction encoding: %w",
+					err,
+				)
+			}
 
-		restrictions[i] = restriction
+			restrictions[i] = restriction
+		}
 	}
 
 	return NewRestrictedStaticType(
