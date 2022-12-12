@@ -15181,6 +15181,10 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRan
 			if !ok {
 				panic(errors.NewExternalError(err))
 			}
+			// `f` takes the `attachment` value directly, but if a method to later iterate over
+			// attachments is added that takes a `fun (&Attachment): Void` callback, the `f` provided here
+			// should convert the provided attachment value into a reference before passing it to the user
+			// callback
 			f(attachment)
 		}
 	}
