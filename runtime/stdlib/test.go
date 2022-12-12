@@ -1566,7 +1566,7 @@ func TestCheckerContractValueHandler(
 	declaration *ast.CompositeDeclaration,
 	compositeType *sema.CompositeType,
 ) sema.ValueDeclaration {
-	constructorType, constructorArgumentLabels := sema.CompositeConstructorType(
+	constructorType, constructorArgumentLabels := sema.CompositeLikeConstructorType(
 		checker.Elaboration,
 		declaration,
 		compositeType,

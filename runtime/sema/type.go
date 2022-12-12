@@ -3891,16 +3891,16 @@ func (t *CompositeType) initializeMemberResolvers() {
 	})
 }
 
-func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDeclaration) ast.Position {
+func (t *CompositeType) FieldPosition(name string, declaration ast.CompositeLikeDeclaration) ast.Position {
 	var pos ast.Position
 	if t.Kind == common.CompositeKindEnum &&
 		name == EnumRawValueFieldName {
 
-		if len(declaration.Conformances) > 0 {
-			pos = declaration.Conformances[0].StartPosition()
+		if len(declaration.ConformanceList()) > 0 {
+			pos = declaration.ConformanceList()[0].StartPosition()
 		}
 	} else {
-		pos = declaration.Members.FieldPosition(name, declaration.CompositeKind)
+		pos = declaration.DeclarationMembers().FieldPosition(name, declaration.Kind())
 	}
 	return pos
 }

@@ -870,8 +870,7 @@ func (interpreter *Interpreter) declareAttachmentValue(
 	scope *VariableActivation,
 	variable *Variable,
 ) {
-	compositeDeclaration := sema.AttachmentAsComposite(interpreter, interpreter.Program.Elaboration, declaration)
-	return interpreter.declareCompositeValue(compositeDeclaration, lexicalScope)
+	return interpreter.declareCompositeValue(declaration, lexicalScope)
 }
 
 // declareCompositeValue creates and declares the value for
@@ -891,27 +890,27 @@ func (interpreter *Interpreter) declareAttachmentValue(
 //
 // For all other composite kinds the constructor function is declared.
 func (interpreter *Interpreter) declareCompositeValue(
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
 	variable *Variable,
 ) {
-	if declaration.CompositeKind == common.CompositeKindEnum {
-		return interpreter.declareEnumConstructor(declaration, lexicalScope)
+	if declaration.Kind() == common.CompositeKindEnum {
+		return interpreter.declareEnumConstructor(declaration.(*ast.CompositeDeclaration), lexicalScope)
 	} else {
 		return interpreter.declareNonEnumCompositeValue(declaration, lexicalScope)
 	}
 }
 
 func (interpreter *Interpreter) declareNonEnumCompositeValue(
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
 	variable *Variable,
 ) {
-	identifier := declaration.Identifier.Identifier
+	identifier := declaration.DeclarationIdentifier().Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable = interpreter.findOrDeclareVariable(identifier)
 
@@ -936,23 +935,25 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			)
 		}
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
+		members := declaration.DeclarationMembers()
+
+		for _, nestedInterfaceDeclaration := range members.Interfaces() {
 			predeclare(nestedInterfaceDeclaration.Identifier)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		for _, nestedCompositeDeclaration := range members.Composites() {
 			predeclare(nestedCompositeDeclaration.Identifier)
 		}
 
-		for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
+		for _, nestedAttachmentDeclaration := range members.Attachments() {
 			predeclare(nestedAttachmentDeclaration.Identifier)
 		}
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
+		for _, nestedInterfaceDeclaration := range members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		for _, nestedCompositeDeclaration := range members.Composites() {
 
 			// Pass the lexical scope, which has the containing composite's value declared,
 			// to the nested declarations so they can refer to it, and update the lexical scope
@@ -969,7 +970,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			nestedVariables[memberIdentifier] = nestedVariable
 		}
 
-		for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
+		for _, nestedAttachmentDeclaration := range members.Attachments() {
 
 			// Pass the lexical scope, which has the containing composite's value declared,
 			// to the nested declarations so they can refer to it, and update the lexical scope
@@ -999,7 +1000,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	}
 
 	var initializerFunction FunctionValue
-	if declaration.CompositeKind == common.CompositeKindEvent {
+	if declaration.Kind() == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
@@ -1143,13 +1144,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 						interpreter,
 						location,
 						qualifiedIdentifier,
-						declaration.CompositeKind,
+						declaration.Kind(),
 					)
 				}
 
 				var fields []CompositeField
 
-				if declaration.CompositeKind == common.CompositeKindResource {
+				if declaration.Kind() == common.CompositeKindResource {
 
 					uuidHandler := config.UUIDHandler
 					if uuidHandler == nil {
@@ -1183,7 +1184,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					locationRange,
 					location,
 					qualifiedIdentifier,
-					declaration.CompositeKind,
+					declaration.Kind(),
 					fields,
 					address,
 				)
@@ -1193,7 +1194,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				value.Destructor = destructorFunction
 
 				var self MemberAccessibleValue = value
-				if declaration.CompositeKind == common.CompositeKindAttachment {
+				if declaration.Kind() == common.CompositeKindAttachment {
 					self = NewEphemeralReferenceValue(interpreter, false, value, interpreter.MustSemaTypeOfValue(value))
 					// set the base to the implicitly provided value, and remove this implicit argument from the list
 					implicitArgumentPos := len(invocation.Arguments) - 1
@@ -1205,7 +1206,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 				invocation.Self = &self
 
-				if declaration.CompositeKind == common.CompositeKindContract {
+				if declaration.Kind() == common.CompositeKindContract {
 					// NOTE: set the variable value immediately, as the contract value
 					// needs to be available for nested declarations
 
@@ -1231,9 +1232,9 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	// Contract declarations declare a value / instance (singleton),
 	// for all other composite kinds, the constructor is declared
 
-	if declaration.CompositeKind == common.CompositeKindContract {
+	if declaration.Kind() == common.CompositeKindContract {
 		variable.getter = func() Value {
-			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
+			positioned := ast.NewRangeFromPositioned(interpreter, declaration.DeclarationIdentifier())
 
 			contractValue := config.ContractValueHandler(
 				interpreter,
@@ -1389,13 +1390,13 @@ func EnumConstructorFunction(
 }
 
 func (interpreter *Interpreter) compositeInitializerFunction(
-	compositeDeclaration *ast.CompositeDeclaration,
+	compositeDeclaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
 	// TODO: support multiple overloaded initializers
 
-	initializers := compositeDeclaration.Members.Initializers()
+	initializers := compositeDeclaration.DeclarationMembers().Initializers()
 	var initializer *ast.SpecialFunctionDeclaration
 	if len(initializers) == 0 {
 		return nil
@@ -1438,11 +1439,11 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 }
 
 func (interpreter *Interpreter) compositeDestructorFunction(
-	compositeDeclaration *ast.CompositeDeclaration,
+	compositeDeclaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
-	destructor := compositeDeclaration.Members.Destructor()
+	destructor := compositeDeclaration.DeclarationMembers().Destructor()
 	if destructor == nil {
 		return nil
 	}
@@ -1510,13 +1511,13 @@ func (interpreter *Interpreter) defaultFunctions(
 }
 
 func (interpreter *Interpreter) compositeFunctions(
-	compositeDeclaration *ast.CompositeDeclaration,
+	compositeDeclaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) map[string]FunctionValue {
 
 	functions := map[string]FunctionValue{}
 
-	for _, functionDeclaration := range compositeDeclaration.Members.Functions() {
+	for _, functionDeclaration := range compositeDeclaration.DeclarationMembers().Functions() {
 		name := functionDeclaration.Identifier.Identifier
 		functions[name] =
 			interpreter.compositeFunction(

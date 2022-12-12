@@ -120,7 +120,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		// Composite declarations nested in interface declarations are type requirements,
 		// i.e. they should be checked like interfaces
 
-		checker.visitCompositeDeclaration(nestedComposite, kind)
+		checker.visitCompositeLikeDeclaration(nestedComposite, kind)
 	}
 
 	for _, nestedAttachments := range declaration.Members.Attachments() {
@@ -357,7 +357,7 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	}
 
 	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-		checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
+		checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
 	}
 
 	for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {

@@ -1233,7 +1233,7 @@ type InitializerMismatch struct {
 	InterfaceParameters []Parameter
 }
 type ConformanceError struct {
-	CompositeDeclaration           *ast.CompositeDeclaration
+	CompositeDeclaration           ast.CompositeLikeDeclaration
 	CompositeType                  *CompositeType
 	InterfaceType                  *InterfaceType
 	InitializerMismatch            *InitializerMismatch
@@ -1320,10 +1320,10 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 		})
 	}
 
-	if e.InitializerMismatch != nil && len(e.CompositeDeclaration.Members.Initializers()) > 0 {
+	if e.InitializerMismatch != nil && len(e.CompositeDeclaration.DeclarationMembers().Initializers()) > 0 {
 		compositeMemberIdentifierRange :=
 			//	right now we only support a single initializer
-			ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.Members.Initializers()[0].FunctionDeclaration.Identifier)
+			ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.DeclarationMembers().Initializers()[0].FunctionDeclaration.Identifier)
 
 		notes = append(notes, &MemberMismatchNote{
 			Range: compositeMemberIdentifierRange,

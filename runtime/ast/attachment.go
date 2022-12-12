@@ -41,6 +41,7 @@ type AttachmentDeclaration struct {
 var _ Element = &AttachmentDeclaration{}
 var _ Declaration = &AttachmentDeclaration{}
 var _ Statement = &AttachmentDeclaration{}
+var _ CompositeLikeDeclaration = &AttachmentDeclaration{}
 
 func NewAttachmentDeclaration(
 	memoryGauge common.MemoryGauge,
@@ -97,6 +98,14 @@ func (d *AttachmentDeclaration) DeclarationMembers() *Members {
 
 func (d *AttachmentDeclaration) DeclarationDocString() string {
 	return d.DocString
+}
+
+func (*AttachmentDeclaration) Kind() common.CompositeKind {
+	return common.CompositeKindAttachment
+}
+
+func (d *AttachmentDeclaration) ConformanceList() []*NominalType {
+	return d.Conformances
 }
 
 const attachmentStatementDoc = prettier.Text("attachment")

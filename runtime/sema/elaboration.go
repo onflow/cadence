@@ -106,9 +106,8 @@ type Elaboration struct {
 	functionDeclarationFunctionTypes map[*ast.FunctionDeclaration]*FunctionType
 	variableDeclarationTypes         map[*ast.VariableDeclaration]VariableDeclarationTypes
 	assignmentStatementTypes         map[*ast.AssignmentStatement]AssignmentStatementTypes
-	compositeDeclarationTypes        map[*ast.CompositeDeclaration]*CompositeType
-	compositeTypeDeclarations        map[*CompositeType]*ast.CompositeDeclaration
-	attachmentCompositeDeclarations  map[*ast.AttachmentDeclaration]*ast.CompositeDeclaration
+	compositeDeclarationTypes        map[ast.CompositeLikeDeclaration]*CompositeType
+	compositeTypeDeclarations        map[*CompositeType]ast.CompositeLikeDeclaration
 	interfaceDeclarationTypes        map[*ast.InterfaceDeclaration]*InterfaceType
 	interfaceTypeDeclarations        map[*InterfaceType]*ast.InterfaceDeclaration
 	constructorFunctionTypes         map[*ast.SpecialFunctionDeclaration]*FunctionType
@@ -129,7 +128,7 @@ type Elaboration struct {
 	// nestedResourceMoveExpressions indicates the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
 	nestedResourceMoveExpressions       map[ast.Expression]struct{}
-	compositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
+	compositeNestedDeclarations         map[ast.CompositeLikeDeclaration]map[string]ast.Declaration
 	interfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
 	postConditionsRewrites              map[*ast.Conditions]PostConditionsRewrite
 	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
@@ -248,7 +247,7 @@ func (e *Elaboration) SetAssignmentStatementTypes(
 	e.assignmentStatementTypes[assignment] = types
 }
 
-func (e *Elaboration) CompositeDeclarationType(declaration *ast.CompositeDeclaration) *CompositeType {
+func (e *Elaboration) CompositeDeclarationType(declaration ast.CompositeLikeDeclaration) *CompositeType {
 	if e.compositeDeclarationTypes == nil {
 		return nil
 	}
@@ -256,28 +255,29 @@ func (e *Elaboration) CompositeDeclarationType(declaration *ast.CompositeDeclara
 }
 
 func (e *Elaboration) SetCompositeDeclarationType(
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 	compositeType *CompositeType,
 ) {
 	if e.compositeDeclarationTypes == nil {
-		e.compositeDeclarationTypes = map[*ast.CompositeDeclaration]*CompositeType{}
+		e.compositeDeclarationTypes = map[ast.CompositeLikeDeclaration]*CompositeType{}
 	}
 	e.compositeDeclarationTypes[declaration] = compositeType
 }
 
-func (e *Elaboration) CompositeTypeDeclaration(compositeType *CompositeType) *ast.CompositeDeclaration {
+func (e *Elaboration) CompositeTypeDeclaration(compositeType *CompositeType) (decl ast.CompositeLikeDeclaration, ok bool) {
 	if e.compositeTypeDeclarations == nil {
-		return nil
+		return
 	}
-	return e.compositeTypeDeclarations[compositeType]
+	decl, ok = e.compositeTypeDeclarations[compositeType]
+	return
 }
 
 func (e *Elaboration) SetCompositeTypeDeclaration(
 	compositeType *CompositeType,
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 ) {
 	if e.compositeTypeDeclarations == nil {
-		e.compositeTypeDeclarations = map[*CompositeType]*ast.CompositeDeclaration{}
+		e.compositeTypeDeclarations = map[*CompositeType]ast.CompositeLikeDeclaration{}
 	}
 	e.compositeTypeDeclarations[compositeType] = declaration
 }
@@ -634,7 +634,7 @@ func (e *Elaboration) SwapStatementTypes(statement *ast.SwapStatement) (types Sw
 	return e.swapStatementTypes[statement]
 }
 
-func (e *Elaboration) CompositeNestedDeclarations(declaration *ast.CompositeDeclaration) map[string]ast.Declaration {
+func (e *Elaboration) CompositeNestedDeclarations(declaration ast.CompositeLikeDeclaration) map[string]ast.Declaration {
 	if e.compositeNestedDeclarations == nil {
 		return nil
 	}
@@ -642,11 +642,11 @@ func (e *Elaboration) CompositeNestedDeclarations(declaration *ast.CompositeDecl
 }
 
 func (e *Elaboration) SetCompositeNestedDeclarations(
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 	nestedDeclaration map[string]ast.Declaration,
 ) {
 	if e.compositeNestedDeclarations == nil {
-		e.compositeNestedDeclarations = map[*ast.CompositeDeclaration]map[string]ast.Declaration{}
+		e.compositeNestedDeclarations = map[ast.CompositeLikeDeclaration]map[string]ast.Declaration{}
 	}
 	e.compositeNestedDeclarations[declaration] = nestedDeclaration
 }
@@ -848,27 +848,6 @@ func (e *Elaboration) SetNumberConversionArgumentTypes(
 		e.numberConversionArgumentTypes = map[ast.Expression]NumberConversionArgumentTypes{}
 	}
 	e.numberConversionArgumentTypes[expression] = types
-}
-
-func (e *Elaboration) AttachmentCompositeDeclarations(
-	decl *ast.AttachmentDeclaration,
-) (
-	compositeDecl *ast.CompositeDeclaration,
-) {
-	if e.attachmentCompositeDeclarations == nil {
-		return
-	}
-	return e.attachmentCompositeDeclarations[decl]
-}
-
-func (e *Elaboration) SetAttachmentCompositeDeclarations(
-	decl *ast.AttachmentDeclaration,
-	compositeDecl *ast.CompositeDeclaration,
-) {
-	if e.attachmentCompositeDeclarations == nil {
-		e.attachmentCompositeDeclarations = map[*ast.AttachmentDeclaration]*ast.CompositeDeclaration{}
-	}
-	e.attachmentCompositeDeclarations[decl] = compositeDecl
 }
 
 func (e *Elaboration) AttachmentAccessTypes(
