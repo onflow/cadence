@@ -414,14 +414,17 @@ func (interpreter *Interpreter) InvokeExternally(
 	}
 
 	var self *MemberAccessibleValue
+	var base *EphemeralReferenceValue
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.Self
+		base = boundFunc.Base
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := NewInvocation(
 		interpreter,
 		self,
+		base,
 		preparedArguments,
 		nil,
 		nil,
@@ -537,10 +540,9 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 		interpreter.visitGlobalDeclaration(declaration)
 	}
 
-	// TODO: Add this
-	//for _, declaration := range program.AttachmentDeclarations() {
-	// interpreter.visitGlobalDeclaration(declaration)
-	//}
+	for _, declaration := range program.AttachmentDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
 
 	for _, declaration := range program.FunctionDeclarations() {
 		interpreter.visitGlobalDeclaration(declaration)
@@ -855,8 +857,21 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 }
 
 func (interpreter *Interpreter) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) StatementResult {
-	// TODO: fill this in
+	// lexical scope: variables in functions are bound to what is visible at declaration time
+	lexicalScope := interpreter.activations.CurrentOrNew()
+	_, _ = interpreter.declareAttachmentValue(declaration, lexicalScope)
 	return nil
+}
+
+func (interpreter *Interpreter) declareAttachmentValue(
+	declaration *ast.AttachmentDeclaration,
+	lexicalScope *VariableActivation,
+) (
+	scope *VariableActivation,
+	variable *Variable,
+) {
+	compositeDeclaration := sema.AttachmentAsComposite(interpreter, interpreter.Program.Elaboration, declaration)
+	return interpreter.declareCompositeValue(compositeDeclaration, lexicalScope)
 }
 
 // declareCompositeValue creates and declares the value for
@@ -929,6 +944,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			predeclare(nestedCompositeDeclaration.Identifier)
 		}
 
+		for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
+			predeclare(nestedAttachmentDeclaration.Identifier)
+		}
+
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
@@ -947,6 +966,23 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
+			nestedVariables[memberIdentifier] = nestedVariable
+		}
+
+		for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
+
+			// Pass the lexical scope, which has the containing composite's value declared,
+			// to the nested declarations so they can refer to it, and update the lexical scope
+			// so the container's functions can refer to the nested composite's value
+
+			var nestedVariable *Variable
+			lexicalScope, nestedVariable =
+				interpreter.declareAttachmentValue(
+					nestedAttachmentDeclaration,
+					lexicalScope,
+				)
+
+			memberIdentifier := nestedAttachmentDeclaration.Identifier.Identifier
 			nestedVariables[memberIdentifier] = nestedVariable
 		}
 	})()
@@ -1157,6 +1193,16 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				value.Destructor = destructorFunction
 
 				var self MemberAccessibleValue = value
+				if declaration.CompositeKind == common.CompositeKindAttachment {
+					self = NewEphemeralReferenceValue(interpreter, false, value, interpreter.MustSemaTypeOfValue(value))
+					// set the base to the implicitly provided value, and remove this implicit argument from the list
+					implicitArgumentPos := len(invocation.Arguments) - 1
+					invocation.Base = invocation.Arguments[implicitArgumentPos].(*EphemeralReferenceValue)
+					invocation.Arguments[implicitArgumentPos] = nil
+					invocation.Arguments = invocation.Arguments[:implicitArgumentPos]
+					invocation.ArgumentTypes[implicitArgumentPos] = nil
+					invocation.ArgumentTypes = invocation.ArgumentTypes[:implicitArgumentPos]
+				}
 				invocation.Self = &self
 
 				if declaration.CompositeKind == common.CompositeKindContract {
@@ -1958,6 +2004,9 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 
 				if invocation.Self != nil {
 					interpreter.declareVariable(sema.SelfIdentifier, *invocation.Self)
+				}
+				if invocation.Base != nil {
+					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
 				}
 
 				// NOTE: The `inner` function might be nil.
@@ -3268,6 +3317,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 				subInvocation := NewInvocation(
 					inter,
 					nil,
+					nil,
 					[]Value{pathValue, runtimeType},
 					invocationTypeParams,
 					nil,
@@ -3993,6 +4043,10 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 	)
 }
 
+func (interpreter *Interpreter) MustSemaTypeOfValue(value Value) sema.Type {
+	return interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+}
+
 func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticType) sema.Type {
 	semaType, err := interpreter.ConvertStaticToSemaType(staticType)
 	if err != nil {
@@ -4221,8 +4275,8 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	)
 }
 
-func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) {
-	self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
+func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) bool {
+	return self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
 }
 
 func (interpreter *Interpreter) ExpectType(
@@ -4251,7 +4305,7 @@ func (interpreter *Interpreter) checkContainerMutation(
 	if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
 		panic(ContainerMutationError{
 			ExpectedType:  interpreter.MustConvertStaticToSemaType(elementType),
-			ActualType:    interpreter.MustConvertStaticToSemaType(element.StaticType(interpreter)),
+			ActualType:    interpreter.MustSemaTypeOfValue(element),
 			LocationRange: locationRange,
 		})
 	}

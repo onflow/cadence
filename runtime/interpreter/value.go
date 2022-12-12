@@ -151,13 +151,21 @@ type ValueIndexableValue interface {
 	InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value)
 }
 
+type TypeIndexableValue interface {
+	Value
+	GetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
+	SetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type, value Value)
+	RemoveTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
+}
+
 // MemberAccessibleValue
 
 type MemberAccessibleValue interface {
 	Value
 	GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
 	RemoveMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
-	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value)
+	// returns whether a value previously existed with this name
+	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) bool
 }
 
 // EquatableValue
@@ -391,7 +399,7 @@ func (TypeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Types have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -882,7 +890,7 @@ func (CharacterValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Va
 	panic(errors.NewUnreachableError())
 }
 
-func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Characters have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -1183,7 +1191,7 @@ func (*StringValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Strings have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -2240,7 +2248,7 @@ func (v *ArrayValue) RemoveMember(interpreter *Interpreter, locationRange Locati
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ArrayValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) {
+func (v *ArrayValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -3343,7 +3351,7 @@ func (IntValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -3929,7 +3937,7 @@ func (Int8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (Int8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -4515,7 +4523,7 @@ func (Int16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Int16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -5103,7 +5111,7 @@ func (Int32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Int32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -5687,7 +5695,7 @@ func (Int64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -6377,7 +6385,7 @@ func (Int128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -7062,7 +7070,7 @@ func (Int256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -7651,7 +7659,7 @@ func (UIntValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (UIntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UIntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -8199,7 +8207,7 @@ func (UInt8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -8704,7 +8712,7 @@ func (UInt16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -9216,7 +9224,7 @@ func (UInt32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -9755,7 +9763,7 @@ func (UInt64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -10388,7 +10396,7 @@ func (UInt128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -11019,7 +11027,7 @@ func (UInt256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -11435,7 +11443,7 @@ func (Word8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -11851,7 +11859,7 @@ func (Word16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -12270,7 +12278,7 @@ func (Word32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Word32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -12713,7 +12721,7 @@ func (Word64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Word64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -13252,7 +13260,7 @@ func (Fix64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Fix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Fix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -13756,7 +13764,7 @@ func (UFix64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UFix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UFix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -13848,6 +13856,13 @@ type CompositeValue struct {
 	isDestroyed         bool
 	typeID              common.TypeID
 	staticType          StaticType
+
+	// attachments also have a reference to their base value. This field is set in three cases:
+	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
+	// 2) When a resource `r`'s destructor is invoked, all of `r`'s attachments' destructors will also run, and
+	//    have their `base` fields set to `&r`
+	// 3) When a value is transferred, this field is copied between its attachments
+	base *EphemeralReferenceValue
 }
 
 type ComputedField func(*Interpreter, LocationRange) Value
@@ -13856,6 +13871,10 @@ type CompositeField struct {
 	Name  string
 	Value Value
 }
+
+const attachmentNamePrefix = "$"
+
+var _ TypeIndexableValue = &CompositeValue{}
 
 func NewCompositeField(memoryGauge common.MemoryGauge, name string, value Value) CompositeField {
 	common.UseMemory(memoryGauge, common.CompositeFieldMemoryUsage)
@@ -13994,7 +14013,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 // Walk iterates over all field values of the composite value.
-// It does NOT walk the computed fields and functions!
+// It does NOT walk the computed field or functions!
 func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
 	v.ForEachField(interpreter, func(_ string, value Value) {
 		walkChild(value)
@@ -14055,6 +14074,18 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		}()
 	}
 
+	// if this type has attachments, destroy all of them before invoking the destructor
+	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
+		// an attachment's destructor may make reference to `base`, so we must set the base value
+		// for the attachment before invoking its destructor. For other functions, this happens
+		// automatically when the attachment is accessed with the access expression `v[A]`, which
+		// is a necessary pre-requisite for calling any members of the attachment. However, in
+		// the case of a destructor, this is called implicitly, and thus must have its `base`
+		// set manually
+		attachment.setBaseValue(interpreter, v)
+		attachment.Destroy(interpreter, locationRange)
+	})
+
 	interpreter = v.getInterpreter(interpreter)
 
 	// if composite was deserialized, dynamically link in the destructor
@@ -14065,10 +14096,15 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	destructor := v.Destructor
 
 	if destructor != nil {
+		var base *EphemeralReferenceValue
 		var self MemberAccessibleValue = v
+		if v.Kind == common.CompositeKindAttachment {
+			base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
+		}
 		invocation := NewInvocation(
 			interpreter,
 			&self,
+			base,
 			nil,
 			nil,
 			nil,
@@ -14102,6 +14138,18 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	)
 }
 
+func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+
+	switch name {
+	case sema.ResourceOwnerFieldName:
+		if v.Kind == common.CompositeKindResource {
+			return v.OwnerValue(interpreter, locationRange)
+		}
+	}
+
+	return nil
+}
+
 func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	config := interpreter.SharedState.Config
 
@@ -14127,10 +14175,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		}()
 	}
 
-	if v.Kind == common.CompositeKindResource &&
-		name == sema.ResourceOwnerFieldName {
-
-		return v.OwnerValue(interpreter, locationRange)
+	if builtin := v.getBuiltinMember(interpreter, locationRange, name); builtin != nil {
+		return builtin
 	}
 
 	storable, err := v.dictionary.Get(
@@ -14186,8 +14232,12 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 
 	function, ok := v.Functions[name]
 	if ok {
+		var base *EphemeralReferenceValue
 		var self MemberAccessibleValue = v
-		return NewBoundFunctionValue(interpreter, function, &self)
+		if v.Kind == common.CompositeKindAttachment {
+			base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
+		}
+		return NewBoundFunctionValue(interpreter, function, &self, base)
 	}
 
 	return nil
@@ -14310,7 +14360,7 @@ func (v *CompositeValue) SetMember(
 	locationRange LocationRange,
 	name string,
 	value Value,
-) {
+) bool {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -14362,7 +14412,10 @@ func (v *CompositeValue) SetMember(
 		existingValue.DeepRemove(interpreter)
 
 		interpreter.RemoveReferencedSlab(existingStorable)
+		return true
 	}
+
+	return false
 }
 
 func (v *CompositeValue) String() string {
@@ -14583,6 +14636,13 @@ func (v *CompositeValue) ConformsToStaticType(
 		return false
 	}
 
+	if compositeType.Kind == common.CompositeKindAttachment {
+		base := v.getBaseValue(interpreter, locationRange).Value
+		if base == nil || !base.ConformsToStaticType(interpreter, locationRange, results) {
+			return false
+		}
+	}
+
 	fieldsLen := int(v.dictionary.Count())
 	if v.ComputedFields != nil {
 		fieldsLen += len(v.ComputedFields)
@@ -14640,6 +14700,7 @@ func (v *CompositeValue) IsStorable() bool {
 	case common.CompositeKindStructure,
 		common.CompositeKindResource,
 		common.CompositeKindEnum,
+		common.CompositeKindAttachment,
 		common.CompositeKindContract:
 		break
 	default:
@@ -14662,7 +14723,10 @@ func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageID().Address
 }
 
-func (v *CompositeValue) IsResourceKinded(_ *Interpreter) bool {
+func (v *CompositeValue) IsResourceKinded(interpreter *Interpreter) bool {
+	if v.Kind == common.CompositeKindAttachment {
+		return interpreter.MustSemaTypeOfValue(v).IsResourceType()
+	}
 	return v.Kind == common.CompositeKindResource
 }
 
@@ -14751,8 +14815,14 @@ func (v *CompositeValue) Transfer(
 				// NOTE: key is stringAtreeValue
 				// and does not need to be converted or copied
 
-				value := MustConvertStoredValue(interpreter, atreeValue).
-					Transfer(interpreter, locationRange, address, remove, nil)
+				value := MustConvertStoredValue(interpreter, atreeValue)
+				// the base of an attachment is not stored in the atree, so in order to make the
+				// transfer happen properly, we set the base value here if this field is an attachment
+				if compositeValue, ok := value.(*CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
+					compositeValue.setBaseValue(interpreter, v)
+				}
+
+				value = value.Transfer(interpreter, locationRange, address, remove, nil)
 
 				return atreeKey, value, nil
 			},
@@ -14826,6 +14896,7 @@ func (v *CompositeValue) Transfer(
 		res.isDestroyed = v.isDestroyed
 		res.typeID = v.typeID
 		res.staticType = v.staticType
+		res.base = v.base
 	}
 
 	onResourceOwnerChange := config.OnResourceOwnerChange
@@ -14908,6 +14979,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		isDestroyed:         v.isDestroyed,
 		typeID:              v.typeID,
 		staticType:          v.staticType,
+		base:                v.base,
 	}
 }
 
@@ -15038,6 +15110,121 @@ func NewEnumCaseValue(
 	v.Functions = functions
 
 	return v
+}
+
+func (v *CompositeValue) getBaseValue(interpreter *Interpreter, locationRange LocationRange) *EphemeralReferenceValue {
+	return v.base
+}
+
+func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	var baseType sema.Type
+	switch ty := attachmentType.GetBaseType().(type) {
+	case *sema.InterfaceType:
+		baseType, _ = ty.RewriteWithRestrictedTypes()
+	default:
+		baseType = ty
+	}
+
+	// the base reference can only be borrowed with the declared type of the attachment's base
+	v.base = NewEphemeralReferenceValue(interpreter, false, base, baseType)
+}
+
+func attachmentMemberName(ty sema.Type) string {
+	return attachmentNamePrefix + string(ty.ID())
+}
+
+func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
+	if attachment := v.GetMember(interpreter, locationRange, attachmentMemberName(ty)); attachment != nil {
+		return attachment.(*CompositeValue)
+	}
+	return nil
+}
+
+func attachmentBaseAndSelfValues(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	v *CompositeValue,
+) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
+	base = v.getBaseValue(interpreter, locationRange)
+	// in attachment functions, self is a reference value
+	self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
+	return
+}
+
+func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRange LocationRange, f func(*CompositeValue)) {
+	iterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	oldSharedState := interpreter.SharedState.inAttachmentIteration(v)
+	interpreter.SharedState.setAttachmentIteration(v, true)
+	defer func() {
+		interpreter.SharedState.setAttachmentIteration(v, oldSharedState)
+	}()
+
+	for {
+		key, value, err := iterator.Next()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+		if key == nil {
+			break
+		}
+		if strings.HasPrefix(string(key.(StringAtreeValue)), attachmentNamePrefix) {
+			attachment, ok := MustConvertStoredValue(interpreter, value).(*CompositeValue)
+			if !ok {
+				panic(errors.NewExternalError(err))
+			}
+			// `f` takes the `attachment` value directly, but if a method to later iterate over
+			// attachments is added that takes a `fun (&Attachment): Void` callback, the `f` provided here
+			// should convert the provided attachment value into a reference before passing it to the user
+			// callback
+			f(attachment)
+		}
+	}
+}
+
+func (v *CompositeValue) GetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	ty sema.Type,
+) Value {
+	attachment := v.getAttachmentValue(interpreter, locationRange, ty)
+	if attachment == nil {
+		return NilValue{}
+	}
+	// dynamically set the attachment's base to this composite
+	attachment.setBaseValue(interpreter, v)
+	return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, false, attachment, ty))
+}
+
+func (v *CompositeValue) SetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	attachmentType sema.Type,
+	attachment Value,
+) {
+	if v.SetMember(interpreter, locationRange, attachmentMemberName(attachmentType), attachment) {
+		panic(DuplicateAttachmentError{
+			AttachmentType: attachmentType,
+			Value:          v,
+			LocationRange:  locationRange,
+		})
+	}
+}
+
+func (v *CompositeValue) RemoveTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	attachmentType sema.Type,
+) Value {
+	return v.RemoveMember(interpreter, locationRange, attachmentMemberName(attachmentType))
 }
 
 // DictionaryValue
@@ -15327,10 +15514,10 @@ func (v *DictionaryValue) ForEachKey(
 	keyType := v.SemaType(interpreter).KeyType
 
 	iterationInvocation := func(key Value) Invocation {
-		var self MemberAccessibleValue = v
 		return NewInvocation(
 			interpreter,
-			&self,
+			nil,
+			nil,
 			[]Value{key},
 			[]sema.Type{keyType},
 			nil,
@@ -15674,7 +15861,7 @@ func (v *DictionaryValue) RemoveMember(interpreter *Interpreter, locationRange L
 	panic(errors.NewUnreachableError())
 }
 
-func (v *DictionaryValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) {
+func (v *DictionaryValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -16343,7 +16530,7 @@ func (NilValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (NilValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (NilValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Nil has no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -16537,6 +16724,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRa
 					transformInvocation := NewInvocation(
 						invocation.Interpreter,
 						nil,
+						nil,
 						[]Value{v},
 						[]sema.Type{valueType},
 						nil,
@@ -16568,7 +16756,7 @@ func (v *SomeValue) RemoveMember(interpreter *Interpreter, locationRange Locatio
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SomeValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) {
+func (v *SomeValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -16776,6 +16964,7 @@ type StorageReferenceValue struct {
 var _ Value = &StorageReferenceValue{}
 var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
+var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
@@ -16887,10 +17076,9 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 	return value
 }
 
-func (v *StorageReferenceValue) GetMember(
+func (v *StorageReferenceValue) mustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	name string,
 ) Value {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
@@ -16902,6 +17090,15 @@ func (v *StorageReferenceValue) GetMember(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	return self
+}
+
+func (v *StorageReferenceValue) GetMember(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	name string,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return interpreter.getMember(self, locationRange, name)
 }
@@ -16911,16 +17108,7 @@ func (v *StorageReferenceValue) RemoveMember(
 	locationRange LocationRange,
 	name string,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return self.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, name)
 }
@@ -16930,19 +17118,10 @@ func (v *StorageReferenceValue) SetMember(
 	locationRange LocationRange,
 	name string,
 	value Value,
-) {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
+) bool {
+	self := v.mustReferencedValue(interpreter, locationRange)
 
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
-
-	interpreter.setMember(self, locationRange, name, value)
+	return interpreter.setMember(self, locationRange, name, value)
 }
 
 func (v *StorageReferenceValue) GetKey(
@@ -16950,16 +17129,7 @@ func (v *StorageReferenceValue) GetKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, locationRange, key)
@@ -16971,16 +17141,7 @@ func (v *StorageReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, locationRange, key, value)
@@ -16992,16 +17153,7 @@ func (v *StorageReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, locationRange, key, value)
@@ -17012,19 +17164,44 @@ func (v *StorageReferenceValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, locationRange, key)
+}
+
+func (v *StorageReferenceValue) GetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	return self.(TypeIndexableValue).
+		GetTypeKey(interpreter, locationRange, key)
+}
+
+func (v *StorageReferenceValue) SetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+	value Value,
+) {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	self.(TypeIndexableValue).
+		SetTypeKey(interpreter, locationRange, key, value)
+}
+
+func (v *StorageReferenceValue) RemoveTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	return self.(TypeIndexableValue).
+		RemoveTypeKey(interpreter, locationRange, key)
 }
 
 func (v *StorageReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -17122,6 +17299,7 @@ type EphemeralReferenceValue struct {
 var _ Value = &EphemeralReferenceValue{}
 var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
+var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
@@ -17215,10 +17393,9 @@ func (v *EphemeralReferenceValue) ReferencedValue(
 	}
 }
 
-func (v *EphemeralReferenceValue) GetMember(
+func (v *EphemeralReferenceValue) mustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	name string,
 ) Value {
 	referencedValue := v.ReferencedValue(interpreter, locationRange)
 	if referencedValue == nil {
@@ -17230,6 +17407,15 @@ func (v *EphemeralReferenceValue) GetMember(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	return self
+}
+
+func (v *EphemeralReferenceValue) GetMember(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	name string,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return interpreter.getMember(self, locationRange, name)
 }
@@ -17239,16 +17425,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	locationRange LocationRange,
 	identifier string,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
@@ -17262,19 +17439,10 @@ func (v *EphemeralReferenceValue) SetMember(
 	locationRange LocationRange,
 	name string,
 	value Value,
-) {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
+) bool {
+	self := v.mustReferencedValue(interpreter, locationRange)
 
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
-
-	interpreter.setMember(self, locationRange, name, value)
+	return interpreter.setMember(self, locationRange, name, value)
 }
 
 func (v *EphemeralReferenceValue) GetKey(
@@ -17282,16 +17450,7 @@ func (v *EphemeralReferenceValue) GetKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, locationRange, key)
@@ -17303,16 +17462,7 @@ func (v *EphemeralReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, locationRange, key, value)
@@ -17324,16 +17474,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, locationRange, key, value)
@@ -17344,19 +17485,44 @@ func (v *EphemeralReferenceValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, locationRange, key)
+}
+
+func (v *EphemeralReferenceValue) GetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	return self.(TypeIndexableValue).
+		GetTypeKey(interpreter, locationRange, key)
+}
+
+func (v *EphemeralReferenceValue) SetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+	value Value,
+) {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	self.(TypeIndexableValue).
+		SetTypeKey(interpreter, locationRange, key, value)
+}
+
+func (v *EphemeralReferenceValue) RemoveTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	return self.(TypeIndexableValue).
+		RemoveTypeKey(interpreter, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
@@ -17618,7 +17784,7 @@ func (AddressValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Addresses have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -17852,7 +18018,7 @@ func (PathValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (PathValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (PathValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Paths have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -18110,7 +18276,7 @@ func (*StorageCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ s
 	panic(errors.NewUnreachableError())
 }
 
-func (*StorageCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*StorageCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

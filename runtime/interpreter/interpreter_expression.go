@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -37,7 +39,10 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 		return interpreter.identifierExpressionGetterSetter(expression)
 
 	case *ast.IndexExpression:
-		return interpreter.indexExpressionGetterSetter(expression)
+		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
+			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
+		}
+		return interpreter.valueIndexExpressionGetterSetter(expression)
 
 	case *ast.MemberExpression:
 		return interpreter.memberExpressionGetterSetter(expression)
@@ -73,9 +78,35 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 	}
 }
 
-// indexExpressionGetterSetter returns a getter/setter function pair
+func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
+	indexExpression *ast.IndexExpression,
+	attachmentType sema.Type,
+) getterSetter {
+	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(TypeIndexableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: indexExpression,
+	}
+
+	return getterSetter{
+		target: target,
+		get: func(_ bool) Value {
+			return target.GetTypeKey(interpreter, locationRange, attachmentType)
+		},
+		set: func(_ Value) {
+			// writing to composites with indexing syntax is not supported
+			panic(errors.NewUnreachableError())
+		},
+	}
+}
+
+// valueIndexExpressionGetterSetter returns a getter/setter function pair
 // for the target index expression
-func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
+func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
 	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -764,16 +795,32 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) Value {
-	typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
+	// note that this check in `AttachmentAccessTypes` must proceed the casting to the `TypeIndexableValue`
+	// or `ValueIndexableValue` interfaces. A `*EphemeralReferenceValue` value is both a `TypeIndexableValue`
+	// and a `ValueIndexableValue` statically, but at runtime can only be used as one or the other. Whether
+	// or not an expression is present in this map allows us to disambiguate between these two cases.
+	if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
+		typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(TypeIndexableValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression,
+		}
+		return typedResult.GetTypeKey(interpreter, locationRange, attachmentType)
+	} else {
+		typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		indexingValue := interpreter.evalExpression(expression.IndexingExpression)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression,
+		}
+		return typedResult.GetKey(interpreter, locationRange, indexingValue)
 	}
-	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: expression,
-	}
-	return typedResult.GetKey(interpreter, locationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) Value {
@@ -789,6 +836,10 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 }
 
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) Value {
+	return interpreter.visitInvocationExpressionWithImplicitArgument(invocationExpression, nil)
+}
+
+func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg *Value) Value {
 	config := interpreter.SharedState.Config
 
 	// tracing
@@ -855,6 +906,12 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	typeParameterTypes := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
 	parameterTypes := invocationExpressionTypes.TypeParameterTypes
+
+	// add the implicit argument to the end of the argument list, if it exists
+	if implicitArg != nil {
+		arguments = append(arguments, *implicitArg)
+		argumentTypes = append(argumentTypes, interpreter.MustSemaTypeOfValue(*implicitArg))
+	}
 
 	interpreter.reportFunctionInvocation()
 
@@ -1137,7 +1194,71 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 	)
 }
 
-func (interpreter *Interpreter) VisitAttachExpression(_ *ast.AttachExpression) Value {
-	// TODO: implement this
-	return nil
+func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.AttachExpression) Value {
+
+	base, ok := interpreter.evalExpression(attachExpression.Base).(*CompositeValue)
+	// we enforce this in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: attachExpression,
+	}
+
+	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
+		panic(AttachmentIterationMutationError{
+			Value:         base,
+			LocationRange: locationRange,
+		})
+	}
+
+	// the `base` value must be accessible during the attachment's constructor, but we cannot
+	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
+	// we create an implicit constructor argument containing a reference to the base
+	var baseValue Value = NewEphemeralReferenceValue(
+		interpreter,
+		false,
+		base,
+		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
+	)
+	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
+
+	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(
+		attachExpression.Attachment,
+		&baseValue,
+	).(*CompositeValue)
+	// attached expressions must be composite constructors, as enforced in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Because `self` in attachments is a reference, we need to track the attachment if it's a resource
+	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
+
+	base = base.Transfer(
+		interpreter,
+		locationRange,
+		atree.Address{},
+		false,
+		nil,
+	).(*CompositeValue)
+
+	// we enforce this in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// when `v[A]` is executed, we set `A`'s base to `&v`
+	attachment.setBaseValue(interpreter, base)
+
+	base.SetTypeKey(
+		interpreter,
+		locationRange,
+		interpreter.MustSemaTypeOfValue(attachment),
+		attachment,
+	)
+
+	return base
 }

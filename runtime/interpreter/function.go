@@ -269,7 +269,7 @@ func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string
 	panic(errors.NewUnreachableError())
 }
 
-func (*HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -323,6 +323,7 @@ func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
 // BoundFunctionValue
 type BoundFunctionValue struct {
 	Function FunctionValue
+	Base     *EphemeralReferenceValue
 	Self     *MemberAccessibleValue
 }
 
@@ -333,6 +334,7 @@ func NewBoundFunctionValue(
 	interpreter *Interpreter,
 	function FunctionValue,
 	self *MemberAccessibleValue,
+	base *EphemeralReferenceValue,
 ) BoundFunctionValue {
 
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
@@ -340,6 +342,7 @@ func NewBoundFunctionValue(
 	return BoundFunctionValue{
 		Function: function,
 		Self:     self,
+		Base:     base,
 	}
 }
 
@@ -381,6 +384,7 @@ func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	invocation.Self = f.Self
+	invocation.Base = f.Base
 	return f.Function.invoke(invocation)
 }
 

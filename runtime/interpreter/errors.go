@@ -875,3 +875,39 @@ func (InvalidHexLengthError) IsUserError() {}
 func (InvalidHexLengthError) Error() string {
 	return "hex string has non-even length"
 }
+
+// DuplicateAttachmentError
+type DuplicateAttachmentError struct {
+	AttachmentType sema.Type
+	Value          *CompositeValue
+	LocationRange
+}
+
+var _ errors.UserError = DuplicateAttachmentError{}
+
+func (DuplicateAttachmentError) IsUserError() {}
+
+func (e DuplicateAttachmentError) Error() string {
+	return fmt.Sprintf(
+		"cannot attach %s to %s, as it already exists on that value",
+		e.AttachmentType.QualifiedString(),
+		e.Value.QualifiedIdentifier,
+	)
+}
+
+// AttachmentIterationMutationError
+type AttachmentIterationMutationError struct {
+	Value *CompositeValue
+	LocationRange
+}
+
+var _ errors.UserError = AttachmentIterationMutationError{}
+
+func (AttachmentIterationMutationError) IsUserError() {}
+
+func (e AttachmentIterationMutationError) Error() string {
+	return fmt.Sprintf(
+		"cannot modify %s's attachments while iterating over them",
+		e.Value.QualifiedIdentifier,
+	)
+}

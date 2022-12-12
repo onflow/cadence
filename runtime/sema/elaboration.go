@@ -143,6 +143,8 @@ type Elaboration struct {
 	isChecking                          bool
 	referenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
 	indexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
+	attachmentAccessTypes               map[*ast.IndexExpression]Type
+	attachmentRemoveTypes               map[*ast.RemoveStatement]Type
 	forceExpressionTypes                map[*ast.ForceExpression]Type
 	staticCastTypes                     map[*ast.CastingExpression]CastTypes
 	runtimeCastTypes                    map[*ast.CastingExpression]RuntimeCastTypes
@@ -867,4 +869,47 @@ func (e *Elaboration) SetAttachmentCompositeDeclarations(
 		e.attachmentCompositeDeclarations = map[*ast.AttachmentDeclaration]*ast.CompositeDeclaration{}
 	}
 	e.attachmentCompositeDeclarations[decl] = compositeDecl
+}
+
+func (e *Elaboration) AttachmentAccessTypes(
+	expression *ast.IndexExpression,
+) (
+	ty Type, ok bool,
+) {
+	if e.attachmentAccessTypes == nil {
+		return
+	}
+	ty, ok = e.attachmentAccessTypes[expression]
+	return
+}
+
+func (e *Elaboration) SetAttachmentAccessTypes(
+	expression *ast.IndexExpression,
+	ty Type,
+) {
+	if e.attachmentAccessTypes == nil {
+		e.attachmentAccessTypes = map[*ast.IndexExpression]Type{}
+	}
+	e.attachmentAccessTypes[expression] = ty
+}
+
+func (e *Elaboration) AttachmentRemoveTypes(
+	stmt *ast.RemoveStatement,
+) (
+	ty Type,
+) {
+	if e.attachmentRemoveTypes == nil {
+		return
+	}
+	return e.attachmentRemoveTypes[stmt]
+}
+
+func (e *Elaboration) SetAttachmentRemoveTypes(
+	stmt *ast.RemoveStatement,
+	ty Type,
+) {
+	if e.attachmentRemoveTypes == nil {
+		e.attachmentRemoveTypes = map[*ast.RemoveStatement]Type{}
+	}
+	e.attachmentRemoveTypes[stmt] = ty
 }

@@ -314,7 +314,7 @@ func (checker *Checker) visitIndexExpression(
 			)
 			return InvalidType
 		}
-		elementType := checker.checkTypeIndexingExpression(typeIndexedType, indexExpression.IndexingExpression)
+		elementType := checker.checkTypeIndexingExpression(typeIndexedType, indexExpression)
 		if elementType == InvalidType {
 			checker.report(
 				&InvalidTypeIndexingError{
@@ -333,10 +333,10 @@ func (checker *Checker) visitIndexExpression(
 
 func (checker *Checker) checkTypeIndexingExpression(
 	base TypeIndexableType,
-	indexingExpression ast.Expression,
+	indexExpression *ast.IndexExpression,
 ) Type {
 
-	expressionType := ast.ExpressionAsType(indexingExpression)
+	expressionType := ast.ExpressionAsType(indexExpression.IndexingExpression)
 	if expressionType == nil {
 		return InvalidType
 	}
@@ -349,6 +349,8 @@ func (checker *Checker) checkTypeIndexingExpression(
 	if !base.IsValidIndexingType(nominalType) {
 		return InvalidType
 	}
+
+	checker.Elaboration.SetAttachmentAccessTypes(indexExpression, nominalType)
 
 	// at this point, the base is known to be a struct/resource,
 	// and the attachment is known to be a valid attachment for that base

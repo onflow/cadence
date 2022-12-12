@@ -314,7 +314,7 @@ func (checker *Checker) importElements(
 
 			access := element.Access
 
-			if !checker.isReadableAccess(access) {
+			if !checker.Config.AccessCheckMode.IsReadableAccess(access) {
 
 				// If the variable was imported explicitly, report an error
 

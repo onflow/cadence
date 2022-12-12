@@ -401,8 +401,46 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 	return nil
 }
 
-func (interpreter *Interpreter) VisitRemoveStatement(_ *ast.RemoveStatement) StatementResult {
-	// TODO: fill this in
+func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.RemoveStatement) StatementResult {
+	base, ok := interpreter.evalExpression(removeStatement.Value).(*CompositeValue)
+	// we enforce this in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: removeStatement,
+	}
+
+	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
+		panic(AttachmentIterationMutationError{
+			Value:         base,
+			LocationRange: locationRange,
+		})
+	}
+
+	nominalType := interpreter.Program.Elaboration.AttachmentRemoveTypes(removeStatement)
+
+	removed := base.RemoveTypeKey(interpreter, locationRange, nominalType)
+
+	// attachment not present on this base
+	if removed == nil {
+		return nil
+	}
+
+	attachment, ok := removed.(*CompositeValue)
+	// we enforce this in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if attachment.IsResourceKinded(interpreter) {
+		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
+		attachment.setBaseValue(interpreter, base)
+		attachment.Destroy(interpreter, locationRange)
+	}
+
 	return nil
 }
 
