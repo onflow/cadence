@@ -13873,7 +13873,6 @@ type CompositeField struct {
 }
 
 const attachmentNamePrefix = "$"
-const attachmentBaseName = "$base"
 
 var _ TypeIndexableValue = &CompositeValue{}
 

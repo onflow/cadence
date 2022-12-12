@@ -1603,7 +1603,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		)
 
 		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` shoudl be invalidated after the save
+		// this should be an error, as `a` should be invalidated after the save
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
@@ -1639,7 +1639,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		)
 
 		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` shoudl be invalidated after the save
+		// this should be an error, as `a` should be invalidated after the save
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
