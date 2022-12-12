@@ -352,7 +352,7 @@ func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",

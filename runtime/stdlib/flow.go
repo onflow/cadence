@@ -128,7 +128,7 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 
 // built-in event types
 
-func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.CompositeType {
+func newFlowEventType(identifier string, parameters ...sema.Parameter) *sema.CompositeType {
 
 	eventType := &sema.CompositeType{
 		Kind:       common.CompositeKindEvent,
@@ -173,22 +173,22 @@ var HashType = &sema.ConstantSizedType{
 
 var HashTypeAnnotation = sema.NewTypeAnnotation(HashType)
 
-var AccountEventAddressParameter = &sema.Parameter{
+var AccountEventAddressParameter = sema.Parameter{
 	Identifier:     "address",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	TypeAnnotation: sema.AddressTypeAnnotation,
 }
 
-var AccountEventCodeHashParameter = &sema.Parameter{
+var AccountEventCodeHashParameter = sema.Parameter{
 	Identifier:     "codeHash",
 	TypeAnnotation: HashTypeAnnotation,
 }
 
-var AccountEventPublicKeyParameter = &sema.Parameter{
+var AccountEventPublicKeyParameter = sema.Parameter{
 	Identifier:     "publicKey",
 	TypeAnnotation: sema.ByteArrayTypeAnnotation,
 }
 
-var AccountEventContractParameter = &sema.Parameter{
+var AccountEventContractParameter = sema.Parameter{
 	Identifier:     "contract",
 	TypeAnnotation: sema.StringTypeAnnotation,
 }
@@ -231,22 +231,22 @@ var AccountContractRemovedEventType = newFlowEventType(
 	AccountEventContractParameter,
 )
 
-var AccountEventProviderParameter = &sema.Parameter{
+var AccountEventProviderParameter = sema.Parameter{
 	Identifier:     "provider",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	TypeAnnotation: sema.AddressTypeAnnotation,
 }
 
-var AccountEventRecipientParameter = &sema.Parameter{
+var AccountEventRecipientParameter = sema.Parameter{
 	Identifier:     "recipient",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	TypeAnnotation: sema.AddressTypeAnnotation,
 }
 
-var AccountEventNameParameter = &sema.Parameter{
+var AccountEventNameParameter = sema.Parameter{
 	Identifier:     "name",
 	TypeAnnotation: sema.StringTypeAnnotation,
 }
 
-var AccountEventTypeParameter = &sema.Parameter{
+var AccountEventTypeParameter = sema.Parameter{
 	Identifier:     "type",
 	TypeAnnotation: sema.MetaTypeAnnotation,
 }

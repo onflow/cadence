@@ -230,7 +230,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 
 	missingDeclarations := make([]ast.Declaration, 0, len(oldCompositeAndInterfaceDecls))
 
-	for _, declaration := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
+	for _, declaration := range oldCompositeAndInterfaceDecls { //nolint:maprange
 		missingDeclarations = append(missingDeclarations, declaration)
 	}
 
@@ -257,12 +257,12 @@ func getNestedCompositeAndInterfaceDecls(declaration ast.Declaration) map[string
 	compositeAndInterfaceDecls := map[string]ast.Declaration{}
 
 	nestedCompositeDecls := declaration.DeclarationMembers().CompositesByIdentifier()
-	for identifier, nestedDecl := range nestedCompositeDecls { //nolint:maprangecheck
+	for identifier, nestedDecl := range nestedCompositeDecls { //nolint:maprange
 		compositeAndInterfaceDecls[identifier] = nestedDecl
 	}
 
 	nestedInterfaceDecls := declaration.DeclarationMembers().InterfacesByIdentifier()
-	for identifier, nestedDecl := range nestedInterfaceDecls { //nolint:maprangecheck
+	for identifier, nestedDecl := range nestedInterfaceDecls { //nolint:maprange
 		compositeAndInterfaceDecls[identifier] = nestedDecl
 	}
 

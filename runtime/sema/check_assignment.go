@@ -33,11 +33,13 @@ func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentState
 		false,
 	)
 
-	checker.Elaboration.AssignmentStatementTypes[assignment] =
+	checker.Elaboration.SetAssignmentStatementTypes(
+		assignment,
 		AssignmentStatementTypes{
 			ValueType:  valueType,
 			TargetType: targetType,
-		}
+		},
+	)
 
 	return
 }
@@ -143,7 +145,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 	}
 
 	var baseVariable *Variable
-	var accessChain []Type = make([]Type, 0)
+	var accessChain = make([]Type, 0)
 	var inAccessChain = true
 
 	// seek the variable expression (if it exists) at the base of the access chain
@@ -157,7 +159,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 			inAccessChain = false
 		case *ast.IndexExpression:
 			target = targetExp.TargetExpression
-			elementType := checker.Elaboration.IndexExpressionTypes[targetExp].IndexedType.ElementType(true)
+			elementType := checker.Elaboration.IndexExpressionTypes(targetExp).IndexedType.ElementType(true)
 			accessChain = append(accessChain, elementType)
 		case *ast.MemberExpression:
 			target = targetExp.Expression

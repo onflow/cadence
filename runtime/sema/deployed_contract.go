@@ -43,7 +43,7 @@ var DeployedContractType = &SimpleType{
 						memoryGauge,
 						t,
 						identifier,
-						&AddressType{},
+						TheAddressType,
 						deployedContractTypeAddressFieldDocString,
 					)
 				},

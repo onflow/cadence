@@ -154,7 +154,7 @@ func TestInterpretForStatementWithContinue(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.IsType(t, value, &interpreter.ArrayValue{})
+	require.IsType(t, &interpreter.ArrayValue{}, value)
 	arrayValue := value.(*interpreter.ArrayValue)
 
 	AssertValueSlicesEqual(
@@ -216,7 +216,7 @@ func TestInterpretForStatementEmpty(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }

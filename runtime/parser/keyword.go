@@ -132,7 +132,7 @@ var hardKeywords = mapDiff(allKeywords, softKeywords)
 func mapDiff[T comparable, U any](minuend map[T]U, subtrahend map[T]U) map[T]U {
 	diff := make(map[T]U, len(minuend))
 	// iteration order is not important here
-	for k, v := range minuend { // nolint:maprangecheck
+	for k, v := range minuend { // nolint:maprange
 		if _, exists := subtrahend[k]; !exists {
 			diff[k] = v
 		}

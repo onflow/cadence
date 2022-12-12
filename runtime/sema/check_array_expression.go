@@ -94,11 +94,13 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 		}
 	}
 
-	checker.Elaboration.ArrayExpressionTypes[expression] =
+	checker.Elaboration.SetArrayExpressionTypes(
+		expression,
 		ArrayExpressionTypes{
 			ArgumentTypes: argumentTypes,
 			ArrayType:     resultType,
-		}
+		},
+	)
 
 	return resultType
 }

@@ -35,4 +35,6 @@ type Config struct {
 	CoverageReportingEnabled bool
 	// StackDepthLimit specifies the maximum depth for call stacks.
 	StackDepthLimit uint64
+	// AccountLinkingEnabled specifies if account linking is enabled
+	AccountLinkingEnabled bool
 }

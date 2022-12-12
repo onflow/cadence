@@ -129,7 +129,7 @@ func NewTestContract(
 }
 
 var testContractType = func() *sema.CompositeType {
-	variable, ok := TestContractChecker.Elaboration.GlobalTypes.Get(testContractTypeName)
+	variable, ok := TestContractChecker.Elaboration.GetGlobalType(testContractTypeName)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -301,7 +301,10 @@ func init() {
 
 	// Enrich 'Test' contract elaboration with natively implemented composite types.
 	// e.g: 'EmulatorBackend' type.
-	TestContractChecker.Elaboration.CompositeTypes[EmulatorBackendType.ID()] = EmulatorBackendType
+	TestContractChecker.Elaboration.SetCompositeType(
+		EmulatorBackendType.ID(),
+		EmulatorBackendType,
+	)
 }
 
 var blockchainType = func() sema.Type {
@@ -325,7 +328,7 @@ const testAssertFunctionName = "assert"
 
 var testAssertFunctionType = &sema.FunctionType{
 	Purity: sema.FunctionPurityView,
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "condition",
@@ -378,7 +381,7 @@ const testFailFunctionName = "fail"
 
 var testFailFunctionType = &sema.FunctionType{
 	Purity: sema.FunctionPurityView,
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Identifier:     "message",
 			TypeAnnotation: sema.StringTypeAnnotation,
@@ -420,7 +423,7 @@ var testExpectFunctionType = &sema.FunctionType{
 	TypeParameters: []*sema.TypeParameter{
 		typeParameter,
 	},
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "value",
@@ -519,7 +522,7 @@ const testReadFileFunctionName = "readFile"
 
 var testReadFileFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
-	[]*sema.Parameter{
+	[]sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "path",
@@ -638,7 +641,7 @@ const newMatcherFunctionName = "newMatcher"
 // Type of the Matcher.test function: ((T): Bool)
 var matcherTestFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
-	[]*sema.Parameter{
+	[]sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "value",
@@ -658,7 +661,7 @@ var newMatcherFunctionType = &sema.FunctionType{
 	TypeParameters: []*sema.TypeParameter{
 		newMatcherFunctionTypeParameter,
 	},
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "test",
@@ -1142,7 +1145,7 @@ func accountFromValue(
 	publicKeyVal, ok := accountValue.GetMember(
 		inter,
 		locationRange,
-		sema.AccountKeyPublicKeyField,
+		sema.AccountKeyPublicKeyFieldName,
 	).(interpreter.MemberAccessibleValue)
 
 	if !ok {
@@ -1293,7 +1296,7 @@ var equalMatcherFunctionType = &sema.FunctionType{
 	TypeParameters: []*sema.TypeParameter{
 		typeParameter,
 	},
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "value",
@@ -1581,7 +1584,7 @@ func NewTestInterpreterContractValueHandler(
 	) interpreter.ContractValue {
 
 		switch compositeType.Location {
-		case CryptoChecker.Location:
+		case CryptoCheckerLocation:
 			contract, err := NewCryptoContract(
 				inter,
 				constructorGenerator(common.Address{}),

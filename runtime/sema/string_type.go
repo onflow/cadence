@@ -143,7 +143,7 @@ func init() {
 
 var StringTypeConcatFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "other",
@@ -159,7 +159,7 @@ Returns a new string which contains the given string concatenated to the end of 
 
 var StringTypeSliceFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Identifier:     "from",
 			TypeAnnotation: IntTypeAnnotation,
@@ -291,7 +291,7 @@ var StringFunctionType = func() *FunctionType {
 
 var StringTypeEncodeHexFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "data",
@@ -303,7 +303,7 @@ var StringTypeEncodeHexFunctionType = NewSimpleFunctionType(
 
 var StringTypeFromUtf8FunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "bytes",
@@ -319,7 +319,7 @@ var StringTypeFromUtf8FunctionType = NewSimpleFunctionType(
 
 var StringTypeFromCharactersFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "characters",

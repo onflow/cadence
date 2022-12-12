@@ -570,7 +570,7 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 	case voidTypeMask:
 		return VoidType
 	case addressTypeMask:
-		return &AddressType{}
+		return TheAddressType
 	case metaTypeMask:
 		return MetaType
 	case blockTypeMask:

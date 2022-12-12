@@ -110,7 +110,7 @@ const HashAlgorithmTypeHashFunctionName = "hash"
 
 var HashAlgorithmTypeHashFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "data",
@@ -128,7 +128,7 @@ const HashAlgorithmTypeHashWithTagFunctionName = "hashWithTag"
 
 var HashAlgorithmTypeHashWithTagFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "data",

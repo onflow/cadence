@@ -30,7 +30,7 @@ func (interpreter *Interpreter) VisitTransactionDeclaration(declaration *ast.Tra
 }
 
 func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.TransactionDeclaration) {
-	transactionType := interpreter.Program.Elaboration.TransactionDeclarationTypes[declaration]
+	transactionType := interpreter.Program.Elaboration.TransactionDeclarationType(declaration)
 
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
@@ -49,7 +49,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	}
 
 	postConditionsRewrite :=
-		interpreter.Program.Elaboration.PostConditionsRewrite[declaration.PostConditions]
+		interpreter.Program.Elaboration.PostConditionsRewrite(declaration.PostConditions)
 
 	staticType := NewCompositeStaticTypeComputeTypeID(interpreter, interpreter.Location, "")
 
