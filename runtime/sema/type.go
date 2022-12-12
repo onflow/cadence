@@ -180,6 +180,14 @@ type ValueIndexableType interface {
 	IndexingType() Type
 }
 
+// TypeIndexableType is a type which can be indexed into using a type
+type TypeIndexableType interface {
+	Type
+	isTypeIndexableType() bool
+	IsValidIndexingType(indexingType Type) bool
+	TypeIndexingElementType(indexingType Type) Type
+}
+
 type MemberResolver struct {
 	Kind     common.DeclarationKind
 	Mutating bool
@@ -3012,7 +3020,9 @@ func init() {
 		MetaType,
 		VoidType,
 		AnyStructType,
+		AnyStructAttachmentType,
 		AnyResourceType,
+		AnyResourceAttachmentType,
 		NeverType,
 		BoolType,
 		CharacterType,
@@ -3500,6 +3510,7 @@ var _ ContainerType = &CompositeType{}
 var _ ContainedType = &CompositeType{}
 var _ LocatedType = &CompositeType{}
 var _ CompositeKindedType = &CompositeType{}
+var _ TypeIndexableType = &CompositeType{}
 
 func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
@@ -3585,6 +3596,13 @@ func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
 		return base.CompositeKind()
 	}
 	return common.CompositeKindUnknown
+}
+
+func isAttachmentType(t Type) bool {
+	composite, ok := t.(*CompositeType)
+	return (ok && composite.Kind == common.CompositeKindAttachment) ||
+		t == AnyResourceAttachmentType ||
+		t == AnyStructAttachmentType
 }
 
 func (t *CompositeType) GetBaseType() Type {
@@ -3812,6 +3830,26 @@ func (t *CompositeType) IsContainerType() bool {
 
 func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
+}
+
+func (t *CompositeType) isTypeIndexableType() bool {
+	// resources and structs only can be indexed for attachments
+	return t.Kind.SupportsAttachments()
+}
+
+func (t *CompositeType) TypeIndexingElementType(indexingType Type) Type {
+	return &OptionalType{
+		Type: &ReferenceType{
+			Type: indexingType,
+		},
+	}
+}
+
+func (t *CompositeType) IsValidIndexingType(ty Type) bool {
+	attachmentType, isComposite := ty.(*CompositeType)
+	return isComposite &&
+		IsSubType(t, attachmentType.baseType) &&
+		attachmentType.IsResourceType() == t.IsResourceType()
 }
 
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
@@ -4714,8 +4752,9 @@ type ReferenceType struct {
 
 var _ Type = &ReferenceType{}
 
-// Not all references are indexable, but some, depending on the references type
+// Not all references are indexable, but some are, depending on the reference's type
 var _ ValueIndexableType = &ReferenceType{}
+var _ TypeIndexableType = &ReferenceType{}
 
 func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorized bool) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
@@ -4829,6 +4868,31 @@ func (t *ReferenceType) isValueIndexableType() bool {
 	return referencedType.isValueIndexableType()
 }
 
+func (t *ReferenceType) isTypeIndexableType() bool {
+	referencedType, ok := t.Type.(TypeIndexableType)
+	return ok && referencedType.isTypeIndexableType()
+}
+
+func (t *ReferenceType) TypeIndexingElementType(indexingType Type) Type {
+	referencedType, ok := t.Type.(TypeIndexableType)
+	if !ok {
+		return nil
+	}
+	return referencedType.TypeIndexingElementType(indexingType)
+}
+
+func (t *ReferenceType) IsValidIndexingType(ty Type) bool {
+	attachmentType, isComposite := ty.(*CompositeType)
+	return isComposite &&
+		// we can index into reference types only if their referenced type
+		// is a valid base for the attachement;
+		// i.e. (&v)[A] is valid only if `v` is a valid base for `A`
+		IsSubType(t, &ReferenceType{
+			Type: attachmentType.baseType,
+		}) &&
+		attachmentType.IsResourceType() == t.Type.IsResourceType()
+}
+
 func (t *ReferenceType) AllowsValueIndexingAssignment() bool {
 	referencedType, ok := t.Type.(ValueIndexableType)
 	if !ok {
@@ -4853,14 +4917,30 @@ func (t *ReferenceType) IndexingType() Type {
 	return referencedType.IndexingType()
 }
 
-func (*ReferenceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	// TODO:
-	return false
+func (t *ReferenceType) Unify(
+	other Type,
+	typeParameters *TypeParameterTypeOrderedMap,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+	otherReference, ok := other.(*ReferenceType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Unify(otherReference.Type, typeParameters, report, outerRange)
 }
 
-func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	// TODO:
-	return t
+func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	newInnerType := t.Type.Resolve(typeArguments)
+	if newInnerType == nil {
+		return nil
+	}
+
+	return &ReferenceType{
+		Authorized: t.Authorized,
+		Type:       newInnerType,
+	}
 }
 
 const AddressTypeName = "Address"
@@ -5080,6 +5160,12 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case AnyResourceType:
 		return subType.IsResourceType()
+
+	case AnyResourceAttachmentType:
+		return subType.IsResourceType() && isAttachmentType(subType)
+
+	case AnyStructAttachmentType:
+		return !subType.IsResourceType() && isAttachmentType(subType)
 
 	case NumberType:
 		switch subType {
@@ -5334,6 +5420,43 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			// The holder of the reference may not gain more permissions or knowledge.
 
 			return false
+
+		case *InterfaceType:
+			switch typedInnerSubType := typedSubType.Type.(type) {
+
+			// An unauthorized reference to an interface type `&U`
+			// is a supertype of a reference to a composite type `&T`:
+			// if that composite type's conformance set includes that interface.
+			//
+			// This is equivalent in principle to the check we would perform to check
+			// if `&T <: &{U}`, the singleton restricted set containing only `U`.
+			case *CompositeType:
+				return typedInnerSubType.ExplicitInterfaceConformanceSet().Contains(typedInnerSuperType)
+
+			// An unauthorized reference to an interface type `&T`
+			// is a supertype of a reference to a restricted type `&{U}`:
+			// if the restriction set contains that explicit interface type.
+
+			// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
+			// resource interface I { /* ... */ }
+			// attachment A for I { /* ... */ }
+
+			// let i : &{I} = ... // some operation constructing `i`
+			// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that &{I} <: &I
+
+			// Note that this does not check whether the restricted type's restricted type conforms to the interface;
+			// i.e. whether in `&R{X} <: &I`, `R <: I`. This is intentional;
+			// when checking whether an attachment declared for `I` is accessible on a value of type `&R{X}`,
+			// even if `R <: I`, we only want to allow access if `X <: I`
+
+			// Once interfaces can conform to interfaces,
+			// this should instead check that at least one value in the restriction set
+			// is a subtype of the interface supertype
+			case *RestrictedType:
+				return typedInnerSubType.RestrictionSet().Contains(typedInnerSuperType)
+			}
+
+			return false
 		}
 
 		switch typedSuperType.Type {
@@ -5356,17 +5479,21 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			switch typedInnerSubType := typedSubType.Type.(type) {
 			case *RestrictedType:
 				if typedInnerInnerSubType, ok := typedInnerSubType.Type.(*CompositeType); ok {
-					return typedInnerInnerSubType.Kind == common.CompositeKindResource
+					return typedInnerInnerSubType.IsResourceType()
 				}
 
 				return typedInnerSubType.Type == AnyResourceType
 
 			case *CompositeType:
-				return typedInnerSubType.Kind == common.CompositeKindResource
+				return typedInnerSubType.IsResourceType()
 			}
 
 		case AnyStructType:
 			// `&T <: &AnyStruct` iff `T <: AnyStruct`
+			return IsSubType(typedSubType.Type, typedSuperType.Type)
+		case AnyResourceAttachmentType, AnyStructAttachmentType:
+			// `&T <: &AnyResourceAttachmentType` iff `T <: AnyResourceAttachmentType` and
+			// `&T <: &AnyStructAttachmentType` iff `T <: AnyStructAttachmentType`
 			return IsSubType(typedSubType.Type, typedSuperType.Type)
 		}
 
@@ -5590,6 +5717,19 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			// TODO: once interfaces can conform to interfaces, include
 			return typedSubType.ExplicitInterfaceConformanceSet().
 				Contains(typedSuperType)
+
+		// An interface type is a supertype of a restricted type if the restricted set contains
+		// that explicit interface type. Once interfaces can conform to interfaces, this should instead
+		// check that at least one value in the restriction set is a subtype of the interface supertype
+
+		// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
+		// resource interface I { /* ... */ }
+		// attachment A for I { /* ... */ }
+
+		// let i : {I} = ... // some operation constructing `i`
+		// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
+		case *RestrictedType:
+			return typedSubType.RestrictionSet().Contains(typedSuperType)
 
 		case *InterfaceType:
 			// TODO: Once interfaces can conform to interfaces, check conformances here
@@ -6055,6 +6195,32 @@ func (*RestrictedType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err 
 func (t *RestrictedType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	// TODO:
 	return t
+}
+
+// restricted types must be type indexable, because this is how we handle access control for attachments.
+// Specifically, because in `v[A]`, `v` must be a subtype of `A`'s declared base,
+// if `v` is a restricted type `{I}`, only attachments declared for `I` or a supertype can be accessed on `v`.
+// Attachments declared for concrete types implementing `I` cannot be accessed.
+// A good elucidating example here is that an attachment declared for `Vault` cannot be accessed on a value of type `&{Provider}`
+func (t *RestrictedType) isTypeIndexableType() bool {
+	// resources and structs only can be indexed for attachments, but all restricted types
+	// are necessarily structs and resources, we return true
+	return true
+}
+
+func (t *RestrictedType) TypeIndexingElementType(indexingType Type) Type {
+	return &OptionalType{
+		Type: &ReferenceType{
+			Type: indexingType,
+		},
+	}
+}
+
+func (t *RestrictedType) IsValidIndexingType(ty Type) bool {
+	attachmentType, isComposite := ty.(*CompositeType)
+	return isComposite &&
+		IsSubType(t, attachmentType.baseType) &&
+		attachmentType.IsResourceType() == t.IsResourceType()
 }
 
 // CapabilityType

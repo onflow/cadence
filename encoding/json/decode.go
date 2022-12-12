@@ -1145,8 +1145,12 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return cadence.NewMeteredAnyType(d.gauge)
 	case "AnyStruct":
 		return cadence.NewMeteredAnyStructType(d.gauge)
+	case "AnyStructAttachment":
+		return cadence.NewMeteredAnyStructAttachmentType(d.gauge)
 	case "AnyResource":
 		return cadence.NewMeteredAnyResourceType(d.gauge)
+	case "AnyResourceAttachment":
+		return cadence.NewMeteredAnyResourceAttachmentType(d.gauge)
 	case "Type":
 		return cadence.NewMeteredMetaType(d.gauge)
 	case "Void":

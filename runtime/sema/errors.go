@@ -3886,3 +3886,111 @@ func (*InvalidAttachmentAnnotationError) IsUserError() {}
 func (e *InvalidAttachmentAnnotationError) Error() string {
 	return "cannot refer directly to attachment type"
 }
+
+// InvalidAttachmentConstructorError
+
+type InvalidAttachmentUsageError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidAttachmentUsageError{}
+var _ errors.UserError = &InvalidAttachmentUsageError{}
+
+func (*InvalidAttachmentUsageError) isSemanticError() {}
+
+func (*InvalidAttachmentUsageError) IsUserError() {}
+
+func (*InvalidAttachmentUsageError) Error() string {
+	return "cannot construct attachment outside of an `attach` expression"
+}
+
+// AttachNonAttachmentError
+
+type AttachNonAttachmentError struct {
+	Type Type
+	ast.Range
+}
+
+var _ SemanticError = &AttachNonAttachmentError{}
+var _ errors.UserError = &AttachNonAttachmentError{}
+
+func (*AttachNonAttachmentError) isSemanticError() {}
+
+func (*AttachNonAttachmentError) IsUserError() {}
+
+func (e *AttachNonAttachmentError) Error() string {
+	return fmt.Sprintf(
+		"cannot attach non-attachment type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
+// AttachToInvalidTypeError
+type AttachToInvalidTypeError struct {
+	Type Type
+	ast.Range
+}
+
+var _ SemanticError = &AttachToInvalidTypeError{}
+var _ errors.UserError = &AttachToInvalidTypeError{}
+
+func (*AttachToInvalidTypeError) isSemanticError() {}
+
+func (*AttachToInvalidTypeError) IsUserError() {}
+
+func (e *AttachToInvalidTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot attach attachment to type `%s`, as it is not valid for this base type",
+		e.Type.QualifiedString(),
+	)
+}
+
+// InvalidAttachmentRemoveError
+type InvalidAttachmentRemoveError struct {
+	Attachment Type
+	BaseType   Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidAttachmentRemoveError{}
+var _ errors.UserError = &InvalidAttachmentRemoveError{}
+
+func (*InvalidAttachmentRemoveError) isSemanticError() {}
+
+func (*InvalidAttachmentRemoveError) IsUserError() {}
+
+func (e *InvalidAttachmentRemoveError) Error() string {
+	if e.BaseType == nil {
+		return fmt.Sprintf(
+			"cannot remove `%s`, as it is not an attachment type",
+			e.Attachment.QualifiedString(),
+		)
+	}
+	return fmt.Sprintf(
+		"cannot remove `%s` from type `%s`, as this attachment cannot exist on this base type",
+		e.Attachment.QualifiedString(),
+		e.BaseType.QualifiedString(),
+	)
+}
+
+// InvalidTypeIndexingError
+type InvalidTypeIndexingError struct {
+	IndexingExpression ast.Expression
+	BaseType           Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidTypeIndexingError{}
+var _ errors.UserError = &InvalidTypeIndexingError{}
+
+func (*InvalidTypeIndexingError) isSemanticError() {}
+
+func (*InvalidTypeIndexingError) IsUserError() {}
+
+func (e *InvalidTypeIndexingError) Error() string {
+	return fmt.Sprintf(
+		"cannot index `%s` with `%s`, as it is not an valid type index for this type",
+		e.BaseType.QualifiedString(),
+		e.IndexingExpression.String(),
+	)
+}

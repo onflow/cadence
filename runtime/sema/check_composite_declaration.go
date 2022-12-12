@@ -62,14 +62,14 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 
 	switch ty := baseType.(type) {
 	case *InterfaceType:
-		if ty.CompositeKind == common.CompositeKindResource || ty.CompositeKind == common.CompositeKindStructure {
+		if ty.CompositeKind.SupportsAttachments() {
 			return
 		}
 	case *CompositeType:
 		if ty.Location == nil {
 			break
 		}
-		if ty.Kind == common.CompositeKindResource || ty.Kind == common.CompositeKindStructure {
+		if ty.Kind.SupportsAttachments() {
 			return
 		}
 	case *SimpleType:
@@ -2147,10 +2147,25 @@ func (checker *Checker) declareLowerScopedValue(
 }
 
 func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
+	// inside of an attachment, self is a reference to the attachment's type, because
+	// attachments are never first class values, they must always exist inside references
+	if typedSelfType, ok := selfType.(*CompositeType); ok && typedSelfType.Kind == common.CompositeKindAttachment {
+		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, false)
+	}
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }
 
 func (checker *Checker) declareBaseValue(baseType Type, superDocString string) {
+	switch typedBaseType := baseType.(type) {
+	case *InterfaceType:
+		restrictedType := AnyStructType
+		if baseType.IsResourceType() {
+			restrictedType = AnyResourceType
+		}
+		// we can't actually have a value of an interface type I, so instead we create a value of {I}
+		// to be referenced by `base`
+		baseType = NewRestrictedType(checker.memoryGauge, restrictedType, []*InterfaceType{typedBaseType})
+	}
 	// References to `base` should be non-auth, as the actual base type in practice may be any number of subtypes of the annotated base type,
 	// not all of which should be available to the writer of the attachment.
 	base := NewReferenceType(checker.memoryGauge, baseType, false)

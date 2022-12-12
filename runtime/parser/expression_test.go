@@ -2795,7 +2795,7 @@ func TestParseAttach(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseExpression("attach e to r")
+		result, errs := testParseExpression("attach E() to r")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2803,14 +2803,18 @@ func TestParseAttach(t *testing.T) {
 				Base: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
 						Identifier: "r",
-						Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+						Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
 					},
 				},
-				Attachment: &ast.IdentifierExpression{
-					Identifier: ast.Identifier{
-						Identifier: "e",
-						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+				Attachment: &ast.InvocationExpression{
+					InvokedExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "E",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					ArgumentsStartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					EndPos:            ast.Position{Line: 1, Column: 9, Offset: 9},
 				},
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
@@ -2818,11 +2822,27 @@ func TestParseAttach(t *testing.T) {
 		)
 	})
 
+	t.Run("non-invocation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach A to E")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '('",
+					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("nested", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseExpression("attach a to attach b to r")
+		result, errs := testParseExpression("attach A() to attach B() to r")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2831,22 +2851,30 @@ func TestParseAttach(t *testing.T) {
 					Base: &ast.IdentifierExpression{
 						Identifier: ast.Identifier{
 							Identifier: "r",
-							Pos:        ast.Position{Line: 1, Column: 24, Offset: 24},
+							Pos:        ast.Position{Line: 1, Column: 28, Offset: 28},
 						},
 					},
-					Attachment: &ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "b",
-							Pos:        ast.Position{Line: 1, Column: 19, Offset: 19},
+					Attachment: &ast.InvocationExpression{
+						InvokedExpression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "B",
+								Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+							},
 						},
+						ArgumentsStartPos: ast.Position{Line: 1, Column: 22, Offset: 22},
+						EndPos:            ast.Position{Line: 1, Column: 23, Offset: 23},
 					},
-					StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+					StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
 				},
-				Attachment: &ast.IdentifierExpression{
-					Identifier: ast.Identifier{
-						Identifier: "a",
-						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+				Attachment: &ast.InvocationExpression{
+					InvokedExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "A",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					ArgumentsStartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					EndPos:            ast.Position{Line: 1, Column: 9, Offset: 9},
 				},
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
@@ -2858,12 +2886,12 @@ func TestParseAttach(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("attach 3")
+		_, errs := testParseExpression("attach A()")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected 'to', got EOF",
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
 				},
 			},
 			errs,
@@ -2874,12 +2902,12 @@ func TestParseAttach(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("attach e to")
+		_, errs := testParseExpression("attach E() to")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected end of program",
-					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,

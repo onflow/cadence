@@ -1095,10 +1095,12 @@ func TestCheckInvalidCompositeSelfAssignment(t *testing.T) {
 			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[1])
 		},
 		common.CompositeKindAttachment: func(err error) {
-			errs := RequireCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 4)
 
 			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
-			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[1])
+			assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
+			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[2])
+			assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[3])
 		},
 		common.CompositeKindResource: func(err error) {
 			errs := RequireCheckerErrors(t, err, 4)
@@ -1807,7 +1809,7 @@ func TestCheckCompositeFunctionWithArgumentLabel(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		var setupCode, identifier string
 
@@ -1823,17 +1825,12 @@ func TestCheckCompositeFunctionWithArgumentLabel(t *testing.T) {
 			identifier = "test"
 		}
 
-		var baseType string
-		if compositeKind == common.CompositeKindAttachment {
-			baseType = "for AnyStruct"
-		}
-
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s Test %[4]s {
+                      %[1]s Test {
 
                           fun test(x: Int) {}
                       }
@@ -1844,7 +1841,6 @@ func TestCheckCompositeFunctionWithArgumentLabel(t *testing.T) {
 					compositeKind.Keyword(),
 					setupCode,
 					identifier,
-					baseType,
 				),
 			)
 
@@ -1857,7 +1853,7 @@ func TestCheckInvalidCompositeFunctionCallWithMissingArgumentLabel(t *testing.T)
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		var setupCode, identifier string
 
@@ -1873,17 +1869,12 @@ func TestCheckInvalidCompositeFunctionCallWithMissingArgumentLabel(t *testing.T)
 			identifier = "test"
 		}
 
-		var baseType string
-		if compositeKind == common.CompositeKindAttachment {
-			baseType = "for AnyStruct"
-		}
-
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s Test %[4]s {
+                      %[1]s Test {
 
                           fun test(x: Int) {}
                       }
@@ -1894,7 +1885,6 @@ func TestCheckInvalidCompositeFunctionCallWithMissingArgumentLabel(t *testing.T)
 					compositeKind.Keyword(),
 					setupCode,
 					identifier,
-					baseType,
 				),
 			)
 
@@ -2048,10 +2038,12 @@ func TestCheckCompositeFunction(t *testing.T) {
 			case common.CompositeKindStructure:
 				require.NoError(t, err)
 			case common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 4)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
-				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[2])
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
 			case common.CompositeKindContract:
 				errs := RequireCheckerErrors(t, err, 1)
 

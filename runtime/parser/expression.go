@@ -932,7 +932,7 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) (*ast.CreateEx
 }
 
 func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachExpression, error) {
-	attachment, err := parseExpression(p, lowestBindingPower)
+	attachment, err := parseNominalTypeInvocationRemainder(p)
 
 	if err != nil {
 		return nil, err

@@ -138,6 +138,9 @@ func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 		members = containerType.Members
 	case *TransactionType:
 		members = containerType.Members
+	case *ReferenceType:
+		// self can only be a reference type if the container is an attachment, which is a composite
+		members = containerType.Type.(*CompositeType).Members
 	default:
 		panic(errors.NewUnreachableError())
 	}
