@@ -24,8 +24,9 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 
-	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretAttachmentStruct(t *testing.T) {
