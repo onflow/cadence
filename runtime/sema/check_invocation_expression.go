@@ -26,10 +26,9 @@ import (
 func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) Type {
 	ty := checker.checkInvocationExpression(invocationExpression)
 
-	// Events cannot be invoked without an emit statement
-
 	if compositeType, ok := ty.(*CompositeType); ok {
 		switch compositeType.Kind {
+		// Events cannot be invoked without an emit statement
 		case common.CompositeKindEvent:
 			checker.report(
 				&InvalidEventUsageError{
