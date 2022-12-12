@@ -2729,7 +2729,7 @@ func negateSigned[T constraints.Signed](interpreter *Interpreter, v BoundedSigne
 	// INT32-C
 	underlying := v.Underlying()
 	if underlying == v.MinValue() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() T {
@@ -2743,7 +2743,7 @@ func negateSignedBigInt(interpreter *Interpreter, v BoundedSignedValue[*big.Int]
 	// INT32-C
 	underlying := v.Underlying()
 	if underlying.Cmp(v.MinValue()) == 0 {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() *big.Int {
@@ -2762,12 +2762,12 @@ func genericPlusSigned[T constraints.Signed, V BoundedSignedValue[T]](interprete
 		// INT32-C
 		if (otherUnderlying > 0) && (underlying > (v.MaxValue() - otherUnderlying)) {
 			if errorOnOverflow {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return v.MaxValue()
 		} else if (otherUnderlying < 0) && (underlying < (v.MinValue() - otherUnderlying)) {
 			if errorOnOverflow {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return v.MinValue()
 		}
@@ -2787,12 +2787,12 @@ func genericPlusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interp
 		res.Add(underlying, otherUnderlying)
 		if res.Cmp(v.MinValue()) < 0 {
 			if errorOnOverflow {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return v.MinValue()
 		} else if res.Cmp(v.MaxValue()) > 0 {
 			if errorOnOverflow {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return v.MaxValue()
 		}
@@ -2812,7 +2812,7 @@ func genericPlusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](inte
 		// INT30-C
 		if checkOverflow && sum < underlying {
 			if errorOnOverflow {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return v.MaxValue()
 		}
@@ -2831,7 +2831,7 @@ func genericPlusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *In
 			sum.Add(underlying, otherUnderlying)
 			if sum.Cmp(v.MaxValue()) > 0 {
 				if errorOnOverflow {
-					panic(OverflowError{locationRange})
+					panic(OverflowError{LocationRange: locationRange})
 				}
 				return v.MaxValue()
 			}
@@ -2971,12 +2971,12 @@ func genericMinusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpret
 		// INT32-C
 		if (otherUnderlying > 0) && (underlying < (v.MinValue() + otherUnderlying)) {
 			if errorOnOverflow {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return v.MinValue()
 		} else if (otherUnderlying < 0) && (underlying > (v.MaxValue() + otherUnderlying)) {
 			if errorOnOverflow {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return v.MaxValue()
 		}
@@ -2992,12 +2992,12 @@ func genericMinusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Inter
 		res.Sub(v.Underlying(), o.Underlying())
 		if res.Cmp(v.MinValue()) < 0 {
 			if errorOnOverflow {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return v.MinValue()
 		} else if res.Cmp(v.MaxValue()) > 0 {
 			if errorOnOverflow {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return v.MaxValue()
 		}
@@ -3023,7 +3023,7 @@ func genericMinusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
 			// INT30-C
 			if checkOverflow && diff > underlying {
 				if errorOnOverflow {
-					panic(UnderflowError{locationRange})
+					panic(UnderflowError{LocationRange: locationRange})
 				}
 				return 0
 			}
@@ -3044,7 +3044,7 @@ func genericMinusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *I
 			diff.Sub(v.Underlying(), o.Underlying())
 			if diff.Cmp(sema.UIntTypeMin) < 0 {
 				if errorOnOverflow {
-					panic(UnderflowError{locationRange})
+					panic(UnderflowError{LocationRange: locationRange})
 				}
 				return sema.UIntTypeMin
 			}
@@ -3187,7 +3187,7 @@ func genericMulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter
 				// positive * positive = positive. overflow?
 				if underlying > (v.MaxValue() / otherUnderlying) {
 					if errorOnOverflow {
-						panic(OverflowError{locationRange})
+						panic(OverflowError{LocationRange: locationRange})
 					}
 					return v.MaxValue()
 				}
@@ -3195,7 +3195,7 @@ func genericMulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter
 				// positive * negative = negative. underflow?
 				if otherUnderlying < (v.MinValue() / underlying) {
 					if errorOnOverflow {
-						panic(UnderflowError{locationRange})
+						panic(UnderflowError{LocationRange: locationRange})
 					}
 					return v.MinValue()
 				}
@@ -3205,7 +3205,7 @@ func genericMulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter
 				// negative * positive = negative. underflow?
 				if underlying < (v.MinValue() / otherUnderlying) {
 					if errorOnOverflow {
-						panic(UnderflowError{locationRange})
+						panic(UnderflowError{LocationRange: locationRange})
 					}
 					return v.MinValue()
 				}
@@ -3213,7 +3213,7 @@ func genericMulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter
 				// negative * negative = positive. overflow?
 				if (v.Underlying() != 0) && (otherUnderlying < (v.MaxValue() / underlying)) {
 					if errorOnOverflow {
-						panic(OverflowError{locationRange})
+						panic(OverflowError{LocationRange: locationRange})
 					}
 					return v.MaxValue()
 				}
@@ -3231,12 +3231,12 @@ func genericMulSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpr
 		res.Mul(v.Underlying(), o.Underlying())
 		if res.Cmp(v.MinValue()) < 0 {
 			if errorOnOverflow {
-				panic(UnderflowError{locationRange})
+				panic(UnderflowError{LocationRange: locationRange})
 			}
 			return v.MinValue()
 		} else if res.Cmp(v.MaxValue()) > 0 {
 			if errorOnOverflow {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return v.MaxValue()
 		}
@@ -3262,7 +3262,7 @@ func genericMulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
 			// INT30-C
 			if checkOverflow && (underlying > 0) && (otherUnderlying > 0) && (underlying > (v.MaxValue() / otherUnderlying)) {
 				if errorOnOverflow {
-					panic(OverflowError{locationRange})
+					panic(OverflowError{LocationRange: locationRange})
 				}
 				return v.MaxValue()
 			}
@@ -3279,7 +3279,7 @@ func genericMulUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Int
 			res.Mul(v.Underlying(), o.Underlying())
 			if res.Cmp(v.MaxValue()) > 0 {
 				if errorOnOverflow {
-					panic(OverflowError{locationRange})
+					panic(OverflowError{LocationRange: locationRange})
 				}
 				return v.MaxValue()
 			}
@@ -3407,10 +3407,10 @@ func genericDivSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter
 		// INT33-C
 		// https://golang.org/ref/spec#Integer_operators
 		if otherUnderlying == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		} else if (underlying == v.MinValue()) && (otherUnderlying == -1) {
 			if errorOnOverflow {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return v.MaxValue()
 		}
@@ -3427,12 +3427,12 @@ func genericDivSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpr
 		underlying := v.Underlying()
 		otherUnderlying := o.Underlying()
 		if otherUnderlying.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		}
 		res.SetInt64(-1)
 		if (underlying.Cmp(v.MinValue()) == 0) && (otherUnderlying.Cmp(res) == 0) {
 			if errorOnOverflow {
-				panic(OverflowError{locationRange})
+				panic(OverflowError{LocationRange: locationRange})
 			}
 			return v.MaxValue()
 		}
@@ -3486,7 +3486,7 @@ func divUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter 
 			underlying := v.Underlying()
 			otherUnderlying := o.Underlying()
 			if otherUnderlying == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return underlying / otherUnderlying
 		},
@@ -3509,7 +3509,7 @@ func divUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interprete
 			res := new(big.Int)
 			otherUnderlying := o.Underlying()
 			if otherUnderlying.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
+				panic(DivisionByZeroError{LocationRange: locationRange})
 			}
 			return res.Div(v.Underlying(), otherUnderlying)
 		},
@@ -3574,7 +3574,7 @@ func mod[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, 
 
 	// INT33-C
 	if otherUnderlying == 0 {
-		panic(DivisionByZeroError{locationRange})
+		panic(DivisionByZeroError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() T {
@@ -3599,7 +3599,7 @@ func modBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other Nu
 		// INT33-C
 		otherUnderlying := o.Underlying()
 		if otherUnderlying.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
+			panic(DivisionByZeroError{LocationRange: locationRange})
 		}
 		res.Rem(v.Underlying(), otherUnderlying)
 
@@ -3855,10 +3855,10 @@ func bitwiseLeftShiftBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, 
 	otherUnderlying := o.Underlying()
 
 	if otherUnderlying.Sign() < 0 {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 	if !otherUnderlying.IsUint64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() *big.Int {
@@ -3899,10 +3899,10 @@ func bitwiseRightShiftBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter,
 	otherUnderlying := o.Underlying()
 
 	if otherUnderlying.Sign() < 0 {
-		panic(UnderflowError{locationRange})
+		panic(UnderflowError{LocationRange: locationRange})
 	}
 	if !otherUnderlying.IsUint64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 
 	valueGetter := func() *big.Int {
@@ -4141,7 +4141,7 @@ func (IntValue) IsImportable(_ *Interpreter) bool {
 
 func (v IntValue) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{locationRange})
+		panic(OverflowError{LocationRange: locationRange})
 	}
 	return int(v.BigInt.Int64())
 }
