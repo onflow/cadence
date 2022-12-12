@@ -129,7 +129,7 @@ func NewTestContract(
 }
 
 var testContractType = func() *sema.CompositeType {
-	variable, ok := TestContractChecker.Elaboration.GlobalTypes.Get(testContractTypeName)
+	variable, ok := TestContractChecker.Elaboration.GetGlobalType(testContractTypeName)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -301,7 +301,10 @@ func init() {
 
 	// Enrich 'Test' contract elaboration with natively implemented composite types.
 	// e.g: 'EmulatorBackend' type.
-	TestContractChecker.Elaboration.CompositeTypes[EmulatorBackendType.ID()] = EmulatorBackendType
+	TestContractChecker.Elaboration.SetCompositeType(
+		EmulatorBackendType.ID(),
+		EmulatorBackendType,
+	)
 }
 
 var blockchainType = func() sema.Type {
@@ -1590,7 +1593,7 @@ func NewTestInterpreterContractValueHandler(
 	) interpreter.ContractValue {
 
 		switch compositeType.Location {
-		case CryptoChecker.Location:
+		case CryptoCheckerLocation:
 			contract, err := NewCryptoContract(
 				inter,
 				constructorGenerator(common.Address{}),

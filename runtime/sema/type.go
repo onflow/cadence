@@ -3344,20 +3344,26 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(nil, argument, targetType, checker.report) {
 				if checker.Config.ExtendedElaborationEnabled {
-					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
-						Type  Type
-						Range ast.Range
-					}{Type: targetType, Range: invocationRange}
+					checker.Elaboration.SetNumberConversionArgumentTypes(
+						argument,
+						NumberConversionArgumentTypes{
+							Type:  targetType,
+							Range: invocationRange,
+						},
+					)
 				}
 			}
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(nil, argument, targetType, checker.report) {
 				if checker.Config.ExtendedElaborationEnabled {
-					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
-						Type  Type
-						Range ast.Range
-					}{Type: targetType, Range: invocationRange}
+					checker.Elaboration.SetNumberConversionArgumentTypes(
+						argument,
+						NumberConversionArgumentTypes{
+							Type:  targetType,
+							Range: invocationRange,
+						},
+					)
 				}
 			}
 		}
@@ -3797,7 +3803,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 
 		t.ExplicitInterfaceConformanceSet().
 			ForEach(func(conformance *InterfaceType) {
-				for name, resolver := range conformance.GetMembers() { //nolint:maprangecheck
+				for name, resolver := range conformance.GetMembers() { //nolint:maprange
 					if _, ok := members[name]; !ok {
 						members[name] = resolver
 					}
@@ -5960,7 +5966,7 @@ func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 	// but implicitly when the resource declaration's conformances are checked.
 
 	for _, restriction := range t.Restrictions {
-		for name, resolver := range restriction.GetMembers() { //nolint:maprangecheck
+		for name, resolver := range restriction.GetMembers() { //nolint:maprange
 			if _, ok := members[name]; !ok {
 				members[name] = resolver
 			}
@@ -5973,7 +5979,7 @@ func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 	//
 	// The restricted type may be `AnyResource`, in which case there are no members.
 
-	for name, loopResolver := range t.Type.GetMembers() { //nolint:maprangecheck
+	for name, loopResolver := range t.Type.GetMembers() { //nolint:maprange
 
 		if _, ok := members[name]; ok {
 			continue

@@ -26,7 +26,7 @@ import (
 )
 
 func (checker *Checker) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) (_ struct{}) {
-	transactionType := checker.Elaboration.TransactionDeclarationTypes[declaration]
+	transactionType := checker.Elaboration.TransactionDeclarationType(declaration)
 	if transactionType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -273,6 +273,6 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.PrepareParameters = checker.parameters(parameterList)
 	}
 
-	checker.Elaboration.TransactionDeclarationTypes[declaration] = transactionType
+	checker.Elaboration.SetTransactionDeclarationType(declaration, transactionType)
 	checker.Elaboration.TransactionTypes = append(checker.Elaboration.TransactionTypes, transactionType)
 }

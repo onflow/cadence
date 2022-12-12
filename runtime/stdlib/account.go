@@ -1500,7 +1500,7 @@ func newAuthAccountContractsChangeFunction(
 			var contractTypes []*sema.CompositeType
 			var contractInterfaceTypes []*sema.InterfaceType
 
-			program.Elaboration.GlobalTypes.Foreach(func(_ string, variable *sema.Variable) {
+			program.Elaboration.ForEachGlobalType(func(_ string, variable *sema.Variable) {
 				switch ty := variable.Type.(type) {
 				case *sema.CompositeType:
 					if ty.Kind == common.CompositeKindContract {

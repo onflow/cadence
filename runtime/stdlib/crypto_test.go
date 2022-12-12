@@ -27,5 +27,5 @@ import (
 )
 
 func TestCryptoContract(t *testing.T) {
-	require.IsType(t, &sema.Checker{}, CryptoChecker)
+	require.IsType(t, &sema.Checker{}, CryptoChecker())
 }

@@ -45,7 +45,7 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) (_ stru
 		return
 	}
 
-	checker.Elaboration.EmitStatementEventTypes[statement] = compositeType
+	checker.Elaboration.SetEmitStatementEventType(statement, compositeType)
 
 	// Check that the emitted event is declared in the same location
 

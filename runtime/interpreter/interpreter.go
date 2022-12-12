@@ -187,15 +187,15 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 	// Iterating over the maps in a non-deterministic way is OK,
 	// we only copy the values over.
 
-	for typeID, code := range codes.CompositeCodes { //nolint:maprangecheck
+	for typeID, code := range codes.CompositeCodes { //nolint:maprange
 		c.CompositeCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.InterfaceCodes { //nolint:maprangecheck
+	for typeID, code := range codes.InterfaceCodes { //nolint:maprange
 		c.InterfaceCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprangecheck
+	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprange
 		c.TypeRequirementCodes[typeID] = code
 	}
 }
@@ -356,7 +356,7 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	functionVariable, ok := interpreter.Program.Elaboration.GlobalValues.Get(functionName)
+	functionVariable, ok := interpreter.Program.Elaboration.GetGlobalValue(functionName)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -619,8 +619,6 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 	for _, variable := range variableDeclarationVariables {
 		_ = variable.GetValue()
 	}
-
-	return
 }
 
 func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) StatementResult {
@@ -631,7 +629,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	identifier := declaration.Identifier.Identifier
 
-	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[declaration]
+	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(declaration)
 
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
@@ -669,7 +667,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 
 	if declaration.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[declaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(declaration.FunctionBlock.PostConditions)
 
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 		beforeStatements = postConditionsRewrite.BeforeStatements
@@ -943,7 +941,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	})()
 
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 
 	constructorType := &sema.FunctionType{
 		IsConstructor: true,
@@ -1017,7 +1015,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// we only apply the function wrapper to each function,
 		// the order does not matter.
 
-		for name, function := range code.Functions { //nolint:maprangecheck
+		for name, function := range code.Functions { //nolint:maprange
 			if functions[name] != nil {
 				continue
 			}
@@ -1033,7 +1031,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// we only apply the function wrapper to each function,
 		// the order does not matter.
 
-		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprangecheck
+		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
 			functions[name] = functionWrapper(functions[name])
 		}
 	}
@@ -1218,7 +1216,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 	lexicalScope.Set(identifier, variable)
 
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
 	location := interpreter.Location
@@ -1348,7 +1346,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	}
 
 	initializer = initializers[0]
-	functionType := interpreter.Program.Elaboration.ConstructorFunctionTypes[initializer]
+	functionType := interpreter.Program.Elaboration.ConstructorFunctionType(initializer)
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 
@@ -1365,7 +1363,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	postConditions := initializer.FunctionDeclaration.FunctionBlock.PostConditions
 	if postConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[postConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(postConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -1408,7 +1406,7 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 	postConditions := destructor.FunctionDeclaration.FunctionBlock.PostConditions
 	if postConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[postConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(postConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -1483,7 +1481,7 @@ func (interpreter *Interpreter) functionWrappers(
 
 	for _, functionDeclaration := range members.Functions() {
 
-		functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+		functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 
 		name := functionDeclaration.Identifier.Identifier
 		functionWrapper := interpreter.functionConditionsWrapper(
@@ -1505,7 +1503,7 @@ func (interpreter *Interpreter) compositeFunction(
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
-	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 
 	var preConditions ast.Conditions
 
@@ -1514,15 +1512,15 @@ func (interpreter *Interpreter) compositeFunction(
 	}
 
 	var beforeStatements []ast.Statement
-	var postConditions ast.Conditions
+	var rewrittenPostConditions ast.Conditions
 
 	if functionDeclaration.FunctionBlock.PostConditions != nil {
 
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[functionDeclaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(functionDeclaration.FunctionBlock.PostConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
-		postConditions = postConditionsRewrite.RewrittenPostConditions
+		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 	}
 
 	parameterList := functionDeclaration.ParameterList
@@ -1536,7 +1534,7 @@ func (interpreter *Interpreter) compositeFunction(
 		beforeStatements,
 		preConditions,
 		statements,
-		postConditions,
+		rewrittenPostConditions,
 	)
 }
 
@@ -1805,7 +1803,7 @@ func (interpreter *Interpreter) declareInterface(
 		}
 	})()
 
-	interfaceType := interpreter.Program.Elaboration.InterfaceDeclarationTypes[declaration]
+	interfaceType := interpreter.Program.Elaboration.InterfaceDeclarationType(declaration)
 	typeID := interfaceType.ID()
 
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
@@ -1841,7 +1839,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 		}
 	})()
 
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 	typeID := compositeType.ID()
 
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
@@ -1919,7 +1917,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	if declaration.FunctionBlock.PostConditions != nil {
 
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[declaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(declaration.FunctionBlock.PostConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -2016,7 +2014,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 							interpreter.invalidateResource(value)
 							interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
 						}
-						return ReturnResult{returnValue}
+						return ReturnResult{Value: returnValue}
 					}
 				}
 
@@ -4050,7 +4048,7 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 		}
 	}
 
-	ty := elaboration.CompositeTypes[typeID]
+	ty := elaboration.CompositeType(typeID)
 	if ty == nil {
 		return nil, TypeLoadingError{
 			TypeID: typeID,
@@ -4085,7 +4083,7 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 		}
 	}
 
-	ty := elaboration.InterfaceTypes[typeID]
+	ty := elaboration.InterfaceType(typeID)
 	if ty == nil {
 		return nil, TypeLoadingError{
 			TypeID: typeID,
@@ -4425,7 +4423,7 @@ func (interpreter *Interpreter) updateReferencedResource(
 	if values == nil {
 		return
 	}
-	for value := range values { //nolint:maprangecheck
+	for value := range values { //nolint:maprange
 		updateFunc(value)
 	}
 	if newStorageID != currentStorageID {

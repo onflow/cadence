@@ -137,17 +137,16 @@ func NewChecker(
 
 	functionActivations := FunctionActivations{
 		// Pre-allocate a common function depth
-		make([]FunctionActivation, 0, 2),
+		activations: make([]FunctionActivation, 0, 2),
 	}
-	functionActivations.EnterFunction(&FunctionType{
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
+	functionActivations.EnterFunction(
+		&FunctionType{
+			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+		},
 		0,
 	)
 
-	elaboration := NewElaboration(
-		memoryGauge,
-		config.ExtendedElaborationEnabled,
-	)
+	elaboration := NewElaboration(memoryGauge)
 
 	checker := &Checker{
 		Program:             program,
@@ -280,9 +279,9 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	registerInElaboration := func(ty Type) {
 		switch typedType := ty.(type) {
 		case *InterfaceType:
-			checker.Elaboration.InterfaceTypes[typedType.ID()] = typedType
+			checker.Elaboration.SetInterfaceType(typedType.ID(), typedType)
 		case *CompositeType:
-			checker.Elaboration.CompositeTypes[typedType.ID()] = typedType
+			checker.Elaboration.SetCompositeType(typedType.ID(), typedType)
 		default:
 			panic(errors.NewUnreachableError())
 		}
@@ -393,7 +392,7 @@ func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Decl
 
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
 	functionType := checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
-	checker.Elaboration.FunctionDeclarationFunctionTypes[declaration] = functionType
+	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 	checker.declareFunctionDeclaration(declaration, functionType)
 }
 
@@ -664,7 +663,7 @@ func (checker *Checker) declareGlobalValue(name string) {
 	if variable == nil {
 		return
 	}
-	checker.Elaboration.GlobalValues.Set(name, variable)
+	checker.Elaboration.SetGlobalValue(name, variable)
 }
 
 func (checker *Checker) declareGlobalType(name string) {
@@ -672,7 +671,7 @@ func (checker *Checker) declareGlobalType(name string) {
 	if ty == nil {
 		return
 	}
-	checker.Elaboration.GlobalTypes.Set(name, ty)
+	checker.Elaboration.SetGlobalType(name, ty)
 }
 
 func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expression, valueType Type) {
@@ -2273,11 +2272,11 @@ func (checker *Checker) declareGlobalRanges() {
 		return nil
 	})
 
-	checker.Elaboration.GlobalTypes.Foreach(func(name string, variable *Variable) {
+	checker.Elaboration.ForEachGlobalType(func(name string, variable *Variable) {
 		checker.PositionInfo.recordGlobalRange(memoryGauge, name, variable)
 	})
 
-	checker.Elaboration.GlobalValues.Foreach(func(name string, variable *Variable) {
+	checker.Elaboration.ForEachGlobalValue(func(name string, variable *Variable) {
 		checker.PositionInfo.recordGlobalRange(memoryGauge, name, variable)
 	})
 }

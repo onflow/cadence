@@ -45,7 +45,7 @@ func TestCheckDynamicCastingAnyStruct(t *testing.T) {
 		t.Run(operation.Symbol(), func(t *testing.T) {
 
 			t.Run("struct", func(t *testing.T) {
-				checker, err := ParseAndCheck(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           struct S {}
@@ -59,7 +59,6 @@ func TestCheckDynamicCastingAnyStruct(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
 			})
 
 			t.Run("resource", func(t *testing.T) {
@@ -91,9 +90,11 @@ func TestCheckDynamicCastingAnyResource(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		t.Run("as?", func(t *testing.T) {
 
-			checker, err := ParseAndCheck(t, `
+			_, err := ParseAndCheck(t, `
 
               resource R {}
 
@@ -108,13 +109,11 @@ func TestCheckDynamicCastingAnyResource(t *testing.T) {
             `)
 
 			require.NoError(t, err)
-
-			assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
 		})
 
 		t.Run("as!", func(t *testing.T) {
 
-			checker, err := ParseAndCheck(t, `
+			_, err := ParseAndCheck(t, `
 
               resource R {}
 
@@ -126,12 +125,12 @@ func TestCheckDynamicCastingAnyResource(t *testing.T) {
             `)
 
 			require.NoError(t, err)
-
-			assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
 		})
 	})
 
 	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		t.Run("as?", func(t *testing.T) {
 

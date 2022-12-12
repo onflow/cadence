@@ -472,8 +472,9 @@ func (e *interpreterEnvironment) resolveImport(
 
 	var elaboration *sema.Elaboration
 	switch importedLocation {
-	case stdlib.CryptoChecker.Location:
-		elaboration = stdlib.CryptoChecker.Elaboration
+	case stdlib.CryptoCheckerLocation:
+		cryptoChecker := stdlib.CryptoChecker()
+		elaboration = cryptoChecker.Elaboration
 
 	default:
 
@@ -752,7 +753,7 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 	) map[string]interpreter.Value {
 
 		switch location {
-		case stdlib.CryptoChecker.Location:
+		case stdlib.CryptoCheckerLocation:
 			return nil
 
 		default:
@@ -788,9 +789,11 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 
 func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLocationHandlerFunc {
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+
 		switch location {
-		case stdlib.CryptoChecker.Location:
-			program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
+		case stdlib.CryptoCheckerLocation:
+			cryptoChecker := stdlib.CryptoChecker()
+			program := interpreter.ProgramFromChecker(cryptoChecker)
 			subInterpreter, err := inter.NewSubInterpreter(program, location)
 			if err != nil {
 				panic(err)
@@ -824,7 +827,7 @@ func (e *interpreterEnvironment) loadContract(
 ) *interpreter.CompositeValue {
 
 	switch compositeType.Location {
-	case stdlib.CryptoChecker.Location:
+	case stdlib.CryptoCheckerLocation:
 		contract, err := stdlib.NewCryptoContract(
 			inter,
 			constructorGenerator(common.Address{}),

@@ -41,7 +41,7 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 	checker.checkSelfVariableUseInInitializer(variable, identifier.Pos)
 
 	if checker.inInvocation {
-		checker.Elaboration.IdentifierInInvocationTypes[expression] = valueType
+		checker.Elaboration.SetIdentifierInInvocationType(expression, valueType)
 	}
 
 	return valueType
@@ -187,7 +187,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 		CheckIntegerLiteral(checker.memoryGauge, expression, actualType, checker.report)
 	}
 
-	checker.Elaboration.IntegerExpressionType[expression] = actualType
+	checker.Elaboration.SetIntegerExpressionType(expression, actualType)
 
 	return actualType
 }
@@ -212,7 +212,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 
 	CheckFixedPointLiteral(checker.memoryGauge, expression, actualType, checker.report)
 
-	checker.Elaboration.FixedPointExpression[expression] = actualType
+	checker.Elaboration.SetFixedPointExpression(expression, actualType)
 
 	return actualType
 }
@@ -227,7 +227,7 @@ func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) 
 		actualType = expectedType
 	}
 
-	checker.Elaboration.StringExpressionType[expression] = actualType
+	checker.Elaboration.SetStringExpressionType(expression, actualType)
 
 	return actualType
 }
@@ -291,10 +291,13 @@ func (checker *Checker) visitIndexExpression(
 
 	checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
-	checker.Elaboration.IndexExpressionTypes[indexExpression] = IndexExpressionTypes{
-		IndexedType:  indexedType,
-		IndexingType: indexingType,
-	}
+	checker.Elaboration.SetIndexExpressionTypes(
+		indexExpression,
+		IndexExpressionTypes{
+			IndexedType:  indexedType,
+			IndexingType: indexingType,
+		},
+	)
 
 	return elementType
 }

@@ -52,7 +52,7 @@ func (m MapNodeSet) Contains(node *Node) bool {
 }
 
 func (m MapNodeSet) ForEach(f func(*Node) error) error {
-	for node := range m { // nolint:maprangecheck
+	for node := range m { // nolint:maprange
 		err := f(node)
 		if err != nil {
 			return err
