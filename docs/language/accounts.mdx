@@ -37,7 +37,7 @@ which represents the publicly available portion of an account.
       fun getLinkTarget(_ path: CapabilityPath): Path?
 
       // Storage iteration
-      fun forEachPublic(_ function: ((PublicPath, Type): Bool))
+      fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
 
       struct Contracts {
 
@@ -55,7 +55,7 @@ which represents the publicly available portion of an account.
           // passing each key in turn to the provided function.
           // Iteration is stopped early if the function returns `false`.
           // The order of iteration is undefined.
-          fun forEach(function: ((AccountKey): Bool)): Void
+          fun forEach(function: fun(AccountKey): Bool): Void
 
           // The total number of unrevoked keys in this account.
           let count: UInt64
@@ -134,9 +134,9 @@ to the `prepare` phase of the transaction.
 
       // Storage iteration
 
-      fun forEachPublic(_ function: ((PublicPath, Type): Bool))
-      fun forEachPrivate(_ function: ((PrivatePath, Type): Bool))
-      fun forEachStored(_ function: ((StoragePath, Type): Bool))
+      fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
+      fun forEachPrivate(_ function: fun(PrivatePath, Type): Bool)
+      fun forEachStored(_ function: fun(StoragePath, Type): Bool)
 
       struct Contracts {
 
@@ -176,7 +176,7 @@ to the `prepare` phase of the transaction.
           // passing each key in turn to the provided function.
           // Iteration is stopped early if the function returns `false`.
           // The order of iteration is undefined.
-          fun forEach(function: ((AccountKey): Bool)): Void
+          fun forEach(function: fun(AccountKey): Bool): Void
 
           // The total number of unrevoked keys in this account.
           let count: UInt64
@@ -701,9 +701,9 @@ let nonExistentRef = authAccount.borrow<&{HasCount}>(from: /storage/nonExistent)
 It is possible to iterate over an account's storage using the following iteration functions:
 
 ```cadence
-fun forEachPublic(_ function: ((PublicPath, Type): Bool))
-fun forEachPrivate(_ function: ((PrivatePath, Type): Bool))
-fun forEachStored(_ function: ((StoragePath, Type): Bool))
+fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
+fun forEachPrivate(_ function: fun(PrivatePath, Type): Bool)
+fun forEachStored(_ function: fun(StoragePath, Type): Bool)
 ```
 
 Each of these iterates over every element in the specified domain (public, private, and storage),
