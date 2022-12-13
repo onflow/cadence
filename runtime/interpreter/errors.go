@@ -250,6 +250,10 @@ func (e DereferenceError) Error() string {
 	return "dereference failed"
 }
 
+func (e DereferenceError) SecondaryError() string {
+	return "the value being referenced has been destroyed or moved"
+}
+
 // OverflowError
 
 type OverflowError struct {
@@ -558,7 +562,7 @@ func (StringSliceIndicesError) IsUserError() {}
 
 func (e StringSliceIndicesError) Error() string {
 	return fmt.Sprintf(
-		"slice indices [%d:%d] are out of bounds (length %d)",
+		"string slice indices [%d:%d] are out of bounds (length %d)",
 		e.FromIndex, e.UpToIndex, e.Length,
 	)
 }
@@ -573,7 +577,7 @@ var _ errors.UserError = EventEmissionUnavailableError{}
 func (EventEmissionUnavailableError) IsUserError() {}
 
 func (e EventEmissionUnavailableError) Error() string {
-	return "cannot emit event: unavailable"
+	return "cannot emit event: event emission is unavailable in this configuration of Cadence"
 }
 
 // UUIDUnavailableError
@@ -586,7 +590,7 @@ var _ errors.UserError = UUIDUnavailableError{}
 func (UUIDUnavailableError) IsUserError() {}
 
 func (e UUIDUnavailableError) Error() string {
-	return "cannot get UUID: unavailable"
+	return "cannot get UUID: UUID acces is unavailable in this configuration of Cadence"
 }
 
 // TypeLoadingError
@@ -602,19 +606,18 @@ func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
 }
 
-// MissingMemberValueError
-
-type MissingMemberValueError struct {
+// UseBeforeInitializationError
+type UseBeforeInitializationError struct {
 	Name string
 	LocationRange
 }
 
-var _ errors.UserError = MissingMemberValueError{}
+var _ errors.UserError = UseBeforeInitializationError{}
 
-func (MissingMemberValueError) IsUserError() {}
+func (UseBeforeInitializationError) IsUserError() {}
 
-func (e MissingMemberValueError) Error() string {
-	return fmt.Sprintf("missing value for member `%s`", e.Name)
+func (e UseBeforeInitializationError) Error() string {
+	return fmt.Sprintf("member `%s` is used before it has been initialized", e.Name)
 }
 
 // InvocationArgumentTypeError
@@ -643,9 +646,9 @@ type MemberAccessTypeError struct {
 	LocationRange
 }
 
-var _ errors.UserError = MemberAccessTypeError{}
+var _ errors.InternalError = MemberAccessTypeError{}
 
-func (MemberAccessTypeError) IsUserError() {}
+func (MemberAccessTypeError) IsInternalError() {}
 
 func (e MemberAccessTypeError) Error() string {
 	return fmt.Sprintf(
@@ -662,9 +665,9 @@ type ValueTransferTypeError struct {
 	LocationRange
 }
 
-var _ errors.UserError = ValueTransferTypeError{}
+var _ errors.InternalError = ValueTransferTypeError{}
 
-func (ValueTransferTypeError) IsUserError() {}
+func (ValueTransferTypeError) IsInternalError() {}
 
 func (e ValueTransferTypeError) Error() string {
 	expected, actual := sema.ErrorMessageExpectedActualTypes(
@@ -685,9 +688,9 @@ type ResourceConstructionError struct {
 	LocationRange
 }
 
-var _ errors.UserError = ResourceConstructionError{}
+var _ errors.InternalError = ResourceConstructionError{}
 
-func (ResourceConstructionError) IsUserError() {}
+func (ResourceConstructionError) IsInternalError() {}
 
 func (e ResourceConstructionError) Error() string {
 	return fmt.Sprintf(
