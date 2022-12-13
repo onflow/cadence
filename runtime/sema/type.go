@@ -2568,29 +2568,24 @@ func (t *FunctionType) Tag() TypeTag {
 	return FunctionTypeTag
 }
 
-func (t *FunctionType) CheckArgumentExpressions(
-	checker *Checker,
-	argumentExpressions []ast.Expression,
-	invocationRange ast.Range,
-) {
-	if t.ArgumentExpressionsCheck == nil {
-		return
-	}
-	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
-}
-
 func (t *FunctionType) String() string {
 
-	typeParameters := make([]string, len(t.TypeParameters))
-
-	for i, typeParameter := range t.TypeParameters {
-		typeParameters[i] = typeParameter.String()
+	var typeParameters []string
+	typeParameterCount := len(t.TypeParameters)
+	if typeParameterCount > 0 {
+		typeParameters = make([]string, typeParameterCount)
+		for i, typeParameter := range t.TypeParameters {
+			typeParameters[i] = typeParameter.String()
+		}
 	}
 
-	parameters := make([]string, len(t.Parameters))
-
-	for i, parameter := range t.Parameters {
-		parameters[i] = parameter.String()
+	var parameters []string
+	parameterCount := len(t.Parameters)
+	if parameterCount > 0 {
+		parameters = make([]string, parameterCount)
+		for i, parameter := range t.Parameters {
+			parameters[i] = parameter.String()
+		}
 	}
 
 	returnTypeAnnotation := t.ReturnTypeAnnotation.String()

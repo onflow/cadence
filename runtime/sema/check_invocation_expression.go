@@ -101,20 +101,23 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 			)
 		}
 
-		argumentTypes = make([]Type, 0, len(invocationExpression.Arguments))
+		argumentCount := len(invocationExpression.Arguments)
+		if argumentCount > 0 {
+			argumentTypes = make([]Type, 0, argumentCount)
 
-		for _, argument := range invocationExpression.Arguments {
-			argumentType := checker.VisitExpression(argument.Expression, nil)
-			argumentTypes = append(argumentTypes, argumentType)
+			for _, argument := range invocationExpression.Arguments {
+				argumentType := checker.VisitExpression(argument.Expression, nil)
+				argumentTypes = append(argumentTypes, argumentType)
+			}
+
+			checker.Elaboration.SetInvocationExpressionTypes(
+				invocationExpression,
+				InvocationExpressionTypes{
+					ArgumentTypes: argumentTypes,
+					ReturnType:    checker.expectedType,
+				},
+			)
 		}
-
-		checker.Elaboration.SetInvocationExpressionTypes(
-			invocationExpression,
-			InvocationExpressionTypes{
-				ArgumentTypes: argumentTypes,
-				ReturnType:    checker.expectedType,
-			},
-		)
 
 		return InvalidType
 	}
@@ -427,43 +430,54 @@ func (checker *Checker) checkInvocation(
 		minCount = parameterCount
 	}
 
-	argumentTypes = make([]Type, argumentCount)
-	parameterTypes := make([]Type, argumentCount)
+	var parameterTypes []Type
 
-	// Check all the required arguments
+	if argumentCount > 0 {
+		argumentTypes = make([]Type, argumentCount)
+		parameterTypes = make([]Type, argumentCount)
 
-	for argumentIndex := 0; argumentIndex < minCount; argumentIndex++ {
+		// Check all the required arguments
 
-		parameterTypes[argumentIndex] =
-			checker.checkInvocationRequiredArgument(
-				invocationExpression.Arguments,
-				argumentIndex,
-				functionType,
-				argumentTypes,
-				typeArguments,
-			)
-	}
+		for argumentIndex := 0; argumentIndex < minCount; argumentIndex++ {
 
-	// Add extra argument types
+			parameterTypes[argumentIndex] =
+				checker.checkInvocationRequiredArgument(
+					invocationExpression.Arguments,
+					argumentIndex,
+					functionType,
+					argumentTypes,
+					typeArguments,
+				)
+		}
 
-	for i := minCount; i < argumentCount; i++ {
-		argument := invocationExpression.Arguments[i]
-		// TODO: pass the expected type to support type inferring for parameters
-		argumentTypes[i] = checker.VisitExpression(argument.Expression, nil)
+		// Add extra argument types
+
+		for i := minCount; i < argumentCount; i++ {
+			argument := invocationExpression.Arguments[i]
+			// TODO: pass the expected type to support type inferring for parameters
+			argumentTypes[i] = checker.VisitExpression(argument.Expression, nil)
+		}
 	}
 
 	// The invokable type might have special checks for the arguments
 
-	argumentExpressions := make([]ast.Expression, argumentCount)
-	for i, argument := range invocationExpression.Arguments {
-		argumentExpressions[i] = argument.Expression
-	}
+	if functionType.ArgumentExpressionsCheck != nil && argumentCount > 0 {
+		argumentExpressions := make([]ast.Expression, argumentCount)
+		for i, argument := range invocationExpression.Arguments {
+			argumentExpressions[i] = argument.Expression
+		}
 
-	functionType.CheckArgumentExpressions(
-		checker,
-		argumentExpressions,
-		ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
-	)
+		invocationRange := ast.NewRangeFromPositioned(
+			checker.memoryGauge,
+			invocationExpression,
+		)
+
+		functionType.ArgumentExpressionsCheck(
+			checker,
+			argumentExpressions,
+			invocationRange,
+		)
+	}
 
 	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeArguments)
 	if returnType == nil {
