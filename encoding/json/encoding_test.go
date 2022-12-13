@@ -3282,7 +3282,7 @@ func TestExportFunctionValue(t *testing.T) {
 			FunctionType: (&cadence.FunctionType{
 				Parameters: []cadence.Parameter{},
 				ReturnType: cadence.VoidType{},
-			}).WithID("(():Void)"),
+			}).WithID("fun():Void"),
 		},
 		// language=json
 		`
@@ -3291,7 +3291,7 @@ func TestExportFunctionValue(t *testing.T) {
             "value": {
               "functionType": {
                 "kind": "Function",
-                "typeID": "(():Void)",
+                "typeID": "fun():Void",
                 "parameters": [],
                 "purity":"",
                 "return": {

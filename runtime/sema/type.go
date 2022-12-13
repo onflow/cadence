@@ -4741,7 +4741,7 @@ func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
 func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 	const functionPurity = FunctionPurityImpure
 
-	// ((K): Bool)
+	// fun(K): Bool
 	funcType := NewSimpleFunctionType(
 		functionPurity,
 		[]Parameter{
@@ -4753,7 +4753,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 		BoolTypeAnnotation,
 	)
 
-	// fun forEachKey(_ function: ((K): Bool)): Void
+	// fun forEachKey(_ function: fun(K): Bool): Void
 	return NewSimpleFunctionType(
 		functionPurity,
 		[]Parameter{

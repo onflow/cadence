@@ -579,7 +579,7 @@ func newAccountKeysGetFunction(
 	)
 }
 
-// the AccountKey in `forEachKey(_ f: ((AccountKey): Bool)): Void`
+// the AccountKey in `forEachKey(_ f: fun(AccountKey): Bool): Void`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
 func newAccountKeysForEachFunction(

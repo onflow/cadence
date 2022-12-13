@@ -625,7 +625,7 @@ func getNestedTypeConstructorValue(parent interpreter.Value, typeName string) *i
 // Accepts test function that accepts subtype of 'AnyStruct'.
 //
 // Signature:
-//    fun newMatcher<T: AnyStruct>(test: ((T): Bool)): Test.Matcher
+//    fun newMatcher<T: AnyStruct>(test: fun(T): Bool): Test.Matcher
 //
 // where `T` is optional, and bound to `AnyStruct`.
 //
@@ -633,12 +633,12 @@ func getNestedTypeConstructorValue(parent interpreter.Value, typeName string) *i
 
 const newMatcherFunctionDocString = `
 Creates a matcher with a test function.
-The test function is of type '((T): Bool)', where 'T' is bound to 'AnyStruct'.
+The test function is of type 'fun(T): Bool', where 'T' is bound to 'AnyStruct'.
 `
 
 const newMatcherFunctionName = "newMatcher"
 
-// Type of the Matcher.test function: ((T): Bool)
+// Type of the Matcher.test function: fun(T): Bool
 var matcherTestFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
 	[]sema.Parameter{
@@ -1496,7 +1496,7 @@ func newMatcherWithGenericTestFunction(
 	// Wrap the user provided test function with a function that validates the argument types.
 	// i.e: create a closure that cast the arguments.
 	//
-	// e.g: convert `newMatcher(test: ((Int): Bool))` to:
+	// e.g: convert `newMatcher(test: fun(Int): Bool)` to:
 	//
 	//  newMatcher(fun (b: AnyStruct): Bool {
 	//      return test(b as! Int)
