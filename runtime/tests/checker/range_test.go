@@ -79,7 +79,7 @@ func TestCheckRange(t *testing.T) {
 			if !strings.HasPrefix(rnge.Identifier, "_TEST_") {
 				continue
 			}
-			count, _ := bag[rnge] // default to 0
+			count := bag[rnge] // default to 0
 			bag[rnge] = count + 1
 		}
 		return bag
