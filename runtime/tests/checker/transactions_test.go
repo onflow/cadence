@@ -179,7 +179,7 @@ func TestCheckTransactions(t *testing.T) {
 		test(t,
 			`
               transaction {
-				  var foo: ((): Int)
+				  var foo: fun (): Int
 
                   prepare() {
 					  self.foo = fun (): Int {
@@ -226,7 +226,7 @@ func TestCheckTransactions(t *testing.T) {
 		test(t,
 			`
               transaction {
-				  var foo: ((): Int)
+				  var foo: fun (): Int
 
                   prepare() {
 					  self.foo = fun (): Int {
