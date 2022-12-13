@@ -805,8 +805,8 @@ type MemberExpression struct {
 	Identifier Identifier
 	// The position of the token (`.`, `?.`) that separates the accessed expression
 	// and the identifier of the member
-	AccessPos  Position
-	Optional   bool
+	AccessPos Position
+	Optional  bool
 }
 
 var _ Element = &MemberExpression{}
