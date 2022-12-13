@@ -63,39 +63,45 @@ func (interpreter *Interpreter) invokeFunctionValue(
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
-	transferredArguments := make([]Value, len(arguments))
 
-	for i, argument := range arguments {
-		argumentType := argumentTypes[i]
+	var transferredArguments []Value
 
-		var locationPos ast.HasPosition
-		if i < len(expressions) {
-			locationPos = expressions[i]
-		} else {
-			locationPos = invocationPosition
-		}
+	argumentCount := len(arguments)
+	if argumentCount > 0 {
+		transferredArguments = make([]Value, argumentCount)
 
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: locationPos,
-		}
+		for i, argument := range arguments {
+			argumentType := argumentTypes[i]
 
-		if i < parameterTypeCount {
-			parameterType := parameterTypes[i]
-			transferredArguments[i] = interpreter.transferAndConvert(
-				argument,
-				argumentType,
-				parameterType,
-				locationRange,
-			)
-		} else {
-			transferredArguments[i] = argument.Transfer(
-				interpreter,
-				locationRange,
-				atree.Address{},
-				false,
-				nil,
-			)
+			var locationPos ast.HasPosition
+			if i < len(expressions) {
+				locationPos = expressions[i]
+			} else {
+				locationPos = invocationPosition
+			}
+
+			locationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: locationPos,
+			}
+
+			if i < parameterTypeCount {
+				parameterType := parameterTypes[i]
+				transferredArguments[i] = interpreter.transferAndConvert(
+					argument,
+					argumentType,
+					parameterType,
+					locationRange,
+				)
+			} else {
+				transferredArguments[i] = argument.Transfer(
+					interpreter,
+					locationRange,
+					atree.Address{},
+					false,
+					nil,
+				)
+			}
 		}
 	}
 
