@@ -23,32 +23,36 @@ import (
 )
 
 const AuthAccountTypeName = "AuthAccount"
-const AuthAccountAddressField = "address"
-const AuthAccountBalanceField = "balance"
-const AuthAccountAvailableBalanceField = "availableBalance"
-const AuthAccountStorageUsedField = "storageUsed"
-const AuthAccountStorageCapacityField = "storageCapacity"
-const AuthAccountSaveField = "save"
-const AuthAccountLoadField = "load"
-const AuthAccountTypeField = "type"
-const AuthAccountCopyField = "copy"
-const AuthAccountBorrowField = "borrow"
-const AuthAccountLinkField = "link"
-const AuthAccountUnlinkField = "unlink"
-const AuthAccountGetCapabilityField = "getCapability"
-const AuthAccountGetLinkTargetField = "getLinkTarget"
-const AuthAccountForEachPublicField = "forEachPublic"
-const AuthAccountForEachPrivateField = "forEachPrivate"
-const AuthAccountForEachStoredField = "forEachStored"
-const AuthAccountContractsField = "contracts"
-const AuthAccountKeysField = "keys"
-const AuthAccountInboxField = "inbox"
-const AuthAccountPublicPathsField = "publicPaths"
-const AuthAccountPrivatePathsField = "privatePaths"
-const AuthAccountStoragePathsField = "storagePaths"
-const AuthAccountInboxPublishField = "publish"
-const AuthAccountInboxUnpublishField = "unpublish"
-const AuthAccountInboxClaimField = "claim"
+
+const AuthAccountTypeAddressFieldName = "address"
+const AuthAccountTypeBalanceFieldName = "balance"
+const AuthAccountTypeAvailableBalanceFieldName = "availableBalance"
+const AuthAccountTypeStorageUsedFieldName = "storageUsed"
+const AuthAccountTypeStorageCapacityFieldName = "storageCapacity"
+const AuthAccountTypeSaveFunctionName = "save"
+const AuthAccountTypeLoadFunctionName = "load"
+const AuthAccountTypeTypeFunctionName = "type"
+const AuthAccountTypeCopyFunctionName = "copy"
+const AuthAccountTypeBorrowFunctionName = "borrow"
+const AuthAccountTypeLinkFunctionName = "link"
+const AuthAccountTypeLinkAccountFunctionName = "linkAccount"
+const AuthAccountTypeUnlinkFunctionName = "unlink"
+const AuthAccountTypeGetCapabilityFunctionName = "getCapability"
+const AuthAccountTypeGetLinkTargetFunctionName = "getLinkTarget"
+const AuthAccountTypeForEachPublicFunctionName = "forEachPublic"
+const AuthAccountTypeForEachPrivateFunctionName = "forEachPrivate"
+const AuthAccountTypeForEachStoredFunctionName = "forEachStored"
+const AuthAccountTypeContractsFieldName = "contracts"
+const AuthAccountTypeKeysFieldName = "keys"
+const AuthAccountTypeInboxFieldName = "inbox"
+const AuthAccountTypePublicPathsFieldName = "publicPaths"
+const AuthAccountTypePrivatePathsFieldName = "privatePaths"
+const AuthAccountTypeStoragePathsFieldName = "storagePaths"
+const AuthAccountTypeInboxPublishFunctionName = "publish"
+const AuthAccountTypeInboxUnpublishFunctionName = "unpublish"
+const AuthAccountTypeInboxClaimFunctionName = "claim"
+
+var AuthAccountTypeLinkAccountFunctionType *FunctionType
 
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
@@ -69,142 +73,167 @@ var AuthAccountType = func() *CompositeType {
 		}(),
 	}
 
+	AuthAccountTypeLinkAccountFunctionType = &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "newCapabilityPath",
+				TypeAnnotation: CapabilityPathTypeAnnotation,
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &CapabilityType{
+					BorrowType: &ReferenceType{
+						Type: authAccountType,
+					},
+				},
+			},
+		),
+	}
+
 	var members = []*Member{
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountAddressField,
-			&AddressType{},
+			AuthAccountTypeAddressFieldName,
+			TheAddressType,
 			accountTypeAddressFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountBalanceField,
+			AuthAccountTypeBalanceFieldName,
 			UFix64Type,
 			accountTypeAccountBalanceFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountAvailableBalanceField,
+			AuthAccountTypeAvailableBalanceFieldName,
 			UFix64Type,
 			accountTypeAccountAvailableBalanceFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountStorageUsedField,
+			AuthAccountTypeStorageUsedFieldName,
 			UInt64Type,
 			accountTypeStorageUsedFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountStorageCapacityField,
+			AuthAccountTypeStorageCapacityFieldName,
 			UInt64Type,
 			accountTypeStorageCapacityFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountSaveField,
+			AuthAccountTypeSaveFunctionName,
 			AuthAccountTypeSaveFunctionType,
 			authAccountTypeSaveFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountTypeField,
+			AuthAccountTypeTypeFunctionName,
 			AuthAccountTypeTypeFunctionType,
 			authAccountTypeTypeFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountLoadField,
+			AuthAccountTypeLoadFunctionName,
 			AuthAccountTypeLoadFunctionType,
 			authAccountTypeLoadFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountCopyField,
+			AuthAccountTypeCopyFunctionName,
 			AuthAccountTypeCopyFunctionType,
 			authAccountTypeCopyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountBorrowField,
+			AuthAccountTypeBorrowFunctionName,
 			AuthAccountTypeBorrowFunctionType,
 			authAccountTypeBorrowFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountLinkField,
+			AuthAccountTypeLinkFunctionName,
 			AuthAccountTypeLinkFunctionType,
 			authAccountTypeLinkFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountUnlinkField,
+			AuthAccountTypeLinkAccountFunctionName,
+			AuthAccountTypeLinkAccountFunctionType,
+			authAccountTypeLinkAccountFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountType,
+			AuthAccountTypeUnlinkFunctionName,
 			AuthAccountTypeUnlinkFunctionType,
 			authAccountTypeUnlinkFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountGetCapabilityField,
+			AuthAccountTypeGetCapabilityFunctionName,
 			AuthAccountTypeGetCapabilityFunctionType,
 			authAccountTypeGetCapabilityFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountGetLinkTargetField,
+			AuthAccountTypeGetLinkTargetFunctionName,
 			AccountTypeGetLinkTargetFunctionType,
 			accountTypeGetLinkTargetFunctionDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountContractsField,
+			AuthAccountTypeContractsFieldName,
 			AuthAccountContractsType,
 			accountTypeContractsFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountKeysField,
+			AuthAccountTypeKeysFieldName,
 			AuthAccountKeysType,
 			accountTypeKeysFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountInboxField,
+			AuthAccountTypeInboxFieldName,
 			AuthAccountInboxType,
 			accountInboxDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountPublicPathsField,
+			AuthAccountTypePublicPathsFieldName,
 			AuthAccountPublicPathsType,
 			authAccountTypePublicPathsFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountPrivatePathsField,
+			AuthAccountTypePrivatePathsFieldName,
 			AuthAccountPrivatePathsType,
 			authAccountTypePrivatePathsFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountStoragePathsField,
+			AuthAccountTypeStoragePathsFieldName,
 			AuthAccountStoragePathsType,
 			authAccountTypeStoragePathsFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountForEachPublicField,
+			AuthAccountTypeForEachPublicFunctionName,
 			AuthAccountForEachPublicFunctionType,
 			authAccountForEachPublicDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountForEachPrivateField,
+			AuthAccountTypeForEachPrivateFunctionName,
 			AuthAccountForEachPrivateFunctionType,
 			authAccountForEachPrivateDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountForEachStoredField,
+			AuthAccountTypeForEachStoredFunctionName,
 			AuthAccountForEachStoredFunctionType,
 			authAccountForEachStoredDocString,
 		),
@@ -292,7 +321,7 @@ var AuthAccountTypeSaveFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:      ArgumentLabelNotRequired,
 				Identifier: "value",
@@ -333,7 +362,7 @@ var AuthAccountTypeLoadFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          "from",
 				Identifier:     "path",
@@ -360,7 +389,7 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 
 var AuthAccountTypeTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:          "at",
 			Identifier:     "path",
@@ -400,7 +429,7 @@ var AuthAccountTypeCopyFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          "from",
 				Identifier:     "path",
@@ -444,7 +473,7 @@ var AuthAccountTypeBorrowFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          "from",
 				Identifier:     "path",
@@ -490,7 +519,7 @@ var AuthAccountTypeLinkFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "newCapabilityPath",
@@ -526,9 +555,15 @@ The link function does **not** check if the target path is valid/exists at the t
 The link is latent. The target value might be stored after the link is created, and the target value might be moved out after the link has been created.
 `
 
+const authAccountTypeLinkAccountFunctionDocString = `
+Creates a capability at the given public or private path which targets this account.
+
+Returns nil if a link for the given capability path already exists, or the newly created capability if not.
+`
+
 var AuthAccountTypeUnlinkFunctionType = NewSimpleFunctionType(
 	FunctionPurityImpure,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
@@ -557,7 +592,7 @@ var AuthAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "capabilityPath",
@@ -580,7 +615,7 @@ Returns the capability at the given private or public path, or nil if it does no
 
 var AccountTypeGetLinkTargetFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
@@ -606,19 +641,19 @@ var AuthAccountKeysType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicFunctionMember(
 			accountKeys,
-			AccountKeysAddFunctionName,
+			AccountKeysTypeAddFunctionName,
 			AuthAccountKeysTypeAddFunctionType,
 			authAccountKeysTypeAddFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountKeys,
-			AccountKeysGetFunctionName,
+			AccountKeysTypeGetFunctionName,
 			AccountKeysTypeGetFunctionType,
 			accountKeysTypeGetFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountKeys,
-			AccountKeysRevokeFunctionName,
+			AccountKeysTypeRevokeFunctionName,
 			AuthAccountKeysTypeRevokeFunctionType,
 			authAccountKeysTypeRevokeFunctionDocString,
 		),
@@ -630,7 +665,7 @@ var AuthAccountKeysType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeys,
-			AccountKeysCountFieldName,
+			AccountKeysTypeCountFieldName,
 			AccountKeysTypeCountFieldType,
 			accountKeysTypeCountFieldDocString,
 		),
@@ -643,17 +678,17 @@ var AuthAccountKeysType = func() *CompositeType {
 
 var AuthAccountKeysTypeAddFunctionType = NewSimpleFunctionType(
 	FunctionPurityImpure,
-	[]*Parameter{
+	[]Parameter{
 		{
-			Identifier:     AccountKeyPublicKeyField,
+			Identifier:     AccountKeyPublicKeyFieldName,
 			TypeAnnotation: PublicKeyTypeAnnotation,
 		},
 		{
-			Identifier:     AccountKeyHashAlgoField,
+			Identifier:     AccountKeyHashAlgoFieldName,
 			TypeAnnotation: HashAlgorithmTypeAnnotation,
 		},
 		{
-			Identifier:     AccountKeyWeightField,
+			Identifier:     AccountKeyWeightFieldName,
 			TypeAnnotation: UFix64TypeAnnotation,
 		},
 	},
@@ -662,9 +697,9 @@ var AuthAccountKeysTypeAddFunctionType = NewSimpleFunctionType(
 
 var AccountKeysTypeGetFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	[]*Parameter{
+	[]Parameter{
 		{
-			Identifier:     AccountKeyKeyIndexField,
+			Identifier:     AccountKeyKeyIndexFieldName,
 			TypeAnnotation: IntTypeAnnotation,
 		},
 	},
@@ -678,7 +713,7 @@ var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 	// ((AccountKey): Bool)
 	iterFunctionType := NewSimpleFunctionType(
 		functionPurity,
-		[]*Parameter{
+		[]Parameter{
 			{
 				TypeAnnotation: AccountKeyTypeAnnotation,
 			},
@@ -688,7 +723,7 @@ var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 
 	return NewSimpleFunctionType(
 		functionPurity,
-		[]*Parameter{
+		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "function",
@@ -703,9 +738,9 @@ var AccountKeysTypeCountFieldType = UInt64Type
 
 var AuthAccountKeysTypeRevokeFunctionType = NewSimpleFunctionType(
 	FunctionPurityImpure,
-	[]*Parameter{
+	[]Parameter{
 		{
-			Identifier:     AccountKeyKeyIndexField,
+			Identifier:     AccountKeyKeyIndexFieldName,
 			TypeAnnotation: IntTypeAnnotation,
 		},
 	},
@@ -718,11 +753,11 @@ func init() {
 }
 
 const AccountKeysTypeName = "Keys"
-const AccountKeysAddFunctionName = "add"
-const AccountKeysGetFunctionName = "get"
+const AccountKeysTypeAddFunctionName = "add"
+const AccountKeysTypeGetFunctionName = "get"
 const AccountKeysTypeForEachFunctionName = "forEach"
-const AccountKeysRevokeFunctionName = "revoke"
-const AccountKeysCountFieldName = "count"
+const AccountKeysTypeRevokeFunctionName = "revoke"
+const AccountKeysTypeCountFieldName = "count"
 
 const accountTypeGetLinkTargetFunctionDocString = `
 Returns the target path of the capability at the given public or private path, or nil if there exists no capability at the given path.
@@ -768,7 +803,7 @@ const authAccountKeysTypeRevokeFunctionDocString = `
 Revokes the key at the given index of the account.
 `
 const accountKeysTypeForEachFunctionDocString = `
-Iterates through all the keys of this account, passing each key to the provided function and short-circuiting if the function returns false. 
+Iterates through all the keys of this account, passing each key to the provided function and short-circuiting if the function returns false.
 
 The order of iteration is undefined.
 `
@@ -783,7 +818,7 @@ Publishes the argument value under the given name, to be later claimed by the sp
 
 var AuthAccountTypeInboxPublishFunctionType = NewSimpleFunctionType(
 	FunctionPurityImpure,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "value",
@@ -795,7 +830,7 @@ var AuthAccountTypeInboxPublishFunctionType = NewSimpleFunctionType(
 		},
 		{
 			Identifier:     "recipient",
-			TypeAnnotation: NewTypeAnnotation(&AddressType{}),
+			TypeAnnotation: AddressTypeAnnotation,
 		},
 	},
 	VoidTypeAnnotation,
@@ -817,7 +852,7 @@ var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "name",
@@ -852,7 +887,7 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "name",
@@ -860,7 +895,7 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 			},
 			{
 				Identifier:     "provider",
-				TypeAnnotation: NewTypeAnnotation(&AddressType{}),
+				TypeAnnotation: AddressTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -891,19 +926,19 @@ var AuthAccountInboxType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
-			AuthAccountInboxClaimField,
+			AuthAccountTypeInboxClaimFunctionName,
 			AuthAccountTypeInboxClaimFunctionType,
 			authAccountTypeInboxClaimFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
-			AuthAccountInboxPublishField,
+			AuthAccountTypeInboxPublishFunctionName,
 			AuthAccountTypeInboxPublishFunctionType,
 			authAccountTypeInboxPublishFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
-			AuthAccountInboxUnpublishField,
+			AuthAccountTypeInboxUnpublishFunctionName,
 			AuthAccountTypeInboxUnpublishFunctionType,
 			authAccountTypeInboxUnpublishFunctionDocString,
 		),

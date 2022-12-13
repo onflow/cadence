@@ -126,7 +126,7 @@ type jsonCompositeField struct {
 	Value jsonValue `json:"value"`
 }
 
-type jsonLinkValue struct {
+type jsonPathLinkValue struct {
 	TargetPath jsonValue `json:"targetPath"`
 	BorrowType string    `json:"borrowType"`
 }
@@ -201,7 +201,7 @@ type jsonTypeValue struct {
 	StaticType jsonValue `json:"staticType"`
 }
 
-type jsonCapabilityValue struct {
+type jsonStorageCapabilityValue struct {
 	Path       jsonValue `json:"path"`
 	Address    string    `json:"address"`
 	BorrowType jsonValue `json:"borrowType"`
@@ -320,13 +320,13 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareEvent(x)
 	case cadence.Contract:
 		return prepareContract(x)
-	case cadence.Link:
+	case cadence.PathLink:
 		return prepareLink(x)
 	case cadence.Path:
 		return preparePath(x)
 	case cadence.TypeValue:
 		return prepareTypeValue(x)
-	case cadence.Capability:
+	case cadence.StorageCapability:
 		return prepareCapability(x)
 	case cadence.Enum:
 		return prepareEnum(x)
@@ -601,10 +601,10 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	}
 }
 
-func prepareLink(x cadence.Link) jsonValue {
+func prepareLink(x cadence.PathLink) jsonValue {
 	return jsonValueObject{
 		Type: linkTypeStr,
-		Value: jsonLinkValue{
+		Value: jsonPathLinkValue{
 			TargetPath: preparePath(x.TargetPath),
 			BorrowType: x.BorrowType,
 		},
@@ -872,10 +872,10 @@ func prepareTypeValue(typeValue cadence.TypeValue) jsonValue {
 	}
 }
 
-func prepareCapability(capability cadence.Capability) jsonValue {
+func prepareCapability(capability cadence.StorageCapability) jsonValue {
 	return jsonValueObject{
 		Type: capabilityTypeStr,
-		Value: jsonCapabilityValue{
+		Value: jsonStorageCapabilityValue{
 			Path:       preparePath(capability.Path),
 			Address:    encodeBytes(capability.Address.Bytes()),
 			BorrowType: prepareType(capability.BorrowType, typePreparationResults{}),

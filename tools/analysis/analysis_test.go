@@ -112,8 +112,9 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 				return true
 			}
 
-			leftHandType := program.Elaboration.CastingStaticValueTypes[castingExpression]
-			rightHandType := program.Elaboration.CastingTargetTypes[castingExpression]
+			types := program.Elaboration.CastingExpressionTypes(castingExpression)
+			leftHandType := types.StaticValueType
+			rightHandType := types.TargetType
 
 			if !sema.IsSubType(leftHandType, rightHandType) {
 				return true

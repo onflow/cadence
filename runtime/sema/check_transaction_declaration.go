@@ -26,7 +26,7 @@ import (
 )
 
 func (checker *Checker) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) (_ struct{}) {
-	transactionType := checker.Elaboration.TransactionDeclarationTypes[declaration]
+	transactionType := checker.Elaboration.TransactionDeclarationType(declaration)
 	if transactionType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -84,7 +84,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	return
 }
 
-func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionDeclaration, parameters []*Parameter) {
+func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionDeclaration, parameters []Parameter) {
 	checker.checkArgumentLabels(declaration.ParameterList)
 	checker.checkParameters(declaration.ParameterList, parameters)
 	checker.declareParameters(declaration.ParameterList, parameters)
@@ -200,7 +200,7 @@ func (checker *Checker) visitTransactionPrepareFunction(
 // checkTransactionPrepareFunctionParameters checks that the parameters are each of type Account.
 func (checker *Checker) checkTransactionPrepareFunctionParameters(
 	parameterList *ast.ParameterList,
-	parameters []*Parameter,
+	parameters []Parameter,
 ) {
 	for i, parameter := range parameterList.Parameters {
 		parameterType := parameters[i].TypeAnnotation.Type
@@ -273,6 +273,6 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.PrepareParameters = checker.parameters(parameterList)
 	}
 
-	checker.Elaboration.TransactionDeclarationTypes[declaration] = transactionType
+	checker.Elaboration.SetTransactionDeclarationType(declaration, transactionType)
 	checker.Elaboration.TransactionTypes = append(checker.Elaboration.TransactionTypes, transactionType)
 }

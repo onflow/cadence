@@ -5453,7 +5453,7 @@ func TestParseInvalidCompositeWithPurity(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "invalid view modifier for composite",
+				Message: "invalid view modifier for struct",
 				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
@@ -6616,7 +6616,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier for composite",
+					Message: "invalid static modifier for structure",
 					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
@@ -6660,7 +6660,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for composite",
+					Message: "invalid native modifier for structure",
 					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
@@ -6779,4 +6779,222 @@ func TestParseTransactionWithModifier(t *testing.T) {
 			errs,
 		)
 	})
+}
+
+func TestParseNestedPragma(t *testing.T) {
+
+	t.Parallel()
+
+	parse := func(input string, config Config) (any, []error) {
+		return Parse(
+			nil,
+			[]byte(input),
+			func(p *parser) (any, error) {
+				return parseMemberOrNestedDeclaration(
+					p,
+					"",
+				)
+			},
+			config,
+		)
+	}
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"native #foo",
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("native #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static #pragma",
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static #pragma",
+			Config{},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static native #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("static native #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"native static #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier after native modifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("pub #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"pub static native #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("pub static native #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+
 }

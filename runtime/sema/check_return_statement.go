@@ -57,11 +57,13 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 
 	valueType := checker.VisitExpression(statement.Expression, returnType)
 
-	checker.Elaboration.ReturnStatementTypes[statement] =
+	checker.Elaboration.SetReturnStatementTypes(
+		statement,
 		ReturnStatementTypes{
 			ValueType:  valueType,
 			ReturnType: returnType,
-		}
+		},
+	)
 
 	if returnType == VoidType {
 		return

@@ -51,7 +51,7 @@ without the need for any trusted third party anywhere in the process, because th
 Programs that run on blockchains are commonly referred to as smart contracts
 because they mediate important functionality (such as currency) without having to rely on a central authority (like a bank).
 
-[Cadence is the resource-oriented programming language](/cadence)
+[Cadence is the resource-oriented programming language](https://developers.flow.com/cadence)
 for developing smart contracts on the Flow Blockchain.
 
 This tutorial will walk you through an example of a smart contract that implements basic Cadence features,
@@ -89,11 +89,11 @@ For this tutorial, you'll be working with only the first account `0x01`
 You will start by writing a smart contract that contains a public function that returns `"Hello World!"`.
 
 Like most other blockchains, the programming model in Flow is centered around accounts and transactions.
-All state that persists permanently is stored in [accounts](/cadence/language/accounts)
+All state that persists permanently is stored in [accounts](../language/accounts)
 and all accounts have the same core functionality. (users, smart contracts, data storage)
 
 The interfaces to this state (the ways to interact with it, otherwise known as methods or functions) are also stored in accounts.
-All code execution takes place within [transactions](/cadence/language/transactions),
+All code execution takes place within [transactions](../language/transactions),
 which are blocks of code that are authorized and submitted by external users
 to interact with the persistent state, which includes directly modifying account storage.
 
@@ -156,10 +156,10 @@ You would have used `var` to declare a variable, which that the value can be cha
 
 You can use `access(all)` and the `pub` keyword interchangeably.
 They are both examples of an access control specification that means an interface can be accessed in all scopes, but not written to in all scopes.
-For more information about the different levels of access control permitted in Cadence, refer to the [Access Control section of the language reference](/cadence/language/access-control).
+For more information about the different levels of access control permitted in Cadence, refer to the [Access Control section of the language reference](../language/access-control).
 
 The `init()` section is called the initializer. It is a special function that only runs when the contract is first created.
-Objects similar to contracts, such as other [composite types like structs or resources](/cadence/language/composite-types),
+Objects similar to contracts, such as other [composite types like structs or resources](../language/composite-types),
 require that the `init()` function initialize any fields that are declared in a composite type.
 In the above example, the initializer sets the `greeting` field to `"Hello, World!"` when the contract is initialized.
 
@@ -181,7 +181,7 @@ is built into the protocol by default.
 
 An account is divided into two main areas:
 
-1. The first area is the [contract area](/cadence/language/accounts).
+1. The first area is the [contract area](../language/accounts).
    This is the area that stores smart contracts containing type definitions, fields, and functions that relate to common functionality.
    There is no limit to the number of smart contracts an account can store.
    This area cannot be directly accessed in a transaction unless the transaction is just returning (reading) a copy of the code deployed to an account.
@@ -223,7 +223,7 @@ In the Flow Playground environment there can only be one contract for each accou
 ### Creating a Transaction
 ---
 
-A [Transaction](/cadence/language/transactions) in Flow is defined as an arbitrary-sized block of Cadence code that is authorized by one or more accounts.
+A [Transaction](../language/transactions) in Flow is defined as an arbitrary-sized block of Cadence code that is authorized by one or more accounts.
 When an account authorizes a transaction, the code in that transaction has access to the authorizers' private storage.
 An account authorizes a transaction by performing a cryptographic signature on the transaction with the account's private key,
 which should only be accessible to the account owner. Therefore, authorizers are also known as signers.
@@ -305,5 +305,5 @@ Now that you have completed the tutorial, you have the basic knowledge to write 
 - Sign the transaction with one or multiple signers
 
 Feel free to modify the smart contract to implement different functions,
-experiment with the available [Cadence types](/cadence/language/values-and-types),
+experiment with the available [Cadence types](../language/values-and-types),
 and write new transactions that execute multiple functions from your `HelloWorld` smart contract.

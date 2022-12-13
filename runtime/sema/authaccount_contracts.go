@@ -104,7 +104,7 @@ Returns the deployed contract.
 
 var AuthAccountContractsTypeAddFunctionType = &FunctionType{
 	Purity: FunctionPurityImpure,
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     "name",
 			TypeAnnotation: StringTypeAnnotation,
@@ -146,7 +146,7 @@ Returns the deployed contract for the updated contract.
 
 var AuthAccountContractsTypeUpdateExperimentalFunctionType = NewSimpleFunctionType(
 	FunctionPurityImpure,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Identifier:     "name",
 			TypeAnnotation: StringTypeAnnotation,
@@ -169,7 +169,7 @@ Returns nil if no contract/contract interface with the given name exists in the 
 
 var AuthAccountContractsTypeRemoveFunctionType = NewSimpleFunctionType(
 	FunctionPurityImpure,
-	[]*Parameter{
+	[]Parameter{
 		{
 			Identifier:     "name",
 			TypeAnnotation: StringTypeAnnotation,
