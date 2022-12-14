@@ -955,7 +955,7 @@ func defineIdentifierTypes() {
 
 			case KeywordFun:
 				p.skipSpaceAndComments()
-				return parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified, false)
+				return parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified)
 
 			case KeywordView:
 
@@ -968,7 +968,7 @@ func defineIdentifierTypes() {
 				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
 					// skip the `fun` keyword
 					p.nextSemanticToken()
-					return parseFunctionType(p, current.StartPos, ast.FunctionPurityView, false)
+					return parseFunctionType(p, current.StartPos, ast.FunctionPurityView)
 				} else {
 					// backtrack otherwise - view is a nominal type here
 					p.current = current
@@ -990,14 +990,14 @@ func defineIdentifierTypes() {
 //
 //	'(' ( type ( ',' type )* )? ')'
 //	( ':' type )?
-func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPurity, requireReturnType bool) (ast.Type, error) {
+func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPurity) (ast.Type, error) {
 	parameterTypeAnnotations, err := parseParameterTypeAnnotations(p)
 	if err != nil {
 		return nil, err
 	}
 
 	endPos := p.current.EndPos
-	// // skip the closing parenthesis of the argument tuple
+	// skip the closing parenthesis of the argument tuple
 	p.nextSemanticToken()
 
 	var returnTypeAnnotation *ast.TypeAnnotation
@@ -1011,17 +1011,11 @@ func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPuri
 			return nil, err
 		}
 		endPos = returnTypeAnnotation.EndPosition(p.memoryGauge)
-	} else if requireReturnType {
-		return nil, NewSyntaxError(p.current.StartPos, "expected return type")
 	} else {
-		// if the return type is omitted, infer it to be `Void`
-		voidType := ast.NewNominalType(
+		returnType := ast.NewNominalType(
 			p.memoryGauge,
-			ast.NewIdentifier(
+			ast.NewEmptyIdentifier(
 				p.memoryGauge,
-				"Void",
-				// give the inferred type a fake position at the end of the argument tuple
-				// it would be located if it was explicitly written?
 				endPos,
 			),
 			nil,
@@ -1029,7 +1023,7 @@ func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPuri
 		returnTypeAnnotation = ast.NewTypeAnnotation(
 			p.memoryGauge,
 			false,
-			voidType,
+			returnType,
 			endPos,
 		)
 	}
