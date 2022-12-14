@@ -20,9 +20,9 @@ package wasm
 
 // Function represents a function
 type Function struct {
+	Code      *Code
 	Name      string
 	TypeIndex uint32
-	Code      *Code
 }
 
 // Code represents the code of a function

@@ -31,9 +31,9 @@ import (
 // i.e. it is used as a symbol table during semantic analysis.
 type VariableActivation struct {
 	entries        *StringVariableOrderedMap
-	Depth          int
 	Parent         *VariableActivation
 	LeaveCallbacks []func(EndPositionGetter)
+	Depth          int
 }
 
 type EndPositionGetter func(common.MemoryGauge) ast.Position
@@ -257,14 +257,14 @@ func (a *VariableActivations) Depth() int {
 }
 
 type variableDeclaration struct {
-	identifier               string
 	ty                       Type
+	identifier               string
 	docString                string
+	argumentLabels           []string
+	pos                      ast.Position
 	access                   ast.Access
 	kind                     common.DeclarationKind
-	pos                      ast.Position
 	isConstant               bool
-	argumentLabels           []string
 	allowOuterScopeShadowing bool
 }
 
@@ -330,12 +330,12 @@ func (a *VariableActivations) DeclareValue(declaration ValueDeclaration) (*Varia
 }
 
 type typeDeclaration struct {
-	identifier               ast.Identifier
 	ty                       Type
+	docString                string
+	identifier               ast.Identifier
 	declarationKind          common.DeclarationKind
 	access                   ast.Access
 	allowOuterScopeShadowing bool
-	docString                string
 }
 
 func (a *VariableActivations) declareType(declaration typeDeclaration) (*Variable, error) {

@@ -23,9 +23,9 @@ import (
 )
 
 type Token struct {
-	Type         TokenType
 	SpaceOrError any
 	ast.Range
+	Type TokenType
 }
 
 func (t Token) Is(ty TokenType) bool {

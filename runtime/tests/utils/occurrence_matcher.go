@@ -24,10 +24,10 @@ import (
 )
 
 type OccurrenceMatcher struct {
-	StartPos        sema.Position
-	EndPos          sema.Position
 	OriginStartPos  *sema.Position
 	OriginEndPos    *sema.Position
+	StartPos        sema.Position
+	EndPos          sema.Position
 	DeclarationKind common.DeclarationKind
 }
 

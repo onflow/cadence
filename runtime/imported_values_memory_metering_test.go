@@ -389,10 +389,10 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	type importTest struct {
+		TypeInstance cadence.Value
 		TypeName     string
 		MemoryKind   common.MemoryKind
 		Weight       uint64
-		TypeInstance cadence.Value
 	}
 
 	tests := []importTest{
@@ -556,9 +556,9 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 
 	type importTest struct {
 		Location   common.Location
+		Name       string
 		MemoryKind common.MemoryKind
 		Weight     uint64
-		Name       string
 	}
 
 	tests := []importTest{

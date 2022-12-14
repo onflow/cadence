@@ -29,10 +29,10 @@ import (
 // AccountReferenceValue
 
 type AccountReferenceValue struct {
-	_authAccount Value
-	Address      common.Address
-	Path         PathValue
 	BorrowedType sema.Type
+	_authAccount Value
+	Path         PathValue
+	Address      common.Address
 }
 
 var _ Value = &AccountReferenceValue{}

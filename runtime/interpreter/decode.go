@@ -143,10 +143,10 @@ func NewStorableDecoder(
 }
 
 type StorableDecoder struct {
+	TypeDecoder
 	memoryGauge   common.MemoryGauge
 	decoder       *cbor.StreamDecoder
 	slabStorageID atree.StorageID
-	TypeDecoder
 }
 
 func (d StorableDecoder) decodeStorable() (atree.Storable, error) {

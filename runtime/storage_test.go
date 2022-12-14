@@ -1810,8 +1810,8 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
     `))
 
 	type resourceOwnerChange struct {
-		typeID     common.TypeID
 		uuid       *interpreter.UInt64Value
+		typeID     common.TypeID
 		oldAddress common.Address
 		newAddress common.Address
 	}

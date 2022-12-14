@@ -84,8 +84,8 @@ var rlpDecodeStringFunctionType = &sema.FunctionType{
 }
 
 type RLPDecodeStringError struct {
-	Msg string
 	interpreter.LocationRange
+	Msg string
 }
 
 var _ errors.UserError = RLPDecodeStringError{}
@@ -158,8 +158,8 @@ var rlpDecodeListFunctionType = &sema.FunctionType{
 }
 
 type RLPDecodeListError struct {
-	Msg string
 	interpreter.LocationRange
+	Msg string
 }
 
 var _ errors.UserError = RLPDecodeListError{}
