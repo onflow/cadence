@@ -2712,7 +2712,7 @@ type BoundedValue[T Numerical] interface {
 	NumberValue
 	MaxValue() T
 	Underlying() T
-	Constructor(common.MemoryGauge, func() T) NumberValue
+	Construct(common.MemoryGauge, func() T) NumberValue
 }
 type BoundedUnsignedValue[T Unsigned] interface {
 	BoundedValue[T]
@@ -2736,7 +2736,7 @@ func negateSigned[T constraints.Signed](interpreter *Interpreter, v BoundedSigne
 		return -underlying
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func negateSignedBigInt(interpreter *Interpreter, v BoundedSignedValue[*big.Int], locationRange LocationRange) NumberValue {
@@ -2750,7 +2750,7 @@ func negateSignedBigInt(interpreter *Interpreter, v BoundedSignedValue[*big.Int]
 		return new(big.Int).Neg(underlying)
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 // Addition
@@ -2775,7 +2775,7 @@ func genericPlusSigned[T constraints.Signed, V BoundedSignedValue[T]](interprete
 		return underlying + otherUnderlying
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func genericPlusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
@@ -2800,14 +2800,14 @@ func genericPlusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interp
 		return res
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func genericPlusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, o V, checkOverflow, errorOnOverflow bool, locationRange LocationRange) NumberValue {
 	underlying := v.Underlying()
 	otherUnderlying := o.Underlying()
 
-	return v.Constructor(interpreter, func() T {
+	return v.Construct(interpreter, func() T {
 		sum := underlying + otherUnderlying
 		// INT30-C
 		if checkOverflow && sum < underlying {
@@ -2824,7 +2824,7 @@ func genericPlusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *In
 	underlying := v.Underlying()
 	otherUnderlying := o.Underlying()
 
-	return v.Constructor(
+	return v.Construct(
 		interpreter,
 		func() *big.Int {
 			sum := new(big.Int)
@@ -2983,7 +2983,7 @@ func genericMinusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpret
 		return underlying - otherUnderlying
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func genericMinusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
@@ -3005,7 +3005,7 @@ func genericMinusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Inter
 		return res
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func genericMinusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
@@ -3014,7 +3014,7 @@ func genericMinusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
 	checkOverflow, errorOnOverflow bool,
 	locationRange LocationRange,
 ) NumberValue {
-	return v.Constructor(
+	return v.Construct(
 		interpreter,
 		func() T {
 			underlying := v.Underlying()
@@ -3037,7 +3037,7 @@ func genericMinusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
 //
 // If Go gains a native uint128 and uint256 type, we can switch this to `minusUnsigned`
 func genericMinusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
-	return v.Constructor(
+	return v.Construct(
 		interpreter,
 		func() *big.Int {
 			diff := new(big.Int)
@@ -3222,7 +3222,7 @@ func genericMulSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter
 		return underlying * otherUnderlying
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func genericMulSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
@@ -3243,7 +3243,7 @@ func genericMulSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpr
 
 		return res
 	}
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func genericMulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
@@ -3254,7 +3254,7 @@ func genericMulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
 	errorOnOverflow bool,
 	locationRange LocationRange,
 ) NumberValue {
-	return v.Constructor(
+	return v.Construct(
 		interpreter,
 		func() T {
 			underlying := v.Underlying()
@@ -3272,7 +3272,7 @@ func genericMulUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](
 }
 
 func genericMulUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
-	return v.Constructor(
+	return v.Construct(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
@@ -3418,7 +3418,7 @@ func genericDivSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter
 		return underlying / otherUnderlying
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func genericDivSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, o V, errorOnOverflow bool, locationRange LocationRange) NumberValue {
@@ -3441,7 +3441,7 @@ func genericDivSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpr
 		return res
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func divSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3480,7 +3480,7 @@ func divUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter 
 		})
 	}
 
-	return v.Constructor(
+	return v.Construct(
 		interpreter,
 		func() T {
 			underlying := v.Underlying()
@@ -3503,7 +3503,7 @@ func divUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interprete
 		})
 	}
 
-	return v.Constructor(
+	return v.Construct(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
@@ -3581,7 +3581,7 @@ func mod[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, 
 		return underlying % otherUnderlying
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func modBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
@@ -3606,7 +3606,7 @@ func modBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other Nu
 		return res
 	}
 
-	return v.Constructor(interpreter, valueGetter)
+	return v.Construct(interpreter, valueGetter)
 }
 
 func less[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) BoolValue {
@@ -3731,7 +3731,7 @@ func bitwiseOr[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpr
 		return v.Underlying() | o.Underlying()
 	}
 
-	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+	return v.Construct(interpreter, valueGetter).(IntegerValue)
 }
 
 func bitwiseOrBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -3750,7 +3750,7 @@ func bitwiseOrBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, ot
 		return res
 	}
 
-	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+	return v.Construct(interpreter, valueGetter).(IntegerValue)
 }
 
 func bitwiseXor[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -3767,7 +3767,7 @@ func bitwiseXor[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interp
 		return v.Underlying() ^ o.Underlying()
 	}
 
-	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+	return v.Construct(interpreter, valueGetter).(IntegerValue)
 }
 
 func bitwiseXorBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -3786,7 +3786,7 @@ func bitwiseXorBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, o
 		return res
 	}
 
-	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+	return v.Construct(interpreter, valueGetter).(IntegerValue)
 }
 
 func bitwiseAnd[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -3803,7 +3803,7 @@ func bitwiseAnd[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interp
 		return v.Underlying() & o.Underlying()
 	}
 
-	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+	return v.Construct(interpreter, valueGetter).(IntegerValue)
 }
 
 func bitwiseAndBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -3822,7 +3822,7 @@ func bitwiseAndBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, o
 		return res
 	}
 
-	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+	return v.Construct(interpreter, valueGetter).(IntegerValue)
 }
 
 func bitwiseLeftShift[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -3839,7 +3839,7 @@ func bitwiseLeftShift[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *
 		return v.Underlying() << o.Underlying()
 	}
 
-	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+	return v.Construct(interpreter, valueGetter).(IntegerValue)
 }
 
 func bitwiseLeftShiftBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -3866,7 +3866,7 @@ func bitwiseLeftShiftBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, 
 		res.Lsh(v.Underlying(), uint(otherUnderlying.Uint64()))
 		return res
 	}
-	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+	return v.Construct(interpreter, valueGetter).(IntegerValue)
 }
 
 func bitwiseRightShift[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -3883,7 +3883,7 @@ func bitwiseRightShift[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter 
 		return v.Underlying() >> o.Underlying()
 	}
 
-	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+	return v.Construct(interpreter, valueGetter).(IntegerValue)
 }
 
 func bitwiseRightShiftBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -3910,7 +3910,7 @@ func bitwiseRightShiftBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter,
 		res.Rsh(v.Underlying(), uint(otherUnderlying.Uint64()))
 		return res
 	}
-	return v.Constructor(interpreter, valueGetter).(IntegerValue)
+	return v.Construct(interpreter, valueGetter).(IntegerValue)
 }
 
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
@@ -4701,7 +4701,7 @@ func (v Int8Value) Underlying() int8 {
 	return int8(v)
 }
 
-func (v Int8Value) Constructor(gauge common.MemoryGauge, getter func() int8) NumberValue {
+func (v Int8Value) Construct(gauge common.MemoryGauge, getter func() int8) NumberValue {
 	return NewInt8Value(gauge, getter)
 }
 
@@ -4977,7 +4977,7 @@ func (v Int16Value) Underlying() int16 {
 	return int16(v)
 }
 
-func (v Int16Value) Constructor(gauge common.MemoryGauge, getter func() int16) NumberValue {
+func (v Int16Value) Construct(gauge common.MemoryGauge, getter func() int16) NumberValue {
 	return NewInt16Value(gauge, getter)
 }
 
@@ -5255,7 +5255,7 @@ func (v Int32Value) Underlying() int32 {
 	return int32(v)
 }
 
-func (v Int32Value) Constructor(gauge common.MemoryGauge, getter func() int32) NumberValue {
+func (v Int32Value) Construct(gauge common.MemoryGauge, getter func() int32) NumberValue {
 	return NewInt32Value(gauge, getter)
 }
 
@@ -5530,7 +5530,7 @@ func (v Int64Value) Underlying() int64 {
 	return int64(v)
 }
 
-func (v Int64Value) Constructor(gauge common.MemoryGauge, getter func() int64) NumberValue {
+func (v Int64Value) Construct(gauge common.MemoryGauge, getter func() int64) NumberValue {
 	return NewInt64Value(gauge, getter)
 }
 
@@ -5829,7 +5829,7 @@ func (v Int128Value) Underlying() *big.Int {
 	return v.BigInt
 }
 
-func (v Int128Value) Constructor(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
+func (v Int128Value) Construct(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
 	return NewInt128ValueFromBigInt(gauge, getter)
 }
 
@@ -6140,7 +6140,7 @@ func (v Int256Value) Underlying() *big.Int {
 	return v.BigInt
 }
 
-func (v Int256Value) Constructor(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
+func (v Int256Value) Construct(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
 	return NewInt256ValueFromBigInt(gauge, getter)
 }
 
@@ -7011,7 +7011,7 @@ func (v UInt8Value) Underlying() uint8 {
 	return uint8(v)
 }
 
-func (v UInt8Value) Constructor(gauge common.MemoryGauge, getter func() uint8) NumberValue {
+func (v UInt8Value) Construct(gauge common.MemoryGauge, getter func() uint8) NumberValue {
 	return NewUInt8Value(gauge, getter)
 }
 
@@ -7313,7 +7313,7 @@ func (v UInt16Value) Underlying() uint16 {
 	return uint16(v)
 }
 
-func (v UInt16Value) Constructor(gauge common.MemoryGauge, getter func() uint16) NumberValue {
+func (v UInt16Value) Construct(gauge common.MemoryGauge, getter func() uint16) NumberValue {
 	return NewUInt16Value(gauge, getter)
 }
 
@@ -7574,7 +7574,7 @@ func (v UInt32Value) Underlying() uint32 {
 	return uint32(v)
 }
 
-func (v UInt32Value) Constructor(gauge common.MemoryGauge, getter func() uint32) NumberValue {
+func (v UInt32Value) Construct(gauge common.MemoryGauge, getter func() uint32) NumberValue {
 	return NewUInt32Value(gauge, getter)
 }
 
@@ -7859,7 +7859,7 @@ func (v UInt64Value) Underlying() uint64 {
 	return uint64(v)
 }
 
-func (v UInt64Value) Constructor(gauge common.MemoryGauge, getter func() uint64) NumberValue {
+func (v UInt64Value) Construct(gauge common.MemoryGauge, getter func() uint64) NumberValue {
 	return NewUInt64Value(gauge, getter)
 }
 
@@ -8149,7 +8149,7 @@ func (v UInt128Value) Underlying() *big.Int {
 	return v.BigInt
 }
 
-func (v UInt128Value) Constructor(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
+func (v UInt128Value) Construct(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
 	return NewUInt128ValueFromBigInt(gauge, getter)
 }
 
@@ -8463,7 +8463,7 @@ func (v UInt256Value) Underlying() *big.Int {
 	return v.BigInt
 }
 
-func (v UInt256Value) Constructor(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
+func (v UInt256Value) Construct(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
 	return NewUInt256ValueFromBigInt(gauge, getter)
 }
 
@@ -8747,7 +8747,7 @@ func (v Word8Value) Underlying() uint8 {
 	return uint8(v)
 }
 
-func (v Word8Value) Constructor(gauge common.MemoryGauge, getter func() uint8) NumberValue {
+func (v Word8Value) Construct(gauge common.MemoryGauge, getter func() uint8) NumberValue {
 	return NewWord8Value(gauge, getter)
 }
 
@@ -9001,7 +9001,7 @@ func (v Word16Value) Underlying() uint16 {
 	return uint16(v)
 }
 
-func (v Word16Value) Constructor(gauge common.MemoryGauge, getter func() uint16) NumberValue {
+func (v Word16Value) Construct(gauge common.MemoryGauge, getter func() uint16) NumberValue {
 	return NewWord16Value(gauge, getter)
 }
 
@@ -9258,7 +9258,7 @@ func (v Word32Value) Underlying() uint32 {
 	return uint32(v)
 }
 
-func (v Word32Value) Constructor(gauge common.MemoryGauge, getter func() uint32) NumberValue {
+func (v Word32Value) Construct(gauge common.MemoryGauge, getter func() uint32) NumberValue {
 	return NewWord32Value(gauge, getter)
 }
 
@@ -9539,7 +9539,7 @@ func (v Word64Value) Underlying() uint64 {
 	return uint64(v)
 }
 
-func (v Word64Value) Constructor(gauge common.MemoryGauge, getter func() uint64) NumberValue {
+func (v Word64Value) Construct(gauge common.MemoryGauge, getter func() uint64) NumberValue {
 	return NewWord64Value(gauge, getter)
 }
 
@@ -9821,7 +9821,7 @@ func (v Fix64Value) Underlying() int64 {
 	return int64(v)
 }
 
-func (v Fix64Value) Constructor(gauge common.MemoryGauge, getter func() int64) NumberValue {
+func (v Fix64Value) Construct(gauge common.MemoryGauge, getter func() int64) NumberValue {
 	return NewFix64Value(gauge, getter)
 }
 
@@ -10256,7 +10256,7 @@ func (v UFix64Value) Underlying() uint64 {
 	return uint64(v)
 }
 
-func (v UFix64Value) Constructor(gauge common.MemoryGauge, getter func() uint64) NumberValue {
+func (v UFix64Value) Construct(gauge common.MemoryGauge, getter func() uint64) NumberValue {
 	return NewUFix64Value(gauge, getter)
 }
 
