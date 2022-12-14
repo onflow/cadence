@@ -239,6 +239,9 @@ func (e RedeclarationError) Error() string {
 // DereferenceError
 
 type DereferenceError struct {
+	Cause        string
+	ExpectedType *sema.Type
+	ActualType   *sema.Type
 	LocationRange
 }
 
@@ -251,7 +254,19 @@ func (e DereferenceError) Error() string {
 }
 
 func (e DereferenceError) SecondaryError() string {
-	return "the value being referenced has been destroyed or moved"
+	if e.Cause != "" {
+		return e.Cause
+	}
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		*e.ExpectedType,
+		*e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"type mismatch: expected `%s`, got `%s`",
+		expected,
+		actual,
+	)
 }
 
 // OverflowError

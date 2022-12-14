@@ -3907,7 +3907,7 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 				// and performs a dynamic type check
 
 				return AsBoolValue(
-					reference.ReferencedValue(interpreter) != nil,
+					reference.ReferencedValue(interpreter, invocation.LocationRange, false) != nil,
 				)
 
 			default:
