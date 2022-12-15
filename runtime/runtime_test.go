@@ -7759,3 +7759,58 @@ error: unexpectedly found nil while forcing an Optional value
 
 	require.Equal(t, errorString, err.Error())
 }
+
+func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	script := []byte(`
+	pub fun main(): String {
+		// fill lines so the error occurs on lines 9 and 10
+		// 
+		// 
+		//
+		//
+		let a = [1,2,3,4]
+		return a
+			.firstIndex(of: 5)
+				?.toString()!
+	}
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getAccountBalance:          noopRuntimeUInt64Getter,
+		getAccountAvailableBalance: noopRuntimeUInt64Getter,
+		getStorageUsed:             noopRuntimeUInt64Getter,
+		getStorageCapacity:         noopRuntimeUInt64Getter,
+		accountKeysCount:           noopRuntimeUInt64Getter,
+		storage:                    newTestLedger(nil, nil),
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.Error(t, err)
+
+	errorString := `Execution failed:
+error: unexpectedly found nil while forcing an Optional value
+  --> 0000000000000000000000000000000000000000000000000000000000000000:9:9
+   |
+ 9 | 		return a
+10 | 			.firstIndex(of: 5)
+11 | 				?.toString()!
+   | 				            ^
+`
+
+	require.Equal(t, errorString, err.Error())
+}
