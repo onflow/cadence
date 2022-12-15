@@ -257,14 +257,8 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 		lineNumberLength := 0
 		if excerpt.startPos != nil {
 
-			plainLineNumberString := strconv.Itoa(excerpt.startPos.Line)
+			plainLineNumberString := strconv.Itoa(excerpt.endPos.Line)
 			lineNumberLength = len(plainLineNumberString)
-
-			// prepare line number string
-			lineNumberString = plainLineNumberString + " | "
-			if p.useColor {
-				lineNumberString = colorizeMeta(lineNumberString)
-			}
 		}
 
 		// write arrow, location, and position (if any)
@@ -293,24 +287,40 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			p.writeString(emptyLineNumbers)
 			p.writeString("\n")
 
-			// line number
-			p.writeString(lineNumberString)
+			var line string
+			for lineNumber := excerpt.startPos.Line - 1; lineNumber < excerpt.endPos.Line; lineNumber++ {
+				plainLineNumberString := strconv.Itoa(lineNumber + 1)
 
-			// code line
-			line := lines[excerpt.startPos.Line-1]
-			if len(line) > maxLineLength {
-				p.writeString(line[:maxLineLength])
-				p.writeString(excerptDots)
-			} else {
-				p.writeString(line)
+				// if the line number increases in digit length during the error,
+				// fill the extra space with blank spaces
+				if i = 0; i < lineNumberLength-len(plainLineNumberString) {
+					p.writeString(" ")
+				}
+
+				// prepare line number string
+				lineNumberString = plainLineNumberString + " | "
+				if p.useColor {
+					lineNumberString = colorizeMeta(lineNumberString)
+				}
+				// line number
+				p.writeString(lineNumberString)
+
+				// code line
+				line = lines[lineNumber]
+				if len(line) > maxLineLength {
+					p.writeString(line[:maxLineLength])
+					p.writeString(excerptDots)
+				} else {
+					p.writeString(line)
+				}
+
+				p.writeString("\n")
 			}
-
-			p.writeString("\n")
 
 			// indicator line
 			p.writeString(emptyLineNumbers)
 
-			indicatorLength := excerpt.startPos.Column
+			indicatorLength := excerpt.endPos.Column
 			if indicatorLength >= maxLineLength {
 				indicatorLength = maxLineLength
 			}
