@@ -177,6 +177,11 @@ class Updater {
     async repoModUpdated(refName: string, repo: Repo, mod: Mod): Promise<boolean> {
         const fullRepoName = repo.repo
         const fullModName = path.join(fullRepoName, mod.path)
+
+        if (this.versions.get(fullModName)) {
+            return true
+        }
+
         console.log(`Checking if mod ${fullModName} at repo version ${refName} is updated ...`)
 
         const goMod = await Updater.fetchRaw(fullRepoName, refName, path.join(mod.path, "go.mod"))
