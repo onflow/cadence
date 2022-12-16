@@ -320,13 +320,13 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			// indicator line
 			p.writeString(emptyLineNumbers)
 
-			indicatorLength := excerpt.endPos.Column
+			indicatorLength := excerpt.startPos.Column
 			if indicatorLength >= maxLineLength {
 				indicatorLength = maxLineLength
 			}
 
 			p.writeString(" ")
-			for i := 0; i < indicatorLength; i++ {
+			for i := 0; i < indicatorLength && i < excerpt.endPos.Column; i++ {
 				c := line[i]
 				if c != '\t' {
 					c = ' '
@@ -335,7 +335,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			}
 
 			columns := 1
-			if excerpt.endPos != nil && excerpt.endPos.Line == excerpt.startPos.Line {
+			if excerpt.endPos != nil {
 				endColumn := excerpt.endPos.Column
 				if endColumn >= maxLineLength {
 					endColumn = maxLineLength - 1
