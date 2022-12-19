@@ -1956,7 +1956,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 	checker, err := ParseAndCheckWithPanic(t, `
       struct interface I {}
 
-      let s: ((I): {Int: I}) = panic("")
+      let s: fun(I): {Int: I} = panic("")
     `)
 
 	errs := RequireCheckerErrors(t, err, 1)

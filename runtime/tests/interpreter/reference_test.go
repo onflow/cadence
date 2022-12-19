@@ -368,7 +368,7 @@ func TestInterpretContainerVariance(t *testing.T) {
           }
 
           fun test(): Int {
-              let dict: {Int: ((): Int)} = {}
+              let dict: {Int: fun(): Int} = {}
               let dictRef = &dict as &{Int: AnyStruct}
 
               dictRef[0] = f2

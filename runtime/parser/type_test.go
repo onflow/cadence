@@ -1012,7 +1012,7 @@ func TestParseFunctionType(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("(():Void)")
+		result, errs := testParseType("fun():Void")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1024,14 +1024,14 @@ func TestParseFunctionType(t *testing.T) {
 					Type: &ast.NominalType{
 						Identifier: ast.Identifier{
 							Identifier: "Void",
-							Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+							Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
 						},
 					},
-					StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+					StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 				},
 			},
 			result,
@@ -1042,7 +1042,7 @@ func TestParseFunctionType(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("(view ():Void)")
+		result, errs := testParseType("view fun ():Void")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1054,14 +1054,14 @@ func TestParseFunctionType(t *testing.T) {
 					Type: &ast.NominalType{
 						Identifier: ast.Identifier{
 							Identifier: "Void",
-							Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+							Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
 						},
 					},
-					StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+					StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+					StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+					EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
 				},
 			},
 			result,
@@ -1072,7 +1072,7 @@ func TestParseFunctionType(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("( ( String , Bool , @R ) : Int)")
+		result, errs := testParseType("fun( String , Bool , @R ) : Int")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1083,30 +1083,30 @@ func TestParseFunctionType(t *testing.T) {
 						Type: &ast.NominalType{
 							Identifier: ast.Identifier{
 								Identifier: "String",
-								Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
 							},
 						},
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
 					},
 					{
 						IsResource: false,
 						Type: &ast.NominalType{
 							Identifier: ast.Identifier{
 								Identifier: "Bool",
-								Pos:        ast.Position{Line: 1, Column: 13, Offset: 13},
+								Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
 							},
 						},
-						StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+						StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
 					},
 					{
 						IsResource: true,
 						Type: &ast.NominalType{
 							Identifier: ast.Identifier{
 								Identifier: "R",
-								Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+								Pos:        ast.Position{Line: 1, Column: 22, Offset: 22},
 							},
 						},
-						StartPos: ast.Position{Line: 1, Column: 20, Offset: 20},
+						StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
 					},
 				},
 				ReturnTypeAnnotation: &ast.TypeAnnotation{
@@ -1114,10 +1114,10 @@ func TestParseFunctionType(t *testing.T) {
 					Type: &ast.NominalType{
 						Identifier: ast.Identifier{
 							Identifier: "Int",
-							Pos:        ast.Position{Line: 1, Column: 27, Offset: 27},
+							Pos:        ast.Position{Line: 1, Column: 28, Offset: 28},
 						},
 					},
-					StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
+					StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1835,7 +1835,7 @@ func TestParseFunctionTypeInVariableDeclaration(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-		let add: ((Int8, Int16): Int32) = nothing
+		let add: fun(Int8, Int16): Int32 = nothing
 	`
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
@@ -1857,20 +1857,20 @@ func TestParseFunctionTypeInVariableDeclaration(t *testing.T) {
 								Type: &ast.NominalType{
 									Identifier: ast.Identifier{
 										Identifier: "Int8",
-										Pos:        ast.Position{Offset: 14, Line: 2, Column: 13},
+										Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 									},
 								},
-								StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
+								StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 							},
 							{
 								IsResource: false,
 								Type: &ast.NominalType{
 									Identifier: ast.Identifier{
 										Identifier: "Int16",
-										Pos:        ast.Position{Offset: 20, Line: 2, Column: 19},
+										Pos:        ast.Position{Offset: 22, Line: 2, Column: 21},
 									},
 								},
-								StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+								StartPos: ast.Position{Offset: 22, Line: 2, Column: 21},
 							},
 						},
 						ReturnTypeAnnotation: &ast.TypeAnnotation{
@@ -1878,26 +1878,26 @@ func TestParseFunctionTypeInVariableDeclaration(t *testing.T) {
 							Type: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "Int32",
-									Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
+									Pos:        ast.Position{Offset: 30, Line: 2, Column: 29},
 								},
 							},
-							StartPos: ast.Position{Offset: 28, Line: 2, Column: 27},
+							StartPos: ast.Position{Offset: 30, Line: 2, Column: 29},
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 12, Line: 2, Column: 11},
-							EndPos:   ast.Position{Offset: 33, Line: 2, Column: 32},
+							EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
 						},
 					},
 					StartPos: ast.Position{Offset: 12, Line: 2, Column: 11},
 				},
 				Transfer: &ast.Transfer{
 					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 35, Line: 2, Column: 34},
+					Pos:       ast.Position{Offset: 36, Line: 2, Column: 35},
 				},
 				Value: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
 						Identifier: "nothing",
-						Pos:        ast.Position{Offset: 37, Line: 2, Column: 36},
+						Pos:        ast.Position{Offset: 38, Line: 2, Column: 37},
 					},
 				},
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
@@ -1912,7 +1912,7 @@ func TestParseFunctionArrayType(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-		let test: [((Int8): Int16); 2] = []
+		let test: [fun(Int8): Int16; 2] = []
 	`
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
@@ -1936,10 +1936,10 @@ func TestParseFunctionArrayType(t *testing.T) {
 									Type: &ast.NominalType{
 										Identifier: ast.Identifier{
 											Identifier: "Int8",
-											Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+											Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
 										},
 									},
-									StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
+									StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 								},
 							},
 							ReturnTypeAnnotation: &ast.TypeAnnotation{
@@ -1947,14 +1947,14 @@ func TestParseFunctionArrayType(t *testing.T) {
 								Type: &ast.NominalType{
 									Identifier: ast.Identifier{
 										Identifier: "Int16",
-										Pos:        ast.Position{Offset: 23, Line: 2, Column: 22},
+										Pos:        ast.Position{Offset: 25, Line: 2, Column: 24},
 									},
 								},
-								StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+								StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
 							},
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
-								EndPos:   ast.Position{Offset: 28, Line: 2, Column: 27},
+								EndPos:   ast.Position{Offset: 29, Line: 2, Column: 28},
 							},
 						},
 						Size: &ast.IntegerExpression{
@@ -1962,25 +1962,25 @@ func TestParseFunctionArrayType(t *testing.T) {
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 31, Line: 2, Column: 30},
-								EndPos:   ast.Position{Offset: 31, Line: 2, Column: 30},
+								StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
+								EndPos:   ast.Position{Offset: 32, Line: 2, Column: 31},
 							},
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
-							EndPos:   ast.Position{Offset: 32, Line: 2, Column: 31},
+							EndPos:   ast.Position{Offset: 33, Line: 2, Column: 32},
 						},
 					},
 					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 				Transfer: &ast.Transfer{
 					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 34, Line: 2, Column: 33},
+					Pos:       ast.Position{Offset: 35, Line: 2, Column: 34},
 				},
 				Value: &ast.ArrayExpression{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 36, Line: 2, Column: 35},
-						EndPos:   ast.Position{Offset: 37, Line: 2, Column: 36},
+						StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
+						EndPos:   ast.Position{Offset: 38, Line: 2, Column: 37},
 					},
 				},
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
@@ -1995,7 +1995,7 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-		let test: ((Int8): [Int16; 2]) = nothing
+		let test: fun(Int8): [Int16; 2] = nothing
 	`
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
@@ -2017,10 +2017,10 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 								Type: &ast.NominalType{
 									Identifier: ast.Identifier{
 										Identifier: "Int8",
-										Pos:        ast.Position{Offset: 15, Line: 2, Column: 14},
+										Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
 									},
 								},
-								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
+								StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 							},
 						},
 						ReturnTypeAnnotation: &ast.TypeAnnotation{
@@ -2029,7 +2029,7 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 								Type: &ast.NominalType{
 									Identifier: ast.Identifier{
 										Identifier: "Int16",
-										Pos:        ast.Position{Offset: 23, Line: 2, Column: 22},
+										Pos:        ast.Position{Offset: 25, Line: 2, Column: 24},
 									},
 								},
 								Size: &ast.IntegerExpression{
@@ -2037,32 +2037,32 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 									Value:           big.NewInt(2),
 									Base:            10,
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 30, Line: 2, Column: 29},
-										EndPos:   ast.Position{Offset: 30, Line: 2, Column: 29},
+										StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
+										EndPos:   ast.Position{Offset: 32, Line: 2, Column: 31},
 									},
 								},
 								Range: ast.Range{
-									StartPos: ast.Position{Offset: 22, Line: 2, Column: 21},
-									EndPos:   ast.Position{Offset: 31, Line: 2, Column: 30},
+									StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+									EndPos:   ast.Position{Offset: 33, Line: 2, Column: 32},
 								},
 							},
-							StartPos: ast.Position{Offset: 22, Line: 2, Column: 21},
+							StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
-							EndPos:   ast.Position{Offset: 32, Line: 2, Column: 31},
+							EndPos:   ast.Position{Offset: 33, Line: 2, Column: 32},
 						},
 					},
 					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 				Transfer: &ast.Transfer{
 					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 34, Line: 2, Column: 33},
+					Pos:       ast.Position{Offset: 35, Line: 2, Column: 34},
 				},
 				Value: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
 						Identifier: "nothing",
-						Pos:        ast.Position{Offset: 36, Line: 2, Column: 35},
+						Pos:        ast.Position{Offset: 37, Line: 2, Column: 36},
 					},
 				},
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
@@ -2077,7 +2077,19 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-		let test: ((Int8): ((Int16): Int32)) = nothing
+		let test: fun(Int8): (fun(Int16): Int32) = nothing
+	`
+	_, errs := testParseProgram(code)
+
+	require.Empty(t, errs)
+}
+
+func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+		let test: fun(Int8): fun(Int16): Int32 = nothing
 	`
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
@@ -2099,10 +2111,10 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 								Type: &ast.NominalType{
 									Identifier: ast.Identifier{
 										Identifier: "Int8",
-										Pos:        ast.Position{Offset: 15, Line: 2, Column: 14},
+										Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
 									},
 								},
-								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
+								StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 							},
 						},
 						ReturnTypeAnnotation: &ast.TypeAnnotation{
@@ -2114,10 +2126,10 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 										Type: &ast.NominalType{
 											Identifier: ast.Identifier{
 												Identifier: "Int16",
-												Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
+												Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
 											},
 										},
-										StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+										StartPos: ast.Position{Offset: 28, Line: 2, Column: 27},
 									},
 								},
 								ReturnTypeAnnotation: &ast.TypeAnnotation{
@@ -2125,33 +2137,33 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 									Type: &ast.NominalType{
 										Identifier: ast.Identifier{
 											Identifier: "Int32",
-											Pos:        ast.Position{Offset: 32, Line: 2, Column: 31},
+											Pos:        ast.Position{Offset: 36, Line: 2, Column: 35},
 										},
 									},
-									StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
+									StartPos: ast.Position{Offset: 36, Line: 2, Column: 35},
 								},
 								Range: ast.Range{
-									StartPos: ast.Position{Offset: 22, Line: 2, Column: 21},
-									EndPos:   ast.Position{Offset: 37, Line: 2, Column: 36},
+									StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+									EndPos:   ast.Position{Offset: 40, Line: 2, Column: 39},
 								},
 							},
-							StartPos: ast.Position{Offset: 22, Line: 2, Column: 21},
+							StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
-							EndPos:   ast.Position{Offset: 38, Line: 2, Column: 37},
+							EndPos:   ast.Position{Offset: 40, Line: 2, Column: 39},
 						},
 					},
 					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 				Transfer: &ast.Transfer{
 					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 40, Line: 2, Column: 39},
+					Pos:       ast.Position{Offset: 42, Line: 2, Column: 41},
 				},
 				Value: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
 						Identifier: "nothing",
-						Pos:        ast.Position{Offset: 42, Line: 2, Column: 41},
+						Pos:        ast.Position{Offset: 44, Line: 2, Column: 43},
 					},
 				},
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
@@ -2161,93 +2173,168 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 	)
 }
 
-func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
-
+func TestParseViewFunctionTypeWithNewSyntax(t *testing.T) {
 	t.Parallel()
 
-	const code = `
-		let test: ((Int8): ((Int16): Int32)) = nothing
+	code := `
+		let test: view     fun(Int8): fun(Int16): Int32 = nothing
 	`
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.VariableDeclaration{
-				Identifier: ast.Identifier{
-					Identifier: "test",
-					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
-				},
-				IsConstant: true,
-				TypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.FunctionType{
-						ParameterTypeAnnotations: []*ast.TypeAnnotation{
-							{
-								IsResource: false,
-								Type: &ast.NominalType{
-									Identifier: ast.Identifier{
-										Identifier: "Int8",
-										Pos:        ast.Position{Offset: 15, Line: 2, Column: 14},
-									},
+	expected := []ast.Declaration{
+		&ast.VariableDeclaration{
+			IsConstant: true,
+			Identifier: ast.Identifier{
+				Identifier: "test",
+				Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+			},
+			TypeAnnotation: &ast.TypeAnnotation{
+				Type: &ast.FunctionType{
+					PurityAnnotation: ast.FunctionPurityView,
+					ParameterTypeAnnotations: []*ast.TypeAnnotation{
+						{
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int8",
+									Pos:        ast.Position{Offset: 26, Line: 2, Column: 25},
 								},
-								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 							},
+							StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
 						},
-						ReturnTypeAnnotation: &ast.TypeAnnotation{
-							IsResource: false,
-							Type: &ast.FunctionType{
-								ParameterTypeAnnotations: []*ast.TypeAnnotation{
-									{
-										IsResource: false,
-										Type: &ast.NominalType{
-											Identifier: ast.Identifier{
-												Identifier: "Int16",
-												Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
-											},
-										},
-										StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
-									},
-								},
-								ReturnTypeAnnotation: &ast.TypeAnnotation{
-									IsResource: false,
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.FunctionType{
+							ParameterTypeAnnotations: []*ast.TypeAnnotation{
+								{
 									Type: &ast.NominalType{
 										Identifier: ast.Identifier{
-											Identifier: "Int32",
-											Pos:        ast.Position{Offset: 32, Line: 2, Column: 31},
+											Identifier: "Int16",
+											Pos:        ast.Position{Offset: 37, Line: 2, Column: 36},
 										},
 									},
-									StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
-								},
-								Range: ast.Range{
-									StartPos: ast.Position{Offset: 22, Line: 2, Column: 21},
-									EndPos:   ast.Position{Offset: 37, Line: 2, Column: 36},
+									StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
 								},
 							},
-							StartPos: ast.Position{Offset: 22, Line: 2, Column: 21},
+							ReturnTypeAnnotation: &ast.TypeAnnotation{
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int32",
+										Pos:        ast.Position{Offset: 45, Line: 2, Column: 44},
+									},
+								},
+								StartPos: ast.Position{Offset: 45, Line: 2, Column: 44},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 33, Line: 2, Column: 32},
+								EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
+							},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
-							EndPos:   ast.Position{Offset: 38, Line: 2, Column: 37},
-						},
+						StartPos: ast.Position{Offset: 33, Line: 2, Column: 32},
 					},
-					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 40, Line: 2, Column: 39},
-				},
-				Value: &ast.IdentifierExpression{
-					Identifier: ast.Identifier{
-						Identifier: "nothing",
-						Pos:        ast.Position{Offset: 42, Line: 2, Column: 41},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+						EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
 					},
 				},
-				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+				StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 			},
+			Value: &ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "nothing",
+					Pos:        ast.Position{Offset: 53, Line: 2, Column: 52},
+				},
+			},
+			Transfer: &ast.Transfer{
+				Operation: 1,
+				Pos:       ast.Position{Offset: 51, Line: 2, Column: 50},
+			},
+			StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 		},
-		result.Declarations(),
-	)
+	}
+	utils.AssertEqualWithDiff(t, expected, result.Declarations())
+}
+
+func TestParseNewSyntaxFunctionType(t *testing.T) {
+	t.Parallel()
+
+	code := `
+		let test: fun(Int8): fun(Int16): Int32 = nothing
+	`
+
+	result, errs := testParseProgram(code)
+	require.Empty(t, errs)
+
+	expected := []ast.Declaration{
+		&ast.VariableDeclaration{
+			IsConstant: true,
+			Identifier: ast.Identifier{
+				Identifier: "test",
+				Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+			},
+			TypeAnnotation: &ast.TypeAnnotation{
+				Type: &ast.FunctionType{
+					ParameterTypeAnnotations: []*ast.TypeAnnotation{
+						{
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int8",
+									Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
+								},
+							},
+							StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.FunctionType{
+							ParameterTypeAnnotations: []*ast.TypeAnnotation{
+								{
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int16",
+											Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
+										},
+									},
+									StartPos: ast.Position{Offset: 28, Line: 2, Column: 27},
+								},
+							},
+							ReturnTypeAnnotation: &ast.TypeAnnotation{
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int32",
+										Pos:        ast.Position{Offset: 36, Line: 2, Column: 35},
+									},
+								},
+								StartPos: ast.Position{Offset: 36, Line: 2, Column: 35},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+								EndPos:   ast.Position{Offset: 40, Line: 2, Column: 39},
+							},
+						},
+						StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+						EndPos:   ast.Position{Offset: 40, Line: 2, Column: 39},
+					},
+				},
+				StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+			},
+			Value: &ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "nothing",
+					Pos:        ast.Position{Offset: 44, Line: 2, Column: 43},
+				},
+			},
+			Transfer: &ast.Transfer{
+				Operation: 1,
+				Pos:       ast.Position{Offset: 42, Line: 2, Column: 41},
+			},
+			StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+		},
+	}
+	utils.AssertEqualWithDiff(t, expected, result.Declarations())
 }
 
 func TestParseOptionalTypeDouble(t *testing.T) {
@@ -2309,7 +2396,7 @@ func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-        let f: ((): @R) = g
+        let f: fun(): @R = g
 	`
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
@@ -2331,26 +2418,26 @@ func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 							Type: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "R",
-									Pos:        ast.Position{Offset: 22, Line: 2, Column: 21},
+									Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
 								},
 							},
-							StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
+							StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-							EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
+							EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
 						},
 					},
 					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
 				Transfer: &ast.Transfer{
 					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 25, Line: 2, Column: 24},
+					Pos:       ast.Position{Offset: 26, Line: 2, Column: 25},
 				},
 				Value: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
 						Identifier: "g",
-						Pos:        ast.Position{Offset: 27, Line: 2, Column: 26},
+						Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
 					},
 				},
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
@@ -2874,4 +2961,82 @@ func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
 		},
 		errs,
 	)
+}
+
+func TestParseParenthesizedTypes(t *testing.T) {
+	t.Parallel()
+
+	code := `let x: (Int) = 42`
+	prog, errs := testParseProgram(code)
+	require.Empty(t, errs)
+	expected := []ast.Declaration{
+		&ast.VariableDeclaration{
+			IsConstant: true,
+			Identifier: ast.Identifier{Identifier: "x", Pos: ast.Position{Offset: 4, Line: 1, Column: 4}},
+			TypeAnnotation: &ast.TypeAnnotation{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+				StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+			},
+			Value: &ast.IntegerExpression{
+				PositiveLiteral: []uint8("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+					EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+				},
+			},
+			Transfer: &ast.Transfer{
+				Operation: 1,
+				Pos:       ast.Position{Offset: 13, Line: 1, Column: 13},
+			},
+			StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+		},
+	}
+
+	utils.AssertEqualWithDiff(t, expected, prog.Declarations())
+}
+
+func TestParseNestedParenthesizedTypes(t *testing.T) {
+	t.Parallel()
+
+	code := `let x: (((((((((Int))))))))) = 42`
+	prog, errs := testParseProgram(code)
+	require.Empty(t, errs)
+	expected := []ast.Declaration{
+		&ast.VariableDeclaration{
+			IsConstant: true,
+			Identifier: ast.Identifier{Identifier: "x", Pos: ast.Position{Offset: 4, Line: 1, Column: 4}},
+			TypeAnnotation: &ast.TypeAnnotation{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Offset: 16, Line: 1, Column: 16},
+					},
+				},
+				StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+			},
+			Value: &ast.IntegerExpression{
+				PositiveLiteral: []uint8("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 31, Line: 1, Column: 31},
+					EndPos:   ast.Position{Offset: 32, Line: 1, Column: 32},
+				},
+			},
+			Transfer: &ast.Transfer{
+				Operation: 1,
+				Pos:       ast.Position{Offset: 29, Line: 1, Column: 29},
+			},
+			StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+		},
+	}
+
+	utils.AssertEqualWithDiff(t, expected, prog.Declarations())
 }

@@ -444,7 +444,7 @@ func TestInterpretFunctionType(t *testing.T) {
       let b = FunctionType(parameters: [Type<String>(), Type<Int>()], return: Type<Bool>())
       let c = FunctionType(parameters: [], return: Type<String>())
 
-      let d = Type<((String): Int)>();
+      let d = Type<fun(String): Int>();
     `)
 
 	assert.Equal(t,

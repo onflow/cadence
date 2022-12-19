@@ -706,11 +706,11 @@ var AccountKeysTypeGetFunctionType = NewSimpleFunctionType(
 	NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
 )
 
-// fun keys.forEach(_ function: ((AccountKey): Bool)): Void
+// fun keys.forEach(_ function: fun(AccountKey): Bool): Void
 var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 	const functionPurity = FunctionPurityImpure
 
-	// ((AccountKey): Bool)
+	// fun(AccountKey): Bool
 	iterFunctionType := NewSimpleFunctionType(
 		functionPurity,
 		[]Parameter{

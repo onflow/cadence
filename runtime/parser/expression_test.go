@@ -5487,7 +5487,7 @@ func TestParseMissingReturnType(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-		let noop: ((): Void) =
+		let noop: fun(): Void =
             fun () { return }
 	`
 	result, errs := testParseProgram(code)
@@ -5510,55 +5510,55 @@ func TestParseMissingReturnType(t *testing.T) {
 							Type: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "Void",
-									Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+									Pos:        ast.Position{Offset: 20, Line: 2, Column: 19},
 								},
 							},
-							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
+							StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
-							EndPos:   ast.Position{Offset: 22, Line: 2, Column: 21},
+							EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
 						},
 					},
 					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 				Transfer: &ast.Transfer{
 					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 24, Line: 2, Column: 23},
+					Pos:       ast.Position{Offset: 25, Line: 2, Column: 24},
 				},
 				Value: &ast.FunctionExpression{
 					ParameterList: &ast.ParameterList{
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 42, Line: 3, Column: 16},
-							EndPos:   ast.Position{Offset: 43, Line: 3, Column: 17},
+							StartPos: ast.Position{Offset: 43, Line: 3, Column: 16},
+							EndPos:   ast.Position{Offset: 44, Line: 3, Column: 17},
 						},
 					},
 					ReturnTypeAnnotation: &ast.TypeAnnotation{
 						IsResource: false,
 						Type: &ast.NominalType{
 							Identifier: ast.Identifier{
-								Pos: ast.Position{Offset: 43, Line: 3, Column: 17},
+								Pos: ast.Position{Offset: 44, Line: 3, Column: 17},
 							},
 						},
-						StartPos: ast.Position{Offset: 43, Line: 3, Column: 17},
+						StartPos: ast.Position{Offset: 44, Line: 3, Column: 17},
 					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
 							Statements: []ast.Statement{
 								&ast.ReturnStatement{
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 47, Line: 3, Column: 21},
-										EndPos:   ast.Position{Offset: 52, Line: 3, Column: 26},
+										StartPos: ast.Position{Offset: 48, Line: 3, Column: 21},
+										EndPos:   ast.Position{Offset: 53, Line: 3, Column: 26},
 									},
 								},
 							},
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 45, Line: 3, Column: 19},
-								EndPos:   ast.Position{Offset: 54, Line: 3, Column: 28},
+								StartPos: ast.Position{Offset: 46, Line: 3, Column: 19},
+								EndPos:   ast.Position{Offset: 55, Line: 3, Column: 28},
 							},
 						},
 					},
-					StartPos: ast.Position{Offset: 38, Line: 3, Column: 12},
+					StartPos: ast.Position{Offset: 39, Line: 3, Column: 12},
 				},
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 			},

@@ -462,8 +462,9 @@ func (t *FunctionType) String() string {
 	return Prettier(t)
 }
 
-const functionTypeStartDoc = prettier.Text("(")
-const functionTypeEndDoc = prettier.Text(")")
+const functionTypeKeywordDoc = prettier.Text("fun")
+const openParenthesisDoc = prettier.Text("(")
+const closeParenthesisDoc = prettier.Text(")")
 const functionTypeParameterSeparatorDoc = prettier.Text(",")
 
 func (t *FunctionType) Doc() prettier.Doc {
@@ -471,9 +472,17 @@ func (t *FunctionType) Doc() prettier.Doc {
 		prettier.SoftLine{},
 	}
 
-	result := prettier.Concat{
-		functionTypeStartDoc,
+	var result prettier.Concat
+
+	if t.PurityAnnotation != FunctionPurityUnspecified {
+		result = append(
+			result,
+			prettier.Text(t.PurityAnnotation.Keyword()),
+			prettier.Space,
+		)
 	}
+
+	result = append(result, functionTypeKeywordDoc, prettier.Space)
 
 	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
 		if i > 0 {
@@ -489,29 +498,20 @@ func (t *FunctionType) Doc() prettier.Doc {
 		)
 	}
 
-	if t.PurityAnnotation != FunctionPurityUnspecified {
-		result = append(
-			result,
-			prettier.Text(t.PurityAnnotation.Keyword()),
-			prettier.Space,
-		)
-	}
-
 	result = append(
 		result,
 		prettier.Group{
 			Doc: prettier.Concat{
-				functionTypeStartDoc,
+				openParenthesisDoc,
 				prettier.Indent{
 					Doc: parametersDoc,
 				},
 				prettier.SoftLine{},
-				functionTypeEndDoc,
+				closeParenthesisDoc,
 			},
 		},
 		typeSeparatorSpaceDoc,
 		t.ReturnTypeAnnotation.Doc(),
-		functionTypeEndDoc,
 	)
 
 	return result

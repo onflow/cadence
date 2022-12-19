@@ -164,7 +164,7 @@ func TestFunctionSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("((Int): Void) <: ((AnyStruct): Void)", func(t *testing.T) {
+	t.Run("fun(Int): Void <: fun(AnyStruct): Void", func(t *testing.T) {
 		assert.False(t,
 			IsSubType(
 				&FunctionType{
@@ -187,7 +187,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		)
 	})
 
-	t.Run("((AnyStruct): Void) <: ((Int): Void)", func(t *testing.T) {
+	t.Run("fun(AnyStruct): Void <: fun(Int): Void", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
@@ -210,7 +210,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		)
 	})
 
-	t.Run("((): Int) <: ((): AnyStruct)", func(t *testing.T) {
+	t.Run("fun(): Int <: fun(): AnyStruct", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
@@ -223,7 +223,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		)
 	})
 
-	t.Run("((): Any) <: ((): Int)", func(t *testing.T) {
+	t.Run("fun(): Any <: fun(): Int", func(t *testing.T) {
 		assert.False(t,
 			IsSubType(
 				&FunctionType{

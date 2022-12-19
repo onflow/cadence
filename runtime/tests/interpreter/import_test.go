@@ -334,7 +334,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 		`
           import R from 0x1
 
-          fun test(createR: ((): @R)) {
+          fun test(createR: fun(): @R) {
               let r <- createR()
               destroy r
           }

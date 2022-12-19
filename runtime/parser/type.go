@@ -148,39 +148,22 @@ func init() {
 	defineOptionalType()
 	defineReferenceType()
 	defineRestrictedOrDictionaryType()
-	defineFunctionType()
 	defineInstantiationType()
+	defineIdentifierTypes()
+	defineParenthesizedTypes()
+}
 
-	setTypeNullDenotation(
-		lexer.TokenIdentifier,
-		func(p *parser, token lexer.Token) (ast.Type, error) {
-
-			switch string(p.tokenSource(token)) {
-			case KeywordAuth:
-				p.skipSpaceAndComments()
-
-				_, err := p.mustOne(lexer.TokenAmpersand)
-				if err != nil {
-					return nil, err
-				}
-
-				right, err := parseType(p, typeLeftBindingPowerReference)
-				if err != nil {
-					return nil, err
-				}
-
-				return ast.NewReferenceType(
-					p.memoryGauge,
-					true,
-					right,
-					token.StartPos,
-				), nil
-
-			default:
-				return parseNominalTypeRemainder(p, token)
-			}
-		},
-	)
+func defineParenthesizedTypes() {
+	setTypeNullDenotation(lexer.TokenParenOpen, func(p *parser, token lexer.Token) (ast.Type, error) {
+		p.skipSpaceAndComments()
+		innerType, err := parseType(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
+		p.skipSpaceAndComments()
+		_, err = p.mustOne(lexer.TokenParenClose)
+		return innerType, err
+	})
 }
 
 func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, error) {
@@ -625,51 +608,6 @@ func parseNominalTypes(
 	return
 }
 
-func defineFunctionType() {
-	setTypeNullDenotation(
-		lexer.TokenParenOpen,
-		func(p *parser, startToken lexer.Token) (ast.Type, error) {
-
-			purity := parsePurityAnnotation(p)
-
-			parameterTypeAnnotations, err := parseParameterTypeAnnotations(p)
-			if err != nil {
-				return nil, err
-			}
-
-			p.skipSpaceAndComments()
-			_, err = p.mustOne(lexer.TokenColon)
-			if err != nil {
-				return nil, err
-			}
-
-			p.skipSpaceAndComments()
-			returnTypeAnnotation, err := parseTypeAnnotation(p)
-			if err != nil {
-				return nil, err
-			}
-
-			p.skipSpaceAndComments()
-			endToken, err := p.mustOne(lexer.TokenParenClose)
-			if err != nil {
-				return nil, err
-			}
-
-			return ast.NewFunctionType(
-				p.memoryGauge,
-				purity,
-				parameterTypeAnnotations,
-				returnTypeAnnotation,
-				ast.NewRange(
-					p.memoryGauge,
-					startToken.StartPos,
-					endToken.EndPos,
-				),
-			), nil
-		},
-	)
-}
-
 func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnotation, err error) {
 
 	p.skipSpaceAndComments()
@@ -696,8 +634,8 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 			expectTypeAnnotation = true
 
 		case lexer.TokenParenClose:
-			// Skip the closing paren
-			p.next()
+			// Don't skip the closing paren, so that we can mark the current
+			// position as an end pos if the type signature is missing an explicit return type
 			atEnd = true
 
 		case lexer.TokenEOF:
@@ -729,7 +667,6 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 }
 
 func parseType(p *parser, rightBindingPower int) (ast.Type, error) {
-
 	if p.typeDepth == typeDepthLimit {
 		return nil, TypeDepthLimitReachedError{
 			Pos: p.current.StartPos,
@@ -989,4 +926,115 @@ func defineInstantiationType() {
 			), nil
 		},
 	)
+}
+
+func defineIdentifierTypes() {
+	setTypeNullDenotation(
+		lexer.TokenIdentifier,
+		func(p *parser, token lexer.Token) (ast.Type, error) {
+			switch string(p.tokenSource(token)) {
+			case KeywordAuth:
+				p.skipSpaceAndComments()
+
+				_, err := p.mustOne(lexer.TokenAmpersand)
+				if err != nil {
+					return nil, err
+				}
+
+				right, err := parseType(p, typeLeftBindingPowerReference)
+				if err != nil {
+					return nil, err
+				}
+
+				return ast.NewReferenceType(
+					p.memoryGauge,
+					true,
+					right,
+					token.StartPos,
+				), nil
+
+			case KeywordFun:
+				p.skipSpaceAndComments()
+				return parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified)
+
+			case KeywordView:
+
+				current := p.current
+				cursor := p.tokens.Cursor()
+
+				// look ahead for the `fun` keyword, if it exists
+				p.skipSpaceAndComments()
+
+				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
+					// skip the `fun` keyword
+					p.nextSemanticToken()
+					return parseFunctionType(p, current.StartPos, ast.FunctionPurityView)
+				}
+
+				// backtrack otherwise - view is a nominal type here
+				p.current = current
+				p.tokens.Revert(cursor)
+			}
+
+			return parseNominalTypeRemainder(p, token)
+		},
+	)
+}
+
+// parse a function type starting after the `fun` keyword.
+//
+// ('view')? 'fun'
+//
+//	'(' ( type ( ',' type )* )? ')'
+//	( ':' type )?
+func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPurity) (ast.Type, error) {
+	parameterTypeAnnotations, err := parseParameterTypeAnnotations(p)
+	if err != nil {
+		return nil, err
+	}
+
+	endPos := p.current.EndPos
+	// skip the closing parenthesis of the argument tuple
+	p.nextSemanticToken()
+
+	var returnTypeAnnotation *ast.TypeAnnotation
+	// return type annotation is optional in function types too
+	if p.current.Is(lexer.TokenColon) {
+		// skip the colon
+		p.nextSemanticToken()
+
+		returnTypeAnnotation, err = parseTypeAnnotation(p)
+		if err != nil {
+			return nil, err
+		}
+		endPos = returnTypeAnnotation.EndPosition(p.memoryGauge)
+	} else {
+		returnType := ast.NewNominalType(
+			p.memoryGauge,
+			ast.NewEmptyIdentifier(
+				p.memoryGauge,
+				endPos,
+			),
+			nil,
+		)
+		returnTypeAnnotation = ast.NewTypeAnnotation(
+			p.memoryGauge,
+			false,
+			returnType,
+			endPos,
+		)
+	}
+
+	return ast.NewFunctionType(
+		p.memoryGauge,
+		purity,
+		parameterTypeAnnotations,
+		returnTypeAnnotation,
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
+	), nil
+
 }

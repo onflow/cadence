@@ -816,7 +816,6 @@ func defineIdentifierExpression() {
 
 			case KeywordView:
 				// if `view` is followed by `fun`, then it denotes a view function expression
-
 				current := p.current
 				cursor := p.tokens.Cursor()
 

@@ -63,7 +63,7 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		"[((Int8): Int16); 2]",
+		"[fun(Int8): Int16; 2]",
 		ty.String(),
 	)
 }
@@ -86,7 +86,7 @@ func TestConstantSizedType_String_OfViewFunctionType(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		"[(view (Int8): Int16); 2]",
+		"[view fun(Int8): Int16; 2]",
 		ty.String(),
 	)
 }
@@ -124,7 +124,7 @@ func TestVariableSizedType_String_OfFunctionType(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		"[((Int8): Int16)]",
+		"[fun(Int8): Int16]",
 		ty.String(),
 	)
 }
@@ -544,7 +544,7 @@ func TestBeforeType_Strings(t *testing.T) {
 
 	t.Parallel()
 
-	expected := "(view <T: AnyStruct>(_ value: T): T)"
+	expected := "view fun<T: AnyStruct>(_ value: T): T"
 
 	assert.Equal(t,
 		expected,

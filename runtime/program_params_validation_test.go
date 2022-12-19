@@ -128,7 +128,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
 
             pub struct Foo {
-                pub var funcTypedField: (():Void)
+                pub var funcTypedField: fun(): Void
 
                 init() {
                     self.funcTypedField = fun() {}
@@ -178,7 +178,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
 
             pub struct interface Bar {
-                pub var funcTypedField: (():Void)
+                pub var funcTypedField: fun():Void
             }
         `
 
@@ -251,7 +251,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: [(():Void)]) {
+            pub fun main(arg: [fun():Void]) {
             }
         `
 
@@ -297,7 +297,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: {String: (():Void)}) {
+            pub fun main(arg: {String: fun():Void}) {
             }
         `
 
@@ -630,7 +630,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
 
             pub struct Foo {
-                pub var funcTypedField: (():Void)
+                pub var funcTypedField: fun():Void
 
                 init() {
                     self.funcTypedField = fun() {}
@@ -684,7 +684,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
 
             pub struct interface Bar {
-                pub var funcTypedField: (():Void)
+                pub var funcTypedField: fun():Void
             }
         `
 
@@ -772,7 +772,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            transaction(arg: [(():Void)]) {
+            transaction(arg: [fun():Void]) {
             }
         `
 
@@ -813,7 +813,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            transaction(arg: {String: (():Void)}) {
+            transaction(arg: {String: fun():Void}) {
             }
         `
 

@@ -215,7 +215,7 @@ except that function expressions have no name, i.e., they are anonymous.
 //
 // The function multiplies a number by two when it is called.
 //
-// This function's type is `((Int): Int)`.
+// This function's type is `fun (Int): Int`.
 //
 let double =
     fun (_ x: Int): Int {
@@ -246,8 +246,8 @@ to be placed after the opening parenthesis but before the parameter list.
 So, for example, these are valid types:
 
 ```cadence
-    let f: (view (Int): Int) = ...
-    let h: (view (): (view (): Void)) = ...
+    let f: view fun (Int): Int = ...
+    let h: view fun (): (view fun (): Void) = ...
 ```
 
 Any function types without a `view` annotation will be considered non-view. 
@@ -257,18 +257,18 @@ so a `view` function is a subtype of an non-view function with the same paramete
 So, the following declarations would typecheck:
 
 ```cadence
-    let a: (view (): Void) = view fun() {}
-    let b: ((): Void) = view fun() {}
-    let c: ((): Void) = fun() {}
-    let d: (((view (): Void)): Void) = fun foo(x:((): Void)) {} // contravariance
+    let a: view fun (): Void = view fun() {}
+    let b: fun (): Void = view fun() {}
+    let c: fun (): Void = fun() {}
+    let d: fun(view fun(): Void): Void = fun (x: fun(): Void) {} // contravariance
 ```
 
 while these would not: 
 
 
 ```cadence
-    let x: (view (): Void) = fun() {}
-    let y: ((((): Void)): Void) = fun foo(f:(view (): Void)) {} // contravariance
+    let x: view fun (): Void = fun() {}
+    let y: fun(fun(): Void): Void = fun(f: view fun(): Void) {} // contravariance
 ```
 
 The operations that are not permitted in `view` contexts are: 
@@ -353,7 +353,7 @@ followed by a colon (`:`), and end with the return type.
 The whole function type needs to be enclosed in parentheses.
 
 ```cadence
-// Declare a function named `add`, with the function type `((Int, Int): Int)`.
+// Declare a function named `add`, with the function type `fun(Int, Int): Int`.
 //
 fun add(a: Int, b: Int): Int {
     return a + b
@@ -361,9 +361,9 @@ fun add(a: Int, b: Int): Int {
 ```
 
 ```cadence
-// Declare a constant named `add`, with the function type `((Int, Int): Int)`
+// Declare a constant named `add`, with the function type `fun(Int, Int): Int`
 //
-let add: ((Int, Int): Int) =
+let add: fun(Int, Int): Int =
     fun (a: Int, b: Int): Int {
         return a + b
     }
@@ -375,17 +375,17 @@ If the function has no return type, it implicitly has the return type `Void`.
 // Declare a constant named `doNothing`, which is a function
 // that takes no parameters and returns nothing.
 //
-let doNothing: ((): Void) =
+let doNothing: fun(): Void =
     fun () {}
 ```
 
 Parentheses also control precedence.
-For example, a function type `((Int): ((): Int))` is the type
+For example, a function type `fun(Int): fun(): Int` is the type
 for a function which accepts one argument with type `Int`,
 and which returns another function,
 that takes no arguments and returns an `Int`.
 
-The type `[((Int): Int); 2]` specifies an array type of two functions,
+The type `[fun(Int): Int; 2]` specifies an array type of two functions,
 which accept one integer and return one integer.
 
 Argument labels are not part of the function type.
@@ -397,7 +397,7 @@ cannot accept argument labels.
 
 ```cadence
 // Declare a function which takes one argument that has type `Int`.
-// The function has type `((Int): Void)`.
+// The function has type `fun(Int): Void`.
 //
 fun foo1(x: Int) {}
 
@@ -405,17 +405,17 @@ fun foo1(x: Int) {}
 foo1(x: 1)
 
 // Declare another function which takes one argument that has type `Int`.
-// The function also has type `((Int): Void)`.
+// The function also has type `fun(Int): Void`.
 //
 fun foo2(y: Int) {}
 
 // Call function `foo2`. This requires an argument label.
 foo2(y: 2)
 
-// Declare a variable which has type `((Int): Void)` and use `foo1`
+// Declare a variable which has type `fun(Int): Void` and use `foo1`
 // as its initial value.
 //
-var someFoo: ((Int): Void) = foo1
+var someFoo: fun(Int): Void = foo1
 
 // Call the function assigned to variable `someFoo`.
 // This is valid as the function types match.
@@ -447,7 +447,7 @@ and assign to the variables it refers to.
 // Declare a function named `makeCounter` which returns a function that
 // each time when called, returns the next integer, starting at 1.
 //
-fun makeCounter(): ((): Int) {
+fun makeCounter(): fun(): Int {
     var count = 0
     return fun (): Int {
         // NOTE: read from and assign to the non-local variable
@@ -590,7 +590,7 @@ or passed to functions as arguments.
 // Declare a function named `transform` which applies a function to each element
 // of an array of integers and returns a new array of the results.
 //
-pub fun transform(function: ((Int): Int), integers: [Int]): [Int] {
+pub fun transform(function: fun(Int): Int, integers: [Int]): [Int] {
     var newIntegers: [Int] = []
     for integer in integers {
         newIntegers.append(function(integer))

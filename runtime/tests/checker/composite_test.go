@@ -1977,7 +1977,7 @@ func TestCheckInvalidResourceDestructorCapturing(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-       var duplicate: ((): @Test)? = nil
+       var duplicate: (fun(): @Test)? = nil
 
        resource Test {
            let test: @Test
