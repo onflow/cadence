@@ -969,14 +969,13 @@ func defineIdentifierTypes() {
 					// skip the `fun` keyword
 					p.nextSemanticToken()
 					return parseFunctionType(p, current.StartPos, ast.FunctionPurityView)
-				} else {
-					// backtrack otherwise - view is a nominal type here
-					p.current = current
-					p.tokens.Revert(cursor)
-
-					break
 				}
 
+				// backtrack otherwise - view is a nominal type here
+				p.current = current
+				p.tokens.Revert(cursor)
+
+				break
 			}
 
 			return parseNominalTypeRemainder(p, token)
@@ -985,7 +984,7 @@ func defineIdentifierTypes() {
 }
 
 // parse a function type starting after the `fun` keyword.
-// this is to ensure compatibility with the old syntax that doesn't require `fun` before the argument tuple.
+//
 // ('view')? 'fun'
 //
 //	'(' ( type ( ',' type )* )? ')'
