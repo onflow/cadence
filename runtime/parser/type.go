@@ -974,8 +974,6 @@ func defineIdentifierTypes() {
 				// backtrack otherwise - view is a nominal type here
 				p.current = current
 				p.tokens.Revert(cursor)
-
-				break
 			}
 
 			return parseNominalTypeRemainder(p, token)
