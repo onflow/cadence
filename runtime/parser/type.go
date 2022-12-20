@@ -95,20 +95,20 @@ type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) a
 type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) ast.Type
 
 type literalType struct {
-	tokenType      lexer.TokenType
 	nullDenotation typeNullDenotationFunc
+	tokenType      lexer.TokenType
 }
 
 type prefixType struct {
-	tokenType      lexer.TokenType
-	bindingPower   int
 	nullDenotation prefixTypeFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
 }
 
 type postfixType struct {
-	tokenType      lexer.TokenType
-	bindingPower   int
 	leftDenotation postfixTypeFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
 }
 
 func defineType(def any) {

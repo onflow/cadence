@@ -675,15 +675,20 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	arrayType := arrayExpressionTypes.ArrayType
 	elementType := arrayType.ElementType(false)
 
-	copies := make([]Value, len(values))
-	for i, argument := range values {
-		argumentType := argumentTypes[i]
-		argumentExpression := expression.Values[i]
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: argumentExpression,
+	var copies []Value
+
+	count := len(values)
+	if count > 0 {
+		copies = make([]Value, count)
+		for i, argument := range values {
+			argumentType := argumentTypes[i]
+			argumentExpression := expression.Values[i]
+			locationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: argumentExpression,
+			}
+			copies[i] = interpreter.transferAndConvert(argument, argumentType, elementType, locationRange)
 		}
-		copies[i] = interpreter.transferAndConvert(argument, argumentType, elementType, locationRange)
 	}
 
 	// TODO: cache
@@ -840,10 +845,17 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
-	argumentExpressions := make([]ast.Expression, len(invocationExpression.Arguments))
-	for i, argument := range invocationExpression.Arguments {
-		argumentExpressions[i] = argument.Expression
+
+	var argumentExpressions []ast.Expression
+
+	argumentCount := len(invocationExpression.Arguments)
+	if argumentCount > 0 {
+		argumentExpressions = make([]ast.Expression, argumentCount)
+		for i, argument := range invocationExpression.Arguments {
+			argumentExpressions[i] = argument.Expression
+		}
 	}
 
 	arguments := interpreter.visitExpressionsNonCopying(argumentExpressions)
@@ -880,30 +892,39 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 }
 
 func (interpreter *Interpreter) visitExpressionsNonCopying(expressions []ast.Expression) []Value {
-	values := make([]Value, 0, len(expressions))
+	var values []Value
 
-	for _, expression := range expressions {
-		value := interpreter.evalExpression(expression)
-		values = append(values, value)
+	count := len(expressions)
+	if count > 0 {
+		values = make([]Value, 0, count)
+		for _, expression := range expressions {
+			value := interpreter.evalExpression(expression)
+			values = append(values, value)
+		}
 	}
 
 	return values
 }
 
 func (interpreter *Interpreter) visitEntries(entries []ast.DictionaryEntry) []DictionaryEntryValues {
-	values := make([]DictionaryEntryValues, 0, len(entries))
+	var values []DictionaryEntryValues
 
-	for _, entry := range entries {
-		key := interpreter.evalExpression(entry.Key)
-		value := interpreter.evalExpression(entry.Value)
+	count := len(entries)
+	if count > 0 {
+		values = make([]DictionaryEntryValues, 0, count)
 
-		values = append(
-			values,
-			DictionaryEntryValues{
-				Key:   key,
-				Value: value,
-			},
-		)
+		for _, entry := range entries {
+			key := interpreter.evalExpression(entry.Key)
+			value := interpreter.evalExpression(entry.Value)
+
+			values = append(
+				values,
+				DictionaryEntryValues{
+					Key:   key,
+					Value: value,
+				},
+			)
+		}
 	}
 
 	return values

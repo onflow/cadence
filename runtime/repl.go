@@ -154,10 +154,8 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
 				panic(panicResult)
 			case error:
 				err = panicResult
-				break
 			default:
 				err = fmt.Errorf("%s", panicResult)
-				break
 			}
 
 			r.onError(err, r.checker.Location, r.codes)
@@ -268,7 +266,7 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	// Iterating over the dictionary of names is safe,
 	// as the suggested entries are sorted afterwards
 
-	for name, description := range names { //nolint:maprangecheck
+	for name, description := range names { //nolint:maprange
 		result = append(result, REPLSuggestion{
 			Name:        name,
 			Description: description,

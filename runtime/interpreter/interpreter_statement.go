@@ -91,7 +91,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		value = interpreter.transferAndConvert(value, valueType, returnType, locationRange)
 	}
 
-	return ReturnResult{value}
+	return ReturnResult{Value: value}
 }
 
 var theBreakResult StatementResult = BreakResult{}
@@ -559,5 +559,5 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 
 func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) StatementResult {
 	result := interpreter.evalExpression(statement.Expression)
-	return ExpressionResult{result}
+	return ExpressionResult{Value: result}
 }

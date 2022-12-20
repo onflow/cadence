@@ -67,24 +67,25 @@ type Environment interface {
 	NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value
 }
 
-type interpreterEnvironment struct {
-	config Config
-
-	baseActivation      *interpreter.VariableActivation
-	baseValueActivation *sema.VariableActivation
-
-	InterpreterConfig *interpreter.Config
-	CheckerConfig     *sema.Config
-
-	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-	stackDepthLimiter                     *stackDepthLimiter
-	checkedImports                        importResolutionResults
-
-	// the following fields are re-configurable, see Configure
+// interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
+// that gets reconfigured by interpreterEnvironment.Configure
+type interpreterEnvironmentReconfigured struct {
 	runtimeInterface Interface
 	storage          *Storage
 	coverageReport   *CoverageReport
 	codesAndPrograms codesAndPrograms
+}
+
+type interpreterEnvironment struct {
+	interpreterEnvironmentReconfigured
+	baseActivation                        *interpreter.VariableActivation
+	baseValueActivation                   *sema.VariableActivation
+	InterpreterConfig                     *interpreter.Config
+	CheckerConfig                         *sema.Config
+	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
+	stackDepthLimiter                     *stackDepthLimiter
+	checkedImports                        importResolutionResults
+	config                                Config
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -472,8 +473,9 @@ func (e *interpreterEnvironment) resolveImport(
 
 	var elaboration *sema.Elaboration
 	switch importedLocation {
-	case stdlib.CryptoChecker.Location:
-		elaboration = stdlib.CryptoChecker.Elaboration
+	case stdlib.CryptoCheckerLocation:
+		cryptoChecker := stdlib.CryptoChecker()
+		elaboration = cryptoChecker.Elaboration
 
 	default:
 
@@ -752,7 +754,7 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 	) map[string]interpreter.Value {
 
 		switch location {
-		case stdlib.CryptoChecker.Location:
+		case stdlib.CryptoCheckerLocation:
 			return nil
 
 		default:
@@ -788,9 +790,11 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 
 func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLocationHandlerFunc {
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+
 		switch location {
-		case stdlib.CryptoChecker.Location:
-			program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
+		case stdlib.CryptoCheckerLocation:
+			cryptoChecker := stdlib.CryptoChecker()
+			program := interpreter.ProgramFromChecker(cryptoChecker)
 			subInterpreter, err := inter.NewSubInterpreter(program, location)
 			if err != nil {
 				panic(err)
@@ -824,7 +828,7 @@ func (e *interpreterEnvironment) loadContract(
 ) *interpreter.CompositeValue {
 
 	switch compositeType.Location {
-	case stdlib.CryptoChecker.Location:
+	case stdlib.CryptoCheckerLocation:
 		contract, err := stdlib.NewCryptoContract(
 			inter,
 			constructorGenerator(common.Address{}),

@@ -323,8 +323,8 @@ func (t ArgumentTypeVector) Write(variable string) string {
 }
 
 type argument struct {
-	Identifier string
 	Type       argumentType
+	Identifier string
 }
 
 func (a argument) Variable() string {
@@ -386,8 +386,8 @@ func (ins instruction) OpcodeIdentifier() string {
 }
 
 type instructionGroup struct {
-	Depth        int
 	Instructions []instruction
+	Depth        int
 }
 
 func (group instructionGroup) GroupByOpcode() map[string]instructionGroup {
@@ -497,21 +497,21 @@ func main() {
 			Name:    "block",
 			Opcodes: opcodes{0x02},
 			Arguments: arguments{
-				{"Block", ArgumentTypeBlock{AllowElse: false}},
+				{Identifier: "Block", Type: ArgumentTypeBlock{AllowElse: false}},
 			},
 		},
 		{
 			Name:    "loop",
 			Opcodes: opcodes{0x03},
 			Arguments: arguments{
-				{"Block", ArgumentTypeBlock{AllowElse: false}},
+				{Identifier: "Block", Type: ArgumentTypeBlock{AllowElse: false}},
 			},
 		},
 		{
 			Name:    "if",
 			Opcodes: opcodes{0x04},
 			Arguments: arguments{
-				{"Block", ArgumentTypeBlock{AllowElse: true}},
+				{Identifier: "Block", Type: ArgumentTypeBlock{AllowElse: true}},
 			},
 		},
 		{
@@ -523,22 +523,22 @@ func main() {
 			Name:    "br",
 			Opcodes: opcodes{0x0C},
 			Arguments: arguments{
-				{"LabelIndex", indexArgumentType},
+				{Identifier: "LabelIndex", Type: indexArgumentType},
 			},
 		},
 		{
 			Name:    "br_if",
 			Opcodes: opcodes{0x0D},
 			Arguments: arguments{
-				{"LabelIndex", indexArgumentType},
+				{Identifier: "LabelIndex", Type: indexArgumentType},
 			},
 		},
 		{
 			Name:    "br_table",
 			Opcodes: opcodes{0x0E},
 			Arguments: arguments{
-				{"LabelIndices", ArgumentTypeVector{indexArgumentType}},
-				{"DefaultLabelIndex", indexArgumentType},
+				{Identifier: "LabelIndices", Type: ArgumentTypeVector{ArgumentType: indexArgumentType}},
+				{Identifier: "DefaultLabelIndex", Type: indexArgumentType},
 			},
 		},
 		{
@@ -550,15 +550,15 @@ func main() {
 			Name:    "call",
 			Opcodes: opcodes{0x10},
 			Arguments: arguments{
-				{"FuncIndex", indexArgumentType},
+				{Identifier: "FuncIndex", Type: indexArgumentType},
 			},
 		},
 		{
 			Name:    "call_indirect",
 			Opcodes: opcodes{0x11},
 			Arguments: arguments{
-				{"TypeIndex", indexArgumentType},
-				{"TableIndex", indexArgumentType},
+				{Identifier: "TypeIndex", Type: indexArgumentType},
+				{Identifier: "TableIndex", Type: indexArgumentType},
 			},
 		},
 		// Reference Instructions
@@ -566,7 +566,7 @@ func main() {
 			Name:    "ref.null",
 			Opcodes: opcodes{0xD0},
 			Arguments: arguments{
-				{"TypeIndex", indexArgumentType},
+				{Identifier: "TypeIndex", Type: indexArgumentType},
 			},
 		},
 		{
@@ -578,7 +578,7 @@ func main() {
 			Name:    "ref.func",
 			Opcodes: opcodes{0xD2},
 			Arguments: arguments{
-				{"FuncIndex", indexArgumentType},
+				{Identifier: "FuncIndex", Type: indexArgumentType},
 			},
 		},
 		// Parametric Instructions
@@ -597,35 +597,35 @@ func main() {
 			Name:    "local.get",
 			Opcodes: opcodes{0x20},
 			Arguments: arguments{
-				{"LocalIndex", indexArgumentType},
+				{Identifier: "LocalIndex", Type: indexArgumentType},
 			},
 		},
 		{
 			Name:    "local.set",
 			Opcodes: opcodes{0x21},
 			Arguments: arguments{
-				{"LocalIndex", indexArgumentType},
+				{Identifier: "LocalIndex", Type: indexArgumentType},
 			},
 		},
 		{
 			Name:    "local.tee",
 			Opcodes: opcodes{0x22},
 			Arguments: arguments{
-				{"LocalIndex", indexArgumentType},
+				{Identifier: "LocalIndex", Type: indexArgumentType},
 			},
 		},
 		{
 			Name:    "global.get",
 			Opcodes: opcodes{0x23},
 			Arguments: arguments{
-				{"GlobalIndex", indexArgumentType},
+				{Identifier: "GlobalIndex", Type: indexArgumentType},
 			},
 		},
 		{
 			Name:    "global.set",
 			Opcodes: opcodes{0x24},
 			Arguments: arguments{
-				{"GlobalIndex", indexArgumentType},
+				{Identifier: "GlobalIndex", Type: indexArgumentType},
 			},
 		},
 		// Numeric Instructions
@@ -635,7 +635,7 @@ func main() {
 			Opcodes: opcodes{0x41},
 			Arguments: arguments{
 				// i32, "Uninterpreted integers are encoded as signed integers."
-				{"Value", ArgumentTypeInt32{}},
+				{Identifier: "Value", Type: ArgumentTypeInt32{}},
 			},
 		},
 		{
@@ -643,7 +643,7 @@ func main() {
 			Opcodes: opcodes{0x42},
 			Arguments: arguments{
 				// i64, "Uninterpreted integers are encoded as signed integers."
-				{"Value", ArgumentTypeInt64{}},
+				{Identifier: "Value", Type: ArgumentTypeInt64{}},
 			},
 		},
 		// All other numeric instructions are plain opcodes without any immediates.

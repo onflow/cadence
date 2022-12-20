@@ -5944,7 +5944,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.Int8Type, cast.TargetType)
 			}
 		})
@@ -5959,7 +5959,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 2)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.Int8Type, cast.TargetType)
 			}
 		})
@@ -5974,7 +5974,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 2)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.Int8Type, cast.TargetType)
 			}
 		})
@@ -5989,7 +5989,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.CharacterType, cast.TargetType)
 			}
 		})
@@ -6004,7 +6004,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.UInt8Type, cast.TargetType)
 			}
 		})
@@ -6072,7 +6072,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.StringType, cast.TargetType)
 			}
 		})
@@ -6087,7 +6087,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.BoolType, cast.TargetType)
 			}
 		})
@@ -6102,7 +6102,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, &sema.OptionalType{
 					Type: sema.NeverType,
 				}, cast.TargetType)
@@ -6121,7 +6121,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 2)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.Int8Type, cast.ExprActualType)
 			}
 		})
@@ -6138,7 +6138,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 2)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.Int8Type, cast.ExprActualType)
 			}
 		})
@@ -6154,7 +6154,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			RequireCheckerErrors(t, err, 1)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.Int8Type, cast.TargetType)
 			}
 		})
@@ -6170,7 +6170,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 2)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.AnyStructType, cast.ExpectedType)
 			}
 		})
@@ -6185,7 +6185,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.UFix64Type, cast.TargetType)
 			}
 
@@ -6196,7 +6196,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.Fix64Type, cast.TargetType)
 			}
 		})
@@ -6211,7 +6211,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, &sema.VariableSizedType{
 					Type: sema.IntType,
 				}, cast.TargetType)
@@ -6228,7 +6228,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, &sema.VariableSizedType{
 					Type: sema.UInt8Type,
 				}, cast.TargetType)
@@ -6248,7 +6248,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, &sema.VariableSizedType{
 					Type: sema.Int8Type,
 				}, cast.TargetType)
@@ -6287,7 +6287,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, &sema.VariableSizedType{
 					Type: &sema.VariableSizedType{
 						Type: sema.Int8Type,
@@ -6308,7 +6308,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, &sema.VariableSizedType{
 					Type: &sema.VariableSizedType{
 						Type: sema.Int8Type,
@@ -6349,7 +6349,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, &sema.DictionaryType{
 					KeyType: sema.Int8Type,
 					ValueType: &sema.DictionaryType{
@@ -6373,7 +6373,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 2)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, &sema.DictionaryType{
 					KeyType: sema.Int8Type,
 					ValueType: &sema.DictionaryType{
@@ -6420,7 +6420,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, &sema.OptionalType{
 					Type: sema.UFix64Type,
 				}, cast.TargetType)
@@ -6437,7 +6437,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, &sema.OptionalType{
 					Type: sema.Fix64Type,
 				}, cast.TargetType)
@@ -6454,7 +6454,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.UFix64Type, cast.TargetType)
 			}
 		})
@@ -6473,7 +6473,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.UIntType, cast.TargetType)
 			}
 		})
@@ -6497,7 +6497,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.StringType, cast.TargetType)
 			}
 		})
@@ -6513,7 +6513,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.IntType, cast.TargetType)
 			}
 		})
@@ -6530,7 +6530,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.IsType(t, &sema.CompositeType{}, cast.TargetType)
 				compositeType := cast.TargetType.(*sema.CompositeType)
 				assert.Equal(t, "Foo", compositeType.Identifier)
@@ -6548,7 +6548,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.IntType, cast.TargetType)
 			}
 		})
@@ -6564,7 +6564,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 2)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.PublicPathType, cast.TargetType)
 			}
 		})
@@ -6579,7 +6579,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.BoolType, cast.TargetType)
 			}
 
@@ -6591,7 +6591,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.Fix64Type, cast.TargetType)
 			}
 		})
@@ -6622,7 +6622,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
-			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprangecheck
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.IsType(t, &sema.FunctionType{}, cast.TargetType)
 			}
 		})

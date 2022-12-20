@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "github.com/onflow/cadence/tools/update/config.schema.json",
+  "title": "Cadence update tool config schema",
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "The repository name"
+    },
+    "repos": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/repo"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "repo",
+    "repos"
+  ],
+  "$defs": {
+    "repo": {
+      "type": "object",
+      "properties": {
+        "repo": {
+          "type": "string",
+          "description": "The repository name"
+        },
+        "mods": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mod"
+          },
+          "description": "The modules of the repository"
+        },
+        "needsRelease": {
+          "type": "boolean",
+          "description": "Indicates if a released version of this repo should be used, or if the latest commit should be used instead"
+        },
+        "updateLabels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "repo",
+        "mods",
+        "needsRelease"
+      ]
+    },
+    "mod": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The path of the module"
+        },
+        "deps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The dependencies that should be updated"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "deps"
+      ]
+    }
+  }
+}

@@ -26,11 +26,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/onflow/cadence/runtime/activations"
-
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
@@ -187,15 +187,15 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 	// Iterating over the maps in a non-deterministic way is OK,
 	// we only copy the values over.
 
-	for typeID, code := range codes.CompositeCodes { //nolint:maprangecheck
+	for typeID, code := range codes.CompositeCodes { //nolint:maprange
 		c.CompositeCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.InterfaceCodes { //nolint:maprangecheck
+	for typeID, code := range codes.InterfaceCodes { //nolint:maprange
 		c.InterfaceCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprangecheck
+	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprange
 		c.TypeRequirementCodes[typeID] = code
 	}
 }
@@ -209,14 +209,14 @@ type Storage interface {
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
-	Program      *Program
 	Location     common.Location
+	statement    ast.Statement
+	Program      *Program
 	SharedState  *SharedState
 	Globals      GlobalVariables
+	activations  *VariableActivations
 	Transactions []*HostFunctionValue
 	interpreted  bool
-	activations  *VariableActivations
-	statement    ast.Statement
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -405,12 +405,15 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	locationRange := EmptyLocationRange
 
-	preparedArguments := make([]Value, len(arguments))
-	for i, argument := range arguments {
-		parameterType := parameters[i].TypeAnnotation.Type
+	var preparedArguments []Value
+	if argumentCount > 0 {
+		preparedArguments = make([]Value, argumentCount)
+		for i, argument := range arguments {
+			parameterType := parameters[i].TypeAnnotation.Type
 
-		// converts the argument into the parameter type declared by the function
-		preparedArguments[i] = interpreter.ConvertAndBox(locationRange, argument, nil, parameterType)
+			// converts the argument into the parameter type declared by the function
+			preparedArguments[i] = interpreter.ConvertAndBox(locationRange, argument, nil, parameterType)
+		}
 	}
 
 	var self *MemberAccessibleValue
@@ -576,41 +579,46 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 	// which will evaluate the variable declaration. The resulting value
 	// is reused for subsequent reads of the variable.
 
-	variableDeclarationVariables := make([]*Variable, 0, len(program.VariableDeclarations()))
+	var variableDeclarationVariables []*Variable
 
-	for _, declaration := range program.VariableDeclarations() {
+	variableDeclarationCount := len(program.VariableDeclarations())
+	if variableDeclarationCount > 0 {
+		variableDeclarationVariables = make([]*Variable, 0, variableDeclarationCount)
 
-		// Rebind declaration, so the closure captures to current iteration's value,
-		// i.e. the next iteration doesn't override `declaration`
+		for _, declaration := range program.VariableDeclarations() {
 
-		declaration := declaration
+			// Rebind declaration, so the closure captures to current iteration's value,
+			// i.e. the next iteration doesn't override `declaration`
 
-		identifier := declaration.Identifier.Identifier
+			declaration := declaration
 
-		var variable *Variable
+			identifier := declaration.Identifier.Identifier
 
-		variable = NewVariableWithGetter(interpreter, func() Value {
-			var result Value
-			interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
-				result = value
+			var variable *Variable
+
+			variable = NewVariableWithGetter(interpreter, func() Value {
+				var result Value
+				interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
+					result = value
+				})
+
+				// Global variables are lazily loaded. Therefore, start resource tracking also
+				// lazily when the resource is used for the first time.
+				// This is needed to support forward referencing.
+				interpreter.startResourceTracking(
+					result,
+					variable,
+					identifier,
+					declaration.Identifier,
+				)
+
+				return result
 			})
+			interpreter.setVariable(identifier, variable)
+			interpreter.Globals.Set(identifier, variable)
 
-			// Global variables are lazily loaded. Therefore, start resource tracking also
-			// lazily when the resource is used for the first time.
-			// This is needed to support forward referencing.
-			interpreter.startResourceTracking(
-				result,
-				variable,
-				identifier,
-				declaration.Identifier,
-			)
-
-			return result
-		})
-		interpreter.setVariable(identifier, variable)
-		interpreter.Globals.Set(identifier, variable)
-
-		variableDeclarationVariables = append(variableDeclarationVariables, variable)
+			variableDeclarationVariables = append(variableDeclarationVariables, variable)
+		}
 	}
 
 	// Second, force the evaluation of all variable declarations,
@@ -619,8 +627,6 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 	for _, variable := range variableDeclarationVariables {
 		_ = variable.GetValue()
 	}
-
-	return
 }
 
 func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) StatementResult {
@@ -1017,7 +1023,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// we only apply the function wrapper to each function,
 		// the order does not matter.
 
-		for name, function := range code.Functions { //nolint:maprangecheck
+		for name, function := range code.Functions { //nolint:maprange
 			if functions[name] != nil {
 				continue
 			}
@@ -1033,7 +1039,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// we only apply the function wrapper to each function,
 		// the order does not matter.
 
-		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprangecheck
+		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
 			functions[name] = functionWrapper(functions[name])
 		}
 	}
@@ -2016,7 +2022,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 							interpreter.invalidateResource(value)
 							interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
 						}
-						return ReturnResult{returnValue}
+						return ReturnResult{Value: returnValue}
 					}
 				}
 
@@ -2353,11 +2359,11 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 }()
 
 type ValueConverterDeclaration struct {
-	name         string
-	convert      func(*Interpreter, Value, LocationRange) Value
 	min          Value
 	max          Value
+	convert      func(*Interpreter, Value, LocationRange) Value
 	functionType *sema.FunctionType
+	name         string
 }
 
 // It would be nice if return types in Go's function types would be covariant
@@ -2790,36 +2796,42 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	staticRestrictions := make([]InterfaceStaticType, 0, restrictionIDs.Count())
-	semaRestrictions := make([]*sema.InterfaceType, 0, restrictionIDs.Count())
+	var staticRestrictions []InterfaceStaticType
+	var semaRestrictions []*sema.InterfaceType
 
-	var invalidRestrictionID bool
-	restrictionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
-		typeIDValue, ok := typeID.(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+	count := restrictionIDs.Count()
+	if count > 0 {
+		staticRestrictions = make([]InterfaceStaticType, 0, count)
+		semaRestrictions = make([]*sema.InterfaceType, 0, count)
 
-		restrictionInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
-		if err != nil {
-			invalidRestrictionID = true
+		var invalidRestrictionID bool
+		restrictionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
+			typeIDValue, ok := typeID.(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			restrictionInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
+			if err != nil {
+				invalidRestrictionID = true
+				return true
+			}
+
+			staticRestrictions = append(
+				staticRestrictions,
+				ConvertSemaToStaticType(invocation.Interpreter, restrictionInterface).(InterfaceStaticType),
+			)
+			semaRestrictions = append(semaRestrictions, restrictionInterface)
+
+			// Continue iteration
 			return true
+		})
+
+		// If there are any invalid restrictions,
+		// then return nil
+		if invalidRestrictionID {
+			return Nil
 		}
-
-		staticRestrictions = append(
-			staticRestrictions,
-			ConvertSemaToStaticType(invocation.Interpreter, restrictionInterface).(InterfaceStaticType),
-		)
-		semaRestrictions = append(semaRestrictions, restrictionInterface)
-
-		// Continue iteration
-		return true
-	})
-
-	// If there are any invalid restrictions,
-	// then return nil
-	if invalidRestrictionID {
-		return Nil
 	}
 
 	var semaType sema.Type
@@ -2875,8 +2887,8 @@ func defineBaseFunctions(activation *VariableActivation) {
 }
 
 type converterFunction struct {
-	name      string
 	converter *HostFunctionValue
+	name      string
 }
 
 // Converter functions are stateless functions. Hence they can be re-used across interpreters.
@@ -2931,8 +2943,8 @@ func defineConverterFunctions(activation *VariableActivation) {
 }
 
 type runtimeTypeConstructor struct {
-	name      string
 	converter *HostFunctionValue
+	name      string
 }
 
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
@@ -3185,9 +3197,14 @@ func (interpreter *Interpreter) domainPaths(address common.Address, domain commo
 		return []Value{}
 	}
 	iterator := storageMap.Iterator(interpreter)
-	values := make([]Value, 0, storageMap.Count())
-	for key := iterator.NextKey(); key != ""; key = iterator.NextKey() {
-		values = append(values, NewPathValue(interpreter, domain, key))
+	var values []Value
+
+	count := storageMap.Count()
+	if count > 0 {
+		values = make([]Value, 0, count)
+		for key := iterator.NextKey(); key != ""; key = iterator.NextKey() {
+			values = append(values, NewPathValue(interpreter, domain, key))
+		}
 	}
 	return values
 }
@@ -4425,7 +4442,7 @@ func (interpreter *Interpreter) updateReferencedResource(
 	if values == nil {
 		return
 	}
-	for value := range values { //nolint:maprangecheck
+	for value := range values { //nolint:maprange
 		updateFunc(value)
 	}
 	if newStorageID != currentStorageID {

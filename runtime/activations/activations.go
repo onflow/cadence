@@ -27,11 +27,11 @@ import (
 // i.e. it can be used as a symbol table during semantic analysis,
 // or as an activation record during interpretation or compilation.
 type Activation[T any] struct {
-	entries     map[string]T
-	Depth       int
-	Parent      *Activation[T]
-	IsFunction  bool
 	MemoryGauge common.MemoryGauge
+	entries     map[string]T
+	Parent      *Activation[T]
+	Depth       int
+	IsFunction  bool
 }
 
 func NewActivation[T any](memoryGauge common.MemoryGauge, parent *Activation[T]) *Activation[T] {
@@ -80,7 +80,7 @@ func (a *Activation[T]) FunctionValues() map[string]T {
 	for current != nil {
 
 		if current.entries != nil {
-			for name, value := range current.entries { //nolint:maprangecheck
+			for name, value := range current.entries { //nolint:maprange
 				if _, ok := values[name]; !ok {
 					values[name] = value
 				}
@@ -113,8 +113,8 @@ func (a *Activation[T]) Set(name string, value T) {
 // The current / most nested activation record can be found
 // at the top of the stack (see function `Current`).
 type Activations[T any] struct {
-	activations []*Activation[T]
 	memoryGauge common.MemoryGauge
+	activations []*Activation[T]
 }
 
 func NewActivations[T any](memoryGauge common.MemoryGauge) *Activations[T] {

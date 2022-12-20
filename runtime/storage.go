@@ -177,8 +177,8 @@ func (s *Storage) recordContractUpdate(
 }
 
 type ContractUpdate struct {
-	Key           interpreter.StorageKey
 	ContractValue *interpreter.CompositeValue
+	Key           interpreter.StorageKey
 }
 
 func SortContractUpdates(updates []ContractUpdate) {
@@ -270,7 +270,7 @@ func (s *Storage) CheckHealth() error {
 	accountRootSlabIDs := make(map[atree.StorageID]struct{}, len(rootSlabIDs))
 
 	// NOTE: map range is safe, as it creates a subset
-	for rootSlabID := range rootSlabIDs { //nolint:maprangecheck
+	for rootSlabID := range rootSlabIDs { //nolint:maprange
 		if rootSlabID.Address == (atree.Address{}) {
 			continue
 		}
@@ -284,7 +284,7 @@ func (s *Storage) CheckHealth() error {
 
 	var storageMapStorageIDs []atree.StorageID
 
-	for _, storageMap := range s.storageMaps { //nolint:maprangecheck
+	for _, storageMap := range s.storageMaps { //nolint:maprange
 		storageMapStorageIDs = append(
 			storageMapStorageIDs,
 			storageMap.StorageID(),
@@ -312,7 +312,7 @@ func (s *Storage) CheckHealth() error {
 	if len(accountRootSlabIDs) > len(found) {
 		var unreferencedRootSlabIDs []atree.StorageID
 
-		for accountRootSlabID := range accountRootSlabIDs { //nolint:maprangecheck
+		for accountRootSlabID := range accountRootSlabIDs { //nolint:maprange
 			if _, ok := found[accountRootSlabID]; ok {
 				continue
 			}

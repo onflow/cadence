@@ -69,8 +69,8 @@ type TransactionResult struct {
 }
 
 type Account struct {
-	Address   common.Address
 	PublicKey *PublicKey
+	Address   common.Address
 }
 
 type Configuration struct {

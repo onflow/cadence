@@ -25,29 +25,29 @@ import (
 )
 
 type ValueIndexingInfo struct {
-	IsValueIndexableType          bool
-	AllowsValueIndexingAssignment bool
 	ElementType                   func(_ bool) Type
 	IndexingType                  *NumericType
+	IsValueIndexableType          bool
+	AllowsValueIndexingAssignment bool
 }
 
 // SimpleType represents a simple nominal type.
 type SimpleType struct {
-	Name                string
+	ValueIndexingInfo   ValueIndexingInfo
+	IsSuperTypeOf       func(subType Type) bool
+	NestedTypes         *StringTypeOrderedMap
+	memberResolvers     map[string]MemberResolver
+	Members             func(*SimpleType) map[string]MemberResolver
 	QualifiedName       string
 	TypeID              TypeID
+	Name                string
 	tag                 TypeTag
-	IsResource          bool
-	Storable            bool
-	Equatable           bool
-	Exportable          bool
-	Importable          bool
-	IsSuperTypeOf       func(subType Type) bool
-	Members             func(*SimpleType) map[string]MemberResolver
-	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
-	NestedTypes         *StringTypeOrderedMap
-	ValueIndexingInfo   ValueIndexingInfo
+	Importable          bool
+	Exportable          bool
+	Equatable           bool
+	Storable            bool
+	IsResource          bool
 }
 
 var _ Type = &SimpleType{}

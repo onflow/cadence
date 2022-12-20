@@ -248,12 +248,17 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.Parameters = checker.parameters(declaration.ParameterList)
 	}
 
-	declarations := make([]ast.Declaration, len(declaration.Fields))
-	for i, field := range declaration.Fields {
-		declarations[i] = field
+	var fieldDeclarations []ast.Declaration
+
+	fieldCount := len(declaration.Fields)
+	if fieldCount > 0 {
+		fieldDeclarations = make([]ast.Declaration, fieldCount)
+		for i, field := range declaration.Fields {
+			fieldDeclarations[i] = field
+		}
 	}
 
-	allMembers := ast.NewMembers(checker.memoryGauge, declarations)
+	allMembers := ast.NewMembers(checker.memoryGauge, fieldDeclarations)
 
 	members, fields, origins := checker.defaultMembersAndOrigins(
 		allMembers,
