@@ -2688,12 +2688,6 @@ func (t *FunctionType) Equal(other Type) bool {
 		return false
 	}
 
-	// constructors
-
-	if t.IsConstructor != otherFunction.IsConstructor {
-		return false
-	}
-
 	return true
 }
 
