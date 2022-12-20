@@ -3393,6 +3393,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
+		ledger := newTestLedger(nil, nil)
 		nextTransactionLocation := newTransactionLocationGenerator()
 		contractIsBroken := false
 
@@ -3404,7 +3405,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		newRuntimeInterface := func() Interface {
 			return &testRuntimeInterface{
-				storage: newTestLedger(nil, nil),
+				storage: ledger,
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
 				},
@@ -3520,6 +3521,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
+		ledger := newTestLedger(nil, nil)
 		nextTransactionLocation := newTransactionLocationGenerator()
 		contractIsBroken := false
 
@@ -3531,7 +3533,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		newRuntimeInterface := func() Interface {
 			return &testRuntimeInterface{
-				storage: newTestLedger(nil, nil),
+				storage: ledger,
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
 				},
