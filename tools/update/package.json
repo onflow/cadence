@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "axios": "^1.1.0",
+    "executive": "^1.6.3",
+    "js-yaml": "^4.1.0",
+    "octokit": "^2.0.7",
+    "prompts": "^2.4.2",
+    "semver": "^7.3.8",
+    "yargs": "^17.6.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node16": "^1.0.3",
+    "@types/inquirer": "^9.0.2",
+    "@types/js-yaml": "^4.0.5",
+    "@types/node-fetch": "^2.6.2",
+    "@types/semver": "^7.3.12",
+    "@types/yargs": "^17.0.13",
+    "@typescript-eslint/eslint-plugin": "^5.39.0",
+    "@typescript-eslint/parser": "^5.39.0",
+    "eslint": "^8.24.0",
+    "json-schema-to-typescript": "^11.0.2",
+    "typescript": "^4.8.4"
+  }
+}
