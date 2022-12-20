@@ -633,7 +633,7 @@ func (e *ControlStatementError) Error() string {
 func (e *ControlStatementError) SecondaryError() string {
 	validLocation := "a loop "
 	if e.ControlStatement == common.ControlStatementBreak {
-		validLocation = validLocation + " or switch statement"
+		validLocation += " or switch statement"
 	}
 	return fmt.Sprintf(
 		"`%s` can only be used within %s body",
