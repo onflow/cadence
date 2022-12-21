@@ -1,0 +1,84 @@
+repo: onflow/cadence
+repos:
+- repo: onflow/flow-go-sdk
+  needsRelease: true
+  mods:
+    - path: ""
+      deps:
+        - onflow/cadence
+
+- repo: onflow/flow-go
+  needsRelease: false
+  mods:
+    - path: ""
+      deps:
+        - onflow/flow-go-sdk
+        - onflow/cadence
+    - path: integration
+      deps:
+        - onflow/flow-go-sdk
+        - onflow/cadence
+
+- repo: onflow/flow-emulator
+  needsRelease: true
+  mods:
+    - path: ""
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+
+- repo: onflow/cadence-tools
+  needsRelease: true
+  mods:
+    - path: test
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+        - onflow/flow-emulator
+
+- repo: onflow/flow-cli
+  needsRelease: false
+  mods:
+    - path: pkg/flowkit
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+        - onflow/flow-emulator
+        - onflow/cadence-tools/test
+
+- repo: onflow/cadence-tools
+  needsRelease: true
+  mods:
+    - path: lint
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+        - onflow/flow-cli/pkg/flowkit
+
+- repo: onflow/cadence-tools
+  needsRelease: true
+  mods:
+    - path: languageserver
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+        - onflow/flow-emulator
+        - onflow/cadence-tools/lint
+
+- repo: onflow/flow-cli
+  needsRelease: true
+  mods:
+    - path: ""
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+        - onflow/flow-emulator
+        - onflow/cadence-tools/test
+        - onflow/cadence-tools/lint
+        - onflow/cadence-tools/languageserver

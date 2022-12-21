@@ -26,13 +26,13 @@ import (
 )
 
 type StandardLibraryValue struct {
-	Name           string
 	Type           sema.Type
-	DocString      string
 	Value          interpreter.Value
-	Kind           common.DeclarationKind
 	Position       *ast.Position
+	Name           string
+	DocString      string
 	ArgumentLabels []string
+	Kind           common.DeclarationKind
 }
 
 func (v StandardLibraryValue) ValueDeclarationName() string {

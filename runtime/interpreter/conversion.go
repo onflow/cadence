@@ -31,22 +31,27 @@ func ByteArrayValueToByteSlice(memoryGauge common.MemoryGauge, value Value, loca
 		return nil, errors.NewDefaultUserError("value is not an array")
 	}
 
-	result := make([]byte, 0, array.Count())
+	var result []byte
 
-	var err error
-	array.Iterate(memoryGauge, func(element Value) (resume bool) {
-		var b byte
-		b, err = ByteValueToByte(memoryGauge, element, locationRange)
+	count := array.Count()
+	if count > 0 {
+		result = make([]byte, 0, count)
+
+		var err error
+		array.Iterate(memoryGauge, func(element Value) (resume bool) {
+			var b byte
+			b, err = ByteValueToByte(memoryGauge, element, locationRange)
+			if err != nil {
+				return false
+			}
+
+			result = append(result, b)
+
+			return true
+		})
 		if err != nil {
-			return false
+			return nil, err
 		}
-
-		result = append(result, b)
-
-		return true
-	})
-	if err != nil {
-		return nil, err
 	}
 	return result, nil
 }
@@ -89,9 +94,14 @@ func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue
 
 	common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(buf)))
 
-	values := make([]Value, len(buf))
-	for i, b := range buf {
-		values[i] = UInt8Value(b)
+	var values []Value
+
+	count := len(buf)
+	if count > 0 {
+		values = make([]Value, count)
+		for i, b := range buf {
+			values[i] = UInt8Value(b)
+		}
 	}
 
 	return NewArrayValue(

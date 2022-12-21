@@ -20,11 +20,11 @@ package sema
 
 type FunctionActivation struct {
 	ReturnType           Type
+	ReturnInfo           *ReturnInfo
+	InitializationInfo   *InitializationInfo
 	Loops                int
 	Switches             int
 	ValueActivationDepth int
-	ReturnInfo           *ReturnInfo
-	InitializationInfo   *InitializationInfo
 }
 
 func (a FunctionActivation) InLoop() bool {

@@ -19,10 +19,10 @@
 package ir
 
 type Func struct {
+	Statement Stmt
 	Name      string
 	Type      FuncType
 	Locals    []Local
-	Statement Stmt
 }
 
 func (*Func) isStmt() {}

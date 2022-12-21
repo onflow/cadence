@@ -139,8 +139,8 @@ func (e InvalidTransactionAuthorizerCountError) Error() string {
 
 // InvalidEntryPointArgumentError
 type InvalidEntryPointArgumentError struct {
-	Index int
 	Err   error
+	Index int
 }
 
 var _ errors.UserError = &InvalidEntryPointArgumentError{}

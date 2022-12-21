@@ -26,15 +26,15 @@ import (
 )
 
 type SharedState struct {
-	Config                        *Config
-	allInterpreters               map[common.Location]*Interpreter
-	callStack                     *CallStack
-	typeCodes                     TypeCodes
-	inStorageIteration            bool
-	storageMutatedDuringIteration bool
+	typeCodes       TypeCodes
+	Config          *Config
+	allInterpreters map[common.Location]*Interpreter
+	callStack       *CallStack
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues ReferencedResourceKindedValues
 	resourceVariables              map[ResourceKindedValue]*Variable
+	inStorageIteration             bool
+	storageMutatedDuringIteration  bool
 }
 
 func NewSharedState(config *Config) *SharedState {

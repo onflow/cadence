@@ -2543,9 +2543,9 @@ func TestDecodeFixedPoints(t *testing.T) {
 	}
 
 	type test struct {
+		check    func(t *testing.T, actual cadence.Value, err error)
 		input    string
 		expected int
-		check    func(t *testing.T, actual cadence.Value, err error)
 	}
 
 	for ty, params := range allFixedPointTypes {

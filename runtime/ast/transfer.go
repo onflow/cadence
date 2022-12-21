@@ -53,9 +53,9 @@ func (f Transfer) EndPosition(memoryGauge common.MemoryGauge) Position {
 func (f Transfer) MarshalJSON() ([]byte, error) {
 	type Alias Transfer
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "Transfer",
 		Range: NewUnmeteredRangeFromPositioned(f),

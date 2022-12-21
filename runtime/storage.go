@@ -177,8 +177,8 @@ func (s *Storage) recordContractUpdate(
 }
 
 type ContractUpdate struct {
-	Key           interpreter.StorageKey
 	ContractValue *interpreter.CompositeValue
+	Key           interpreter.StorageKey
 }
 
 func SortContractUpdates(updates []ContractUpdate) {

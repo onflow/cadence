@@ -49,24 +49,23 @@ type Config struct {
 }
 
 type parser struct {
-	config Config
 	// tokens is a stream of tokens from the lexer
 	tokens lexer.TokenStream
-	// current is the current token being parsed.
-	current lexer.Token
+	// memoryGauge is used for metering memory usage
+	memoryGauge common.MemoryGauge
 	// errors are the parsing errors encountered during parsing
 	errors []error
 	// backtrackingCursorStack is the stack of lexer cursors used when backtracking
 	backtrackingCursorStack []int
 	// bufferedErrorsStack is the stack of parsing errors encountered during buffering
 	bufferedErrorsStack [][]error
-	// memoryGauge is used for metering memory usage
-	memoryGauge common.MemoryGauge
+	// current is the current token being parsed
+	current lexer.Token
 	// localReplayedTokensCount is the number of replayed tokens since starting the top-most ambiguity.
-	// Reset when the top-most ambiguity starts and ends. This keeps errors local.
+	// Reset when the top-most ambiguity starts and ends. This keeps errors local
 	localReplayedTokensCount uint
 	// globalReplayedTokensCount is the number of replayed tokens since starting the parse.
-	// It is never reset.
+	// It is never reset
 	globalReplayedTokensCount uint
 	// ambiguityLevel is the current level of ambiguity (nesting)
 	ambiguityLevel int
@@ -74,6 +73,8 @@ type parser struct {
 	expressionDepth int
 	// typeDepth is the depth of the type (if >0)
 	typeDepth int
+	// config enables certain features
+	config Config
 }
 
 // Parse creates a lexer to scan the given input string,

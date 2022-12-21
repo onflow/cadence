@@ -25,8 +25,8 @@ import (
 )
 
 type StandardLibraryType struct {
-	Name string
 	Type sema.Type
+	Name string
 	Kind common.DeclarationKind
 }
 
