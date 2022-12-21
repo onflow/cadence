@@ -19,13 +19,14 @@
 package intervalst
 
 type node[T any] struct {
-	interval    Interval
-	value       T
-	left, right *node[T]
+	interval Interval
+	value    T
+	// max endpoint in subtree rooted at this node
+	max   Position
+	left  *node[T]
+	right *node[T]
 	// size of subtree rooted at this node
 	n int
-	// max endpoint in subtree rooted at this node
-	max Position
 }
 
 func newNode[T any](interval Interval, value T) *node[T] {

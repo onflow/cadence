@@ -29,12 +29,12 @@ import (
 // InterfaceDeclaration
 
 type InterfaceDeclaration struct {
+	Members    *Members
+	DocString  string
+	Identifier Identifier
+	Range
 	Access        Access
 	CompositeKind common.CompositeKind
-	Identifier    Identifier
-	Members       *Members
-	DocString     string
-	Range
 }
 
 var _ Element = &InterfaceDeclaration{}
@@ -99,8 +99,8 @@ func (d *InterfaceDeclaration) DeclarationDocString() string {
 func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias InterfaceDeclaration
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "InterfaceDeclaration",
 		Alias: (*Alias)(d),

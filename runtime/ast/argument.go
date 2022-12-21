@@ -27,11 +27,11 @@ import (
 )
 
 type Argument struct {
-	Label                string    `json:",omitempty"`
+	Expression           Expression
 	LabelStartPos        *Position `json:",omitempty"`
 	LabelEndPos          *Position `json:",omitempty"`
+	Label                string    `json:",omitempty"`
 	TrailingSeparatorPos Position
-	Expression           Expression
 }
 
 func NewArgument(
@@ -75,8 +75,8 @@ func (a *Argument) String() string {
 func (a *Argument) MarshalJSON() ([]byte, error) {
 	type Alias Argument
 	return json.Marshal(&struct {
-		Range
 		*Alias
+		Range
 	}{
 		Range: NewUnmeteredRangeFromPositioned(a),
 		Alias: (*Alias)(a),

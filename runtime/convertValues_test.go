@@ -43,12 +43,12 @@ func TestExportValue(t *testing.T) {
 	t.Parallel()
 
 	type exportTest struct {
-		label string
-		value interpreter.Value
+		value    interpreter.Value
+		expected cadence.Value
 		// Some values need an interpreter to be created (e.g. stored values like arrays, dictionaries, and composites),
 		// so provide an optional helper function to construct the value
 		valueFactory func(*interpreter.Interpreter) interpreter.Value
-		expected     cadence.Value
+		label        string
 		invalid      bool
 	}
 
@@ -531,10 +531,10 @@ func TestImportValue(t *testing.T) {
 	t.Parallel()
 
 	type importTest struct {
-		label        string
 		expected     interpreter.Value
 		value        cadence.Value
 		expectedType sema.Type
+		label        string
 	}
 
 	test := func(tt importTest) {
@@ -853,9 +853,9 @@ func TestImportRuntimeType(t *testing.T) {
 	t.Parallel()
 
 	type importTest struct {
-		label    string
 		expected interpreter.StaticType
 		actual   cadence.Type
+		label    string
 	}
 
 	test := func(tt importTest) {
@@ -2392,9 +2392,9 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 	t.Parallel()
 
 	type argumentPassingTest struct {
+		exportedValue cadence.Value
 		label         string
 		typeSignature string
-		exportedValue cadence.Value
 		skipExport    bool
 	}
 
@@ -3003,10 +3003,10 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	}
 
 	type argumentPassingTest struct {
-		label                                    string
-		typeSignature                            string
 		exportedValue                            cadence.Value
 		expectedInvalidEntryPointArgumentErrType error
+		label                                    string
+		typeSignature                            string
 		expectedContainerMutationError           bool
 	}
 

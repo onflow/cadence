@@ -23,10 +23,10 @@ const MemoryPageSize = 64 * 1024
 
 // Memory represents a memory
 type Memory struct {
-	// minimum number of pages (each one is 64KiB in size)
-	Min uint32
 	// maximum number of pages (each one is 64KiB in size). optional, unlimited if nil
 	Max *uint32
+	// minimum number of pages (each one is 64KiB in size)
+	Min uint32
 }
 
 // limitIndicator is the byte used to indicate the kind of limit in the WASM binary

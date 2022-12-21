@@ -84,8 +84,8 @@ var AssertFunction = NewStandardLibraryFunction(
 // AssertionError
 
 type AssertionError struct {
-	Message string
 	interpreter.LocationRange
+	Message string
 }
 
 var _ errors.UserError = AssertionError{}

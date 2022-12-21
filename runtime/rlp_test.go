@@ -45,9 +45,9 @@ func TestRLPDecodeString(t *testing.T) {
 
 	type testCase struct {
 		name           string
+		expectedErrMsg string
 		input          []cadence.Value
 		output         []cadence.Value
-		expectedErrMsg string
 	}
 
 	tests := []testCase{
@@ -188,9 +188,9 @@ func TestRLPDecodeList(t *testing.T) {
 
 	type testCase struct {
 		name           string
+		expectedErrMsg string
 		input          []cadence.Value
 		output         [][]cadence.Value
-		expectedErrMsg string
 	}
 
 	tests := []testCase{

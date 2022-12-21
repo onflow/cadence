@@ -87,8 +87,8 @@ func (s *BranchIf) Accept(v Visitor) Repr {
 }
 
 type StoreLocal struct {
-	LocalIndex uint32
 	Exp        Expr
+	LocalIndex uint32
 }
 
 func (*StoreLocal) isStmt() {}

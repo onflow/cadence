@@ -63,11 +63,11 @@ func (pos Position) Compare(other intervalst.Position) int {
 
 type Origin struct {
 	Type            Type
-	DeclarationKind common.DeclarationKind
 	StartPos        *ast.Position
 	EndPos          *ast.Position
-	Occurrences     []ast.Range
 	DocString       string
+	Occurrences     []ast.Range
+	DeclarationKind common.DeclarationKind
 }
 
 type Occurrences struct {
@@ -110,9 +110,9 @@ func (o *Occurrences) Put(startPos, endPos ast.Position, origin *Origin) {
 }
 
 type Occurrence struct {
+	Origin   *Origin
 	StartPos Position
 	EndPos   Position
-	Origin   *Origin
 }
 
 func (o *Occurrences) All() []Occurrence {

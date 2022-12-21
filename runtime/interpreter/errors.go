@@ -132,8 +132,8 @@ func (e PositionedError) Error() string {
 // NotDeclaredError
 
 type NotDeclaredError struct {
-	ExpectedKind common.DeclarationKind
 	Name         string
+	ExpectedKind common.DeclarationKind
 }
 
 var _ errors.UserError = NotDeclaredError{}
@@ -206,9 +206,9 @@ func (e TransactionNotDeclaredError) Error() string {
 // ConditionError
 
 type ConditionError struct {
-	ConditionKind ast.ConditionKind
-	Message       string
 	LocationRange
+	Message       string
+	ConditionKind ast.ConditionKind
 }
 
 var _ errors.UserError = ConditionError{}
@@ -414,9 +414,9 @@ func (e TypeMismatchError) Error() string {
 
 // InvalidPathDomainError
 type InvalidPathDomainError struct {
-	ActualDomain    common.PathDomain
-	ExpectedDomains []common.PathDomain
 	LocationRange
+	ExpectedDomains []common.PathDomain
+	ActualDomain    common.PathDomain
 }
 
 var _ errors.UserError = InvalidPathDomainError{}
@@ -445,9 +445,9 @@ func (e InvalidPathDomainError) SecondaryError() string {
 
 // OverwriteError
 type OverwriteError struct {
-	Address AddressValue
-	Path    PathValue
 	LocationRange
+	Path    PathValue
+	Address AddressValue
 }
 
 var _ errors.UserError = OverwriteError{}
@@ -464,9 +464,9 @@ func (e OverwriteError) Error() string {
 
 // CyclicLinkError
 type CyclicLinkError struct {
-	Address common.Address
-	Paths   []PathValue
 	LocationRange
+	Paths   []PathValue
+	Address common.Address
 }
 
 var _ errors.UserError = CyclicLinkError{}
@@ -492,9 +492,9 @@ func (e CyclicLinkError) Error() string {
 
 // ArrayIndexOutOfBoundsError
 type ArrayIndexOutOfBoundsError struct {
+	LocationRange
 	Index int
 	Size  int
-	LocationRange
 }
 
 var _ errors.UserError = ArrayIndexOutOfBoundsError{}
@@ -511,10 +511,10 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 
 // ArraySliceIndicesError
 type ArraySliceIndicesError struct {
+	LocationRange
 	FromIndex int
 	UpToIndex int
 	Size      int
-	LocationRange
 }
 
 var _ errors.UserError = ArraySliceIndicesError{}
@@ -531,9 +531,9 @@ func (e ArraySliceIndicesError) Error() string {
 // InvalidSliceIndexError is returned when a slice index is invalid, such as fromIndex > upToIndex
 // This error can be returned even when fromIndex and upToIndex are both within bounds.
 type InvalidSliceIndexError struct {
+	LocationRange
 	FromIndex int
 	UpToIndex int
-	LocationRange
 }
 
 var _ errors.UserError = InvalidSliceIndexError{}
@@ -546,9 +546,9 @@ func (e InvalidSliceIndexError) Error() string {
 
 // StringIndexOutOfBoundsError
 type StringIndexOutOfBoundsError struct {
+	LocationRange
 	Index  int
 	Length int
-	LocationRange
 }
 
 var _ errors.UserError = StringIndexOutOfBoundsError{}
@@ -565,10 +565,10 @@ func (e StringIndexOutOfBoundsError) Error() string {
 
 // StringSliceIndicesError
 type StringSliceIndicesError struct {
+	LocationRange
 	FromIndex int
 	UpToIndex int
 	Length    int
-	LocationRange
 }
 
 var _ errors.UserError = StringSliceIndicesError{}
@@ -623,8 +623,8 @@ func (e TypeLoadingError) Error() string {
 
 // UseBeforeInitializationError
 type UseBeforeInitializationError struct {
-	Name string
 	LocationRange
+	Name string
 }
 
 var _ errors.UserError = UseBeforeInitializationError{}
@@ -637,9 +637,9 @@ func (e UseBeforeInitializationError) Error() string {
 
 // InvocationArgumentTypeError
 type InvocationArgumentTypeError struct {
-	Index         int
-	ParameterType sema.Type
 	LocationRange
+	ParameterType sema.Type
+	Index         int
 }
 
 var _ errors.UserError = InvocationArgumentTypeError{}
@@ -782,11 +782,11 @@ func (e InterfaceMissingLocationError) Error() string {
 
 // InvalidOperandsError
 type InvalidOperandsError struct {
-	Operation    ast.Operation
-	FunctionName string
+	LocationRange
 	LeftType     StaticType
 	RightType    StaticType
-	LocationRange
+	FunctionName string
+	Operation    ast.Operation
 }
 
 var _ errors.UserError = InvalidOperandsError{}
@@ -869,8 +869,8 @@ func (StorageMutatedDuringIterationError) Error() string {
 
 // InvalidHexByteError
 type InvalidHexByteError struct {
-	Byte byte
 	LocationRange
+	Byte byte
 }
 
 var _ errors.UserError = InvalidHexByteError{}

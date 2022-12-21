@@ -35,8 +35,8 @@ type Request struct {
 }
 
 type Response struct {
-	Error   string       `json:"error"`
 	Program *ast.Program `json:"program"`
+	Error   string       `json:"error"`
 }
 
 func main() {

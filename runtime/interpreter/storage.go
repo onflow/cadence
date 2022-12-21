@@ -85,8 +85,8 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 }
 
 type StorageKey struct {
-	Address common.Address
 	Key     string
+	Address common.Address
 }
 
 func NewStorageKey(memoryGauge common.MemoryGauge, address common.Address, key string) StorageKey {
