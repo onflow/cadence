@@ -28,6 +28,7 @@ import (
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOverEstimateIntStringLength(t *testing.T) {
@@ -165,4 +166,90 @@ func TestOverEstimateFixedPointStringLength(t *testing.T) {
 			),
 		)
 	}
+}
+
+func BenchmarkValueArithmetic(b *testing.B) {
+
+	b.ReportAllocs()
+
+	isNegatable := func(v NumberValue) bool {
+		switch v.(type) {
+		case IntValue, Int8Value, Int16Value,
+			Int32Value, Int64Value, Int128Value,
+			Int256Value, Fix64Value:
+			return true
+		}
+		return false
+	}
+
+	isSaturating := func(v NumberValue) bool {
+		switch v.(type) {
+		case Word8Value, Word16Value, Word32Value, Word64Value:
+			return false
+		}
+		return false
+	}
+
+	testArithmeticOps := func(name string, v2 NumberValue, v1 NumberValue) {
+		b.Run(name, func(b *testing.B) {
+			storage := NewInMemoryStorage(nil)
+
+			inter, err := NewInterpreter(
+				nil,
+				EmptyLocationRange.Location,
+				&Config{
+					Storage:                       storage,
+					AtreeValueValidationEnabled:   true,
+					AtreeStorageValidationEnabled: true,
+				},
+			)
+
+			require.NoError(b, err)
+
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				v1.Plus(inter, v2, EmptyLocationRange)
+				v1.Minus(inter, v2, EmptyLocationRange)
+				v1.Mod(inter, v2, EmptyLocationRange)
+				v1.Mul(inter, v2, EmptyLocationRange)
+				v1.Div(inter, v2, EmptyLocationRange)
+				v1.Less(inter, v2, EmptyLocationRange)
+				v1.LessEqual(inter, v2, EmptyLocationRange)
+				v1.Greater(inter, v2, EmptyLocationRange)
+				v1.GreaterEqual(inter, v2, EmptyLocationRange)
+
+				if isNegatable(v1) {
+					v1.Negate(inter, EmptyLocationRange)
+				}
+				if isSaturating(v1) {
+					v1.SaturatingPlus(inter, v2, EmptyLocationRange)
+					v1.SaturatingMinus(inter, v2, EmptyLocationRange)
+					v1.SaturatingMul(inter, v2, EmptyLocationRange)
+					v1.SaturatingDiv(inter, v2, EmptyLocationRange)
+				}
+			}
+		})
+	}
+
+	testArithmeticOps("Int8Value", NewUnmeteredInt8Value(4), NewUnmeteredInt8Value(5))
+	testArithmeticOps("Int16Value", NewUnmeteredInt16Value(40), NewUnmeteredInt16Value(50))
+	testArithmeticOps("Int32Value", NewUnmeteredInt32Value(400), NewUnmeteredInt32Value(500))
+	testArithmeticOps("Int64Value", NewUnmeteredInt64Value(4000), NewUnmeteredInt64Value(5000))
+	testArithmeticOps("Fix64Value", NewUnmeteredFix64Value(4000), NewUnmeteredFix64Value(5000))
+	testArithmeticOps("Int128Value", NewUnmeteredInt128ValueFromInt64(400000), NewUnmeteredInt128ValueFromInt64(500000))
+	testArithmeticOps("Int256Value", NewUnmeteredInt256ValueFromInt64(400000), NewUnmeteredInt256ValueFromInt64(500000))
+
+	testArithmeticOps("UInt8Value", NewUnmeteredUInt8Value(4), NewUnmeteredUInt8Value(5))
+	testArithmeticOps("UInt16Value", NewUnmeteredUInt16Value(40), NewUnmeteredUInt16Value(50))
+	testArithmeticOps("UInt32Value", NewUnmeteredUInt32Value(400), NewUnmeteredUInt32Value(500))
+	testArithmeticOps("UInt64Value", NewUnmeteredUInt64Value(4000), NewUnmeteredUInt64Value(5000))
+	testArithmeticOps("UFix64Value", NewUnmeteredUFix64Value(4000), NewUnmeteredUFix64Value(5000))
+	testArithmeticOps("UInt128Value", NewUnmeteredUInt128ValueFromUint64(400000), NewUnmeteredUInt128ValueFromUint64(500000))
+	testArithmeticOps("UInt256Value", NewUnmeteredUInt256ValueFromUint64(400000), NewUnmeteredUInt256ValueFromUint64(500000))
+
+	testArithmeticOps("Word8Value", NewUnmeteredWord8Value(4), NewUnmeteredWord8Value(5))
+	testArithmeticOps("Word16Value", NewUnmeteredWord16Value(40), NewUnmeteredWord16Value(50))
+	testArithmeticOps("Word32Value", NewUnmeteredWord32Value(400), NewUnmeteredWord32Value(500))
+	testArithmeticOps("Word64Value", NewUnmeteredWord64Value(4000), NewUnmeteredWord64Value(5000))
 }
