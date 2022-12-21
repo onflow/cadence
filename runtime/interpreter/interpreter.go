@@ -3280,21 +3280,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 
 				// Perform a forced type loading to see if the underlying type is not broken.
 				// If broken, skip this value from the iteration.
-				var typeError error
-				func() {
-					defer func() {
-						if r := recover(); r != nil {
-							switch r := r.(type) {
-							case errors.UserError, errors.ExternalError:
-								typeError = r.(error)
-							default:
-								panic(r)
-							}
-						}
-					}()
-					_, typeError = inter.ConvertStaticToSemaType(staticType)
-				}()
-
+				typeError := inter.checkTypeLoading(staticType)
 				if typeError != nil {
 					continue
 				}
@@ -3337,6 +3323,24 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 		},
 		sema.AccountForEachFunctionType(pathType),
 	)
+}
+
+func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch r := r.(type) {
+			case errors.UserError, errors.ExternalError:
+				typeError = r.(error)
+			default:
+				panic(r)
+			}
+		}
+	}()
+
+	// Here it is only interested in whether the type can be properly loaded.
+	_, typeError = interpreter.ConvertStaticToSemaType(staticType)
+
+	return
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
