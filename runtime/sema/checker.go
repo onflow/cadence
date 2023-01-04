@@ -105,7 +105,7 @@ type Checker struct {
 	// initialized lazily. use beforeExtractor()
 	_beforeExtractor                   *BeforeExtractor
 	errors                             []error
-	functionActivations                FunctionActivations
+	functionActivations                *FunctionActivations
 	inCondition                        bool
 	allowSelfResourceFieldInvalidation bool
 	inAssignment                       bool
@@ -133,9 +133,9 @@ func NewChecker(
 		return nil, errors.NewDefaultUserError("invalid default access check mode")
 	}
 
-	functionActivations := FunctionActivations{
+	functionActivations := &FunctionActivations{
 		// Pre-allocate a common function depth
-		activations: make([]FunctionActivation, 0, 2),
+		activations: make([]*FunctionActivation, 0, 2),
 	}
 	functionActivations.EnterFunction(
 		&FunctionType{
