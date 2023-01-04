@@ -319,6 +319,38 @@ Composite fields are encoded as a list of name-value pairs in the order in which
 
 ---
 
+## PathLink
+
+```json
+{
+  "type": "Link",
+  "value": {
+    "TargetPath": <path>,
+    "BorrowType": "..."
+  }
+}
+```
+
+### Example
+
+```json
+{
+  "type": "Link",
+  "value": {
+    "TargetPath": {
+      "type": "Path",
+      "value": {
+        "domain": "public",
+        "identifier": "someInteger"
+      }
+    },
+    "BorrowType": "Int"
+  }
+}
+```
+
+---
+
 ## Type Value
 
 ```json
