@@ -233,7 +233,7 @@ func exportValueWithInterpreter(
 			seenReferences,
 		)
 	case *interpreter.StorageReferenceValue:
-		referencedValue := v.ReferencedValue(inter)
+		referencedValue := v.ReferencedValue(inter, interpreter.EmptyLocationRange, true)
 		if referencedValue == nil {
 			return nil, nil
 		}

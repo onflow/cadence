@@ -49,6 +49,7 @@ func TestErrorOutputIncludesLocationRage(t *testing.T) {
 		Error{
 			Location: utils.TestLocation,
 			Err: DereferenceError{
+				Cause: "the value being referenced has been destroyed or moved",
 				LocationRange: LocationRange{
 					Location: utils.TestLocation,
 					HasPosition: ast.Range{
