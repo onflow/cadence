@@ -4167,6 +4167,9 @@ func TestParseStructureWithConformances(t *testing.T) {
 
 func TestParseInvalidMember(t *testing.T) {
 
+	// For now, leading unknown identifiers are valid.
+	// This will be rejected in Stable Cadence.
+
 	t.Parallel()
 
 	const code = `
@@ -4177,16 +4180,7 @@ func TestParseInvalidMember(t *testing.T) {
 
 	_, errs := testParseDeclarations(code)
 
-	utils.AssertEqualWithDiff(t,
-		[]error{
-			&SyntaxError{
-				Message: "unexpected token: identifier",
-				Pos:     ast.Position{Offset: 35, Line: 3, Column: 12},
-			},
-		},
-		errs,
-	)
-
+	require.Empty(t, errs)
 }
 
 func TestParsePreAndPostConditions(t *testing.T) {
