@@ -16888,8 +16888,8 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter, locati
 		if errorOnFailedDereference {
 			// relay the type mismatch error with a dereference error context
 			panic(DereferenceError{
-				ExpectedType:  &forceCastErr.ExpectedType,
-				ActualType:    &forceCastErr.ActualType,
+				ExpectedType:  forceCastErr.ExpectedType,
+				ActualType:    forceCastErr.ActualType,
 				LocationRange: locationRange,
 			})
 		}

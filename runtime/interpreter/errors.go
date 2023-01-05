@@ -240,8 +240,8 @@ func (e RedeclarationError) Error() string {
 
 type DereferenceError struct {
 	Cause        string
-	ExpectedType *sema.Type
-	ActualType   *sema.Type
+	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
@@ -258,8 +258,8 @@ func (e DereferenceError) SecondaryError() string {
 		return e.Cause
 	}
 	expected, actual := sema.ErrorMessageExpectedActualTypes(
-		*e.ExpectedType,
-		*e.ActualType,
+		e.ExpectedType,
+		e.ActualType,
 	)
 
 	return fmt.Sprintf(
