@@ -21,46 +21,45 @@ package interpreter
 import "github.com/onflow/cadence/runtime/common"
 
 type Config struct {
-	// OnEventEmitted is triggered when an event is emitted by the program.
-	OnEventEmitted OnEventEmittedFunc
-	// OnStatement is triggered when a statement is about to be executed.
-	OnStatement OnStatementFunc
-	// OnLoopIteration is triggered when a loop iteration is about to be executed.
-	OnLoopIteration OnLoopIterationFunc
-	// OnFunctionInvocation is triggered when a function invocation is about to be executed.
-	OnFunctionInvocation OnFunctionInvocationFunc
-	// OnInvokedFunctionReturn is triggered when an invoked function returned.
+	MemoryGauge common.MemoryGauge
+	Storage     Storage
+	// ImportLocationHandler is used to handle imports of locations
+	ImportLocationHandler ImportLocationHandlerFunc
+	// PublicAccountHandler is used to handle accounts
+	PublicAccountHandler PublicAccountHandlerFunc
+	// OnInvokedFunctionReturn is triggered when an invoked function returned
 	OnInvokedFunctionReturn OnInvokedFunctionReturnFunc
-	// OnRecordTrace is triggered when a trace is recorded.
+	// OnRecordTrace is triggered when a trace is recorded
 	OnRecordTrace OnRecordTraceFunc
-	// OnResourceOwnerChange is triggered when the owner of a resource changes.
+	// OnResourceOwnerChange is triggered when the owner of a resource changes
 	OnResourceOwnerChange OnResourceOwnerChangeFunc
-	// OnMeterComputation is triggered when a computation is about to happen.
+	// OnMeterComputation is triggered when a computation is about to happen
 	OnMeterComputation OnMeterComputationFunc
 	// InjectedCompositeFieldsHandler is used to initialize new composite values' fields
 	InjectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
-	// ContractValueHandler is used to handle imports of values.
+	// ContractValueHandler is used to handle imports of values
 	ContractValueHandler ContractValueHandlerFunc
-	// ImportLocationHandler is used to handle imports of locations.
-	ImportLocationHandler ImportLocationHandlerFunc
-	// PublicAccountHandler is used to handle accounts.
-	PublicAccountHandler PublicAccountHandlerFunc
-	// AuthAccountHandler is used to handle accounts.
+	// OnEventEmitted is triggered when an event is emitted by the program
+	OnEventEmitted OnEventEmittedFunc
+	// OnFunctionInvocation is triggered when a function invocation is about to be executed
+	OnFunctionInvocation OnFunctionInvocationFunc
+	// AuthAccountHandler is used to handle accounts
 	AuthAccountHandler AuthAccountHandlerFunc
-	// UUIDHandler is used to handle the generation of UUIDs.
-	UUIDHandler UUIDHandlerFunc
-	// AtreeValueValidationEnabled determines if the validation of atree values is enabled.
-	AtreeValueValidationEnabled bool
-	// AtreeStorageValidationEnabled determines if the validation of atree storage is enabled.
-	AtreeStorageValidationEnabled bool
+	// UUIDHandler is used to handle the generation of UUIDs
+	UUIDHandler    UUIDHandlerFunc
+	BaseActivation *VariableActivation
+	Debugger       *Debugger
+	// OnStatement is triggered when a statement is about to be executed
+	OnStatement OnStatementFunc
+	// OnLoopIteration is triggered when a loop iteration is about to be executed
+	OnLoopIteration OnLoopIterationFunc
+	// InvalidatedResourceValidationEnabled determines if the validation of invalidated resources is enabled
+	InvalidatedResourceValidationEnabled bool
 	// TracingEnabled determines if tracing is enabled.
 	// Tracing reports certain operations, e.g. composite value transfers
 	TracingEnabled bool
-	// InvalidatedResourceValidationEnabled determines if the validation of invalidated resources is enabled.
-	InvalidatedResourceValidationEnabled bool
-
-	MemoryGauge    common.MemoryGauge
-	Storage        Storage
-	Debugger       *Debugger
-	BaseActivation *VariableActivation
+	// AtreeStorageValidationEnabled determines if the validation of atree storage is enabled
+	AtreeStorageValidationEnabled bool
+	// AtreeValueValidationEnabled determines if the validation of atree values is enabled
+	AtreeValueValidationEnabled bool
 }

@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -162,4 +163,1508 @@ func TestType_ID(t *testing.T) {
 	for _, testCase := range stringerTests {
 		test(testCase.ty, testCase.expected)
 	}
+}
+
+func TestTypeEquality(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple types", func(t *testing.T) {
+
+		t.Parallel()
+
+		types := []Type{
+			AnyType{},
+			AnyStructType{},
+			AnyResourceType{},
+			NumberType{},
+			SignedNumberType{},
+			IntegerType{},
+			SignedIntegerType{},
+			FixedPointType{},
+			SignedFixedPointType{},
+			UIntType{},
+			UInt8Type{},
+			UInt16Type{},
+			UInt32Type{},
+			UInt64Type{},
+			UInt128Type{},
+			UInt256Type{},
+			IntType{},
+			Int8Type{},
+			Int16Type{},
+			Int32Type{},
+			Int64Type{},
+			Int128Type{},
+			Int256Type{},
+			Word8Type{},
+			Word16Type{},
+			Word32Type{},
+			Word64Type{},
+			UFix64Type{},
+			Fix64Type{},
+			VoidType{},
+			BoolType{},
+			CharacterType{},
+			NeverType{},
+			StringType{},
+			BytesType{},
+			AddressType{},
+			PathType{},
+			StoragePathType{},
+			CapabilityPathType{},
+			PublicPathType{},
+			PrivatePathType{},
+			BlockType{},
+			MetaType{},
+			AuthAccountType{},
+			AuthAccountKeysType{},
+			AuthAccountContractsType{},
+			PublicAccountType{},
+			PublicAccountKeysType{},
+			PublicAccountContractsType{},
+			AccountKeyType{},
+			DeployedContractType{},
+		}
+
+		for i, source := range types {
+			for j, target := range types {
+				if i == j {
+					assert.True(t, source.Equal(target))
+				} else {
+					assert.False(t, source.Equal(target))
+				}
+			}
+		}
+	})
+
+	t.Run("typeId type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := TypeID("Foo")
+			target := TypeID("Foo")
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("not equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := TypeID("Foo")
+			target := TypeID("Bar")
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("capability type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal with borrow type", func(t *testing.T) {
+			t.Parallel()
+
+			source := CapabilityType{
+				BorrowType: IntType{},
+			}
+			target := CapabilityType{
+				BorrowType: IntType{},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("equal without borrow type", func(t *testing.T) {
+			t.Parallel()
+
+			source := CapabilityType{}
+			target := CapabilityType{}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("not equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := CapabilityType{
+				BorrowType: IntType{},
+			}
+			target := CapabilityType{
+				BorrowType: StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("source missing borrow type", func(t *testing.T) {
+			t.Parallel()
+
+			source := CapabilityType{}
+			target := CapabilityType{
+				BorrowType: StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("target missing borrow type", func(t *testing.T) {
+			t.Parallel()
+
+			source := CapabilityType{
+				BorrowType: IntType{},
+			}
+			target := CapabilityType{}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := CapabilityType{
+				BorrowType: IntType{},
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("optional type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := OptionalType{
+				Type: IntType{},
+			}
+			target := OptionalType{
+				Type: IntType{},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("not equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := OptionalType{
+				Type: IntType{},
+			}
+			target := OptionalType{
+				Type: StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := OptionalType{
+				Type: IntType{},
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("variable sized type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := VariableSizedArrayType{
+				ElementType: IntType{},
+			}
+			target := VariableSizedArrayType{
+				ElementType: IntType{},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("not equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := VariableSizedArrayType{
+				ElementType: IntType{},
+			}
+			target := VariableSizedArrayType{
+				ElementType: StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := VariableSizedArrayType{
+				ElementType: IntType{},
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("constant sized type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := ConstantSizedArrayType{
+				ElementType: IntType{},
+				Size:        3,
+			}
+			target := ConstantSizedArrayType{
+				ElementType: IntType{},
+				Size:        3,
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different inner types", func(t *testing.T) {
+			t.Parallel()
+
+			source := ConstantSizedArrayType{
+				ElementType: IntType{},
+				Size:        3,
+			}
+			target := ConstantSizedArrayType{
+				ElementType: StringType{},
+				Size:        3,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different sizes", func(t *testing.T) {
+			t.Parallel()
+
+			source := ConstantSizedArrayType{
+				ElementType: IntType{},
+				Size:        3,
+			}
+			target := ConstantSizedArrayType{
+				ElementType: IntType{},
+				Size:        4,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := ConstantSizedArrayType{
+				ElementType: IntType{},
+				Size:        3,
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("dictionary type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := DictionaryType{
+				KeyType:     IntType{},
+				ElementType: BoolType{},
+			}
+			target := DictionaryType{
+				KeyType:     IntType{},
+				ElementType: BoolType{},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different key types", func(t *testing.T) {
+			t.Parallel()
+
+			source := DictionaryType{
+				KeyType:     IntType{},
+				ElementType: BoolType{},
+			}
+			target := DictionaryType{
+				KeyType:     UIntType{},
+				ElementType: BoolType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different element types", func(t *testing.T) {
+			t.Parallel()
+
+			source := DictionaryType{
+				KeyType:     IntType{},
+				ElementType: BoolType{},
+			}
+			target := DictionaryType{
+				KeyType:     IntType{},
+				ElementType: StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different key and element types", func(t *testing.T) {
+			t.Parallel()
+
+			source := DictionaryType{
+				KeyType:     IntType{},
+				ElementType: BoolType{},
+			}
+			target := DictionaryType{
+				KeyType:     UIntType{},
+				ElementType: StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := DictionaryType{
+				KeyType:     IntType{},
+				ElementType: BoolType{},
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("struct type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &StructType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &StructType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different location name", func(t *testing.T) {
+			t.Parallel()
+
+			source := &StructType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &StructType{
+				Location: common.AddressLocation{
+					Name:    "Test",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different address", func(t *testing.T) {
+			t.Parallel()
+
+			source := &StructType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &StructType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0, 0, 0, 0, 0, 0, 0, 0x01},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different qualified identifier", func(t *testing.T) {
+			t.Parallel()
+
+			source := &StructType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &StructType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Baz",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &StructType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("struct interface type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &StructInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &StructInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different location name", func(t *testing.T) {
+			t.Parallel()
+
+			source := &StructInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &StructInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Test",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different address", func(t *testing.T) {
+			t.Parallel()
+
+			source := &StructInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &StructInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0, 0, 0, 0, 0, 0, 0, 0x01},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different qualified identifier", func(t *testing.T) {
+			t.Parallel()
+
+			source := &StructInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &StructInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Baz",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &StructInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("resource type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ResourceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ResourceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different location name", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ResourceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ResourceType{
+				Location: common.AddressLocation{
+					Name:    "Test",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different address", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ResourceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ResourceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0, 0, 0, 0, 0, 0, 0, 0x01},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different qualified identifier", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ResourceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ResourceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Baz",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ResourceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("resource interface type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ResourceInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ResourceInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different location name", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ResourceInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ResourceInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Test",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different address", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ResourceInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ResourceInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0, 0, 0, 0, 0, 0, 0, 0x01},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different qualified identifier", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ResourceInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ResourceInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Baz",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ResourceInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("contract type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ContractType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ContractType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different location name", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ContractType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ContractType{
+				Location: common.AddressLocation{
+					Name:    "Test",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different address", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ContractType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ContractType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0, 0, 0, 0, 0, 0, 0, 0x01},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different qualified identifier", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ContractType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ContractType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Baz",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ContractType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("contract interface type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ContractInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ContractInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different location name", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ContractInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ContractInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Test",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different address", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ContractInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ContractInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0, 0, 0, 0, 0, 0, 0, 0x01},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different qualified identifier", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ContractInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &ContractInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Baz",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ContractInterfaceType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("event type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EventType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &EventType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different location name", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EventType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &EventType{
+				Location: common.AddressLocation{
+					Name:    "Test",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different address", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EventType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &EventType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0, 0, 0, 0, 0, 0, 0, 0x01},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different qualified identifier", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EventType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := &EventType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Baz",
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EventType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("function type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				ReturnType: StringType{},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+					{
+						Type: BoolType{},
+					},
+				},
+			}
+			target := &FunctionType{
+				ReturnType: StringType{},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+					{
+						Type: BoolType{},
+					},
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different return type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				ReturnType: StringType{},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+			}
+			target := &FunctionType{
+				ReturnType: BoolType{},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different param type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				ReturnType: StringType{},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+			}
+			target := &FunctionType{
+				ReturnType: StringType{},
+				Parameters: []Parameter{
+					{
+						Type: StringType{},
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different param type count", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				ReturnType: StringType{},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+			}
+			target := &FunctionType{
+				ReturnType: StringType{},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+					{
+						Type: StringType{},
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				ReturnType: StringType{},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("reference type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type:       IntType{},
+				Authorized: false,
+			}
+			target := &ReferenceType{
+				Type:       IntType{},
+				Authorized: false,
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different referenced type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type:       IntType{},
+				Authorized: false,
+			}
+			target := &ReferenceType{
+				Type:       StringType{},
+				Authorized: false,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("auth vs non-auth", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type:       IntType{},
+				Authorized: false,
+			}
+			target := &ReferenceType{
+				Type:       IntType{},
+				Authorized: true,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("non-auth vs auth", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type:       IntType{},
+				Authorized: true,
+			}
+			target := &ReferenceType{
+				Type:       IntType{},
+				Authorized: false,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type:       IntType{},
+				Authorized: true,
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("restricted type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					AnyType{},
+					IntType{},
+				},
+			}
+			target := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					AnyType{},
+					IntType{},
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different restrictions order", func(t *testing.T) {
+			t.Parallel()
+
+			source := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					AnyType{},
+					IntType{},
+				},
+			}
+			target := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					IntType{},
+					AnyType{},
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("duplicate restrictions", func(t *testing.T) {
+			t.Parallel()
+
+			source := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					IntType{},
+					AnyType{},
+					IntType{},
+				},
+			}
+			target := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					IntType{},
+					AnyType{},
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different inner type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					AnyType{},
+					IntType{},
+				},
+			}
+			target := &RestrictedType{
+				Type: StringType{},
+				Restrictions: []Type{
+					AnyType{},
+					IntType{},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different restrictions", func(t *testing.T) {
+			t.Parallel()
+
+			source := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					AnyType{},
+					IntType{},
+				},
+			}
+			target := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					AnyType{},
+					StringType{},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different restrictions length", func(t *testing.T) {
+			t.Parallel()
+
+			source := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					AnyType{},
+				},
+			}
+			target := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					AnyType{},
+					StringType{},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &RestrictedType{
+				Type: IntType{},
+				Restrictions: []Type{
+					AnyType{},
+				},
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("enum type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+				RawType:             IntType{},
+			}
+			target := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+				RawType:             IntType{},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different raw type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+				RawType:             IntType{},
+			}
+			target := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+				RawType:             StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different location name", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+				RawType:             IntType{},
+			}
+			target := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Test",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+				RawType:             IntType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different address", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+				RawType:             IntType{},
+			}
+			target := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0, 0, 0, 0, 0, 0, 0, 0x01},
+				},
+				QualifiedIdentifier: "Bar",
+				RawType:             IntType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different qualified identifier", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+				RawType:             IntType{},
+			}
+			target := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Baz",
+				RawType:             IntType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &EnumType{
+				Location: common.AddressLocation{
+					Name:    "Foo",
+					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				},
+				QualifiedIdentifier: "Bar",
+				RawType:             IntType{},
+			}
+			target := AnyType{}
+			assert.False(t, source.Equal(target))
+		})
+	})
+
 }

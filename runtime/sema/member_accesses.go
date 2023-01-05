@@ -24,9 +24,9 @@ import (
 )
 
 type MemberAccess struct {
+	AccessedType Type
 	StartPos     Position
 	EndPos       Position
-	AccessedType Type
 }
 
 type MemberAccesses struct {

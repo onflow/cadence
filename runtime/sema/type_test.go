@@ -771,9 +771,9 @@ func TestCommonSuperType(t *testing.T) {
 	}
 
 	type testCase struct {
+		expectedSuperType Type
 		name              string
 		types             []Type
-		expectedSuperType Type
 	}
 
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {

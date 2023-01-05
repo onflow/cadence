@@ -24,9 +24,9 @@ import (
 )
 
 type Diagnostic struct {
-	ast.Range
 	Location         common.Location
-	Category         string // optional
+	Category         string
 	Message          string
-	SecondaryMessage string // optional
+	SecondaryMessage string
+	ast.Range
 }

@@ -112,9 +112,9 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	}
 
 	type testCase struct {
+		check     func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type)
 		contract  string
 		arguments []argument
-		check     func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type)
 	}
 
 	test := func(t *testing.T, test testCase) {

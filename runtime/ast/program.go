@@ -164,9 +164,9 @@ func (p *Program) SoleTransactionDeclaration() *TransactionDeclaration {
 func (p *Program) MarshalJSON() ([]byte, error) {
 	type Alias Program
 	return json.Marshal(&struct {
+		*Alias
 		Type         string
 		Declarations []Declaration
-		*Alias
 	}{
 		Type:         "Program",
 		Declarations: p.declarations,

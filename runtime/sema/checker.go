@@ -96,33 +96,30 @@ type ContractValueHandlerFunc func(
 // Checker
 
 type Checker struct {
-	Program     *ast.Program
-	Location    common.Location
-	Elaboration *Elaboration
-	Config      *Config
-
-	errors                             []error
-	valueActivations                   *VariableActivations
-	resources                          *Resources
-	typeActivations                    *VariableActivations
-	containerTypes                     map[Type]bool
-	functionActivations                FunctionActivations
-	inCondition                        bool
-	isChecked                          bool
-	inCreate                           bool
-	inInvocation                       bool
-	inAssignment                       bool
-	allowSelfResourceFieldInvalidation bool
-	currentMemberExpression            *ast.MemberExpression
-	purityCheckScopes                  []PurityCheckScope
-
-	// initialized lazily. use beforeExtractor()
-	_beforeExtractor *BeforeExtractor
-	expectedType     Type
-
 	// memoryGauge is used for metering memory usage
-	memoryGauge  common.MemoryGauge
-	PositionInfo *PositionInfo
+	memoryGauge             common.MemoryGauge
+	Location                common.Location
+	expectedType            Type
+	resources               *Resources
+	valueActivations        *VariableActivations
+	currentMemberExpression *ast.MemberExpression
+	typeActivations         *VariableActivations
+	containerTypes          map[Type]bool
+	Program                 *ast.Program
+	PositionInfo            *PositionInfo
+	Config                  *Config
+	Elaboration             *Elaboration
+	// initialized lazily. use beforeExtractor()
+	_beforeExtractor                   *BeforeExtractor
+	errors                             []error
+	functionActivations                *FunctionActivations
+	purityCheckScopes                  []PurityCheckScope
+	inCondition                        bool
+	allowSelfResourceFieldInvalidation bool
+	inAssignment                       bool
+	inInvocation                       bool
+	inCreate                           bool
+	isChecked                          bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -150,9 +147,9 @@ func NewChecker(
 		return nil, errors.NewDefaultUserError("invalid default access check mode")
 	}
 
-	functionActivations := FunctionActivations{
+	functionActivations := &FunctionActivations{
 		// Pre-allocate a common function depth
-		activations: make([]FunctionActivation, 0, 2),
+		activations: make([]*FunctionActivation, 0, 2),
 	}
 	functionActivations.EnterFunction(
 		baseFunctionType,
@@ -1101,16 +1098,20 @@ func (checker *Checker) convertOptionalType(t *ast.OptionalType) Type {
 func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 	parameterTypeAnnotations := t.ParameterTypeAnnotations
 
-	parameters := make([]Parameter, 0, len(parameterTypeAnnotations))
+	var parameters []Parameter
+	parameterCount := len(parameterTypeAnnotations)
+	if parameterCount > 0 {
+		parameters = make([]Parameter, 0, parameterCount)
 
-	for _, parameterTypeAnnotation := range parameterTypeAnnotations {
-		convertedParameterTypeAnnotation := checker.ConvertTypeAnnotation(parameterTypeAnnotation)
-		parameters = append(
-			parameters,
-			Parameter{
-				TypeAnnotation: convertedParameterTypeAnnotation,
-			},
-		)
+		for _, parameterTypeAnnotation := range parameterTypeAnnotations {
+			convertedParameterTypeAnnotation := checker.ConvertTypeAnnotation(parameterTypeAnnotation)
+			parameters = append(
+				parameters,
+				Parameter{
+					TypeAnnotation: convertedParameterTypeAnnotation,
+				},
+			)
+		}
 	}
 
 	returnTypeAnnotation := checker.ConvertTypeAnnotation(t.ReturnTypeAnnotation)
@@ -2022,51 +2023,57 @@ func (checker *Checker) checkVariableMove(expression ast.Expression) {
 func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) PostConditionsRewrite {
 
 	var beforeStatements []ast.Statement
-	rewrittenPostConditions := make([]*ast.Condition, len(postConditions))
 
-	beforeExtractor := checker.beforeExtractor()
+	var rewrittenPostConditions []*ast.Condition
 
-	for i, postCondition := range postConditions {
+	count := len(postConditions)
+	if count > 0 {
+		rewrittenPostConditions = make([]*ast.Condition, count)
 
-		// copy condition and set expression to rewritten one
-		newPostCondition := *postCondition
+		beforeExtractor := checker.beforeExtractor()
 
-		testExtraction := beforeExtractor.ExtractBefore(postCondition.Test)
+		for i, postCondition := range postConditions {
 
-		extractedExpressions := testExtraction.ExtractedExpressions
+			// copy condition and set expression to rewritten one
+			newPostCondition := *postCondition
 
-		newPostCondition.Test = testExtraction.RewrittenExpression
+			testExtraction := beforeExtractor.ExtractBefore(postCondition.Test)
 
-		if postCondition.Message != nil {
-			messageExtraction := beforeExtractor.ExtractBefore(postCondition.Message)
+			extractedExpressions := testExtraction.ExtractedExpressions
 
-			newPostCondition.Message = messageExtraction.RewrittenExpression
+			newPostCondition.Test = testExtraction.RewrittenExpression
 
-			extractedExpressions = append(
-				extractedExpressions,
-				messageExtraction.ExtractedExpressions...,
-			)
+			if postCondition.Message != nil {
+				messageExtraction := beforeExtractor.ExtractBefore(postCondition.Message)
+
+				newPostCondition.Message = messageExtraction.RewrittenExpression
+
+				extractedExpressions = append(
+					extractedExpressions,
+					messageExtraction.ExtractedExpressions...,
+				)
+			}
+
+			for _, extractedExpression := range extractedExpressions {
+
+				// NOTE: no need to check the before statements or update elaboration here:
+				// The before statements are visited/checked later
+				variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
+				variableDeclaration.Identifier = extractedExpression.Identifier
+				variableDeclaration.Transfer = ast.NewTransfer(
+					checker.memoryGauge,
+					ast.TransferOperationCopy,
+					ast.EmptyPosition,
+				)
+				variableDeclaration.Value = extractedExpression.Expression
+
+				beforeStatements = append(beforeStatements,
+					variableDeclaration,
+				)
+			}
+
+			rewrittenPostConditions[i] = &newPostCondition
 		}
-
-		for _, extractedExpression := range extractedExpressions {
-
-			// NOTE: no need to check the before statements or update elaboration here:
-			// The before statements are visited/checked later
-			variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
-			variableDeclaration.Identifier = extractedExpression.Identifier
-			variableDeclaration.Transfer = ast.NewTransfer(
-				checker.memoryGauge,
-				ast.TransferOperationCopy,
-				ast.EmptyPosition,
-			)
-			variableDeclaration.Value = extractedExpression.Expression
-
-			beforeStatements = append(beforeStatements,
-				variableDeclaration,
-			)
-		}
-
-		rewrittenPostConditions[i] = &newPostCondition
 	}
 
 	return PostConditionsRewrite{
@@ -2164,13 +2171,16 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	// Always convert (check) the type arguments,
 	// even if the instantiated type
 
+	var typeArgumentAnnotations []TypeAnnotation
 	typeArgumentCount := len(t.TypeArguments)
-	typeArgumentAnnotations := make([]TypeAnnotation, typeArgumentCount)
+	if typeArgumentCount > 0 {
+		typeArgumentAnnotations = make([]TypeAnnotation, typeArgumentCount)
 
-	for i, rawTypeArgument := range t.TypeArguments {
-		typeArgument := checker.ConvertTypeAnnotation(rawTypeArgument)
-		checker.checkTypeAnnotation(typeArgument, rawTypeArgument)
-		typeArgumentAnnotations[i] = typeArgument
+		for i, rawTypeArgument := range t.TypeArguments {
+			typeArgument := checker.ConvertTypeAnnotation(rawTypeArgument)
+			checker.checkTypeAnnotation(typeArgument, rawTypeArgument)
+			typeArgumentAnnotations[i] = typeArgument
+		}
 	}
 
 	parameterizedType, ok := ty.(ParameterizedType)
@@ -2197,24 +2207,28 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	typeParameters := parameterizedType.TypeParameters()
 	typeParameterCount := len(typeParameters)
 
-	typeArguments := make([]Type, len(typeArgumentAnnotations))
+	typeArgumentAnnotationCount := len(typeArgumentAnnotations)
+	var typeArguments []Type
+	if typeArgumentAnnotationCount > 0 {
+		typeArguments = make([]Type, typeArgumentAnnotationCount)
 
-	for i, typeAnnotation := range typeArgumentAnnotations {
-		typeArgument := typeAnnotation.Type
-		typeArguments[i] = typeArgument
+		for i, typeAnnotation := range typeArgumentAnnotations {
+			typeArgument := typeAnnotation.Type
+			typeArguments[i] = typeArgument
 
-		// If the type parameter corresponding to the type argument (if any) has a type bound,
-		// then check that the argument is a subtype of the type bound.
+			// If the type parameter corresponding to the type argument (if any) has a type bound,
+			// then check that the argument is a subtype of the type bound.
 
-		if i < typeParameterCount {
-			typeParameter := typeParameters[i]
-			rawTypeArgument := t.TypeArguments[i]
+			if i < typeParameterCount {
+				typeParameter := typeParameters[i]
+				rawTypeArgument := t.TypeArguments[i]
 
-			err := typeParameter.checkTypeBound(
-				typeArgument,
-				ast.NewRangeFromPositioned(checker.memoryGauge, rawTypeArgument),
-			)
-			checker.report(err)
+				err := typeParameter.checkTypeBound(
+					typeArgument,
+					ast.NewRangeFromPositioned(checker.memoryGauge, rawTypeArgument),
+				)
+				checker.report(err)
+			}
 		}
 	}
 

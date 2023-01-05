@@ -83,7 +83,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 					Type: PrimitiveStaticTypeInteger,
 				},
 				common.Address{},
-			): {},
+			): nil,
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,

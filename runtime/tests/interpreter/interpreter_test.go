@@ -9440,7 +9440,7 @@ func TestInterpretMissingMember(t *testing.T) {
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
 
-	var missingMemberError interpreter.MissingMemberValueError
+	var missingMemberError interpreter.UseBeforeInitializationError
 	require.ErrorAs(t, err, &missingMemberError)
 
 	require.Equal(t, "y", missingMemberError.Name)
