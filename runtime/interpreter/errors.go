@@ -605,7 +605,7 @@ var _ errors.UserError = UUIDUnavailableError{}
 func (UUIDUnavailableError) IsUserError() {}
 
 func (e UUIDUnavailableError) Error() string {
-	return "cannot get UUID: UUID acces is unavailable in this configuration of Cadence"
+	return "cannot get UUID: UUID access is unavailable in this configuration of Cadence"
 }
 
 // TypeLoadingError
