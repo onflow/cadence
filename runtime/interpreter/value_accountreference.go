@@ -29,10 +29,10 @@ import (
 // AccountReferenceValue
 
 type AccountReferenceValue struct {
-	_authAccount Value
-	Address      common.Address
-	Path         PathValue
 	BorrowedType sema.Type
+	_authAccount Value
+	Path         PathValue
+	Address      common.Address
 }
 
 var _ Value = &AccountReferenceValue{}
@@ -111,6 +111,7 @@ func (v *AccountReferenceValue) checkLink(interpreter *Interpreter, locationRang
 	referenced := interpreter.ReadStored(address, domain, identifier)
 	if referenced == nil {
 		panic(DereferenceError{
+			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})
 	}

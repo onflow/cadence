@@ -744,6 +744,12 @@ account.forEachStored(fun (path: StoragePath, type: Type): Bool {
 
 </Callout>
 
+<Callout type="info">
+    The iteration will skip any broken elements in the storage.
+    An element could be broken due to invalid types associated with the stored value.
+    e.g: A value belongs to type `T` of a contract with syntax/semantic errors.
+</Callout>
+
 ## Storage limit
 
 An account's storage is limited by its storage capacity.

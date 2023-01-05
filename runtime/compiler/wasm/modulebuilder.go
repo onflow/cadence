@@ -29,8 +29,8 @@ type ModuleBuilder struct {
 	types              []*FunctionType
 	functions          []*Function
 	data               []*Data
-	requiredMemorySize uint32
 	exports            []*Export
+	requiredMemorySize uint32
 }
 
 func (b *ModuleBuilder) AddFunction(name string, functionType *FunctionType, code *Code) uint32 {

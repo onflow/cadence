@@ -113,8 +113,8 @@ type PathExtractor interface {
 }
 
 type ExpressionExtractor struct {
-	nextIdentifier       int
-	VoidExtractor        VoidExtractor
+	IndexExtractor       IndexExtractor
+	ForceExtractor       ForceExtractor
 	BoolExtractor        BoolExtractor
 	NilExtractor         NilExtractor
 	IntExtractor         IntExtractor
@@ -123,20 +123,20 @@ type ExpressionExtractor struct {
 	ArrayExtractor       ArrayExtractor
 	DictionaryExtractor  DictionaryExtractor
 	IdentifierExtractor  IdentifierExtractor
-	InvocationExtractor  InvocationExtractor
-	MemberExtractor      MemberExtractor
-	IndexExtractor       IndexExtractor
-	ConditionalExtractor ConditionalExtractor
+	MemoryGauge          common.MemoryGauge
+	VoidExtractor        VoidExtractor
 	UnaryExtractor       UnaryExtractor
+	ConditionalExtractor ConditionalExtractor
+	InvocationExtractor  InvocationExtractor
 	BinaryExtractor      BinaryExtractor
 	FunctionExtractor    FunctionExtractor
 	CastingExtractor     CastingExtractor
 	CreateExtractor      CreateExtractor
 	DestroyExtractor     DestroyExtractor
 	ReferenceExtractor   ReferenceExtractor
-	ForceExtractor       ForceExtractor
+	MemberExtractor      MemberExtractor
 	PathExtractor        PathExtractor
-	MemoryGauge          common.MemoryGauge
+	nextIdentifier       int
 }
 
 var _ ExpressionVisitor[ExpressionExtraction] = &ExpressionExtractor{}
@@ -162,8 +162,8 @@ func (extractor *ExpressionExtractor) FormatIdentifier(identifier int) string {
 }
 
 type ExtractedExpression struct {
-	Identifier Identifier
 	Expression Expression
+	Identifier Identifier
 }
 
 type ExpressionExtraction struct {

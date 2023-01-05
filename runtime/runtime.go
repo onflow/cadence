@@ -320,7 +320,6 @@ func wrapPanic(f func()) {
 					Recovered: r,
 				})
 			}
-
 		}
 	}()
 	f()

@@ -45,9 +45,9 @@ func ParseAndCheck(t testing.TB, code string) (*sema.Checker, error) {
 
 type ParseAndCheckOptions struct {
 	Location         common.Location
-	IgnoreParseError bool
 	Config           *sema.Config
 	ParseOptions     parser.Config
+	IgnoreParseError bool
 }
 
 var checkConcurrently = flag.Int(

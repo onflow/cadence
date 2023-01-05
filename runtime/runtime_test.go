@@ -961,12 +961,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
+		check        func(t *testing.T, err error)
 		label        string
 		script       string
 		args         [][]byte
 		authorizers  []Address
 		expectedLogs []string
-		check        func(t *testing.T, err error)
 	}
 
 	var tests = []testCase{
@@ -1280,11 +1280,11 @@ func TestRuntimeScriptArguments(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
+		check        func(t *testing.T, err error)
 		name         string
 		script       string
 		args         [][]byte
 		expectedLogs []string
-		check        func(t *testing.T, err error)
 	}
 
 	var tests = []testCase{
@@ -2545,8 +2545,8 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		code     string
 		expected cadence.Value
+		code     string
 		invalid  bool
 	}
 

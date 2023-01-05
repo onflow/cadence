@@ -31,8 +31,8 @@ const AddressLocationPrefix = "A"
 
 // AddressLocation is the location of a contract/contract interface at an address
 type AddressLocation struct {
-	Address Address
 	Name    string
+	Address Address
 }
 
 var _ Location = AddressLocation{}

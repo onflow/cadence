@@ -90,7 +90,7 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 
 	script := []byte(`
         pub fun main(): PublicAccount {
-			let acc = getAccount(0x02)
+            let acc = getAccount(0x02)
             return acc
           }
     `)
@@ -126,7 +126,7 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 
 	script := []byte(`
         pub fun main(): AuthAccount {
-			let acc = getAuthAccount(0x02)
+            let acc = getAuthAccount(0x02)
             return acc
           }
     `)
@@ -368,17 +368,17 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-				transaction {
-					prepare(signer: AuthAccount) {
-						assert(signer.keys.count == 1)
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        assert(signer.keys.count == 1)
 
-						let key = signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
-						assert(key.isRevoked)
+                        let key = signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
+                        assert(key.isRevoked)
 
-						assert(signer.keys.count == 0)
-					}
-				}
-			`,
+                        assert(signer.keys.count == 0)
+                    }
+                }
+            `,
 			args: []cadence.Value{},
 		}
 
@@ -394,26 +394,26 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		testEnv := initTestEnvironment(t)
 		test := accountKeyTestCase{
 			code: `
-				transaction {
-					prepare(signer: AuthAccount) {
-						signer.keys.add(
-							publicKey: PublicKey(
-								publicKey: [1, 2, 3],
-								signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-							),
-							hashAlgorithm: HashAlgorithm.SHA3_256,
-							weight: 100.0
-						)
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        signer.keys.add(
+                            publicKey: PublicKey(
+                                publicKey: [1, 2, 3],
+                                signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                            ),
+                            hashAlgorithm: HashAlgorithm.SHA3_256,
+                            weight: 100.0
+                        )
 
-						signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
+                        signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
 
-						signer.keys.forEach(fun(key: AccountKey): Bool {
-							log(key.keyIndex)
-							return true
-						})
-					}
-				}
-			`,
+                        signer.keys.forEach(fun(key: AccountKey): Bool {
+                            log(key.keyIndex)
+                            return true
+                        })
+                    }
+                }
+            `,
 			args: []cadence.Value{},
 		}
 
@@ -652,10 +652,10 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-			pub fun main(): UInt64 {
-				return getAccount(0x02).keys.count
-			}
-			`,
+            pub fun main(): UInt64 {
+                return getAccount(0x02).keys.count
+            }
+            `,
 		}
 
 		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
@@ -672,13 +672,13 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		testEnv := initTestEnv(revokedAccountKeyA, accountKeyB)
 		test := accountKeyTestCase{
 			code: `
-				pub fun main() {
-						getAccount(0x02).keys.forEach(fun(key: AccountKey): Bool {
-							log(key.keyIndex)
-							return true
-						})
-					}
-			`,
+                pub fun main() {
+                        getAccount(0x02).keys.forEach(fun(key: AccountKey): Bool {
+                            log(key.keyIndex)
+                            return true
+                        })
+                    }
+            `,
 			args: []cadence.Value{},
 		}
 
@@ -1096,11 +1096,11 @@ func newTestAccountKeyStorage() *testAccountKeyStorage {
 }
 
 type testAccountKeyStorage struct {
+	returnedKey       *stdlib.AccountKey
 	events            []cadence.Event
 	keys              []*stdlib.AccountKey
-	unrevokedKeyCount int
-	returnedKey       *stdlib.AccountKey
 	logs              []string
+	unrevokedKeyCount int
 }
 
 func TestRuntimePublicKey(t *testing.T) {
@@ -2254,10 +2254,10 @@ func TestGetAuthAccount(t *testing.T) {
 
 		script := []byte(`
             transaction {
-		        prepare() {
+                prepare() {
                     let acc = getAuthAccount(0x02)
                     log(acc.storageUsed)
-		        }
+                }
             }
         `)
 
@@ -2463,6 +2463,114 @@ func TestRuntimeAccountLink(t *testing.T) {
 
 		require.Equal(t,
 			[]string{"0x0000000000000001"},
+			logs,
+		)
+	})
+
+	t.Run("publish and claim", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime(Config{
+			AtreeValidationEnabled: true,
+			AccountLinkingEnabled:  true,
+		})
+
+		address1 := common.MustBytesToAddress([]byte{0x1})
+		address2 := common.MustBytesToAddress([]byte{0x2})
+
+		accountCodes := map[Location][]byte{}
+		var logs []string
+		var events []cadence.Event
+
+		signerAccount := address1
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location] = code
+				return nil
+			},
+			log: func(message string) {
+				logs = append(logs, message)
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Set up account
+
+		setupTransaction := []byte(`
+          transaction {
+              prepare(acct: AuthAccount) {
+                  let cap = acct.linkAccount(/private/foo)!
+                  log(acct.inbox.publish(cap, name: "foo", recipient: 0x2))
+              }
+          }
+        `)
+
+		signerAccount = address1
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: setupTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Claim
+
+		accessTransaction := []byte(`
+          transaction {
+              prepare(acct: AuthAccount) {
+                  let cap = acct.inbox.claim<&AuthAccount>("foo", provider: 0x1)!
+                  let ref = cap.borrow()!
+                  log(ref.address)
+              }
+          }
+        `)
+
+		signerAccount = address2
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: accessTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{"()", "0x0000000000000001"},
 			logs,
 		)
 	})

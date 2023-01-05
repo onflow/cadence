@@ -32,9 +32,9 @@ const typeSeparatorSpaceDoc = prettier.Text(": ")
 // TypeAnnotation
 
 type TypeAnnotation struct {
-	IsResource bool
 	Type       Type     `json:"AnnotatedType"`
 	StartPos   Position `json:"-"`
+	IsResource bool
 }
 
 func NewTypeAnnotation(
@@ -80,8 +80,8 @@ func (t *TypeAnnotation) Doc() prettier.Doc {
 func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
 	type Alias TypeAnnotation
 	return json.Marshal(&struct {
-		Range
 		*Alias
+		Range
 	}{
 		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
@@ -106,8 +106,8 @@ func IsEmptyType(t Type) bool {
 // NominalType represents a named type
 
 type NominalType struct {
-	Identifier        Identifier
 	NestedIdentifiers []Identifier `json:",omitempty"`
+	Identifier        Identifier
 }
 
 var _ Type = &NominalType{}
@@ -164,9 +164,9 @@ func (t *NominalType) Doc() prettier.Doc {
 func (t *NominalType) MarshalJSON() ([]byte, error) {
 	type Alias NominalType
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "NominalType",
 		Range: NewUnmeteredRangeFromPositioned(t),
@@ -229,9 +229,9 @@ func (t *OptionalType) Doc() prettier.Doc {
 func (t *OptionalType) MarshalJSON() ([]byte, error) {
 	type Alias OptionalType
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "OptionalType",
 		Range: NewUnmeteredRangeFromPositioned(t),
@@ -290,8 +290,8 @@ func (t *VariableSizedType) Doc() prettier.Doc {
 func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
 	type Alias VariableSizedType
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "VariableSizedType",
 		Alias: (*Alias)(t),
@@ -353,8 +353,8 @@ func (t *ConstantSizedType) Doc() prettier.Doc {
 func (t *ConstantSizedType) MarshalJSON() ([]byte, error) {
 	type Alias ConstantSizedType
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "ConstantSizedType",
 		Alias: (*Alias)(t),
@@ -417,8 +417,8 @@ func (t *DictionaryType) Doc() prettier.Doc {
 func (t *DictionaryType) MarshalJSON() ([]byte, error) {
 	type Alias DictionaryType
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "DictionaryType",
 		Alias: (*Alias)(t),
@@ -433,8 +433,8 @@ func (t *DictionaryType) CheckEqual(other Type, checker TypeEqualityChecker) err
 
 type FunctionType struct {
 	PurityAnnotation         FunctionPurity
-	ParameterTypeAnnotations []*TypeAnnotation `json:",omitempty"`
 	ReturnTypeAnnotation     *TypeAnnotation
+	ParameterTypeAnnotations []*TypeAnnotation `json:",omitempty"`
 	Range
 }
 
@@ -520,8 +520,8 @@ func (t *FunctionType) Doc() prettier.Doc {
 func (t *FunctionType) MarshalJSON() ([]byte, error) {
 	type Alias FunctionType
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "FunctionType",
 		Alias: (*Alias)(t),
@@ -535,9 +535,9 @@ func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error
 // ReferenceType
 
 type ReferenceType struct {
-	Authorized bool
 	Type       Type     `json:"ReferencedType"`
 	StartPos   Position `json:"-"`
+	Authorized bool
 }
 
 var _ Type = &ReferenceType{}
@@ -589,9 +589,9 @@ func (t *ReferenceType) Doc() prettier.Doc {
 func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 	type Alias ReferenceType
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "ReferenceType",
 		Range: NewUnmeteredRangeFromPositioned(t),
@@ -679,8 +679,8 @@ func (t *RestrictedType) Doc() prettier.Doc {
 func (t *RestrictedType) MarshalJSON() ([]byte, error) {
 	type Alias RestrictedType
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "RestrictedType",
 		Alias: (*Alias)(t),
@@ -773,9 +773,9 @@ func (t *InstantiationType) Doc() prettier.Doc {
 func (t *InstantiationType) MarshalJSON() ([]byte, error) {
 	type Alias InstantiationType
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "InstantiationType",
 		Range: NewUnmeteredRangeFromPositioned(t),

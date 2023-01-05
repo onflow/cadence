@@ -181,14 +181,14 @@ type ValueIndexableType interface {
 }
 
 type MemberResolver struct {
-	Kind     common.DeclarationKind
-	Mutating bool
-	Resolve  func(
+	Resolve func(
 		memoryGauge common.MemoryGauge,
 		identifier string,
 		targetRange ast.Range,
 		report func(error),
 	) *Member
+	Kind     common.DeclarationKind
+	Mutating bool
 }
 
 // supertype of interfaces and composites
@@ -248,8 +248,8 @@ type ParameterizedType interface {
 // TypeAnnotation
 
 type TypeAnnotation struct {
-	IsResource bool
 	Type       Type
+	IsResource bool
 }
 
 func (a TypeAnnotation) TypeAnnotationState() TypeAnnotationState {
@@ -925,16 +925,16 @@ func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[st
 // NumericType represent all the types in the integer range
 // and non-fractional ranged types.
 type NumericType struct {
-	name                       string
-	tag                        TypeTag
 	minInt                     *big.Int
 	maxInt                     *big.Int
+	memberResolvers            map[string]MemberResolver
+	name                       string
+	tag                        TypeTag
+	memberResolversOnce        sync.Once
 	supportsSaturatingAdd      bool
 	supportsSaturatingSubtract bool
 	supportsSaturatingMultiply bool
 	supportsSaturatingDivide   bool
-	memberResolvers            map[string]MemberResolver
-	memberResolversOnce        sync.Once
 	isSuperType                bool
 }
 
@@ -1096,19 +1096,19 @@ func (t *NumericType) IsSuperType() bool {
 
 // FixedPointNumericType represents all the types in the fixed-point range.
 type FixedPointNumericType struct {
+	maxFractional              *big.Int
+	minFractional              *big.Int
+	memberResolvers            map[string]MemberResolver
+	minInt                     *big.Int
+	maxInt                     *big.Int
 	name                       string
 	tag                        TypeTag
 	scale                      uint
-	minInt                     *big.Int
-	maxInt                     *big.Int
-	minFractional              *big.Int
-	maxFractional              *big.Int
-	supportsSaturatingAdd      bool
-	supportsSaturatingSubtract bool
-	supportsSaturatingMultiply bool
-	supportsSaturatingDivide   bool
-	memberResolvers            map[string]MemberResolver
 	memberResolversOnce        sync.Once
+	supportsSaturatingAdd      bool
+	supportsSaturatingDivide   bool
+	supportsSaturatingMultiply bool
+	supportsSaturatingSubtract bool
 	isSuperType                bool
 }
 
@@ -2305,8 +2305,8 @@ func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
 	Type                Type
-	Size                int64
 	memberResolvers     map[string]MemberResolver
+	Size                int64
 	memberResolversOnce sync.Once
 }
 
@@ -2477,9 +2477,9 @@ func formatParameter(spaces bool, label, identifier, typeAnnotation string) stri
 }
 
 type Parameter struct {
+	TypeAnnotation TypeAnnotation
 	Label          string
 	Identifier     string
-	TypeAnnotation TypeAnnotation
 }
 
 func (p Parameter) String() string {
@@ -2514,8 +2514,8 @@ func (p Parameter) EffectiveArgumentLabel() string {
 // TypeParameter
 
 type TypeParameter struct {
-	Name      string
 	TypeBound Type
+	Name      string
 	Optional  bool
 }
 
@@ -2647,14 +2647,14 @@ func (p FunctionPurity) String() string {
 // FunctionType
 
 type FunctionType struct {
-	IsConstructor            bool
 	Purity                   FunctionPurity
-	TypeParameters           []*TypeParameter
-	Parameters               []Parameter
 	ReturnTypeAnnotation     TypeAnnotation
 	RequiredArgumentCount    *int
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
 	Members                  *StringMemberOrderedMap
+	TypeParameters           []*TypeParameter
+	Parameters               []Parameter
+	IsConstructor            bool
 }
 
 func NewSimpleFunctionType(
@@ -2681,31 +2681,26 @@ func (t *FunctionType) Tag() TypeTag {
 	return FunctionTypeTag
 }
 
-func (t *FunctionType) CheckArgumentExpressions(
-	checker *Checker,
-	argumentExpressions []ast.Expression,
-	invocationRange ast.Range,
-) {
-	if t.ArgumentExpressionsCheck == nil {
-		return
-	}
-	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
-}
-
 func (t *FunctionType) String() string {
 
 	purity := t.Purity.String()
 
-	typeParameters := make([]string, len(t.TypeParameters))
-
-	for i, typeParameter := range t.TypeParameters {
-		typeParameters[i] = typeParameter.String()
+	var typeParameters []string
+	typeParameterCount := len(t.TypeParameters)
+	if typeParameterCount > 0 {
+		typeParameters = make([]string, typeParameterCount)
+		for i, typeParameter := range t.TypeParameters {
+			typeParameters[i] = typeParameter.String()
+		}
 	}
 
-	parameters := make([]string, len(t.Parameters))
-
-	for i, parameter := range t.Parameters {
-		parameters[i] = parameter.String()
+	var parameters []string
+	parameterCount := len(t.Parameters)
+	if parameterCount > 0 {
+		parameters = make([]string, parameterCount)
+		for i, parameter := range t.Parameters {
+			parameters[i] = parameter.String()
+		}
 	}
 
 	returnTypeAnnotation := t.ReturnTypeAnnotation.String()
@@ -2824,12 +2819,6 @@ func (t *FunctionType) Equal(other Type) bool {
 
 	if !t.ReturnTypeAnnotation.Type.
 		Equal(otherFunction.ReturnTypeAnnotation.Type) {
-		return false
-	}
-
-	// constructors
-
-	if t.IsConstructor != otherFunction.IsConstructor {
 		return false
 	}
 
@@ -3600,34 +3589,31 @@ type EnumInfo struct {
 }
 
 type CompositeType struct {
-	Location   common.Location
-	Identifier string
-	Kind       common.CompositeKind
+	Location      common.Location
+	EnumRawType   Type
+	containerType Type
+	NestedTypes   *StringTypeOrderedMap
 	// an internal set of field `ExplicitInterfaceConformances`
-	explicitInterfaceConformanceSet     *InterfaceSet
-	explicitInterfaceConformanceSetOnce sync.Once
-	ExplicitInterfaceConformances       []*InterfaceType
-	ImplicitTypeRequirementConformances []*CompositeType
-	Members                             *StringMemberOrderedMap
-	memberResolvers                     map[string]MemberResolver
-	memberResolversOnce                 sync.Once
-	Fields                              []string
-	// TODO: add support for overloaded initializers
-	ConstructorParameters []Parameter
-	ConstructorPurity     FunctionPurity
-	NestedTypes           *StringTypeOrderedMap
-	containerType         Type
-	EnumRawType           Type
-	hasComputedMembers    bool
-
-	// Only applicable for native composite types.
-	importable bool
-
-	cachedIdentifiers *struct {
+	explicitInterfaceConformanceSet *InterfaceSet
+	cachedIdentifiers               *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
 	}
-	cachedIdentifiersLock sync.RWMutex
+	Members                             *StringMemberOrderedMap
+	memberResolvers                     map[string]MemberResolver
+	Identifier                          string
+	Fields                              []string
+	ConstructorParameters               []Parameter
+	ImplicitTypeRequirementConformances []*CompositeType
+	ExplicitInterfaceConformances       []*InterfaceType
+	Kind                                common.CompositeKind
+	cachedIdentifiersLock               sync.RWMutex
+	explicitInterfaceConformanceSetOnce sync.Once
+	memberResolversOnce                 sync.Once
+	ConstructorPurity                   FunctionPurity
+	hasComputedMembers                  bool
+	// Only applicable for native composite types
+	importable bool
 }
 
 var _ Type = &CompositeType{}
@@ -3977,21 +3963,21 @@ func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDec
 // Member
 
 type Member struct {
+	TypeAnnotation TypeAnnotation
 	// Parent type where this member can be resolved
 	ContainerType  Type
-	Access         ast.Access
+	DocString      string
+	ArgumentLabels []string
 	Identifier     ast.Identifier
-	TypeAnnotation TypeAnnotation
+	Access         ast.Access
 	// TODO: replace with dedicated MemberKind enum
 	DeclarationKind common.DeclarationKind
 	VariableKind    ast.VariableKind
-	ArgumentLabels  []string
 	// Predeclared fields can be considered initialized
 	Predeclared       bool
 	HasImplementation bool
-	// IgnoreInSerialization fields are ignored in serialization
+	// IgnoreInSerialization determines if the field is ignored in serialization
 	IgnoreInSerialization bool
-	DocString             string
 }
 
 func NewUnmeteredPublicFunctionMember(
@@ -4146,23 +4132,22 @@ func (m *Member) testType(test func(Type) bool, results map[*Member]bool) (resul
 // InterfaceType
 
 type InterfaceType struct {
-	Location            common.Location
-	Identifier          string
-	CompositeKind       common.CompositeKind
-	Members             *StringMemberOrderedMap
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
-	Fields              []string
-	// TODO: add support for overloaded initializers
-	InitializerParameters []Parameter
-	InitializerPurity     FunctionPurity
-	containerType         Type
-	NestedTypes           *StringTypeOrderedMap
-	cachedIdentifiers     *struct {
+	Location          common.Location
+	containerType     Type
+	Members           *StringMemberOrderedMap
+	memberResolvers   map[string]MemberResolver
+	NestedTypes       *StringTypeOrderedMap
+	cachedIdentifiers *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
 	}
+	Identifier            string
+	Fields                []string
+	InitializerParameters []Parameter
+	CompositeKind         common.CompositeKind
 	cachedIdentifiersLock sync.RWMutex
+	memberResolversOnce   sync.Once
+	InitializerPurity     FunctionPurity
 }
 
 var _ Type = &InterfaceType{}
@@ -4824,8 +4809,8 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 
 // ReferenceType represents the reference to a value
 type ReferenceType struct {
-	Authorized bool
 	Type       Type
+	Authorized bool
 }
 
 var _ Type = &ReferenceType{}
@@ -5943,10 +5928,10 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 // No restrictions implies the type is fully restricted,
 // i.e. no members of the underlying resource type are available.
 type RestrictedType struct {
-	Type         Type
-	Restrictions []*InterfaceType
+	Type Type
 	// an internal set of field `Restrictions`
 	restrictionSet     *InterfaceSet
+	Restrictions       []*InterfaceType
 	restrictionSetOnce sync.Once
 }
 

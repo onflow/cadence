@@ -20,11 +20,11 @@ package sema
 
 type FunctionActivation struct {
 	ReturnType           Type
+	ReturnInfo           *ReturnInfo
+	InitializationInfo   *InitializationInfo
 	Loops                int
 	Switches             int
 	ValueActivationDepth int
-	ReturnInfo           *ReturnInfo
-	InitializationInfo   *InitializationInfo
 }
 
 func (a FunctionActivation) InLoop() bool {
@@ -49,7 +49,7 @@ func (a *FunctionActivation) WithSwitch(f func()) {
 }
 
 type FunctionActivations struct {
-	activations []FunctionActivation
+	activations []*FunctionActivation
 }
 
 func (a *FunctionActivations) IsLocal() bool {
@@ -64,19 +64,18 @@ func (a *FunctionActivations) IsLocal() bool {
 }
 
 func (a *FunctionActivations) EnterFunction(functionType *FunctionType, valueActivationDepth int) *FunctionActivation {
-	activation := FunctionActivation{
+	activation := &FunctionActivation{
 		ReturnType:           functionType.ReturnTypeAnnotation.Type,
 		ValueActivationDepth: valueActivationDepth,
 		ReturnInfo:           NewReturnInfo(),
 	}
-	lastIndex := len(a.activations)
 	a.activations = append(a.activations, activation)
-	return &a.activations[lastIndex]
+	return activation
 }
 
 func (a *FunctionActivations) LeaveFunction() {
 	lastIndex := len(a.activations) - 1
-	a.activations[lastIndex] = FunctionActivation{}
+	a.activations[lastIndex] = nil
 	a.activations = a.activations[:lastIndex]
 }
 
@@ -95,5 +94,5 @@ func (a *FunctionActivations) Current() *FunctionActivation {
 	if lastIndex < 0 {
 		return nil
 	}
-	return &a.activations[lastIndex]
+	return a.activations[lastIndex]
 }

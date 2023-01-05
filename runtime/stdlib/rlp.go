@@ -81,8 +81,8 @@ var rlpDecodeStringFunctionType = sema.NewSimpleFunctionType(
 )
 
 type RLPDecodeStringError struct {
-	Msg string
 	interpreter.LocationRange
+	Msg string
 }
 
 var _ errors.UserError = RLPDecodeStringError{}
@@ -152,8 +152,8 @@ var rlpDecodeListFunctionType = sema.NewSimpleFunctionType(
 )
 
 type RLPDecodeListError struct {
-	Msg string
 	interpreter.LocationRange
+	Msg string
 }
 
 var _ errors.UserError = RLPDecodeListError{}
