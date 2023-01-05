@@ -187,7 +187,7 @@ func BenchmarkValueArithmetic(b *testing.B) {
 		case Word8Value, Word16Value, Word32Value, Word64Value:
 			return false
 		}
-		return false
+		return true
 	}
 
 	testArithmeticOps := func(name string, v2 NumberValue, v1 NumberValue) {
