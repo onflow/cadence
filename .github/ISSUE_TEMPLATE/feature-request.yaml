@@ -1,6 +1,6 @@
 name: Requesting a Feature or Improvement
 description: For feature requests. Please search for existing issues first. Also see CONTRIBUTING.
-title: ''
+title: 'Feature/Improvement'
 labels: [Feature, Feedback]
 assignees: turbolent
 body:
