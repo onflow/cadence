@@ -196,6 +196,9 @@ type testRuntimeInterface struct {
 	getAccountContractNames    func(address Address) ([]string, error)
 	recordTrace                func(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
 	meterMemory                func(usage common.MemoryUsage) error
+	computationUsed            func() (uint64, error)
+	memoryUsed                 func() (uint64, error)
+	interactionUsed            func() (uint64, error)
 }
 
 // testRuntimeInterface should implement Interface
@@ -590,6 +593,30 @@ func (i *testRuntimeInterface) MeterMemory(usage common.MemoryUsage) error {
 	return i.meterMemory(usage)
 }
 
+func (i *testRuntimeInterface) ComputationUsed() (uint64, error) {
+	if i.computationUsed == nil {
+		return 0, nil
+	}
+
+	return i.computationUsed()
+}
+
+func (i *testRuntimeInterface) MemoryUsed() (uint64, error) {
+	if i.memoryUsed == nil {
+		return 0, nil
+	}
+
+	return i.memoryUsed()
+}
+
+func (i *testRuntimeInterface) InteractionUsed() (uint64, error) {
+	if i.interactionUsed == nil {
+		return 0, nil
+	}
+
+	return i.interactionUsed()
+}
+
 func TestRuntimeImport(t *testing.T) {
 
 	t.Parallel()
@@ -743,7 +770,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 	//   however, currently the imported program gets re-checked if it is currently being checked.
 	//   This can probably be optimized by synchronizing the checking of a program using `sync`.
 	//
-	//require.Equal(t, concurrency+1, checkCount)
+	// require.Equal(t, concurrency+1, checkCount)
 }
 
 func TestRuntimeProgramSetAndGet(t *testing.T) {
