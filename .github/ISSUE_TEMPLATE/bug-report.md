@@ -1,48 +1,49 @@
----
 name: Reporting a Problem/Bug
-about: Reporting a Problem/Bug
+description: Reporting a Problem/Bug
 title: ''
-labels: bug, Feedback
-assignees: turbolent, SupunS
-
----
-
-<!---
-
-##########################################################
-Do you experience a crash in Cadence?
-Please do *NOT* report a crasher as a bug issue!
-Report it as a security issue: 
-https://docs.onflow.org/bounties/responsible-disclosure/
-##########################################################
-
-
-### Instructions
-
-Please fill out the template below to the best of your ability and include a label indicating which tool/service you were working with when you encountered the problem.
-
--->
-
-### Problem
-
-<!-- 
-Please describe the problem you've encountered below.
-
-Please provide additional information:
-
-- What version of Cadence are you using? If you are using the CLI, run `flow version`
-- What operating system are you using? 
-- Are you having a problem with the language server in Visual Studio Code?
-  - Go to settings, search for "Cadence". Under "Cadence > Trace: Server": Select `verbose`. Restart
-  - Reproduce the problem
-  - Copy the log output here: Select `View` -> `Output`, then select "Cadence" in right top drop down
-
--->
-
-
-### Steps to Reproduce
-
-<!-- 
-Share any details and steps to replicate below 
--->
-
+labels: [Bug, Feedback]
+assignees: turbolent, SupunS, dsainati1
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Warning**
+        > Do you experience a **crash** in Cadence?
+        > Please do **NOT** report a crasher as a bug!
+        >
+        > Instead, report it as a security issue:
+        > https://flow.com/flow-responsible-disclosure
+  - type: textarea
+    attributes:
+      label: Current Behavior
+      description: A concise description of what you're experiencing.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: A concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps To Reproduce
+      description: Please share any details and steps that can reproduce the problem
+      placeholder: |
+        1. When running a transaction with the following code...
+        2. See error...
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Environment
+      description: |
+        Example:
+          - **Cadence version**: v0.31.2
+          - **Network**: Emulator
+      value: |
+        - Cadence version:
+        - Network:
+      render: markdown
+    validations:
+      required: true
