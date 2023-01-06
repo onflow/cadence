@@ -1,6 +1,5 @@
 name: Reporting a Problem/Bug
 description: Reporting a Problem/Bug
-title: 'Bug'
 labels: [Bug, Feedback]
 assignees: turbolent, SupunS, dsainati1
 body:
