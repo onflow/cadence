@@ -1396,7 +1396,7 @@ func (v Array) Type() Type {
 	return v.ArrayType
 }
 
-func (v Array) MeteredType(_ common.MemoryGauge) Type {
+func (v Array) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1456,7 +1456,7 @@ func (v Dictionary) Type() Type {
 	return v.DictionaryType
 }
 
-func (v Dictionary) MeteredType(_ common.MemoryGauge) Type {
+func (v Dictionary) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1544,7 +1544,7 @@ func (v Struct) Type() Type {
 	return v.StructType
 }
 
-func (v Struct) MeteredType(_ common.MemoryGauge) Type {
+func (v Struct) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1622,7 +1622,7 @@ func (v Resource) Type() Type {
 	return v.ResourceType
 }
 
-func (v Resource) MeteredType(_ common.MemoryGauge) Type {
+func (v Resource) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1679,7 +1679,7 @@ func (v Event) Type() Type {
 	return v.EventType
 }
 
-func (v Event) MeteredType(_ common.MemoryGauge) Type {
+func (v Event) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1735,7 +1735,7 @@ func (v Contract) Type() Type {
 	return v.ContractType
 }
 
-func (v Contract) MeteredType(_ common.MemoryGauge) Type {
+func (v Contract) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1783,10 +1783,10 @@ func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string
 func (PathLink) isValue() {}
 
 func (v PathLink) Type() Type {
-	return nil
+	return ThePathLinkType
 }
 
-func (v PathLink) MeteredType(_ common.MemoryGauge) Type {
+func (v PathLink) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1958,7 +1958,7 @@ func (v Enum) Type() Type {
 	return v.EnumType
 }
 
-func (v Enum) MeteredType(_ common.MemoryGauge) Type {
+func (v Enum) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -2005,7 +2005,7 @@ func (v Function) Type() Type {
 	return v.FunctionType
 }
 
-func (v Function) MeteredType(_ common.MemoryGauge) Type {
+func (v Function) MeteredType(common.MemoryGauge) Type {
 	return v.FunctionType
 }
 

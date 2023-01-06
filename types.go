@@ -2125,3 +2125,22 @@ func (AccountKeyType) ID() string {
 func (t AccountKeyType) Equal(other Type) bool {
 	return t == other
 }
+
+// PathLinkType
+type PathLinkType struct{}
+
+var ThePathLinkType = NewPathLinkType()
+
+func NewPathLinkType() PathLinkType {
+	return PathLinkType{}
+}
+
+func (PathLinkType) isType() {}
+
+func (PathLinkType) ID() string {
+	return "PathLink"
+}
+
+func (t PathLinkType) Equal(other Type) bool {
+	return t == other
+}
