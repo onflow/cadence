@@ -29,156 +29,8 @@ import (
 )
 
 // ExportType converts a runtime type to its corresponding Go representation.
-func ExportType(
-	t sema.Type,
-	results map[sema.TypeID]cadence.Type,
-) cadence.Type {
-	if t == nil {
-		return nil
-	}
-
-	typeID := t.ID()
-	if result, ok := results[typeID]; ok {
-		return result
-	}
-
-	var gauge common.MemoryGauge = nil
-
-	result := func() cadence.Type {
-		switch t := t.(type) {
-		case *sema.OptionalType:
-			return exportOptionalType(gauge, t, results)
-		case *sema.VariableSizedType:
-			return exportVariableSizedType(gauge, t, results)
-		case *sema.ConstantSizedType:
-			return exportConstantSizedType(gauge, t, results)
-		case *sema.CompositeType:
-			return exportCompositeType(gauge, t, results)
-		case *sema.InterfaceType:
-			return exportInterfaceType(gauge, t, results)
-		case *sema.DictionaryType:
-			return exportDictionaryType(gauge, t, results)
-		case *sema.FunctionType:
-			return exportFunctionType(gauge, t, results)
-		case *sema.AddressType:
-			return cadence.NewMeteredAddressType(gauge)
-		case *sema.ReferenceType:
-			return exportReferenceType(gauge, t, results)
-		case *sema.RestrictedType:
-			return exportRestrictedType(gauge, t, results)
-		case *sema.CapabilityType:
-			return exportCapabilityType(gauge, t, results)
-		}
-
-		switch t {
-		case sema.NumberType:
-			return cadence.NewMeteredNumberType(gauge)
-		case sema.SignedNumberType:
-			return cadence.NewMeteredSignedNumberType(gauge)
-		case sema.IntegerType:
-			return cadence.NewMeteredIntegerType(gauge)
-		case sema.SignedIntegerType:
-			return cadence.NewMeteredSignedIntegerType(gauge)
-		case sema.FixedPointType:
-			return cadence.NewMeteredFixedPointType(gauge)
-		case sema.SignedFixedPointType:
-			return cadence.NewMeteredSignedFixedPointType(gauge)
-		case sema.IntType:
-			return cadence.NewMeteredIntType(gauge)
-		case sema.Int8Type:
-			return cadence.NewMeteredInt8Type(gauge)
-		case sema.Int16Type:
-			return cadence.NewMeteredInt16Type(gauge)
-		case sema.Int32Type:
-			return cadence.NewMeteredInt32Type(gauge)
-		case sema.Int64Type:
-			return cadence.NewMeteredInt64Type(gauge)
-		case sema.Int128Type:
-			return cadence.NewMeteredInt128Type(gauge)
-		case sema.Int256Type:
-			return cadence.NewMeteredInt256Type(gauge)
-		case sema.UIntType:
-			return cadence.NewMeteredUIntType(gauge)
-		case sema.UInt8Type:
-			return cadence.NewMeteredUInt8Type(gauge)
-		case sema.UInt16Type:
-			return cadence.NewMeteredUInt16Type(gauge)
-		case sema.UInt32Type:
-			return cadence.NewMeteredUInt32Type(gauge)
-		case sema.UInt64Type:
-			return cadence.NewMeteredUInt64Type(gauge)
-		case sema.UInt128Type:
-			return cadence.NewMeteredUInt128Type(gauge)
-		case sema.UInt256Type:
-			return cadence.NewMeteredUInt256Type(gauge)
-		case sema.Word8Type:
-			return cadence.NewMeteredWord8Type(gauge)
-		case sema.Word16Type:
-			return cadence.NewMeteredWord16Type(gauge)
-		case sema.Word32Type:
-			return cadence.NewMeteredWord32Type(gauge)
-		case sema.Word64Type:
-			return cadence.NewMeteredWord64Type(gauge)
-		case sema.Fix64Type:
-			return cadence.NewMeteredFix64Type(gauge)
-		case sema.UFix64Type:
-			return cadence.NewMeteredUFix64Type(gauge)
-		case sema.PathType:
-			return cadence.NewMeteredPathType(gauge)
-		case sema.StoragePathType:
-			return cadence.NewMeteredStoragePathType(gauge)
-		case sema.PrivatePathType:
-			return cadence.NewMeteredPrivatePathType(gauge)
-		case sema.PublicPathType:
-			return cadence.NewMeteredPublicPathType(gauge)
-		case sema.CapabilityPathType:
-			return cadence.NewMeteredCapabilityPathType(gauge)
-		case sema.NeverType:
-			return cadence.NewMeteredNeverType(gauge)
-		case sema.VoidType:
-			return cadence.NewMeteredVoidType(gauge)
-		case sema.InvalidType:
-			return nil
-		case sema.MetaType:
-			return cadence.NewMeteredMetaType(gauge)
-		case sema.BoolType:
-			return cadence.NewMeteredBoolType(gauge)
-		case sema.CharacterType:
-			return cadence.NewMeteredCharacterType(gauge)
-		case sema.AnyType:
-			return cadence.NewMeteredAnyType(gauge)
-		case sema.AnyStructType:
-			return cadence.NewMeteredAnyStructType(gauge)
-		case sema.AnyResourceType:
-			return cadence.NewMeteredAnyResourceType(gauge)
-		case sema.BlockType:
-			return cadence.NewMeteredBlockType(gauge)
-		case sema.StringType:
-			return cadence.NewMeteredStringType(gauge)
-		case sema.AccountKeyType:
-			return cadence.NewMeteredAccountKeyType(gauge)
-		case sema.PublicAccountContractsType:
-			return cadence.NewMeteredPublicAccountContractsType(gauge)
-		case sema.AuthAccountContractsType:
-			return cadence.NewMeteredAuthAccountContractsType(gauge)
-		case sema.PublicAccountKeysType:
-			return cadence.NewMeteredPublicAccountKeysType(gauge)
-		case sema.AuthAccountKeysType:
-			return cadence.NewMeteredAuthAccountKeysType(gauge)
-		case sema.PublicAccountType:
-			return cadence.NewMeteredPublicAccountType(gauge)
-		case sema.AuthAccountType:
-			return cadence.NewMeteredAuthAccountType(gauge)
-		case sema.DeployedContractType:
-			return cadence.NewMeteredDeployedContractType(gauge)
-		}
-
-		panic(fmt.Sprintf("cannot export type of type %T", t))
-	}()
-
-	results[typeID] = result
-
-	return result
+func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type {
+	return ExportMeteredType(nil, t, results)
 }
 
 // ExportMeteredType converts a runtime type to its corresponding Go representation.
@@ -213,7 +65,7 @@ func ExportMeteredType(
 		case *sema.FunctionType:
 			return exportFunctionType(gauge, t, results)
 		case *sema.AddressType:
-			return cadence.NewMeteredAddressType(gauge)
+			return cadence.TheAddressType
 		case *sema.ReferenceType:
 			return exportReferenceType(gauge, t, results)
 		case *sema.RestrictedType:
@@ -224,105 +76,105 @@ func ExportMeteredType(
 
 		switch t {
 		case sema.NumberType:
-			return cadence.NewMeteredNumberType(gauge)
+			return cadence.TheNumberType
 		case sema.SignedNumberType:
-			return cadence.NewMeteredSignedNumberType(gauge)
+			return cadence.TheSignedNumberType
 		case sema.IntegerType:
-			return cadence.NewMeteredIntegerType(gauge)
+			return cadence.TheIntegerType
 		case sema.SignedIntegerType:
-			return cadence.NewMeteredSignedIntegerType(gauge)
+			return cadence.TheSignedIntegerType
 		case sema.FixedPointType:
-			return cadence.NewMeteredFixedPointType(gauge)
+			return cadence.TheFixedPointType
 		case sema.SignedFixedPointType:
-			return cadence.NewMeteredSignedFixedPointType(gauge)
+			return cadence.TheSignedFixedPointType
 		case sema.IntType:
-			return cadence.NewMeteredIntType(gauge)
+			return cadence.TheIntType
 		case sema.Int8Type:
-			return cadence.NewMeteredInt8Type(gauge)
+			return cadence.TheInt8Type
 		case sema.Int16Type:
-			return cadence.NewMeteredInt16Type(gauge)
+			return cadence.TheInt16Type
 		case sema.Int32Type:
-			return cadence.NewMeteredInt32Type(gauge)
+			return cadence.TheInt32Type
 		case sema.Int64Type:
-			return cadence.NewMeteredInt64Type(gauge)
+			return cadence.TheInt64Type
 		case sema.Int128Type:
-			return cadence.NewMeteredInt128Type(gauge)
+			return cadence.TheInt128Type
 		case sema.Int256Type:
-			return cadence.NewMeteredInt256Type(gauge)
+			return cadence.TheInt256Type
 		case sema.UIntType:
-			return cadence.NewMeteredUIntType(gauge)
+			return cadence.TheUIntType
 		case sema.UInt8Type:
-			return cadence.NewMeteredUInt8Type(gauge)
+			return cadence.TheUInt8Type
 		case sema.UInt16Type:
-			return cadence.NewMeteredUInt16Type(gauge)
+			return cadence.TheUInt16Type
 		case sema.UInt32Type:
-			return cadence.NewMeteredUInt32Type(gauge)
+			return cadence.TheUInt32Type
 		case sema.UInt64Type:
-			return cadence.NewMeteredUInt64Type(gauge)
+			return cadence.TheUInt64Type
 		case sema.UInt128Type:
-			return cadence.NewMeteredUInt128Type(gauge)
+			return cadence.TheUInt128Type
 		case sema.UInt256Type:
-			return cadence.NewMeteredUInt256Type(gauge)
+			return cadence.TheUInt256Type
 		case sema.Word8Type:
-			return cadence.NewMeteredWord8Type(gauge)
+			return cadence.TheWord8Type
 		case sema.Word16Type:
-			return cadence.NewMeteredWord16Type(gauge)
+			return cadence.TheWord16Type
 		case sema.Word32Type:
-			return cadence.NewMeteredWord32Type(gauge)
+			return cadence.TheWord32Type
 		case sema.Word64Type:
-			return cadence.NewMeteredWord64Type(gauge)
+			return cadence.TheWord64Type
 		case sema.Fix64Type:
-			return cadence.NewMeteredFix64Type(gauge)
+			return cadence.TheFix64Type
 		case sema.UFix64Type:
-			return cadence.NewMeteredUFix64Type(gauge)
+			return cadence.TheUFix64Type
 		case sema.PathType:
-			return cadence.NewMeteredPathType(gauge)
+			return cadence.ThePathType
 		case sema.StoragePathType:
-			return cadence.NewMeteredStoragePathType(gauge)
+			return cadence.TheStoragePathType
 		case sema.PrivatePathType:
-			return cadence.NewMeteredPrivatePathType(gauge)
+			return cadence.ThePrivatePathType
 		case sema.PublicPathType:
-			return cadence.NewMeteredPublicPathType(gauge)
+			return cadence.ThePublicPathType
 		case sema.CapabilityPathType:
-			return cadence.NewMeteredCapabilityPathType(gauge)
+			return cadence.TheCapabilityPathType
 		case sema.NeverType:
-			return cadence.NewMeteredNeverType(gauge)
+			return cadence.TheNeverType
 		case sema.VoidType:
-			return cadence.NewMeteredVoidType(gauge)
+			return cadence.TheVoidType
 		case sema.InvalidType:
 			return nil
 		case sema.MetaType:
-			return cadence.NewMeteredMetaType(gauge)
+			return cadence.TheMetaType
 		case sema.BoolType:
-			return cadence.NewMeteredBoolType(gauge)
+			return cadence.TheBoolType
 		case sema.CharacterType:
-			return cadence.NewMeteredCharacterType(gauge)
+			return cadence.TheCharacterType
 		case sema.AnyType:
-			return cadence.NewMeteredAnyType(gauge)
+			return cadence.TheAnyType
 		case sema.AnyStructType:
-			return cadence.NewMeteredAnyStructType(gauge)
+			return cadence.TheAnyStructType
 		case sema.AnyResourceType:
-			return cadence.NewMeteredAnyResourceType(gauge)
+			return cadence.TheAnyResourceType
 		case sema.BlockType:
-			return cadence.NewMeteredBlockType(gauge)
+			return cadence.TheBlockType
 		case sema.StringType:
-			return cadence.NewMeteredStringType(gauge)
+			return cadence.TheStringType
 		case sema.AccountKeyType:
-			return cadence.NewMeteredAccountKeyType(gauge)
+			return cadence.TheAccountKeyType
 		case sema.PublicAccountContractsType:
-			return cadence.NewMeteredPublicAccountContractsType(gauge)
+			return cadence.ThePublicAccountContractsType
 		case sema.AuthAccountContractsType:
-			return cadence.NewMeteredAuthAccountContractsType(gauge)
+			return cadence.TheAuthAccountContractsType
 		case sema.PublicAccountKeysType:
-			return cadence.NewMeteredPublicAccountKeysType(gauge)
+			return cadence.ThePublicAccountKeysType
 		case sema.AuthAccountKeysType:
-			return cadence.NewMeteredAuthAccountKeysType(gauge)
+			return cadence.TheAuthAccountKeysType
 		case sema.PublicAccountType:
-			return cadence.NewMeteredPublicAccountType(gauge)
+			return cadence.ThePublicAccountType
 		case sema.AuthAccountType:
-			return cadence.NewMeteredAuthAccountType(gauge)
+			return cadence.TheAuthAccountType
 		case sema.DeployedContractType:
-			return cadence.NewMeteredDeployedContractType(gauge)
+			return cadence.TheDeployedContractType
 		}
 
 		panic(fmt.Sprintf("cannot export type of type %T", t))

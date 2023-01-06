@@ -202,7 +202,6 @@ var (
 
 	// Cadence external types
 
-	CadenceSimpleTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceSimpleType)
 	CadenceCapabilityTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceCapabilityType)
 	CadenceConstantSizedArrayTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceConstantSizedArrayType)
 	CadenceVariableSizedArrayTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceVariableSizedArrayType)

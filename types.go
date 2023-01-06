@@ -51,13 +51,10 @@ func (t TypeID) Equal(other Type) bool {
 
 type AnyType struct{}
 
+var TheAnyType = NewAnyType()
+
 func NewAnyType() AnyType {
 	return AnyType{}
-}
-
-func NewMeteredAnyType(gauge common.MemoryGauge) AnyType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewAnyType()
 }
 
 func (AnyType) isType() {}
@@ -74,13 +71,10 @@ func (t AnyType) Equal(other Type) bool {
 
 type AnyStructType struct{}
 
+var TheAnyStructType = NewAnyStructType()
+
 func NewAnyStructType() AnyStructType {
 	return AnyStructType{}
-}
-
-func NewMeteredAnyStructType(gauge common.MemoryGauge) AnyStructType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewAnyStructType()
 }
 
 func (AnyStructType) isType() {}
@@ -97,13 +91,10 @@ func (t AnyStructType) Equal(other Type) bool {
 
 type AnyResourceType struct{}
 
+var TheAnyResourceType = NewAnyResourceType()
+
 func NewAnyResourceType() AnyResourceType {
 	return AnyResourceType{}
-}
-
-func NewMeteredAnyResourceType(gauge common.MemoryGauge) AnyResourceType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewAnyResourceType()
 }
 
 func (AnyResourceType) isType() {}
@@ -150,13 +141,10 @@ func (t OptionalType) Equal(other Type) bool {
 
 type MetaType struct{}
 
+var TheMetaType = NewMetaType()
+
 func NewMetaType() MetaType {
 	return MetaType{}
-}
-
-func NewMeteredMetaType(gauge common.MemoryGauge) MetaType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewMetaType()
 }
 
 func (MetaType) isType() {}
@@ -173,13 +161,10 @@ func (t MetaType) Equal(other Type) bool {
 
 type VoidType struct{}
 
+var TheVoidType = NewVoidType()
+
 func NewVoidType() VoidType {
 	return VoidType{}
-}
-
-func NewMeteredVoidType(gauge common.MemoryGauge) VoidType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewVoidType()
 }
 
 func (VoidType) isType() {}
@@ -196,13 +181,10 @@ func (t VoidType) Equal(other Type) bool {
 
 type NeverType struct{}
 
+var TheNeverType = NewNeverType()
+
 func NewNeverType() NeverType {
 	return NeverType{}
-}
-
-func NewMeteredNeverType(gauge common.MemoryGauge) NeverType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewNeverType()
 }
 
 func (NeverType) isType() {}
@@ -219,13 +201,10 @@ func (t NeverType) Equal(other Type) bool {
 
 type BoolType struct{}
 
+var TheBoolType = NewBoolType()
+
 func NewBoolType() BoolType {
 	return BoolType{}
-}
-
-func NewMeteredBoolType(gauge common.MemoryGauge) BoolType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewBoolType()
 }
 
 func (BoolType) isType() {}
@@ -242,13 +221,10 @@ func (t BoolType) Equal(other Type) bool {
 
 type StringType struct{}
 
+var TheStringType = NewStringType()
+
 func NewStringType() StringType {
 	return StringType{}
-}
-
-func NewMeteredStringType(gauge common.MemoryGauge) StringType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewStringType()
 }
 
 func (StringType) isType() {}
@@ -265,13 +241,10 @@ func (t StringType) Equal(other Type) bool {
 
 type CharacterType struct{}
 
+var TheCharacterType = NewCharacterType()
+
 func NewCharacterType() CharacterType {
 	return CharacterType{}
-}
-
-func NewMeteredCharacterType(gauge common.MemoryGauge) CharacterType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewCharacterType()
 }
 
 func (CharacterType) isType() {}
@@ -288,13 +261,10 @@ func (t CharacterType) Equal(other Type) bool {
 
 type BytesType struct{}
 
+var TheBytesType = NewBytesType()
+
 func NewBytesType() BytesType {
 	return BytesType{}
-}
-
-func NewMeteredBytesType(gauge common.MemoryGauge) BytesType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewBytesType()
 }
 
 func (BytesType) isType() {}
@@ -311,13 +281,10 @@ func (t BytesType) Equal(other Type) bool {
 
 type AddressType struct{}
 
+var TheAddressType = NewAddressType()
+
 func NewAddressType() AddressType {
 	return AddressType{}
-}
-
-func NewMeteredAddressType(gauge common.MemoryGauge) AddressType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewAddressType()
 }
 
 func (AddressType) isType() {}
@@ -334,13 +301,10 @@ func (t AddressType) Equal(other Type) bool {
 
 type NumberType struct{}
 
+var TheNumberType = NewNumberType()
+
 func NewNumberType() NumberType {
 	return NumberType{}
-}
-
-func NewMeteredNumberType(gauge common.MemoryGauge) NumberType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewNumberType()
 }
 
 func (NumberType) isType() {}
@@ -357,13 +321,10 @@ func (t NumberType) Equal(other Type) bool {
 
 type SignedNumberType struct{}
 
+var TheSignedNumberType = NewSignedNumberType()
+
 func NewSignedNumberType() SignedNumberType {
 	return SignedNumberType{}
-}
-
-func NewMeteredSignedNumberType(gauge common.MemoryGauge) SignedNumberType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewSignedNumberType()
 }
 
 func (SignedNumberType) isType() {}
@@ -380,13 +341,10 @@ func (t SignedNumberType) Equal(other Type) bool {
 
 type IntegerType struct{}
 
+var TheIntegerType = NewIntegerType()
+
 func NewIntegerType() IntegerType {
 	return IntegerType{}
-}
-
-func NewMeteredIntegerType(gauge common.MemoryGauge) IntegerType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewIntegerType()
 }
 
 func (IntegerType) isType() {}
@@ -403,13 +361,10 @@ func (t IntegerType) Equal(other Type) bool {
 
 type SignedIntegerType struct{}
 
+var TheSignedIntegerType = NewSignedIntegerType()
+
 func NewSignedIntegerType() SignedIntegerType {
 	return SignedIntegerType{}
-}
-
-func NewMeteredSignedIntegerType(gauge common.MemoryGauge) SignedIntegerType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewSignedIntegerType()
 }
 
 func (SignedIntegerType) isType() {}
@@ -426,13 +381,10 @@ func (t SignedIntegerType) Equal(other Type) bool {
 
 type FixedPointType struct{}
 
+var TheFixedPointType = NewFixedPointType()
+
 func NewFixedPointType() FixedPointType {
 	return FixedPointType{}
-}
-
-func NewMeteredFixedPointType(gauge common.MemoryGauge) FixedPointType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewFixedPointType()
 }
 
 func (FixedPointType) isType() {}
@@ -449,13 +401,10 @@ func (t FixedPointType) Equal(other Type) bool {
 
 type SignedFixedPointType struct{}
 
+var TheSignedFixedPointType = NewSignedFixedPointType()
+
 func NewSignedFixedPointType() SignedFixedPointType {
 	return SignedFixedPointType{}
-}
-
-func NewMeteredSignedFixedPointType(gauge common.MemoryGauge) SignedFixedPointType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewSignedFixedPointType()
 }
 
 func (SignedFixedPointType) isType() {}
@@ -472,13 +421,10 @@ func (t SignedFixedPointType) Equal(other Type) bool {
 
 type IntType struct{}
 
+var TheIntType = NewIntType()
+
 func NewIntType() IntType {
 	return IntType{}
-}
-
-func NewMeteredIntType(gauge common.MemoryGauge) IntType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewIntType()
 }
 
 func (IntType) isType() {}
@@ -495,17 +441,14 @@ func (t IntType) Equal(other Type) bool {
 
 type Int8Type struct{}
 
+var TheInt8Type = NewInt8Type()
+
 func NewInt8Type() Int8Type {
 	return Int8Type{}
 }
 
 func (t Int8Type) Equal(other Type) bool {
 	return t == other
-}
-
-func NewMeteredInt8Type(gauge common.MemoryGauge) Int8Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewInt8Type()
 }
 
 func (Int8Type) isType() {}
@@ -518,13 +461,10 @@ func (Int8Type) ID() string {
 
 type Int16Type struct{}
 
+var TheInt16Type = NewInt16Type()
+
 func NewInt16Type() Int16Type {
 	return Int16Type{}
-}
-
-func NewMeteredInt16Type(gauge common.MemoryGauge) Int16Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewInt16Type()
 }
 
 func (Int16Type) isType() {}
@@ -541,13 +481,10 @@ func (t Int16Type) Equal(other Type) bool {
 
 type Int32Type struct{}
 
+var TheInt32Type = NewInt32Type()
+
 func NewInt32Type() Int32Type {
 	return Int32Type{}
-}
-
-func NewMeteredInt32Type(gauge common.MemoryGauge) Int32Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewInt32Type()
 }
 
 func (Int32Type) isType() {}
@@ -564,13 +501,10 @@ func (t Int32Type) Equal(other Type) bool {
 
 type Int64Type struct{}
 
+var TheInt64Type = NewInt64Type()
+
 func NewInt64Type() Int64Type {
 	return Int64Type{}
-}
-
-func NewMeteredInt64Type(gauge common.MemoryGauge) Int64Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewInt64Type()
 }
 
 func (Int64Type) isType() {}
@@ -587,13 +521,10 @@ func (t Int64Type) Equal(other Type) bool {
 
 type Int128Type struct{}
 
+var TheInt128Type = NewInt128Type()
+
 func NewInt128Type() Int128Type {
 	return Int128Type{}
-}
-
-func NewMeteredInt128Type(gauge common.MemoryGauge) Int128Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewInt128Type()
 }
 
 func (Int128Type) isType() {}
@@ -610,13 +541,10 @@ func (t Int128Type) Equal(other Type) bool {
 
 type Int256Type struct{}
 
+var TheInt256Type = NewInt256Type()
+
 func NewInt256Type() Int256Type {
 	return Int256Type{}
-}
-
-func NewMeteredInt256Type(gauge common.MemoryGauge) Int256Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewInt256Type()
 }
 
 func (Int256Type) isType() {}
@@ -633,13 +561,10 @@ func (t Int256Type) Equal(other Type) bool {
 
 type UIntType struct{}
 
+var TheUIntType = NewUIntType()
+
 func NewUIntType() UIntType {
 	return UIntType{}
-}
-
-func NewMeteredUIntType(gauge common.MemoryGauge) UIntType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewUIntType()
 }
 
 func (UIntType) isType() {}
@@ -656,13 +581,10 @@ func (t UIntType) Equal(other Type) bool {
 
 type UInt8Type struct{}
 
+var TheUInt8Type = NewUInt8Type()
+
 func NewUInt8Type() UInt8Type {
 	return UInt8Type{}
-}
-
-func NewMeteredUInt8Type(gauge common.MemoryGauge) UInt8Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewUInt8Type()
 }
 
 func (UInt8Type) isType() {}
@@ -679,13 +601,10 @@ func (t UInt8Type) Equal(other Type) bool {
 
 type UInt16Type struct{}
 
+var TheUInt16Type = NewUInt16Type()
+
 func NewUInt16Type() UInt16Type {
 	return UInt16Type{}
-}
-
-func NewMeteredUInt16Type(gauge common.MemoryGauge) UInt16Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewUInt16Type()
 }
 
 func (UInt16Type) isType() {}
@@ -702,13 +621,10 @@ func (t UInt16Type) Equal(other Type) bool {
 
 type UInt32Type struct{}
 
+var TheUInt32Type = NewUInt32Type()
+
 func NewUInt32Type() UInt32Type {
 	return UInt32Type{}
-}
-
-func NewMeteredUInt32Type(gauge common.MemoryGauge) UInt32Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewUInt32Type()
 }
 
 func (UInt32Type) isType() {}
@@ -725,13 +641,10 @@ func (t UInt32Type) Equal(other Type) bool {
 
 type UInt64Type struct{}
 
+var TheUInt64Type = NewUInt64Type()
+
 func NewUInt64Type() UInt64Type {
 	return UInt64Type{}
-}
-
-func NewMeteredUInt64Type(gauge common.MemoryGauge) UInt64Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewUInt64Type()
 }
 
 func (UInt64Type) isType() {}
@@ -748,13 +661,10 @@ func (t UInt64Type) Equal(other Type) bool {
 
 type UInt128Type struct{}
 
+var TheUInt128Type = NewUInt128Type()
+
 func NewUInt128Type() UInt128Type {
 	return UInt128Type{}
-}
-
-func NewMeteredUInt128Type(gauge common.MemoryGauge) UInt128Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewUInt128Type()
 }
 
 func (UInt128Type) isType() {}
@@ -771,13 +681,10 @@ func (t UInt128Type) Equal(other Type) bool {
 
 type UInt256Type struct{}
 
+var TheUInt256Type = NewUInt256Type()
+
 func NewUInt256Type() UInt256Type {
 	return UInt256Type{}
-}
-
-func NewMeteredUInt256Type(gauge common.MemoryGauge) UInt256Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewUInt256Type()
 }
 
 func (UInt256Type) isType() {}
@@ -794,13 +701,10 @@ func (t UInt256Type) Equal(other Type) bool {
 
 type Word8Type struct{}
 
+var TheWord8Type = NewWord8Type()
+
 func NewWord8Type() Word8Type {
 	return Word8Type{}
-}
-
-func NewMeteredWord8Type(gauge common.MemoryGauge) Word8Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewWord8Type()
 }
 
 func (Word8Type) isType() {}
@@ -817,13 +721,10 @@ func (t Word8Type) Equal(other Type) bool {
 
 type Word16Type struct{}
 
+var TheWord16Type = NewWord16Type()
+
 func NewWord16Type() Word16Type {
 	return Word16Type{}
-}
-
-func NewMeteredWord16Type(gauge common.MemoryGauge) Word16Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewWord16Type()
 }
 
 func (Word16Type) isType() {}
@@ -840,13 +741,10 @@ func (t Word16Type) Equal(other Type) bool {
 
 type Word32Type struct{}
 
+var TheWord32Type = NewWord32Type()
+
 func NewWord32Type() Word32Type {
 	return Word32Type{}
-}
-
-func NewMeteredWord32Type(gauge common.MemoryGauge) Word32Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewWord32Type()
 }
 
 func (Word32Type) isType() {}
@@ -863,13 +761,10 @@ func (t Word32Type) Equal(other Type) bool {
 
 type Word64Type struct{}
 
+var TheWord64Type = NewWord64Type()
+
 func NewWord64Type() Word64Type {
 	return Word64Type{}
-}
-
-func NewMeteredWord64Type(gauge common.MemoryGauge) Word64Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewWord64Type()
 }
 
 func (Word64Type) isType() {}
@@ -886,13 +781,10 @@ func (t Word64Type) Equal(other Type) bool {
 
 type Fix64Type struct{}
 
+var TheFix64Type = NewFix64Type()
+
 func NewFix64Type() Fix64Type {
 	return Fix64Type{}
-}
-
-func NewMeteredFix64Type(gauge common.MemoryGauge) Fix64Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewFix64Type()
 }
 
 func (Fix64Type) isType() {}
@@ -909,13 +801,10 @@ func (t Fix64Type) Equal(other Type) bool {
 
 type UFix64Type struct{}
 
+var TheUFix64Type = NewUFix64Type()
+
 func NewUFix64Type() UFix64Type {
 	return UFix64Type{}
-}
-
-func NewMeteredUFix64Type(gauge common.MemoryGauge) UFix64Type {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewUFix64Type()
 }
 
 func (UFix64Type) isType() {}
@@ -1849,15 +1738,10 @@ func (t *RestrictedType) initializeRestrictionSet() {
 
 type BlockType struct{}
 
+var TheBlockType = NewBlockType()
+
 func NewBlockType() BlockType {
 	return BlockType{}
-}
-
-func NewMeteredBlockType(
-	gauge common.MemoryGauge,
-) BlockType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewBlockType()
 }
 
 func (BlockType) isType() {}
@@ -1874,15 +1758,10 @@ func (t BlockType) Equal(other Type) bool {
 
 type PathType struct{}
 
+var ThePathType = NewPathType()
+
 func NewPathType() PathType {
 	return PathType{}
-}
-
-func NewMeteredPathType(
-	gauge common.MemoryGauge,
-) PathType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewPathType()
 }
 
 func (PathType) isType() {}
@@ -1899,15 +1778,10 @@ func (t PathType) Equal(other Type) bool {
 
 type CapabilityPathType struct{}
 
+var TheCapabilityPathType = NewCapabilityPathType()
+
 func NewCapabilityPathType() CapabilityPathType {
 	return CapabilityPathType{}
-}
-
-func NewMeteredCapabilityPathType(
-	gauge common.MemoryGauge,
-) CapabilityPathType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewCapabilityPathType()
 }
 
 func (CapabilityPathType) isType() {}
@@ -1924,15 +1798,10 @@ func (t CapabilityPathType) Equal(other Type) bool {
 
 type StoragePathType struct{}
 
+var TheStoragePathType = NewStoragePathType()
+
 func NewStoragePathType() StoragePathType {
 	return StoragePathType{}
-}
-
-func NewMeteredStoragePathType(
-	gauge common.MemoryGauge,
-) StoragePathType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewStoragePathType()
 }
 
 func (StoragePathType) isType() {}
@@ -1949,15 +1818,10 @@ func (t StoragePathType) Equal(other Type) bool {
 
 type PublicPathType struct{}
 
+var ThePublicPathType = NewPublicPathType()
+
 func NewPublicPathType() PublicPathType {
 	return PublicPathType{}
-}
-
-func NewMeteredPublicPathType(
-	gauge common.MemoryGauge,
-) PublicPathType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewPublicPathType()
 }
 
 func (PublicPathType) isType() {}
@@ -1974,15 +1838,10 @@ func (t PublicPathType) Equal(other Type) bool {
 
 type PrivatePathType struct{}
 
+var ThePrivatePathType = NewPrivatePathType()
+
 func NewPrivatePathType() PrivatePathType {
 	return PrivatePathType{}
-}
-
-func NewMeteredPrivatePathType(
-	gauge common.MemoryGauge,
-) PrivatePathType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewPrivatePathType()
 }
 
 func (PrivatePathType) isType() {}
@@ -2118,15 +1977,10 @@ func (t *EnumType) Equal(other Type) bool {
 // AuthAccountType
 type AuthAccountType struct{}
 
+var TheAuthAccountType = NewAuthAccountType()
+
 func NewAuthAccountType() AuthAccountType {
 	return AuthAccountType{}
-}
-
-func NewMeteredAuthAccountType(
-	gauge common.MemoryGauge,
-) AuthAccountType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewAuthAccountType()
 }
 
 func (AuthAccountType) isType() {}
@@ -2142,15 +1996,10 @@ func (t AuthAccountType) Equal(other Type) bool {
 // PublicAccountType
 type PublicAccountType struct{}
 
+var ThePublicAccountType = NewPublicAccountType()
+
 func NewPublicAccountType() PublicAccountType {
 	return PublicAccountType{}
-}
-
-func NewMeteredPublicAccountType(
-	gauge common.MemoryGauge,
-) PublicAccountType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewPublicAccountType()
 }
 
 func (PublicAccountType) isType() {}
@@ -2166,15 +2015,10 @@ func (t PublicAccountType) Equal(other Type) bool {
 // DeployedContractType
 type DeployedContractType struct{}
 
+var TheDeployedContractType = NewDeployedContractType()
+
 func NewDeployedContractType() DeployedContractType {
 	return DeployedContractType{}
-}
-
-func NewMeteredDeployedContractType(
-	gauge common.MemoryGauge,
-) DeployedContractType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewDeployedContractType()
 }
 
 func (DeployedContractType) isType() {}
@@ -2190,15 +2034,10 @@ func (t DeployedContractType) Equal(other Type) bool {
 // AuthAccountContractsType
 type AuthAccountContractsType struct{}
 
+var TheAuthAccountContractsType = NewAuthAccountContractsType()
+
 func NewAuthAccountContractsType() AuthAccountContractsType {
 	return AuthAccountContractsType{}
-}
-
-func NewMeteredAuthAccountContractsType(
-	gauge common.MemoryGauge,
-) AuthAccountContractsType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewAuthAccountContractsType()
 }
 
 func (AuthAccountContractsType) isType() {}
@@ -2214,15 +2053,10 @@ func (t AuthAccountContractsType) Equal(other Type) bool {
 // PublicAccountContractsType
 type PublicAccountContractsType struct{}
 
+var ThePublicAccountContractsType = NewPublicAccountContractsType()
+
 func NewPublicAccountContractsType() PublicAccountContractsType {
 	return PublicAccountContractsType{}
-}
-
-func NewMeteredPublicAccountContractsType(
-	gauge common.MemoryGauge,
-) PublicAccountContractsType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewPublicAccountContractsType()
 }
 
 func (PublicAccountContractsType) isType() {}
@@ -2238,15 +2072,10 @@ func (t PublicAccountContractsType) Equal(other Type) bool {
 // AuthAccountKeysType
 type AuthAccountKeysType struct{}
 
+var TheAuthAccountKeysType = NewAuthAccountKeysType()
+
 func NewAuthAccountKeysType() AuthAccountKeysType {
 	return AuthAccountKeysType{}
-}
-
-func NewMeteredAuthAccountKeysType(
-	gauge common.MemoryGauge,
-) AuthAccountKeysType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewAuthAccountKeysType()
 }
 
 func (AuthAccountKeysType) isType() {}
@@ -2262,15 +2091,10 @@ func (t AuthAccountKeysType) Equal(other Type) bool {
 // PublicAccountKeysType
 type PublicAccountKeysType struct{}
 
+var ThePublicAccountKeysType = NewPublicAccountKeysType()
+
 func NewPublicAccountKeysType() PublicAccountKeysType {
 	return PublicAccountKeysType{}
-}
-
-func NewMeteredPublicAccountKeysType(
-	gauge common.MemoryGauge,
-) PublicAccountKeysType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewPublicAccountKeysType()
 }
 
 func (PublicAccountKeysType) isType() {}
@@ -2286,15 +2110,10 @@ func (t PublicAccountKeysType) Equal(other Type) bool {
 // AccountKeyType
 type AccountKeyType struct{}
 
+var TheAccountKeyType = NewAccountKeyType()
+
 func NewAccountKeyType() AccountKeyType {
 	return AccountKeyType{}
-}
-
-func NewMeteredAccountKeyType(
-	gauge common.MemoryGauge,
-) AccountKeyType {
-	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
-	return NewAccountKeyType()
 }
 
 func (AccountKeyType) isType() {}
