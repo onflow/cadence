@@ -389,14 +389,18 @@ let contract = signer.contracts.get(name: "Test")
 
 ### Borrowing a Deployed Contract
 
+In contrast to a static contract import `import T from 0x1`, 
+which will always perform an import of a type, 
+contracts can be "borrowed" to effectively perform a dynamic import dependent on a specific execution path. 
+
 A reference to a deployed contract contract can obtained using the `borrow` function:
 
   ```cadence
   fun borrow<T: &Any>(name: String): T?
   ```
 
-  This returns a reference to the contract value stored with that name on the account, if it exists, and if it has
-  the provided type `T`. 
+  This returns a reference to the contract value stored with that name on the account, 
+  if it exists, and if it has the provided type `T`. 
 
   Returns `nil` if no contract/contract interface with the given name exists in the account.
 
