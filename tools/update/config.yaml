@@ -18,6 +18,10 @@ repos:
       deps:
         - onflow/flow-go-sdk
         - onflow/cadence
+    - path: insecure
+      deps:
+        - onflow/flow-go-sdk
+        - onflow/cadence
 
 - repo: onflow/flow-emulator
   needsRelease: true
