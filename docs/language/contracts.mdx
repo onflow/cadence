@@ -400,12 +400,11 @@ A reference to a deployed contract contract can obtained using the `borrow` func
 
   Returns `nil` if no contract/contract interface with the given name exists in the account.
 
-For example, assuming that a contract named `Test` is deployed to an account with type `TestContract`, the contract can be retrieved as follows:
+For example, assuming that a contract named `Test` which conforms to the `TestInterface` interface is deployed to an account, the contract can be retrieved as follows:
 
 ```cadence
 let signer: AuthAccount = ...
-let contract: &TestContract = signer.contracts.borrow<&TestContract>(name: "Test")
-```
+let contract: &TestInterface = signer.contracts.borrow<&TestInterface>(name: "Test")
 
 ### Removing a Deployed Contract
 
