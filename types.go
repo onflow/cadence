@@ -1090,6 +1090,80 @@ func (t *ResourceType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
 
+type AttachmentType struct {
+	Location            common.Location
+	BaseType            Type
+	QualifiedIdentifier string
+	Fields              []Field
+	Initializers        [][]Parameter
+}
+
+// AttachmentType
+
+func NewAttachmentType(
+	location common.Location,
+	baseType Type,
+	qualifiedIdentifier string,
+	fields []Field,
+	initializers [][]Parameter,
+) *AttachmentType {
+	return &AttachmentType{
+		Location:            location,
+		BaseType:            baseType,
+		QualifiedIdentifier: qualifiedIdentifier,
+		Fields:              fields,
+		Initializers:        initializers,
+	}
+}
+
+func NewMeteredAttachmentType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	baseType Type,
+	qualifiedIdentifer string,
+	fields []Field,
+	initializers [][]Parameter,
+) *AttachmentType {
+	common.UseMemory(gauge, common.CadenceStructTypeMemoryUsage)
+	return NewAttachmentType(location, baseType, qualifiedIdentifer, fields, initializers)
+}
+
+func (*AttachmentType) isType() {}
+
+func (t *AttachmentType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+}
+
+func (*AttachmentType) isCompositeType() {}
+
+func (t *AttachmentType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *AttachmentType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
+}
+
+func (t *AttachmentType) CompositeFields() []Field {
+	return t.Fields
+}
+
+func (t *AttachmentType) SetCompositeFields(fields []Field) {
+	t.Fields = fields
+}
+
+func (t *AttachmentType) CompositeInitializers() [][]Parameter {
+	return t.Initializers
+}
+
+func (t *AttachmentType) Base() Type {
+	return t.BaseType
+}
+
 // EventType
 
 type EventType struct {

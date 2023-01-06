@@ -1645,6 +1645,63 @@ func (v Resource) String() string {
 	return formatComposite(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 }
 
+// Resource
+
+type Attachment struct {
+	AttachmentType *AttachmentType
+	Fields         []Value
+}
+
+var _ Value = Resource{}
+
+func NewAttachment(fields []Value) Attachment {
+	return Attachment{Fields: fields}
+}
+
+func NewMeteredAttachment(
+	gauge common.MemoryGauge,
+	numberOfFields int,
+	constructor func() ([]Value, error),
+) (Attachment, error) {
+	baseUsage, sizeUsage := common.NewCadenceAttachmentMemoryUsages(numberOfFields)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, sizeUsage)
+	fields, err := constructor()
+	if err != nil {
+		return Attachment{}, err
+	}
+	return NewAttachment(fields), nil
+}
+
+func (Attachment) isValue() {}
+
+func (v Attachment) Type() Type {
+	return v.AttachmentType
+}
+
+func (v Attachment) MeteredType(_ common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v Attachment) WithType(typ *AttachmentType) Attachment {
+	v.AttachmentType = typ
+	return v
+}
+
+func (v Attachment) ToGoValue() any {
+	ret := make([]any, len(v.Fields))
+
+	for i, field := range v.Fields {
+		ret[i] = field.ToGoValue()
+	}
+
+	return ret
+}
+
+func (v Attachment) String() string {
+	return formatComposite(v.AttachmentType.ID(), v.AttachmentType.Fields, v.Fields)
+}
+
 // Event
 
 type Event struct {
