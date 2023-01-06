@@ -1457,7 +1457,9 @@ func newAuthAccountContractsChangeFunction(
 				oldProgram, err := parser.ParseProgram(
 					gauge,
 					oldCode,
-					parser.Config{},
+					parser.Config{
+						IgnoreLeadingIdentifierEnabled: true,
+					},
 				)
 
 				if !ignoreUpdatedProgramParserError(err) {
