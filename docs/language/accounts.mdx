@@ -44,6 +44,8 @@ which represents the publicly available portion of an account.
           let names: [String]
 
           fun get(name: String): DeployedContract?
+
+          fun borrow<T: &Any>(name: String): T?
       }
 
       struct Keys {
@@ -160,6 +162,8 @@ to the `prepare` phase of the transaction.
           fun get(name: String): DeployedContract?
 
           fun remove(name: String): DeployedContract?
+
+          fun borrow<T: &Any>(name: String): T?
       }
 
       struct Keys {
