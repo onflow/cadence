@@ -1,0 +1,29 @@
+name: Requesting a Feature or Improvement
+description: For feature requests. Please search for existing issues first. Also see CONTRIBUTING.
+labels: [Feature, Feedback]
+assignees: turbolent
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill out the template below to the best of your ability.
+  - type: textarea
+    attributes:
+      label: Issue to be solved
+      description: |
+        Please present a concise description of the problem to be addressed by this feature request.
+        Please be clear what parts of the problem are considered to be in-scope and out-of-scope.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Suggested Solution
+      description: |
+        A concise description of your preferred solution. Things to address include:
+          * Details of the technical implementation
+          * Tradeoffs made in design decisions
+          * Caveats and considerations for the future
+
+        If there are multiple solutions, please present each one separately. Save comparisons for the very end.
+    validations:
+      required: false
