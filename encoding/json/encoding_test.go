@@ -3246,3 +3246,30 @@ func TestExportFunctionValue(t *testing.T) {
         `,
 	)
 }
+
+func TestEncodePathLinkType(t *testing.T) {
+
+	t.Parallel()
+
+	typValue := cadence.TypeValue{
+		StaticType: cadence.ThePathLinkType,
+	}
+
+	_, err := json.Encode(typValue)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported type: cadence.PathLinkType")
+}
+
+func TestDecodePathLinkType(t *testing.T) {
+
+	t.Parallel()
+
+	// language=json
+	encoded := []byte(`{"type":"Type","value":{"staticType":{"kind":"PathLink"}}}`)
+
+	_, err := json.Decode(nil, encoded)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported type: PathLink")
+}

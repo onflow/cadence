@@ -1243,6 +1243,8 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return cadence.TheAccountKeyType
 	case "Block":
 		return cadence.TheBlockType
+	case "PathLink":
+		panic(errors.NewDefaultUserError("unsupported type: %s", kindValue))
 	default:
 		fieldsValue := obj.Get(fieldsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))
