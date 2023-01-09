@@ -51,10 +51,10 @@ func (t TypeID) Equal(other Type) bool {
 
 type AnyType struct{}
 
-var TheAnyType = NewAnyType()
+var TheAnyType = AnyType{}
 
 func NewAnyType() AnyType {
-	return AnyType{}
+	return TheAnyType
 }
 
 func (AnyType) isType() {}
@@ -71,10 +71,10 @@ func (t AnyType) Equal(other Type) bool {
 
 type AnyStructType struct{}
 
-var TheAnyStructType = NewAnyStructType()
+var TheAnyStructType = AnyStructType{}
 
 func NewAnyStructType() AnyStructType {
-	return AnyStructType{}
+	return TheAnyStructType
 }
 
 func (AnyStructType) isType() {}
@@ -91,10 +91,10 @@ func (t AnyStructType) Equal(other Type) bool {
 
 type AnyResourceType struct{}
 
-var TheAnyResourceType = NewAnyResourceType()
+var TheAnyResourceType = AnyResourceType{}
 
 func NewAnyResourceType() AnyResourceType {
-	return AnyResourceType{}
+	return TheAnyResourceType
 }
 
 func (AnyResourceType) isType() {}
@@ -141,10 +141,10 @@ func (t OptionalType) Equal(other Type) bool {
 
 type MetaType struct{}
 
-var TheMetaType = NewMetaType()
+var TheMetaType = MetaType{}
 
 func NewMetaType() MetaType {
-	return MetaType{}
+	return TheMetaType
 }
 
 func (MetaType) isType() {}
@@ -161,10 +161,10 @@ func (t MetaType) Equal(other Type) bool {
 
 type VoidType struct{}
 
-var TheVoidType = NewVoidType()
+var TheVoidType = VoidType{}
 
 func NewVoidType() VoidType {
-	return VoidType{}
+	return TheVoidType
 }
 
 func (VoidType) isType() {}
@@ -181,10 +181,10 @@ func (t VoidType) Equal(other Type) bool {
 
 type NeverType struct{}
 
-var TheNeverType = NewNeverType()
+var TheNeverType = NeverType{}
 
 func NewNeverType() NeverType {
-	return NeverType{}
+	return TheNeverType
 }
 
 func (NeverType) isType() {}
@@ -201,10 +201,10 @@ func (t NeverType) Equal(other Type) bool {
 
 type BoolType struct{}
 
-var TheBoolType = NewBoolType()
+var TheBoolType = BoolType{}
 
 func NewBoolType() BoolType {
-	return BoolType{}
+	return TheBoolType
 }
 
 func (BoolType) isType() {}
@@ -221,10 +221,10 @@ func (t BoolType) Equal(other Type) bool {
 
 type StringType struct{}
 
-var TheStringType = NewStringType()
+var TheStringType = StringType{}
 
 func NewStringType() StringType {
-	return StringType{}
+	return TheStringType
 }
 
 func (StringType) isType() {}
@@ -241,10 +241,10 @@ func (t StringType) Equal(other Type) bool {
 
 type CharacterType struct{}
 
-var TheCharacterType = NewCharacterType()
+var TheCharacterType = CharacterType{}
 
 func NewCharacterType() CharacterType {
-	return CharacterType{}
+	return TheCharacterType
 }
 
 func (CharacterType) isType() {}
@@ -261,10 +261,10 @@ func (t CharacterType) Equal(other Type) bool {
 
 type BytesType struct{}
 
-var TheBytesType = NewBytesType()
+var TheBytesType = BytesType{}
 
 func NewBytesType() BytesType {
-	return BytesType{}
+	return TheBytesType
 }
 
 func (BytesType) isType() {}
@@ -281,10 +281,10 @@ func (t BytesType) Equal(other Type) bool {
 
 type AddressType struct{}
 
-var TheAddressType = NewAddressType()
+var TheAddressType = AddressType{}
 
 func NewAddressType() AddressType {
-	return AddressType{}
+	return TheAddressType
 }
 
 func (AddressType) isType() {}
@@ -301,10 +301,10 @@ func (t AddressType) Equal(other Type) bool {
 
 type NumberType struct{}
 
-var TheNumberType = NewNumberType()
+var TheNumberType = NumberType{}
 
 func NewNumberType() NumberType {
-	return NumberType{}
+	return TheNumberType
 }
 
 func (NumberType) isType() {}
@@ -321,10 +321,10 @@ func (t NumberType) Equal(other Type) bool {
 
 type SignedNumberType struct{}
 
-var TheSignedNumberType = NewSignedNumberType()
+var TheSignedNumberType = SignedNumberType{}
 
 func NewSignedNumberType() SignedNumberType {
-	return SignedNumberType{}
+	return TheSignedNumberType
 }
 
 func (SignedNumberType) isType() {}
@@ -341,10 +341,10 @@ func (t SignedNumberType) Equal(other Type) bool {
 
 type IntegerType struct{}
 
-var TheIntegerType = NewIntegerType()
+var TheIntegerType = IntegerType{}
 
 func NewIntegerType() IntegerType {
-	return IntegerType{}
+	return TheIntegerType
 }
 
 func (IntegerType) isType() {}
@@ -361,10 +361,10 @@ func (t IntegerType) Equal(other Type) bool {
 
 type SignedIntegerType struct{}
 
-var TheSignedIntegerType = NewSignedIntegerType()
+var TheSignedIntegerType = SignedIntegerType{}
 
 func NewSignedIntegerType() SignedIntegerType {
-	return SignedIntegerType{}
+	return TheSignedIntegerType
 }
 
 func (SignedIntegerType) isType() {}
@@ -381,10 +381,10 @@ func (t SignedIntegerType) Equal(other Type) bool {
 
 type FixedPointType struct{}
 
-var TheFixedPointType = NewFixedPointType()
+var TheFixedPointType = FixedPointType{}
 
 func NewFixedPointType() FixedPointType {
-	return FixedPointType{}
+	return TheFixedPointType
 }
 
 func (FixedPointType) isType() {}
@@ -401,10 +401,10 @@ func (t FixedPointType) Equal(other Type) bool {
 
 type SignedFixedPointType struct{}
 
-var TheSignedFixedPointType = NewSignedFixedPointType()
+var TheSignedFixedPointType = SignedFixedPointType{}
 
 func NewSignedFixedPointType() SignedFixedPointType {
-	return SignedFixedPointType{}
+	return TheSignedFixedPointType
 }
 
 func (SignedFixedPointType) isType() {}
@@ -421,10 +421,10 @@ func (t SignedFixedPointType) Equal(other Type) bool {
 
 type IntType struct{}
 
-var TheIntType = NewIntType()
+var TheIntType = IntType{}
 
 func NewIntType() IntType {
-	return IntType{}
+	return TheIntType
 }
 
 func (IntType) isType() {}
@@ -441,10 +441,10 @@ func (t IntType) Equal(other Type) bool {
 
 type Int8Type struct{}
 
-var TheInt8Type = NewInt8Type()
+var TheInt8Type = Int8Type{}
 
 func NewInt8Type() Int8Type {
-	return Int8Type{}
+	return TheInt8Type
 }
 
 func (t Int8Type) Equal(other Type) bool {
@@ -461,10 +461,10 @@ func (Int8Type) ID() string {
 
 type Int16Type struct{}
 
-var TheInt16Type = NewInt16Type()
+var TheInt16Type = Int16Type{}
 
 func NewInt16Type() Int16Type {
-	return Int16Type{}
+	return TheInt16Type
 }
 
 func (Int16Type) isType() {}
@@ -481,10 +481,10 @@ func (t Int16Type) Equal(other Type) bool {
 
 type Int32Type struct{}
 
-var TheInt32Type = NewInt32Type()
+var TheInt32Type = Int32Type{}
 
 func NewInt32Type() Int32Type {
-	return Int32Type{}
+	return TheInt32Type
 }
 
 func (Int32Type) isType() {}
@@ -501,10 +501,10 @@ func (t Int32Type) Equal(other Type) bool {
 
 type Int64Type struct{}
 
-var TheInt64Type = NewInt64Type()
+var TheInt64Type = Int64Type{}
 
 func NewInt64Type() Int64Type {
-	return Int64Type{}
+	return TheInt64Type
 }
 
 func (Int64Type) isType() {}
@@ -521,10 +521,10 @@ func (t Int64Type) Equal(other Type) bool {
 
 type Int128Type struct{}
 
-var TheInt128Type = NewInt128Type()
+var TheInt128Type = Int128Type{}
 
 func NewInt128Type() Int128Type {
-	return Int128Type{}
+	return TheInt128Type
 }
 
 func (Int128Type) isType() {}
@@ -541,10 +541,10 @@ func (t Int128Type) Equal(other Type) bool {
 
 type Int256Type struct{}
 
-var TheInt256Type = NewInt256Type()
+var TheInt256Type = Int256Type{}
 
 func NewInt256Type() Int256Type {
-	return Int256Type{}
+	return TheInt256Type
 }
 
 func (Int256Type) isType() {}
@@ -561,10 +561,10 @@ func (t Int256Type) Equal(other Type) bool {
 
 type UIntType struct{}
 
-var TheUIntType = NewUIntType()
+var TheUIntType = UIntType{}
 
 func NewUIntType() UIntType {
-	return UIntType{}
+	return TheUIntType
 }
 
 func (UIntType) isType() {}
@@ -581,10 +581,10 @@ func (t UIntType) Equal(other Type) bool {
 
 type UInt8Type struct{}
 
-var TheUInt8Type = NewUInt8Type()
+var TheUInt8Type = UInt8Type{}
 
 func NewUInt8Type() UInt8Type {
-	return UInt8Type{}
+	return TheUInt8Type
 }
 
 func (UInt8Type) isType() {}
@@ -601,10 +601,10 @@ func (t UInt8Type) Equal(other Type) bool {
 
 type UInt16Type struct{}
 
-var TheUInt16Type = NewUInt16Type()
+var TheUInt16Type = UInt16Type{}
 
 func NewUInt16Type() UInt16Type {
-	return UInt16Type{}
+	return TheUInt16Type
 }
 
 func (UInt16Type) isType() {}
@@ -621,10 +621,10 @@ func (t UInt16Type) Equal(other Type) bool {
 
 type UInt32Type struct{}
 
-var TheUInt32Type = NewUInt32Type()
+var TheUInt32Type = UInt32Type{}
 
 func NewUInt32Type() UInt32Type {
-	return UInt32Type{}
+	return TheUInt32Type
 }
 
 func (UInt32Type) isType() {}
@@ -641,10 +641,10 @@ func (t UInt32Type) Equal(other Type) bool {
 
 type UInt64Type struct{}
 
-var TheUInt64Type = NewUInt64Type()
+var TheUInt64Type = UInt64Type{}
 
 func NewUInt64Type() UInt64Type {
-	return UInt64Type{}
+	return TheUInt64Type
 }
 
 func (UInt64Type) isType() {}
@@ -661,10 +661,10 @@ func (t UInt64Type) Equal(other Type) bool {
 
 type UInt128Type struct{}
 
-var TheUInt128Type = NewUInt128Type()
+var TheUInt128Type = UInt128Type{}
 
 func NewUInt128Type() UInt128Type {
-	return UInt128Type{}
+	return TheUInt128Type
 }
 
 func (UInt128Type) isType() {}
@@ -681,10 +681,10 @@ func (t UInt128Type) Equal(other Type) bool {
 
 type UInt256Type struct{}
 
-var TheUInt256Type = NewUInt256Type()
+var TheUInt256Type = UInt256Type{}
 
 func NewUInt256Type() UInt256Type {
-	return UInt256Type{}
+	return TheUInt256Type
 }
 
 func (UInt256Type) isType() {}
@@ -701,10 +701,10 @@ func (t UInt256Type) Equal(other Type) bool {
 
 type Word8Type struct{}
 
-var TheWord8Type = NewWord8Type()
+var TheWord8Type = Word8Type{}
 
 func NewWord8Type() Word8Type {
-	return Word8Type{}
+	return TheWord8Type
 }
 
 func (Word8Type) isType() {}
@@ -721,10 +721,10 @@ func (t Word8Type) Equal(other Type) bool {
 
 type Word16Type struct{}
 
-var TheWord16Type = NewWord16Type()
+var TheWord16Type = Word16Type{}
 
 func NewWord16Type() Word16Type {
-	return Word16Type{}
+	return TheWord16Type
 }
 
 func (Word16Type) isType() {}
@@ -741,10 +741,10 @@ func (t Word16Type) Equal(other Type) bool {
 
 type Word32Type struct{}
 
-var TheWord32Type = NewWord32Type()
+var TheWord32Type = Word32Type{}
 
 func NewWord32Type() Word32Type {
-	return Word32Type{}
+	return TheWord32Type
 }
 
 func (Word32Type) isType() {}
@@ -761,10 +761,10 @@ func (t Word32Type) Equal(other Type) bool {
 
 type Word64Type struct{}
 
-var TheWord64Type = NewWord64Type()
+var TheWord64Type = Word64Type{}
 
 func NewWord64Type() Word64Type {
-	return Word64Type{}
+	return TheWord64Type
 }
 
 func (Word64Type) isType() {}
@@ -781,10 +781,10 @@ func (t Word64Type) Equal(other Type) bool {
 
 type Fix64Type struct{}
 
-var TheFix64Type = NewFix64Type()
+var TheFix64Type = Fix64Type{}
 
 func NewFix64Type() Fix64Type {
-	return Fix64Type{}
+	return TheFix64Type
 }
 
 func (Fix64Type) isType() {}
@@ -801,10 +801,10 @@ func (t Fix64Type) Equal(other Type) bool {
 
 type UFix64Type struct{}
 
-var TheUFix64Type = NewUFix64Type()
+var TheUFix64Type = UFix64Type{}
 
 func NewUFix64Type() UFix64Type {
-	return UFix64Type{}
+	return TheUFix64Type
 }
 
 func (UFix64Type) isType() {}
@@ -1738,10 +1738,10 @@ func (t *RestrictedType) initializeRestrictionSet() {
 
 type BlockType struct{}
 
-var TheBlockType = NewBlockType()
+var TheBlockType = BlockType{}
 
 func NewBlockType() BlockType {
-	return BlockType{}
+	return TheBlockType
 }
 
 func (BlockType) isType() {}
@@ -1758,10 +1758,10 @@ func (t BlockType) Equal(other Type) bool {
 
 type PathType struct{}
 
-var ThePathType = NewPathType()
+var ThePathType = PathType{}
 
 func NewPathType() PathType {
-	return PathType{}
+	return ThePathType
 }
 
 func (PathType) isType() {}
@@ -1778,10 +1778,10 @@ func (t PathType) Equal(other Type) bool {
 
 type CapabilityPathType struct{}
 
-var TheCapabilityPathType = NewCapabilityPathType()
+var TheCapabilityPathType = CapabilityPathType{}
 
 func NewCapabilityPathType() CapabilityPathType {
-	return CapabilityPathType{}
+	return TheCapabilityPathType
 }
 
 func (CapabilityPathType) isType() {}
@@ -1798,10 +1798,10 @@ func (t CapabilityPathType) Equal(other Type) bool {
 
 type StoragePathType struct{}
 
-var TheStoragePathType = NewStoragePathType()
+var TheStoragePathType = StoragePathType{}
 
 func NewStoragePathType() StoragePathType {
-	return StoragePathType{}
+	return TheStoragePathType
 }
 
 func (StoragePathType) isType() {}
@@ -1818,10 +1818,10 @@ func (t StoragePathType) Equal(other Type) bool {
 
 type PublicPathType struct{}
 
-var ThePublicPathType = NewPublicPathType()
+var ThePublicPathType = PublicPathType{}
 
 func NewPublicPathType() PublicPathType {
-	return PublicPathType{}
+	return ThePublicPathType
 }
 
 func (PublicPathType) isType() {}
@@ -1838,10 +1838,10 @@ func (t PublicPathType) Equal(other Type) bool {
 
 type PrivatePathType struct{}
 
-var ThePrivatePathType = NewPrivatePathType()
+var ThePrivatePathType = PrivatePathType{}
 
 func NewPrivatePathType() PrivatePathType {
-	return PrivatePathType{}
+	return ThePrivatePathType
 }
 
 func (PrivatePathType) isType() {}
@@ -1977,10 +1977,10 @@ func (t *EnumType) Equal(other Type) bool {
 // AuthAccountType
 type AuthAccountType struct{}
 
-var TheAuthAccountType = NewAuthAccountType()
+var TheAuthAccountType = AuthAccountType{}
 
 func NewAuthAccountType() AuthAccountType {
-	return AuthAccountType{}
+	return TheAuthAccountType
 }
 
 func (AuthAccountType) isType() {}
@@ -1996,10 +1996,10 @@ func (t AuthAccountType) Equal(other Type) bool {
 // PublicAccountType
 type PublicAccountType struct{}
 
-var ThePublicAccountType = NewPublicAccountType()
+var ThePublicAccountType = PublicAccountType{}
 
 func NewPublicAccountType() PublicAccountType {
-	return PublicAccountType{}
+	return ThePublicAccountType
 }
 
 func (PublicAccountType) isType() {}
@@ -2015,10 +2015,10 @@ func (t PublicAccountType) Equal(other Type) bool {
 // DeployedContractType
 type DeployedContractType struct{}
 
-var TheDeployedContractType = NewDeployedContractType()
+var TheDeployedContractType = DeployedContractType{}
 
 func NewDeployedContractType() DeployedContractType {
-	return DeployedContractType{}
+	return TheDeployedContractType
 }
 
 func (DeployedContractType) isType() {}
@@ -2034,10 +2034,10 @@ func (t DeployedContractType) Equal(other Type) bool {
 // AuthAccountContractsType
 type AuthAccountContractsType struct{}
 
-var TheAuthAccountContractsType = NewAuthAccountContractsType()
+var TheAuthAccountContractsType = AuthAccountContractsType{}
 
 func NewAuthAccountContractsType() AuthAccountContractsType {
-	return AuthAccountContractsType{}
+	return TheAuthAccountContractsType
 }
 
 func (AuthAccountContractsType) isType() {}
@@ -2053,10 +2053,10 @@ func (t AuthAccountContractsType) Equal(other Type) bool {
 // PublicAccountContractsType
 type PublicAccountContractsType struct{}
 
-var ThePublicAccountContractsType = NewPublicAccountContractsType()
+var ThePublicAccountContractsType = PublicAccountContractsType{}
 
 func NewPublicAccountContractsType() PublicAccountContractsType {
-	return PublicAccountContractsType{}
+	return ThePublicAccountContractsType
 }
 
 func (PublicAccountContractsType) isType() {}
@@ -2072,10 +2072,10 @@ func (t PublicAccountContractsType) Equal(other Type) bool {
 // AuthAccountKeysType
 type AuthAccountKeysType struct{}
 
-var TheAuthAccountKeysType = NewAuthAccountKeysType()
+var TheAuthAccountKeysType = AuthAccountKeysType{}
 
 func NewAuthAccountKeysType() AuthAccountKeysType {
-	return AuthAccountKeysType{}
+	return TheAuthAccountKeysType
 }
 
 func (AuthAccountKeysType) isType() {}
@@ -2091,10 +2091,10 @@ func (t AuthAccountKeysType) Equal(other Type) bool {
 // PublicAccountKeysType
 type PublicAccountKeysType struct{}
 
-var ThePublicAccountKeysType = NewPublicAccountKeysType()
+var ThePublicAccountKeysType = PublicAccountKeysType{}
 
 func NewPublicAccountKeysType() PublicAccountKeysType {
-	return PublicAccountKeysType{}
+	return ThePublicAccountKeysType
 }
 
 func (PublicAccountKeysType) isType() {}
@@ -2110,10 +2110,10 @@ func (t PublicAccountKeysType) Equal(other Type) bool {
 // AccountKeyType
 type AccountKeyType struct{}
 
-var TheAccountKeyType = NewAccountKeyType()
+var TheAccountKeyType = AccountKeyType{}
 
 func NewAccountKeyType() AccountKeyType {
-	return AccountKeyType{}
+	return TheAccountKeyType
 }
 
 func (AccountKeyType) isType() {}
@@ -2129,10 +2129,10 @@ func (t AccountKeyType) Equal(other Type) bool {
 // PathLinkType
 type PathLinkType struct{}
 
-var ThePathLinkType = NewPathLinkType()
+var ThePathLinkType = PathLinkType{}
 
 func NewPathLinkType() PathLinkType {
-	return PathLinkType{}
+	return ThePathLinkType
 }
 
 func (PathLinkType) isType() {}
