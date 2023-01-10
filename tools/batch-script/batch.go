@@ -156,7 +156,7 @@ func retryScriptUntilSuccess(
 	for {
 		time.Sleep(pause)
 
-		log.Info().Msgf("executing script")
+		log.Debug().Msgf("executing script")
 
 		result, err = flowClient.ExecuteScriptAtLatestBlock(
 			ctx,

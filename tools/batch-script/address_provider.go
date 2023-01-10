@@ -23,10 +23,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/schollz/progressbar/v3"
+
 	"github.com/onflow/cadence"
+
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
-	"github.com/rs/zerolog"
 )
 
 // AddressProvider Is used to get all the addresses that exists at a certain referenceBlockId
@@ -37,6 +40,7 @@ type AddressProvider struct {
 	lastAddressIndex uint
 	referenceBlockID flow.Identifier
 	currentIndex     uint
+	progress         *progressbar.ProgressBar
 }
 
 const endOfAccountsError = "get storage used failed"
@@ -108,6 +112,12 @@ func InitAddressProvider(
 
 	ap.lastAddress = ap.indexToAddress(lastAddressIndex)
 	ap.lastAddressIndex = lastAddressIndex
+
+	ap.progress = progressbar.Default(
+		int64(lastAddressIndex),
+		"Executing script...",
+	)
+
 	return ap, nil
 }
 
@@ -167,9 +177,7 @@ func (p *AddressProvider) GetNextAddress() (address flow.Address, isOutOfBounds 
 	address = p.indexToAddress(p.currentIndex)
 
 	// Give some progress information every so often
-	if p.currentIndex%(p.lastAddressIndex/10) == 0 {
-		p.log.Info().Msgf("Processed %v %% accounts", p.currentIndex/(p.lastAddressIndex/10)*10)
-	}
+	_ = p.progress.Add(1)
 
 	if p.currentIndex > p.lastAddressIndex {
 		isOutOfBounds = true
