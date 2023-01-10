@@ -73,6 +73,12 @@ var AuthAccountContractsType = func() *CompositeType {
 			accountContractsTypeNamesFieldType,
 			accountContractsTypeNamesFieldDocString,
 		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountContractsType,
+			AccountContractsTypePublicTypesFunctionName,
+			AccountContractsTypePublicTypesFunctionType,
+			accountContractsTypePublicTypesFunctionDocString,
+		),
 	}
 
 	authAccountContractsType.Members = GetMembersAsMap(members)

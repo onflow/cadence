@@ -21,6 +21,7 @@ package sema
 const AccountContractsTypeGetFunctionName = "get"
 const AccountContractsTypeBorrowFunctionName = "borrow"
 const AccountContractsTypeNamesFieldName = "names"
+const AccountContractsTypePublicTypesFunctionName = "publicTypes"
 
 const accountContractsTypeGetFunctionDocString = `
 Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
@@ -86,3 +87,18 @@ var accountContractsTypeNamesFieldType = &VariableSizedType{
 const accountContractsTypeNamesFieldDocString = `
 Names of all contracts deployed in the account.
 `
+
+const accountContractsTypePublicTypesFunctionDocString = `
+Returns an array containing ` + "`Type`" + ` objects for all struct and resource declarations in this contract.
+`
+
+// fun Contract.publicTypes(): [Type]
+var AccountContractsTypePublicTypesFunctionType = func() *FunctionType {
+	return &FunctionType{
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&VariableSizedType{
+				Type: MetaType,
+			},
+		),
+	}
+}()
