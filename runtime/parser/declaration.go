@@ -1168,6 +1168,16 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 
+			if !p.config.IgnoreLeadingIdentifierEnabled &&
+				previousIdentifierToken != nil {
+
+				return nil, NewSyntaxError(
+					previousIdentifierToken.StartPos,
+					"unexpected %s",
+					previousIdentifierToken.Type,
+				)
+			}
+
 			switch string(p.currentTokenSource()) {
 			case KeywordLet, KeywordVar:
 				if purity != ast.FunctionPurityUnspecified {
@@ -1313,7 +1323,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				continue
 			}
 
-			if previousIdentifierToken != nil {
+			if p.config.IgnoreLeadingIdentifierEnabled &&
+				previousIdentifierToken != nil {
+
 				return nil, p.syntaxError("unexpected %s", p.current.Type)
 			}
 

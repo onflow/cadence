@@ -46,6 +46,15 @@ type Config struct {
 	StaticModifierEnabled bool
 	// NativeModifierEnabled determines if the static modifier is enabled
 	NativeModifierEnabled bool
+	// Deprecated: IgnoreLeadingIdentifierEnabled determines
+	// if leading identifiers are ignored.
+	//
+	// Pre-Stable Cadence, identifiers preceding keywords were (incorrectly) ignored,
+	// instead of being reported as invalid, e.g. `foo let bar: Int` was valid.
+	// The new default behaviour is to report an error, e.g. for `foo` in the example above.
+	//
+	// This option exists so the old behaviour can be enabled to allow developers to update their code.
+	IgnoreLeadingIdentifierEnabled bool
 }
 
 type parser struct {
