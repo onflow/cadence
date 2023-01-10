@@ -226,7 +226,7 @@ func (e *NotDeclaredError) Error() string {
 }
 
 func (e *NotDeclaredError) SecondaryError() string {
-	return "not found in this scope"
+	return fmt.Sprintf("%s not found in this scope", e.Expression.Identifier.Identifier)
 }
 
 func (e *NotDeclaredError) StartPosition() ast.Position {

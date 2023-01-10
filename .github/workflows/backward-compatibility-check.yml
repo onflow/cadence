@@ -49,7 +49,7 @@ jobs:
           go run ./cmd/main.go ../../outputs/mainnet-contracts.csv ../../outputs/mainnet-output-new.txt
           cd ../..
 
-      - name: Check contracts using current branch
+      - name: Print results
         run: |
           cat ./outputs/mainnet-output-new.txt
 
@@ -61,3 +61,7 @@ jobs:
           cd ./tools/check-contracts
           go run ./cmd/main.go ../../outputs/mainnet-contracts.csv mainnet-output-old.txt
           cd ../..
+
+      - name: Print results
+        run: |
+          cat ./outputs/mainnet-output-new.txt
