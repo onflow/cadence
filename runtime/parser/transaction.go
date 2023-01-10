@@ -71,47 +71,26 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		return nil, err
 	}
 
-	// Prepare (optional) or execute (optional)
+	// Prepare (optional)
 
 	var prepare *ast.SpecialFunctionDeclaration
-	var execute *ast.SpecialFunctionDeclaration
 
 	p.skipSpaceAndComments()
-	if p.current.Is(lexer.TokenIdentifier) {
-
-		keyword := p.currentTokenSource()
-
-		switch string(keyword) {
-		case keywordPrepare:
-			identifier := p.tokenToIdentifier(p.current)
-			// Skip the `prepare` keyword
-			p.next()
-			prepare, err = parseSpecialFunctionDeclaration(
-				p,
-				false,
-				ast.AccessNotSpecified,
-				nil,
-				nil,
-				nil,
-				identifier,
-			)
-			if err != nil {
-				return nil, err
-			}
-
-		case keywordExecute:
-			execute, err = parseTransactionExecute(p)
-			if err != nil {
-				return nil, err
-			}
-
-		default:
-			return nil, p.syntaxError(
-				"unexpected identifier, expected keyword %q or %q, got %q",
-				keywordPrepare,
-				keywordExecute,
-				keyword,
-			)
+	if p.isToken(p.current, lexer.TokenIdentifier, keywordPrepare) {
+		identifier := p.tokenToIdentifier(p.current)
+		// Skip the `prepare` keyword
+		p.next()
+		prepare, err = parseSpecialFunctionDeclaration(
+			p,
+			false,
+			ast.AccessNotSpecified,
+			nil,
+			nil,
+			nil,
+			identifier,
+		)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -119,22 +98,21 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 	var preConditions *ast.Conditions
 
-	if execute == nil {
-		p.skipSpaceAndComments()
-		if p.isToken(p.current, lexer.TokenIdentifier, keywordPre) {
-			// Skip the `pre` keyword
-			p.next()
-			conditions, err := parseConditions(p, ast.ConditionKindPre)
-			if err != nil {
-				return nil, err
-			}
-
-			preConditions = &conditions
+	p.skipSpaceAndComments()
+	if p.isToken(p.current, lexer.TokenIdentifier, keywordPre) {
+		// Skip the `pre` keyword
+		p.next()
+		conditions, err := parseConditions(p, ast.ConditionKindPre)
+		if err != nil {
+			return nil, err
 		}
+
+		preConditions = &conditions
 	}
 
 	// Execute / post-conditions (both optional, in any order)
 
+	var execute *ast.SpecialFunctionDeclaration
 	var postConditions *ast.Conditions
 
 	var endPos ast.Position
