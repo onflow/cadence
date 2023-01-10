@@ -403,6 +403,21 @@ func exportCompositeValue(
 			fields[i] = exportedFieldValue
 		}
 
+		if composite, ok := v.(*interpreter.CompositeValue); ok {
+			for _, attachment := range composite.GetAttachments(inter, locationRange) {
+				exportedAttachmentValue, err := exportValueWithInterpreter(
+					attachment,
+					inter,
+					locationRange,
+					seenReferences,
+				)
+				if err != nil {
+					return nil, err
+				}
+				fields = append(fields, exportedAttachmentValue)
+			}
+		}
+
 		return fields, nil
 	}
 

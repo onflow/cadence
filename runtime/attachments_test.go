@@ -221,7 +221,7 @@ func TestAccountAttachmentExport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	_, err = rt.ExecuteScript(
+	v, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
@@ -230,6 +230,10 @@ func TestAccountAttachmentExport(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
+	require.IsType(t, cadence.Optional{}, v)
+	require.IsType(t, cadence.Attachment{}, v.(cadence.Optional).Value)
+	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Optional).Value.String())
+
 	require.NoError(t, err)
 }
 
@@ -304,7 +308,7 @@ func TestAccountAttachedExport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	_, err = rt.ExecuteScript(
+	v, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
@@ -313,6 +317,11 @@ func TestAccountAttachedExport(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
+	require.IsType(t, cadence.Resource{}, v)
+	require.Len(t, v.(cadence.Resource).Fields, 2)
+	require.IsType(t, cadence.Attachment{}, v.(cadence.Resource).Fields[1])
+	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Resource).Fields[1].String())
+
 	require.NoError(t, err)
 }
 

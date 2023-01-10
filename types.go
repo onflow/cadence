@@ -1090,6 +1090,7 @@ func (t *ResourceType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
 
+// AttachmentType
 type AttachmentType struct {
 	Location            common.Location
 	BaseType            Type
@@ -1097,8 +1098,6 @@ type AttachmentType struct {
 	Fields              []Field
 	Initializers        [][]Parameter
 }
-
-// AttachmentType
 
 func NewAttachmentType(
 	location common.Location,

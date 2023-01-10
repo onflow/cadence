@@ -15145,6 +15145,14 @@ func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRa
 	return nil
 }
 
+func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange LocationRange) []*CompositeValue {
+	var attachments []*CompositeValue
+	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
+		attachments = append(attachments, attachment)
+	})
+	return attachments
+}
+
 func attachmentBaseAndSelfValues(
 	interpreter *Interpreter,
 	locationRange LocationRange,

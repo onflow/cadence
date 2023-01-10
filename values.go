@@ -1645,14 +1645,14 @@ func (v Resource) String() string {
 	return formatComposite(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 }
 
-// Resource
+// Attachment
 
 type Attachment struct {
 	AttachmentType *AttachmentType
 	Fields         []Value
 }
 
-var _ Value = Resource{}
+var _ Value = Attachment{}
 
 func NewAttachment(fields []Value) Attachment {
 	return Attachment{Fields: fields}
