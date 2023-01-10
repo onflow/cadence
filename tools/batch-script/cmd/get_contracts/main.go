@@ -27,11 +27,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/tools/batch-script"
 )
 

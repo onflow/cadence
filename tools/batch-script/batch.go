@@ -158,9 +158,8 @@ func retryScriptUntilSuccess(
 
 		log.Info().Msgf("executing script")
 
-		result, err = flowClient.ExecuteScriptAtBlockHeight(
+		result, err = flowClient.ExecuteScriptAtLatestBlock(
 			ctx,
-			blockHeight,
 			script,
 			arguments,
 			grpc.MaxCallRecvMsgSize(16*1024*1024),
