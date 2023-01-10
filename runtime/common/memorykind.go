@@ -91,7 +91,9 @@ const (
 	MemoryKindCadenceStructValueBase
 	MemoryKindCadenceStructValueSize
 	MemoryKindCadenceResourceValueBase
+	MemoryKindCadenceAttachmentValueBase
 	MemoryKindCadenceResourceValueSize
+	MemoryKindCadenceAttachmentValueSize
 	MemoryKindCadenceEventValueBase
 	MemoryKindCadenceEventValueSize
 	MemoryKindCadenceContractValueBase
@@ -114,6 +116,7 @@ const (
 	MemoryKindCadenceParameter
 	MemoryKindCadenceStructType
 	MemoryKindCadenceResourceType
+	MemoryKindCadenceAttachmentType
 	MemoryKindCadenceEventType
 	MemoryKindCadenceContractType
 	MemoryKindCadenceStructInterfaceType

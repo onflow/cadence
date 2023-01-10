@@ -147,6 +147,184 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	require.Equal(t, logs[0], "3")
 }
 
+func TestAccountAttachmentExport(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntime()
+
+	logs := make([]string, 0)
+	events := make([]string, 0)
+	accountCodes := map[Location][]byte{}
+
+	deployTx := DeploymentTransaction("Test", []byte(`
+		pub contract Test {
+			pub resource R {}
+			pub attachment A for R {}
+			pub fun makeRWithA(): @R {
+				return <- attach A() to <-create R()
+			}
+		}
+	`))
+
+	script := []byte(`
+		import Test from 0x1
+		pub fun main(): &Test.A? { 
+			let r <- Test.makeRWithA()
+			let a = r[Test.A]
+			destroy r
+			return a
+		}
+	 `)
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log: func(message string) {
+			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	v, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.IsType(t, cadence.Optional{}, v)
+	require.IsType(t, cadence.Attachment{}, v.(cadence.Optional).Value)
+	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Optional).Value.String())
+
+	require.NoError(t, err)
+}
+
+func TestAccountAttachedExport(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntime()
+
+	logs := make([]string, 0)
+	events := make([]string, 0)
+	accountCodes := map[Location][]byte{}
+
+	deployTx := DeploymentTransaction("Test", []byte(`
+		pub contract Test {
+			pub resource R {}
+			pub attachment A for R {}
+			pub fun makeRWithA(): @R {
+				return <- attach A() to <-create R()
+			}
+		}
+	`))
+
+	script := []byte(`
+		import Test from 0x1
+		pub fun main(): @Test.R { 
+			return <-Test.makeRWithA()
+		}
+	 `)
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log: func(message string) {
+			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	v, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.IsType(t, cadence.Resource{}, v)
+	require.Len(t, v.(cadence.Resource).Fields, 2)
+	require.IsType(t, cadence.Attachment{}, v.(cadence.Resource).Fields[1])
+	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Resource).Fields[1].String())
+
+	require.NoError(t, err)
+}
+
 func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	t.Parallel()
 

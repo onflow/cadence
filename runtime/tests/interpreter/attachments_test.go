@@ -1645,3 +1645,30 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretAttachmentsRuntimeType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("getType()", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+            attachment A for R {}
+            fun test(): Type {
+                let r <- create R()
+                let r2 <- attach A() to <-r
+                let a: Type = r2[A]!.getType()
+                destroy r2
+                return a
+            }
+        `)
+
+		a, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.IsType(t, interpreter.TypeValue{}, a)
+		require.Equal(t, "S.test.A", a.(interpreter.TypeValue).Type.String())
+	})
+}

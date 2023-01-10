@@ -403,6 +403,21 @@ func exportCompositeValue(
 			fields[i] = exportedFieldValue
 		}
 
+		if composite, ok := v.(*interpreter.CompositeValue); ok {
+			for _, attachment := range composite.GetAttachments(inter, locationRange) {
+				exportedAttachmentValue, err := exportValueWithInterpreter(
+					attachment,
+					inter,
+					locationRange,
+					seenReferences,
+				)
+				if err != nil {
+					return nil, err
+				}
+				fields = append(fields, exportedAttachmentValue)
+			}
+		}
+
 		return fields, nil
 	}
 
@@ -436,6 +451,18 @@ func exportCompositeValue(
 			return nil, err
 		}
 		return resource.WithType(t.(*cadence.ResourceType)), nil
+	case common.CompositeKindAttachment:
+		attachment, err := cadence.NewMeteredAttachment(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return attachment.WithType(t.(*cadence.AttachmentType)), nil
 	case common.CompositeKindEvent:
 		event, err := cadence.NewMeteredEvent(
 			inter,
@@ -481,6 +508,7 @@ func exportCompositeValue(
 			[]string{
 				common.CompositeKindStructure.Name(),
 				common.CompositeKindResource.Name(),
+				common.CompositeKindAttachment.Name(),
 				common.CompositeKindEvent.Name(),
 				common.CompositeKindContract.Name(),
 				common.CompositeKindEnum.Name(),
