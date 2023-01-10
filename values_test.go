@@ -662,7 +662,7 @@ func TestGetType(t *testing.T) {
 				value := valueInstance.Elem().Interface().(Value)
 
 				// Check whether the type is always returned
-				cadenceType := (value).Type()
+				cadenceType := value.Type()
 				assert.NotNil(t, cadenceType)
 
 				// Check if the type is not a duplicate of some other type
