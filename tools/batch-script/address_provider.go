@@ -113,6 +113,9 @@ func InitAddressProvider(
 	ap.lastAddress = ap.indexToAddress(lastAddressIndex)
 	ap.lastAddressIndex = lastAddressIndex
 
+	// TODO: Remove
+	ap.lastAddressIndex = 20
+
 	ap.progress = progressbar.Default(
 		int64(lastAddressIndex),
 		"Executing script...",

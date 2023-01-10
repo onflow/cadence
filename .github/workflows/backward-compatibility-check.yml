@@ -1,0 +1,63 @@
+name: BackwardCompatibilityCheck
+
+on:
+  pull_request:
+    branches:
+      - master
+      - 'feature/**'
+      - 'v**'
+
+env:
+  GO_VERSION: '1.19.2'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Contracts backward compatibility check
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+#      - name: Build
+#        run: make build
+
+      - name: Make output dirs
+        run: |
+          mkdir outputs
+
+      - name: Download mainnet contracts
+        run: |
+          cd ./tools/batch-script
+          go run ./cmd/get_contracts/main.go > ../../outputs/mainnet-contracts.csv
+          cd ../..
+
+      - name: Check contracts using current branch
+        run: |
+          cd ./tools/check-contracts
+          go run ./cmd/main.go ../../outputs/mainnet-contracts.csv ../../outputs/mainnet-output-new.txt
+          cd ../..
+
+      - name: Check contracts using current branch
+        run: |
+          cat ./outputs/mainnet-output-new.txt
+
+      - name: Checkout base branch
+        run: git checkout ${{ github.event.pull_request.base.sha }}
+
+      - name: Check contracts using base branch
+        run: |
+          cd ./tools/check-contracts
+          go run ./cmd/main.go ../../outputs/mainnet-contracts.csv mainnet-output-old.txt
+          cd ../..
