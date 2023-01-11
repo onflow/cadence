@@ -2902,67 +2902,32 @@ func (e *ReadOnlyTargetAssignmentError) Error() string {
 	return "cannot assign to read-only target"
 }
 
-// InvalidTransactionBlockError
-
-type InvalidTransactionBlockError struct {
-	Name string
-	Pos  ast.Position
-}
-
-var _ SemanticError = &InvalidTransactionBlockError{}
-var _ errors.UserError = &InvalidTransactionBlockError{}
-var _ errors.SecondaryError = &InvalidTransactionBlockError{}
-
-func (*InvalidTransactionBlockError) isSemanticError() {}
-
-func (*InvalidTransactionBlockError) IsUserError() {}
-
-func (e *InvalidTransactionBlockError) Error() string {
-	return "invalid transaction block"
-}
-
-func (e *InvalidTransactionBlockError) SecondaryError() string {
-	return fmt.Sprintf(
-		"expected `prepare` or `execute`, got `%s`",
-		e.Name,
-	)
-}
-
-func (e *InvalidTransactionBlockError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *InvalidTransactionBlockError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	length := len(e.Name)
-	return e.Pos.Shifted(memoryGauge, length-1)
-}
-
 // TransactionMissingPrepareError
 
-type TransactionMissingPrepareError struct {
+type MissingPrepareError struct {
 	FirstFieldName string
 	FirstFieldPos  ast.Position
 }
 
-var _ SemanticError = &TransactionMissingPrepareError{}
-var _ errors.UserError = &TransactionMissingPrepareError{}
+var _ SemanticError = &MissingPrepareError{}
+var _ errors.UserError = &MissingPrepareError{}
 
-func (*TransactionMissingPrepareError) isSemanticError() {}
+func (*MissingPrepareError) isSemanticError() {}
 
-func (*TransactionMissingPrepareError) IsUserError() {}
+func (*MissingPrepareError) IsUserError() {}
 
-func (e *TransactionMissingPrepareError) Error() string {
+func (e *MissingPrepareError) Error() string {
 	return fmt.Sprintf(
-		"transaction missing prepare function for field `%s`",
+		"missing prepare block for field `%s`",
 		e.FirstFieldName,
 	)
 }
 
-func (e *TransactionMissingPrepareError) StartPosition() ast.Position {
+func (e *MissingPrepareError) StartPosition() ast.Position {
 	return e.FirstFieldPos
 }
 
-func (e *TransactionMissingPrepareError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+func (e *MissingPrepareError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.FirstFieldName)
 	return e.FirstFieldPos.Shifted(memoryGauge, length-1)
 }
@@ -3007,38 +2972,6 @@ func (e *InvalidNonImportableTransactionParameterTypeError) Error() string {
 		"transaction parameter must be importable: `%s`",
 		e.Type.QualifiedString(),
 	)
-}
-
-// InvalidTransactionFieldAccessModifierError
-
-type InvalidTransactionFieldAccessModifierError struct {
-	Name   string
-	Access ast.Access
-	Pos    ast.Position
-}
-
-var _ SemanticError = &InvalidTransactionFieldAccessModifierError{}
-var _ errors.UserError = &InvalidTransactionFieldAccessModifierError{}
-
-func (*InvalidTransactionFieldAccessModifierError) isSemanticError() {}
-
-func (*InvalidTransactionFieldAccessModifierError) IsUserError() {}
-
-func (e *InvalidTransactionFieldAccessModifierError) Error() string {
-	return fmt.Sprintf(
-		"access modifier not allowed for transaction field `%s`: `%s`",
-		e.Name,
-		e.Access.Keyword(),
-	)
-}
-
-func (e *InvalidTransactionFieldAccessModifierError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *InvalidTransactionFieldAccessModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	length := len(e.Access.Keyword())
-	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // InvalidTransactionPrepareParameterTypeError

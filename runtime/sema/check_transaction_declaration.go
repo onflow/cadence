@@ -51,13 +51,15 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	}
 
 	checker.checkTransactionFields(declaration)
-	checker.checkTransactionBlocks(declaration)
+	checker.checkPrepareExists(declaration.Prepare, declaration.Fields)
 
 	// enter a new scope for this transaction
 	checker.enterValueScope()
 	defer checker.leaveValueScope(declaration.EndPosition, true)
 
 	checker.declareSelfValue(transactionType, "")
+
+	// TODO: declare variables for all blocks
 
 	if declaration.ParameterList != nil {
 		checker.checkTransactionParameters(declaration, transactionType.Parameters)
@@ -117,54 +119,36 @@ func (checker *Checker) checkTransactionFields(declaration *ast.TransactionDecla
 	for _, field := range declaration.Fields {
 		if field.Access != ast.AccessNotSpecified {
 			checker.report(
-				&InvalidTransactionFieldAccessModifierError{
-					Name:   field.Identifier.Identifier,
-					Access: field.Access,
-					Pos:    field.StartPosition(),
+				&InvalidAccessModifierError{
+					Access:          field.Access,
+					Explanation:     "fields in transactions may not have an access modifier",
+					DeclarationKind: common.DeclarationKindField,
+					Pos:             field.StartPos,
 				},
 			)
 		}
 	}
 }
 
-// checkTransactionBlocks checks that a transaction contains the required prepare and execute blocks.
-//
-// An execute block is always required, but a prepare block is only required if fields are present.
-func (checker *Checker) checkTransactionBlocks(declaration *ast.TransactionDeclaration) {
-	if declaration.Prepare != nil {
-		// parser allows any identifier so it must be checked here
-		prepareIdentifier := declaration.Prepare.FunctionDeclaration.Identifier
-		if prepareIdentifier.Identifier != common.DeclarationKindPrepare.Keywords() {
-			checker.report(&InvalidTransactionBlockError{
-				Name: prepareIdentifier.Identifier,
-				Pos:  prepareIdentifier.Pos,
-			})
-		}
-	} else if len(declaration.Fields) != 0 {
-		// report an error if fields are defined but no prepare statement exists
-		// note: field initialization is checked later
-
-		// report error for first field
-		firstField := declaration.Fields[0]
-
-		checker.report(
-			&TransactionMissingPrepareError{
-				FirstFieldName: firstField.Identifier.Identifier,
-				FirstFieldPos:  firstField.Identifier.Pos,
-			},
-		)
+// checkPrepareExists ensures that if fields exists, a prepare block is necessary,
+// for example, in a transaction or transaction role.
+func (checker *Checker) checkPrepareExists(
+	prepare *ast.SpecialFunctionDeclaration,
+	fields []*ast.FieldDeclaration,
+) {
+	if len(fields) == 0 || prepare != nil {
+		return
 	}
 
-	if declaration.Execute != nil {
-		// parser allows any identifier so it must be checked here
-		executeIdentifier := declaration.Execute.FunctionDeclaration.Identifier
-		if executeIdentifier.Identifier != common.DeclarationKindExecute.Keywords() {
-			checker.report(&InvalidTransactionBlockError{
-				Name: executeIdentifier.Identifier,
-				Pos:  executeIdentifier.Pos,
-			})
-		}
-	}
+	// Report and error for the first field
+	firstField := fields[0]
+
+	checker.report(
+		&MissingPrepareError{
+			FirstFieldName: firstField.Identifier.Identifier,
+			FirstFieldPos:  firstField.Identifier.Pos,
+		},
+	)
 }
 
 // visitTransactionPrepareFunction visits and checks the prepare function of a transaction.

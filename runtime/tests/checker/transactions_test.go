@@ -123,7 +123,7 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			[]error{
-				&sema.TransactionMissingPrepareError{},
+				&sema.MissingPrepareError{},
 			},
 		)
 	})
@@ -345,6 +345,25 @@ func TestCheckTransactions(t *testing.T) {
 		    `,
 			[]error{
 				&sema.InvalidNonImportableTransactionParameterTypeError{},
+			},
+		)
+	})
+
+	t.Run("invalid access modifier for field", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                priv var x: Int
+
+                prepare() {
+                    self.x = 1
+                }
+              }
+            `,
+			[]error{
+				&sema.InvalidAccessModifierError{},
 			},
 		)
 	})

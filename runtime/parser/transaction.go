@@ -218,6 +218,9 @@ func parseTransactionPrepare(p *parser) (*ast.SpecialFunctionDeclaration, error)
 }
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err error) {
+	access := ast.AccessNotSpecified
+	var accessPos *ast.Position
+
 	for {
 		_, docString := p.parseTrivia(triviaOptions{
 			skipNewlines:    true,
@@ -238,8 +241,8 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 			case keywordLet, keywordVar:
 				field, err := parseFieldWithVariableKind(
 					p,
-					ast.AccessNotSpecified,
-					nil,
+					access,
+					accessPos,
 					nil,
 					nil,
 					docString,
@@ -247,8 +250,24 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 				if err != nil {
 					return nil, err
 				}
+				access = ast.AccessNotSpecified
+				accessPos = nil
 
 				fields = append(fields, field)
+				continue
+
+			case keywordPriv, keywordPub, keywordAccess:
+				if access != ast.AccessNotSpecified {
+					return nil, p.syntaxError("invalid second access modifier")
+				}
+				pos := p.current.StartPos
+				accessPos = &pos
+				var err error
+				access, err = parseAccess(p)
+				if err != nil {
+					return nil, err
+				}
+
 				continue
 
 			default:
