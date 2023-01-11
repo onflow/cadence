@@ -50,8 +50,8 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		fieldMembers.Set(member, field)
 	}
 
-	checker.checkTransactionFields(declaration)
-	checker.checkPrepareExists(declaration.Prepare, declaration.Fields)
+	checker.checkTransactionFields(fields)
+	checker.checkPrepareExists(declaration.Prepare, fields)
 
 	// enter a new scope for this transaction
 	checker.enterValueScope()
@@ -59,13 +59,13 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 
 	checker.declareSelfValue(transactionType, "")
 
-	// TODO: declare variables for all blocks
-
 	if declaration.ParameterList != nil {
 		checker.checkTransactionParameters(declaration, transactionType.Parameters)
 	}
 
 	checker.visitTransactionPrepareFunction(declaration.Prepare, transactionType, fieldMembers)
+
+	// TODO: declare variables for all blocks
 
 	if declaration.PreConditions != nil {
 		checker.visitConditions(*declaration.PreConditions)
@@ -114,9 +114,10 @@ func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionD
 	}
 }
 
-// checkTransactionFields validates the field declarations for a transaction.
-func (checker *Checker) checkTransactionFields(declaration *ast.TransactionDeclaration) {
-	for _, field := range declaration.Fields {
+// checkTransactionFields validates the field declarations in a transaction,
+// i.e. a transaction declaration or a transaction role declaration.
+func (checker *Checker) checkTransactionFields(fields []*ast.FieldDeclaration) {
+	for _, field := range fields {
 		if field.Access != ast.AccessNotSpecified {
 			checker.report(
 				&InvalidAccessModifierError{
