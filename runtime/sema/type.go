@@ -5644,6 +5644,8 @@ func IsNilType(ty Type) bool {
 	return true
 }
 
+// TransactionType
+
 type TransactionType struct {
 	Members           *StringMemberOrderedMap
 	Fields            []string
@@ -5755,6 +5757,106 @@ func (*TransactionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err
 }
 
 func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+	return t
+}
+
+// TransactionRoleType
+
+type TransactionRoleType struct {
+	Members           *StringMemberOrderedMap
+	Fields            []string
+	PrepareParameters []Parameter
+}
+
+var _ Type = &TransactionRoleType{}
+
+func (t *TransactionRoleType) PrepareFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Parameters:           t.PrepareParameters,
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+	}
+}
+
+func (*TransactionRoleType) IsType() {}
+
+func (t *TransactionRoleType) Tag() TypeTag {
+	return TransactionRoleTypeTag
+}
+
+func (*TransactionRoleType) String() string {
+	return "TransactionRole"
+}
+
+func (*TransactionRoleType) QualifiedString() string {
+	return "TransactionRole"
+}
+
+func (*TransactionRoleType) ID() TypeID {
+	return "TransactionRole"
+}
+
+func (*TransactionRoleType) Equal(other Type) bool {
+	_, ok := other.(*TransactionRoleType)
+	return ok
+}
+
+func (*TransactionRoleType) IsResourceType() bool {
+	return false
+}
+
+func (*TransactionRoleType) IsInvalidType() bool {
+	return false
+}
+
+func (*TransactionRoleType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*TransactionRoleType) IsExportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *TransactionRoleType) IsImportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*TransactionRoleType) IsEquatable() bool {
+	return false
+}
+
+func (*TransactionRoleType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateValid
+}
+
+func (t *TransactionRoleType) RewriteWithRestrictedTypes() (Type, bool) {
+	return t, false
+}
+
+func (t *TransactionRoleType) GetMembers() map[string]MemberResolver {
+	// TODO: optimize
+	var members map[string]MemberResolver
+	if t.Members != nil {
+		members = make(map[string]MemberResolver, t.Members.Len())
+		t.Members.Foreach(func(name string, loopMember *Member) {
+			// NOTE: don't capture loop variable
+			member := loopMember
+			members[name] = MemberResolver{
+				Kind: member.DeclarationKind,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return member
+				},
+			}
+		})
+	}
+	return withBuiltinMembers(t, members)
+}
+
+func (*TransactionRoleType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *TransactionRoleType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
