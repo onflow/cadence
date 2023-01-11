@@ -63,7 +63,12 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		checker.checkTransactionParameters(declaration, transactionType.Parameters)
 	}
 
-	checker.visitTransactionPrepareFunction(declaration.Prepare, transactionType, fieldMembers)
+	checker.visitPrepareFunction(
+		declaration.Prepare,
+		transactionType,
+		transactionType.PrepareFunctionType(),
+		fieldMembers,
+	)
 
 	// TODO: declare variables for all blocks
 
@@ -152,19 +157,18 @@ func (checker *Checker) checkPrepareExists(
 	)
 }
 
-// visitTransactionPrepareFunction visits and checks the prepare function of a transaction.
-func (checker *Checker) visitTransactionPrepareFunction(
+// visitPrepareFunction visits and checks the prepare function of a transaction.
+func (checker *Checker) visitPrepareFunction(
 	prepareFunction *ast.SpecialFunctionDeclaration,
-	transactionType *TransactionType,
+	containerType Type,
+	prepareFunctionType *FunctionType,
 	fieldMembers *MemberFieldDeclarationOrderedMap,
 ) {
 	if prepareFunction == nil {
 		return
 	}
 
-	initializationInfo := NewInitializationInfo(transactionType, fieldMembers)
-
-	prepareFunctionType := transactionType.PrepareFunctionType()
+	initializationInfo := NewInitializationInfo(containerType, fieldMembers)
 
 	checker.checkFunction(
 		prepareFunction.FunctionDeclaration.ParameterList,
