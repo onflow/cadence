@@ -113,11 +113,8 @@ func InitAddressProvider(
 	ap.lastAddress = ap.indexToAddress(lastAddressIndex)
 	ap.lastAddressIndex = lastAddressIndex
 
-	// TODO: Remove
-	ap.lastAddressIndex = 20
-
 	ap.progress = progressbar.Default(
-		int64(lastAddressIndex),
+		100,
 		"Executing script...",
 	)
 
@@ -180,7 +177,9 @@ func (p *AddressProvider) GetNextAddress() (address flow.Address, isOutOfBounds 
 	address = p.indexToAddress(p.currentIndex)
 
 	// Give some progress information every so often
-	_ = p.progress.Add(1)
+	if p.currentIndex%(p.lastAddressIndex/20) == 0 {
+		_ = p.progress.Add(5)
+	}
 
 	if p.currentIndex > p.lastAddressIndex {
 		isOutOfBounds = true

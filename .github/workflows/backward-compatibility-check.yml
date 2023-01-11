@@ -68,4 +68,6 @@ jobs:
 
       - name: Check diff
         run: |
+          cd ./tools/compatibility-check
           go run ./cmd/get_diff/main.go ../../outputs/mainnet-output-old.txt ../../outputs/mainnet-output-new.txt
+          cd ../..
