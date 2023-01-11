@@ -50,6 +50,7 @@ const (
 	DeclarationKindImport
 	DeclarationKindSelf
 	DeclarationKindTransaction
+	DeclarationKindTransactionRole
 	DeclarationKindPrepare
 	DeclarationKindExecute
 	DeclarationKindTypeParameter

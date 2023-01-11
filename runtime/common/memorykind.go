@@ -163,6 +163,7 @@ const (
 	MemoryKindEnumCaseDeclaration
 	MemoryKindFieldDeclaration
 	MemoryKindTransactionDeclaration
+	MemoryKindTransactionRoleDeclaration
 	MemoryKindImportDeclaration
 	MemoryKindVariableDeclaration
 	MemoryKindSpecialFunctionDeclaration

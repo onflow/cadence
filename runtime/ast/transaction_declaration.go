@@ -29,6 +29,7 @@ import (
 type TransactionDeclaration struct {
 	ParameterList  *ParameterList
 	Prepare        *SpecialFunctionDeclaration
+	Roles          []*TransactionRoleDeclaration
 	PreConditions  *Conditions
 	Execute        *SpecialFunctionDeclaration
 	PostConditions *Conditions
@@ -46,6 +47,7 @@ func NewTransactionDeclaration(
 	parameterList *ParameterList,
 	fields []*FieldDeclaration,
 	prepare *SpecialFunctionDeclaration,
+	roles []*TransactionRoleDeclaration,
 	preConditions *Conditions,
 	postConditions *Conditions,
 	execute *SpecialFunctionDeclaration,
@@ -58,6 +60,7 @@ func NewTransactionDeclaration(
 		ParameterList:  parameterList,
 		Fields:         fields,
 		Prepare:        prepare,
+		Roles:          roles,
 		PreConditions:  preConditions,
 		PostConditions: postConditions,
 		Execute:        execute,
@@ -72,15 +75,23 @@ func (*TransactionDeclaration) ElementType() ElementType {
 
 func (d *TransactionDeclaration) Walk(walkChild func(Element)) {
 	// TODO: walk parameters
+
 	for _, declaration := range d.Fields {
 		walkChild(declaration)
 	}
+
 	if d.Prepare != nil {
 		walkChild(d.Prepare)
 	}
+
+	for _, role := range d.Roles {
+		walkChild(role)
+	}
+
 	if d.Execute != nil {
 		walkChild(d.Execute)
 	}
+
 	// TODO: walk pre and post-conditions
 }
 
@@ -142,6 +153,11 @@ func (d *TransactionDeclaration) Doc() prettier.Doc {
 		addContent(d.Prepare.Doc())
 	}
 
+	for _, role := range d.Roles {
+		roleDoc := role.Doc()
+		addContent(roleDoc)
+	}
+
 	if conditionsDoc := d.PreConditions.Doc(preConditionsKeywordDoc); conditionsDoc != nil {
 		addContent(conditionsDoc)
 	}
@@ -168,18 +184,135 @@ func (d *TransactionDeclaration) Doc() prettier.Doc {
 	return append(
 		doc,
 		prettier.Space,
-		blockStartDoc,
-		prettier.Indent{
-			Doc: prettier.Join(
-				prettier.HardLine{},
-				contents...,
-			),
-		},
-		prettier.HardLine{},
-		blockEndDoc,
+		AsBlockDoc(prettier.Join(
+			prettier.HardLine{},
+			contents...,
+		)),
 	)
 }
 
 func (d *TransactionDeclaration) String() string {
+	return Prettier(d)
+}
+
+// TransactionRoleDeclaration
+
+type TransactionRoleDeclaration struct {
+	Identifier Identifier
+	Prepare    *SpecialFunctionDeclaration
+	DocString  string
+	Fields     []*FieldDeclaration
+	Range
+}
+
+var _ Element = &TransactionRoleDeclaration{}
+var _ Declaration = &TransactionRoleDeclaration{}
+var _ Statement = &TransactionRoleDeclaration{}
+
+func NewTransactionRoleDeclaration(
+	gauge common.MemoryGauge,
+	identifier Identifier,
+	fields []*FieldDeclaration,
+	prepare *SpecialFunctionDeclaration,
+	docString string,
+	declRange Range,
+) *TransactionRoleDeclaration {
+	common.UseMemory(gauge, common.TransactionRoleDeclarationMemoryUsage)
+
+	return &TransactionRoleDeclaration{
+		Identifier: identifier,
+		Fields:     fields,
+		Prepare:    prepare,
+		DocString:  docString,
+		Range:      declRange,
+	}
+}
+
+func (*TransactionRoleDeclaration) ElementType() ElementType {
+	return ElementTypeTransactionRoleDeclaration
+}
+
+func (d *TransactionRoleDeclaration) Walk(walkChild func(Element)) {
+	for _, declaration := range d.Fields {
+		walkChild(declaration)
+	}
+	if d.Prepare != nil {
+		walkChild(d.Prepare)
+	}
+
+	// TODO: walk pre and post-conditions
+}
+
+func (*TransactionRoleDeclaration) isDeclaration() {}
+func (*TransactionRoleDeclaration) isStatement()   {}
+
+func (d *TransactionRoleDeclaration) DeclarationIdentifier() *Identifier {
+	return nil
+}
+
+func (d *TransactionRoleDeclaration) DeclarationKind() common.DeclarationKind {
+	return common.DeclarationKindTransactionRole
+}
+
+func (d *TransactionRoleDeclaration) DeclarationAccess() Access {
+	return AccessNotSpecified
+}
+
+func (d *TransactionRoleDeclaration) DeclarationMembers() *Members {
+	return nil
+}
+
+func (d *TransactionRoleDeclaration) DeclarationDocString() string {
+	return ""
+}
+
+func (d *TransactionRoleDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias TransactionRoleDeclaration
+	return json.Marshal(&struct {
+		*Alias
+		Type string
+	}{
+		Type:  "TransactionRoleDeclaration",
+		Alias: (*Alias)(d),
+	})
+}
+
+var roleKeywordDoc = prettier.Text("role")
+
+func (d *TransactionRoleDeclaration) Doc() prettier.Doc {
+
+	var contents []prettier.Doc
+
+	addContent := func(doc prettier.Doc) {
+		contents = append(
+			contents,
+			prettier.Concat{
+				prettier.HardLine{},
+				doc,
+			},
+		)
+	}
+
+	for _, field := range d.Fields {
+		addContent(field.Doc())
+	}
+
+	if d.Prepare != nil {
+		addContent(d.Prepare.Doc())
+	}
+
+	return prettier.Concat{
+		roleKeywordDoc,
+		prettier.Space,
+		prettier.Text(d.Identifier.Identifier),
+		prettier.Space,
+		AsBlockDoc(prettier.Join(
+			prettier.HardLine{},
+			contents...,
+		)),
+	}
+}
+
+func (d *TransactionRoleDeclaration) String() string {
 	return Prettier(d)
 }
