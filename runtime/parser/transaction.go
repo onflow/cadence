@@ -30,13 +30,14 @@ import (
 //	    parameterList?
 //	    '{'
 //	    fields
-//	    prepare?
+//	    transactionPrepare?
+//	    transactionRoleDeclaration*
 //	    preConditions?
-//	    ( execute
-//	    | execute postConditions
+//	    ( transactionExecute
+//	    | transactionExecute postConditions
 //	    | postConditions
-//	    | postConditions execute
-//	    | /* no execute or postConditions */
+//	    | postConditions transactionExecute
+//	    | /* no transactionExecute or postConditions */
 //	    )
 //	    '}'
 func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionDeclaration, error) {
@@ -77,20 +78,31 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 	p.skipSpaceAndComments()
 	if p.isToken(p.current, lexer.TokenIdentifier, keywordPrepare) {
-		identifier := p.tokenToIdentifier(p.current)
-		// Skip the `prepare` keyword
-		p.next()
-		prepare, err = parseSpecialFunctionDeclaration(
-			p,
-			false,
-			ast.AccessNotSpecified,
-			nil,
-			nil,
-			nil,
-			identifier,
-		)
+		prepare, err = parseTransactionPrepare(p)
 		if err != nil {
 			return nil, err
+		}
+	}
+
+	// Roles (optional)
+
+	atEnd := false
+
+	var roles []*ast.TransactionRoleDeclaration
+	for !atEnd {
+		_, docString := p.parseTrivia(triviaOptions{
+			skipNewlines:    true,
+			parseDocStrings: true,
+		})
+
+		if p.isToken(p.current, lexer.TokenIdentifier, keywordRole) {
+			role, err := parseTransactionRole(p, docString)
+			if err != nil {
+				return nil, err
+			}
+			roles = append(roles, role)
+		} else {
+			atEnd = true
 		}
 	}
 
@@ -118,7 +130,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var endPos ast.Position
 
 	sawPost := false
-	atEnd := false
+	atEnd = false
 	for !atEnd {
 		p.skipSpaceAndComments()
 
@@ -176,6 +188,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		parameterList,
 		fields,
 		prepare,
+		roles,
 		preConditions,
 		postConditions,
 		execute,
@@ -186,6 +199,22 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			endPos,
 		),
 	), nil
+}
+
+func parseTransactionPrepare(p *parser) (*ast.SpecialFunctionDeclaration, error) {
+	identifier := p.tokenToIdentifier(p.current)
+	// Skip the `prepare` keyword
+	p.next()
+
+	return parseSpecialFunctionDeclaration(
+		p,
+		false,
+		ast.AccessNotSpecified,
+		nil,
+		nil,
+		nil,
+		identifier,
+	)
 }
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err error) {
@@ -263,5 +292,91 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 			identifier.Pos,
 			"",
 		),
+	), nil
+}
+
+// parseTransactionRole parses a transaction role declaration.
+//
+//	transactionRoleDeclaration : 'role'
+//	    identifier
+//	    '{'
+//	    fields
+//	    transactionPrepare?
+//	    '}'
+func parseTransactionRole(p *parser, docString string) (*ast.TransactionRoleDeclaration, error) {
+	// Skip the `role` keyword
+	p.nextSemanticToken()
+
+	// Name
+	name, err := p.mustIdentifier()
+	if err != nil {
+		return nil, err
+	}
+	p.nextSemanticToken()
+
+	blockStartToken, err := p.mustOne(lexer.TokenBraceOpen)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fields
+	var fields []*ast.FieldDeclaration
+	for {
+		_, docString := p.parseTrivia(triviaOptions{
+			skipNewlines:    true,
+			parseDocStrings: true,
+		})
+
+		if p.current.Is(lexer.TokenIdentifier) {
+			switch string(p.currentTokenSource()) {
+			case keywordLet, keywordVar:
+				field, err := parseFieldWithVariableKind(
+					p,
+					ast.AccessNotSpecified,
+					nil,
+					nil,
+					nil,
+					docString,
+				)
+				if err != nil {
+					return nil, err
+				}
+
+				fields = append(fields, field)
+				continue
+			}
+		}
+
+		break
+	}
+
+	// Prepare (optional)
+
+	var prepare *ast.SpecialFunctionDeclaration
+
+	p.skipSpaceAndComments()
+	if p.isToken(p.current, lexer.TokenIdentifier, keywordPrepare) {
+		prepare, err = parseTransactionPrepare(p)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	p.skipSpaceAndComments()
+	blockEndToken, err := p.mustOne(lexer.TokenBraceClose)
+	if err != nil {
+		return nil, err
+	}
+
+	return ast.NewTransactionRoleDeclaration(
+		p.memoryGauge,
+		name,
+		fields,
+		prepare,
+		docString,
+		ast.Range{
+			StartPos: blockStartToken.StartPos,
+			EndPos:   blockEndToken.EndPos,
+		},
 	), nil
 }
