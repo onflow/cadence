@@ -23,35 +23,38 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/onflow/cadence/tools/check_contracts"
+	"github.com/onflow/cadence/tools/compatibility_check"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Error().Msg("not enough arguments. Usage: csv_path output_path")
+		log.Error().Msg("not enough arguments. Usage: old_checking_results new_checking_results")
 		return
 	}
 
-	csvPath := os.Args[1]
-	outputPath := os.Args[2]
+	oldResultsPath := os.Args[1]
+	newResultsPath := os.Args[2]
 
-	csvFile, err := os.Open(csvPath)
+	oldResultsFile, err := os.Open(oldResultsPath)
 	if err != nil {
-		log.Err(err).Msgf("failed to open csv file: %s", csvPath)
+		log.Err(err).Msgf("failed to open file: %s", oldResultsPath)
 		return
 	}
 
-	outputFile, err := os.Create(outputPath)
+	newResultsFile, err := os.Open(newResultsPath)
 	if err != nil {
-		log.Err(err).Msgf("failed to create output file: %s", csvPath)
+		log.Err(err).Msgf("failed to open file: %s", oldResultsPath)
 		return
 	}
 
 	defer func() {
-		_ = csvFile.Close()
-		_ = outputFile.Close()
+		_ = oldResultsFile.Close()
+		_ = newResultsFile.Close()
 	}()
 
-	checker := check_contracts.NewContractChecker(outputFile)
-	checker.CheckCSV(csvFile)
+	err = compatibility_check.CompareFiles(oldResultsFile, newResultsFile)
+
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+	}
 }

@@ -45,8 +45,8 @@ jobs:
 
       - name: Check contracts using current branch
         run: |
-          cd ./tools/check-contracts
-          go run ./cmd/main.go ../../outputs/mainnet-contracts.csv ../../outputs/mainnet-output-new.txt
+          cd ./tools/compatibility-check
+          go run ./cmd/check_contracts/main.go ../../outputs/mainnet-contracts.csv ../../outputs/mainnet-output-new.txt
           cd ../..
 
       - name: Print results
@@ -58,10 +58,14 @@ jobs:
 
       - name: Check contracts using base branch
         run: |
-          cd ./tools/check-contracts
-          go run ./cmd/main.go ../../outputs/mainnet-contracts.csv mainnet-output-old.txt
+          cd ./tools/compatibility-check
+          go run ./cmd/check_contracts/main.go ../../outputs/mainnet-contracts.csv ../../outputs/mainnet-output-old.txt
           cd ../..
 
       - name: Print results
         run: |
-          cat ./outputs/mainnet-output-new.txt
+          cat ./outputs/mainnet-output-old.txt
+
+      - name: Check diff
+        run: |
+          go run ./cmd/get_diff/main.go ../../outputs/mainnet-output-old.txt ../../outputs/mainnet-output-new.txt

@@ -1,8 +1,9 @@
-module github.com/onflow/cadence/tools/check_contracts
+module github.com/onflow/cadence/tools/compatibility_check
 
 go 1.19
 
 require (
+	github.com/kylelemons/godebug v1.1.0
 	github.com/onflow/cadence v0.31.2
 	github.com/rs/zerolog v1.26.1
 )

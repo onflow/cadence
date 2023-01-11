@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package check_contracts
+package compatibility_check
 
 import (
 	"fmt"
