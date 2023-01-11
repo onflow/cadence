@@ -339,34 +339,9 @@ func parseTransactionRole(p *parser, docString string) (*ast.TransactionRoleDecl
 	}
 
 	// Fields
-	var fields []*ast.FieldDeclaration
-	for {
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
-		})
-
-		if p.current.Is(lexer.TokenIdentifier) {
-			switch string(p.currentTokenSource()) {
-			case keywordLet, keywordVar:
-				field, err := parseFieldWithVariableKind(
-					p,
-					ast.AccessNotSpecified,
-					nil,
-					nil,
-					nil,
-					docString,
-				)
-				if err != nil {
-					return nil, err
-				}
-
-				fields = append(fields, field)
-				continue
-			}
-		}
-
-		break
+	fields, err := parseTransactionFields(p)
+	if err != nil {
+		return nil, err
 	}
 
 	// Prepare (optional)
