@@ -44,18 +44,52 @@ func CompareFiles(oldResults, newResults *os.File) error {
 		newResultsLines = append(newResultsLines, newResultsScanner.Text())
 	}
 
-	diffChunks := diff.DiffChunks(oldResultsLines, newResultsLines)
-
 	totalDiffs := 0
-	for i, currentChunk := range diffChunks {
-		if currentChunk.Added == nil && currentChunk.Deleted == nil {
-			continue
+
+	const batchSize = 100_000
+	const maxDiffs = 1000
+
+	// `diff.DiffChunks` can't seem to handle when the diff is too large.
+	// Hence, check the diff in batches.
+	// Might not be 100% accurate if there's a very large diff at one side.
+	// But it should be good enough for the reporting.
+	// (i.e: worst-case: can have false positives, but no false negatives)
+
+batchLoop:
+	for batchStart := 0; batchStart < len(oldResultsLines); batchStart += batchSize {
+		batchEnd := batchStart + batchSize
+		oldResultsLineEnd := len(oldResultsLines)
+		if oldResultsLineEnd > batchEnd {
+			oldResultsLineEnd = batchEnd
 		}
 
-		prevChunk := diffChunks[i-1]
-		printDiffChunk(prevChunk, currentChunk)
+		newResultsLineEnd := len(newResultsLines)
+		if newResultsLineEnd > batchEnd {
+			newResultsLineEnd = batchEnd
+		}
 
-		totalDiffs += 1
+		diffChunks := diff.DiffChunks(
+			oldResultsLines[batchStart:oldResultsLineEnd],
+			newResultsLines[batchStart:newResultsLineEnd],
+		)
+
+		var prevChunk diff.Chunk
+
+		for _, currentChunk := range diffChunks {
+			if currentChunk.Added == nil && currentChunk.Deleted == nil {
+				continue
+			}
+
+			printDiffChunk(prevChunk, currentChunk)
+
+			totalDiffs++
+			prevChunk = currentChunk
+
+			// stop reporting too many errors
+			if totalDiffs > maxDiffs {
+				break batchLoop
+			}
+		}
 	}
 
 	if totalDiffs > 0 {
