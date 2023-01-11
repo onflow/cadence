@@ -177,7 +177,7 @@ func (p *AddressProvider) GetNextAddress() (address flow.Address, isOutOfBounds 
 	address = p.indexToAddress(p.currentIndex)
 
 	// Give some progress information every so often
-	// Note: Progress is printed at a reduced frequency, since in some enthronements (e.g: github CI),
+	// Note: Progress is printed at a reduced frequency, since in some environments (e.g: github CI),
 	// progress bar doesn't get overwritten upon updates, and would clutter the output.
 	if p.currentIndex%(p.lastAddressIndex/20) == 0 {
 		_ = p.progress.Add(5)

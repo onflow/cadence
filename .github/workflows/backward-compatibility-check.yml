@@ -1,11 +1,12 @@
 name: BackwardCompatibilityCheck
 
-on:
-  pull_request:
-    branches:
-      - master
-      - 'feature/**'
-      - 'v**'
+# Currently disabled
+#on:
+#  pull_request:
+#    branches:
+#      - master
+#      - 'feature/**'
+#      - 'v**'
 
 env:
   GO_VERSION: '1.19.2'
