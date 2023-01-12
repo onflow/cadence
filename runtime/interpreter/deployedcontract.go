@@ -76,20 +76,21 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 
 			nestedTypes := compositeType.NestedTypes
 			pair := nestedTypes.Oldest()
+			yieldNext := func() Value {
+				if pair == nil {
+					return nil
+				}
+				typeValue := TypeValue{Type: ConvertSemaToStaticType(inter, pair.Value)}
+				pair = pair.Next()
+				return typeValue
+			}
 
 			publicTypes = NewArrayValueWithIterator(
 				inter,
 				NewVariableSizedStaticType(inter, PrimitiveStaticTypeMetaType),
 				address,
 				uint64(nestedTypes.Len()),
-				func() Value {
-					if pair == nil {
-						return nil
-					}
-					typeValue := TypeValue{Type: ConvertSemaToStaticType(inter, pair.Value)}
-					pair = pair.Next()
-					return typeValue
-				},
+				yieldNext,
 			)
 		})
 
