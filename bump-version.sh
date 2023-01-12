@@ -24,5 +24,9 @@ echo "$v => $v2"
 
 for f in $VERSIONED_FILES; do \
   echo "- $f"; \
-  sed -i '' "s/$v/$v2/g" "$f"; \
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "s/$v/$v2/g" "$f"; \
+  else
+    sed -i "s/$v/$v2/g" "$f"; \
+  fi
 done
