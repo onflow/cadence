@@ -109,7 +109,7 @@ func TestCheckTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("InvalidFieldUninitialized", func(t *testing.T) {
+	t.Run("field, missing prepare", func(t *testing.T) {
 		test(
 			t,
 			`
@@ -128,7 +128,24 @@ func TestCheckTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("FieldInitialized", func(t *testing.T) {
+	t.Run("field, missing prepare", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                var x: Int
+
+                prepare() {}
+              }
+            `,
+			[]error{
+				&sema.FieldUninitializedError{},
+			},
+		)
+	})
+
+	t.Run("field, prepare, execute", func(t *testing.T) {
 		test(t,
 			`
               transaction {
@@ -364,6 +381,96 @@ func TestCheckTransactions(t *testing.T) {
             `,
 			[]error{
 				&sema.InvalidAccessModifierError{},
+			},
+		)
+	})
+}
+
+func TestCheckTransactionRoles(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, code string, expectedErrors []error) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, code)
+
+		errs := RequireCheckerErrors(t, err, len(expectedErrors))
+
+		for i, err := range errs {
+			if !assert.IsType(t, expectedErrors[i], err) {
+				t.Log(err)
+			}
+		}
+	}
+
+	t.Run("empty", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                role foo {}
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("field, prepare", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                role foo {
+
+                  let bar: Int
+
+                  prepare() {
+                    self.bar = 1
+                  }
+                }
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("duplicate", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                role foo {}
+
+                role foo {}
+              }
+            `,
+			[]error{
+				&sema.DuplicateTransactionRoleError{},
+			},
+		)
+	})
+
+	t.Run("field name conflict", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                let foo: Int
+
+                prepare() {
+                    self.foo = 1
+                }
+
+                role foo {}
+              }
+            `,
+			[]error{
+				&sema.TransactionRoleWithFieldNameError{},
 			},
 		)
 	})
