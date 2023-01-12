@@ -46,7 +46,7 @@ func CompareFiles(oldResults, newResults *os.File) error {
 
 	totalDiffs := 0
 
-	const batchSize = 100_000
+	const batchSize = 10_000
 	const maxDiffs = 1000
 
 	// `diff.DiffChunks` can't seem to handle when the diff is too large.
@@ -58,19 +58,20 @@ func CompareFiles(oldResults, newResults *os.File) error {
 batchLoop:
 	for batchStart := 0; batchStart < len(oldResultsLines); batchStart += batchSize {
 		batchEnd := batchStart + batchSize
-		oldResultsLineEnd := len(oldResultsLines)
-		if oldResultsLineEnd > batchEnd {
-			oldResultsLineEnd = batchEnd
+
+		oldResultsBatchEnd := len(oldResultsLines)
+		if oldResultsBatchEnd > batchEnd {
+			oldResultsBatchEnd = batchEnd
 		}
 
-		newResultsLineEnd := len(newResultsLines)
-		if newResultsLineEnd > batchEnd {
-			newResultsLineEnd = batchEnd
+		newResultsBatchEnd := len(newResultsLines)
+		if newResultsBatchEnd > batchEnd {
+			newResultsBatchEnd = batchEnd
 		}
 
 		diffChunks := diff.DiffChunks(
-			oldResultsLines[batchStart:oldResultsLineEnd],
-			newResultsLines[batchStart:newResultsLineEnd],
+			oldResultsLines[batchStart:oldResultsBatchEnd],
+			newResultsLines[batchStart:newResultsBatchEnd],
 		)
 
 		var prevChunk diff.Chunk
