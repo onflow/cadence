@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"sync"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -54,16 +56,43 @@ func NewDeployedContractValue(
 	)
 }
 
-func newPublicTypesFunctionValue(inter *Interpreter, address AddressValue, name *StringValue) FunctionValue {
-	var fv FunctionValue = NewHostFunctionValue(inter, func(inv Invocation) Value {
-		contractLocation := common.NewAddressLocation(inter, address.ToAddress(), name.Str)
-		// TODO figure out correct location and typeID for contract types
-		elaboration := inter.getElaboration(contractLocation)
-		if elaboration == nil {
+func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, name *StringValue) FunctionValue {
+	// public types only need to be computed once per contract
+	var once sync.Once
+	var publicTypes *ArrayValue
 
-		}
+	address := addressValue.ToAddress()
+	return NewHostFunctionValue(inter, func(inv Invocation) Value {
+		once.Do(func() {
+			inter := inv.Interpreter
+			contractLocation := common.NewAddressLocation(inter, address, name.Str)
+			// we're only looking at the contract as a whole, so no need to construct a nested path
+			qualifiedIdent := name.Str
+			typeID := common.NewTypeIDFromQualifiedName(inter, contractLocation, name.Str)
+			compositeType, err := inter.GetCompositeType(contractLocation, qualifiedIdent, typeID)
+			if err != nil {
+				panic(err)
+			}
 
-		return nil
+			nestedTypes := compositeType.NestedTypes
+			pair := nestedTypes.Oldest()
+
+			publicTypes = NewArrayValueWithIterator(
+				inter,
+				NewVariableSizedStaticType(inter, PrimitiveStaticTypeMetaType),
+				address,
+				uint64(nestedTypes.Len()),
+				func() Value {
+					if pair == nil {
+						return nil
+					}
+					typeValue := TypeValue{Type: ConvertSemaToStaticType(inter, pair.Value)}
+					pair = pair.Next()
+					return typeValue
+				},
+			)
+		})
+
+		return publicTypes
 	}, sema.DeployedContractTypePublicTypesFunctionType)
-	return fv
 }
