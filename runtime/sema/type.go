@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -5651,6 +5652,7 @@ type TransactionType struct {
 	Fields            []string
 	PrepareParameters []Parameter
 	Parameters        []Parameter
+	Roles             *orderedmap.OrderedMap[string, *TransactionRoleType]
 }
 
 var _ Type = &TransactionType{}
@@ -5696,9 +5698,8 @@ func (*TransactionType) ID() TypeID {
 	return "Transaction"
 }
 
-func (*TransactionType) Equal(other Type) bool {
-	_, ok := other.(*TransactionType)
-	return ok
+func (t *TransactionType) Equal(other Type) bool {
+	return t == other
 }
 
 func (*TransactionType) IsResourceType() bool {
@@ -5796,9 +5797,8 @@ func (*TransactionRoleType) ID() TypeID {
 	return "TransactionRole"
 }
 
-func (*TransactionRoleType) Equal(other Type) bool {
-	_, ok := other.(*TransactionRoleType)
-	return ok
+func (t *TransactionRoleType) Equal(other Type) bool {
+	return t == other
 }
 
 func (*TransactionRoleType) IsResourceType() bool {

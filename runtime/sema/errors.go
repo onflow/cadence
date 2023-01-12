@@ -2996,6 +2996,48 @@ func (e *InvalidTransactionPrepareParameterTypeError) Error() string {
 	)
 }
 
+// DuplicateTransactionRoleError
+
+type DuplicateTransactionRoleError struct {
+	Name string
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateTransactionRoleError{}
+var _ errors.UserError = &DuplicateTransactionRoleError{}
+
+func (*DuplicateTransactionRoleError) isSemanticError() {}
+
+func (*DuplicateTransactionRoleError) IsUserError() {}
+
+func (e *DuplicateTransactionRoleError) Error() string {
+	return fmt.Sprintf(
+		"duplicate role declaration `%s`",
+		e.Name,
+	)
+}
+
+// TransactionRoleWithFieldNameError
+
+type TransactionRoleWithFieldNameError struct {
+	Name string
+	ast.Range
+}
+
+var _ SemanticError = &TransactionRoleWithFieldNameError{}
+var _ errors.UserError = &TransactionRoleWithFieldNameError{}
+
+func (*TransactionRoleWithFieldNameError) isSemanticError() {}
+
+func (*TransactionRoleWithFieldNameError) IsUserError() {}
+
+func (e *TransactionRoleWithFieldNameError) Error() string {
+	return fmt.Sprintf(
+		"role conflicts with field `%s`",
+		e.Name,
+	)
+}
+
 // InvalidNestedDeclarationError
 
 type InvalidNestedDeclarationError struct {

@@ -41,6 +41,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 
 	for _, field := range fields {
 		fieldName := field.Identifier.Identifier
+		// Fields were previously declared in declareTransactionDeclaration
 		member, ok := transactionType.Members.Get(fieldName)
 
 		if !ok {
@@ -237,23 +238,10 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.Parameters = checker.parameters(declaration.ParameterList)
 	}
 
-	var fieldDeclarations []ast.Declaration
-
-	fieldCount := len(declaration.Fields)
-	if fieldCount > 0 {
-		fieldDeclarations = make([]ast.Declaration, fieldCount)
-		for i, field := range declaration.Fields {
-			fieldDeclarations[i] = field
-		}
-	}
-
-	allMembers := ast.NewMembers(checker.memoryGauge, fieldDeclarations)
-
-	members, fields, origins := checker.defaultMembersAndOrigins(
-		allMembers,
+	members, fields, origins := checker.compositeFieldMembersAndOrigins(
 		transactionType,
-		ContainerKindComposite,
 		declaration.DeclarationKind(),
+		declaration.Fields,
 	)
 
 	transactionType.Members = members
@@ -267,6 +255,106 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.PrepareParameters = checker.parameters(parameterList)
 	}
 
+	roles := &orderedmap.OrderedMap[string, *TransactionRoleType]{}
+	for _, role := range declaration.Roles {
+		transactionRoleType := checker.transactionRoleType(role)
+
+		// Ensure roles are not duplicated
+		roleName := role.Identifier.Identifier
+		if _, ok := roles.Get(roleName); ok {
+			checker.report(
+				&DuplicateTransactionRoleError{
+					Name: roleName,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						role.Identifier,
+					),
+				},
+			)
+			continue
+		}
+
+		// Ensure roles and fields do not clash
+		if _, ok := members.Get(roleName); ok {
+			checker.report(
+				&TransactionRoleWithFieldNameError{
+					Name: roleName,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						role.Identifier,
+					),
+				},
+			)
+			continue
+		}
+
+		roles.Set(roleName, transactionRoleType)
+		members.Set(
+			roleName,
+			&Member{
+				ContainerType:   transactionType,
+				Identifier:      role.Identifier,
+				DeclarationKind: common.DeclarationKindTransactionRole,
+				VariableKind:    ast.VariableKindConstant,
+				TypeAnnotation:  NewTypeAnnotation(transactionRoleType),
+				DocString:       role.DocString,
+			},
+		)
+	}
+	transactionType.Roles = roles
+
 	checker.Elaboration.SetTransactionDeclarationType(declaration, transactionType)
 	checker.Elaboration.TransactionTypes = append(checker.Elaboration.TransactionTypes, transactionType)
+}
+
+func (checker *Checker) transactionRoleType(declaration *ast.TransactionRoleDeclaration) *TransactionRoleType {
+	transactionRoleType := &TransactionRoleType{}
+
+	members, fields, origins := checker.compositeFieldMembersAndOrigins(
+		transactionRoleType,
+		declaration.DeclarationKind(),
+		declaration.Fields,
+	)
+
+	transactionRoleType.Members = members
+	transactionRoleType.Fields = fields
+	if checker.PositionInfo != nil {
+		checker.PositionInfo.recordMemberOrigins(transactionRoleType, origins)
+	}
+
+	if declaration.Prepare != nil {
+		parameterList := declaration.Prepare.FunctionDeclaration.ParameterList
+		transactionRoleType.PrepareParameters = checker.parameters(parameterList)
+	}
+
+	return transactionRoleType
+}
+
+func (checker *Checker) compositeFieldMembersAndOrigins(
+	containerType Type,
+	declarationKind common.DeclarationKind,
+	declarations []*ast.FieldDeclaration,
+) (
+	members *StringMemberOrderedMap,
+	fields []string,
+	origins map[string]*Origin,
+) {
+	var fieldDeclarations []ast.Declaration
+
+	fieldCount := len(declarations)
+	if fieldCount > 0 {
+		fieldDeclarations = make([]ast.Declaration, fieldCount)
+		for i, field := range declarations {
+			fieldDeclarations[i] = field
+		}
+	}
+
+	allMembers := ast.NewMembers(checker.memoryGauge, fieldDeclarations)
+
+	return checker.defaultMembersAndOrigins(
+		allMembers,
+		containerType,
+		ContainerKindComposite,
+		declarationKind,
+	)
 }
