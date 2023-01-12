@@ -1,0 +1,31 @@
+name: BackwardCompatibilityCheck
+
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: 'Base branch'
+        required: false
+        default: 'master'
+
+env:
+  GO_VERSION: '1.19.2'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.base || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  mainnet:
+    uses: ./.github/workflows/compatibility-check-template.yml
+    with:
+      base-branch: ${{ inputs.base }}
+      chain: flow-mainnet
+      url: access.mainnet.nodes.onflow.org:9000
+
+  testnet:
+    uses: ./.github/workflows/compatibility-check-template.yml
+    with:
+      base-branch:  ${{ inputs.base }}
+      chain: flow-testnet
+      url: access.testnet.nodes.onflow.org:9000

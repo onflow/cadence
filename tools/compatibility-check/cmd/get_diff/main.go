@@ -40,15 +40,16 @@ func main() {
 		log.Err(err).Msgf("failed to open file: %s", oldResultsPath)
 		return
 	}
+	defer func() {
+		_ = oldResultsFile.Close()
+	}()
 
 	newResultsFile, err := os.Open(newResultsPath)
 	if err != nil {
-		log.Err(err).Msgf("failed to open file: %s", oldResultsPath)
+		log.Err(err).Msgf("failed to open file: %s", newResultsPath)
 		return
 	}
-
 	defer func() {
-		_ = oldResultsFile.Close()
 		_ = newResultsFile.Close()
 	}()
 

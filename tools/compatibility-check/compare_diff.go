@@ -30,19 +30,8 @@ import (
 
 func CompareFiles(oldResults, newResults *os.File) error {
 
-	oldResultsScanner := bufio.NewScanner(oldResults)
-	oldResultsScanner.Split(bufio.ScanLines)
-	var oldResultsLines []string
-	for oldResultsScanner.Scan() {
-		oldResultsLines = append(oldResultsLines, oldResultsScanner.Text())
-	}
-
-	newResultsScanner := bufio.NewScanner(newResults)
-	newResultsScanner.Split(bufio.ScanLines)
-	var newResultsLines []string
-	for newResultsScanner.Scan() {
-		newResultsLines = append(newResultsLines, newResultsScanner.Text())
-	}
+	oldResultsLines := getContentLines(oldResults)
+	newResultsLines := getContentLines(newResults)
 
 	totalDiffs := 0
 
@@ -98,6 +87,18 @@ batchLoop:
 	}
 
 	return nil
+}
+
+func getContentLines(file *os.File) []string {
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+
+	var lines []string
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	return lines
 }
 
 func printDiffChunk(prevChunk, currentChunk diff.Chunk) {

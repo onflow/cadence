@@ -1,0 +1,61 @@
+name: BackwardCompatibilityCheckTemplate
+
+on:
+  workflow_call:
+    inputs:
+      base-branch:
+        required: true
+        type: string
+      chain:
+        required: true
+        type: string
+      url:
+        required: true
+        type: string
+
+env:
+  GO_VERSION: '1.19.2'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.base-branch || github.run_id }}-${{ inputs.chain }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Make output dirs
+        run: |
+          mkdir tmp
+
+      - name: Download contracts
+        working-directory: ./tools/batch-script
+        run: |
+          go run ./cmd/get_contracts/main.go --chain=${{ inputs.chain }} --u=${{ inputs.url }} > ../../tmp/contracts.csv
+
+      - name: Check contracts using current branch
+        working-directory: ./tools/compatibility-check
+        run: |
+          go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-new.txt
+
+      - name: Checkout base branch
+        run: git checkout ${{ inputs.base-branch }}
+
+      - name: Check contracts using base branch
+        working-directory: ./tools/compatibility-check
+        run: |
+          go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-old.txt
+
+      - name: Check diff
+        run: |
+          go run ./cmd/get_diff/main.go ../../tmp/output-old.txt ../../tmp/output-new.txt

@@ -40,15 +40,16 @@ func main() {
 		log.Err(err).Msgf("failed to open csv file: %s", csvPath)
 		return
 	}
+	defer func() {
+		_ = csvFile.Close()
+	}()
 
 	outputFile, err := os.Create(outputPath)
 	if err != nil {
-		log.Err(err).Msgf("failed to create output file: %s", csvPath)
+		log.Err(err).Msgf("failed to create output file: %s", outputPath)
 		return
 	}
-
 	defer func() {
-		_ = csvFile.Close()
 		_ = outputFile.Close()
 	}()
 
