@@ -506,3 +506,28 @@ func TestCheckNestedFunctionExits(t *testing.T) {
 		exits: false,
 	})
 }
+
+func TestCheckFunctionExpressionReturnStatementInfluence(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int {
+          if false {
+              // should not influence definite halt of outer function (test)
+              fun() { return }
+              return 1
+          }
+
+          if false {
+              return 2
+          }
+
+          return 3
+      }
+    `)
+
+	// If this test fails, there is likely something wrong in the definite halt analysis,
+	// or in the function activation stack
+	require.NoError(t, err)
+}

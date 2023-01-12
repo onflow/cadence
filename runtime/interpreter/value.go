@@ -16879,12 +16879,23 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 	return &referenced, nil
 }
 
-func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-	value, err := v.dereference(interpreter, EmptyLocationRange)
-	if err != nil {
+func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value {
+	referencedValue, err := v.dereference(interpreter, EmptyLocationRange)
+	if err == nil {
+		return referencedValue
+	}
+	if forceCastErr, ok := err.(ForceCastTypeMismatchError); ok {
+		if errorOnFailedDereference {
+			// relay the type mismatch error with a dereference error context
+			panic(DereferenceError{
+				ExpectedType:  forceCastErr.ExpectedType,
+				ActualType:    forceCastErr.ActualType,
+				LocationRange: locationRange,
+			})
+		}
 		return nil
 	}
-	return value
+	panic(err)
 }
 
 func (v *StorageReferenceValue) GetMember(
@@ -16892,9 +16903,10 @@ func (v *StorageReferenceValue) GetMember(
 	locationRange LocationRange,
 	name string,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})
 	}
@@ -16911,9 +16923,10 @@ func (v *StorageReferenceValue) RemoveMember(
 	locationRange LocationRange,
 	name string,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})
 	}
@@ -16931,9 +16944,10 @@ func (v *StorageReferenceValue) SetMember(
 	name string,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})
 	}
@@ -16950,9 +16964,10 @@ func (v *StorageReferenceValue) GetKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})
 	}
@@ -16971,9 +16986,10 @@ func (v *StorageReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})
 	}
@@ -16992,9 +17008,10 @@ func (v *StorageReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})
 	}
@@ -17012,9 +17029,10 @@ func (v *StorageReferenceValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})
 	}
@@ -17049,8 +17067,8 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
+	referencedValue, err := v.dereference(interpreter, locationRange)
+	if referencedValue == nil || err != nil {
 		return false
 	}
 
@@ -17180,7 +17198,9 @@ func (v *EphemeralReferenceValue) MeteredString(memoryGauge common.MemoryGauge, 
 func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 	referencedValue := v.ReferencedValue(inter, EmptyLocationRange)
 	if referencedValue == nil {
-		panic(DereferenceError{})
+		panic(DereferenceError{
+			Cause: "the value being referenced has been destroyed or moved",
+		})
 	}
 
 	self := *referencedValue
@@ -17223,6 +17243,7 @@ func (v *EphemeralReferenceValue) GetMember(
 	referencedValue := v.ReferencedValue(interpreter, locationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "the value being referenced has been destroyed or moved",
 			LocationRange: locationRange,
 		})
 	}
@@ -17242,6 +17263,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	referencedValue := v.ReferencedValue(interpreter, locationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "the value being referenced has been destroyed or moved",
 			LocationRange: locationRange,
 		})
 	}
@@ -17266,6 +17288,7 @@ func (v *EphemeralReferenceValue) SetMember(
 	referencedValue := v.ReferencedValue(interpreter, locationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "the value being referenced has been destroyed or moved",
 			LocationRange: locationRange,
 		})
 	}
@@ -17285,6 +17308,7 @@ func (v *EphemeralReferenceValue) GetKey(
 	referencedValue := v.ReferencedValue(interpreter, locationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "the value being referenced has been destroyed or moved",
 			LocationRange: locationRange,
 		})
 	}
@@ -17306,6 +17330,7 @@ func (v *EphemeralReferenceValue) SetKey(
 	referencedValue := v.ReferencedValue(interpreter, locationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "the value being referenced has been destroyed or moved",
 			LocationRange: locationRange,
 		})
 	}
@@ -17327,6 +17352,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 	referencedValue := v.ReferencedValue(interpreter, locationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "the value being referenced has been destroyed or moved",
 			LocationRange: locationRange,
 		})
 	}
@@ -17347,6 +17373,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 	referencedValue := v.ReferencedValue(interpreter, locationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "the value being referenced has been destroyed or moved",
 			LocationRange: locationRange,
 		})
 	}

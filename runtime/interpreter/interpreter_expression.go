@@ -166,7 +166,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 				resultValue = interpreter.getMember(target, locationRange, identifier)
 			}
 			if resultValue == nil && !allowMissing {
-				panic(MissingMemberValueError{
+				panic(UseBeforeInitializationError{
 					Name:          identifier,
 					LocationRange: locationRange,
 				})
