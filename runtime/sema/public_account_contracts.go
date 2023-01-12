@@ -52,12 +52,6 @@ var PublicAccountContractsType = func() *CompositeType {
 			accountContractsTypeNamesFieldType,
 			accountContractsTypeNamesFieldDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
-			publicAccountContractsType,
-			AccountContractsTypePublicTypesFunctionName,
-			AccountContractsTypePublicTypesFunctionType,
-			accountContractsTypePublicTypesFunctionDocString,
-		),
 	}
 
 	publicAccountContractsType.Members = GetMembersAsMap(members)
