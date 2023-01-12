@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -51,4 +52,18 @@ func NewDeployedContractValue(
 		nil,
 		nil,
 	)
+}
+
+func newPublicTypesFunctionValue(inter *Interpreter, address AddressValue, name *StringValue) FunctionValue {
+	var fv FunctionValue = NewHostFunctionValue(inter, func(inv Invocation) Value {
+		contractLocation := common.NewAddressLocation(inter, address.ToAddress(), name.Str)
+		// TODO figure out correct location and typeID for contract types
+		elaboration := inter.getElaboration(contractLocation)
+		if elaboration == nil {
+
+		}
+
+		return nil
+	}, sema.DeployedContractTypePublicTypesFunctionType)
+	return fv
 }

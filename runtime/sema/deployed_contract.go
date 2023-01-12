@@ -72,6 +72,18 @@ var DeployedContractType = &SimpleType{
 					)
 				},
 			},
+			DeployedContractTypePublicTypesFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, report func(error)) *Member {
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						DeployedContractTypePublicTypesFunctionType,
+						DeployedContractTypePublicTypesFunctionDocString,
+					)
+				},
+			},
 		}
 	},
 }
@@ -93,3 +105,18 @@ const DeployedContractTypeCodeFieldName = "code"
 const deployedContractTypeCodeFieldDocString = `
 The code of the contract
 `
+
+const DeployedContractTypePublicTypesFunctionName = "publicTypes"
+const DeployedContractTypePublicTypesFunctionDocString = `
+	Returns an array of Type objects representing all public type declarations in this contract.
+`
+
+var DeployedContractTypePublicTypesFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{},
+	NewTypeAnnotation(
+		&VariableSizedType{
+			Type: MetaType,
+		},
+	),
+)
