@@ -3278,13 +3278,6 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
 				staticType := value.StaticType(inter)
 
-				// Perform a forced type loading to see if the underlying type is not broken.
-				// If broken, skip this value from the iteration.
-				typeError := inter.checkTypeLoading(staticType)
-				if typeError != nil {
-					continue
-				}
-
 				pathValue := NewPathValue(inter, domain, key)
 				runtimeType := NewTypeValue(inter, staticType)
 

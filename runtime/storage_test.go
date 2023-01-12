@@ -32,6 +32,8 @@ import (
 
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
@@ -3511,7 +3513,9 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.TypeLoadingError{})
 	})
 
 	t.Run("broken contract", func(t *testing.T) {
@@ -3648,6 +3652,11 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
+		RequireError(t, err)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		notDeclaredErr := &sema.NotDeclaredError{}
+		require.ErrorAs(t, errs[0], &notDeclaredErr)
 	})
 }
