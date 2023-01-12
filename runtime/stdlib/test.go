@@ -426,30 +426,39 @@ Expect function tests a value against a matcher, and fails the test if it's not 
 
 const testExpectFunctionName = "expect"
 
-var testExpectFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.GenericType{
-					TypeParameter: typeParameter,
-				},
-			),
+var testExpectFunctionType = func() *sema.FunctionType {
+
+	typeParameter := &sema.TypeParameter{
+		TypeBound: sema.AnyStructType,
+		Name:      "T",
+		Optional:  true,
+	}
+
+	return &sema.FunctionType{
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "matcher",
+				TypeAnnotation: sema.NewTypeAnnotation(matcherType),
+			},
 		},
-		{
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     "matcher",
-			TypeAnnotation: sema.NewTypeAnnotation(matcherType),
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
 		},
-	},
-	TypeParameters: []*sema.TypeParameter{
-		typeParameter,
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
-}
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			sema.VoidType,
+		),
+	}
+}()
 
 var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -648,44 +657,47 @@ The test function is of type '((T): Bool)', where 'T' is bound to 'AnyStruct'.
 
 const newMatcherFunctionName = "newMatcher"
 
-var newMatcherFunctionType = &sema.FunctionType{
-	IsConstructor: true,
-	Parameters: []sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "test",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				// Type of the 'test' function: ((T): Bool)
-				&sema.FunctionType{
-					Parameters: []sema.Parameter{
-						{
-							Label:      sema.ArgumentLabelNotRequired,
-							Identifier: "value",
-							TypeAnnotation: sema.NewTypeAnnotation(
-								&sema.GenericType{
-									TypeParameter: newMatcherFunctionTypeParameter,
-								},
-							),
-						},
-					},
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(
-						sema.BoolType,
-					),
-				},
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
-	TypeParameters: []*sema.TypeParameter{
-		newMatcherFunctionTypeParameter,
-	},
-}
+var newMatcherFunctionType = func() *sema.FunctionType {
 
-var newMatcherFunctionTypeParameter = &sema.TypeParameter{
-	TypeBound: sema.AnyStructType,
-	Name:      "T",
-	Optional:  true,
-}
+	typeParameter := &sema.TypeParameter{
+		TypeBound: sema.AnyStructType,
+		Name:      "T",
+		Optional:  true,
+	}
+
+	return &sema.FunctionType{
+		IsConstructor: true,
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "test",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					// Type of the 'test' function: ((T): Bool)
+					&sema.FunctionType{
+						Parameters: []sema.Parameter{
+							{
+								Label:      sema.ArgumentLabelNotRequired,
+								Identifier: "value",
+								TypeAnnotation: sema.NewTypeAnnotation(
+									&sema.GenericType{
+										TypeParameter: typeParameter,
+									},
+								),
+							},
+						},
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(
+							sema.BoolType,
+						),
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+		},
+	}
+}()
 
 var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -1293,30 +1305,33 @@ const equalMatcherFunctionDocString = `
 Returns a matcher that succeeds if the tested value is equal to the given value.
 `
 
-var typeParameter = &sema.TypeParameter{
-	TypeBound: sema.AnyStructType,
-	Name:      "T",
-	Optional:  true,
-}
+var equalMatcherFunctionType = func() *sema.FunctionType {
 
-var equalMatcherFunctionType = &sema.FunctionType{
-	IsConstructor: false,
-	TypeParameters: []*sema.TypeParameter{
-		typeParameter,
-	},
-	Parameters: []sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.GenericType{
-					TypeParameter: typeParameter,
-				},
-			),
+	typeParameter := &sema.TypeParameter{
+		TypeBound: sema.AnyStructType,
+		Name:      "T",
+		Optional:  true,
+	}
+
+	return &sema.FunctionType{
+		IsConstructor: false,
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
 		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
-}
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
 
 var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
