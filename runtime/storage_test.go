@@ -3531,13 +3531,38 @@ func TestRuntimeStorageIteration(t *testing.T) {
             }
         `))
 
-		newRuntimeInterface := func() Interface {
-			return &testRuntimeInterface{
+		newRuntimeInterface := func() (Interface, *[]Location) {
+			programs := map[Location]*interpreter.Program{}
+
+			var programStack []Location
+
+			runtimeInterface := &testRuntimeInterface{
 				storage: ledger,
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
 				},
 				resolveLocation: singleIdentifierLocationResolver(t),
+				getProgram: func(location Location) (*interpreter.Program, error) {
+					programStack = append(programStack, location)
+					return programs[location], nil
+				},
+				setProgram: func(location Location, program *interpreter.Program) error {
+					programs[location] = program
+
+					if _, ok := location.(common.TransactionLocation); ok {
+						return nil
+					}
+
+					require.NotEmpty(t, programStack)
+					lastLocation := programStack[0]
+					require.Equal(t, lastLocation, location)
+
+					lastIndex := len(programStack) - 1
+					programStack[lastIndex] = nil
+					programStack = programStack[:lastIndex]
+
+					return nil
+				},
 				updateAccountContractCode: func(address Address, name string, code []byte) error {
 					location := common.AddressLocation{
 						Address: address,
@@ -3566,11 +3591,13 @@ func TestRuntimeStorageIteration(t *testing.T) {
 					return nil
 				},
 			}
+
+			return runtimeInterface, &programStack
 		}
 
 		// Deploy contract
 
-		runtimeInterface := newRuntimeInterface()
+		runtimeInterface, programStack := newRuntimeInterface()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -3585,7 +3612,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Store values
 
-		runtimeInterface = newRuntimeInterface()
+		runtimeInterface, programStack = newRuntimeInterface()
 
 		err = runtime.ExecuteTransaction(
 			Script{
@@ -3621,7 +3648,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
 		contractIsBroken = true
 
-		runtimeInterface = newRuntimeInterface()
+		runtimeInterface, programStack = newRuntimeInterface()
 
 		// Read value
 		err = runtime.ExecuteTransaction(
@@ -3649,5 +3676,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+
+		require.Empty(t, *programStack)
 	})
 }
