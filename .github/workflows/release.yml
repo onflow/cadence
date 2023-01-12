@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+      base:
+        description: 'Base branch create the release'
+        required: false
+        default: 'master'
+
+env:
+  GO_VERSION: '1.19.2'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release branch
+        run: |
+          git checkout ${{ github.event.inputs.base }}
+          git checkout -b release/${{ github.event.inputs.version }}
+          git push origin release/${{ github.event.inputs.version }}
+
