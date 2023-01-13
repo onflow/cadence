@@ -58,4 +58,4 @@ jobs:
 
       - name: Check diff
         run: |
-          go run ./cmd/get_diff/main.go ../../tmp/output-old.txt ../../tmp/output-new.txt
+          go run ./cmd/check_diff/main.go ../../tmp/output-old.txt ../../tmp/output-new.txt

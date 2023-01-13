@@ -19,11 +19,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/onflow/cadence/tools/compatibility_check"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 func main() {
@@ -35,27 +36,40 @@ func main() {
 	oldResultsPath := os.Args[1]
 	newResultsPath := os.Args[2]
 
-	oldResultsFile, err := os.Open(oldResultsPath)
+	oldResultsFile, err := os.ReadFile(oldResultsPath)
 	if err != nil {
 		log.Err(err).Msgf("failed to open file: %s", oldResultsPath)
 		return
 	}
-	defer func() {
-		_ = oldResultsFile.Close()
-	}()
 
-	newResultsFile, err := os.Open(newResultsPath)
+	newResultsFile, err := os.ReadFile(newResultsPath)
 	if err != nil {
 		log.Err(err).Msgf("failed to open file: %s", newResultsPath)
 		return
 	}
-	defer func() {
-		_ = newResultsFile.Close()
-	}()
 
-	err = compatibility_check.CompareFiles(oldResultsFile, newResultsFile)
+	compareBytes(oldResultsFile, newResultsFile)
+}
 
-	if err != nil {
-		log.Fatal().Msg(err.Error())
+func compareBytes(old, new []byte) {
+	dmp := diffmatchpatch.New()
+
+	diffs := dmp.DiffMain(string(old), string(new), false)
+
+	changes := make([]diffmatchpatch.Diff, 0)
+
+	// Filter out only the diff chunks with changes.
+	// No need to print the equal chunks.
+	for _, diff := range diffs {
+		if diff.Type == diffmatchpatch.DiffEqual {
+			continue
+		}
+		changes = append(changes, diff)
+	}
+
+	fmt.Println(dmp.DiffPrettyText(changes))
+
+	if len(changes) > 0 {
+		log.Fatal().Msg("found differences")
 	}
 }
