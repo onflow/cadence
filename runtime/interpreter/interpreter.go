@@ -3318,24 +3318,6 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 	)
 }
 
-func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
-	defer func() {
-		if r := recover(); r != nil {
-			switch r := r.(type) {
-			case errors.UserError, errors.ExternalError:
-				typeError = r.(error)
-			default:
-				panic(r)
-			}
-		}
-	}()
-
-	// Here it is only interested in whether the type can be properly loaded.
-	_, typeError = interpreter.ConvertStaticToSemaType(staticType)
-
-	return
-}
-
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
