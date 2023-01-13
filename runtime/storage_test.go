@@ -3445,7 +3445,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Deploy contract
 
-		runtimeInterface, programStack := newRuntimeInterface()
+		runtimeInterface, _ := newRuntimeInterface()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -3460,7 +3460,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Store value
 
-		runtimeInterface, programStack = newRuntimeInterface()
+		runtimeInterface, _ = newRuntimeInterface()
 
 		err = runtime.ExecuteTransaction(
 			Script{
@@ -3488,6 +3488,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
 		contractIsBroken = true
+
+		var programStack *[]Location
 
 		runtimeInterface, programStack = newRuntimeInterface()
 
@@ -3602,7 +3604,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Deploy contract
 
-		runtimeInterface, programStack := newRuntimeInterface()
+		runtimeInterface, _ := newRuntimeInterface()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -3617,7 +3619,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Store values
 
-		runtimeInterface, programStack = newRuntimeInterface()
+		runtimeInterface, _ = newRuntimeInterface()
 
 		err = runtime.ExecuteTransaction(
 			Script{
@@ -3652,6 +3654,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
 		contractIsBroken = true
+
+		var programStack *[]Location
 
 		runtimeInterface, programStack = newRuntimeInterface()
 
@@ -3768,7 +3772,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Deploy contract
 
-		runtimeInterface, programStack := newRuntimeInterface()
+		runtimeInterface, _ := newRuntimeInterface()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -3783,7 +3787,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Store values
 
-		runtimeInterface, programStack = newRuntimeInterface()
+		runtimeInterface, _ = newRuntimeInterface()
 
 		err = runtime.ExecuteTransaction(
 			Script{
@@ -3818,6 +3822,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
 		contractIsBroken = true
+
+		var programStack *[]Location
 
 		runtimeInterface, programStack = newRuntimeInterface()
 
