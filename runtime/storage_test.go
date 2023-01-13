@@ -3404,6 +3404,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
         `))
 
 		newRuntimeInterface := func() (Interface, *[]Location) {
+			programs := map[Location]*interpreter.Program{}
 
 			var programStack []Location
 
@@ -3413,6 +3414,27 @@ func TestRuntimeStorageIteration(t *testing.T) {
 					return []Address{address}, nil
 				},
 				resolveLocation: singleIdentifierLocationResolver(t),
+				getProgram: func(location Location) (*interpreter.Program, error) {
+					programStack = append(programStack, location)
+					return programs[location], nil
+				},
+				setProgram: func(location Location, program *interpreter.Program) error {
+					programs[location] = program
+
+					if _, ok := location.(common.TransactionLocation); ok {
+						return nil
+					}
+
+					require.NotEmpty(t, programStack)
+					lastLocation := programStack[0]
+					require.Equal(t, lastLocation, location)
+
+					lastIndex := len(programStack) - 1
+					programStack[lastIndex] = nil
+					programStack = programStack[:lastIndex]
+
+					return nil
+				},
 				updateAccountContractCode: func(address Address, name string, code []byte) error {
 					location := common.AddressLocation{
 						Address: address,
