@@ -32,6 +32,7 @@ var deployedContractFieldNames = []string{
 	sema.DeployedContractTypeAddressFieldName,
 	sema.DeployedContractTypeNameFieldName,
 	sema.DeployedContractTypeCodeFieldName,
+	sema.DeployedContractTypePublicTypesFunctionName,
 }
 
 func NewDeployedContractValue(
@@ -40,15 +41,17 @@ func NewDeployedContractValue(
 	name *StringValue,
 	code *ArrayValue,
 ) *SimpleCompositeValue {
+	publicTypesFuncValue := newPublicTypesFunctionValue(inter, address, name)
 	return NewSimpleCompositeValue(
 		inter,
 		sema.DeployedContractType.TypeID,
 		deployedContractStaticType,
 		deployedContractFieldNames,
 		map[string]Value{
-			sema.DeployedContractTypeAddressFieldName: address,
-			sema.DeployedContractTypeNameFieldName:    name,
-			sema.DeployedContractTypeCodeFieldName:    code,
+			sema.DeployedContractTypeAddressFieldName:        address,
+			sema.DeployedContractTypeNameFieldName:           name,
+			sema.DeployedContractTypeCodeFieldName:           code,
+			sema.DeployedContractTypePublicTypesFunctionName: publicTypesFuncValue,
 		},
 		nil,
 		nil,
