@@ -1243,10 +1243,6 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return cadence.TheAccountKeyType
 	case "Block":
 		return cadence.TheBlockType
-	case "PathLink":
-		// PathLink type cannot exist at Cadence runtime.
-		// i.e: there is no run-time/internal type counterpart for external `PathLinkType`
-		panic(errors.NewDefaultUserError("unsupported type: %s", kindValue))
 	default:
 		fieldsValue := obj.Get(fieldsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))

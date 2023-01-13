@@ -1783,10 +1783,10 @@ func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string
 func (PathLink) isValue() {}
 
 func (v PathLink) Type() Type {
-	return ThePathLinkType
+	return nil
 }
 
-func (v PathLink) MeteredType(common.MemoryGauge) Type {
+func (v PathLink) MeteredType(_ common.MemoryGauge) Type {
 	return v.Type()
 }
 
