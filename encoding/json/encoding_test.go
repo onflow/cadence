@@ -1635,35 +1635,6 @@ func TestEncodeContract(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
 }
 
-func TestEncodeLink(t *testing.T) {
-
-	t.Parallel()
-
-	testEncodeAndDecode(
-		t,
-		cadence.NewPathLink(
-			cadence.NewPath("storage", "foo"),
-			"Bar",
-		),
-		// language=json
-		`
-          {
-            "type": "Link",
-            "value": {
-              "targetPath": {
-                "type": "Path",
-                "value": {
-                  "domain": "storage",
-                  "identifier": "foo"
-                }
-              },
-              "borrowType": "Bar"
-            }
-          }
-        `,
-	)
-}
-
 func TestEncodeSimpleTypes(t *testing.T) {
 
 	t.Parallel()
