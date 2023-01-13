@@ -382,11 +382,7 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 		wrapPanic(func() {
 			err = e.runtimeInterface.SetProgram(location, program)
 		})
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return err
 	}
 
 	wrapParsingCheckingError := func(err error) error {
