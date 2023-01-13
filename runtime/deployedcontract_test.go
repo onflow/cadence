@@ -28,11 +28,19 @@ func TestDeployedContracts(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				let deployedContract = signer.contracts.get(name: "Test")
-				log(signer.contracts.names)
 				assert(deployedContract!.name == "Test")
 
+				let expected: {String: Void} =  
+					{ "A.2a00000000000000.Test.A": ()
+					, "A.2a00000000000000.Test.B": ()
+					, "A.2a00000000000000.Test.C": ()
+					}
 				let types = deployedContract!.publicTypes()
-				let identifiers: [String] = []
+				assert(types.length == 3)
+
+				for type in types {
+					assert(expected[type.identifier] != nil, message: type.identifier)
+				}
 			}
 		}
 		`
@@ -55,13 +63,12 @@ func TestDeployedContracts(t *testing.T) {
 		},
 		getAccountContractNames: func(_ Address) ([]string, error) {
 			names := make([]string, 0, len(accountCodes))
-			for location, _ := range accountCodes {
+			for location := range accountCodes {
 				names = append(names, location.String())
 			}
 			return names, nil
 		},
-		emitEvent: func(event cadence.Event) error {
-			fmt.Println(event.String())
+		emitEvent: func(_ cadence.Event) error {
 			return nil
 		},
 		updateAccountContractCode: func(address common.Address, name string, code []byte) error {
@@ -69,7 +76,6 @@ func TestDeployedContracts(t *testing.T) {
 				Address: address, Name: name,
 			}
 			accountCodes[location] = code
-			fmt.Println(accountCodes)
 			return nil
 		},
 		log: func(msg string) {

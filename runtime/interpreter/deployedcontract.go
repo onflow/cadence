@@ -67,12 +67,12 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 	address := addressValue.ToAddress()
 	return NewHostFunctionValue(inter, func(inv Invocation) Value {
 		once.Do(func() {
-			inter := inv.Interpreter
-			contractLocation := common.NewAddressLocation(inter, address, name.Str)
+			innerInter := inv.Interpreter
+			contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
 			// we're only looking at the contract as a whole, so no need to construct a nested path
 			qualifiedIdent := name.Str
-			typeID := common.NewTypeIDFromQualifiedName(inter, contractLocation, qualifiedIdent)
-			compositeType, err := inter.GetCompositeType(contractLocation, qualifiedIdent, typeID)
+			typeID := common.NewTypeIDFromQualifiedName(innerInter, contractLocation, qualifiedIdent)
+			compositeType, err := innerInter.GetCompositeType(contractLocation, qualifiedIdent, typeID)
 			if err != nil {
 				panic(err)
 			}
@@ -83,15 +83,15 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 				if pair == nil {
 					return nil
 				}
-				typeValue := TypeValue{Type: ConvertSemaToStaticType(inter, pair.Value)}
+				typeValue := TypeValue{Type: ConvertSemaToStaticType(innerInter, pair.Value)}
 				pair = pair.Next()
 				return typeValue
 			}
 
 			publicTypes = NewArrayValueWithIterator(
-				inter,
-				NewVariableSizedStaticType(inter, PrimitiveStaticTypeMetaType),
-				address,
+				innerInter,
+				NewVariableSizedStaticType(innerInter, PrimitiveStaticTypeMetaType),
+				common.Address{0x0},
 				uint64(nestedTypes.Len()),
 				yieldNext,
 			)
