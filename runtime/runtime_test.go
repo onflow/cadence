@@ -630,7 +630,7 @@ func TestRuntimeImport(t *testing.T) {
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
 
 	const transactionCount = 10
 	for i := 0; i < transactionCount; i++ {
@@ -641,7 +641,7 @@ func TestRuntimeImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  nextScriptLocation(),
 			},
 		)
 		require.NoError(t, err)
@@ -709,13 +709,13 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
 
 	var wg sync.WaitGroup
 	const concurrency uint64 = 10
 	for i := uint64(0); i < concurrency; i++ {
 
-		location := nextTransactionLocation()
+		location := nextScriptLocation()
 
 		wg.Add(1)
 		go func() {
@@ -760,6 +760,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
       }
     `)
 	importedScriptLocation := common.StringLocation("imported")
+	scriptLocation := common.StringLocation("placeholder")
 
 	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{
@@ -795,7 +796,6 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
               execute {}
           }
         `)
-		scriptLocation := common.StringLocation("placeholder")
 
 		// Initial call, should parse script, store program.
 		_, err := runtime.ParseAndCheckProgram(
@@ -826,7 +826,6 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
               execute {}
           }
         `)
-		scriptLocation := common.StringLocation("placeholder")
 
 		// Call a second time to hit stored programs.
 		_, err := runtime.ParseAndCheckProgram(
@@ -838,8 +837,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 		)
 		assert.NoError(t, err)
 
-		// Script was not in stored programs.
-		assert.False(t, programsHits[scriptLocation])
+		assert.True(t, programsHits[scriptLocation])
 	})
 
 	t.Run("imported program previously parsed, hit", func(t *testing.T) {
@@ -852,7 +850,6 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
               execute {}
           }
         `)
-		scriptLocation := common.StringLocation("placeholder")
 
 		// Call a second time to hit the stored programs
 		_, err := runtime.ParseAndCheckProgram(
@@ -864,19 +861,27 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 		)
 		assert.NoError(t, err)
 
-		// Script was not in stored programs.
-		assert.False(t, programsHits[scriptLocation])
-		// Import was in stored programs.
-		assert.True(t, programsHits[importedScriptLocation])
+		assert.True(t, programsHits[scriptLocation])
+		assert.False(t, programsHits[importedScriptLocation])
 	})
 }
 
-func newTransactionLocationGenerator() func() common.TransactionLocation {
-	var transactionCount uint8
-	return func() common.TransactionLocation {
-		defer func() { transactionCount++ }()
-		return common.TransactionLocation{transactionCount}
+func newLocationGenerator[T ~[32]byte]() func() T {
+	var count int
+	return func() T {
+		defer func() { count++ }()
+		t := T{}
+		binary.LittleEndian.PutUint64(t[:], uint64(count))
+		return t
 	}
+}
+
+func newTransactionLocationGenerator() func() common.TransactionLocation {
+	return newLocationGenerator[common.TransactionLocation]()
+}
+
+func newScriptLocationGenerator() func() common.ScriptLocation {
+	return newLocationGenerator[common.ScriptLocation]()
 }
 
 func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
@@ -967,6 +972,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		args         [][]byte
 		authorizers  []Address
 		expectedLogs []string
+		contracts    map[common.AddressLocation][]byte
 	}
 
 	var tests = []testCase{
@@ -1151,19 +1157,29 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		},
 		{
 			label: "Struct",
+			contracts: map[common.AddressLocation][]byte{
+				{
+					Address: common.MustBytesToAddress([]byte{0x1}),
+					Name:    "C",
+				}: []byte(`
+                  pub contract C {
+                      pub struct Foo {
+                           pub var y: String
+
+                           init() {
+                               self.y = "initial string"
+                           }
+                      }
+                  }
+                `),
+			},
 			script: `
-              pub struct Foo {
-                pub var y: String
+              import C from 0x1
 
-                init() {
-                  self.y = "initial string"
-                }
-               }
-
-              transaction(x: Foo) {
-                execute {
-                  log(x.y)
-                }
+              transaction(x: C.Foo) {
+                  execute {
+                      log(x.y)
+                  }
               }
             `,
 			args: [][]byte{
@@ -1171,8 +1187,11 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 					cadence.
 						NewStruct([]cadence.Value{cadence.String("bar")}).
 						WithType(&cadence.StructType{
-							Location:            TestLocation,
-							QualifiedIdentifier: "Foo",
+							Location: common.AddressLocation{
+								Address: common.MustBytesToAddress([]byte{0x1}),
+								Name:    "C",
+							},
+							QualifiedIdentifier: "C.Foo",
 							Fields: []cadence.Field{
 								{
 									Identifier: "y",
@@ -1186,16 +1205,26 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		},
 		{
 			label: "Struct in array",
+			contracts: map[common.AddressLocation][]byte{
+				{
+					Address: common.MustBytesToAddress([]byte{0x1}),
+					Name:    "C",
+				}: []byte(`
+                  pub contract C {
+                      pub struct Foo {
+                           pub var y: String
+
+                           init() {
+                               self.y = "initial string"
+                           }
+                      }
+                  }
+                `),
+			},
 			script: `
-              pub struct Foo {
-                pub var y: String
+              import C from 0x1
 
-                init() {
-                  self.y = "initial string"
-                }
-               }
-
-              transaction(f: [Foo]) {
+              transaction(f: [C.Foo]) {
                 execute {
                   let x = f[0]
                   log(x.y)
@@ -1208,8 +1237,11 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 						cadence.
 							NewStruct([]cadence.Value{cadence.String("bar")}).
 							WithType(&cadence.StructType{
-								Location:            TestLocation,
-								QualifiedIdentifier: "Foo",
+								Location: common.AddressLocation{
+									Address: common.MustBytesToAddress([]byte{0x1}),
+									Name:    "C",
+								},
+								QualifiedIdentifier: "C.Foo",
 								Fields: []cadence.Field{
 									{
 										Identifier: "y",
@@ -1239,6 +1271,14 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				getSigningAccounts: func() ([]Address, error) {
 					return tc.authorizers, nil
 				},
+				resolveLocation: singleIdentifierLocationResolver(t),
+				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+					location := common.AddressLocation{
+						Address: address,
+						Name:    name,
+					}
+					return tc.contracts[location], nil
+				},
 				log: func(message string) {
 					loggedMessages = append(loggedMessages, message)
 				},
@@ -1257,7 +1297,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  TestLocation,
+					Location:  common.TransactionLocation{},
 				},
 			)
 
@@ -1519,7 +1559,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 					cadence.
 						NewStruct([]cadence.Value{cadence.String("bar")}).
 						WithType(&cadence.StructType{
-							Location:            TestLocation,
+							Location:            common.ScriptLocation{},
 							QualifiedIdentifier: "Foo",
 							Fields: []cadence.Field{
 								{
@@ -1554,7 +1594,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						cadence.
 							NewStruct([]cadence.Value{cadence.String("bar")}).
 							WithType(&cadence.StructType{
-								Location:            TestLocation,
+								Location:            common.ScriptLocation{},
 								QualifiedIdentifier: "Foo",
 								Fields: []cadence.Field{
 									{
@@ -1602,7 +1642,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  TestLocation,
+					Location:  common.ScriptLocation{},
 				},
 			)
 
@@ -2726,15 +2766,13 @@ func TestRuntimeScriptParameterTypeNotImportableError(t *testing.T) {
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	_, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  common.ScriptLocation{},
 		},
 	)
 	RequireError(t, err)
@@ -3173,6 +3211,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -3195,7 +3234,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -3210,7 +3249,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -6124,6 +6163,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
 
 	// create the account
 
@@ -6179,7 +6219,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -6228,14 +6268,14 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)
 	require.Equal(t, cadence.String("2"), result2)
 }
 
-func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
+func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 
 	// We do not want to hit the stored programs for toplevel programs
 	// (scripts and transactions) until we have moved the caching layer to Cadence.
@@ -6377,19 +6417,31 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// We should only receive a cache hit for the imported program, not the transactions/scripts.
-
-	require.GreaterOrEqual(t, len(programsHits), 1)
-
-	for _, cacheHit := range programsHits {
-		require.Equal(t,
+	require.Equal(t,
+		[]common.Location{
+			common.TransactionLocation{
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.TransactionLocation{
+				0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.TransactionLocation{
+				0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
 			common.AddressLocation{
 				Address: Address{1},
 				Name:    "HelloWorld",
 			},
-			cacheHit,
-		)
-	}
+			common.AddressLocation{
+				Address: Address{1},
+				Name:    "HelloWorld",
+			},
+		},
+		programsHits,
+	)
 }
 
 func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
@@ -6560,13 +6612,15 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
       }
     `)
 
+	nextScriptLocation := newScriptLocationGenerator()
+
 	_, err = runtime.ExecuteScript(
 		Script{
 			Source: script1,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -6631,7 +6685,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -6794,15 +6848,13 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -6831,15 +6883,13 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -6868,15 +6918,13 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		res, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -6987,8 +7035,6 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
-
 	t.Run("script with go error", func(t *testing.T) {
 
 		t.Parallel()
@@ -6999,6 +7045,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
           }
         `)
 
+		runtime := newTestInterpreterRuntime()
+
 		runtimeInterface := &testRuntimeInterface{
 			log: func(message string) {
 				// panic due to go-error in cadence implementation
@@ -7007,15 +7055,13 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -7034,6 +7080,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
           }
         `)
 
+		runtime := newTestInterpreterRuntime()
+
 		runtimeInterface := &testRuntimeInterface{
 			log: func(message string) {
 				// intentionally panic
@@ -7041,15 +7089,13 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -7071,6 +7117,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
           }
         `)
 
+		runtime := newTestInterpreterRuntime()
+
 		runtimeInterface := &testRuntimeInterface{
 			log: func(message string) {
 				// panic due to Cadence implementation error
@@ -7079,15 +7127,13 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.TransactionLocation{},
 			},
 		)
 
@@ -7115,6 +7161,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		var accountCode []byte
 
 		storage := newTestLedger(nil, nil)
+
+		runtime := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -7179,6 +7227,9 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		t.Parallel()
 
 		script := []byte("pub fun test() {}")
+
+		runtime := newTestInterpreterRuntime()
+
 		runtimeInterface := &testRuntimeInterface{
 			setProgram: func(location Location, program *interpreter.Program) error {
 				panic(errors.New("crash while setting program"))
@@ -7203,6 +7254,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 	t.Run("read stored", func(t *testing.T) {
 
 		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: testLedger{
@@ -7234,6 +7287,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 	t.Run("read linked", func(t *testing.T) {
 
 		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: testLedger{
@@ -7268,6 +7323,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		script := []byte(`pub fun main() {}`)
 
+		runtime := newTestInterpreterRuntime()
+
 		runtimeInterface := &testRuntimeInterface{
 			meterMemory: func(usage common.MemoryUsage) error {
 				// panic with a non-error type
@@ -7275,15 +7332,13 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -7448,7 +7503,7 @@ func TestRuntimeImportAnyStruct(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  TestLocation,
+			Location:  common.TransactionLocation{},
 		},
 	)
 	require.NoError(t, err)
@@ -7539,7 +7594,7 @@ func TestRuntimeImportTestStdlib(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 
@@ -7552,7 +7607,7 @@ func TestRuntimeImportTestStdlib(t *testing.T) {
 	assert.Equal(t, "Test", notDeclaredErr.Name)
 }
 
-func TestRuntime(t *testing.T) {
+func TestRuntimeGetCurrentBlockScript(t *testing.T) {
 
 	t.Parallel()
 
@@ -7570,7 +7625,7 @@ func TestRuntime(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 
@@ -7633,6 +7688,7 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
 
 	// Deploy same contract to two different accounts
 
@@ -7698,7 +7754,7 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.Error(t, err)
