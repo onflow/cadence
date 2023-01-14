@@ -48,7 +48,7 @@ type Environment interface {
 	ParseAndCheckProgram(
 		code []byte,
 		location common.Location,
-		storeProgram bool,
+		getAndSetProgram bool,
 	) (
 		*interpreter.Program,
 		error,
@@ -335,15 +335,17 @@ func (e *interpreterEnvironment) TemporarilyRecordCode(location common.AddressLo
 func (e *interpreterEnvironment) ParseAndCheckProgram(
 	code []byte,
 	location common.Location,
-	storeProgram bool,
+	getAndSetProgram bool,
 ) (
 	*interpreter.Program,
 	error,
 ) {
-	return e.parseAndCheckProgram(
-		code,
+	return e.getProgram(
 		location,
-		storeProgram,
+		func() ([]byte, error) {
+			return code, nil
+		},
+		getAndSetProgram,
 		importResolutionResults{},
 	)
 }
@@ -528,7 +530,12 @@ func (e *interpreterEnvironment) resolveImport(
 			defer delete(e.checkedImports, importedLocation)
 		}
 
-		program, err := e.getProgram(importedLocation, e.checkedImports)
+		const getAndSetProgram = true
+		program, err := e.GetProgram(
+			importedLocation,
+			getAndSetProgram,
+			e.checkedImports,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -541,36 +548,55 @@ func (e *interpreterEnvironment) resolveImport(
 	}, nil
 }
 
-func (e *interpreterEnvironment) GetProgram(location Location) (*interpreter.Program, error) {
-	return e.getProgram(location, importResolutionResults{})
+func (e *interpreterEnvironment) GetProgram(
+	location Location,
+	storeProgram bool,
+	checkedImports importResolutionResults,
+) (
+	*interpreter.Program,
+	error,
+) {
+	return e.getProgram(
+		location,
+		func() ([]byte, error) {
+			return e.getCode(location)
+		},
+		storeProgram,
+		checkedImports,
+	)
 }
 
 // getProgram returns the existing program at the given location, if available.
 // If it is not available, it loads the code, and then parses and checks it.
 func (e *interpreterEnvironment) getProgram(
 	location Location,
+	getCode func() ([]byte, error),
+	getAndSetProgram bool,
 	checkedImports importResolutionResults,
 ) (
 	program *interpreter.Program,
 	err error,
 ) {
-	wrapPanic(func() {
-		program, err = e.runtimeInterface.GetProgram(location)
-	})
-	if err != nil {
-		return nil, err
+	if getAndSetProgram {
+		wrapPanic(func() {
+			program, err = e.runtimeInterface.GetProgram(location)
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if program == nil {
-		var code []byte
-		code, err = e.getCode(location)
+		code, err := getCode()
 		if err != nil {
-			var setProgramErr error
-			wrapPanic(func() {
-				setProgramErr = e.runtimeInterface.SetProgram(location, program)
-			})
-			if setProgramErr != nil {
-				return nil, setProgramErr
+			if getAndSetProgram {
+				var setProgramErr error
+				wrapPanic(func() {
+					setProgramErr = e.runtimeInterface.SetProgram(location, program)
+				})
+				if setProgramErr != nil {
+					return nil, setProgramErr
+				}
 			}
 			return nil, err
 		}
@@ -582,7 +608,7 @@ func (e *interpreterEnvironment) getProgram(
 		program, err = e.parseAndCheckProgram(
 			code,
 			location,
-			true,
+			getAndSetProgram,
 			checkedImports,
 		)
 		if err != nil {
@@ -853,7 +879,12 @@ func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLo
 			}
 
 		default:
-			program, err := e.GetProgram(location)
+			const getAndSetProgram = true
+			program, err := e.GetProgram(
+				location,
+				getAndSetProgram,
+				importResolutionResults{},
+			)
 			if err != nil {
 				panic(err)
 			}

@@ -3421,9 +3421,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				setProgram: func(location Location, program *interpreter.Program) error {
 					programs[location] = program
 
-					if _, ok := location.(common.TransactionLocation); ok {
-						return nil
-					}
 					require.NotEmpty(t, programStack)
 					lastIndex := len(programStack) - 1
 					lastLocation := programStack[lastIndex]
@@ -3579,9 +3576,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				setProgram: func(location Location, program *interpreter.Program) error {
 					programs[location] = program
 
-					if _, ok := location.(common.TransactionLocation); ok {
-						return nil
-					}
 					require.NotEmpty(t, programStack)
 					lastIndex := len(programStack) - 1
 					lastLocation := programStack[lastIndex]
@@ -3744,9 +3738,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				setProgram: func(location Location, program *interpreter.Program) error {
 					programs[location] = program
 
-					if _, ok := location.(common.TransactionLocation); ok {
-						return nil
-					}
 					require.NotEmpty(t, programStack)
 					lastIndex := len(programStack) - 1
 					lastLocation := programStack[lastIndex]
