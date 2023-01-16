@@ -867,11 +867,11 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 }
 
 func newLocationGenerator[T ~[32]byte]() func() T {
-	var count int
+	var count uint64
 	return func() T {
-		defer func() { count++ }()
+		defer atomic.AddUint64(&count, 1)
 		t := T{}
-		binary.LittleEndian.PutUint64(t[:], uint64(count))
+		binary.LittleEndian.PutUint64(t[:], count)
 		return t
 	}
 }
