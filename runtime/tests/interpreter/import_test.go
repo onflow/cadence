@@ -89,7 +89,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 						"Foo",
 						common.CompositeKindContract,
 						nil,
-						common.Address{},
+						common.NilAddress,
 					)
 
 					value.Functions = map[string]interpreter.FunctionValue{

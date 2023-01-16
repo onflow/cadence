@@ -1198,7 +1198,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			return contractValue
 		}
 	} else {
-		constructor := constructorGenerator(common.Address{})
+		constructor := constructorGenerator(common.NilAddress)
 		constructor.NestedVariables = nestedVariables
 		variable.SetValue(constructor)
 	}
@@ -1268,7 +1268,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			qualifiedIdentifier,
 			declaration.CompositeKind,
 			caseValueFields,
-			common.Address{},
+			common.NilAddress,
 		)
 		caseValues[i] = EnumCase{
 			Value:    caseValue,
@@ -3216,7 +3216,7 @@ func (interpreter *Interpreter) accountPaths(addressValue AddressValue, location
 		interpreter,
 		locationRange,
 		NewVariableSizedStaticType(interpreter, pathType),
-		common.Address{},
+		common.NilAddress,
 		values...,
 	)
 }

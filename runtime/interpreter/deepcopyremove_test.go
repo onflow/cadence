@@ -70,7 +70,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 		VariableSizedStaticType{
 			Type: dictionaryStaticType,
 		},
-		common.Address{},
+		common.NilAddress,
 		dictValue,
 	)
 

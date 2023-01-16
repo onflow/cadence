@@ -55,13 +55,13 @@ func TestInspectValue(t *testing.T) {
 			VariableSizedStaticType{
 				Type: dictionaryStaticType,
 			},
-			common.Address{},
+			common.NilAddress,
 			dictValue,
 		)
 
 		optionalValue := NewUnmeteredSomeValueNonCopying(arrayValue)
 
-		compositeValue = newTestCompositeValue(inter, common.Address{})
+		compositeValue = newTestCompositeValue(inter, common.NilAddress)
 		compositeValue.SetMember(
 			inter,
 			EmptyLocationRange,

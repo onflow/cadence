@@ -132,7 +132,7 @@ func TestInterpretToBytes(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
-				common.Address{},
+				common.NilAddress,
 				interpreter.NewUnmeteredUInt8Value(0x0),
 				interpreter.NewUnmeteredUInt8Value(0x0),
 				interpreter.NewUnmeteredUInt8Value(0x0),

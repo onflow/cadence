@@ -217,7 +217,7 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 				invocation.Interpreter,
 				interpreter.ByteArrayStaticType,
 			),
-			common.Address{},
+			common.NilAddress,
 			values...,
 		)
 	},

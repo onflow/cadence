@@ -60,7 +60,7 @@ func NewPublicKeyValue(
 		sema.PublicKeyType.QualifiedIdentifier(),
 		sema.PublicKeyType.Kind,
 		fields,
-		common.Address{},
+		common.NilAddress,
 	)
 
 	publicKeyValue.ComputedFields = map[string]ComputedField{

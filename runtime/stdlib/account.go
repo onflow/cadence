@@ -1222,7 +1222,7 @@ func newAccountContractsGetNamesFunction(
 			inter,
 			locationRange,
 			arrayType,
-			common.Address{},
+			common.NilAddress,
 			values...,
 		)
 	}

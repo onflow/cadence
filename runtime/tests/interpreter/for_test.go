@@ -248,7 +248,7 @@ func TestInterpretForString(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeCharacter,
 			},
-			common.Address{},
+			common.NilAddress,
 			interpreter.NewUnmeteredCharacterValue("👪"),
 			interpreter.NewUnmeteredCharacterValue("❤️"),
 		),

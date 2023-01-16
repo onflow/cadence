@@ -106,7 +106,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
-				common.Address{},
+				common.NilAddress,
 				interpreter.NewUnmeteredUInt8Value(1),
 				interpreter.NewUnmeteredUInt8Value(0xCA),
 				interpreter.NewUnmeteredUInt8Value(0xDE),
@@ -272,7 +272,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
-			common.Address{},
+			common.NilAddress,
 			// Flowers
 			interpreter.NewUnmeteredUInt8Value(70),
 			interpreter.NewUnmeteredUInt8Value(108),

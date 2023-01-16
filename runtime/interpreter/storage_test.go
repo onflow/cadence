@@ -115,7 +115,7 @@ func TestArrayStorage(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		element := newTestCompositeValue(inter, common.Address{})
+		element := newTestCompositeValue(inter, common.NilAddress)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -125,7 +125,7 @@ func TestArrayStorage(t *testing.T) {
 			VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
-			common.Address{},
+			common.NilAddress,
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -181,7 +181,7 @@ func TestArrayStorage(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		element := newTestCompositeValue(inter, common.Address{})
+		element := newTestCompositeValue(inter, common.NilAddress)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -191,7 +191,7 @@ func TestArrayStorage(t *testing.T) {
 			VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
-			common.Address{},
+			common.NilAddress,
 			element,
 		)
 
@@ -449,7 +449,7 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	address := common.Address{}
+	address := common.NilAddress
 
 	array1 := NewArrayValue(
 		inter,
