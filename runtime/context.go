@@ -29,6 +29,9 @@ type Context struct {
 	CoverageReport *CoverageReport
 }
 
+// codesAndPrograms collects the source code and AST for each location.
+// It is purely used for debugging: Both the codes and the programs
+// are provided in runtime errors.
 type codesAndPrograms struct {
 	codes    map[Location][]byte
 	programs map[Location]*ast.Program

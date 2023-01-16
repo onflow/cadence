@@ -2241,30 +2241,36 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		programSets = locationAccessCounts{}
 
 		runtimeInterface = &testRuntimeInterface{
-			getProgram: func(location Location) (*interpreter.Program, error) {
-
+			getAndSetProgram: func(
+				location Location,
+				load func() (*interpreter.Program, error),
+			) (
+				program *interpreter.Program,
+				err error,
+			) {
 				if runtimeInterface.programs == nil {
 					runtimeInterface.programs = map[Location]*interpreter.Program{}
 				}
 
-				program := runtimeInterface.programs[location]
+				var ok bool
+				program, ok = runtimeInterface.programs[location]
 				if program != nil {
 					programGets[location]++
 				}
-
-				return program, nil
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-
-				programSets[location]++
-
-				if runtimeInterface.programs == nil {
-					runtimeInterface.programs = map[Location]*interpreter.Program{}
+				if ok {
+					return
 				}
+
+				program, err = load()
+
+				// NOTE: important: still set empty program,
+				// even if error occurred
 
 				runtimeInterface.programs[location] = program
 
-				return nil
+				programSets[location]++
+
+				return
 			},
 			getCode: func(location Location) (bytes []byte, err error) {
 				return accountCodes[location], nil

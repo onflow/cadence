@@ -283,7 +283,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					"  |\n"+
 					"4 |               fun testCase() {}\n"+
 					"  |               ^\n",
-				1,
+				2,
 			),
 		})
 	})
@@ -333,7 +333,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					"  |\n"+
 					"3 |                   pub fun test() { X }\n"+
 					"  |                                    ^ not found in this scope\n",
-				1,
+				2,
 			),
 		})
 	})
