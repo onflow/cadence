@@ -314,15 +314,16 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllNumberTypes {
+			typString := typ.QualifiedString()
 
-			t.Run(typ.QualifiedString(), func(t *testing.T) {
+			t.Run(typString, func(t *testing.T) {
 				t.Parallel()
 
 				script := fmt.Sprintf(`
                         pub fun main(arg: %s?) {
                         }
                     `,
-					typ.QualifiedString(),
+					typString,
 				)
 
 				err := executeScript(t, script, cadence.NewOptional(nil))
@@ -830,15 +831,16 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllNumberTypes {
+			typString := typ.QualifiedString()
 
-			t.Run(typ.QualifiedString(), func(t *testing.T) {
+			t.Run(typString, func(t *testing.T) {
 				t.Parallel()
 
 				script := fmt.Sprintf(`
                         transaction(arg: %s?) {
                         }
                     `,
-					typ.QualifiedString(),
+					typString,
 				)
 
 				err := executeTransaction(t, script, cadence.NewOptional(nil))
