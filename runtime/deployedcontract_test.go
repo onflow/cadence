@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -97,9 +96,7 @@ func TestDeployedContracts(t *testing.T) {
 			accountCodes[location] = code
 			return nil
 		},
-		log: func(msg string) {
-			fmt.Println(msg)
-		},
+		log:     func(msg string) {},
 		storage: newTestLedger(nil, nil),
 	}
 
@@ -122,10 +119,7 @@ func TestDeployedContracts(t *testing.T) {
 		Script{
 			Source: []byte(script),
 		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
+		newContext(),
 	)
 
 	require.NoError(t, err)

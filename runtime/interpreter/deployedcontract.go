@@ -19,8 +19,6 @@
 package interpreter
 
 import (
-	"sync"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -61,12 +59,11 @@ func NewDeployedContractValue(
 
 func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, name *StringValue) FunctionValue {
 	// public types only need to be computed once per contract
-	var once sync.Once
 	var publicTypes *ArrayValue
 
 	address := addressValue.ToAddress()
 	return NewHostFunctionValue(inter, func(inv Invocation) Value {
-		once.Do(func() {
+		if publicTypes == nil {
 			innerInter := inv.Interpreter
 			contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
 			// we're only looking at the contract as a whole, so no need to construct a nested path
@@ -83,7 +80,7 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 				if pair == nil {
 					return nil
 				}
-				typeValue := TypeValue{Type: ConvertSemaToStaticType(innerInter, pair.Value)}
+				typeValue := NewTypeValue(innerInter, ConvertSemaToStaticType(innerInter, pair.Value))
 				pair = pair.Next()
 				return typeValue
 			}
@@ -91,11 +88,11 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 			publicTypes = NewArrayValueWithIterator(
 				innerInter,
 				NewVariableSizedStaticType(innerInter, PrimitiveStaticTypeMetaType),
-				common.Address{0x0},
+				common.Address{},
 				uint64(nestedTypes.Len()),
 				yieldNext,
 			)
-		})
+		}
 
 		return publicTypes
 	}, sema.DeployedContractTypePublicTypesFunctionType)
