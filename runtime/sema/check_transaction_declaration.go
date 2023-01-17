@@ -74,8 +74,6 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		ast.AcceptDeclaration[struct{}](role, checker)
 	}
 
-	// TODO: declare variables for all blocks
-
 	if declaration.PreConditions != nil {
 		checker.visitConditions(*declaration.PreConditions)
 	}

@@ -512,6 +512,30 @@ func TestCheckTransactionRoles(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("field, prepare, execute", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                role foo {
+
+                  let bar: Int
+
+                  prepare() {
+                    self.bar = 1
+                  }
+                }
+
+                execute {
+                  let bar: Int = self.foo.bar
+                }
+              }
+            `,
+			nil,
+		)
+	})
 }
 
 func TestCheckTransactionExecuteScope(t *testing.T) {
