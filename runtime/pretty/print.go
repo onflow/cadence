@@ -251,18 +251,24 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 
 	lines := strings.Split(string(code), "\n")
 
-	for excerptIndex, excerpt := range excerpts {
+	for i, excerpt := range excerpts {
 
 		lineNumberString := ""
 		lineNumberLength := 0
 		if excerpt.startPos != nil {
 
-			plainLineNumberString := strconv.Itoa(excerpt.endPos.Line)
+			plainLineNumberString := strconv.Itoa(excerpt.startPos.Line)
 			lineNumberLength = len(plainLineNumberString)
+
+			// prepare line number string
+			lineNumberString = plainLineNumberString + " | "
+			if p.useColor {
+				lineNumberString = colorizeMeta(lineNumberString)
+			}
 		}
 
 		// write arrow, location, and position (if any)
-		if excerptIndex == 0 {
+		if i == 0 {
 			p.writeCodeExcerptLocation(location, lineNumberLength, excerpt.startPos)
 		}
 
@@ -272,7 +278,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			excerpt.startPos.Line <= len(lines) &&
 			len(code) > 0 {
 
-			if excerptIndex > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
+			if i > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
 				p.writeCodeExcerptContinuation(lineNumberLength)
 			}
 			lastLineNumber = excerpt.startPos.Line
@@ -287,35 +293,19 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			p.writeString(emptyLineNumbers)
 			p.writeString("\n")
 
-			var line string
-			for lineNumber := excerpt.startPos.Line - 1; lineNumber < excerpt.endPos.Line; lineNumber++ {
-				plainLineNumberString := strconv.Itoa(lineNumber + 1)
+			// line number
+			p.writeString(lineNumberString)
 
-				// if the line number increases in digit length during the error,
-				// fill the extra space with blank spaces
-				if lineNumberLength > len(plainLineNumberString) {
-					p.writeString(" ")
-				}
-
-				// prepare line number string
-				lineNumberString = plainLineNumberString + " | "
-				if p.useColor {
-					lineNumberString = colorizeMeta(lineNumberString)
-				}
-				// line number
-				p.writeString(lineNumberString)
-
-				// code line
-				line = lines[lineNumber]
-				if len(line) > maxLineLength {
-					p.writeString(line[:maxLineLength])
-					p.writeString(excerptDots)
-				} else {
-					p.writeString(line)
-				}
-
-				p.writeString("\n")
+			// code line
+			line := lines[excerpt.startPos.Line-1]
+			if len(line) > maxLineLength {
+				p.writeString(line[:maxLineLength])
+				p.writeString(excerptDots)
+			} else {
+				p.writeString(line)
 			}
+
+			p.writeString("\n")
 
 			// indicator line
 			p.writeString(emptyLineNumbers)
@@ -326,7 +316,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			}
 
 			p.writeString(" ")
-			for i := 0; i < indicatorLength && i < excerpt.endPos.Column; i++ {
+			for i := 0; i < indicatorLength; i++ {
 				c := line[i]
 				if c != '\t' {
 					c = ' '
@@ -335,7 +325,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			}
 
 			columns := 1
-			if excerpt.endPos != nil {
+			if excerpt.endPos != nil && excerpt.endPos.Line == excerpt.startPos.Line {
 				endColumn := excerpt.endPos.Column
 				if endColumn >= maxLineLength {
 					endColumn = maxLineLength - 1
