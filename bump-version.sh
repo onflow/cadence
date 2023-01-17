@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 v=$(git describe --tags --abbrev=0 | sed -Ee 's/^v|-.*//')
 
