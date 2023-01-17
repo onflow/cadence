@@ -247,7 +247,7 @@ func (*TransactionRoleDeclaration) isDeclaration() {}
 func (*TransactionRoleDeclaration) isStatement()   {}
 
 func (d *TransactionRoleDeclaration) DeclarationIdentifier() *Identifier {
-	return nil
+	return &d.Identifier
 }
 
 func (d *TransactionRoleDeclaration) DeclarationKind() common.DeclarationKind {
@@ -263,7 +263,7 @@ func (d *TransactionRoleDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *TransactionRoleDeclaration) DeclarationDocString() string {
-	return ""
+	return d.DocString
 }
 
 func (d *TransactionRoleDeclaration) MarshalJSON() ([]byte, error) {

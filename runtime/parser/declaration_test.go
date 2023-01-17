@@ -3741,9 +3741,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
             role buyer {
               var x: Int
 
-		      prepare(signer: AuthAccount) {
-	            x = 0
-			  }
+              prepare(signer: AuthAccount) {
+                x = 0
+              }
             }
           }
         `)
