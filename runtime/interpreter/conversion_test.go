@@ -48,7 +48,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeUInt64,
 				},
-				common.NilAddress,
+				common.ZeroAddress,
 				NewUnmeteredUInt64Value(500),
 			),
 			NewArrayValue(
@@ -57,7 +57,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
-				common.NilAddress,
+				common.ZeroAddress,
 				NewUnmeteredInt256ValueFromBigInt(largeBigInt),
 			),
 			NewUnmeteredUInt64Value(500),
@@ -82,7 +82,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.NilAddress,
+				common.ZeroAddress,
 			): nil,
 			NewArrayValue(
 				inter,
@@ -90,7 +90,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.NilAddress,
+				common.ZeroAddress,
 				NewUnmeteredUInt64Value(2),
 				NewUnmeteredUInt128ValueFromUint64(3),
 			): {2, 3},
@@ -100,7 +100,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.NilAddress,
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(4),
 				NewUnmeteredIntValueFromInt64(5),
 			): {4, 5},

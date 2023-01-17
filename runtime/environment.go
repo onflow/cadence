@@ -880,7 +880,7 @@ func (e *interpreterEnvironment) loadContract(
 	case stdlib.CryptoCheckerLocation:
 		contract, err := stdlib.NewCryptoContract(
 			inter,
-			constructorGenerator(common.NilAddress),
+			constructorGenerator(common.ZeroAddress),
 			invocationRange,
 		)
 		if err != nil {

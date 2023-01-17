@@ -145,7 +145,7 @@ func NewBlockValue(
 		inter,
 		locationRange,
 		BlockIDStaticType,
-		common.NilAddress,
+		common.ZeroAddress,
 		values...,
 	)
 

@@ -822,7 +822,7 @@ func newEmulatorBackend(
 		emulatorBackendTypeName,
 		common.CompositeKindStructure,
 		fields,
-		common.NilAddress,
+		common.ZeroAddress,
 	)
 }
 
@@ -1611,7 +1611,7 @@ func NewTestInterpreterContractValueHandler(
 		case CryptoCheckerLocation:
 			contract, err := NewCryptoContract(
 				inter,
-				constructorGenerator(common.NilAddress),
+				constructorGenerator(common.ZeroAddress),
 				invocationRange,
 			)
 			if err != nil {
@@ -1623,7 +1623,7 @@ func NewTestInterpreterContractValueHandler(
 			contract, err := NewTestContract(
 				inter,
 				testFramework,
-				constructorGenerator(common.NilAddress),
+				constructorGenerator(common.ZeroAddress),
 				invocationRange,
 			)
 			if err != nil {
@@ -1634,7 +1634,7 @@ func NewTestInterpreterContractValueHandler(
 		default:
 			// During tests, imported contracts can be constructed using the constructor,
 			// similar to structs. Therefore, generate a constructor function.
-			return constructorGenerator(common.NilAddress)
+			return constructorGenerator(common.ZeroAddress)
 		}
 	}
 }

@@ -32,7 +32,7 @@ const AddressLength = 8
 type Address [AddressLength]byte
 
 // Singleton for address 0x0. This should be used in place of an empty initializer `Address{}`
-var NilAddress Address = Address{}
+var ZeroAddress Address = Address{}
 
 // MustBytesToAddress returns Address with value b.
 //
