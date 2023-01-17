@@ -513,7 +513,7 @@ func TestCheckTransactionRoles(t *testing.T) {
 		)
 	})
 
-	t.Run("field, prepare, execute", func(t *testing.T) {
+	t.Run("multiple roles, one field each, execute", func(t *testing.T) {
 		test(
 			t,
 			`
@@ -528,8 +528,18 @@ func TestCheckTransactionRoles(t *testing.T) {
                   }
                 }
 
+                role ying {
+
+                  let yang: String
+
+                  prepare() {
+                    self.yang = "2"
+                  }
+                }
+
                 execute {
                   let bar: Int = self.foo.bar
+                  let yang: String = self.ying.yang
                 }
               }
             `,
