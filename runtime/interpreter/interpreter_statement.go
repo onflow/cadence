@@ -545,7 +545,7 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 	}
 
 	if expression, ok := expression.(*ast.MemberExpression); ok {
-		panic(MissingMemberValueError{
+		panic(UseBeforeInitializationError{
 			Name: expression.Identifier.Identifier,
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,

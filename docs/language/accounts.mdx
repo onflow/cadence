@@ -44,6 +44,8 @@ which represents the publicly available portion of an account.
           let names: [String]
 
           fun get(name: String): DeployedContract?
+
+          fun borrow<T: &Any>(name: String): T?
       }
 
       struct Keys {
@@ -160,6 +162,8 @@ to the `prepare` phase of the transaction.
           fun get(name: String): DeployedContract?
 
           fun remove(name: String): DeployedContract?
+
+          fun borrow<T: &Any>(name: String): T?
       }
 
       struct Keys {
@@ -769,6 +773,12 @@ account.forEachStored(fun (path: StoragePath, type: Type): Bool {
     return true
 })
 ```
+</Callout>
+
+<Callout type="info">
+    The iteration will skip any broken elements in the storage.
+    An element could be broken due to invalid types associated with the stored value.
+    e.g: A value belongs to type `T` of a contract with syntax/semantic errors.
 </Callout>
 
 ## Storage limit

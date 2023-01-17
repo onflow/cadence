@@ -3239,7 +3239,12 @@ func (interpreter *Interpreter) recordStorageMutation() {
 	}
 }
 
-func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
+func (interpreter *Interpreter) newStorageIterationFunction(
+	addressValue AddressValue,
+	domain common.PathDomain,
+	pathType sema.Type,
+) *HostFunctionValue {
+
 	address := addressValue.ToAddress()
 	config := interpreter.SharedState.Config
 
@@ -3271,8 +3276,17 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 			}()
 
 			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
+				staticType := value.StaticType(inter)
+
+				// Perform a forced type loading to see if the underlying type is not broken.
+				// If broken, skip this value from the iteration.
+				typeError := inter.checkTypeLoading(staticType)
+				if typeError != nil {
+					continue
+				}
+
 				pathValue := NewPathValue(inter, domain, key)
-				runtimeType := NewTypeValue(inter, value.StaticType(inter))
+				runtimeType := NewTypeValue(inter, staticType)
 
 				subInvocation := NewInvocation(
 					inter,
@@ -3309,6 +3323,24 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 		},
 		sema.AccountForEachFunctionType(pathType),
 	)
+}
+
+func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch r := r.(type) {
+			case errors.UserError, errors.ExternalError:
+				typeError = r.(error)
+			default:
+				panic(r)
+			}
+		}
+	}()
+
+	// Here it is only interested in whether the type can be properly loaded.
+	_, typeError = interpreter.ConvertStaticToSemaType(staticType)
+
+	return
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
@@ -3907,7 +3939,7 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 				// and performs a dynamic type check
 
 				return AsBoolValue(
-					reference.ReferencedValue(interpreter) != nil,
+					reference.ReferencedValue(interpreter, invocation.LocationRange, false) != nil,
 				)
 
 			default:
