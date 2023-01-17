@@ -31,10 +31,8 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		panic(errors.NewUnreachableError())
 	}
 
-	checker.containerTypes[transactionType] = true
-	defer func() {
-		checker.containerTypes[transactionType] = false
-	}()
+	checker.containerTypes[transactionType] = struct{}{}
+	defer delete(checker.containerTypes, transactionType)
 
 	fields := declaration.Fields
 	fieldMembers := orderedmap.New[MemberFieldDeclarationOrderedMap](len(fields))

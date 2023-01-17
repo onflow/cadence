@@ -46,10 +46,8 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		panic(errors.NewUnreachableError())
 	}
 
-	checker.containerTypes[compositeType] = true
-	defer func() {
-		checker.containerTypes[compositeType] = false
-	}()
+	checker.containerTypes[compositeType] = struct{}{}
+	defer delete(checker.containerTypes, compositeType)
 
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,

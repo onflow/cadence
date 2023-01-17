@@ -97,7 +97,7 @@ type Checker struct {
 	valueActivations        *VariableActivations
 	currentMemberExpression *ast.MemberExpression
 	typeActivations         *VariableActivations
-	containerTypes          map[Type]bool
+	containerTypes          map[Type]struct{}
 	Program                 *ast.Program
 	PositionInfo            *PositionInfo
 	Config                  *Config
@@ -153,7 +153,7 @@ func NewChecker(
 		Elaboration:         elaboration,
 		resources:           NewResources(),
 		functionActivations: functionActivations,
-		containerTypes:      map[Type]bool{},
+		containerTypes:      map[Type]struct{}{},
 		memoryGauge:         memoryGauge,
 	}
 

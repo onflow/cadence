@@ -76,7 +76,7 @@ func (checker *Checker) checkResourceCreationOrDestruction(compositeType *Compos
 			return
 		}
 	} else {
-		if checker.containerTypes[contractType] {
+		if _, ok := checker.containerTypes[contractType]; ok {
 			return
 		}
 	}
