@@ -256,18 +256,19 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 	}
 
 	roles := &orderedmap.OrderedMap[string, *TransactionRoleType]{}
-	for _, role := range declaration.Roles {
-		transactionRoleType := checker.transactionRoleType(role)
+	for _, roleDeclaration := range declaration.Roles {
+		transactionRoleType := checker.transactionRoleType(roleDeclaration)
+		checker.Elaboration.SetTransactionRoleDeclarationType(roleDeclaration, transactionRoleType)
 
 		// Ensure roles are not duplicated
-		roleName := role.Identifier.Identifier
+		roleName := roleDeclaration.Identifier.Identifier
 		if _, ok := roles.Get(roleName); ok {
 			checker.report(
 				&DuplicateTransactionRoleError{
 					Name: roleName,
 					Range: ast.NewRangeFromPositioned(
 						checker.memoryGauge,
-						role.Identifier,
+						roleDeclaration.Identifier,
 					),
 				},
 			)
@@ -281,7 +282,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 					Name: roleName,
 					Range: ast.NewRangeFromPositioned(
 						checker.memoryGauge,
-						role.Identifier,
+						roleDeclaration.Identifier,
 					),
 				},
 			)
@@ -293,11 +294,11 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 			roleName,
 			&Member{
 				ContainerType:   transactionType,
-				Identifier:      role.Identifier,
+				Identifier:      roleDeclaration.Identifier,
 				DeclarationKind: common.DeclarationKindTransactionRole,
 				VariableKind:    ast.VariableKindConstant,
 				TypeAnnotation:  NewTypeAnnotation(transactionRoleType),
-				DocString:       role.DocString,
+				DocString:       roleDeclaration.DocString,
 			},
 		)
 	}
