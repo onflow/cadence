@@ -211,6 +211,9 @@ to the `prepare` phase of the transaction.
   struct DeployedContract {
       let name: String
       let code: [UInt8]
+
+      // Returns an array of `Type` objects representing all the public struct and resource declarations in this contract
+      fun publicTypes(): [Type]
   }
   ```
 
