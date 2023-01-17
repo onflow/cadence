@@ -111,12 +111,10 @@ const DeployedContractTypePublicTypesFunctionDocString = `
 Returns an array of Type objects representing all public type declarations in this contract.
 `
 
-var DeployedContractTypePublicTypesFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	nil,
-	NewTypeAnnotation(
+var DeployedContractTypePublicTypesFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
 			Type: MetaType,
 		},
 	),
-)
+}
