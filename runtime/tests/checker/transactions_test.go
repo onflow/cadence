@@ -596,82 +596,151 @@ func TestCheckInvalidTransactionSelfMoveToFunction(t *testing.T) {
 	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 }
 
-func TestCheckInvalidTransactionSelfMoveInVariableDeclaration(t *testing.T) {
+func TestCheckInvalidTransactionSelfMove(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	t.Run("variable declaration", func(t *testing.T) {
 
-     transaction {
+		_, err := ParseAndCheck(t, `
 
-         execute {
-             let x = self
-         }
-     }
-   `)
+          transaction {
 
-	errs := RequireCheckerErrors(t, err, 1)
+              execute {
+                  let x = self
+              }
+          }
+        `)
 
-	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
+
+	t.Run("return from function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          transaction {
+
+              execute {
+                  return self
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+
+		assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
+		assert.IsType(t, &sema.TransactionType{}, typeMismatchErr.ActualType)
+	})
+
+	t.Run("into array literal", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          transaction {
+
+              execute {
+                  let txs = [self]
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
+
+	t.Run("into dictionary literal", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          transaction {
+
+              execute {
+                  let txs = {"self": self}
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
 }
 
-func TestCheckInvalidTransactionSelfMoveReturnFromFunction(t *testing.T) {
+func TestCheckInvalidTransactionRoleSelfMove(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	t.Run("variable declaration", func(t *testing.T) {
 
-     transaction {
+		_, err := ParseAndCheck(t, `
 
-         execute {
-             return self
-         }
-     }
-   `)
+          transaction {
 
-	errs := RequireCheckerErrors(t, err, 1)
+              role buyer {
+                  prepare() {
+                      let x = self
+                  }
+              }
+          }
+        `)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+		errs := RequireCheckerErrors(t, err, 1)
 
-	assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
-	assert.IsType(t, &sema.TransactionType{}, typeMismatchErr.ActualType)
-}
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
 
-func TestCheckInvalidTransactionSelfMoveIntoArrayLiteral(t *testing.T) {
+	t.Run("into array literal", func(t *testing.T) {
 
-	t.Parallel()
+		t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+		_, err := ParseAndCheck(t, `
 
-     transaction {
+          transaction {
 
-         execute {
-             let txs = [self]
-         }
-     }
-   `)
+              role buyer {
+                  prepare() {
+                      let txs = [self]
+                  }
+              }
+          }
+        `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
-}
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
 
-func TestCheckInvalidTransactionSelfMoveIntoDictionaryLiteral(t *testing.T) {
+	t.Run("into dictionary literal", func(t *testing.T) {
 
-	t.Parallel()
+		t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+		_, err := ParseAndCheck(t, `
 
-     transaction {
+          transaction {
 
-         execute {
-             let txs = {"self": self}
-         }
-     }
-   `)
+              role buyer {
+                  prepare() {
+                      let txs = {"self": self}
+                  }
+              }
+          }
+        `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
 }

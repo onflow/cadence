@@ -1949,6 +1949,9 @@ func (checker *Checker) checkVariableMove(expression ast.Expression) {
 	case *TransactionType:
 		reportInvalidMove(common.DeclarationKindTransaction)
 
+	case *TransactionRoleType:
+		reportInvalidMove(common.DeclarationKindTransactionRole)
+
 	case CompositeKindedType:
 		kind := ty.GetCompositeKind()
 		if kind == common.CompositeKindContract {
