@@ -251,7 +251,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 
 	lines := strings.Split(string(code), "\n")
 
-	for i, excerpt := range excerpts {
+	for excerptIndex, excerpt := range excerpts {
 
 		lineNumberString := ""
 		lineNumberLength := 0
@@ -262,7 +262,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 		}
 
 		// write arrow, location, and position (if any)
-		if i == 0 {
+		if excerptIndex == 0 {
 			p.writeCodeExcerptLocation(location, lineNumberLength, excerpt.startPos)
 		}
 
@@ -272,7 +272,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			excerpt.startPos.Line <= len(lines) &&
 			len(code) > 0 {
 
-			if i > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
+			if excerptIndex > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
 				p.writeCodeExcerptContinuation(lineNumberLength)
 			}
 			lastLineNumber = excerpt.startPos.Line
@@ -293,7 +293,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 
 				// if the line number increases in digit length during the error,
 				// fill the extra space with blank spaces
-				if i = 0; i < lineNumberLength-len(plainLineNumberString) {
+				if lineNumberLength > len(plainLineNumberString) {
 					p.writeString(" ")
 				}
 
