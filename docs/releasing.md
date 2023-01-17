@@ -35,9 +35,9 @@ only due to the error messages, or are there any other differences in the report
 
 ### Releasing
 
-Releasing a new cadence can be easily done using the [Release](https://github.com/onflow/cadence/actions/workflows/release.yml)
-github action.
-Run the workflow by providing `v0.21.2` as the `Release version` and `master` as the `Base branch`.
+Releasing a new version of Cadence can be easily done by using the [Release GitHub action](https://github.com/onflow/cadence/actions/workflows/release.yml)
+Run the workflow by providing `0.21.2` (note the version is without `v`) as the `Release version` and `master` as the
+`Base branch`.
 
 <img src="images/release_action.png" width="800"/>
 
