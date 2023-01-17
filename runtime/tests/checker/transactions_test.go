@@ -437,6 +437,44 @@ func TestCheckTransactionRoles(t *testing.T) {
 		)
 	})
 
+	t.Run("field, missing prepare", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                role foo {
+
+                  let bar: Int
+                }
+              }
+            `,
+			[]error{
+				&sema.MissingPrepareError{},
+			},
+		)
+	})
+
+	t.Run("field, prepare, missing initialization", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                role foo {
+
+                  let bar: Int
+
+                  prepare() {}
+                }
+              }
+            `,
+			[]error{
+				&sema.FieldUninitializedError{},
+			},
+		)
+	})
+
 	t.Run("duplicate", func(t *testing.T) {
 		test(
 			t,

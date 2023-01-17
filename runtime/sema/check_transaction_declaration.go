@@ -27,6 +27,7 @@ import (
 
 func (checker *Checker) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) (_ struct{}) {
 	transactionType := checker.Elaboration.TransactionDeclarationType(declaration)
+	// Type should have been declared in declareTransactionDeclaration
 	if transactionType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -68,6 +69,10 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		transactionType.PrepareFunctionType(),
 		fieldMembers,
 	)
+
+	for _, role := range declaration.Roles {
+		ast.AcceptDeclaration[struct{}](role, checker)
+	}
 
 	// TODO: declare variables for all blocks
 
@@ -356,4 +361,48 @@ func (checker *Checker) compositeFieldMembersAndOrigins(
 		ContainerKindComposite,
 		declarationKind,
 	)
+}
+
+func (checker *Checker) VisitTransactionRoleDeclaration(declaration *ast.TransactionRoleDeclaration) (_ struct{}) {
+	transactionRoleType := checker.Elaboration.TransactionRoleDeclarationType(declaration)
+	// Type should have been declared in declareTransactionDeclaration
+	if transactionRoleType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	checker.containerTypes[transactionRoleType] = struct{}{}
+	defer delete(checker.containerTypes, transactionRoleType)
+
+	fields := declaration.Fields
+	fieldMembers := orderedmap.New[MemberFieldDeclarationOrderedMap](len(fields))
+
+	for _, field := range fields {
+		fieldName := field.Identifier.Identifier
+		// Fields were previously declared in declareTransactionDeclaration
+		member, ok := transactionRoleType.Members.Get(fieldName)
+
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		fieldMembers.Set(member, field)
+	}
+
+	checker.checkTransactionFields(fields)
+	checker.checkPrepareExists(declaration.Prepare, fields)
+
+	// enter a new scope for this transaction role
+	checker.enterValueScope()
+	defer checker.leaveValueScope(declaration.EndPosition, true)
+
+	checker.declareSelfValue(transactionRoleType, "")
+
+	checker.visitPrepareFunction(
+		declaration.Prepare,
+		transactionRoleType,
+		transactionRoleType.PrepareFunctionType(),
+		fieldMembers,
+	)
+
+	return
 }
