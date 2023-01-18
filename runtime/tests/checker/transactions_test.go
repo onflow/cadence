@@ -553,10 +553,12 @@ func TestCheckTransactionRoles(t *testing.T) {
 			`
               transaction {
 
-                  let foo: Int
+                  role buyer {
+                      let foo: Int
 
-                  prepare(foo: Int) {
-                      self.foo = foo
+                      prepare(foo: Int) {
+                          self.foo = foo
+                      }
                   }
               }
             `,
