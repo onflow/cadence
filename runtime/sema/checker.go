@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/common/persistent"
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -2397,4 +2398,25 @@ func (checker *Checker) isAvailableMember(expressionType Type, identifier string
 	}
 
 	return true
+}
+
+func getFieldMembers(
+	members *StringMemberOrderedMap,
+	fields []*ast.FieldDeclaration,
+) (
+	fieldMembers *MemberFieldDeclarationOrderedMap,
+) {
+	fieldMembers = orderedmap.New[MemberFieldDeclarationOrderedMap](len(fields))
+
+	for _, field := range fields {
+		fieldName := field.Identifier.Identifier
+		member, ok := members.Get(fieldName)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		fieldMembers.Set(member, field)
+	}
+
+	return
 }

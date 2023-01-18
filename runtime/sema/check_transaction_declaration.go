@@ -36,19 +36,10 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	defer delete(checker.containerTypes, transactionType)
 
 	fields := declaration.Fields
-	fieldMembers := orderedmap.New[MemberFieldDeclarationOrderedMap](len(fields))
 
-	for _, field := range fields {
-		fieldName := field.Identifier.Identifier
-		// Fields were previously declared in declareTransactionDeclaration
-		member, ok := transactionType.Members.Get(fieldName)
-
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		fieldMembers.Set(member, field)
-	}
+	// Members were previously declared in declareTransactionDeclaration
+	members := transactionType.Members
+	fieldMembers := getFieldMembers(members, fields)
 
 	checker.checkTransactionFields(fields)
 	checker.checkPrepareExists(declaration.Prepare, fields)
@@ -384,19 +375,10 @@ func (checker *Checker) VisitTransactionRoleDeclaration(declaration *ast.Transac
 	defer delete(checker.containerTypes, transactionRoleType)
 
 	fields := declaration.Fields
-	fieldMembers := orderedmap.New[MemberFieldDeclarationOrderedMap](len(fields))
 
-	for _, field := range fields {
-		fieldName := field.Identifier.Identifier
-		// Fields were previously declared in declareTransactionDeclaration
-		member, ok := transactionRoleType.Members.Get(fieldName)
-
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		fieldMembers.Set(member, field)
-	}
+	// Members were previously declared in declareTransactionDeclaration
+	members := transactionRoleType.Members
+	fieldMembers := getFieldMembers(members, fields)
 
 	checker.checkTransactionFields(fields)
 	checker.checkPrepareExists(declaration.Prepare, fields)
