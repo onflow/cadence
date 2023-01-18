@@ -3225,9 +3225,8 @@ func (e *InvalidSelfInvalidationError) Error() string {
 // InvalidMoveError
 
 type InvalidMoveError struct {
-	Name            string
 	DeclarationKind common.DeclarationKind
-	Pos             ast.Position
+	ast.Range
 }
 
 var _ SemanticError = &InvalidMoveError{}
@@ -3239,19 +3238,9 @@ func (*InvalidMoveError) IsUserError() {}
 
 func (e *InvalidMoveError) Error() string {
 	return fmt.Sprintf(
-		"cannot move %s: `%s`",
+		"cannot move %s",
 		e.DeclarationKind.Name(),
-		e.Name,
 	)
-}
-
-func (e *InvalidMoveError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *InvalidMoveError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	length := len(e.Name)
-	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // ConstantSizedArrayLiteralSizeError

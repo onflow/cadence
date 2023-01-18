@@ -762,4 +762,24 @@ func TestCheckInvalidTransactionRoleSelfMove(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 	})
+
+	t.Run("role in execute", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+           transaction {
+
+               role foo {}
+
+               execute {
+                   let foo = self.foo
+               }
+           }
+         `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
 }

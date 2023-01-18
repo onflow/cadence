@@ -101,7 +101,7 @@ func (checker *Checker) checkAssignment(
 		}
 	}
 
-	checker.checkVariableMove(value)
+	checker.checkValueMove(value)
 
 	checker.recordResourceInvalidation(
 		value,

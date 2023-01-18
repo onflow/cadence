@@ -1924,29 +1924,50 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	return predeclaredMembers
 }
 
-func (checker *Checker) checkVariableMove(expression ast.Expression) {
+func (checker *Checker) checkValueMove(expression ast.Expression) {
 
-	identifierExpression, ok := expression.(*ast.IdentifierExpression)
-	if !ok {
-		return
-	}
+	var ty Type
+	var pos ast.HasPosition
 
-	variable := checker.valueActivations.Find(identifierExpression.Identifier.Identifier)
-	if variable == nil {
+	switch expression := expression.(type) {
+	case *ast.IdentifierExpression:
+		variable := checker.valueActivations.Find(expression.Identifier.Identifier)
+		if variable == nil {
+			return
+		}
+
+		ty = variable.Type
+		pos = expression.Identifier
+
+	case *ast.MemberExpression:
+		memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if memberInfo.AccessedType == InvalidType ||
+			memberInfo.Member == nil {
+
+			return
+		}
+
+		ty = memberInfo.Member.TypeAnnotation.Type
+		pos = expression.Identifier
+
+	default:
 		return
 	}
 
 	reportInvalidMove := func(declarationKind common.DeclarationKind) {
 		checker.report(
 			&InvalidMoveError{
-				Name:            variable.Identifier,
 				DeclarationKind: declarationKind,
-				Pos:             identifierExpression.StartPosition(),
+				Range:           ast.NewUnmeteredRangeFromPositioned(pos),
 			},
 		)
 	}
 
-	switch ty := variable.Type.(type) {
+	switch ty := ty.(type) {
 	case *TransactionType:
 		reportInvalidMove(common.DeclarationKindTransaction)
 
