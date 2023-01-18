@@ -528,18 +528,18 @@ func TestCheckTransactionRoles(t *testing.T) {
                       }
                   }
 
-                  role ying {
+                  role baz {
 
-                      let yang: String
+                      let blub: String
 
                       prepare() {
-                          self.yang = "2"
+                          self.blub = "2"
                       }
                   }
 
                   execute {
                       let bar: Int = self.foo.bar
-                      let yang: String = self.ying.yang
+                      let blub: String = self.baz.blub
                   }
               }
             `,
