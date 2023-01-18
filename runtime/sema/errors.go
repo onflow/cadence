@@ -2902,32 +2902,32 @@ func (e *ReadOnlyTargetAssignmentError) Error() string {
 	return "cannot assign to read-only target"
 }
 
-// TransactionMissingPrepareError
-
-type MissingPrepareError struct {
+// MissingPrepareForFieldError
+//
+type MissingPrepareForFieldError struct {
 	FirstFieldName string
 	FirstFieldPos  ast.Position
 }
 
-var _ SemanticError = &MissingPrepareError{}
-var _ errors.UserError = &MissingPrepareError{}
+var _ SemanticError = &MissingPrepareForFieldError{}
+var _ errors.UserError = &MissingPrepareForFieldError{}
 
-func (*MissingPrepareError) isSemanticError() {}
+func (*MissingPrepareForFieldError) isSemanticError() {}
 
-func (*MissingPrepareError) IsUserError() {}
+func (*MissingPrepareForFieldError) IsUserError() {}
 
-func (e *MissingPrepareError) Error() string {
+func (e *MissingPrepareForFieldError) Error() string {
 	return fmt.Sprintf(
 		"missing prepare block for field `%s`",
 		e.FirstFieldName,
 	)
 }
 
-func (e *MissingPrepareError) StartPosition() ast.Position {
+func (e *MissingPrepareForFieldError) StartPosition() ast.Position {
 	return e.FirstFieldPos
 }
 
-func (e *MissingPrepareError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+func (e *MissingPrepareForFieldError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.FirstFieldName)
 	return e.FirstFieldPos.Shifted(memoryGauge, length-1)
 }
@@ -3044,6 +3044,44 @@ func (e *TransactionRoleWithFieldNameError) ErrorNotes() []errors.ErrorNote {
 			Range: ast.NewUnmeteredRangeFromPositioned(e.FieldIdentifier),
 		},
 	}
+}
+
+// PrepareParameterCountMismatchError
+type PrepareParameterCountMismatchError struct {
+	ActualCount   int
+	ExpectedCount int
+	ast.Range
+}
+
+var _ SemanticError = &PrepareParameterCountMismatchError{}
+var _ errors.UserError = &PrepareParameterCountMismatchError{}
+
+func (*PrepareParameterCountMismatchError) isSemanticError() {}
+
+func (*PrepareParameterCountMismatchError) IsUserError() {}
+
+func (e *PrepareParameterCountMismatchError) Error() string {
+	return fmt.Sprintf(
+		"role's prepare parameter count must match transaction's: expected %d, got %d",
+		e.ExpectedCount,
+		e.ActualCount,
+	)
+}
+
+// MissingRolePrepareError
+type MissingRolePrepareError struct {
+	ast.Range
+}
+
+var _ SemanticError = &MissingRolePrepareError{}
+var _ errors.UserError = &MissingRolePrepareError{}
+
+func (*MissingRolePrepareError) isSemanticError() {}
+
+func (*MissingRolePrepareError) IsUserError() {}
+
+func (e *MissingRolePrepareError) Error() string {
+	return "role is missing prepare block that matches transaction's"
 }
 
 // InvalidNestedDeclarationError

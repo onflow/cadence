@@ -123,7 +123,7 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			[]error{
-				&sema.MissingPrepareError{},
+				&sema.MissingPrepareForFieldError{},
 			},
 		)
 	})
@@ -450,7 +450,7 @@ func TestCheckTransactionRoles(t *testing.T) {
               }
             `,
 			[]error{
-				&sema.MissingPrepareError{},
+				&sema.MissingPrepareForFieldError{},
 			},
 		)
 	})
@@ -553,6 +553,8 @@ func TestCheckTransactionRoles(t *testing.T) {
 			`
               transaction {
 
+                  prepare(signer: AuthAccount) {}
+
                   role buyer {
                       let foo: Int
 
@@ -564,6 +566,79 @@ func TestCheckTransactionRoles(t *testing.T) {
             `,
 			[]error{
 				&sema.InvalidTransactionPrepareParameterTypeError{},
+				&sema.TypeMismatchError{},
+			},
+		)
+	})
+
+	t.Run("matching prepare", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {}
+
+                  role buyer {
+                      prepare(signer: AuthAccount) {}
+                  }
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("missing prepare", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {}
+
+                  role buyer {}
+              }
+            `,
+			[]error{
+				&sema.MissingRolePrepareError{},
+			},
+		)
+	})
+
+	t.Run("fewer prepare parameters", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {}
+
+                  role buyer {
+                      prepare() {}
+                  }
+              }
+            `,
+			[]error{
+				&sema.PrepareParameterCountMismatchError{},
+			},
+		)
+	})
+
+	t.Run("more prepare parameters", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {}
+
+                  role buyer {
+                      prepare(firstSigner: AuthAccount, secondSigner: AuthAccount) {}
+                  }
+              }
+            `,
+			[]error{
+				&sema.PrepareParameterCountMismatchError{},
 			},
 		)
 	})

@@ -42,7 +42,9 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	fieldMembers := getFieldMembers(members, fields)
 
 	checker.checkTransactionFields(fields)
-	checker.checkPrepareExists(declaration.Prepare, fields)
+
+	prepareFunctionDeclaration := declaration.Prepare
+	checker.checkPrepareExists(prepareFunctionDeclaration, fields)
 
 	// enter a new scope for this transaction
 	checker.enterValueScope()
@@ -54,15 +56,23 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		checker.checkTransactionParameters(declaration, transactionType.Parameters)
 	}
 
-	checker.visitPrepareFunction(
-		declaration.Prepare,
-		transactionType,
-		transactionType.PrepareFunctionType(),
-		fieldMembers,
-	)
+	if prepareFunctionDeclaration != nil {
+		prepareFunctionType := transactionType.PrepareFunctionType()
 
-	for _, role := range declaration.Roles {
-		ast.AcceptDeclaration[struct{}](role, checker)
+		checker.visitPrepareFunction(
+			prepareFunctionDeclaration,
+			transactionType,
+			prepareFunctionType,
+			fieldMembers,
+		)
+	}
+
+	// Check roles
+	for _, roleDeclaration := range declaration.Roles {
+		ast.AcceptDeclaration[struct{}](roleDeclaration, checker)
+
+		// Each role's prepare parameter list must match the transaction's prepare parameter list
+		checker.checkRolePrepareParameterList(roleDeclaration, transactionType)
 	}
 
 	if declaration.PreConditions != nil {
@@ -82,6 +92,73 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	checker.checkResourceFieldsInvalidated(transactionType, transactionType.Members)
 
 	return
+}
+
+// checkRolePrepareParameterList checks that the role's prepare block parameter list
+// matches the transaction's prepare parameter list:
+// They must have the same length and the parameter types must match.
+func (checker *Checker) checkRolePrepareParameterList(
+	roleDeclaration *ast.TransactionRoleDeclaration,
+	transactionType *TransactionType,
+) {
+	transactionRoleType := checker.Elaboration.TransactionRoleDeclarationType(roleDeclaration)
+	// Type should have been declared in declareTransactionDeclaration
+	if transactionRoleType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	transactionPrepareParameterCount := len(transactionType.PrepareParameters)
+	transactionRolePrepareParameterCount := len(transactionRoleType.PrepareParameters)
+	if transactionPrepareParameterCount != transactionRolePrepareParameterCount {
+		if roleDeclaration.Prepare == nil {
+			checker.report(
+				&MissingRolePrepareError{
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						roleDeclaration.Identifier,
+					),
+				},
+			)
+		} else {
+			checker.report(
+				&PrepareParameterCountMismatchError{
+					ActualCount:   transactionRolePrepareParameterCount,
+					ExpectedCount: transactionPrepareParameterCount,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						roleDeclaration.Prepare,
+					),
+				},
+			)
+		}
+	}
+
+	minPrepareParameterCount := transactionPrepareParameterCount
+	if transactionRolePrepareParameterCount < minPrepareParameterCount {
+		minPrepareParameterCount = transactionRolePrepareParameterCount
+	}
+
+	for prepareParameterIndex := 0; prepareParameterIndex < minPrepareParameterCount; prepareParameterIndex++ {
+		transactionPrepareParameter := transactionType.PrepareParameters[prepareParameterIndex]
+		transactionRolePrepareParameter := transactionRoleType.PrepareParameters[prepareParameterIndex]
+
+		if !transactionRolePrepareParameter.TypeAnnotation.
+			Equal(transactionPrepareParameter.TypeAnnotation) {
+
+			parameter := roleDeclaration.Prepare.FunctionDeclaration.ParameterList.Parameters[prepareParameterIndex]
+
+			checker.report(
+				&TypeMismatchError{
+					ExpectedType: transactionPrepareParameter.TypeAnnotation.Type,
+					ActualType:   transactionRolePrepareParameter.TypeAnnotation.Type,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						parameter.TypeAnnotation,
+					),
+				},
+			)
+		}
+	}
 }
 
 func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionDeclaration, parameters []Parameter) {
@@ -143,7 +220,7 @@ func (checker *Checker) checkPrepareExists(
 	firstField := fields[0]
 
 	checker.report(
-		&MissingPrepareError{
+		&MissingPrepareForFieldError{
 			FirstFieldName: firstField.Identifier.Identifier,
 			FirstFieldPos:  firstField.Identifier.Pos,
 		},
@@ -157,10 +234,6 @@ func (checker *Checker) visitPrepareFunction(
 	prepareFunctionType *FunctionType,
 	fieldMembers *MemberFieldDeclarationOrderedMap,
 ) {
-	if prepareFunction == nil {
-		return
-	}
-
 	initializationInfo := NewInitializationInfo(containerType, fieldMembers)
 
 	checker.checkFunction(
@@ -390,12 +463,15 @@ func (checker *Checker) VisitTransactionRoleDeclaration(declaration *ast.Transac
 
 	checker.declareSelfValue(transactionRoleType, "")
 
-	checker.visitPrepareFunction(
-		declaration.Prepare,
-		transactionRoleType,
-		transactionRoleType.PrepareFunctionType(),
-		fieldMembers,
-	)
+	if declaration.Prepare != nil {
+		prepareFunctionType := transactionRoleType.PrepareFunctionType()
+		checker.visitPrepareFunction(
+			declaration.Prepare,
+			transactionRoleType,
+			prepareFunctionType,
+			fieldMembers,
+		)
+	}
 
 	return
 }
