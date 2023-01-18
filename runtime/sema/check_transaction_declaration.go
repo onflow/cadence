@@ -256,6 +256,17 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.PrepareParameters = checker.parameters(parameterList)
 	}
 
+	var fieldDeclarationsByIdentifier map[string]*ast.FieldDeclaration
+	fieldDeclarationByIdentifier := func(identifier string) *ast.FieldDeclaration {
+		if fieldDeclarationsByIdentifier == nil {
+			fieldDeclarationsByIdentifier = make(map[string]*ast.FieldDeclaration, len(declaration.Fields))
+			for _, field := range declaration.Fields {
+				fieldDeclarationsByIdentifier[field.Identifier.Identifier] = field
+			}
+		}
+		return fieldDeclarationsByIdentifier[identifier]
+	}
+
 	roles := &orderedmap.OrderedMap[string, *TransactionRoleType]{}
 	for _, roleDeclaration := range declaration.Roles {
 		transactionRoleType := checker.transactionRoleType(roleDeclaration)
@@ -278,7 +289,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 
 		// Ensure roles and fields do not clash
 		if _, ok := members.Get(roleName); ok {
-			field := declaration.DeclarationMembers().FieldsByIdentifier()[roleName]
+			field := fieldDeclarationByIdentifier(roleName)
 			checker.report(
 				&TransactionRoleWithFieldNameError{
 					FieldIdentifier: field.Identifier,

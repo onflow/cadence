@@ -35,7 +35,6 @@ type TransactionDeclaration struct {
 	PostConditions *Conditions
 	DocString      string
 	Fields         []*FieldDeclaration
-	Members        *Members
 	Range
 }
 
@@ -57,23 +56,6 @@ func NewTransactionDeclaration(
 ) *TransactionDeclaration {
 	common.UseMemory(gauge, common.TransactionDeclarationMemoryUsage)
 
-	var declarations []Declaration
-
-	for _, field := range fields {
-		declarations = append(declarations, field)
-	}
-	if prepare != nil {
-		declarations = append(declarations, prepare)
-	}
-	for _, role := range roles {
-		declarations = append(declarations, role)
-	}
-	if execute != nil {
-		declarations = append(declarations, execute)
-	}
-
-	members := NewMembers(gauge, declarations)
-
 	return &TransactionDeclaration{
 		ParameterList:  parameterList,
 		Fields:         fields,
@@ -83,7 +65,6 @@ func NewTransactionDeclaration(
 		PostConditions: postConditions,
 		Execute:        execute,
 		DocString:      docString,
-		Members:        members,
 		Range:          declRange,
 	}
 }
@@ -130,7 +111,7 @@ func (d *TransactionDeclaration) DeclarationAccess() Access {
 }
 
 func (d *TransactionDeclaration) DeclarationMembers() *Members {
-	return d.Members
+	return nil
 }
 
 func (d *TransactionDeclaration) DeclarationDocString() string {
