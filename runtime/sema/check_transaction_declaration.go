@@ -275,36 +275,37 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 					),
 				},
 			)
-			continue
+		} else {
+			roles.Set(roleName, transactionRoleType)
 		}
 
 		// Ensure roles and fields do not clash
 		if _, ok := members.Get(roleName); ok {
 			field := fieldDeclarationByIdentifier(roleName)
-			checker.report(
-				&TransactionRoleWithFieldNameError{
-					FieldIdentifier: field.Identifier,
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						roleDeclaration.Identifier,
-					),
+			if field != nil {
+				checker.report(
+					&TransactionRoleWithFieldNameError{
+						FieldIdentifier: field.Identifier,
+						Range: ast.NewRangeFromPositioned(
+							checker.memoryGauge,
+							roleDeclaration.Identifier,
+						),
+					},
+				)
+			}
+		} else {
+			members.Set(
+				roleName,
+				&Member{
+					ContainerType:   transactionType,
+					Identifier:      roleDeclaration.Identifier,
+					DeclarationKind: common.DeclarationKindTransactionRole,
+					VariableKind:    ast.VariableKindConstant,
+					TypeAnnotation:  NewTypeAnnotation(transactionRoleType),
+					DocString:       roleDeclaration.DocString,
 				},
 			)
-			continue
 		}
-
-		roles.Set(roleName, transactionRoleType)
-		members.Set(
-			roleName,
-			&Member{
-				ContainerType:   transactionType,
-				Identifier:      roleDeclaration.Identifier,
-				DeclarationKind: common.DeclarationKindTransactionRole,
-				VariableKind:    ast.VariableKindConstant,
-				TypeAnnotation:  NewTypeAnnotation(transactionRoleType),
-				DocString:       roleDeclaration.DocString,
-			},
-		)
 	}
 	transactionType.Roles = roles
 
