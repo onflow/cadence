@@ -5657,6 +5657,8 @@ type TransactionType struct {
 
 var _ Type = &TransactionType{}
 
+const TransactionTypeName = "Transaction"
+
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	return &FunctionType{
 		Parameters:           append(t.Parameters, t.PrepareParameters...),
@@ -5687,15 +5689,15 @@ func (t *TransactionType) Tag() TypeTag {
 }
 
 func (*TransactionType) String() string {
-	return "Transaction"
+	return TransactionTypeName
 }
 
 func (*TransactionType) QualifiedString() string {
-	return "Transaction"
+	return TransactionTypeName
 }
 
 func (*TransactionType) ID() TypeID {
-	return "Transaction"
+	return TransactionTypeName
 }
 
 func (t *TransactionType) Equal(other Type) bool {
@@ -5771,6 +5773,8 @@ type TransactionRoleType struct {
 
 var _ Type = &TransactionRoleType{}
 
+const TransactionRoleTypeName = "TransactionRole"
+
 func (t *TransactionRoleType) PrepareFunctionType() *FunctionType {
 	return &FunctionType{
 		IsConstructor:        true,
@@ -5786,15 +5790,15 @@ func (t *TransactionRoleType) Tag() TypeTag {
 }
 
 func (*TransactionRoleType) String() string {
-	return "TransactionRole"
+	return TransactionRoleTypeName
 }
 
 func (*TransactionRoleType) QualifiedString() string {
-	return "TransactionRole"
+	return TransactionRoleTypeName
 }
 
 func (*TransactionRoleType) ID() TypeID {
-	return "TransactionRole"
+	return TransactionRoleTypeName
 }
 
 func (t *TransactionRoleType) Equal(other Type) bool {
