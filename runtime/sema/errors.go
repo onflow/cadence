@@ -3020,7 +3020,7 @@ func (e *DuplicateTransactionRoleError) Error() string {
 // TransactionRoleWithFieldNameError
 
 type TransactionRoleWithFieldNameError struct {
-	Name string
+	FieldIdentifier ast.Identifier
 	ast.Range
 }
 
@@ -3034,8 +3034,16 @@ func (*TransactionRoleWithFieldNameError) IsUserError() {}
 func (e *TransactionRoleWithFieldNameError) Error() string {
 	return fmt.Sprintf(
 		"role conflicts with field `%s`",
-		e.Name,
+		e.FieldIdentifier.Identifier,
 	)
+}
+
+func (e *TransactionRoleWithFieldNameError) ErrorNotes() []errors.ErrorNote {
+	return []errors.ErrorNote{
+		&RedeclarationNote{
+			Range: ast.NewUnmeteredRangeFromPositioned(e.FieldIdentifier),
+		},
+	}
 }
 
 // InvalidNestedDeclarationError

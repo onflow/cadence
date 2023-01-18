@@ -278,9 +278,10 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 
 		// Ensure roles and fields do not clash
 		if _, ok := members.Get(roleName); ok {
+			field := declaration.DeclarationMembers().FieldsByIdentifier()[roleName]
 			checker.report(
 				&TransactionRoleWithFieldNameError{
-					Name: roleName,
+					FieldIdentifier: field.Identifier,
 					Range: ast.NewRangeFromPositioned(
 						checker.memoryGauge,
 						roleDeclaration.Identifier,
