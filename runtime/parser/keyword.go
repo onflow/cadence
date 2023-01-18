@@ -64,4 +64,5 @@ const (
 	keywordEnum        = "enum"
 	keywordStatic      = "static"
 	keywordNative      = "native"
+	keywordRole        = "role"
 )

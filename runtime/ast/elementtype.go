@@ -40,6 +40,7 @@ const (
 	ElementTypePragmaDeclaration
 	ElementTypeImportDeclaration
 	ElementTypeTransactionDeclaration
+	ElementTypeTransactionRoleDeclaration
 
 	// Statements
 

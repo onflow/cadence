@@ -58,19 +58,28 @@ var blockStartDoc prettier.Doc = prettier.Text("{")
 var blockEndDoc prettier.Doc = prettier.Text("}")
 var blockEmptyDoc prettier.Doc = prettier.Text("{}")
 
-func (b *Block) Doc() prettier.Doc {
-	if b.IsEmpty() {
+func AsBlockDoc(doc prettier.Doc) prettier.Doc {
+	if doc == nil {
 		return blockEmptyDoc
 	}
 
 	return prettier.Concat{
 		blockStartDoc,
 		prettier.Indent{
-			Doc: StatementsDoc(b.Statements),
+			Doc: doc,
 		},
 		prettier.HardLine{},
 		blockEndDoc,
 	}
+}
+
+func (b *Block) Doc() prettier.Doc {
+	var doc prettier.Doc
+	if !b.IsEmpty() {
+		doc = StatementsDoc(b.Statements)
+	}
+
+	return AsBlockDoc(doc)
 }
 
 func StatementsDoc(statements []Statement) prettier.Doc {

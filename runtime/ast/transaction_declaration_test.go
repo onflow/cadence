@@ -43,6 +43,7 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 		},
 		Fields:         []*FieldDeclaration{},
 		Prepare:        nil,
+		Roles:          []*TransactionRoleDeclaration{},
 		PreConditions:  &Conditions{},
 		PostConditions: &Conditions{},
 		DocString:      "test",
@@ -68,6 +69,7 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
             },
 		    "Fields":         [],
 		    "Prepare":        null,
+		    "Roles":          [],
 		    "PreConditions":  [],
 		    "PostConditions": [],
 		    "Execute":        null,
@@ -139,6 +141,13 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 				},
 			},
 		},
+		Roles: []*TransactionRoleDeclaration{
+			{
+				Identifier: Identifier{
+					Identifier: "buyer",
+				},
+			},
+		},
 		PreConditions: &Conditions{
 			{
 				Kind: ConditionKindPre,
@@ -201,142 +210,155 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 				},
 			},
 			prettier.Text(" "),
-			prettier.Text("{"),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.Concat{
-						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("pub"),
-								prettier.Text(" "),
-								prettier.Text("let"),
-								prettier.Text(" "),
-								prettier.Group{
-									Doc: prettier.Concat{
-										prettier.Text("f"),
-										prettier.Text(": "),
-										prettier.Concat{
-											prettier.Text("@"),
-											prettier.Text("F"),
-										},
-									},
-								},
-							},
-						},
-					},
-					prettier.HardLine{},
-					prettier.Concat{
-						prettier.HardLine{},
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
 						prettier.Concat{
-							prettier.Text("prepare"),
+							prettier.HardLine{},
 							prettier.Group{
 								Doc: prettier.Concat{
+									prettier.Text("pub"),
+									prettier.Text(" "),
+									prettier.Text("let"),
+									prettier.Text(" "),
 									prettier.Group{
 										Doc: prettier.Concat{
-											prettier.Text("("),
-											prettier.Indent{
-												Doc: prettier.Concat{
-													prettier.SoftLine{},
-													prettier.Concat{
-														prettier.Text("signer"),
-														prettier.Text(": "),
-														prettier.Text("AuthAccount"),
-													},
-												},
-											},
-											prettier.SoftLine{},
-											prettier.Text(")"),
-										},
-									},
-								},
-							},
-							prettier.Text(" {}"),
-						},
-					},
-					prettier.HardLine{},
-					prettier.Concat{
-						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("pre"),
-								prettier.Text(" "),
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Group{
-											Doc: prettier.Concat{
-												prettier.Text("true"),
-												prettier.Text(":"),
-												prettier.Indent{
-													Doc: prettier.Concat{
-														prettier.HardLine{},
-														prettier.Text("\"pre\""),
-													},
-												},
+											prettier.Text("f"),
+											prettier.Text(": "),
+											prettier.Concat{
+												prettier.Text("@"),
+												prettier.Text("F"),
 											},
 										},
 									},
 								},
-								prettier.HardLine{},
-								prettier.Text("}"),
 							},
 						},
-					},
-					prettier.HardLine{},
-					prettier.Concat{
 						prettier.HardLine{},
 						prettier.Concat{
-							prettier.Text("execute"),
-							prettier.Text(" "),
+							prettier.HardLine{},
 							prettier.Concat{
-								prettier.Text("{"),
-								prettier.Indent{
+								prettier.Text("prepare"),
+								prettier.Group{
 									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Text("\"xyz\""),
-									},
-								},
-								prettier.HardLine{},
-								prettier.Text("}"),
-							},
-						},
-					},
-					prettier.HardLine{},
-					prettier.Concat{
-						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("post"),
-								prettier.Text(" "),
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
 										prettier.Group{
 											Doc: prettier.Concat{
-												prettier.Text("false"),
-												prettier.Text(":"),
+												prettier.Text("("),
 												prettier.Indent{
 													Doc: prettier.Concat{
-														prettier.HardLine{},
-														prettier.Text("\"post\""),
+														prettier.SoftLine{},
+														prettier.Concat{
+															prettier.Text("signer"),
+															prettier.Text(": "),
+															prettier.Text("AuthAccount"),
+														},
+													},
+												},
+												prettier.SoftLine{},
+												prettier.Text(")"),
+											},
+										},
+									},
+								},
+								prettier.Text(" {}"),
+							},
+						},
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.HardLine{},
+							prettier.Concat{
+								prettier.Text("role"),
+								prettier.Text(" "),
+								prettier.Text("buyer"),
+								prettier.Text(" "),
+								prettier.Text("{}"),
+							},
+						},
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.HardLine{},
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text("pre"),
+									prettier.Text(" "),
+									prettier.Text("{"),
+									prettier.Indent{
+										Doc: prettier.Concat{
+											prettier.HardLine{},
+											prettier.Group{
+												Doc: prettier.Concat{
+													prettier.Text("true"),
+													prettier.Text(":"),
+													prettier.Indent{
+														Doc: prettier.Concat{
+															prettier.HardLine{},
+															prettier.Text("\"pre\""),
+														},
 													},
 												},
 											},
 										},
 									},
+									prettier.HardLine{},
+									prettier.Text("}"),
 								},
-								prettier.HardLine{},
-								prettier.Text("}"),
+							},
+						},
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.HardLine{},
+							prettier.Concat{
+								prettier.Text("execute"),
+								prettier.Text(" "),
+								prettier.Concat{
+									prettier.Text("{"),
+									prettier.Indent{
+										Doc: prettier.Concat{
+											prettier.HardLine{},
+											prettier.Text("\"xyz\""),
+										},
+									},
+									prettier.HardLine{},
+									prettier.Text("}"),
+								},
+							},
+						},
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.HardLine{},
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text("post"),
+									prettier.Text(" "),
+									prettier.Text("{"),
+									prettier.Indent{
+										Doc: prettier.Concat{
+											prettier.HardLine{},
+											prettier.Group{
+												Doc: prettier.Concat{
+													prettier.Text("false"),
+													prettier.Text(":"),
+													prettier.Indent{
+														Doc: prettier.Concat{
+															prettier.HardLine{},
+															prettier.Text("\"post\""),
+														},
+													},
+												},
+											},
+										},
+									},
+									prettier.HardLine{},
+									prettier.Text("}"),
+								},
 							},
 						},
 					},
 				},
+				prettier.HardLine{},
+				prettier.Text("}"),
 			},
-			prettier.HardLine{},
-			prettier.Text("}"),
 		},
 		decl.Doc(),
 	)
@@ -401,6 +423,13 @@ func TestTransactionDeclaration_String(t *testing.T) {
 				},
 			},
 		},
+		Roles: []*TransactionRoleDeclaration{
+			{
+				Identifier: Identifier{
+					Identifier: "buyer",
+				},
+			},
+		},
 		PreConditions: &Conditions{
 			{
 				Kind: ConditionKindPre,
@@ -448,6 +477,8 @@ func TestTransactionDeclaration_String(t *testing.T) {
 			"    \n"+
 			"    prepare(signer: AuthAccount) {}\n"+
 			"    \n"+
+			"    role buyer {}\n"+
+			"    \n"+
 			"    pre {\n"+
 			"        true:\n"+
 			"            \"pre\"\n"+
@@ -461,6 +492,227 @@ func TestTransactionDeclaration_String(t *testing.T) {
 			"        false:\n"+
 			"            \"post\"\n"+
 			"    }\n"+
+			"}",
+		decl.String(),
+	)
+}
+
+func TestTransactionRoleDeclaration_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &TransactionRoleDeclaration{
+		Identifier: Identifier{
+			Identifier: "buyer",
+			Pos:        Position{Offset: 1, Line: 2, Column: 3},
+		},
+		Fields:    []*FieldDeclaration{},
+		Prepare:   nil,
+		DocString: "test",
+		Range: Range{
+			StartPos: Position{Offset: 4, Line: 5, Column: 6},
+			EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+		},
+	}
+
+	actual, err := json.Marshal(decl)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		// language=json
+		`
+        {
+            "Type": "TransactionRoleDeclaration",
+            "Identifier": {
+                "Identifier": "buyer",
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 5, "Line": 2, "Column": 7}
+            },
+		    "Fields": [],
+		    "Prepare": null,
+            "DocString": "test",
+            "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+            "EndPos": {"Offset": 7, "Line": 8, "Column": 9}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestTransactionRoleDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &TransactionRoleDeclaration{
+		Identifier: Identifier{
+			Identifier: "buyer",
+		},
+		Fields: []*FieldDeclaration{
+			{
+				Access:       AccessPublic,
+				VariableKind: VariableKindConstant,
+				Identifier: Identifier{
+					Identifier: "f",
+				},
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "F",
+						},
+					},
+				},
+			},
+		},
+		Prepare: &SpecialFunctionDeclaration{
+			Kind: common.DeclarationKindPrepare,
+			FunctionDeclaration: &FunctionDeclaration{
+				ParameterList: &ParameterList{
+					Parameters: []*Parameter{
+						{
+							Identifier: Identifier{
+								Identifier: "signer",
+							},
+							TypeAnnotation: &TypeAnnotation{
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "AuthAccount",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	require.Equal(
+		t,
+		prettier.Concat{
+			prettier.Text("role"),
+			prettier.Text(" "),
+			prettier.Text("buyer"),
+			prettier.Text(" "),
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.Concat{
+							prettier.HardLine{},
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text("pub"),
+									prettier.Text(" "),
+									prettier.Text("let"),
+									prettier.Text(" "),
+									prettier.Group{
+										Doc: prettier.Concat{
+											prettier.Text("f"),
+											prettier.Text(": "),
+											prettier.Concat{
+												prettier.Text("@"),
+												prettier.Text("F"),
+											},
+										},
+									},
+								},
+							},
+						},
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.HardLine{},
+							prettier.Concat{
+								prettier.Text("prepare"),
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Text("("),
+												prettier.Indent{
+													Doc: prettier.Concat{
+														prettier.SoftLine{},
+														prettier.Concat{
+															prettier.Text("signer"),
+															prettier.Text(": "),
+															prettier.Text("AuthAccount"),
+														},
+													},
+												},
+												prettier.SoftLine{},
+												prettier.Text(")"),
+											},
+										},
+									},
+								},
+								prettier.Text(" {}"),
+							},
+						},
+					},
+				},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+		},
+		decl.Doc(),
+	)
+}
+
+func TestTransactionRoleDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &TransactionRoleDeclaration{
+		Identifier: Identifier{
+			Identifier: "buyer",
+			Pos:        Position{Offset: 1, Line: 2, Column: 3},
+		},
+		Fields: []*FieldDeclaration{
+			{
+				Access:       AccessPublic,
+				VariableKind: VariableKindConstant,
+				Identifier: Identifier{
+					Identifier: "f",
+				},
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "F",
+						},
+					},
+				},
+			},
+		},
+		Prepare: &SpecialFunctionDeclaration{
+			Kind: common.DeclarationKindPrepare,
+			FunctionDeclaration: &FunctionDeclaration{
+				ParameterList: &ParameterList{
+					Parameters: []*Parameter{
+						{
+							Identifier: Identifier{
+								Identifier: "signer",
+							},
+							TypeAnnotation: &TypeAnnotation{
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "AuthAccount",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	require.Equal(
+		t,
+		"role buyer {\n"+
+			"    pub let f: @F\n"+
+			"    \n"+
+			"    prepare(signer: AuthAccount) {}\n"+
 			"}",
 		decl.String(),
 	)
