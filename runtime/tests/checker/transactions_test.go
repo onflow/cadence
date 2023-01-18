@@ -567,6 +567,25 @@ func TestCheckTransactionRoles(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("transaction parameter usage", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction(foo: Int) {
+
+                  role buyer {
+                      let foo: Int
+
+                      prepare() {
+                          self.foo = foo
+                      }
+                  }
+              }
+            `,
+			nil,
+		)
+	})
 }
 
 func TestCheckTransactionExecuteScope(t *testing.T) {
