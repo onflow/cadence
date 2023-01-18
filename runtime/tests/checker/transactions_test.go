@@ -410,7 +410,7 @@ func TestCheckTransactionRoles(t *testing.T) {
 			`
               transaction {
 
-                role foo {}
+                  role foo {}
               }
             `,
 			nil,
@@ -423,14 +423,14 @@ func TestCheckTransactionRoles(t *testing.T) {
 			`
               transaction {
 
-                role foo {
+                  role foo {
 
-                  let bar: Int
+                      let bar: Int
 
-                  prepare() {
-                    self.bar = 1
+                      prepare() {
+                          self.bar = 1
+                      }
                   }
-                }
               }
             `,
 			nil,
@@ -443,10 +443,10 @@ func TestCheckTransactionRoles(t *testing.T) {
 			`
               transaction {
 
-                role foo {
+                  role foo {
 
-                  let bar: Int
-                }
+                      let bar: Int
+                  }
               }
             `,
 			[]error{
@@ -461,12 +461,12 @@ func TestCheckTransactionRoles(t *testing.T) {
 			`
               transaction {
 
-                role foo {
+                  role foo {
 
-                  let bar: Int
+                      let bar: Int
 
-                  prepare() {}
-                }
+                      prepare() {}
+                  }
               }
             `,
 			[]error{
@@ -481,9 +481,9 @@ func TestCheckTransactionRoles(t *testing.T) {
 			`
               transaction {
 
-                role foo {}
+                  role foo {}
 
-                role foo {}
+                  role foo {}
               }
             `,
 			[]error{
@@ -498,13 +498,13 @@ func TestCheckTransactionRoles(t *testing.T) {
 			`
               transaction {
 
-                let foo: Int
+                  let foo: Int
 
-                prepare() {
-                    self.foo = 1
-                }
+                  prepare() {
+                      self.foo = 1
+                  }
 
-                role foo {}
+                  role foo {}
               }
             `,
 			[]error{
@@ -519,31 +519,50 @@ func TestCheckTransactionRoles(t *testing.T) {
 			`
               transaction {
 
-                role foo {
+                  role foo {
 
-                  let bar: Int
+                      let bar: Int
 
-                  prepare() {
-                    self.bar = 1
+                      prepare() {
+                          self.bar = 1
+                      }
                   }
-                }
 
-                role ying {
+                  role ying {
 
-                  let yang: String
+                      let yang: String
 
-                  prepare() {
-                    self.yang = "2"
+                      prepare() {
+                          self.yang = "2"
+                      }
                   }
-                }
 
-                execute {
-                  let bar: Int = self.foo.bar
-                  let yang: String = self.ying.yang
-                }
+                  execute {
+                      let bar: Int = self.foo.bar
+                      let yang: String = self.ying.yang
+                  }
               }
             `,
 			nil,
+		)
+	})
+
+	t.Run("invalid prepare parameter type", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  let foo: Int
+
+                  prepare(foo: Int) {
+                      self.foo = foo
+                  }
+              }
+            `,
+			[]error{
+				&sema.InvalidTransactionPrepareParameterTypeError{},
+			},
 		)
 	})
 }
