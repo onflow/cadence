@@ -24,6 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -317,4 +320,119 @@ func TestInterpretTransactions(t *testing.T) {
 			arrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
 	})
+}
+
+func TestInterpretTransactionRoles(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("NoPrepareFunction", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				firstArgument := invocation.Arguments[0]
+				message := firstArgument.(*interpreter.StringValue).Str
+				logs = append(logs, message)
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              transaction(a: String, b: String) {
+
+                  let foo: String
+
+                  prepare(signer: AuthAccount) {
+                      log("a 1")
+                      log(a)
+                      log("b 1")
+                      log(b)
+                      self.foo = signer.address.toString()
+                      log("self.foo 1")
+                      log(self.foo)
+                  }
+
+                  role buyer {
+                      let bar: String
+
+                      prepare(signer: AuthAccount) {
+                          log("a 2")
+                          log(a)
+                          log("b 2")
+                          log(b)
+                          log("self.bar")
+                          self.bar = signer.address.toString()
+                      }
+                  }
+
+                  execute {
+                      log("self.foo 2")
+                      log(self.foo)
+                      //log("self.buyer.bar")
+                      //log(self.buyer.bar)
+                  }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		signer := newTestAuthAccountValue(
+			nil,
+			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
+		)
+
+		err = inter.InvokeTransaction(
+			0,
+			interpreter.NewUnmeteredStringValue("A"),
+			interpreter.NewUnmeteredStringValue("B"),
+			signer,
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				// transaction prepare
+				"a 1",
+				"A",
+				"b 1",
+				"B",
+				"self.foo 1",
+				"0x0000000000000001",
+				//// role prepare
+				//"a 2",
+				//"A",
+				//"b 2",
+				//"B",
+				//"self.bar",
+				//"0x0000000000000001",
+				// execute
+				"self.foo 2",
+				"0x0000000000000001",
+			},
+			logs,
+		)
+	})
+
 }
