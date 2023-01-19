@@ -34,8 +34,8 @@ func TestDeployedContracts(t *testing.T) {
 	contractCode := `
 		pub contract Test {
 			pub struct A {}
-			pub struct B {}
-			pub struct C {}
+			pub resource B {}
+			pub event C()
 
 			init() {}
 		}
