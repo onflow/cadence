@@ -206,6 +206,12 @@ func (interpreter *Interpreter) checkMemberAccess(
 
 		return
 
+	case *sema.TransactionRoleType:
+		// TODO: maybe also check transaction roles.
+		//   they are composites with a type ID which is not declared, i.e. no type is available
+
+		return
+
 	case *sema.CompositeType:
 		// TODO: also check built-in values.
 		//   blocked by standard library values (RLP, BLS, etc.),
