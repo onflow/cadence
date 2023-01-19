@@ -1366,31 +1366,12 @@ func (checker *Checker) recordResourceInvalidation(
 		)
 	}
 
-	accessedSelfMember := checker.accessedSelfMember(expression)
-
-	switch expression.(type) {
-	case *ast.MemberExpression:
-
-		if accessedSelfMember == nil ||
-			!checker.allowSelfResourceFieldInvalidation {
-
-			reportInvalidNestedMove()
-			return nil
+	getRecordedResourceInvalidation := func(res Resource) *recordedResourceInvalidation {
+		invalidation := ResourceInvalidation{
+			Kind:     invalidationKind,
+			StartPos: expression.StartPosition(),
+			EndPos:   expression.EndPosition(checker.memoryGauge),
 		}
-
-	case *ast.IndexExpression:
-		reportInvalidNestedMove()
-		return nil
-	}
-
-	invalidation := ResourceInvalidation{
-		Kind:     invalidationKind,
-		StartPos: expression.StartPosition(),
-		EndPos:   expression.EndPosition(checker.memoryGauge),
-	}
-
-	if checker.allowSelfResourceFieldInvalidation && accessedSelfMember != nil {
-		res := Resource{Member: accessedSelfMember}
 
 		checker.maybeAddResourceInvalidation(res, invalidation)
 
@@ -1400,37 +1381,52 @@ func (checker *Checker) recordResourceInvalidation(
 		}
 	}
 
-	identifierExpression, ok := expression.(*ast.IdentifierExpression)
-	if !ok {
+	switch expression := expression.(type) {
+	case *ast.IdentifierExpression:
+		variable := checker.findAndCheckValueVariable(expression, false)
+		if variable == nil {
+			return nil
+		}
+
+		if invalidationKind != ResourceInvalidationKindMoveTemporary &&
+			variable.DeclarationKind == common.DeclarationKindSelf {
+
+			checker.report(
+				&InvalidSelfInvalidationError{
+					InvalidationKind: invalidationKind,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						expression,
+					),
+				},
+			)
+		}
+
+		return getRecordedResourceInvalidation(Resource{
+			Variable: variable,
+		})
+
+	case *ast.MemberExpression:
+
+		accessedSelfMember := checker.accessedSelfMember(expression)
+
+		if accessedSelfMember == nil ||
+			!checker.allowSelfResourceFieldInvalidation {
+
+			reportInvalidNestedMove()
+			return nil
+		}
+
+		return getRecordedResourceInvalidation(Resource{
+			Member: accessedSelfMember,
+		})
+
+	case *ast.IndexExpression:
+		reportInvalidNestedMove()
 		return nil
-	}
 
-	variable := checker.findAndCheckValueVariable(identifierExpression, false)
-	if variable == nil {
+	default:
 		return nil
-	}
-
-	if invalidationKind != ResourceInvalidationKindMoveTemporary &&
-		variable.DeclarationKind == common.DeclarationKindSelf {
-
-		checker.report(
-			&InvalidSelfInvalidationError{
-				InvalidationKind: invalidationKind,
-				Range: ast.NewRangeFromPositioned(
-					checker.memoryGauge,
-					expression,
-				),
-			},
-		)
-	}
-
-	res := Resource{Variable: variable}
-
-	checker.maybeAddResourceInvalidation(res, invalidation)
-
-	return &recordedResourceInvalidation{
-		resource:     res,
-		invalidation: invalidation,
 	}
 }
 
