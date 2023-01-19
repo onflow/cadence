@@ -15,7 +15,7 @@ The tool automatically detects versions and supports multiple modules per repo.
 - Run:
 
   ```sh
-  GITHUB_TOKEN=`gh auth token` ts-node main.ts update --version <version>
+  GH_TOKEN=`gh auth token` ts-node main.ts update --version <version>
   ```
 
 Certain dependencies are not released, e.g. flow-go.
