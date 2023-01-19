@@ -69,16 +69,13 @@ func TestRuntimeCyclicImport(t *testing.T) {
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
-	location := nextTransactionLocation()
 	_, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  location,
+			Location:  common.ScriptLocation{},
 		},
 	)
 	RequireError(t, err)

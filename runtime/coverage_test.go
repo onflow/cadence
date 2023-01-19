@@ -71,8 +71,6 @@ func TestRuntimeCoverage(t *testing.T) {
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	coverageReport := NewCoverageReport()
 
 	value, err := runtime.ExecuteScript(
@@ -81,7 +79,7 @@ func TestRuntimeCoverage(t *testing.T) {
 		},
 		Context{
 			Interface:      runtimeInterface,
-			Location:       nextTransactionLocation(),
+			Location:       common.ScriptLocation{},
 			CoverageReport: coverageReport,
 		},
 	)
@@ -104,7 +102,7 @@ func TestRuntimeCoverage(t *testing.T) {
                "7": 1
              }
            },
-           "t.0000000000000000000000000000000000000000000000000000000000000000": {
+           "s.0000000000000000000000000000000000000000000000000000000000000000": {
              "line_hits": {
                "5": 1,
                "6": 1,

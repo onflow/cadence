@@ -2342,7 +2342,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		addTx := newContractAddTransaction(name, oldCode)
 
-		txLocation := common.TransactionLocation{0}
+		txLocation := common.TransactionLocation{0x1}
 
 		// Deploy to first
 
@@ -2370,7 +2370,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		clearLocationAccessCounts()
 
-		txLocation := common.TransactionLocation{1}
+		txLocation := common.TransactionLocation{0x2}
 
 		importTx := fmt.Sprintf(
 			`
@@ -2416,9 +2416,9 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		clearLocationAccessCounts()
 
-		txLocation1 := common.TransactionLocation{1}
+		txLocation1 := common.TransactionLocation{0x2}
 		// second has seen an additional transaction (import, above)
-		txLocation2 := common.TransactionLocation{2}
+		txLocation2 := common.TransactionLocation{0x3}
 
 		updateTx := newContractUpdateTransaction(name, newCode)
 

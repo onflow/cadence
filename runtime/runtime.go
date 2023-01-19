@@ -263,6 +263,10 @@ func (r *interpreterRuntime) NewScriptExecutor(
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+	location := context.Location
+	if _, ok := location.(common.ScriptLocation); !ok {
+		return nil, errors.NewUnexpectedError("invalid non-script location: %s", location)
+	}
 	return r.NewScriptExecutor(script, context).Result()
 }
 
@@ -305,6 +309,10 @@ func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Conte
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
 	_, err = r.NewTransactionExecutor(script, context).Result()
+	location := context.Location
+	if _, ok := location.(common.TransactionLocation); !ok {
+		return errors.NewUnexpectedError("invalid non-transaction location: %s", location)
+	}
 	return err
 }
 
