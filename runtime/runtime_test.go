@@ -196,6 +196,9 @@ type testRuntimeInterface struct {
 	getAccountContractNames    func(address Address) ([]string, error)
 	recordTrace                func(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
 	meterMemory                func(usage common.MemoryUsage) error
+	computationUsed            func() (uint64, error)
+	memoryUsed                 func() (uint64, error)
+	interactionUsed            func() (uint64, error)
 }
 
 // testRuntimeInterface should implement Interface
@@ -590,6 +593,30 @@ func (i *testRuntimeInterface) MeterMemory(usage common.MemoryUsage) error {
 	return i.meterMemory(usage)
 }
 
+func (i *testRuntimeInterface) ComputationUsed() (uint64, error) {
+	if i.computationUsed == nil {
+		return 0, nil
+	}
+
+	return i.computationUsed()
+}
+
+func (i *testRuntimeInterface) MemoryUsed() (uint64, error) {
+	if i.memoryUsed == nil {
+		return 0, nil
+	}
+
+	return i.memoryUsed()
+}
+
+func (i *testRuntimeInterface) InteractionUsed() (uint64, error) {
+	if i.interactionUsed == nil {
+		return 0, nil
+	}
+
+	return i.interactionUsed()
+}
+
 func TestRuntimeImport(t *testing.T) {
 
 	t.Parallel()
@@ -743,7 +770,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 	//   however, currently the imported program gets re-checked if it is currently being checked.
 	//   This can probably be optimized by synchronizing the checking of a program using `sync`.
 	//
-	//require.Equal(t, concurrency+1, checkCount)
+	// require.Equal(t, concurrency+1, checkCount)
 }
 
 func TestRuntimeProgramSetAndGet(t *testing.T) {
@@ -7365,35 +7392,35 @@ func TestRuntimeComputationMetring(t *testing.T) {
 		{
 			name: "Infinite while loop",
 			code: `
-		  while true {}
-		`,
+          while true {}
+        `,
 			ok:          false,
 			expCompUsed: compLimit,
 		},
 		{
 			name: "Limited while loop",
 			code: `
-		  var i = 0
-		  while i < 5 {
-			  i = i + 1
-		  }
-		`,
+          var i = 0
+          while i < 5 {
+              i = i + 1
+          }
+        `,
 			ok:          false,
 			expCompUsed: compLimit,
 		},
 		{
 			name: "statement + createArray + transferArray + too many for-in loop iterations",
 			code: `
-		  for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
-		`,
+          for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
+        `,
 			ok:          false,
 			expCompUsed: compLimit,
 		},
 		{
 			name: "statement + createArray + transferArray + some for-in loop iterations",
 			code: `
-		  for i in [1, 2] {}
-		`,
+          for i in [1, 2] {}
+        `,
 			ok:          true,
 			expCompUsed: 5,
 		},
@@ -7406,12 +7433,12 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			script := []byte(
 				fmt.Sprintf(
 					`
-				  transaction {
-					  prepare() {
-						  %s
-					  }
-				  }
-				`,
+                  transaction {
+                      prepare() {
+                          %s
+                      }
+                  }
+                `,
 					test.code,
 				),
 			)
@@ -7493,10 +7520,10 @@ func TestRuntimeImportAnyStruct(t *testing.T) {
 	err := rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
-			  transaction(args: [AnyStruct]) {
-			    prepare(signer: AuthAccount) {}
-			  }
-			`),
+              transaction(args: [AnyStruct]) {
+                prepare(signer: AuthAccount) {}
+              }
+            `),
 			Arguments: [][]byte{
 				[]byte(`{"value":[{"value":"0xf8d6e0586b0a20c7","type":"Address"},{"value":{"domain":"private","identifier":"USDCAdminCap-ca258982-c98e-4ef0-adef-7ff80ee96b10"},"type":"Path"}],"type":"Array"}`),
 			},
@@ -7585,12 +7612,12 @@ func TestRuntimeImportTestStdlib(t *testing.T) {
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: []byte(`
-			    import Test
+                import Test
 
-			    pub fun main() {
-			        Test.assert(true)
-			    }
-			`),
+                pub fun main() {
+                    Test.assert(true)
+                }
+            `),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -7618,10 +7645,10 @@ func TestRuntimeGetCurrentBlockScript(t *testing.T) {
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: []byte(`
-			    pub fun main(): AnyStruct {
-			        return getCurrentBlock()
-			    }
-			`),
+                pub fun main(): AnyStruct {
+                    return getCurrentBlock()
+                }
+            `),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -7761,4 +7788,112 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 
 	require.ErrorContains(t, err, "expected type `A.0000000000000002.Foo.Bar`, got `A.0000000000000001.Foo.Bar`")
 
+}
+
+func TestRuntimeErrorExcerpts(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	script := []byte(`
+    pub fun main(): Int {
+        // fill lines so the error occurs on lines 9 and 10
+        // 
+        // 
+        //
+        //
+        let a = [1,2,3,4]
+        return a
+            .firstIndex(of: 5)!
+    }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getAccountBalance:          noopRuntimeUInt64Getter,
+		getAccountAvailableBalance: noopRuntimeUInt64Getter,
+		getStorageUsed:             noopRuntimeUInt64Getter,
+		getStorageCapacity:         noopRuntimeUInt64Getter,
+		accountKeysCount:           noopRuntimeUInt64Getter,
+		storage:                    newTestLedger(nil, nil),
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.Error(t, err)
+
+	errorString := `Execution failed:
+error: unexpectedly found nil while forcing an Optional value
+  --> 0000000000000000000000000000000000000000000000000000000000000000:9:15
+   |
+ 9 |         return a
+10 |             .firstIndex(of: 5)!
+   |                ^^^^^^^^^^^^^^^^
+`
+
+	require.Equal(t, errorString, err.Error())
+}
+
+func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	script := []byte(`
+    pub fun main(): String {
+        // fill lines so the error occurs on lines 9 and 10
+        // 
+        // 
+        //
+        //
+        let a = [1,2,3,4]
+        return a
+            .firstIndex(of: 5)
+                ?.toString()!
+    }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getAccountBalance:          noopRuntimeUInt64Getter,
+		getAccountAvailableBalance: noopRuntimeUInt64Getter,
+		getStorageUsed:             noopRuntimeUInt64Getter,
+		getStorageCapacity:         noopRuntimeUInt64Getter,
+		accountKeysCount:           noopRuntimeUInt64Getter,
+		storage:                    newTestLedger(nil, nil),
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.Error(t, err)
+
+	errorString := `Execution failed:
+error: unexpectedly found nil while forcing an Optional value
+  --> 0000000000000000000000000000000000000000000000000000000000000000:9:15
+   |
+ 9 |         return a
+10 |             .firstIndex(of: 5)
+11 |                 ?.toString()!
+   |                ^^^^^^^^^^^^^^
+`
+
+	require.Equal(t, errorString, err.Error())
 }

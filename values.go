@@ -1758,49 +1758,6 @@ func (v Contract) String() string {
 	return formatComposite(v.ContractType.ID(), v.ContractType.Fields, v.Fields)
 }
 
-// PathLink
-
-type PathLink struct {
-	TargetPath Path
-	// TODO: a future version might want to export the whole type
-	BorrowType string
-}
-
-var _ Value = PathLink{}
-
-func NewPathLink(targetPath Path, borrowType string) PathLink {
-	return PathLink{
-		TargetPath: targetPath,
-		BorrowType: borrowType,
-	}
-}
-
-func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) PathLink {
-	common.UseMemory(gauge, common.CadencePathLinkValueMemoryUsage)
-	return NewPathLink(targetPath, borrowType)
-}
-
-func (PathLink) isValue() {}
-
-func (v PathLink) Type() Type {
-	return nil
-}
-
-func (v PathLink) MeteredType(_ common.MemoryGauge) Type {
-	return v.Type()
-}
-
-func (v PathLink) ToGoValue() any {
-	return nil
-}
-
-func (v PathLink) String() string {
-	return format.PathLink(
-		v.BorrowType,
-		v.TargetPath.String(),
-	)
-}
-
 // Path
 
 type Path struct {
