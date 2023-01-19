@@ -2903,7 +2903,6 @@ func (e *ReadOnlyTargetAssignmentError) Error() string {
 }
 
 // MissingPrepareForFieldError
-//
 type MissingPrepareForFieldError struct {
 	FirstFieldName string
 	FirstFieldPos  ast.Position
