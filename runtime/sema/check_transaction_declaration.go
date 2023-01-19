@@ -83,9 +83,14 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		declaration.PostConditions,
 		VoidType,
 		func() {
-			checker.withSelfResourceInvalidationAllowed(func() {
-				checker.visitTransactionExecuteFunction(declaration.Execute, transactionType)
-			})
+			checker.withResourceFieldInvalidationAllowed(
+				func(expression *ast.MemberExpression) *Member {
+					return checker.accessedSelfMember(expression)
+				},
+				func() {
+					checker.visitTransactionExecuteFunction(declaration.Execute, transactionType)
+				},
+			)
 		},
 	)
 

@@ -104,15 +104,15 @@ type Checker struct {
 	Config                  *Config
 	Elaboration             *Elaboration
 	// initialized lazily. use beforeExtractor()
-	_beforeExtractor                   *BeforeExtractor
-	errors                             []error
-	functionActivations                *FunctionActivations
-	inCondition                        bool
-	allowSelfResourceFieldInvalidation bool
-	inAssignment                       bool
-	inInvocation                       bool
-	inCreate                           bool
-	isChecked                          bool
+	_beforeExtractor                 *BeforeExtractor
+	errors                           []error
+	functionActivations              *FunctionActivations
+	inCondition                      bool
+	resourceFieldInvalidationAllowed func(*ast.MemberExpression) *Member
+	inAssignment                     bool
+	inInvocation                     bool
+	inCreate                         bool
+	isChecked                        bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -1407,19 +1407,17 @@ func (checker *Checker) recordResourceInvalidation(
 		})
 
 	case *ast.MemberExpression:
-
-		accessedSelfMember := checker.accessedSelfMember(expression)
-
-		if accessedSelfMember == nil ||
-			!checker.allowSelfResourceFieldInvalidation {
-
-			reportInvalidNestedMove()
-			return nil
+		if checker.resourceFieldInvalidationAllowed != nil {
+			member := checker.resourceFieldInvalidationAllowed(expression)
+			if member != nil {
+				return getRecordedResourceInvalidation(Resource{
+					Member: member,
+				})
+			}
 		}
 
-		return getRecordedResourceInvalidation(Resource{
-			Member: accessedSelfMember,
-		})
+		reportInvalidNestedMove()
+		return nil
 
 	case *ast.IndexExpression:
 		reportInvalidNestedMove()
@@ -1794,11 +1792,14 @@ func (checker *Checker) isWriteableAccess(access ast.Access) bool {
 	}
 }
 
-func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
-	allowSelfResourceFieldInvalidation := checker.allowSelfResourceFieldInvalidation
-	checker.allowSelfResourceFieldInvalidation = true
+func (checker *Checker) withResourceFieldInvalidationAllowed(
+	invalidationAllowed func(*ast.MemberExpression) *Member,
+	f func(),
+) {
+	oldInvalidationAllowed := checker.resourceFieldInvalidationAllowed
+	checker.resourceFieldInvalidationAllowed = invalidationAllowed
 	defer func() {
-		checker.allowSelfResourceFieldInvalidation = allowSelfResourceFieldInvalidation
+		checker.resourceFieldInvalidationAllowed = oldInvalidationAllowed
 	}()
 
 	f()
