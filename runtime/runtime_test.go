@@ -7818,15 +7818,13 @@ func TestRuntimeErrorExcerpts(t *testing.T) {
 		storage:                    newTestLedger(nil, nil),
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.Error(t, err)
@@ -7872,15 +7870,13 @@ func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
 		storage:                    newTestLedger(nil, nil),
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.Error(t, err)
