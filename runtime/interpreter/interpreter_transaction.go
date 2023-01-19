@@ -184,8 +184,6 @@ func (interpreter *Interpreter) declareTransactionRole(
 ) {
 	transactionRoleType := interpreter.Program.Elaboration.TransactionRoleDeclarationType(declaration)
 
-	lexicalScope := interpreter.activations.CurrentOrNew()
-
 	var prepareFunction *ast.FunctionDeclaration
 	var prepareFunctionType *sema.FunctionType
 	if declaration.Prepare != nil {
@@ -221,22 +219,20 @@ func (interpreter *Interpreter) declareTransactionRole(
 
 	prepareFunctionValue = &HostFunctionValue{
 		Function: func(invocation Invocation) Value {
-			interpreter.activations.PushNewWithParent(lexicalScope)
+			interpreter.activations.PushNewWithCurrent()
 			defer interpreter.activations.Pop()
 
 			self := MemberAccessibleValue(roleValue)
 			invocation.Self = &self
 			interpreter.declareVariable(sema.SelfIdentifier, self)
 
-			// NOTE: get current scope instead of using `lexicalScope`,
-			// because current scope has `self` declared
-			transactionScope := interpreter.activations.CurrentOrNew()
+			transactionRoleScope := interpreter.activations.CurrentOrNew()
 
 			if prepareFunction != nil {
 				prepare := interpreter.functionDeclarationValue(
 					prepareFunction,
 					prepareFunctionType,
-					transactionScope,
+					transactionRoleScope,
 				)
 
 				prepare.invoke(invocation)

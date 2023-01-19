@@ -371,9 +371,9 @@ func TestInterpretTransactionRoles(t *testing.T) {
 
                       prepare(signer: AuthAccount) {
                           log("a 2")
-                          //log(a)
-                          //log("b 2")
-                          //log(b)
+                          log(a)
+                          log("b 2")
+                          log(b)
                           self.bar = signer.address.toString()
                           log("self.bar")
                           log(self.bar)
@@ -423,9 +423,9 @@ func TestInterpretTransactionRoles(t *testing.T) {
 				"0x0000000000000001",
 				// role prepare
 				"a 2",
-				//"A",
-				//"b 2",
-				//"B",
+				"A",
+				"b 2",
+				"B",
 				"self.bar",
 				"0x0000000000000001",
 				// execute
