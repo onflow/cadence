@@ -661,6 +661,59 @@ func TestCheckTransactionRoles(t *testing.T) {
 			nil,
 		)
 	})
+
+	t.Run("resource field", func(t *testing.T) {
+		test(t,
+			`
+              resource R {}
+
+              fun absorb(_ r: @R) {
+                  destroy r
+              }
+
+              transaction {
+
+                  role buyer {
+                      var x: @R
+
+                      prepare() {
+                          self.x <- create R()
+                      }
+                  }
+
+                  execute {
+                      absorb(<-self.buyer.x)
+                  }
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("invalid resource field loss", func(t *testing.T) {
+		test(t,
+			`
+              resource R {}
+
+              transaction {
+
+                  role buyer {
+                      var x: @R
+
+                      prepare() {
+                          self.x <- create R()
+                      }
+                  }
+
+                  execute {}
+              }
+            `,
+			[]error{
+				&sema.ResourceFieldNotInvalidatedError{},
+			},
+		)
+	})
+
 }
 
 func TestCheckTransactionExecuteScope(t *testing.T) {
