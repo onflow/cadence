@@ -46,8 +46,9 @@ type Interface interface {
 	//   i.e. it may NOT return a different program,
 	//   an elaboration in the program that is not annotating the AST in the program;
 	//   or a program/elaboration and then nothing in a subsequent call.
-	// - This function MUST also return what was previously loaded,
-	//   it may NOT return something different or nothing/nil (!) after load was called.
+	// - This function MUST also return exactly what was previously returned from load,
+	//   *EVEN IF loading failed* (program is nil / error is non-nil),
+	//   and it may NOT return something different
 	// - Do NOT implement this as a cache!
 	GetAndSetProgram(
 		location Location,
