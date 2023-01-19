@@ -542,24 +542,25 @@ func (e *interpreterEnvironment) getProgram(
 		}, nil
 	}
 
-	if getAndSetProgram {
-		wrapPanic(func() {
-			program, err = e.runtimeInterface.GetAndSetProgram(location, func() (program *interpreter.Program, err error) {
-				// Loading is done by Cadence.
-				// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
-				// then do not treat it as an external error (the load callback is called by the embedder)
-				panicErr := userPanicToError(func() {
-					program, err = load()
-				})
-				if panicErr != nil {
-					return nil, panicErr
-				}
-				return
-			})
-		})
-	} else {
-		program, err = load()
+	if !getAndSetProgram {
+		return load()
 	}
+
+	wrapPanic(func() {
+		program, err = e.runtimeInterface.GetAndSetProgram(location, func() (program *interpreter.Program, err error) {
+			// Loading is done by Cadence.
+			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
+			// then do not treat it as an external error (the load callback is called by the embedder)
+			panicErr := userPanicToError(func() {
+				program, err = load()
+			})
+			if panicErr != nil {
+				return nil, panicErr
+			}
+			return
+		})
+	})
+
 	return
 }
 
