@@ -1,62 +1,62 @@
----
-title: Enumerations
----
+----- 
+titwe: Enyumewations 
+----- 
 
-Enumerations are sets of symbolic names bound to unique, constant values,
-which can be compared by identity.
+Enyumewations awe sets of symbowic nyames b-bound to u-unyique, c-constant vawues, 
+which c-can be compawed by identity. 
 
-## Enum Declaration
+#-## Enyum Decwawation 
 
-Enums are declared using the `enum` keyword,
-followed by the name of the enum, the raw type after a colon,
-and the requirements, which must be enclosed in opening and closing braces.
+Enyums awe d-decwawed using t-the `enyum` keywowd, 
+f-fowwowed by t-the nyame of t-the enyum, t-the waw t-type aftew a cowon, 
+and t-the wequiwements, which (* ^ ω ^) *screams* m-must be encwosed in openying and cwosing >_> *screams* b-bwaces. 
 
-The raw type must be an integer subtype, e.g. `UInt8` or `Int128`.
+The waw t-type (* ^ ω ^) *screams* m-must be an integew subtype, e.g. `-`UInt8` ow `-`Int128`. 
 
-Enum cases are declared using the `case` keyword,
-followed by the name of the enum case.
+Enyum cases awe d-decwawed using t-the `case` keywowd, 
+f-fowwowed by t-the nyame of t-the enyum case. 
 
-Enum cases must be unique.
-Each enum case has a raw value, the index of the case in all cases.
+Enyum cases (* ^ ω ^) *screams* m-must be unyique. 
+Each enyum case has a waw vawue, t-the i-index of t-the case in (＾▽＾') *cuddles you* a-aww cases. 
 
-The raw value of an enum case can be accessed through the `rawValue` field.
+The waw vawue of an enyum case c-can be accessed thwough t-the `wawVawue` fiewd. 
 
-The enum cases can be accessed by using the name as a field on the enum,
-or by using the enum constructor,
-which requires providing the raw value as an argument.
-The enum constructor returns the enum case with the given raw value,
-if any, or `nil` if no such case exists.
+The enyum cases c-can be accessed by using t-the nyame as a fiewd on t-the enyum, 
+ow by using t-the enyum constwuctow, 
+which wequiwes pwoviding t-the waw vawue as an awgument. 
+The enyum c-constwuctow wetuwns t-the enyum case with t-the given waw vawue, 
+if any, ow (＾• ω •＾) *teleports behind you* `-`nyiw` if nyo such case exists. 
 
-Enum cases can be compared using the equality operators `==` and `!=`.
+Enyum cases c-can be compawed using t-the equawity opewatows `==` and `!=`. 
 
-```cadence
-// Declare an enum named `Color` which has the raw value type `UInt8`,
-// and declare three enum cases: `red`, `green`, and `blue`
-//
-pub enum Color: UInt8 {
-    pub case red
-    pub case green
-    pub case blue
-}
-// Declare a variable which has the enum type `Color` and initialize
-// it to the enum case `blue` of the enum
-let blue: Color = Color.blue
-// Get the raw value of the enum case `blue`.
-// As it is the third case, so it has index 2
-//
-blue.rawValue // is `2`
-// Get the `green` enum case of the enum `Color` by using the enum
-// constructor and providing the raw value of the enum case `green`, 1,
-// as the enum case `green` is the second case, so it has index 1
-//
-let green: Color? = Color(rawValue: 1)  // is `Color.green`
-// Get the enum case of the enum `Color` that has the raw value 5.
-// As there are only three cases, the maximum raw value / index is 2.
-//
-let nothing = Color(rawValue: 5)  // is `nil`
-// Enum cases can be compared
-Color.red == Color.red  // is `true`
-Color(rawValue: 1) == Color.green  // is `true`
-// Different enum cases are not the same
-Color.red != Color.blue  // is `true`
-```
+```cadence 
+/-// Decwawe an enyum nyamed `Cowow` which has t-the waw vawue t-type `UInt8`, 
+/-// and decwawe thwee enyum cases: `wed`, `gween`, and `bwue` 
+/-// 
+pub enyum Cowow: UInt8 { 
+pub case (⌒▽⌒)☆ *dances nervously* w-wed 
+pub case gween 
+pub case bwue 
+} 
+/-// Decwawe a vawiabwe which has t-the enyum t-type `Cowow` and inyitiawize 
+/-// it to t-the enyum case `bwue` of t-the enyum 
+wet bwue: Cowow = Color.blue 
+/-// Get t-the waw vawue of t-the enyum case `-`bwue`. 
+/-// As it is t-the thiwd case, so it has i-index 2-2 
+/-// 
+blue.rawValue /-// is (⌒ω⌒) *looks away* `-`2` 
+/-// Get t-the `gween` enyum case of t-the enyum `Cowow` by using t-the enyum 
+/-// c-constwuctow and pwoviding t-the waw vawue of t-the enyum case `gween`, 1, 
+/-// as t-the enyum case `gween` is t-the second case, so it has i-index 1 
+/-// 
+wet gween: Cowow? = C-Cowow(wawVawue: 1) /-// is `-`Color.green` 
+/-// Get t-the enyum case of t-the enyum `Cowow` that has t-the waw vawue 5. 
+/-// As (⌒ω⌒) *hugs tightly* t-thewe awe onwy thwee cases, t-the maximum waw vawue (T_T) *whines* /-/ i-index is 2-2. 
+/-// 
+wet nyothing = C-Cowow(wawVawue: 5) /-// is (＾• ω •＾) *teleports behind you* `-`nyiw` 
+/-// Enyum cases c-can be compawed 
+Color.red == Color.red /-// is `twue` 
+C-Cowow(wawVawue: 1) == C-Color.green /-// is `twue` 
+/-// Diffewent enyum cases awe nyot t-the same 
+Color.red != Color.blue /-// is `twue` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

@@ -1,5 +1,5 @@
----
-title: Type Hierarchy
----
+----- 
+titwe: Type Hiewawchy 
+----- 
 
-![Cadence type hierarchy](type-hierarchy.png)
+![Cadence t-type hierarchy](type-hierarchy.png) 

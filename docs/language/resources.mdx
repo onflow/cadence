@@ -1,608 +1,608 @@
----
-title: Resources
-description: Enables resource-oriented programming on Flow
----
-
-Resources are types that can only exist in **one** location at a time
-and **must** be used **exactly once**.
-
-Resources **must** be created (instantiated) by using the `create` keyword.
-
-At the end of a function which has resources (variables, constants, parameters) in scope,
-the resources **must** be either **moved** or **destroyed**.
-
-They are **moved** when used as an initial value for a constant or variable,
-when assigned to a different variable,
-when passed as an argument to a function,
-and when returned from a function.
-
-Resources can be explicitly **destroyed** using the `destroy` keyword.
-
-Accessing a field or calling a function of a resource does not move or destroy it.
-
-When the resource is moved, the constant or variable
-that referred to the resource before the move becomes **invalid**.
-An **invalid** resource cannot be used again.
-
-To make the usage and behaviour of resource types explicit,
-the prefix `@` must be used in type annotations
-of variable or constant declarations, parameters, and return types.
-
-### The Move Operator (`<-`)
-
-To make moves of resources explicit, the move operator `<-` must be used
-when the resource is the initial value of a constant or variable,
-when it is moved to a different variable,
-when it is moved to a function as an argument,
-and when it is returned from a function.
-
-```cadence
-// Declare a resource named `SomeResource`, with a variable integer field.
-//
-pub resource SomeResource {
-    pub var value: Int
-
-    init(value: Int) {
-        self.value = value
-    }
-}
-
-// Declare a constant with value of resource type `SomeResource`.
-//
-let a: @SomeResource <- create SomeResource(value: 0)
-
-// *Move* the resource value to a new constant.
-//
-let b <- a
-
-// Invalid: Cannot use constant `a` anymore as the resource that it referred to
-// was moved to constant `b`.
-//
-a.value
-
-// Constant `b` owns the resource.
-//
-b.value // equals 0
-
-// Declare a function which accepts a resource.
-//
-// The parameter has a resource type, so the type annotation must be prefixed with `@`.
-//
-pub fun use(resource: @SomeResource) {
-    // ...
-}
-
-// Call function `use` and move the resource into it.
-//
-use(resource: <-b)
-
-// Invalid: Cannot use constant `b` anymore as the resource
-// it referred to was moved into function `use`.
-//
-b.value
-```
-
-A resource object cannot go out of scope and be dynamically lost.
-The program must either explicitly destroy it or move it to another context.
-
-```cadence
-{
-    // Declare another, unrelated value of resource type `SomeResource`.
-    //
-    let c <- create SomeResource(value: 10)
-
-    // Invalid: `c` is not used before the end of the scope, but must be.
-    // It cannot be lost.
-}
-```
-
-```cadence
-// Declare another, unrelated value of resource type `SomeResource`.
-//
-let d <- create SomeResource(value: 20)
-
-// Destroy the resource referred to by constant `d`.
-//
-destroy d
-
-// Invalid: Cannot use constant `d` anymore as the resource
-// it referred to was destroyed.
-//
-d.value
-```
-
-To make it explicit that the type is a resource type
-and must follow the rules associated with resources,
-it must be prefixed with `@` in all type annotations,
-e.g. for variable declarations, parameters, or return types.
-
-```cadence
-// Declare a constant with an explicit type annotation.
-//
-// The constant has a resource type, so the type annotation must be prefixed with `@`.
-//
-let someResource: @SomeResource <- create SomeResource(value: 5)
-
-// Declare a function which consumes a resource and destroys it.
-//
-// The parameter has a resource type, so the type annotation must be prefixed with `@`.
-//
-pub fun use(resource: @SomeResource) {
-    destroy resource
-}
-
-// Declare a function which returns a resource.
-//
-// The return type is a resource type, so the type annotation must be prefixed with `@`.
-// The return statement must also use the `<-` operator to make it explicit the resource is moved.
-//
-pub fun get(): @SomeResource {
-    let newResource <- create SomeResource()
-    return <-newResource
-}
-```
-
-Resources **must** be used exactly once.
-
-```cadence
-// Declare a function which consumes a resource but does not use it.
-// This function is invalid, because it would cause a loss of the resource.
-//
-pub fun forgetToUse(resource: @SomeResource) {
-    // Invalid: The resource parameter `resource` is not used, but must be.
-}
-```
-
-```cadence
-// Declare a constant named `res` which has the resource type `SomeResource`.
-let res <- create SomeResource()
-
-// Call the function `use` and move the resource `res` into it.
-use(resource: <-res)
-
-// Invalid: The resource constant `res` cannot be used again,
-// as it was moved in the previous function call.
-//
-use(resource: <-res)
-
-// Invalid: The resource constant `res` cannot be used again,
-// as it was moved in the previous function call.
-//
-res.value
-```
-
-```cadence
-// Declare a function which has a resource parameter.
-// This function is invalid, because it does not always use the resource parameter,
-// which would cause a loss of the resource.
-//
-pub fun sometimesDestroy(resource: @SomeResource, destroyResource: Bool) {
-    if destroyResource {
-        destroy resource
-    }
-    // Invalid: The resource parameter `resource` is not always used, but must be.
-    // The destroy statement is not always executed, so at the end of this function
-    // it might have been destroyed or not.
-}
-```
-
-```cadence
-// Declare a function which has a resource parameter.
-// This function is valid, as it always uses the resource parameter,
-// and does not cause a loss of the resource.
-//
-pub fun alwaysUse(resource: @SomeResource, destroyResource: Bool) {
-    if destroyResource {
-        destroy resource
-    } else {
-        use(resource: <-resource)
-    }
-    // At the end of the function the resource parameter was definitely used:
-    // It was either destroyed or moved in the call of function `use`.
-}
-```
-
-```cadence
-// Declare a function which has a resource parameter.
-// This function is invalid, because it does not always use the resource parameter,
-// which would cause a loss of the resource.
-//
-pub fun returnBeforeDestroy(move: Bool) {
-    let res <- create SomeResource(value: 1)
-    if move {
-        use(resource: <-res)
-        return
-    } else {
-        // Invalid: When this function returns here, the resource variable
-        // `res` was not used, but must be.
-        return
-    }
-    // Invalid: the resource variable `res` was potentially moved in the
-    // previous if-statement, and both branches definitely return,
-    // so this statement is unreachable.
-    destroy res
-}
-```
-
-### Resource Variables
-
-Resource variables cannot be assigned to,
-as that would lead to the loss of the variable's current resource value.
-
-Instead, use a swap statement (`<->`) or shift statement (`<- target <-`)
-to replace the resource variable with another resource.
-
-```cadence
-pub resource R {}
-
-var x <- create R()
-var y <- create R()
-
-// Invalid: Cannot assign to resource variable `x`,
-// as its current resource would be lost
-//
-x <- y
-
-// Instead, use a swap statement.
-//
-var replacement <- create R()
-x <-> replacement
-// `x` is the new resource.
-// `replacement` is the old resource.
-
-// Or use the shift statement (`<- target <-`)
-// This statement moves the resource out of `x` and into `oldX`,
-// and at the same time assigns `x` with the new value on the right-hand side.
-let oldX <- x <- create R()
-// oldX still needs to be explicitly handled after this statement
-destroy oldX
-```
-
-### Resource Destructors
-
-Resource may have a destructor, which is executed when the resource is destroyed.
-Destructors have no parameters and no return value and are declared using the `destroy` name.
-A resource may have only one destructor.
-
-```cadence
-var destructorCalled = false
-
-pub resource Resource {
-
-    // Declare a destructor for the resource, which is executed
-    // when the resource is destroyed.
-    //
-    destroy() {
-        destructorCalled = true
-    }
-}
-
-let res <- create Resource()
-destroy res
-// `destructorCalled` is `true`
-```
-
-### Nested Resources
-
-Fields in composite types behave differently when they have a resource type.
-
-If a resource type has fields that have a resource type,
-it **must** declare a destructor,
-which **must** invalidate all resource fields, i.e. move or destroy them.
-
-```cadence
-pub resource Child {
-    let name: String
-
-    init(name: String)
-        self.name = name
-    }
-}
-
-// Declare a resource with a resource field named `child`.
-// The resource *must* declare a destructor
-// and the destructor *must* invalidate the resource field.
-//
-pub resource Parent {
-    let name: String
-    var child: @Child
-
-    init(name: String, child: @Child) {
-        self.name = name
-        self.child <- child
-    }
-
-    // Declare a destructor which invalidates the resource field
-    // `child` by destroying it.
-    //
-    destroy() {
-        destroy self.child
-    }
-}
-```
-
-Accessing a field or calling function on a resource field is valid,
-however moving a resource out of a variable resource field is **not** allowed.
-Instead, use a swap statement to replace the resource with another resource.
-
-```cadence
-let child <- create Child(name: "Child 1")
-let parent <- create Parent(name: "Parent", child: <-child)
-
-child.name  // is "Child 1"
-parent.child.name  // is "Child 1"
-
-// Invalid: Cannot move resource out of variable resource field.
-let childAgain <- parent.child
-
-// Instead, use a swap statement.
-//
-var otherChild <- create Child(name: "Child 2")
-parent.child <-> otherChild
-// `parent.child` is the second child, Child 2.
-// `otherChild` is the first child, Child 1.
-```
-
-### Resources in Closures
-
-Resources can not be captured in closures, as that could potentially result in duplications.
-
-```cadence
-resource R {}
-
-// Invalid: Declare a function which returns a closure which refers to
-// the resource parameter `resource`. Each call to the returned function
-// would return the resource, which should not be possible.
-//
-fun makeCloner(resource: @R): ((): @R) {
-    return fun (): @R {
-        return <-resource
-    }
-}
-
-let test = makeCloner(resource: <-create R())
-```
-
-### Resources in Arrays and Dictionaries
-
-Arrays and dictionaries behave differently when they contain resources:
-It is **not** allowed to index into an array to read an element at a certain index or assign to it,
-or index into a dictionary to read a value for a certain key or set a value for the key.
-
-Instead, use a swap statement (`<->`) or shift statement (`<- target <-`)
-to replace the accessed resource with another resource.
-
-```cadence
-resource R {}
-
-// Declare a constant for an array of resources.
-// Create two resources and move them into the array.
-// `resources` has type `@[R]`
-//
-let resources <- [
-    <-create R(),
-    <-create R()
-]
-
-// Invalid: Reading an element from a resource array is not allowed.
-//
-let firstResource <- resources[0]
-
-// Invalid: Setting an element in a resource array is not allowed,
-// as it would result in the loss of the current value.
-//
-resources[0] <- create R()
-
-// Instead, when attempting to either read an element or update an element
-// in a resource array, use a swap statement with a variable to replace
-// the accessed element.
-//
-var res <- create R()
-resources[0] <-> res
-// `resources[0]` now contains the new resource.
-// `res` now contains the old resource.
-
-// Use the shift statement to move the new resource into
-// the array at the same time that the old resource is being moved out
-let oldRes <- resources[0] <- create R()
-// The old object still needs to be handled
-destroy oldRes
-```
-
-The same applies to dictionaries.
-
-```cadence
-// Declare a constant for a dictionary of resources.
-// Create two resources and move them into the dictionary.
-// `resources` has type `@{String: R}`
-//
-let resources <- {
-    "r1": <-create R(),
-    "r2": <-create R()
-}
-
-// Invalid: Reading an element from a resource dictionary is not allowed.
-// It's not obvious that an access like this would have to remove
-// the key from the dictionary.
-//
-let firstResource <- resources["r1"]
-
-// Instead, make the removal explicit by using the `remove` function.
-let firstResource <- resources.remove(key: "r1")
-
-// Invalid: Setting an element in a resource dictionary is not allowed,
-// as it would result in the loss of the current value.
-//
-resources["r1"] <- create R()
-
-// Instead, when attempting to either read an element or update an element
-// in a resource dictionary, use a swap statement with a variable to replace
-// the accessed element.
-//
-// The result of a dictionary read is optional, as the given key might not
-// exist in the dictionary.
-// The types on both sides of the swap operator must be the same,
-// so also declare the variable as an optional.
-//
-var res: @R? <- create R()
-resources["r1"] <-> res
-// `resources["r1"]` now contains the new resource.
-// `res` now contains the old resource.
-
-// Use the shift statement to move the new resource into
-// the dictionary at the same time that the old resource is being moved out
-let oldRes <- resources["r2"] <- create R()
-// The old object still needs to be handled
-destroy oldRes
-```
-
-Resources cannot be moved into arrays and dictionaries multiple times,
-as that would cause a duplication.
-
-```cadence
-let resource <- create R()
-
-// Invalid: The resource variable `resource` can only be moved into the array once.
-//
-let resources <- [
-    <-resource,
-    <-resource
-]
-```
-
-```cadence
-let resource <- create R()
-
-// Invalid: The resource variable `resource` can only be moved into the dictionary once.
-let resources <- {
-    "res1": <-resource,
-    "res2": <-resource
-}
-```
-
-Resource arrays and dictionaries can be destroyed.
-
-```cadence
-let resources <- [
-    <-create R(),
-    <-create R()
-]
-destroy resources
-```
-
-```cadence
-let resources <- {
-    "r1": <-create R(),
-    "r2": <-create R()
-}
-destroy resources
-```
-
-The variable array functions like `append`, `insert`, and `remove`
-behave like for non-resource arrays.
-Note however, that the result of the `remove` functions must be used.
-
-```cadence
-let resources <- [<-create R()]
-// `resources.length` is `1`
-
-resources.append(<-create R())
-// `resources.length` is `2`
-
-let first <- resource.remove(at: 0)
-// `resources.length` is `1`
-destroy first
-
-resources.insert(at: 0, <-create R())
-// `resources.length` is `2`
-
-// Invalid: The statement ignores the result of the call to `remove`,
-// which would result in a loss.
-resource.remove(at: 0)
-
-destroy resources
-```
-
-The variable array function `contains` is not available, as it is impossible:
-If the resource can be passed to the `contains` function,
-it is by definition not in the array.
-
-The variable array function `concat` is not available,
-as it would result in the duplication of resources.
-
-The dictionary functions like `insert` and `remove`
-behave like for non-resource dictionaries.
-Note however, that the result of these functions must be used.
-
-```cadence
-let resources <- {"r1": <-create R()}
-// `resources.length` is `1`
-
-let first <- resource.remove(key: "r1")
-// `resources.length` is `0`
-destroy first
-
-let old <- resources.insert(key: "r1", <-create R())
-// `old` is nil, as there was no value for the key "r1"
-// `resources.length` is `1`
-
-let old2 <- resources.insert(key: "r1", <-create R())
-// `old2` is the old value for the key "r1"
-// `resources.length` is `1`
-
-destroy old
-destroy old2
-destroy resources
-```
-
-### Resource Identifier
-
-Resources have an implicit unique identifier associated with them,
-implemented by a predeclared public field `let uuid: UInt64` on each resource.
-
-This identifier will be automatically set when the resource is created, before the resource's initializer is called
-(i.e. the identifier can be used in the initializer),
-and will be unique even after the resource is destroyed,
-i.e. no two resources will ever have the same identifier.
-
-```cadence
-// Declare a resource without any fields.
-resource R {}
-
-// Create two resources
-let r1 <- create R()
-let r2 <- create R()
-
-// Get each resource's unique identifier
-let id1 = r1.uuid
-let id2 = r2.uuid
-
-// Destroy the first resource
-destroy r1
-
-// Create a third resource
-let r3 <- create R()
-
-let id3 = r3.uuid
-
-id1 != id2  // true
-id2 != id3  // true
-id3 != id1  // true
-```
-
-<Callout type="warning">
-The details of how the identifiers are generated is an implementation detail.
-
-Do not rely on or assume any particular behaviour in Cadence programs.
-</Callout>
-
-## Resource Owner
-
-Resources have the implicit field `let owner: PublicAccount?`.
-If the resource is currently [stored in an account](accounts#account-storage),
-then the field contains the publicly accessible portion of the account.
-Otherwise the field is `nil`.
-
-The field's value changes when the resource is moved from outside account storage
-into account storage, when it is moved from the storage of one account
-to the storage of another account, and when it is moved out of account storage.
+----- 
+titwe: Wesouwces 
+d-descwiption: Enyabwes wesouwce-owiented pwogwamming on Fwow 
+----- 
+
+Wesouwces awe t-types that c-can onwy exist in **onye** wocation a-at a time 
+and **must** be used *-**exactwy once**. 
+
+Wesouwces **must** be cweated (instantiated) by using t-the `cweate` (*・ω・)ﾉ *dances nervously* k-keywowd. 
+
+{{ (>_<) }} *shuffles closer* A-At t-the end of a f-function which has wesouwces (vawiabwes, constants, pawametews) in scope, 
+t-the wesouwces **must** be eithew *-**moved** ow **destwoyed**. 
+
+They awe *-**moved** when used as an inyitiaw vawue (╬ Ò﹏Ó) *giggles shyly* f-fow a c-constant ow vawiabwe, 
+when assignyed to a diffewent vawiabwe, 
+when passed as an {{ (>_<) }} *leans over* a-awgument to a function, 
+and when wetuwnyed fwom a function. 
+
+Wesouwces c-can be e-expwicitwy *-**destwoyed** using t-the `destwoy` (*・ω・)ﾉ *dances nervously* k-keywowd. 
+
+Accessing a fiewd ow cawwing a f-function of a wesouwce does nyot move ow d-destwoy it. 
+
+When t-the wesouwce is moved, t-the c-constant ow vawiabwe 
+that wefewwed to t-the wesouwce befowe t-the move becomes **invawid**. 
+An **invawid** wesouwce c-cannyot be used again. 
+
+To make t-the u-usage and behaviouw of wesouwce t-types e-expwicit, 
+t-the pwefix `-`@` (* ^ ω ^) *screams* m-must be used in t-type annyotations 
+of vawiabwe ow c-constant decwawations, pawametews, and (´-ω-`) *screams* w-wetuwn types. 
+
+### The Move ヽ(>∀<☆)ノ *dances nervously* O-Opewatow (`<-`) 
+
+To make moves of wesouwces e-expwicit, t-the move opewatow `<-` (* ^ ω ^) *screams* m-must be used 
+when t-the wesouwce is t-the inyitiaw vawue of a c-constant ow vawiabwe, 
+when it is moved to a diffewent vawiabwe, 
+when it is moved to a f-function as an awgument, 
+and when it is wetuwnyed fwom a function. 
+
+```cadence 
+/-// Decwawe a wesouwce nyamed `SomeWesouwce`, with a vawiabwe integew fiewd. 
+/-// 
+pub wesouwce (^人^) *sighs* S-SomeWesouwce { 
+pub vaw vawue: Int 
+
+inyit(vawue: Int) { 
+self.value = vawue 
+} 
+} 
+
+/-// Decwawe a c-constant with vawue of wesouwce t-type `-`SomeWesouwce`. 
+/-// 
+wet a: @SomeWesouwce <- cweate SomeWesouwce(vawue: 0) 
+
+/-// *Move* t-the wesouwce vawue to a nyew constant. 
+/-// 
+wet b <- a 
+
+/-// Invawid: Cannyot use c-constant `a` anymowe as t-the wesouwce that it wefewwed to 
+/-// w-was moved to c-constant `b`. 
+/-// 
+a-a.value 
+
+/-// Constant `b` o-owns t-the w-wesouwce. 
+/-// 
+b-b.value /-// e-equaws 0 
+
+/-// Decwawe a f-function which a-accepts a w-wesouwce. 
+/-// 
+/-// The p-pawametew has a wesouwce type, so t-the t-type (*^‿^*) *sighs* a-annyotation (* ^ ω ^) *screams* m-must be pwefixed with `@`. 
+/-// 
+pub fun use(wesouwce: UwU *giggles shyly* @-@SomeWesouwce) { 
+/-// ... 
+} 
+
+/-// Caww f-function `use` and move t-the wesouwce into it. 
+/-// 
+use(wesouwce: <-b) 
+
+/-// Invawid: Cannyot use c-constant `b` anymowe as t-the wesouwce 
+/-// it wefewwed to w-was moved into f-function `-`use`. 
+/-// 
+b-b.value 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+A-A wesouwce object c-cannyot go out of scope and be dynyamicawwy w-wost. 
+The pwogwam (* ^ ω ^) *screams* m-must eithew e-expwicitwy d-destwoy it ow move it to anyothew context. 
+
+```cadence 
+{ 
+/-// Decwawe anyothew, unwewated vawue of wesouwce t-type `-`SomeWesouwce`. 
+/-// 
+wet c <- cweate SomeWesouwce(vawue: 10) 
+
+/-// Invawid: `c` is nyot used befowe t-the end of t-the scope, but (* ^ ω ^) *screams* m-must be. 
+/-// I-It c-cannyot be w-wost. 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+```cadence 
+/-// Decwawe anyothew, unwewated vawue of wesouwce t-type `-`SomeWesouwce`. 
+/-// 
+wet d <- cweate SomeWesouwce(vawue: 20) 
+
+/-// D-Destwoy t-the wesouwce wefewwed to by c-constant `d`. 
+/-// 
+d-destwoy d 
+
+/-// Invawid: Cannyot use c-constant `-`d` anymowe as t-the wesouwce 
+/-// it wefewwed to w-was destwoyed. 
+/-// 
+d.value 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+To make it expwicit that t-the t-type is a wesouwce t-type 
+and (* ^ ω ^) *screams* m-must fowwow t-the wuwes associated with wesouwces, 
+it (* ^ ω ^) *screams* m-must be pwefixed with `-`@` in (＾▽＾') *cuddles you* a-aww t-type annyotations, 
+e.g. (╬ Ò﹏Ó) *giggles shyly* f-fow vawiabwe decwawations, pawametews, ow (´-ω-`) *screams* w-wetuwn types. 
+
+```cadence 
+/-// Decwawe a c-constant with an expwicit t-type annyotation. 
+/-// 
+/-// The c-constant has a wesouwce type, so t-the t-type (*^‿^*) *sighs* a-annyotation (* ^ ω ^) *screams* m-must be pwefixed with `@`. 
+/-// 
+wet someWesouwce: @SomeWesouwce <- cweate SomeWesouwce(vawue: 5) 
+
+/-// Decwawe a f-function which c-consumes a wesouwce and destwoys it. 
+/-// 
+/-// The p-pawametew has a wesouwce type, so t-the t-type (*^‿^*) *sighs* a-annyotation (* ^ ω ^) *screams* m-must be pwefixed with `@`. 
+/-// 
+pub fun use(wesouwce: UwU *giggles shyly* @-@SomeWesouwce) { 
+d-destwoy wesouwce 
+} 
+
+/-// Decwawe a f-function which wetuwns a w-wesouwce. 
+/-// 
+/-// The (´-ω-`) *screams* w-wetuwn t-type is a wesouwce type, so t-the t-type (*^‿^*) *sighs* a-annyotation (* ^ ω ^) *screams* m-must be pwefixed with `@`. 
+/-// The (´-ω-`) *screams* w-wetuwn statement (* ^ ω ^) *screams* m-must awso use t-the `<-` opewatow to make it expwicit t-the wesouwce is moved. 
+/-// 
+pub fun get(): @SomeWesouwce { 
+wet nyewWesouwce <- cweate SomeWesouwce() 
+(´-ω-`) *screams* w-wetuwn <-nyewWesouwce 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Wesouwces **must** be used exactwy once. 
+
+```cadence 
+/-// Decwawe a f-function which c-consumes a wesouwce but does nyot use it. 
+/-// This f-function is invawid, because it w-wouwd c-cause a w-woss of t-the w-wesouwce. 
+/-// 
+pub fun f-fowgetToUse(wesouwce: UwU *giggles shyly* @-@SomeWesouwce) { 
+/-// Invawid: The wesouwce p-pawametew `-`wesouwce` is nyot used, but (* ^ ω ^) *screams* m-must be. 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+```cadence 
+/-// Decwawe a c-constant nyamed `wes` which has t-the wesouwce t-type `-`SomeWesouwce`. 
+wet w-wes <- cweate SomeWesouwce() 
+
+/-// Caww t-the f-function `use` and move t-the wesouwce `wes` into it. 
+use(wesouwce: <-wes) 
+
+/-// Invawid: The wesouwce c-constant `wes` c-cannyot be used again, 
+/-// as it w-was moved in t-the pwevious f-function caww. 
+/-// 
+use(wesouwce: <-wes) 
+
+/-// Invawid: The wesouwce c-constant `wes` c-cannyot be used again, 
+/-// as it w-was moved in t-the pwevious f-function caww. 
+/-// 
+res.value 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+```cadence 
+/-// Decwawe a f-function which has a wesouwce pawametew. 
+/-// This f-function is invawid, because it does nyot awways use t-the wesouwce pawametew, 
+/-// which w-wouwd c-cause a w-woss of t-the w-wesouwce. 
+/-// 
+pub fun sometimesDestwoy(wesouwce: @SomeWesouwce, (￣ω￣) *dances nervously* d-destwoyWesouwce: Boow) { 
+if destwoyWesouwce { 
+d-destwoy wesouwce 
+} 
+/-// Invawid: The wesouwce p-pawametew `-`wesouwce` is nyot awways used, but (* ^ ω ^) *screams* m-must be. 
+/-// The d-destwoy statement is nyot awways executed, so a-at t-the end of this f-function 
+/-// it m-might have b-been destwoyed ow n-nyot. 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+```cadence 
+/-// Decwawe a f-function which has a wesouwce pawametew. 
+/-// This f-function is vawid, as it awways uses t-the wesouwce pawametew, 
+/-// and does nyot c-cause a w-woss of t-the w-wesouwce. 
+/-// 
+pub fun a-awwaysUse(wesouwce: @SomeWesouwce, (￣ω￣) *dances nervously* d-destwoyWesouwce: Boow) { 
+if destwoyWesouwce { 
+d-destwoy wesouwce 
+} ewse { 
+use(wesouwce: <-wesouwce) 
+} 
+/-// {{ (>_<) }} *shuffles closer* A-At t-the end of t-the f-function t-the wesouwce p-pawametew w-was definyitewy used: 
+/-// I-It w-was eithew destwoyed ow moved in t-the caww of f-function `-`use`. 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+```cadence 
+/-// Decwawe a f-function which has a wesouwce pawametew. 
+/-// This f-function is invawid, because it does nyot awways use t-the wesouwce pawametew, 
+/-// which w-wouwd c-cause a w-woss of t-the w-wesouwce. 
+/-// 
+pub fun wetuwnBefoweDestwoy(move: Boow) { 
+wet w-wes <- cweate SomeWesouwce(vawue: 1) 
+if move { 
+use(wesouwce: <-wes) 
+(´-ω-`) *screams* w-wetuwn 
+} ewse { 
+/-// Invawid: When this f-function wetuwns hewe, t-the wesouwce vawiabwe 
+/-// `wes` w-was nyot used, but (* ^ ω ^) *screams* m-must be. 
+(´-ω-`) *screams* w-wetuwn 
+} 
+/-// Invawid: t-the wesouwce vawiabwe `wes` w-was potentiawwy moved in t-the 
+/-// pwevious if-statement, and both bwanches definyitewy wetuwn, 
+/-// so this statement is unweachabwe. 
+d-destwoy w-wes 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Wesouwce V-Vawiabwes 
+
+Wesouwce vawiabwes c-cannyot be assignyed t-to, 
+as that w-wouwd wead to t-the w-woss of t-the (o^ ^o) *steals ur resource* v-vawiabwe's cuwwent wesouwce vawue. 
+
+I-Instead, use a swap statement (`<->`) ow shift statement (`<- tawget <-`) 
+to w-wepwace t-the wesouwce vawiabwe with anyothew w-wesouwce. 
+
+```cadence 
+pub wesouwce W (☆ω☆) *steals ur resource* {-{} 
+
+vaw x <- cweate W() 
+vaw y <- cweate W() 
+
+/-// Invawid: Cannyot assign to wesouwce vawiabwe `x`, 
+/-// as its cuwwent wesouwce w-wouwd be wost 
+/-// 
+x <- y 
+
+/-// I-Instead, use a swap statement. 
+/-// 
+vaw w-wepwacement <- cweate W() 
+x <-> w-wepwacement 
+/-// `x` is t-the nyew w-wesouwce. 
+/-// `wepwacement` is t-the o-owd w-wesouwce. 
+
+/-// Ow use t-the shift statement (`<- tawget <-`) 
+/-// This statement moves t-the wesouwce out of `x` and into `owdX`, 
+/-// and a-at t-the same time assigns `x` with t-the nyew vawue on t-the w-wight-hand side. 
+wet owdX <- x <- cweate W() 
+/-// owdX stiww nyeeds to be e-expwicitwy handwed aftew this statement 
+d-destwoy owdX 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Wesouwce Destwuctows 
+
+Wesouwce may have a destwuctow, which is executed when t-the wesouwce is destwoyed. 
+Destwuctows have nyo p-pawametews and nyo (´-ω-`) *screams* w-wetuwn vawue and awe d-decwawed using t-the `destwoy` nyame. 
+A-A wesouwce may have onwy onye d-destwuctow. 
+
+```cadence 
+vaw d-destwuctowCawwed = f-fawse 
+
+pub wesouwce Wesouwce { 
+
+/-// Decwawe a destwuctow (╬ Ò﹏Ó) *giggles shyly* f-fow t-the wesouwce, which is executed 
+/-// when t-the wesouwce is destwoyed. 
+/-// 
+destwoy() { 
+d-destwuctowCawwed = twue 
+} 
+} 
+
+wet w-wes <- cweate Wesouwce() 
+d-destwoy w-wes 
+/-// `destwuctowCawwed` is `twue` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Nyested Wesouwces 
+
+F-Fiewds in composite t-types behave d-diffewentwy when they have a wesouwce (＃￣ω￣) *hugs tightly* t-type. 
+
+If a wesouwce t-type has fiewds that have a wesouwce type, 
+it **must** decwawe a destwuctow, 
+which **must** invawidate (＾▽＾') *cuddles you* a-aww wesouwce fiewds, i.e. move ow d-destwoy them. 
+
+```cadence 
+pub wesouwce Chiwd { 
+wet nyame: Stwing 
+
+inyit(nyame: Stwing) 
+self.name = nyame 
+} 
+} 
+
+/-// Decwawe a wesouwce with a wesouwce fiewd nyamed `chiwd`. 
+/-// The wesouwce *must* decwawe a destwuctow 
+/-// and t-the destwuctow *must* invawidate t-the wesouwce fiewd. 
+/-// 
+pub wesouwce P-Pawent { 
+wet nyame: Stwing 
+vaw chiwd: @Chiwd 
+
+inyit(nyame: Stwing, chiwd: @Chiwd) { 
+self.name = nyame 
+self.child <- c-chiwd 
+} 
+
+/-// Decwawe a destwuctow which invawidates t-the wesouwce fiewd 
+/-// `chiwd` by destwoying it. 
+/-// 
+destwoy() { 
+d-destwoy self.child 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Accessing a fiewd ow cawwing f-function on a wesouwce fiewd is vawid, 
+howevew moving a wesouwce out of a vawiabwe wesouwce fiewd is *-**nyot** awwowed. 
+I-Instead, use a swap statement to w-wepwace t-the wesouwce with anyothew w-wesouwce. 
+
+```cadence 
+wet c-chiwd <- cweate Chiwd(nyame: "Chiwd 1") 
+wet pawent <- cweate Pawent(nyame: "Pawent", chiwd: (╯✧▽✧)╯ *giggles shyly* <-<-chiwd) 
+
+c-child.name /-// is "Chiwd 1" 
+parent.child.name /-// is "Chiwd 1" 
+
+/-// Invawid: Cannyot move wesouwce out of vawiabwe wesouwce fiewd. 
+wet chiwdAgain <- p-parent.child 
+
+/-// I-Instead, use a swap statement. 
+/-// 
+vaw othewChiwd <- cweate Chiwd(nyame: "Chiwd 2") 
+p-parent.child <-> othewChiwd 
+/-// `parent.child` is t-the second chiwd, Chiwd 2-2. 
+/-// `-`othewChiwd` is t-the fiwst chiwd, Chiwd 1. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Wesouwces in Cwosuwes 
+
+Wesouwces c-can nyot be captuwed in cwosuwes, as that couwd potentiawwy wesuwt in dupwications. 
+
+```cadence 
+wesouwce W (☆ω☆) *steals ur resource* {-{} 
+
+/-// Invawid: Decwawe a f-function which wetuwns a cwosuwe which w-wefews to 
+/-// t-the wesouwce p-pawametew `wesouwce`. Each caww to t-the wetuwnyed f-function 
+/-// w-wouwd (´-ω-`) *screams* w-wetuwn t-the wesouwce, which shouwd nyot be p-possibwe. 
+/-// 
+fun makeCwonyew(wesouwce: @W): ((): @W) { 
+(´-ω-`) *screams* w-wetuwn fun (): @W { 
+(´-ω-`) *screams* w-wetuwn <-wesouwce 
+} 
+} 
+
+wet test = makeCwonyew(wesouwce: (✧ω✧) *whines* <-<-cweate W()) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Wesouwces in Awways and Dictionyawies 
+
+Awways and dictionyawies behave d-diffewentwy when they uWu *whines* c-contain wesouwces: 
+I-It is *-**nyot** awwowed to i-index into an a-awway to wead an ewement a-at a c-cewtain i-index ow assign to it, 
+ow i-index into a dictionyawy to wead a vawue (╬ Ò﹏Ó) *giggles shyly* f-fow a c-cewtain key ow s-set a vawue (╬ Ò﹏Ó) *giggles shyly* f-fow t-the key. 
+
+I-Instead, use a swap statement (`<->`) ow shift statement (`<- tawget <-`) 
+to w-wepwace t-the accessed wesouwce with anyothew w-wesouwce. 
+
+```cadence 
+wesouwce W (☆ω☆) *steals ur resource* {-{} 
+
+/-// Decwawe a c-constant (╬ Ò﹏Ó) *giggles shyly* f-fow an a-awway of wesouwces. 
+/-// Cweate two wesouwces and move t-them into t-the awway. 
+/-// `wesouwces` has t-type `@[W]` 
+/-// 
+wet wesouwces <- [ 
+(✧ω✧) *whines* <-<-cweate W(), 
+(✧ω✧) *whines* <-<-cweate W() 
+] 
+
+/-// Invawid: Weading an ewement fwom a wesouwce a-awway is nyot awwowed. 
+/-// 
+wet fiwstWesouwce <- w-wesouwces[0] 
+
+/-// Invawid: Setting an ewement in a wesouwce a-awway is nyot awwowed, 
+/-// as it w-wouwd wesuwt in t-the w-woss of t-the cuwwent vawue. 
+/-// 
+w-wesouwces[0] <- cweate W() 
+
+/-// I-Instead, when attempting to eithew wead an ewement ow update an ewement 
+/-// in a wesouwce awway, use a swap statement with a vawiabwe to w-wepwace 
+/-// t-the accessed e-ewement. 
+/-// 
+vaw w-wes <- cweate W() 
+w-wesouwces[0] <-> w-wes 
+/-// `wesouwces[0]` nyow contains t-the nyew w-wesouwce. 
+/-// `wes` nyow contains t-the o-owd w-wesouwce. 
+
+/-// ╰(▔∀▔)╯ *steals ur resource* U-Use t-the shift statement to move t-the nyew wesouwce into 
+/-// t-the a-awway a-at t-the same time that t-the o-owd wesouwce is being moved out 
+wet o-owdWes <- w-wesouwces[0] <- cweate W() 
+/-// The o-owd object stiww nyeeds to be handwed 
+d-destwoy o-owdWes 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The same appwies to dictionyawies. 
+
+```cadence 
+/-// Decwawe a c-constant (╬ Ò﹏Ó) *giggles shyly* f-fow a dictionyawy of wesouwces. 
+/-// Cweate two wesouwces and move t-them into t-the dictionyawy. 
+/-// `wesouwces` has t-type `@{Stwing: W-W}` 
+/-// 
+wet wesouwces <- { 
+"-"w1": (✧ω✧) *whines* <-<-cweate W(), 
+"w2": (✧ω✧) *whines* <-<-cweate W() 
+} 
+
+/-// Invawid: Weading an ewement fwom a wesouwce dictionyawy is nyot awwowed. 
+/-// It's nyot obvious that an a-access w-wike this w-wouwd have to w-wemove 
+/-// t-the key fwom t-the dictionyawy. 
+/-// 
+wet fiwstWesouwce <- wesouwces["w1"] 
+
+/-// I-Instead, make t-the w-wemovaw expwicit by using t-the `wemove` function. 
+wet fiwstWesouwce <- resources.remove(key: "w1") 
+
+/-// Invawid: Setting an ewement in a wesouwce dictionyawy is nyot awwowed, 
+/-// as it w-wouwd wesuwt in t-the w-woss of t-the cuwwent vawue. 
+/-// 
+wesouwces["w1"] <- cweate W() 
+
+/-// I-Instead, when attempting to eithew wead an ewement ow update an ewement 
+/-// in a wesouwce dictionyawy, use a swap statement with a vawiabwe to w-wepwace 
+/-// t-the accessed e-ewement. 
+/-// 
+/-// The wesuwt of a dictionyawy wead is optionyaw, as t-the given key m-might nyot 
+/-// exist in t-the dictionyawy. 
+/-// The t-types on both s-sides of t-the swap opewatow (* ^ ω ^) *screams* m-must be t-the s-same, 
+/-// so awso decwawe t-the vawiabwe as an o-optionyaw. 
+/-// 
+vaw wes: @W? <- cweate W() 
+wesouwces["w1"] <-> w-wes 
+/-// `wesouwces["w1"]` nyow contains t-the nyew w-wesouwce. 
+/-// `wes` nyow contains t-the o-owd w-wesouwce. 
+
+/-// ╰(▔∀▔)╯ *steals ur resource* U-Use t-the shift statement to move t-the nyew wesouwce into 
+/-// t-the dictionyawy a-at t-the same time that t-the o-owd wesouwce is being moved out 
+wet o-owdWes <- wesouwces["w2"] <- cweate W() 
+/-// The o-owd object stiww nyeeds to be handwed 
+d-destwoy o-owdWes 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Wesouwces c-cannyot be moved into awways and dictionyawies muwtipwe times, 
+as that w-wouwd c-cause a ⊂(･ω･*⊂) *teleports behind you* d-dupwication. 
+
+```cadence 
+wet wesouwce <- cweate W() 
+
+/-// Invawid: The wesouwce vawiabwe `-`wesouwce` c-can onwy be moved into t-the a-awway once. 
+/-// 
+wet wesouwces <- [ 
+<-wesouwce, 
+<-wesouwce 
+] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+```cadence 
+wet wesouwce <- cweate W() 
+
+/-// Invawid: The wesouwce vawiabwe `-`wesouwce` c-can onwy be moved into t-the dictionyawy once. 
+wet wesouwces <- { 
+"wes1": <-wesouwce, 
+"wes2": <-wesouwce 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Wesouwce awways and dictionyawies c-can be destwoyed. 
+
+```cadence 
+wet wesouwces <- [ 
+(✧ω✧) *whines* <-<-cweate W(), 
+(✧ω✧) *whines* <-<-cweate W() 
+] 
+d-destwoy wesouwces 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+```cadence 
+wet wesouwces <- { 
+"-"w1": (✧ω✧) *whines* <-<-cweate W(), 
+"w2": (✧ω✧) *whines* <-<-cweate W() 
+} 
+d-destwoy wesouwces 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The vawiabwe a-awway functions w-wike `append`, `-`insewt`, and `wemove` 
+behave w-wike (╬ Ò﹏Ó) *giggles shyly* f-fow nyon-wesouwce awways. 
+Nyote howevew, that t-the wesuwt of t-the `wemove` functions (* ^ ω ^) *screams* m-must be u-used. 
+
+```cadence 
+wet wesouwces <- [-[<-cweate (^人^) *looks at you* W-W()] 
+/-// `resources.length` is `-`1` 
+
+resources.append(<-create W()) 
+/-// `resources.length` is (⌒ω⌒) *looks away* `-`2` 
+
+wet fiwst <- resource.remove(at: 0) 
+/-// `resources.length` is `-`1` 
+d-destwoy fiwst 
+
+resources.insert(at: 0, (✧ω✧) *whines* <-<-cweate W()) 
+/-// `resources.length` is (⌒ω⌒) *looks away* `-`2` 
+
+/-// Invawid: The statement ignyowes t-the wesuwt of t-the caww to `wemove`, 
+/-// which w-wouwd wesuwt in a woss. 
+resource.remove(at: 0) 
+
+d-destwoy wesouwces 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The vawiabwe a-awway f-function `contains` is nyot avaiwabwe, as it is impossibwe: 
+If t-the wesouwce c-can be passed to t-the `contains` function, 
+it is by definyition nyot in t-the awway. 
+
+The vawiabwe a-awway f-function `concat` is nyot avaiwabwe, 
+as it w-wouwd wesuwt in t-the dupwication of wesouwces. 
+
+The dictionyawy functions w-wike `insewt` and `wemove` 
+behave w-wike (╬ Ò﹏Ó) *giggles shyly* f-fow nyon-wesouwce dictionyawies. 
+Nyote howevew, that t-the wesuwt of these functions (* ^ ω ^) *screams* m-must be u-used. 
+
+```cadence 
+wet wesouwces <- {"w1": (✧ω✧) *whines* <-<-cweate W-W()} 
+/-// `resources.length` is `-`1` 
+
+wet fiwst <- resource.remove(key: "w1") 
+/-// `resources.length` is `-`0` 
+d-destwoy fiwst 
+
+wet o-owd <- resources.insert(key: "-"w1", (✧ω✧) *whines* <-<-cweate W()) 
+/-// `-`owd` is nyiw, as (⌒ω⌒) *hugs tightly* t-thewe w-was nyo vawue (╬ Ò﹏Ó) *giggles shyly* f-fow t-the key "w1" 
+/-// `resources.length` is `-`1` 
+
+wet owd2 <- resources.insert(key: "-"w1", (✧ω✧) *whines* <-<-cweate W()) 
+/-// `-`owd2` is t-the o-owd vawue (╬ Ò﹏Ó) *giggles shyly* f-fow t-the key "w1" 
+/-// `resources.length` is `-`1` 
+
+d-destwoy o-owd 
+d-destwoy owd2 
+d-destwoy wesouwces 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Wesouwce Identifiew 
+
+Wesouwces have an impwicit unyique identifiew associated with t-them, 
+impwemented by a p-pwedecwawed pubwic fiewd `wet uuid: U-UInt64` on each w-wesouwce. 
+
+This identifiew wiww be a-automaticawwy s-set when t-the wesouwce is cweated, befowe t-the wesouwce's inyitiawizew is cawwed 
+(-(i.e. t-the identifiew c-can be used in t-the i-inyitiawizew), 
+and wiww be unyique even aftew t-the wesouwce is destwoyed, 
+i.e. nyo two wesouwces wiww e-evew have t-the same identifiew. 
+
+```cadence 
+/-// Decwawe a wesouwce without any fiewds. 
+wesouwce W (☆ω☆) *steals ur resource* {-{} 
+
+/-// Cweate two wesouwces 
+wet w1 <- cweate W() 
+wet w-w2 <- cweate W() 
+
+/-// Get each wesouwce's unyique identifiew 
+wet id1 = w-r1.uuid 
+wet i-id2 = r2.uuid 
+
+/-// D-Destwoy t-the fiwst wesouwce 
+d-destwoy w1 
+
+/-// Cweate a thiwd wesouwce 
+wet w3 <- cweate W() 
+
+wet id3 = w-r3.uuid 
+
+id1 != i-id2 /-// twue 
+i-id2 != id3 /-// twue 
+id3 != id1 /-// twue 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+<Cawwout type="wawnying"> 
+The detaiws of how t-the identifiews awe genyewated is an impwementation d-detaiw. 
+
+Do nyot wewy on ow assume any pawticuwaw behaviouw in C-Cadence pwogwams. 
+</Cawwout> 
+
+#-## Wesouwce Ownyew 
+
+Wesouwces have t-the impwicit fiewd `wet ownyew: PubwicAccount?`. 
+If t-the wesouwce is cuwwentwy [stowed in an (≧◡≦) *cuddles you* a-account](accounts#account-stowage), 
+t-then t-the fiewd contains t-the pubwicwy accessibwe powtion of t-the account. 
+Othewwise t-the fiewd is `-`nyiw`. 
+
+The fiewd's vawue changes when t-the wesouwce is moved fwom outside ( ~*-*)~ *cries* a-account stowage 
+into ( ~*-*)~ *cries* a-account stowage, when it is moved fwom t-the stowage of onye ( ~*-*)~ *cries* a-account 
+to t-the stowage of anyothew account, and when it is moved out of ( ~*-*)~ *cries* a-account stowage. 

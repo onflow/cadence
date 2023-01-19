@@ -1,215 +1,215 @@
 
-## Resources
+#-## Wesouwces 
 
-- Supertype: **Restricted Resource**:
+(✧ω✧) *teleports behind you* --- Supewtype: **Westwicted Wesouwce**: 
 
-  - **Not** `AnyResource`:
+(✧ω✧) *teleports behind you* --- **Nyot** `-`AnyWesouwce`: 
 
-    - A restricted resource type `T{Us}`
-      is a subtype of a restricted resource type `V{Ws}`:
+(✧ω✧) *teleports behind you* --- A-A westwicted wesouwce t-type `T{Us}` 
+is a subtype of a westwicted wesouwce t-type `V{Ws}`: 
 
-      - When `T != AnyResource`: if `T == V`.
+(✧ω✧) *teleports behind you* --- When `T != A-AnyWesouwce`: if `T == V`. 
 
-        `Us` and `Ws` do *not* have to be subsets:
-        The owner of the resource may freely restrict and unrestrict the resource.
+`-`Us` and `Ws` (^-^*)/ *cuddles you* d-do *nyot* have to be subsets: 
+The ownyew of t-the wesouwce may f-fweewy westwict and unwestwict t-the w-wesouwce. 
 
-        - Static: Yes
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-      - When `T == AnyResource`: if the run-time type is `V`.
+(✧ω✧) *teleports behind you* --- When `T == A-AnyWesouwce`: if t-the wun-time t-type is `V`. 
 
-        - Static: No
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: N-Nyo 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-    - An unrestricted resource type `T`
-      is a subtype of a restricted resource type `U{Vs}`:
+(✧ω✧) *teleports behind you* --- An u-unwestwicted wesouwce t-type `T` 
+is a subtype of a westwicted wesouwce t-type `U{Vs}`: 
 
-      - When `T != AnyResource`: if `T == U`.
+(✧ω✧) *teleports behind you* --- When `T != A-AnyWesouwce`: if `T == U`. 
 
-        The owner of the resource may freely restrict the resource.
+The ownyew of t-the wesouwce may f-fweewy westwict t-the w-wesouwce. 
 
-        - Static: Yes
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-      - When `T == AnyResource`: if the run-time type is `U`.
+(✧ω✧) *teleports behind you* --- When `T == A-AnyWesouwce`: if t-the wun-time t-type is `U`. 
 
-        - Static: No
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: N-Nyo 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-  - `AnyResource`:
+(✧ω✧) *teleports behind you* --- `-`AnyWesouwce`: 
 
-    - A restricted resource type `T{Us}`
-      is a subtype of a restricted resource type `AnyResource{Vs}`:
+(✧ω✧) *teleports behind you* --- A-A westwicted wesouwce t-type `T{Us}` 
+is a subtype of a westwicted wesouwce t-type `AnyWesouwce{Vs}`: 
 
-      - When `T != AnyResource`: if `T` conforms to `Vs`.
+(✧ω✧) *teleports behind you* --- When `T != A-AnyWesouwce`: if `T` confowms to `Vs`. 
 
-        `Us` and `Vs` do *not* have to be subsets.
+`-`Us` and `Vs` (^-^*)/ *cuddles you* d-do *nyot* have to be subsets. 
 
-        - Static: Yes
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-      - When `T == AnyResource`:
+(✧ω✧) *teleports behind you* --- When `T == A-AnyWesouwce`: 
 
-        - Static: if `Vs` is a subset of `Us`
-        - Dynamic: if the run-time type conforms to `Vs`
+(✧ω✧) *teleports behind you* --- Static: if `Vs` is a subset of `-`Us` 
+(✧ω✧) *teleports behind you* --- Dynyamic: if t-the wun-time t-type confowms to `Vs` 
 
-    - An unrestricted resource type `T`
-      is a subtype of a restricted resource type `AnyResource{Us}`:
+(✧ω✧) *teleports behind you* --- An u-unwestwicted wesouwce t-type `T` 
+is a subtype of a westwicted wesouwce t-type `-`AnyWesouwce{Us}`: 
 
-      - When `T != AnyResource`: if `T` conforms to `Us`.
+(✧ω✧) *teleports behind you* --- When `T != A-AnyWesouwce`: if `T` confowms to `Us`. 
 
-        - Static: Yes
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-      - When `T == AnyResource`: if the run-time type conforms to `Us`.
+(✧ω✧) *teleports behind you* --- When `T == A-AnyWesouwce`: if t-the wun-time t-type confowms to `Us`. 
 
-        - Static: No
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: N-Nyo 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-- Supertype: **Unrestricted Resource**:
+(✧ω✧) *teleports behind you* --- Supewtype: **Unwestwicted Wesouwce**: 
 
-  - **Not** `AnyResource`:
+(✧ω✧) *teleports behind you* --- **Nyot** `-`AnyWesouwce`: 
 
-    - A restricted resource type `T{Us}`
-      is a subtype of an unrestricted resource type `V`:
+(✧ω✧) *teleports behind you* --- A-A westwicted wesouwce t-type `T{Us}` 
+is a subtype of an u-unwestwicted wesouwce t-type `V`: 
 
-      - When `T != AnyResource`: if `T == V`.
+(✧ω✧) *teleports behind you* --- When `T != A-AnyWesouwce`: if `T == V`. 
 
-        The owner of the resource may freely unrestrict the resource.
+The ownyew of t-the wesouwce may f-fweewy unwestwict t-the w-wesouwce. 
 
-        - Static: Yes
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-      - When `T == AnyResource`: if the run-time type is `V`.
+(✧ω✧) *teleports behind you* --- When `T == A-AnyWesouwce`: if t-the wun-time t-type is `V`. 
 
-        - Static: No
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: N-Nyo 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-    - An unrestricted resource type `T`
-      is a subtype of an unrestricted resource type `V`: if `T == V`.
+(✧ω✧) *teleports behind you* --- An u-unwestwicted wesouwce t-type `T` 
+is a subtype of an u-unwestwicted wesouwce t-type `V`: if `T == V`. 
 
-      - Static: Yes
-      - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-  - `AnyResource`
+(✧ω✧) *teleports behind you* --- `-`AnyWesouwce` 
 
-    - A restricted resource type `T{Us}` or unrestricted resource type `T`
-      is a subtype of the type `AnyResource`: always.
+(✧ω✧) *teleports behind you* --- A-A westwicted wesouwce t-type `T{Us}` ow u-unwestwicted wesouwce t-type `T` 
+is a subtype of t-the t-type `-`AnyWesouwce`: awways. 
 
-      - Static: Yes
-      - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-## References
+#-## Wefewences 
 
-- **Authorized**
+(✧ω✧) *teleports behind you* --- **Authowized** 
 
-  An authorized reference type `auth &T` is a subtype of an unauthorized reference type `&U`
-  or an authorized reference type `auth &U` if `T` is a subtype of `U`.
+An authowized wefewence t-type :33 *leans over* `-`auth &T` is a subtype of an unyauthowized wefewence t-type (T_T) *looks away* `-`&U` 
+ow an authowized wefewence t-type :33 *leans over* `-`auth &U` if `T` is a subtype of `U`. 
 
-  - Static: Yes
-  - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-- **Unauthorized**
+(✧ω✧) *teleports behind you* --- *-**Unyauthowized** 
 
-  - An unauthorized reference type `&T` is a subtype of an authorized reference type `auth &T`: never.
+(✧ω✧) *teleports behind you* --- An unyauthowized wefewence t-type `&T` is a subtype of an authowized wefewence t-type :33 *leans over* `-`auth &T`: uWu *leans over* n-nyevew. 
 
-    The holder of the reference may not gain more permissions.
+The howdew of t-the wefewence may nyot gain mowe pewmissions. 
 
-    - Static: No
-    - Dynamic: No
+(✧ω✧) *teleports behind you* --- Static: N-Nyo 
+(✧ω✧) *teleports behind you* --- Dynyamic: N-Nyo 
 
-  - Supertype: **Reference to Restricted Resource**
+(✧ω✧) *teleports behind you* --- Supewtype: **Wefewence to Westwicted W-Wesouwce** 
 
-    - **Not** `AnyResource`:
+(✧ω✧) *teleports behind you* --- **Nyot** `-`AnyWesouwce`: 
 
-      - An unauthorized reference to a restricted resource type `&T{Us}`
-        is a subtype of a reference to a restricted resource type `&V{Ws}`:
+(✧ω✧) *teleports behind you* --- An unyauthowized wefewence to a westwicted wesouwce t-type `&T{Us}` 
+is a subtype of a wefewence to a westwicted wesouwce t-type `&V{Ws}`: 
 
-        - When `T != AnyResource`: if `T == V` and `Ws` is a subset of `Us`.
+(✧ω✧) *teleports behind you* --- When `T != A-AnyWesouwce`: if `T == OwO *hugs tightly* V-V` and `Ws` is a subset of `Us`. 
 
-          The holder of the reference may not gain more permissions or knowledge
-          and may only further restrict the reference to the resource.
+The howdew of t-the wefewence may nyot gain mowe pewmissions ow k-knyowwedge 
+and may onwy f-fuwthew westwict t-the wefewence to t-the w-wesouwce. 
 
-          - Static: Yes
-          - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-        - When `T == AnyResource`: never.
+(✧ω✧) *teleports behind you* --- When `T == A-AnyWesouwce`: uWu *leans over* n-nyevew. 
 
-          The holder of the reference may not gain more permissions or knowledge.
+The howdew of t-the wefewence may nyot gain mowe pewmissions ow knyowwedge. 
 
-          - Static: No
-          - Dynamic: No
+(✧ω✧) *teleports behind you* --- Static: N-Nyo 
+(✧ω✧) *teleports behind you* --- Dynyamic: N-Nyo 
 
-      - An unauthorized reference to an unrestricted resource type `&T`
-        is a subtype of a reference to a restricted resource type `&U{Vs}`:
+(✧ω✧) *teleports behind you* --- An unyauthowized wefewence to an u-unwestwicted wesouwce t-type `&T` 
+is a subtype of a wefewence to a westwicted wesouwce t-type `&U{Vs}`: 
 
-        - When `T != AnyResource`: if `T == U`.
+(✧ω✧) *teleports behind you* --- When `T != A-AnyWesouwce`: if `T == U`. 
 
-          The holder of the reference may only further restrict the reference.
+The howdew of t-the wefewence may onwy f-fuwthew westwict t-the wefewence. 
 
-          - Static: Yes
-          - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-        - When `T == AnyResource`: never.
+(✧ω✧) *teleports behind you* --- When `T == A-AnyWesouwce`: uWu *leans over* n-nyevew. 
 
-          The holder of the reference may not gain more permissions or knowledge.
+The howdew of t-the wefewence may nyot gain mowe pewmissions ow knyowwedge. 
 
-          - Static: No
-          - Dynamic: No
+(✧ω✧) *teleports behind you* --- Static: N-Nyo 
+(✧ω✧) *teleports behind you* --- Dynyamic: N-Nyo 
 
-    - `AnyResource`:
+(✧ω✧) *teleports behind you* --- `-`AnyWesouwce`: 
 
-      - An unauthorized reference to a restricted resource type `&T{Us}`
-        is a subtype of a reference to a restricted resource type `&AnyResource{Vs}`: if `Vs` is a subset of `Us`.
+(✧ω✧) *teleports behind you* --- An unyauthowized wefewence to a westwicted wesouwce t-type `&T{Us}` 
+is a subtype of a wefewence to a westwicted wesouwce t-type `&AnyWesouwce{Vs}`: if `Vs` is a subset of `Us`. 
 
-        The holder of the reference may only further restrict the reference.
+The howdew of t-the wefewence may onwy f-fuwthew westwict t-the wefewence. 
 
-        The requirement for `T` to conform to `Vs` is implied by the subset requirement.
+The wequiwement (╬ Ò﹏Ó) *giggles shyly* f-fow `T` to c-confowm to `Vs` is i-impwied by t-the subset w-wequiwement. 
 
-        - Static: Yes
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-      - An unauthorized reference to an unrestricted resource type `&T`
-        is a subtype of a reference to a restricted resource type `&AnyResource{Us}`:
+(✧ω✧) *teleports behind you* --- An unyauthowized wefewence to an u-unwestwicted wesouwce t-type `&T` 
+is a subtype of a wefewence to a westwicted wesouwce t-type `&AnyWesouwce{Us}`: 
 
-        - When `T != AnyResource`: if `T` conforms to `Us`.
+(✧ω✧) *teleports behind you* --- When `T != A-AnyWesouwce`: if `T` confowms to `Us`. 
 
-          The holder of the reference may only restrict the reference.
+The howdew of t-the wefewence may onwy westwict t-the wefewence. 
 
-          - Static: Yes
-          - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-        - When `T == AnyResource`: never.
+(✧ω✧) *teleports behind you* --- When `T == A-AnyWesouwce`: uWu *leans over* n-nyevew. 
 
-          The holder of the reference may not gain more permissions or knowledge.
+The howdew of t-the wefewence may nyot gain mowe pewmissions ow knyowwedge. 
 
-          - Static: No
-          - Dynamic: No
+(✧ω✧) *teleports behind you* --- Static: N-Nyo 
+(✧ω✧) *teleports behind you* --- Dynyamic: N-Nyo 
 
-  - Supertype: **Unrestricted Resource**:
+(✧ω✧) *teleports behind you* --- Supewtype: **Unwestwicted Wesouwce**: 
 
-    - **Not** `AnyResource`:
+(✧ω✧) *teleports behind you* --- **Nyot** `-`AnyWesouwce`: 
 
-      - An unauthorized reference to a restricted resource type `&T{Us}`
-        is a subtype of a reference to an unrestricted resource type `&V`: never.
+(✧ω✧) *teleports behind you* --- An unyauthowized wefewence to a westwicted wesouwce t-type `&T{Us}` 
+is a subtype of a wefewence to an u-unwestwicted wesouwce t-type `&V`: uWu *leans over* n-nyevew. 
 
-        The holder of the reference may not gain more permissions or knowledge.
+The howdew of t-the wefewence may nyot gain mowe pewmissions ow knyowwedge. 
 
-        - Static: No
-        - Dynamic: No
+(✧ω✧) *teleports behind you* --- Static: N-Nyo 
+(✧ω✧) *teleports behind you* --- Dynyamic: N-Nyo 
 
-      - An unauthorized reference to an unrestricted resource type `&T`
-        is a subtype of a reference to an unrestricted resource type `&V`: if `T == V`.
+(✧ω✧) *teleports behind you* --- An unyauthowized wefewence to an u-unwestwicted wesouwce t-type `&T` 
+is a subtype of a wefewence to an u-unwestwicted wesouwce t-type `&V`: if `T == V`. 
 
-        - Static: Yes
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 
-    - `AnyResource`
+(✧ω✧) *teleports behind you* --- `-`AnyWesouwce` 
 
-      - An unauthorized reference to a restricted resource type `&T{Us}` or
-        to a unrestricted resource type `&T`
-        is a subtype of the type `&AnyResource`: always.
+(✧ω✧) *teleports behind you* --- An unyauthowized wefewence to a westwicted wesouwce t-type `&T{Us}` ow 
+to a u-unwestwicted wesouwce t-type `&T` 
+is a subtype of t-the t-type `&AnyWesouwce`: awways. 
 
-        - Static: Yes
-        - Dynamic: Yes
+(✧ω✧) *teleports behind you* --- Static: Yes 
+(✧ω✧) *teleports behind you* --- Dynyamic: Yes 
 

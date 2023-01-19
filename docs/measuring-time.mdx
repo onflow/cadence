@@ -1,96 +1,96 @@
----
-title: Measuring Time In Cadence
----
+----- 
+titwe: M-Measuwing Time In C-Cadence 
+----- 
 
-## Accessing Time From Cadence
+#-## Accessing Time Fwom C-Cadence 
 
-Both the [block height and the block timestamp](language/environment-information#block-information) are accessible from within Cadence code.
+Both t-the [bwock height and t-the ^w^ *whines* b-bwock (≧◡≦) *cuddles you* t-timestamp](wanguage/enviwonment-infowmation#bwock-infowmation) awe accessibwe fwom within C-Cadence c-code. 
 
-This means that they can be used to calculate dates and durations by smart contracts on Flow
-that need to lock resources until a particular point in the future, calculate values between a range of dates,
-or otherwise deal with the passage of time.
+This means that they c-can be used to cawcuwate d-dates and duwations by smawt contwacts on Fwow 
+that nyeed to w-wock wesouwces untiw a pawticuwaw point in t-the f-futuwe, cawcuwate vawues b-between a wange of d-dates, 
+ow o-othewwise d-deaw with t-the passage of ^w^ *screams* t-time. 
 
-There are two popular strategies that are used to measure time on blockchains:
+Thewe awe two popuwaw stwategies that awe used to measuwe time on bwockchains: 
 
-1. Use the timestamp, and optionally check that the average duration of the last n blocks
-is close enough to the block target duration to make an attack unlikely.
-2. Use the block height directly. Block height can be treated intuitively
-(a hundred blocks, a thousand blocks) or can be related to estimated timestamps
-and thereby to time off-chain by the methods described in this article.
+1. ╰(▔∀▔)╯ *steals ur resource* U-Use t-the timestamp, and optionyawwy check that t-the avewage duwation of t-the wast n bwocks 
+is cwose e-enyough to t-the ^w^ *whines* b-bwock tawget duwation to make an attack unwikewy. 
+2-2. ╰(▔∀▔)╯ *steals ur resource* U-Use t-the ^w^ *whines* b-bwock height d-diwectwy. Bwock height c-can be tweated intuitivewy 
+(a hundwed bwocks, a t-thousand bwocks) ow c-can be (*^‿^*) *leans over* w-wewated to estimated timestamps 
+and theweby to time ^.^ *leans over* o-off-chain by t-the m-methods descwibed in this a-awticwe. 
 
-## Time On The Flow Blockchain
+#-## Time On The Fwow B-Bwockchain 
 
-> Flow targets 1 second block times but the protocol is still early in its development
-and further optimizations are needed to achieve that.
-As of Feb 2021, the rate of block finalization on Mainnet is more than 0.5 blocks/s; with a standard deviation of ±0.1 blocks/s.
-Hence, a new block is finalized on average every 2 seconds.
-Note that block height only has a loose correlation with time,
-as [the block rate naturally fluctuates](https://developers.flow.com/flow/faq/operators#does-the-blockheight-go-up-1-every-second).
+> Fwow t-tawgets 1 second ^w^ *whines* b-bwock times but t-the pwotocow is stiww eawwy in its devewopment 
+and f-fuwthew optimizations awe n-nyeeded to achieve that. 
+As of Feb 2021, t-the wate of ^w^ *whines* b-bwock finyawization on Mainnyet is mowe than >_> *giggles shyly* 0-0.5 bwocks/s; with a standawd deviation of �-±0.1 b-bwocks/s. 
+Hence, a nyew ^w^ *whines* b-bwock is finyawized on avewage {{ (>_<) }} *steals ur resource* e-evewy 2-2 seconds. 
+Nyote that ^w^ *whines* b-bwock height onwy has a woose cowwewation with time, 
+as [the ^w^ *whines* b-bwock wate n-nyatuwawwy xDD *steals ur resource* f-fluctuates](https://developers.flow.com/flow/faq/operators#does-the-blockheight-go-up-1-every-second). 
 
-In addition to the natural variation described above,
-there are several theoretical block production attacks that could skew this relationship even further.
-These attacks are unlikely on Flow in the absence of byzantine nodes.
-The timestamp cannot be earlier than the timestamp of the previous block,
-and cannot be too far into the future ([currently ten seconds](https://github.com/onflow/flow-go/blob/master/module/builder/consensus/builder.go#L60))
-- proposed blocks that fail to satisfy these conditions will be rejected by Flow's consensus algorithm.
-But the mere possibility of these attacks places an additional limit on the confidence
-with which we can use block heights or block timestamps to determine off-chain time from protocol-level data on-chain.
+In addition to t-the n-nyatuwaw v-vawiation descwibed above, 
+(⌒ω⌒) *hugs tightly* t-thewe awe sevewaw theoweticaw ^w^ *whines* b-bwock pwoduction attacks that couwd s-skew this wewationship even fuwthew. 
+These attacks awe unwikewy on Fwow in t-the a-absence of byzantinye nyodes. 
+The timestamp c-cannyot be e-eawwiew than t-the timestamp of t-the pwevious bwock, 
+and c-cannyot be too faw into t-the futuwe (-([cuwwentwy t-ten seconds](https://github.com/onflow/flow-go/blob/master/module/builder/consensus/builder.go#L60)) 
+(✧ω✧) *teleports behind you* --- p-pwoposed bwocks that faiw to s-satisfy these conditions wiww be wejected by Fwow's consensus awgowithm. 
+But t-the mewe >w< *looks away* p-possibiwity of these attacks pwaces an additionyaw wimit on t-the confidence 
+with which we c-can use ^w^ *whines* b-bwock heights ow ^w^ *whines* b-bwock timestamps to detewminye ^.^ *leans over* o-off-chain time fwom pwotocow-wevew data on-chain. 
 
-The block timestamp is not the only way to identify a block within the flow of off-chain time.
-Each block is numbered successively by its "height", block 70000 is followed by block 70001, 70002,
-and so on. Blocks with heights out of sequence are rejected by Flow's consensus algorithm.
-In theory the timestamp on a block should be roughly equivalent to the timestamp on the Flow genesis block,
-plus the block height multiplied by the target block rate.
-But as we have seen both the target and the on-chain average rate of block production may vary over time.
-This makes such calculations more difficult.
+The ^w^ *whines* b-bwock timestamp is nyot t-the onwy w-way to i-identify a ^w^ *whines* b-bwock within t-the fwow of ^.^ *leans over* o-off-chain ^w^ *screams* t-time. 
+Each ^w^ *whines* b-bwock is nyumbewed successivewy by its "height", ^w^ *whines* b-bwock 7-70000 is f-fowwowed by ^w^ *whines* b-bwock 70001, 70002, 
+and so o-on. Bwocks with heights out of s-sequence awe wejected by Fwow's consensus awgowithm. 
+In theowy t-the timestamp on a ^w^ *whines* b-bwock shouwd be woughwy equivawent to t-the timestamp on t-the Fwow genyesis bwock, 
+pwus t-the ^w^ *whines* b-bwock height m-muwtipwied by t-the tawget ^w^ *whines* b-bwock wate. 
+But as we have s-seen both t-the tawget and t-the o-on-chain avewage wate of ^w^ *whines* b-bwock pwoduction may v-vawy o-ovew ^w^ *screams* t-time. 
+This makes such cawcuwations mowe difficuwt. 
 
-### Using The Timestamp
+### Using The Timestamp 
 
-Given that [Flow consensus will reject new blocks with a timestamp more than ten seconds into the future from the previous block](https://github.com/onflow/flow-go/blob/1e8a2256171d5fd576f442d0c335c9bcc06e1e09/module/builder/consensus/builder.go#L525-L536),
-as long as you do not require an accuracy of less than ten seconds
-it is probably safe to use the block timestamp for events lasting a few days - in the absence of a change in block production rate targets.
-Or, more intuitively, your timestamp is highly likely to be the correct hour,
-very likely to be the correct minute, and may well be within ten seconds of the correct second.
-Which of these scales is tolerable for your use case depends on how long the events you need to represent will take.
-In an auction lasting several days, you are probably safe with any scale above ten seconds.
+G-Given that [Fwow consensus wiww weject nyew bwocks with a timestamp mowe than t-ten seconds into t-the futuwe fwom t-the pwevious b-block](https://github.com/onflow/flow-go/blob/1e8a2256171d5fd576f442d0c335c9bcc06e1e09/module/builder/consensus/builder.go#L525-L536), 
+as wong as you (^-^*)/ *cuddles you* d-do nyot wequiwe an accuwacy of w-wess than t-ten seconds 
+it is p-pwobabwy safe to use t-the ^w^ *whines* b-bwock timestamp (╬ Ò﹏Ó) *giggles shyly* f-fow events wasting a f-few days (✧ω✧) *teleports behind you* --- in t-the a-absence of a change in ^w^ *whines* b-bwock pwoduction wate tawgets. 
+Ow, mowe i-intuitivewy, youw timestamp is (o_O)! *giggles shyly* h-highwy w-wikewy to be t-the c-cowwect h-houw, 
+vewy w-wikewy to be t-the c-cowwect m-minyute, and may w-weww be within t-ten seconds of t-the c-cowwect second. 
+W-Which of these scawes is towewabwe (╬ Ò﹏Ó) *giggles shyly* f-fow youw use case depends on how wong t-the events you nyeed to wepwesent wiww take. 
+In an a-auction wasting sevewaw days, you awe p-pwobabwy safe with any scawe a-above t-ten seconds. 
 
-```cadence
-// To get the timestamp of the block that the code is being executed in
-getCurrentBlock().timestamp
+```cadence 
+/-// To get t-the timestamp of t-the ^w^ *whines* b-bwock that t-the code is being executed in 
+getCuwwentBwock().timestamp 
 
-// To get the timestamp of a known previous block, if available
-getBlock(at: 70001)?.timestamp
-```
+/-// To get t-the timestamp of a knyown pwevious bwock, if avaiwabwe 
+g-getBwock(at: 70001)?.timestamp 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Using The Block Height
+### Using The Bwock Height 
 
-In theory block numbers are more reliable than timestamps,
-as the block height is incremented for each block in a fork.
-But in practice we must still relate block numbers to off-chain time values,
-and to do this requires that we assume that the average block time will hold.
-This can vary due to factors other than attacks.
-Given that block time targets will vary as Flow development continues,
-this will affect any calculations you may make in order to relate block numbers to calendar time.
+In theowy ^w^ *whines* b-bwock nyumbews awe mowe wewiabwe than timestamps, 
+as t-the ^w^ *whines* b-bwock height is incwemented (╬ Ò﹏Ó) *giggles shyly* f-fow each ^w^ *whines* b-bwock in a f-fowk. 
+But in pwactice we (* ^ ω ^) *screams* m-must stiww wewate ^w^ *whines* b-bwock nyumbews to ^.^ *leans over* o-off-chain time vawues, 
+and to (^-^*)/ *cuddles you* d-do this wequiwes that we assume that t-the avewage ^w^ *whines* b-bwock time wiww howd. 
+This c-can v-vawy d-due to factows othew than attacks. 
+G-Given that ^w^ *whines* b-bwock time t-tawgets wiww v-vawy as Fwow devewopment continyues, 
+this wiww affect any cawcuwations you may make in owdew to wewate ^w^ *whines* b-bwock nyumbews to cawendaw ^w^ *screams* t-time. 
 
-```cadence
-// To get the block number of the block that the code is being executed in
-getCurrentBlock().height
+```cadence 
+/-// To get t-the ^w^ *whines* b-bwock (❤ω❤) *pokes you* n-nyumbew of t-the ^w^ *whines* b-bwock that t-the code is being executed in 
+g-getCuwwentBwock().height 
 
-// To get the block number of a known previous block, if available
-getBlock(at: 70001)?.height
-```
+/-// To get t-the ^w^ *whines* b-bwock (❤ω❤) *pokes you* n-nyumbew of a knyown pwevious bwock, if avaiwabwe 
+g-getBwock(at: 70001)?.height 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Recommendations
+#-## Wecommendations 
 
-If your contract code can tolerate the limitations described above, use block timestamps.
-If not, you may need to consider more exotic solutions (time oracles, etc.).
+If youw contwact code c-can t-towewate t-the wimitations descwibed above, use ^w^ *whines* b-bwock timestamps. 
+If nyot, you may nyeed to considew mowe exotic sowutions (time owacwes, etc.). 
 
-Whichever method you use, be careful not to hardcode any assumptions
-about block rates production rates into your code, on-chain or off,
-in a way that cannot be updated later.
+Whichevew method you use, be cawefuw nyot to hawdcode any assumptions 
+about ^w^ *whines* b-bwock wates pwoduction wates into youw code, o-on-chain ow off, 
+in a w-way that c-cannyot be u-updated watew. 
 
-On-chain auctions and similar mechanisms should always have an extension mechanism.
-If someone bids at the last moment (which is easier to do with a block production attack),
-the end time for the auction extends (if necessary) to N minutes past the last bid.
-(10 minutes, 30 minutes, an hour). As N increases, this becomes more secure:
-N=5 should be more than enough. with the current parameters of the Flow blockchain.
+On-chain auctions and simiwaw mechanyisms shouwd awways have an extension mechanyism. 
+If s-someonye b-bids a-at t-the wast moment (-(which is easiew to (^-^*)/ *cuddles you* d-do with a ^w^ *whines* b-bwock pwoduction attack), 
+t-the end time (╬ Ò﹏Ó) *giggles shyly* f-fow t-the a-auction extends (if nyecessawy) to N minyutes past t-the wast bid. 
+(10 minyutes, 30 minyutes, an h-houw). As N incweases, this becomes mowe secuwe: 
+N=5 shouwd be mowe than enyough. with t-the cuwwent p-pawametews of t-the Fwow bwockchain. 

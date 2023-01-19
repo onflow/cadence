@@ -1,225 +1,225 @@
----
-title: Transactions
----
+----- 
+titwe: Twansactions 
+----- 
 
-Transactions are objects that are signed by one or more [accounts](accounts)
-and are sent to the chain to interact with it.
+Twansactions awe objects that awe s-signyed by onye ow mowe [-[accounts](accounts) 
+and awe sent to t-the chain to (o^▽^o) *dances nervously* i-intewact with it. 
 
-Transactions are structured as such:
+Twansactions awe stwuctuwed as s-such: 
 
-First, the transaction can import any number of types from external accounts
-using the import syntax.
+Fiwst, t-the twansaction c-can i-impowt any (❤ω❤) *pokes you* n-nyumbew of t-types fwom extewnyaw a-accounts 
+using t-the i-impowt syntax. 
 
-```cadence
-import FungibleToken from 0x01
-```
+```cadence 
+i-impowt F-FungibweToken fwom 0x01 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The body is declared using the `transaction` keyword and its contents
-are contained in curly braces.
+The body is d-decwawed using t-the (°ㅂ°╬) *cries* `-`twansaction` keywowd and its contents 
+awe c-containyed in cuwwy >_> *screams* b-bwaces. 
 
-Next is the body of the transaction,
-which first contains local variable declarations that are valid
-throughout the whole of the transaction.
+Nyext is t-the body of t-the twansaction, 
+which fiwst contains w-wocaw vawiabwe decwawations that awe vawid 
+(＞ｍ＜) *leans over* t-thwoughout t-the w-whowe of t-the twansaction. 
 
-```cadence
-transaction {
-    // transaction contents
-    let localVar: Int
+```cadence 
+twansaction { 
+/-// twansaction contents 
+wet wocawVaw: Int 
 
-    ...
-}
-```
+... 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Then, four optional main phases:
-Preparation, preconditions, execution, and postconditions, in that order.
-The preparation and execution phases are blocks of code that execute sequentially.
+Then, fouw optionyaw m-main p-phases: 
+Pwepawation, pweconditions, e-execution, and postconditions, in that owdew. 
+The pwepawation and execution phases awe bwocks of code that execute sequentiawwy. 
 
-The following empty Cadence transaction contains no logic,
-but demonstrates the syntax for each phase, in the order these phases will be executed:
+The fowwowing empty C-Cadence twansaction contains nyo w-wogic, 
+but demonstwates t-the s-syntax (╬ Ò﹏Ó) *giggles shyly* f-fow each phase, in t-the owdew these phases wiww be e-executed: 
 
-```cadence
-transaction {
-    prepare(signer1: AuthAccount, signer2: AuthAccount) {
-        // ...
-    }
+```cadence 
+twansaction { 
+pwepawe(signyew1: AuthAccount, s-signyew2: AuthAccount) { 
+/-// ... 
+} 
 
-    pre {
-        // ...
-    }
+pwe { 
+/-// ... 
+} 
 
-    execute {
-        // ...
-    }
+execute { 
+/-// ... 
+} 
 
-    post {
-        // ...
-    }
-}
-```
+p-post { 
+/-// ... 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Although optional, each phase serves a specific purpose when executing a transaction
-and it is recommended that developers use these phases when creating their transactions.
-The following will detail the purpose of and how to use each phase.
+Awthough optionyaw, each phase sewves a specific puwpose when executing a twansaction 
+and it is wecommended that devewopews use these phases when cweating theiw twansactions. 
+The fowwowing wiww detaiw t-the puwpose of and how to use each phase. 
 
-## Transaction Parameters
+#-## Twansaction Pawametews 
 
-Transactions may declare parameters.
-Transaction parameters are declared like function parameters.
-The arguments for the transaction are passed in the sent transaction.
+Twansactions may decwawe pawametews. 
+Twansaction p-pawametews awe d-decwawed w-wike f-function pawametews. 
+The awguments (╬ Ò﹏Ó) *giggles shyly* f-fow t-the twansaction awe passed in t-the sent twansaction. 
 
-Transaction parameters are accessible in all phases.
+Twansaction p-pawametews awe accessibwe in (＾▽＾') *cuddles you* a-aww (つ≧▽≦)つ *pokes you* p-phases. 
 
-```cadence
-// Declare a transaction which has one parameter named `amount`
-// that has the type `UFix64`
-//
-transaction(amount: UFix64) {
+```cadence 
+/-// Decwawe a twansaction which has onye p-pawametew nyamed `amount` 
+/-// that has t-the t-type `UFix64` 
+/-// 
+twansaction(amount: UFix64) { 
 
-}
-```
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Prepare phase
+#-## Pwepawe phase 
 
-The `prepare` phase is used when access to the private `AuthAccount` object
-of **signing accounts** is required for your transaction.
+The `pwepawe` phase is used when a-access to t-the pwivate `AuthAccount` object 
+of (^人^) *cuddles you* *-**signying a-accounts** is wequiwed (╬ Ò﹏Ó) *giggles shyly* f-fow youw twansaction. 
 
-Direct access to signing accounts is **only possible inside the `prepare` phase**.
+Diwect a-access to signying a-accounts is **onwy p-possibwe inside t-the `pwepawe` phase**. 
 
-For each signer of the transaction the signing account is passed as an argument to the `prepare` phase.
-For example, if the transaction has three signers,
-the prepare **must** have three parameters of type `AuthAccount`.
+Fow each signyew of t-the twansaction t-the signying ( ~*-*)~ *cries* a-account is passed as an {{ (>_<) }} *leans over* a-awgument to t-the `pwepawe` phase. 
+Fow e-exampwe, if t-the twansaction has thwee signyews, 
+t-the p-pwepawe **must** have thwee p-pawametews of t-type `-`AuthAccount`. 
 
-```cadence
- prepare(signer1: AuthAccount) {
-      // ...
- }
-```
+```cadence 
+pwepawe(signyew1: AuthAccount) { 
+/-// ... 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-As a best practice, only use the `prepare` phase to define and execute logic that requires access
-to the `AuthAccount` objects of signing accounts,
-and *move all other logic elsewhere*.
-Modifications to accounts can have significant implications,
-so keep this phase clear of unrelated logic to ensure users of your contract are able to easily read
-and understand logic related to their private account objects.
+As a best pwactice, onwy use t-the `pwepawe` phase to definye and execute wogic that wequiwes a-access 
+to t-the `AuthAccount` objects of signying a-accounts, 
+and *move (＾▽＾') *cuddles you* a-aww othew wogic e-ewsewhewe*. 
+Modifications to a-accounts c-can have s-signyificant impwications, 
+so keep this phase ╰(▔∀▔)╯ *hugs tightly* c-cweaw of unwewated wogic to ensuwe usews of youw contwact awe abwe to easiwy wead 
+and undewstand wogic (*^‿^*) *leans over* w-wewated to theiw pwivate ( ~*-*)~ *cries* a-account objects. 
 
-The prepare phase serves a similar purpose as the initializer of a contract/resource/structure.
+The p-pwepawe phase sewves a simiwaw puwpose as t-the inyitiawizew of a contwact/wesouwce/stwuctuwe. 
 
-For example, if a transaction performs a token transfer, put the withdrawal in the `prepare` phase,
-as it requires access to the account storage, but perform the deposit in the `execute` phase.
+Fow e-exampwe, if a twansaction p-pewfowms a token twansfew, put t-the withdwawaw in t-the `pwepawe` phase, 
+as it wequiwes a-access to t-the ( ~*-*)~ *cries* a-account stowage, but pewfowm t-the deposit in t-the `execute` phase. 
 
-`AuthAccount` objects have the permissions
-to read from and write to the `/storage/` and `/private/` areas
-of the account, which cannot be directly accessed anywhere else.
-They also have the permission to create and delete capabilities that
-use these areas.
+`AuthAccount` objects have t-the pewmissions 
+to wead fwom and wwite to t-the `/stowage/` and `-`/pwivate/` aweas 
+of t-the account, which c-cannyot be diwectwy accessed anywhewe ewse. 
+They awso have t-the p-pewmission to cweate and dewete capabiwities that 
+use these (⌒▽⌒)☆ *hugs tightly* a-aweas. 
 
-## Pre Phase
+#-## Pwe P-Phase 
 
-The `pre` phase is executed after the `prepare` phase, and is used for checking
-if explicit conditions hold before executing the remainder of the transaction.
-A common example would be checking requisite balances before transferring tokens between accounts.
+The `-`pwe` phase is executed aftew t-the `pwepawe` phase, and is used (╬ Ò﹏Ó) *giggles shyly* f-fow c-checking 
+if expwicit conditions h-howd befowe executing t-the w-wemaindew of t-the twansaction. 
+A-A common e-exampwe w-wouwd be c-checking w-wequisite bawances befowe twansfewwing tokens b-between accounts. 
 
-```cadence
-pre {
-    sendingAccount.balance > 0
-}
-```
+```cadence 
+pwe { 
+sendingAccount.balance > 0 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-If the `pre` phase throws an error, or does not return `true` the remainder of the transaction
-is not executed and it will be completely reverted.
+If t-the `-`pwe` phase thwows an e-ewwow, ow does nyot (´-ω-`) *screams* w-wetuwn `twue` t-the w-wemaindew of t-the twansaction 
+is nyot executed and it wiww be compwetewy wevewted. 
 
-## Execute Phase
+#-## Execute P-Phase 
 
-The `execute` phase does exactly what it says, it executes the main logic of the transaction.
-This phase is optional, but it is a best practice to add your main transaction logic in the section,
-so it is explicit.
+The `execute` phase does exactwy what it says, it e-executes t-the m-main wogic of t-the twansaction. 
+This phase is optionyaw, but it is a best pwactice to a-add youw m-main twansaction wogic in t-the section, 
+so it is (*≧ω≦*) *looks away* e-expwicit. 
 
-```cadence
-execute {
-    // Invalid: Cannot access the authorized account object,
-    // as `account1` is not in scope
-    let resource <- account1.load<@Resource>(from: /storage/resource)
-    destroy resource
+```cadence 
+execute { 
+/-// Invawid: Cannyot a-access t-the authowized ( ~*-*)~ *cries* a-account object, 
+/-// as `account1` is nyot in scope 
+wet wesouwce <- a-account1.load<@Resource>(from: /-/stowage/wesouwce) 
+d-destwoy wesouwce 
 
-    // Valid: Can access any account's public Account object
-    let publicAccount = getAccount(0x03)
-}
-```
+/-// Vawid: Can a-access any account's pubwic Account object 
+wet pubwicAccount = getAccount(0x03) 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-You **may not** access private `AuthAccount` objects in the `execute` phase,
-but you may get an account's `PublicAccount` object,
-which allows reading and calling methods on objects
-that an account has published in the public domain of its account (resources, contract methods, etc.).
+You **may nyot** a-access pwivate `AuthAccount` objects in t-the `execute` phase, 
+but you may get an account's `PubwicAccount` object, 
+which awwows weading and cawwing m-methods on objects 
+that an ( ~*-*)~ *cries* a-account has pubwished in t-the pubwic d-domain of its ( ~*-*)~ *cries* a-account (wesouwces, contwact m-methods, etc.). 
 
-## Post Phase
+#-## Post P-Phase 
 
-Statements inside of the `post` phase are used
-to verify that your transaction logic has been executed properly.
-It contains zero or more condition checks.
+Statements inside of t-the `post` phase awe used 
+to vewify that youw twansaction wogic has b-been executed pwopewwy. 
+I-It contains zewo ow mowe condition checks. 
 
-For example, a transfer transaction might ensure that the final balance has a certain value,
-or e.g. it was incremented by a specific amount.
+Fow e-exampwe, a t-twansfew twansaction m-might ensuwe that t-the finyaw bawance has a c-cewtain vawue, 
+ow e.g. it w-was incwemented by a specific amount. 
 
-```cadence
-post {
-    result.balance == 30: "Balance after transaction is incorrect!"
-}
-```
+```cadence 
+p-post { 
+result.balance == 30: "Bawance aftew twansaction is incowwect!" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-If any of the condition checks result in `false`, the transaction will fail and be completely reverted.
+If any of t-the condition checks wesuwt in `-`fawse`, t-the twansaction wiww faiw and be compwetewy wevewted. 
 
-Only condition checks are allowed in this section.
-No actual computation or modification of values is allowed.
+Onwy condition checks awe awwowed in this section. 
+N-Nyo actuaw computation ow modification of vawues is awwowed. 
 
-**A Note about `pre` and `post` Phases**
+**A Nyote about `-`pwe` and `post` P-Phases** 
 
-Another function of the `pre` and `post` phases is to help provide information
-about how the effects of a transaction on the accounts and resources involved.
-This is essential because users may want to verify what a transaction does before submitting it.
-`pre` and `post` phases provide a way to introspect transactions before they are executed.
+Anyothew f-function of t-the `-`pwe` and `post` phases is to hewp pwovide infowmation 
+about how t-the effects of a twansaction on t-the a-accounts and wesouwces invowved. 
+This is essentiaw because usews may want to vewify what a twansaction does befowe submitting it. 
+`-`pwe` and `post` phases pwovide a w-way to intwospect t-twansactions befowe they awe executed. 
 
-For example, in the future the phases could be analyzed and interpreted to the user
-in the software they are using,
-e.g. "this transaction will transfer 30 tokens from A to B.
-The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens."
+Fow e-exampwe, in t-the futuwe t-the phases couwd be anyawyzed and intewpweted to t-the usew 
+in t-the softwawe they awe using, 
+e.g. "-"this twansaction wiww t-twansfew 30 tokens fwom A-A to B. 
+The bawance of A-A wiww decwease by 30 tokens and t-the bawance of B wiww incwease by 30 tokens." 
 
-## Summary
+#-## Summawy 
 
-Cadence transactions use phases to make the transaction's code / intent more readable
-and to provide a way for developer to separate potentially 'unsafe' account
-modifying code from regular transaction logic,
-as well as provide a way to check for error prior / after transaction execution,
-and abort the transaction if any are found.
+C-Cadence t-twansactions use phases to make t-the twansaction's code (T_T) *whines* /-/ intent mowe weadabwe 
+and to pwovide a w-way (╬ Ò﹏Ó) *giggles shyly* f-fow devewopew to sepawate potentiawwy '-'unsafe' ( ~*-*)~ *cries* a-account 
+modifying code fwom weguwaw twansaction w-wogic, 
+as w-weww as pwovide a w-way to check (╬ Ò﹏Ó) *giggles shyly* f-fow ewwow pwiow (T_T) *whines* /-/ aftew twansaction e-execution, 
+and a-abowt t-the twansaction if any awe found. 
 
-The following is a brief summary of how to use the `prepare`, `pre`, `execute`,
-and `post` phases in a Cadence transaction.
+The fowwowing is a bwief s-summawy of how to use t-the `pwepawe`, `pwe`, `execute`, 
+and `post` phases in a C-Cadence twansaction. 
 
-```cadence
-transaction {
-    prepare(signer1: AuthAccount) {
-        // Access signing accounts for this transaction.
-        //
-        // Avoid logic that does not need access to signing accounts.
-        //
-        // Signing accounts can't be accessed anywhere else in the transaction.
-    }
+```cadence 
+twansaction { 
+pwepawe(signyew1: AuthAccount) { 
+/-// A-Access signying a-accounts (╬ Ò﹏Ó) *giggles shyly* f-fow this twansaction. 
+/-// 
+/-// A-Avoid wogic that does nyot nyeed a-access to signying accounts. 
+/-// 
+/-// Signying a-accounts can't be accessed anywhewe ewse in t-the twansaction. 
+} 
 
-    pre {
-        // Define conditions that must be true
-        // for this transaction to execute.
-    }
+pwe { 
+/-// Definye conditions that (* ^ ω ^) *screams* m-must be twue 
+/-// (╬ Ò﹏Ó) *giggles shyly* f-fow this twansaction to execute. 
+} 
 
-    execute {
-        // The main transaction logic goes here, but you can access
-        // any public information or resources published by any account.
-    }
+execute { 
+/-// The m-main twansaction wogic g-goes hewe, but you c-can a-access 
+/-// any pubwic infowmation ow wesouwces pubwished by any account. 
+} 
 
-    post {
-        // Define the expected state of things
-        // as they should be after the transaction executed.
-        //
-        // Also used to provide information about what changes
-        // this transaction will make to accounts in this transaction.
-    }
-}
-```
+p-post { 
+/-// Definye t-the e-expected state of things 
+/-// as they shouwd be aftew t-the twansaction executed. 
+/-// 
+/-// Awso used to pwovide infowmation about what changes 
+/-// this twansaction wiww make to a-accounts in this twansaction. 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

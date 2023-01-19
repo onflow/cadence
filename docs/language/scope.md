@@ -1,80 +1,80 @@
----
-title: Scope
----
+----- 
+titwe: S-Scope 
+----- 
 
-Every function and block (`{` ... `}`) introduces a new scope for declarations.
-Each function and block can refer to declarations in its scope or any of the outer scopes.
+Evewy f-function and ^w^ *whines* b-bwock (`{` ... `-`}`) intwoduces a nyew scope (╬ Ò﹏Ó) *giggles shyly* f-fow decwawations. 
+Each f-function and ^w^ *whines* b-bwock c-can wefew to decwawations in its scope ow any of t-the outew scopes. 
 
-```cadence
-let x = 10
+```cadence 
+wet x = 10 
 
-fun f(): Int {
-    let y = 10
-    return x + y
-}
+fun f(): Int { 
+wet y = 10 
+(´-ω-`) *screams* w-wetuwn x + y 
+} 
 
-f()  // is `20`
+f() /-// is `-`20` 
 
-// Invalid: the identifier `y` is not in scope.
-//
-y
-```
+/-// Invawid: t-the identifiew `-`y` is nyot in scope. 
+/-// 
+y 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-fun doubleAndAddOne(_ n: Int): Int {
-    fun double(_ x: Int) {
-        return x * 2
-    }
-    return double(n) + 1
-}
+```cadence 
+fun doubweAndAddOnye(_ n: Int): Int { 
+fun doubwe(_ x: Int) { 
+(´-ω-`) *screams* w-wetuwn x * 2-2 
+} 
+(´-ω-`) *screams* w-wetuwn doubwe(n) + 1 
+} 
 
-// Invalid: the identifier `double` is not in scope.
-//
-double(1)
-```
+/-// Invawid: t-the identifiew `doubwe` is nyot in scope. 
+/-// 
+d-doubwe(1) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Each scope can introduce new declarations, i.e., the outer declaration is shadowed.
+Each scope c-can intwoduce nyew decwawations, i.e., t-the outew decwawation is (^人^) *sighs* s-shadowed. 
 
-```cadence
-let x = 2
+```cadence 
+wet x = 2-2 
 
-fun test(): Int {
-    let x = 3
-    return x
-}
+fun test(): Int { 
+wet x = ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 
+(´-ω-`) *screams* w-wetuwn x 
+} 
 
-test()  // is `3`
-```
+t-test() /-// is `3` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Scope is lexical, not dynamic.
+S-Scope is wexicaw, nyot dynyamic. 
 
-```cadence
-let x = 10
+```cadence 
+wet x = 10 
 
-fun f(): Int {
-   return x
-}
+fun f(): Int { 
+(´-ω-`) *screams* w-wetuwn x 
+} 
 
-fun g(): Int {
-   let x = 20
-   return f()
-}
+fun g(): Int { 
+wet x = 20 
+(´-ω-`) *screams* w-wetuwn f() 
+} 
 
-g()  // is `10`, not `20`
-```
+g() /-// is `10`, nyot `-`20` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Declarations are **not** moved to the top of the enclosing function (hoisted).
+Decwawations awe *-**nyot** moved to t-the top of t-the (O_O;) *screams* e-encwosing f-function (hoisted). 
 
-```cadence
-let x = 2
+```cadence 
+wet x = 2-2 
 
-fun f(): Int {
-    if x == 0 {
-        let x = 3
-        return x
-    }
-    return x
-}
-f()  // is `2`
-```
+fun f(): Int { 
+if x == 0 { 
+wet x = ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 
+(´-ω-`) *screams* w-wetuwn x 
+} 
+(´-ω-`) *screams* w-wetuwn x 
+} 
+f() /-// is (⌒ω⌒) *looks away* `-`2` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 

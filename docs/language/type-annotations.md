@@ -1,54 +1,54 @@
----
-title: Type Annotations
----
+----- 
+titwe: Type Annyotations 
+----- 
 
-When declaring a constant or variable,
-an optional *type annotation* can be provided,
-to make it explicit what type the declaration has.
+When decwawing a c-constant ow vawiabwe, 
+an optionyaw *type a-annyotation* c-can be p-pwovided, 
+to make it expwicit what t-type t-the decwawation has. 
 
-If no type annotation is provided, the type of the declaration is
-[inferred from the initial value](type-inference).
+If nyo t-type (*^‿^*) *sighs* a-annyotation is p-pwovided, t-the t-type of t-the decwawation is 
+[infewwed fwom t-the inyitiaw v-vawue](type-infewence). 
 
-For function parameters a type annotation must be provided.
+Fow f-function p-pawametews a t-type (*^‿^*) *sighs* a-annyotation (* ^ ω ^) *screams* m-must be pwovided. 
 
-```cadence
-// Declare a variable named `boolVarWithAnnotation`, which has an explicit type annotation.
-//
-// `Bool` is the type of booleans.
-//
-var boolVarWithAnnotation: Bool = false
+```cadence 
+/-// Decwawe a vawiabwe nyamed `-`boowVawWithAnnyotation`, which has an expwicit t-type annyotation. 
+/-// 
+/-// `-`Boow` is t-the t-type of booweans. 
+/-// 
+vaw b-boowVawWithAnnyotation: Boow = f-fawse 
 
-// Declare a constant named `integerWithoutAnnotation`, which has no type annotation
-// and for which the type is inferred to be `Int`, the type of arbitrary-precision integers.
-//
-// This is based on the initial value which is an integer literal.
-// Integer literals are always inferred to be of type `Int`.
-//
-let integerWithoutAnnotation = 1
+/-// Decwawe a c-constant nyamed `integewWithoutAnnyotation`, which has nyo t-type (*^‿^*) *sighs* a-annyotation 
+/-// and (╬ Ò﹏Ó) *giggles shyly* f-fow which t-the t-type is infewwed to be `Int`, t-the t-type of ヽ(>∀<☆)ノ *giggles shyly* a-awbitwawy-pwecision integews. 
+/-// 
+/-// This is b-based on t-the inyitiaw vawue which is an integew witewaw. 
+/-// Integew witewaws awe awways infewwed to be of t-type `Int`. 
+/-// 
+wet integewWithoutAnnyotation = 1 
 
-// Declare a constant named `smallIntegerWithAnnotation`, which has an explicit type annotation.
-// Because of the explicit type annotation, the type is not inferred.
-// This declaration is valid because the integer literal `1` fits into the range of the type `Int8`,
-// the type of 8-bit signed integers.
-//
-let smallIntegerWithAnnotation: Int8 = 1
-```
+/-// Decwawe a c-constant nyamed `smawwIntegewWithAnnyotation`, which has an expwicit t-type annyotation. 
+/-// (* ^ ω ^) *teleports behind you* B-Because of t-the expwicit t-type annyotation, t-the t-type is nyot infewwed. 
+/-// This decwawation is vawid because t-the integew witewaw `-`1` (⌒ω⌒) *pokes you* f-fits into t-the wange of t-the t-type `-`Int8`, 
+/-// t-the t-type of 8-bit s-signyed integews. 
+/-// 
+wet smawwIntegewWithAnnyotation: I-Int8 = 1 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-If a type annotation is provided, the initial value must be of this type.
-All new values assigned to variables must match its type.
-This type safety is explained in more detail in a [separate section](type-safety).
+If a t-type (*^‿^*) *sighs* a-annyotation is p-pwovided, t-the inyitiaw vawue (* ^ ω ^) *screams* m-must be of this (＃￣ω￣) *hugs tightly* t-type. 
+Aww nyew vawues assignyed to vawiabwes (* ^ ω ^) *screams* m-must match its (＃￣ω￣) *hugs tightly* t-type. 
+This t-type safety is e-expwainyed in mowe detaiw in a [-[sepawate section](type-safety). 
 
-```cadence
-// Invalid: declare a variable with an explicit type `Bool`,
-// but the initial value has type `Int`.
-//
-let booleanConstant: Bool = 1
+```cadence 
+/-// Invawid: decwawe a vawiabwe with an expwicit t-type `Boow`, 
+/-// but t-the inyitiaw vawue has t-type `Int`. 
+/-// 
+wet booweanConstant: Boow = 1 
 
-// Declare a variable that has the inferred type `Bool`.
-//
-var booleanVariable = false
+/-// Decwawe a vawiabwe that has t-the infewwed t-type `Boow`. 
+/-// 
+vaw booweanVawiabwe = f-fawse 
 
-// Invalid: assign a value with type `Int` to a variable which has the inferred type `Bool`.
-//
-booleanVariable = 1
-```
+/-// Invawid: assign a vawue with t-type ^.^ *sweats* `-`Int` to a vawiabwe which has t-the infewwed t-type `Boow`. 
+/-// 
+booweanVawiabwe = 1 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

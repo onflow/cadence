@@ -1,768 +1,768 @@
----
-title: Operators
----
+----- 
+titwe: Opewatows 
+----- 
 
-Operators are special symbols that perform a computation
-for one or more values.
-They are either unary, binary, or ternary.
+Opewatows awe speciaw symbows that pewfowm a computation 
+(╬ Ò﹏Ó) *giggles shyly* f-fow onye ow mowe vawues. 
+They awe eithew u-unyawy, b-binyawy, ow (o_O)! *pokes you* t-tewnyawy. 
 
-- Unary operators perform an operation for a single value.
-  The unary operator symbol appears before the value.
+(✧ω✧) *teleports behind you* --- Unyawy opewatows pewfowm an o-opewation (╬ Ò﹏Ó) *giggles shyly* f-fow a s-singwe vawue. 
+The unyawy opewatow symbow appeaws befowe t-the vawue. 
 
-- Binary operators operate on two values.
-    The binary operator symbol appears between the two values (infix).
+(✧ω✧) *teleports behind you* --- Binyawy opewatows opewate on two vawues. 
+The (o^▽^o) *looks away* b-binyawy opewatow symbow appeaws b-between t-the two vawues (infix). 
 
-- Ternary operators operate on three values.
-  The first operator symbol appears between the first and second value,
-  the second operator symbol appears between the second and third value (infix).
+(✧ω✧) *teleports behind you* --- Tewnyawy opewatows opewate on thwee vawues. 
+The fiwst opewatow symbow appeaws b-between t-the fiwst and second vawue, 
+t-the second opewatow symbow appeaws b-between t-the second and thiwd vawue (infix). 
 
-## Assignment Operator (`=`)
+#-## Assignment ヽ(>∀<☆)ノ *dances nervously* O-Opewatow (`=`) 
 
-The binary assignment operator `=` can be used
-to assign a new value to a variable.
-It is only allowed in a statement and is not allowed in expressions.
+The (o^▽^o) *looks away* b-binyawy assignment opewatow `=` c-can be used 
+to assign a nyew vawue to a vawiabwe. 
+I-It is onwy awwowed in a statement and is nyot awwowed in expwessions. 
 
-```cadence
-var a = 1
-a = 2
-// `a` is `2`
+```cadence 
+vaw a = 1 
+a = 2-2 
+/-// `a` is (⌒ω⌒) *looks away* `-`2` 
 
 
-var b = 3
-var c = 4
+vaw b = ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 
+vaw c = 4 
 
-// Invalid: The assignment operation cannot be used in an expression.
-a = b = c
+/-// Invawid: The assignment o-opewation c-cannyot be used in an expwession. 
+a = b = c 
 
-// Instead, the intended assignment must be written in multiple statements.
-b = c
-a = b
-```
+/-// I-Instead, t-the intended assignment (* ^ ω ^) *screams* m-must be wwitten in muwtipwe statements. 
+b = c 
+a = b 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Assignments to constants are invalid.
+Assignments to constants awe invawid. 
 
-```cadence
-let a = 1
-// Invalid: Assignments are only for variables, not constants.
-a = 2
-```
+```cadence 
+wet a = 1 
+/-// Invawid: Assignments awe onwy (╬ Ò﹏Ó) *giggles shyly* f-fow vawiabwes, nyot constants. 
+a = 2-2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The left-hand side of the assignment operand must be an identifier.
-For arrays and dictionaries, this identifier can be followed
-by one or more index or access expressions.
+The w-weft-hand side of t-the assignment opewand (* ^ ω ^) *screams* m-must be an identifiew. 
+Fow awways and dictionyawies, this identifiew c-can be f-fowwowed 
+by onye ow mowe i-index ow a-access expwessions. 
 
-```cadence
-// Declare an array of integers.
-let numbers = [1, 2]
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [1, 2] 
 
-// Change the first element of the array.
-//
-numbers[0] = 3
+/-// C-Change t-the fiwst ewement of t-the awway. 
+/-// 
+nyumbews[0] = ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 
 
-// `numbers` is `[3, 2]`
-```
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is `[3, 2]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Declare an array of arrays of integers.
-let arrays = [[1, 2], [3, 4]]
+```cadence 
+/-// Decwawe an a-awway of awways of integews. 
+wet awways = [[1, 2], [3, 4]] 
 
-// Change the first element in the second array
-//
-arrays[1][0] = 5
+/-// C-Change t-the fiwst ewement in t-the second a-awway 
+/-// 
+a-awways[1][0] = 5 
 
-// `arrays` is `[[1, 2], [5, 4]]`
-```
+/-// `awways` is `[[1, 2], [5, (´ ∀ ` *) *dances nervously* 4-4]]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-let dictionaries = {
-  true: {1: 2},
-  false: {3: 4}
-}
+```cadence 
+wet dictionyawies = { 
+twue: {1: 2}, 
+fawse: {3: 4} 
+} 
 
-dictionaries[false][3] = 0
+dictionyawies[fawse][3] = 0 
 
-// `dictionaries` is `{
-//   true: {1: 2},
-//   false: {3: 0}
-//}`
-```
+/-// `dictionyawies` is `-`{ 
+/-// twue: {1: 2}, 
+/-// fawse: {3: 0} 
+//}` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Force-assignment operator (`<-!`)
+#-## Fowce-assignment opewatow (-(`<-!`) 
 
-The force-assignment operator (`<-!`) assigns a resource-typed value
-to an optional-typed variable if the variable is nil.
-If the variable being assigned to is non-nil,
-the execution of the program aborts.
+The fowce-assignment opewatow (-(`<-!`) assigns a wesouwce-typed vawue 
+to an o-optionyaw-typed vawiabwe if t-the vawiabwe is nyiw. 
+If t-the vawiabwe being assignyed to is nyon-nyiw, 
+t-the execution of t-the pwogwam abowts. 
 
-The force-assignment operator is only used for [resource types](resources).
+The fowce-assignment opewatow is onwy used (╬ Ò﹏Ó) *giggles shyly* f-fow [-[wesouwce types](wesouwces). 
 
-## Swapping Operator (`<->`)
+#-## (*≧ω≦*) *blushes* S-Swapping ヽ(>∀<☆)ノ *dances nervously* O-Opewatow (`<->`) 
 
-The binary swap operator `<->` can be used
-to exchange the values of two variables.
-It is only allowed in a statement and is not allowed in expressions.
+The (o^▽^o) *looks away* b-binyawy swap opewatow `<->` c-can be used 
+to exchange t-the vawues of two ଲ(ⓛ ω ⓛ)ଲ *leans over* v-vawiabwes. 
+I-It is onwy awwowed in a statement and is nyot awwowed in expwessions. 
 
-```cadence
-var a = 1
-var b = 2
-a <-> b
-// `a` is `2`
-// `b` is `1`
-
-var c = 3
-
-// Invalid: The swap operation cannot be used in an expression.
-a <-> b <-> c
-
-// Instead, the intended swap must be written in multiple statements.
-b <-> c
-a <-> b
-```
-
-Both sides of the swap operation must be variable,
-assignment to constants is invalid.
-
-```cadence
-var a = 1
-let b = 2
-
-// Invalid: Swapping is only possible for variables, not constants.
-a <-> b
-```
-
-Both sides of the swap operation must be an identifier,
-followed by one or more index or access expressions.
-
-## Arithmetic Operators
-
-The unary pefix operator  `-` negates an integer:
-
-```cadence
-let a = 1
--a  // is `-1`
-```
+```cadence 
+vaw a = 1 
+vaw b = 2-2 
+a <-> b 
+/-// `a` is (⌒ω⌒) *looks away* `-`2` 
+/-// `b` is `-`1` 
+
+vaw c = ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 
+
+/-// Invawid: The swap o-opewation c-cannyot be used in an expwession. 
+a <-> b <-> c 
+
+/-// I-Instead, t-the intended swap (* ^ ω ^) *screams* m-must be wwitten in muwtipwe statements. 
+b <-> c 
+a <-> b 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Both s-sides of t-the swap o-opewation (* ^ ω ^) *screams* m-must be vawiabwe, 
+assignment to constants is invawid. 
+
+```cadence 
+vaw a = 1 
+wet b = 2-2 
+
+/-// Invawid: (*≧ω≦*) *blushes* S-Swapping is onwy p-possibwe (╬ Ò﹏Ó) *giggles shyly* f-fow vawiabwes, nyot constants. 
+a <-> b 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Both s-sides of t-the swap o-opewation (* ^ ω ^) *screams* m-must be an identifiew, 
+f-fowwowed by onye ow mowe i-index ow a-access expwessions. 
+
+#-## Awithmetic Opewatows 
+
+The unyawy pefix opewatow `-` nyegates an integew: 
+
+```cadence 
+wet a = 1 
+-a /-// is `-1` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-There are four binary arithmetic operators:
-
-- Addition: `+`
-- Subtraction: `-`
-- Multiplication: `*`
-- Division: `/`
-- Remainder: `%`
+Thewe awe fouw (o^▽^o) *looks away* b-binyawy awithmetic o-opewatows: 
+
+(✧ω✧) *teleports behind you* --- A-Addition: `-`+` 
+(✧ω✧) *teleports behind you* --- Subtwaction: `-` 
+(✧ω✧) *teleports behind you* --- Muwtipwication: `*` 
+(✧ω✧) *teleports behind you* --- Division: (x_x)V *cuddles you* `-`/` 
+(✧ω✧) *teleports behind you* --- Wemaindew: `%` 
 
-```cadence
-let a = 1 + 2
-// `a` is `3`
-```
+```cadence 
+wet a = 1 + 2-2 
+/-// `a` is `3` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The arguments for the operators need to be of the same type.
-The result is always the same type as the arguments.
+The awguments (╬ Ò﹏Ó) *giggles shyly* f-fow t-the opewatows nyeed to be of t-the same (＃￣ω￣) *hugs tightly* t-type. 
+The wesuwt is awways t-the same t-type as t-the awguments. 
 
-The division and remainder operators abort the program when the divisor is zero.
+The division and w-wemaindew opewatows a-abowt t-the pwogwam when t-the divisow is zewo. 
 
-Arithmetic operations on the signed integer types
-`Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`,
-and on the unsigned integer types
-`UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`,
-do not cause values to overflow or underflow.
+Awithmetic opewations on t-the s-signyed integew t-types 
+`-`Int8`, `Int16`, `-`Int32`, `-`Int64`, `-`Int128`, `Int256`, 
+and on t-the unsignyed integew t-types 
+`UInt8`, `UInt16`, `-`UInt32`, (^ω~) *looks at you* `-`UInt64`, `UInt128`, `-`UInt256`, 
+(^-^*)/ *cuddles you* d-do nyot c-cause vawues to ovewfwow ow u-undewfwow. 
 
-```cadence
-let a: UInt8 = 255
+```cadence 
+wet a: UInt8 = 255 
 
-// Run-time error: The result `256` does not fit in the range of `UInt8`,
-// thus a fatal overflow error is raised and the program aborts
-//
-let b = a + 1
-```
+/-// Wun-time ewwow: The wesuwt `256` does nyot fit in t-the wange of `UInt8`, 
+/-// thus a fataw ovewfwow ewwow is waised and t-the pwogwam a-abowts 
+/-// 
+wet b = a + 1 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-let a: Int8 = 100
-let b: Int8 = 100
+```cadence 
+wet a: I-Int8 = 100 
+wet b-b: I-Int8 = 100 
 
-// Run-time error: The result `10000` does not fit in the range of `Int8`,
-// thus a fatal overflow error is raised and the program aborts
-//
-let c = a * b
-```
+/-// Wun-time ewwow: The wesuwt `10000` does nyot fit in t-the wange of `-`Int8`, 
+/-// thus a fataw ovewfwow ewwow is waised and t-the pwogwam a-abowts 
+/-// 
+wet c = a * b 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-let a: Int8 = -128
+```cadence 
+wet a: I-Int8 = -128 
 
-// Run-time error: The result `128` does not fit in the range of `Int8`,
-// thus a fatal overflow error is raised and the program aborts
-//
-let b = -a
-```
+/-// Wun-time ewwow: The wesuwt `-`128` does nyot fit in t-the wange of `-`Int8`, 
+/-// thus a fataw ovewfwow ewwow is waised and t-the pwogwam a-abowts 
+/-// 
+wet b = -a 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Arithmetic operations on the unsigned integer types
-`Word8`, `Word16`, `Word32`, `Word64`
-may cause values to overflow or underflow.
+Awithmetic opewations on t-the unsignyed integew t-types 
+`Wowd8`, `Wowd16`, `-`Wowd32`, `Wowd64` 
+may c-cause vawues to ovewfwow ow u-undewfwow. 
 
-For example, the maximum value of an unsigned 8-bit integer is 255 (binary 11111111).
-Adding 1 results in an overflow, truncation to 8 bits, and the value 0.
+Fow e-exampwe, t-the maximum vawue of an unsignyed 8-bit integew is 255 (binyawy 11111111). 
+A-Adding 1 w-wesuwts in an ovewfwow, twuncation to 8-8 bits, and t-the vawue 0. 
 
-```cadence
-//    11111111 = 255
-// +         1
-// = 100000000 = 0
-```
+```cadence 
+/-// 11111111 = 255 
+/-// + 1 
+/-// = 100000000 = 0 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-let a: Word8 = 255
-a + 1 // is `0`
-```
+```cadence 
+wet a: Wowd8 = 255 
+a + 1 /-// is `-`0` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Similarly, for the minimum value 0,
-subtracting 1 wraps around and results in the maximum value 255.
+S-Simiwawwy, (╬ Ò﹏Ó) *giggles shyly* f-fow t-the minyimum vawue 0, 
+subtwacting 1 wwaps awound and w-wesuwts in t-the maximum vawue 2-255. 
 
-```cadence
-//    00000000
-// -         1
-// =  11111111 = 255
-```
+```cadence 
+/-// 0-00000000 
+/-// (✧ω✧) *teleports behind you* --- 1 
+/-// = 11111111 = 255 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-let b: Word8 = 0
-b - 1  // is `255`
-```
+```cadence 
+wet b-b: Wowd8 = 0 
+b (✧ω✧) *teleports behind you* --- 1 /-// is `255` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Arithmetics on number super-types
+### Awithmetics on (❤ω❤) *pokes you* n-nyumbew supew-types 
 
-Arithmetic operators are not supported for number supertypes
-(`Number`, `SignedNumber`, `FixedPoint`, `SignedFixedPoint`, `Integer`, `SignedInteger`),
-as they may or may not succeed at run-time.
+Awithmetic opewatows awe nyot suppowted (╬ Ò﹏Ó) *giggles shyly* f-fow (❤ω❤) *pokes you* n-nyumbew supewtypes 
+(`Nyumbew`, `SignyedNyumbew`, `FixedPoint`, `-`SignyedFixedPoint`, `-`Integew`, `-`SignyedIntegew`), 
+as they may ow may nyot s-succeed a-at wun-time. 
 
-```cadence
-let x: Integer = 3 as Int8
-let y: Integer = 4 as Int8
+```cadence 
+wet x: Integew = ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 as I-Int8 
+wet y-y: Integew = 4 as I-Int8 
 
-let z: Integer = x + y    // Static error
-```
+wet z: Integew = x + y /-// Static ewwow 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Values of these types need to be cast to the desired type before performing the arithmetic operation.
+Vawues of these t-types nyeed to be cast to t-the desiwed t-type befowe p-pewfowming t-the awithmetic opewation. 
 
-```cadence
-let z: Integer = (x as! Int8) + (y as! Int8)
-```
+```cadence 
+wet z: Integew = (x as! Int8) + (y as! Int8) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Logical Operators
+#-## Wogicaw Opewatows 
 
-Logical operators work with the boolean values `true` and `false`.
+Wogicaw opewatows wowk with t-the boowean vawues `twue` and `fawse`. 
 
-- Logical NOT: `!a`
+(✧ω✧) *teleports behind you* --- Wogicaw NyOT: `-`!a` 
 
-  This unary prefix operator logically negates a boolean:
+This unyawy pwefix opewatow wogicawwy nyegates a boowean: 
 
-  ```cadence
-  let a = true
-  !a  // is `false`
-  ```
+```cadence 
+wet a = twue 
+!a /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- Logical AND: `a && b`
+(✧ω✧) *teleports behind you* --- Wogicaw (=^‥^=) *steals ur resource* A-AND: `a && b` 
 
-  ```cadence
-  true && true  // is `true`
+```cadence 
+twue && twue /-// is `twue` 
 
-  true && false  // is `false`
+twue && f-fawse /-// is `fawse` 
 
-  false && true  // is `false`
+f-fawse && twue /-// is `fawse` 
 
-  false && false  // is `false`
-  ```
+f-fawse && f-fawse /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  If the left-hand side is false, the right-hand side is not evaluated.
+If t-the w-weft-hand side is fawse, t-the w-wight-hand side is nyot evawuated. 
 
-- Logical OR: `a || b`
+(✧ω✧) *teleports behind you* --- Wogicaw OW: `a || b` 
 
-  ```cadence
-  true || true  // is `true`
+```cadence 
+twue || twue /-// is `twue` 
 
-  true || false  // is `true`
+twue || f-fawse /-// is `twue` 
 
-  false || true  // is `true`
+f-fawse || twue /-// is `twue` 
 
-  false || false // is `false`
-  ```
+f-fawse || f-fawse /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  If the left-hand side is true, the right-hand side is not evaluated.
+If t-the w-weft-hand side is twue, t-the w-wight-hand side is nyot evawuated. 
 
-## Comparison Operators
+#-## Compawison Opewatows 
 
-Comparison operators work with boolean and integer values.
+Compawison opewatows wowk with boowean and integew vawues. 
 
-- Equality: `==`, for booleans and integers
+(✧ω✧) *teleports behind you* --- Equawity: `==`, (╬ Ò﹏Ó) *giggles shyly* f-fow booweans and integews 
 
-  Both sides of the equality operator may be optional, even of different levels,
-  so it is for example possible to compare a non-optional with a double-optional (`??`).
+Both s-sides of t-the equawity opewatow may be optionyaw, even of diffewent wevews, 
+so it is (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe p-possibwe to (o-_-o) *sighs* c-compawe a nyon-optionyaw with a doubwe-optionyaw (`??`). 
 
-  ```cadence
-  1 == 1  // is `true`
+```cadence 
+1 == 1 /-// is `twue` 
 
-  1 == 2  // is `false`
-  ```
+1 == 2-2 /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  true == true  // is `true`
+```cadence 
+twue == twue /-// is `twue` 
 
-  true == false  // is `false`
-  ```
+twue == f-fawse /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  let x: Int? = 1
-  x == nil  // is `false`
-  ```
+```cadence 
+wet x: Int? = 1 
+x == nyiw /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  let x: Int = 1
-  x == nil  // is `false`
-  ```
+```cadence 
+wet x: Int = 1 
+x == nyiw /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  // Comparisons of different levels of optionals are possible.
-  let x: Int? = 2
-  let y: Int?? = nil
-  x == y  // is `false`
-  ```
+```cadence 
+/-// C-Compawisons of diffewent wevews of o-optionyaws awe p-possibwe. 
+wet x: Int? = 2-2 
+wet y-y: Int?? = nyiw 
+x == y /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  // Comparisons of different levels of optionals are possible.
-  let x: Int? = 2
-  let y: Int?? = 2
-  x == y  // is `true`
-  ```
+```cadence 
+/-// C-Compawisons of diffewent wevews of o-optionyaws awe p-possibwe. 
+wet x: Int? = 2-2 
+wet y-y: Int?? = 2-2 
+x == y /-// is `twue` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- Inequality: `!=`, for booleans and integers (possibly optional)
+(✧ω✧) *teleports behind you* --- Inyequawity: `!=`, (╬ Ò﹏Ó) *giggles shyly* f-fow booweans and integews (´ ω `♡) *giggles shyly* (-(possibwy optionyaw) 
 
-  Both sides of the inequality operator may be optional, even of different levels,
-  so it is for example possible to compare a non-optional with a double-optional (`??`).
+Both s-sides of t-the inyequawity opewatow may be optionyaw, even of diffewent wevews, 
+so it is (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe p-possibwe to (o-_-o) *sighs* c-compawe a nyon-optionyaw with a doubwe-optionyaw (`??`). 
 
-  ```cadence
-  1 != 1  // is `false`
+```cadence 
+1 != 1 /-// is `fawse` 
 
-  1 != 2  // is `true`
-  ```
+1 != 2-2 /-// is `twue` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  true != true  // is `false`
+```cadence 
+twue != twue /-// is `fawse` 
 
-  true != false  // is `true`
-  ```
+twue != f-fawse /-// is `twue` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  let x: Int? = 1
-  x != nil  // is `true`
-  ```
+```cadence 
+wet x: Int? = 1 
+x != nyiw /-// is `twue` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  let x: Int = 1
-  x != nil  // is `true`
-  ```
+```cadence 
+wet x: Int = 1 
+x != nyiw /-// is `twue` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  // Comparisons of different levels of optionals are possible.
-  let x: Int? = 2
-  let y: Int?? = nil
-  x != y  // is `true`
-  ```
+```cadence 
+/-// C-Compawisons of diffewent wevews of o-optionyaws awe p-possibwe. 
+wet x: Int? = 2-2 
+wet y-y: Int?? = nyiw 
+x != y /-// is `twue` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  // Comparisons of different levels of optionals are possible.
-  let x: Int? = 2
-  let y: Int?? = 2
-  x != y  // is `false`
-  ```
+```cadence 
+/-// C-Compawisons of diffewent wevews of o-optionyaws awe p-possibwe. 
+wet x: Int? = 2-2 
+wet y-y: Int?? = 2-2 
+x != y /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- Less than: `<`, for integers
+(✧ω✧) *teleports behind you* --- Wess than: `<`, (╬ Ò﹏Ó) *giggles shyly* f-fow integews 
 
-  ```cadence
-  1 < 1  // is `false`
+```cadence 
+1 < 1 /-// is `fawse` 
 
-  1 < 2  // is `true`
+1 < 2-2 /-// is `twue` 
 
-  2 < 1  // is `false`
-  ```
+2-2 < 1 /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- Less or equal than: `<=`, for integers
+(✧ω✧) *teleports behind you* --- Wess ow (*´▽`*) *pokes you* e-equaw than: `-`<=`, (╬ Ò﹏Ó) *giggles shyly* f-fow integews 
 
-  ```cadence
-  1 <= 1  // is `true`
+```cadence 
+1 ♡(｡- ω -) *dances nervously* <-<= 1 /-// is `twue` 
 
-  1 <= 2  // is `true`
+1 ♡(｡- ω -) *dances nervously* <-<= 2-2 /-// is `twue` 
 
-  2 <= 1  // is `false`
-  ```
+2-2 ♡(｡- ω -) *dances nervously* <-<= 1 /-// is `fawse` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- Greater than: `>`, for integers
+(✧ω✧) *teleports behind you* --- Gweatew than: `>`, (╬ Ò﹏Ó) *giggles shyly* f-fow integews 
 
-  ```cadence
-  1 > 1  // is `false`
+```cadence 
+1 > 1 /-// is `fawse` 
 
-  1 > 2  // is `false`
+1 > 2-2 /-// is `fawse` 
 
-  2 > 1  // is `true`
-  ```
+2-2 > 1 /-// is `twue` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- Greater or equal than: `>=`, for integers
+(✧ω✧) *teleports behind you* --- Gweatew ow (*´▽`*) *pokes you* e-equaw than: `-`>=`, (╬ Ò﹏Ó) *giggles shyly* f-fow integews 
 
-  ```cadence
-  1 >= 1  // is `true`
+```cadence 
+1 >->= 1 /-// is `twue` 
 
-  1 >= 2  // is `false`
+1 >->= 2-2 /-// is `fawse` 
 
-  2 >= 1  // is `true`
-  ```
+2-2 >->= 1 /-// is `twue` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Comparing number super-types
+### Compawing (❤ω❤) *pokes you* n-nyumbew supew-types 
 
-Similar to arithmetic operators, comparison operators are also not supported for number supertypes
-(`Number`, `SignedNumber` `FixedPoint`, `SignedFixedPoint`, `Integer`, `SignedInteger`),
-as they may or may not succeed at run-time.
+Simiwaw to awithmetic opewatows, c-compawison opewatows awe awso nyot suppowted (╬ Ò﹏Ó) *giggles shyly* f-fow (❤ω❤) *pokes you* n-nyumbew supewtypes 
+(`Nyumbew`, `-`SignyedNyumbew` `FixedPoint`, `-`SignyedFixedPoint`, `-`Integew`, `-`SignyedIntegew`), 
+as they may ow may nyot s-succeed a-at wun-time. 
 
-```cadence
-let x: Integer = 3 as Int8
-let y: Integer = 4 as Int8
+```cadence 
+wet x: Integew = ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 as I-Int8 
+wet y-y: Integew = 4 as I-Int8 
 
-let z: Bool = x > y    // Static error
-```
+wet z: Boow = x > y /-// Static ewwow 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Values of these types need to be cast to the desired type before performing the arithmetic operation.
+Vawues of these t-types nyeed to be cast to t-the desiwed t-type befowe p-pewfowming t-the awithmetic opewation. 
 
-```cadence
-let z: Bool = (x as! Int8) > (y as! Int8)
-```
+```cadence 
+wet z: Boow = (x as! Int8) > (y as! Int8) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Bitwise Operators
+#-## B-Bitwise Opewatows 
 
-Bitwise operators enable the manipulation of individual bits of unsigned and signed integers.
-They're often used in low-level programming.
+B-Bitwise opewatows enyabwe t-the manyipuwation of individuaw bits of unsignyed and s-signyed integews. 
+They'we often used in wow-wevew pwogwamming. 
 
-- Bitwise AND: `a & b`
+(✧ω✧) *teleports behind you* --- B-Bitwise (=^‥^=) *steals ur resource* A-AND: `a &-& b` 
 
-  Returns a new integer whose bits are 1 only if the bits were 1 in *both* input integers:
+Wetuwns a nyew integew whose bits awe 1 onwy if t-the bits wewe 1 in *both* input integews: 
 
-  ```cadence
-  let firstFiveBits = 0b11111000
-  let lastFiveBits  = 0b00011111
-  let middleTwoBits = firstFiveBits & lastFiveBits  // is 0b00011000
-  ```
+```cadence 
+wet ^w^ *giggles shyly* f-fiwstFiveBits = 0b11111000 
+wet wastFiveBits = (^人^) *whines* 0-0b00011111 
+wet middweTwoBits = ^w^ *giggles shyly* f-fiwstFiveBits &-& wastFiveBits /-// is (=^ ◡ ^=) *cries* 0-0b00011000 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- Bitwise OR: `a | b`
+(✧ω✧) *teleports behind you* --- B-Bitwise OW: `a | b` 
 
-  Returns a new integer whose bits are 1 only if the bits were 1 in *either* input integers:
+Wetuwns a nyew integew whose bits awe 1 onwy if t-the bits wewe 1 in *eithew* input integews: 
 
-  ```cadence
-  let someBits = 0b10110010
-  let moreBits = 0b01011110
-  let combinedbits = someBits | moreBits  // is 0b11111110
-  ```
+```cadence 
+wet someBits = 0-0b10110010 
+wet moweBits = 0b01011110 
+wet combinyedbits = someBits | moweBits /-// is 0b11111110 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- Bitwise XOR: `a ^ b`
+(✧ω✧) *teleports behind you* --- B-Bitwise X-XOW: `a ^ b` 
 
-  Returns a new integer whose bits are 1 where the input bits are different,
-  and are 0 where the input bits are the same:
+Wetuwns a nyew integew whose bits awe 1 whewe t-the input bits awe diffewent, 
+and awe 0 whewe t-the input bits awe t-the same: 
 
-  ```cadence
-  let firstBits = 0b00010100
-  let otherBits = 0b00000101
-  let outputBits = firstBits ^ otherBits  // is 0b00010001
-  ```
+```cadence 
+wet fiwstBits = (*≧ω≦*) *screams* 0-0b00010100 
+wet othewBits = 0b00000101 
+wet outputBits = fiwstBits ^ othewBits /-// is 0b00010001 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Bitwise Shifting Operators
+### B-Bitwise Shifting Opewatows 
 
-- Bitwise LEFT SHIFT: `a << b`
+(✧ω✧) *teleports behind you* --- B-Bitwise WEFT SHIFT: `a << b` 
 
-  Returns a new integer with all bits moved to the left by a certain number of places.
+Wetuwns a nyew integew with (＾▽＾') *cuddles you* a-aww bits moved to t-the weft by a c-cewtain (❤ω❤) *pokes you* n-nyumbew of pwaces. 
 
-  ```cadence
-  let someBits = 4  // is 0b00000100
-  let shiftedBits = someBits << 2   // is 0b00010000
-  ```
+```cadence 
+wet someBits = 4 /-// is 0b00000100 
+wet shiftedBits = someBits << 2-2 /-// is 0b00010000 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- Bitwise RIGHT SHIFT: `a >> b`
+(✧ω✧) *teleports behind you* --- B-Bitwise WIGHT SHIFT: `a (O.O) *teleports behind you* >->> b` 
 
-  Returns a new integer with all bits moved to the right by a certain number of places.
+Wetuwns a nyew integew with (＾▽＾') *cuddles you* a-aww bits moved to t-the wight by a c-cewtain (❤ω❤) *pokes you* n-nyumbew of pwaces. 
 
-  ```cadence
-  let someBits = 8  // is 0b00001000
-  let shiftedBits = someBits >> 2   // is 0b00000010
-  ```
+```cadence 
+wet someBits = 8-8 /-// is 0-0b00001000 
+wet shiftedBits = someBits (O.O) *teleports behind you* >->> 2-2 /-// is 0b00000010 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-For unsigned integers, the bitwise shifting operators perform [logical shifting](https://en.wikipedia.org/wiki/Logical_shift),
-for signed integers, they perform [arithmetic shifting](https://en.wikipedia.org/wiki/Arithmetic_shift).
+Fow unsignyed integews, t-the bitwise shifting opewatows pewfowm [wogicaw (=^･ｪ･^=) *teleports behind you* s-shifting](https://en.wikipedia.org/wiki/Logical_shift), 
+(╬ Ò﹏Ó) *giggles shyly* f-fow s-signyed integews, they pewfowm [-[awithmetic shifting](https://en.wikipedia.org/wiki/Arithmetic_shift). 
 
-## Ternary Conditional Operator
+#-## Tewnyawy Conditionyaw ヽ(>∀<☆)ノ *dances nervously* O-Opewatow 
 
-There is only one ternary conditional operator, the ternary conditional operator (`a ? b : c`).
+Thewe is onwy onye tewnyawy conditionyaw o-opewatow, t-the tewnyawy conditionyaw opewatow (`a ? b : c`). 
 
-It behaves like an if-statement, but is an expression:
-If the first operator value is true, the second operator value is returned.
-If the first operator value is false, the third value is returned.
+I-It behaves w-wike an if-statement, but is an expwession: 
+If t-the fiwst opewatow vawue is twue, t-the second opewatow vawue is wetuwnyed. 
+If t-the fiwst opewatow vawue is fawse, t-the thiwd vawue is wetuwnyed. 
 
-The first value must be a boolean (must have the type `Bool`).
-The second value and third value can be of any type.
-The result type is the least common supertype of the second and third value.
+The fiwst vawue (* ^ ω ^) *screams* m-must be a boowean (must have t-the t-type `Boow`). 
+The second vawue and thiwd vawue c-can be of any (＃￣ω￣) *hugs tightly* t-type. 
+The wesuwt t-type is t-the weast common supewtype of t-the second and thiwd vawue. 
 
-```cadence
-let x = 1 > 2 ? 3 : 4
-// `x` is `4` and has type `Int`
+```cadence 
+wet x = 1 > 2-2 ? ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 : 4 
+/-// `x` is `4` and has t-type ^.^ *sweats* `-`Int` 
 
-let y = 1 > 2 ? nil : 3
-// `y` is `3` and has type `Int?`
-```
+wet y = 1 > 2-2 ? nyiw : ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 
+/-// `-`y` is `3` and has t-type `Int?` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Casting Operators
+#-## Casting Opewatows 
 
-### Static Casting Operator (`as`)
+### Static Casting ヽ(>∀<☆)ノ *dances nervously* O-Opewatow (-(`as`) 
 
-The static casting operator `as` can be used to statically type cast a value to a type.
+The static c-casting opewatow `as` c-can be used to s-staticawwy t-type cast a vawue to a (＃￣ω￣) *hugs tightly* t-type. 
 
-If the static type of the value is a subtype of the given type (the "target" type),
-the operator returns the value as the given type.
+If t-the static t-type of t-the vawue is a subtype of t-the given t-type (-(the "tawget" type), 
+t-the opewatow wetuwns t-the vawue as t-the given (＃￣ω￣) *hugs tightly* t-type. 
 
-The cast is performed statically, i.e. when the program is type-checked.
-Only the static type of the value is considered, not the run-time type of the value.
+The cast is ( ╥ω╥ ) *sighs* p-pewfowmed staticawwy, i.e. when t-the pwogwam is type-checked. 
+Onwy t-the static t-type of t-the vawue is (ノωヽ) *whines* c-considewed, nyot t-the wun-time t-type of t-the vawue. 
 
-This means it is not possible to downcast using this operator.
-Consider using the [conditional downcasting operator `as?`](#conditional-downcasting-operator-as) instead.
+This means it is nyot p-possibwe to d-downcast using this opewatow. 
+Considew using t-the [conditionyaw downcasting opewatow `-`as?`](#conditionyaw-downcasting-opewatow-as) instead. 
 
-```cadence
-// Declare a constant named `integer` which has type `Int`.
-//
-let integer: Int = 1
+```cadence 
+/-// Decwawe a c-constant nyamed `integew` which has t-type `Int`. 
+/-// 
+wet integew: Int = 1 
 
-// Statically cast the value of `integer` to the supertype `Number`.
-// The cast succeeds, because the type of the variable `integer`,
-// the type `Int`, is a subtype of type `Number`.
-// This is an upcast.
-//
-let number = integer as Number
-// `number` is `1` and has type `Number`
+/-// Staticawwy cast t-the vawue of `integew` to t-the supewtype `Nyumbew`. 
+/-// The cast succeeds, because t-the t-type of t-the vawiabwe `integew`, 
+/-// t-the t-type `Int`, is a subtype of t-type `Nyumbew`. 
+/-// This is an upcast. 
+/-// 
+wet (❤ω❤) *pokes you* n-nyumbew = integew as N-Nyumbew 
+/-// `-`nyumbew` is `-`1` and has t-type `Nyumbew` 
 
-// Declare a constant named `something` which has type `AnyStruct`,
-// with an initial value which has type `Int`.
-//
-let something: AnyStruct = 1
+/-// Decwawe a c-constant nyamed (^人^) *hugs tightly* `-`something` which has t-type `-`AnyStwuct`, 
+/-// with an inyitiaw vawue which has t-type `Int`. 
+/-// 
+wet something: AnyStwuct = 1 
 
-// Statically cast the value of `something` to `Int`.
-// This is invalid, the cast fails, because the static type of the value is type `AnyStruct`,
-// which is not a subtype of type `Int`.
-//
-let result = something as Int
-```
+/-// Staticawwy cast t-the vawue of (^人^) *hugs tightly* `-`something` to `Int`. 
+/-// This is invawid, t-the cast faiws, because t-the static t-type of t-the vawue is t-type `-`AnyStwuct`, 
+/-// which is nyot a subtype of t-type `Int`. 
+/-// 
+wet wesuwt = something as Int 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Conditional Downcasting Operator (`as?`)
+### Conditionyaw Downcasting ヽ(>∀<☆)ノ *dances nervously* O-Opewatow (`as?`) 
 
-The conditional downcasting operator `as?` can be used to dynamically type cast a value to a type.
-The operator returns an optional.
-If the value has a run-time type that is a subtype of the target type
-the operator returns the value as the target type,
-otherwise the result is `nil`.
+The conditionyaw downcasting opewatow `as?` c-can be used to dynyamicawwy t-type cast a vawue to a (＃￣ω￣) *hugs tightly* t-type. 
+The opewatow wetuwns an o-optionyaw. 
+If t-the vawue has a wun-time t-type that is a subtype of t-the tawget t-type 
+t-the opewatow wetuwns t-the vawue as t-the tawget type, 
+o-othewwise t-the wesuwt is `-`nyiw`. 
 
-The cast is performed at run-time, i.e. when the program is executed,
-not statically, i.e. when the program is checked.
+The cast is ( ╥ω╥ ) *sighs* p-pewfowmed a-at wun-time, i.e. when t-the pwogwam is executed, 
+nyot staticawwy, i.e. when t-the pwogwam is checked. 
 
-```cadence
-// Declare a constant named `something` which has type `AnyStruct`,
-// with an initial value which has type `Int`.
-//
-let something: AnyStruct = 1
+```cadence 
+/-// Decwawe a c-constant nyamed (^人^) *hugs tightly* `-`something` which has t-type `-`AnyStwuct`, 
+/-// with an inyitiaw vawue which has t-type `Int`. 
+/-// 
+wet something: AnyStwuct = 1 
 
-// Conditionally downcast the value of `something` to `Int`.
-// The cast succeeds, because the value has type `Int`.
-//
-let number = something as? Int
-// `number` is `1` and has type `Int?`
+/-// Conditionyawwy d-downcast t-the vawue of (^人^) *hugs tightly* `-`something` to `Int`. 
+/-// The cast succeeds, because t-the vawue has t-type `Int`. 
+/-// 
+wet (❤ω❤) *pokes you* n-nyumbew = something (っ˘ω˘ς ) *screams* a-as? Int 
+/-// `-`nyumbew` is `-`1` and has t-type `Int?` 
 
-// Conditionally downcast the value of `something` to `Bool`.
-// The cast fails, because the value has type `Int`,
-// and `Bool` is not a subtype of `Int`.
-//
-let boolean = something as? Bool
-// `boolean` is `nil` and has type `Bool?`
-```
+/-// Conditionyawwy d-downcast t-the vawue of (^人^) *hugs tightly* `-`something` to `Boow`. 
+/-// The cast faiws, because t-the vawue has t-type `Int`, 
+/-// and `-`Boow` is nyot a subtype of `Int`. 
+/-// 
+wet boowean = something (っ˘ω˘ς ) *screams* a-as? Boow 
+/-// `boowean` is (＾• ω •＾) *teleports behind you* `-`nyiw` and has t-type `Boow?` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Downcasting works for concrete types, but also works e.g. for nested types (e.g. arrays), interfaces, optionals, etc.
+Downcasting wowks (╬ Ò﹏Ó) *giggles shyly* f-fow concwete types, but awso wowks e.g. (╬ Ò﹏Ó) *giggles shyly* f-fow nyested t-types (e.g. awways), intewfaces, optionyaws, etc. 
 
-```cadence
-// Declare a constant named `values` which has type `[AnyStruct]`,
-// i.e. an array of arbitrarily typed values.
-//
-let values: [AnyStruct] = [1, true]
+```cadence 
+/-// Decwawe a c-constant nyamed `-`vawues` which has t-type `-`[AnyStwuct]`, 
+/-// i.e. an a-awway of awbitwawiwy t-typed vawues. 
+/-// 
+wet vawues: [AnyStwuct] = [1, twue] 
 
-let first = values[0] as? Int
-// `first` is `1` and has type `Int?`
+wet fiwst = vawues[0] (っ˘ω˘ς ) *screams* a-as? Int 
+/-// `fiwst` is `-`1` and has t-type `Int?` 
 
-let second = values[1] as? Bool
-// `second` is `true` and has type `Bool?`
-```
+wet second = vawues[1] (っ˘ω˘ς ) *screams* a-as? Boow 
+/-// `second` is `twue` and has t-type `Boow?` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Force-downcasting Operator (`as!`)
+### F-Fowce-downcasting ヽ(>∀<☆)ノ *dances nervously* O-Opewatow (-(`as!`) 
 
-The force-downcasting operator `as!` behaves like the
-[conditional downcasting operator `as?`](#conditional-downcasting-operator-as).
-However, if the cast succeeds, it returns a value of the given type instead of an optional,
-and if the cast fails, it aborts the program instead of returning `nil`,
+The f-fowce-downcasting opewatow `as!` behaves w-wike t-the 
+[conditionyaw downcasting opewatow `as?`](#conditionyaw-downcasting-opewatow-as). 
+Howevew, if t-the cast succeeds, it wetuwns a vawue of t-the given t-type instead of an optionyaw, 
+and if t-the cast faiws, it a-abowts t-the pwogwam instead of wetuwnying `-`nyiw`, 
 
-```cadence
-// Declare a constant named `something` which has type `AnyStruct`,
-// with an initial value which has type `Int`.
-//
-let something: AnyStruct = 1
+```cadence 
+/-// Decwawe a c-constant nyamed (^人^) *hugs tightly* `-`something` which has t-type `-`AnyStwuct`, 
+/-// with an inyitiaw vawue which has t-type `Int`. 
+/-// 
+wet something: AnyStwuct = 1 
 
-// Force-downcast the value of `something` to `Int`.
-// The cast succeeds, because the value has type `Int`.
-//
-let number = something as! Int
-// `number` is `1` and has type `Int`
+/-// Fowce-downcast t-the vawue of (^人^) *hugs tightly* `-`something` to `Int`. 
+/-// The cast succeeds, because t-the vawue has t-type `Int`. 
+/-// 
+wet (❤ω❤) *pokes you* n-nyumbew = something as! Int 
+/-// `-`nyumbew` is `-`1` and has t-type ^.^ *sweats* `-`Int` 
 
-// Force-downcast the value of `something` to `Bool`.
-// The cast fails, because the value has type `Int`,
-// and `Bool` is not a subtype of `Int`.
-//
-let boolean = something as! Bool
-// Run-time error
-```
+/-// Fowce-downcast t-the vawue of (^人^) *hugs tightly* `-`something` to `Boow`. 
+/-// The cast faiws, because t-the vawue has t-type `Int`, 
+/-// and `-`Boow` is nyot a subtype of `Int`. 
+/-// 
+wet boowean = something as! Boow 
+/-// Wun-time ewwow 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Optional Operators
+#-## Optionyaw Opewatows 
 
-### Nil-Coalescing Operator (`??`)
+### Nyiw-Coawescing ヽ(>∀<☆)ノ *dances nervously* O-Opewatow (`??`) 
 
-The nil-coalescing operator `??` returns
-the value inside an optional if it contains a value,
-or returns an alternative value if the optional has no value,
-i.e., the optional value is `nil`.
+The nyiw-coawescing opewatow `-`??` wetuwns 
+t-the vawue inside an optionyaw if it contains a vawue, 
+ow wetuwns an awtewnyative vawue if t-the optionyaw has nyo vawue, 
+i.e., t-the optionyaw vawue is `-`nyiw`. 
 
-If the left-hand side is non-nil, the right-hand side is not evaluated.
+If t-the w-weft-hand side is nyon-nyiw, t-the w-wight-hand side is nyot evawuated. 
 
-```cadence
-// Declare a constant which has an optional integer type
-//
-let a: Int? = nil
+```cadence 
+/-// Decwawe a c-constant which has an optionyaw integew t-type 
+/-// 
+wet a: Int? = nyiw 
 
-// Declare a constant with a non-optional integer type,
-// which is initialized to `a` if it is non-nil, or 42 otherwise.
-//
-let b: Int = a ?? 42
-// `b` is 42, as `a` is nil
-```
+/-// Decwawe a c-constant with a nyon-optionyaw integew type, 
+/-// which is inyitiawized to `a` if it is nyon-nyiw, ow 42 othewwise. 
+/-// 
+wet b-b: Int = a ?? 42 
+/-// `b` is 42, as `a` is nyiw 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The nil-coalescing operator can only be applied
-to values which have an optional type.
+The nyiw-coawescing opewatow c-can onwy be appwied 
+to vawues which have an optionyaw (＃￣ω￣) *hugs tightly* t-type. 
 
-```cadence
-// Declare a constant with a non-optional integer type.
-//
-let a = 1
+```cadence 
+/-// Decwawe a c-constant with a nyon-optionyaw integew (＃￣ω￣) *hugs tightly* t-type. 
+/-// 
+wet a = 1 
 
-// Invalid: nil-coalescing operator is applied to a value which has a non-optional type
-// (a has the non-optional type `Int`).
-//
-let b = a ?? 2
-```
+/-// Invawid: nyiw-coawescing opewatow is appwied to a vawue which has a nyon-optionyaw t-type 
+/-// (a has t-the nyon-optionyaw t-type `Int`). 
+/-// 
+wet b = a ?? 2-2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Invalid: nil-coalescing operator is applied to a value which has a non-optional type
-// (the integer literal is of type `Int`).
-//
-let c = 1 ?? 2
-```
+```cadence 
+/-// Invawid: nyiw-coawescing opewatow is appwied to a vawue which has a nyon-optionyaw t-type 
+/-// (-(the integew witewaw is of t-type `Int`). 
+/-// 
+wet c = 1 ?? 2-2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The type of the right-hand side of the operator (the alternative value) must be a subtype
-of the type of left-hand side, i.e. the right-hand side of the operator must
-be the non-optional or optional type matching the type of the left-hand side.
+The t-type of t-the w-wight-hand side of t-the opewatow (-(the awtewnyative vawue) (* ^ ω ^) *screams* m-must be a subtype 
+of t-the t-type of w-weft-hand side, i.e. t-the w-wight-hand side of t-the opewatow (* ^ ω ^) *screams* m-must 
+be t-the nyon-optionyaw ow optionyaw t-type matching t-the t-type of t-the w-weft-hand side. 
 
-```cadence
-// Declare a constant with an optional integer type.
-//
-let a: Int? = nil
-let b: Int? = 1
-let c = a ?? b
-// `c` is `1` and has type `Int?`
+```cadence 
+/-// Decwawe a c-constant with an optionyaw integew (＃￣ω￣) *hugs tightly* t-type. 
+/-// 
+wet a: Int? = nyiw 
+wet b-b: Int? = 1 
+wet c = a ?? b 
+/-// `c` is `-`1` and has t-type `Int?` 
 
-// Invalid: nil-coalescing operator is applied to a value of type `Int?`,
-// but the alternative has type `Bool`.
-//
-let d = a ?? false
-```
+/-// Invawid: nyiw-coawescing opewatow is appwied to a vawue of t-type (ノωヽ) *whines* `-`Int?`, 
+/-// but t-the awtewnyative has t-type `Boow`. 
+/-// 
+wet d = a ?? f-fawse 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Force Unwrap Operator (`!`)
+### Fowce Unwwap ヽ(>∀<☆)ノ *dances nervously* O-Opewatow (`!`) 
 
-The force-unwrap operator (`!`) returns
-the value inside an optional if it contains a value,
-or panics and aborts the execution if the optional has no value,
-i.e., the optional value is `nil`.
+The fowce-unwwap opewatow (`!`) wetuwns 
+t-the vawue inside an optionyaw if it contains a vawue, 
+ow panyics and a-abowts t-the execution if t-the optionyaw has nyo vawue, 
+i.e., t-the optionyaw vawue is `-`nyiw`. 
 
-```cadence
-// Declare a constant which has an optional integer type
-//
-let a: Int? = nil
+```cadence 
+/-// Decwawe a c-constant which has an optionyaw integew t-type 
+/-// 
+wet a: Int? = nyiw 
 
-// Declare a constant with a non-optional integer type,
-// which is initialized to `a` if `a` is non-nil.
-// If `a` is nil, the program aborts.
-//
-let b: Int = a!
-// The program aborts because `a` is nil.
+/-// Decwawe a c-constant with a nyon-optionyaw integew type, 
+/-// which is inyitiawized to `a` if `a` is nyon-nyiw. 
+/-// If `a` is nyiw, t-the pwogwam abowts. 
+/-// 
+wet b-b: Int = ヽ(>∀<☆)ノ *looks at you* a-a! 
+/-// The pwogwam a-abowts because `a` is nyiw. 
 
-// Declare another optional integer constant
-let c: Int? = 3
+/-// Decwawe anyothew optionyaw integew c-constant 
+wet c: Int? = ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 
 
-// Declare a non-optional integer
-// which is initialized to `c` if `c` is non-nil.
-// If `c` is nil, the program aborts.
-let d: Int = c!
-// `d` is initialized to 3 because c isn't nil.
+/-// Decwawe a nyon-optionyaw integew 
+/-// which is inyitiawized to `c` if `c` is nyon-nyiw. 
+/-// If `c` is nyiw, t-the pwogwam abowts. 
+wet d-d: Int = c! 
+/-// `-`d` is inyitiawized to ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 because c isn't nyiw. 
 
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The force-unwrap operator can only be applied
-to values which have an optional type.
+The fowce-unwwap opewatow c-can onwy be appwied 
+to vawues which have an optionyaw (＃￣ω￣) *hugs tightly* t-type. 
 
-```cadence
-// Declare a constant with a non-optional integer type.
-//
-let a = 1
+```cadence 
+/-// Decwawe a c-constant with a nyon-optionyaw integew (＃￣ω￣) *hugs tightly* t-type. 
+/-// 
+wet a = 1 
 
-// Invalid: force-unwrap operator is applied to a value which has a
-// non-optional type (`a` has the non-optional type `Int`).
-//
-let b = a!
-```
+/-// Invawid: fowce-unwwap opewatow is appwied to a vawue which has a 
+/-// nyon-optionyaw t-type (-(`a` has t-the nyon-optionyaw t-type `Int`). 
+/-// 
+wet b = ヽ(>∀<☆)ノ *looks at you* a-a! 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Invalid: The force-unwrap operator is applied
-// to a value which has a non-optional type
-// (the integer literal is of type `Int`).
-//
-let c = 1!
-```
+```cadence 
+/-// Invawid: The fowce-unwwap opewatow is appwied 
+/-// to a vawue which has a nyon-optionyaw t-type 
+/-// (-(the integew witewaw is of t-type `Int`). 
+/-// 
+wet c = 1-1! 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
 
-## Precedence and Associativity
+#-## Pwecedence and Associativity 
 
-Operators have the following precedences, highest to lowest:
+Opewatows have t-the fowwowing p-pwecedences, highest to wowest: 
 
-- Unary precedence: `-`, `!`, `<-`
-- Cast precedence: `as`, `as?`, `as!`
-- Multiplication precedence: `*`, `/`, `%`
-- Addition precedence: `+`, `-`
-- Bitwise shift precedence: `<<`, `>>`
-- Bitwise conjunction precedence: `&`
-- Bitwise exclusive disjunction precedence: `^`
-- Bitwise disjunction precedence: `|`
-- Nil-Coalescing precedence: `??`
-- Relational precedence: `<`, `<=`, `>`, `>=`
-- Equality precedence: `==`, `!=`
-- Logical conjunction precedence: `&&`
-- Logical disjunction precedence: `||`
-- Ternary precedence: `? :`
+(✧ω✧) *teleports behind you* --- Unyawy pwecedence: `-`-`, `!`, `<-` 
+(✧ω✧) *teleports behind you* --- Cast pwecedence: `as`, `as?`, `as!` 
+(✧ω✧) *teleports behind you* --- M-Muwtipwication pwecedence: `*`, `/`, `%` 
+(✧ω✧) *teleports behind you* --- Addition pwecedence: `+`, `-` 
+(✧ω✧) *teleports behind you* --- B-Bitwise shift pwecedence: `<<`, `-`>>` 
+(✧ω✧) *teleports behind you* --- B-Bitwise conjunction pwecedence: `-`&` 
+(✧ω✧) *teleports behind you* --- B-Bitwise e-excwusive d-disjunction pwecedence: `^` 
+(✧ω✧) *teleports behind you* --- B-Bitwise d-disjunction pwecedence: `|` 
+(✧ω✧) *teleports behind you* --- Nyiw-Coawescing pwecedence: `-`??` 
+(✧ω✧) *teleports behind you* --- Wewationyaw pwecedence: `<`, `-`<=`, `>`, (　･ω･)☞ *hugs tightly* `-`>=` 
+(✧ω✧) *teleports behind you* --- Equawity pwecedence: `==`, `!=` 
+(✧ω✧) *teleports behind you* --- Wogicaw conjunction pwecedence: `-`&&` 
+(✧ω✧) *teleports behind you* --- Wogicaw d-disjunction pwecedence: `||` 
+(✧ω✧) *teleports behind you* --- Tewnyawy pwecedence: `-`? :` 
 
-All operators are left-associative, except for the following operators which are right-associative:
-- Ternary operator
-- Nil-coalescing operator
+Aww opewatows awe w-weft-associative, except (╬ Ò﹏Ó) *giggles shyly* f-fow t-the fowwowing opewatows which awe w-wight-associative: 
+(✧ω✧) *teleports behind you* --- Tewnyawy opewatow 
+(✧ω✧) *teleports behind you* --- Nyiw-coawescing opewatow 
 
-Expressions can be wrapped in parentheses to override precedence conventions,
-i.e. an alternate order should be indicated, or when the default order should be emphasized
-e.g. to avoid confusion.
-For example, `(2 + 3) * 4` forces addition to precede multiplication,
-and `5 + (6 * 7)` reinforces the default order.
+Expwessions c-can be wwapped in p-pawentheses to ovewwide pwecedence conventions, 
+i.e. an a-awtewnyate owdew shouwd be indicated, ow when t-the d-defauwt owdew shouwd be e-emphasized 
+e.g. to avoid c-confusion. 
+Fow e-exampwe, (x_x)V *dances nervously* `-`(2 + 3) * 4` f-fowces addition to pwecede muwtipwication, 
+and `5 + (-(6 * 7-7)` weinfowces t-the d-defauwt owdew. 

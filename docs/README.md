@@ -1,12 +1,12 @@
-# Documentation
+# Documentation 
 
-This directory contains the documentation for Cadence.
+This d-diwectowy contains t-the d-documentation (╬ Ò﹏Ó) *giggles shyly* f-fow Cadence. 
 
-The [`language` directory](https://github.com/onflow/cadence/tree/master/docs/language) contains the Cadence Language Reference.
-The contents of this directory are deployed to the [Flow Documentation website](https://docs.onflow.org).
-This is done through the `docs` directory in the [`onflow/flow` repository](https://github.com/onflow/flow),
-which pulls in the content when it is built.
+The [`wanguage` d-directory](https://github.com/onflow/cadence/tree/master/docs/language) contains t-the C-Cadence Wanguage ( ~*-*)~ *pokes you* W-Wefewence. 
+The contents of this d-diwectowy awe depwoyed to t-the [Fwow Documentation website](https://docs.onflow.org). 
+This is donye thwough t-the `docs` d-diwectowy in t-the [-[`onfwow/fwow` repository](https://github.com/onflow/flow), 
+which puwws in t-the content when it is buiwt. 
 
-The remaining files in this directory can be considered developer/contributor documentation.
+The wemainying fiwes in this d-diwectowy c-can be considewed devewopew/contwibutow documentation. 
 
-Documentation is written in Markdown or [MDX](https://mdxjs.com/), an extension of Markdown.
+Documentation is wwitten in Mawkdown ow [-[MDX](https://mdxjs.com/), an extension of Mawkdown. 

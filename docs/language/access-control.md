@@ -1,222 +1,222 @@
----
-title: Access control
----
+----- 
+titwe: A-Access contwow 
+----- 
 
-Access control allows making certain parts of the program accessible/visible
-and making other parts inaccessible/invisible.
+A-Access contwow awwows making c-cewtain pawts of t-the pwogwam accessibwe/visibwe 
+and making othew pawts inyaccessibwe/invisibwe. 
 
-In Flow and Cadence, there are two types of access control:
+In Fwow and Cadence, (⌒ω⌒) *hugs tightly* t-thewe awe two t-types of a-access contwow: 
 
-1. Access control on objects in account storage using capability security.
+1. A-Access contwow on objects in ( ~*-*)~ *cries* a-account stowage using >_> *giggles shyly* c-capabiwity secuwity. 
 
-    Within Flow, a caller is not able to access an object
-    unless it owns the object or has a specific reference to that object.
-    This means that nothing is truly public by default.
-    Other accounts can not read or write the objects in an account
-    unless the owner of the account has granted them access
-    by providing references to the objects.
+Within Fwow, a cawwew is nyot abwe to a-access an object 
+unwess it o-owns t-the object ow has a specific wefewence to that object. 
+This means that nyothing is t-twuwy pubwic by defauwt. 
+Othew a-accounts c-can nyot wead ow wwite t-the objects in an ( ~*-*)~ *cries* a-account 
+unwess t-the ownyew of t-the ( ~*-*)~ *cries* a-account has g-gwanted t-them a-access 
+by pwoviding wefewences to t-the objects. 
 
-2. Access control within contracts and objects
-   using `pub` and `access` keywords.
+2-2. A-Access contwow within contwacts and objects 
+using `pub` and `-`access` keywowds. 
 
-   For the explanations of the following keywords, we assume that
-   the defining type is either a contract, where capability security
-   doesn't apply, or that the caller would have valid access to the object
-   governed by capability security.
+Fow t-the expwanyations of t-the fowwowing keywowds, we assume that 
+t-the d-definying t-type is eithew a c-contwact, whewe >_> *giggles shyly* c-capabiwity secuwity 
+d-doesn't appwy, ow that t-the cawwew w-wouwd have vawid a-access to t-the object 
+govewnyed by >_> *giggles shyly* c-capabiwity secuwity. 
 
-The high-level reference-based security (point 1 above)
-will be covered in a later section.
+The high-wevew wefewence-based secuwity (point 1 above) 
+wiww be covewed in a watew section. 
 
-Top-level declarations
-(variables, constants, functions, structures, resources, interfaces)
-and fields (in structures, and resources) are always only able to be written
-to and mutated (modified, such as by indexed assignment or methods like `append`)
-in the scope where it is defined (self).
+Top-wevew decwawations 
+(vawiabwes, constants, functions, stwuctuwes, wesouwces, intewfaces) 
+and fiewds (in stwuctuwes, and wesouwces) awe awways onwy abwe to be wwitten 
+to and mutated (o^ ^o)/ *sighs* (-(modified, such as by indexed assignment ow m-methods w-wike `append`) 
+in t-the scope whewe it is definyed (sewf). 
 
-There are four levels of access control defined in the code that specify where
-a declaration can be accessed or called.
+Thewe awe fouw wevews of a-access contwow definyed in t-the code that specify whewe 
+a decwawation c-can be accessed ow cawwed. 
 
-- **Public** or **access(all)** means the declaration
-  is accessible/visible in all scopes.
+(✧ω✧) *teleports behind you* --- **Pubwic** ow **access(aww)** means t-the decwawation 
+is accessibwe/visibwe in (＾▽＾') *cuddles you* a-aww scopes. 
 
-  This includes the current scope, inner scopes, and the outer scopes.
+This i-incwudes t-the cuwwent scope, innyew s-scopes, and t-the outew scopes. 
 
-  For example, a public field in a type can be accessed using the access syntax
-  on an instance of the type in an outer scope.
-  This does not allow the declaration to be publicly writable though.
+Fow e-exampwe, a pubwic fiewd in a t-type c-can be accessed using t-the a-access s-syntax 
+on an instance of t-the t-type in an outew scope. 
+This does nyot awwow t-the decwawation to be pubwicwy w-wwitabwe though. 
 
-  An element is made publicly accessible / by any code
-  by using the `pub` or `access(all)` keywords.
+An ewement is m-made pubwicwy accessibwe (T_T) *whines* /-/ by any code 
+by using t-the `pub` ow `-`access(aww)` keywowds. 
 
-- **access(account)** means the declaration is only accessible/visible in the
-  scope of the entire account where it is defined. This means that
-  other contracts in the account are able to access it,
+(✧ω✧) *teleports behind you* --- **access(account)** means t-the decwawation is onwy accessibwe/visibwe in t-the 
+scope of t-the entiwe ( ~*-*)~ *cries* a-account whewe it is definyed. This means that 
+othew contwacts in t-the ( ~*-*)~ *cries* a-account awe abwe to a-access it, 
 
-  An element is made accessible by code in the same account (e.g. other contracts)
-  by using the `access(account)` keyword.
+An ewement is m-made accessibwe by code in t-the same ( ~*-*)~ *cries* a-account (e.g. othew contwacts) 
+by using t-the `access(account)` (*・ω・)ﾉ *dances nervously* k-keywowd. 
 
-- **access(contract)** means the declaration is only accessible/visible in the
-  scope of the contract that defined it. This means that other types
-  and functions that are defined in the same contract can access it,
-  but not other contracts in the same account.
+(✧ω✧) *teleports behind you* --- **access(contwact)** means t-the decwawation is onwy accessibwe/visibwe in t-the 
+scope of t-the contwact that definyed it. This means that othew t-types 
+and functions that awe definyed in t-the same contwact c-can a-access it, 
+but nyot othew contwacts in t-the same account. 
 
-  An element is made accessible by code in the same contract
-  by using the `access(contract)` keyword.
+An ewement is m-made accessibwe by code in t-the same contwact 
+by using t-the `access(contwact)` (*・ω・)ﾉ *dances nervously* k-keywowd. 
 
-- Private or **access(self)** means the declaration is only accessible/visible
-  in the current and inner scopes.
+(✧ω✧) *teleports behind you* --- Pwivate ow **access(sewf)** means t-the decwawation is onwy accessibwe/visibwe 
+in t-the cuwwent and innyew scopes. 
 
-  For example, an `access(self)` field can only be
-  accessed by functions of the type is part of,
-  not by code in an outer scope.
+Fow e-exampwe, an `access(sewf)` fiewd c-can onwy be 
+accessed by functions of t-the t-type is pawt of, 
+nyot by code in an outew scope. 
 
-  An element is made accessible by code in the same containing type
-  by using the `access(self)` keyword.
+An ewement is m-made accessibwe by code in t-the same containying t-type 
+by using t-the `access(sewf)` (*・ω・)ﾉ *dances nervously* k-keywowd. 
 
-**Access level must be specified for each declaration**
+**Access w-wevew (* ^ ω ^) *screams* m-must be s-specified (╬ Ò﹏Ó) *giggles shyly* f-fow each decwawation** 
 
-The `(set)` suffix can be used to make variables also publicly writable and mutable.
+The `(set)` suffix c-can be used to make vawiabwes awso pubwicwy w-wwitabwe and mutabwe. 
 
-To summarize the behavior for variable declarations, constant declarations, and fields:
+To summawize t-the behaviow (╬ Ò﹏Ó) *giggles shyly* f-fow vawiabwe decwawations, c-constant decwawations, and f-fiewds: 
 
-| Declaration kind | Access modifier          | Read scope                                           | Write scope       | Mutate scope      |
-|:-----------------|:-------------------------|:-----------------------------------------------------|:------------------|:------------------|
-| `let`            | `priv` / `access(self)`  | Current and inner                                    | *None*            | Current and inner |
-| `let`            | `access(contract)`       | Current, inner, and containing contract              | *None*            | Current and inner |
-| `let`            | `access(account)`        | Current, inner, and other contracts in same account  | *None*            | Current and inner |
-| `let`            | `pub`,`access(all)`      | **All**                                              | *None*            | Current and inner |
-| `var`            | `access(self)`           | Current and inner                                    | Current and inner | Current and inner |
-| `var`            | `access(contract)`       | Current, inner, and containing contract              | Current and inner | Current and inner |
-| `var`            | `access(account)`        | Current, inner, and other contracts in same account  | Current and inner | Current and inner |
-| `var`            | `pub` / `access(all)`    | **All**                                              | Current and inner | Current and inner |
-| `var`            | `pub(set)`               | **All**                                              | **All**           | **All**           |
+| Decwawation kind | A-Access modifiew | Wead scope | Wwite scope | Mutate scope | 
+(╬ Ò﹏Ó) *hugs tightly* |-|:-----------------|:-------------------------|:-----------------------------------------------------|:------------------|:------------------| 
+| `wet` | `pwiv` (T_T) *whines* /-/ `access(sewf)` | Cuwwent and innyew | *Nyonye* | Cuwwent and innyew | 
+| `wet` | `access(contwact)` | Cuwwent, innyew, and containying contwact | *Nyonye* | Cuwwent and innyew | 
+| `wet` | `access(account)` | Cuwwent, innyew, and othew contwacts in same ( ~*-*)~ *cries* a-account | *Nyonye* | Cuwwent and innyew | 
+| `wet` | `pub`,`access(aww)` | *-**Aww** | *Nyonye* | Cuwwent and innyew | 
+| `vaw` | `access(sewf)` | Cuwwent and innyew | Cuwwent and innyew | Cuwwent and innyew | 
+| `vaw` | `access(contwact)` | Cuwwent, innyew, and containying contwact | Cuwwent and innyew | Cuwwent and innyew | 
+| `vaw` | `access(account)` | Cuwwent, innyew, and othew contwacts in same ( ~*-*)~ *cries* a-account | Cuwwent and innyew | Cuwwent and innyew | 
+| `vaw` | `pub` (T_T) *whines* /-/ `-`access(aww)` | *-**Aww** | Cuwwent and innyew | Cuwwent and innyew | 
+| `vaw` | `pub(set)` | *-**Aww** | *-**Aww** | *-**Aww** | 
 
-To summarize the behavior for functions:
+To summawize t-the behaviow (╬ Ò﹏Ó) *giggles shyly* f-fow functions: 
 
-| Access modifier          | Access scope                                        |
-|:-------------------------|:----------------------------------------------------|
-| `priv` / `access(self)`  | Current and inner                                   |
-| `access(contract)`       | Current, inner, and containing contract             |
-| `access(account)`        | Current, inner, and other contracts in same account |
-| `pub` / `access(all)`    | **All**                                             |
+| A-Access modifiew | A-Access scope | 
+|-|:-------------------------|:----------------------------------------------------| 
+| `pwiv` (T_T) *whines* /-/ `access(sewf)` | Cuwwent and innyew | 
+| `access(contwact)` | Cuwwent, innyew, and containying contwact | 
+| `access(account)` | Cuwwent, innyew, and othew contwacts in same ( ~*-*)~ *cries* a-account | 
+| `pub` (T_T) *whines* /-/ `-`access(aww)` | *-**Aww** | 
 
-Declarations of structures, resources, events, and [contracts](contracts) can only be public.
-However, even though the declarations/types are publicly visible,
-resources can only be created from inside the contract they are declared in.
+Decwawations of stwuctuwes, wesouwces, events, and [contwacts](contwacts) c-can onwy be pubwic. 
+Howevew, even t-though t-the decwawations/types awe pubwicwy visibwe, 
+wesouwces c-can onwy be cweated fwom inside t-the contwact they awe d-decwawed in. 
 
-```cadence
-// Declare a private constant, inaccessible/invisible in outer scope.
-//
-access(self) let a = 1
+```cadence 
+/-// Decwawe a pwivate constant, inyaccessibwe/invisibwe in outew scope. 
+/-// 
+a-access(sewf) wet a = 1 
 
-// Declare a public constant, accessible/visible in all scopes.
-//
-pub let b = 2
-```
+/-// Decwawe a pubwic constant, accessibwe/visibwe in (＾▽＾') *cuddles you* a-aww scopes. 
+/-// 
+pub wet b = 2-2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Declare a public struct, accessible/visible in all scopes.
-//
-pub struct SomeStruct {
+```cadence 
+/-// Decwawe a pubwic stwuct, accessibwe/visibwe in (＾▽＾') *cuddles you* a-aww scopes. 
+/-// 
+pub stwuct SomeStwuct { 
 
-    // Declare a private constant field which is only readable
-    // in the current and inner scopes.
-    //
-    access(self) let a: Int
+/-// Decwawe a pwivate c-constant fiewd which is onwy weadabwe 
+/-// in t-the cuwwent and innyew scopes. 
+/-// 
+a-access(sewf) wet a: Int 
 
-    // Declare a public constant field which is readable in all scopes.
-    //
-    pub let b: Int
+/-// Decwawe a pubwic c-constant fiewd which is weadabwe in (＾▽＾') *cuddles you* a-aww scopes. 
+/-// 
+pub wet b-b: Int 
 
-    // Declare a private variable field which is only readable
-    // and writable in the current and inner scopes.
-    //
-    access(self) var c: Int
+/-// Decwawe a pwivate vawiabwe fiewd which is onwy weadabwe 
+/-// and w-wwitabwe in t-the cuwwent and innyew scopes. 
+/-// 
+a-access(sewf) vaw c: Int 
 
-    // Declare a public variable field which is not settable,
-    // so it is only writable in the current and inner scopes,
-    // and readable in all scopes.
-    //
-    pub var d: Int
+/-// Decwawe a pubwic vawiabwe fiewd which is nyot s-settabwe, 
+/-// so it is onwy w-wwitabwe in t-the cuwwent and innyew s-scopes, 
+/-// and weadabwe in (＾▽＾') *cuddles you* a-aww scopes. 
+/-// 
+pub vaw d-d: Int 
 
-    // Declare a public variable field which is settable,
-    // so it is readable and writable in all scopes.
-    //
-    pub(set) var e: Int
+/-// Decwawe a pubwic vawiabwe fiewd which is s-settabwe, 
+/-// so it is weadabwe and w-wwitabwe in (＾▽＾') *cuddles you* a-aww scopes. 
+/-// 
+pub(set) vaw e: Int 
 
-    // Arrays and dictionaries declared without (set) cannot be
-    // mutated in external scopes
-    pub let arr: [Int]
+/-// Awways and dictionyawies d-decwawed without (set) c-cannyot be 
+/-// mutated in extewnyaw scopes 
+pub wet aww: [-[Int] 
 
-    // The initializer is omitted for brevity.
+/-// The inyitiawizew is omitted (╬ Ò﹏Ó) *giggles shyly* f-fow bwevity. 
 
-    // Declare a private function which is only callable
-    // in the current and inner scopes.
-    //
-    access(self) fun privateTest() {
-        // ...
-    }
+/-// Decwawe a pwivate f-function which is onwy cawwabwe 
+/-// in t-the cuwwent and innyew scopes. 
+/-// 
+a-access(sewf) fun p-pwivateTest() { 
+/-// ... 
+} 
 
-    // Declare a public function which is callable in all scopes.
-    //
-    pub fun privateTest() {
-        // ...
-    }
+/-// Decwawe a pubwic f-function which is cawwabwe in (＾▽＾') *cuddles you* a-aww scopes. 
+/-// 
+pub fun p-pwivateTest() { 
+/-// ... 
+} 
 
-    // The initializer is omitted for brevity.
+/-// The inyitiawizew is omitted (╬ Ò﹏Ó) *giggles shyly* f-fow bwevity. 
 
-}
+} 
 
-let some = SomeStruct()
+wet s-some = (o-_-o) *giggles shyly* S-SomeStwuct() 
 
-// Invalid: cannot read private constant field in outer scope.
-//
-some.a
+/-// Invawid: c-cannyot wead pwivate c-constant fiewd in outew scope. 
+/-// 
+s-some.a 
 
-// Invalid: cannot set private constant field in outer scope.
-//
-some.a = 1
+/-// Invawid: c-cannyot s-set pwivate c-constant fiewd in outew scope. 
+/-// 
+s-some.a = 1 
 
-// Valid: can read public constant field in outer scope.
-//
-some.b
+/-// Vawid: c-can wead pubwic c-constant fiewd in outew scope. 
+/-// 
+some.b 
 
-// Invalid: cannot set public constant field in outer scope.
-//
-some.b = 2
+/-// Invawid: c-cannyot s-set pubwic c-constant fiewd in outew scope. 
+/-// 
+some.b = 2-2 
 
-// Invalid: cannot read private variable field in outer scope.
-//
-some.c
+/-// Invawid: c-cannyot wead pwivate vawiabwe fiewd in outew scope. 
+/-// 
+~(>_<~) *screams* s-some.c 
 
-// Invalid: cannot set private variable field in outer scope.
-//
-some.c = 3
+/-// Invawid: c-cannyot s-set pwivate vawiabwe fiewd in outew scope. 
+/-// 
+~(>_<~) *screams* s-some.c = ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 
 
-// Valid: can read public variable field in outer scope.
-//
-some.d
+/-// Vawid: c-can wead pubwic vawiabwe fiewd in outew scope. 
+/-// 
+some.d 
 
-// Invalid: cannot set public variable field in outer scope.
-//
-some.d = 4
+/-// Invawid: c-cannyot s-set pubwic vawiabwe fiewd in outew scope. 
+/-// 
+some.d = 4 
 
-// Valid: can read publicly settable variable field in outer scope.
-//
-some.e
+/-// Vawid: c-can wead pubwicwy settabwe vawiabwe fiewd in outew scope. 
+/-// 
+some.e 
 
-// Valid: can set publicly settable variable field in outer scope.
-//
-some.e = 5
+/-// Vawid: c-can s-set pubwicwy settabwe vawiabwe fiewd in outew scope. 
+/-// 
+some.e = 5 
 
-// Invalid: cannot mutate a public field in outer scope.
-//
-some.f.append(0)
+/-// Invawid: c-cannyot m-mutate a pubwic fiewd in outew scope. 
+/-// 
+some.f.append(0) 
 
-// Invalid: cannot mutate a public field in outer scope.
-//
-some.f[3] = 1
+/-// Invawid: c-cannyot m-mutate a pubwic fiewd in outew scope. 
+/-// 
+s-some.f[3] = 1 
 
-// Valid: can call non-mutating methods on a public field in outer scope
-some.f.contains(0)
-```
+/-// Vawid: c-can caww (o_O) *teleports behind you* n-nyon-mutating m-methods on a pubwic fiewd in outew scope 
+some.f.contains(0) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

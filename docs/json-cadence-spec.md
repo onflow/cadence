@@ -1,868 +1,868 @@
----
-title: JSON-Cadence Data Interchange Format
----
+----- 
+titwe: J-JSON-Cadence D-Data Intewchange F-Fowmat 
+----- 
 
-> Version 0.3.1
+> Vewsion (*^.^*) *leans over* 0-0.3.1 
 
-JSON-Cadence is a data interchange format used to represent Cadence values as language-independent JSON objects.
+J-JSON-Cadence is a data intewchange fowmat used to wepwesent C-Cadence vawues as wanguage-independent JSON objects. 
 
-This format includes less type information than a complete [ABI](https://en.wikipedia.org/wiki/Application_binary_interface), and instead promotes the following tenets:
+This fowmat i-incwudes w-wess t-type infowmation than a compwete [ABI](https://en.wikipedia.org/wiki/Application_binary_interface), and instead p-pwomotes t-the fowwowing (=^‥^=) *looks at you* t-tenyets: 
 
-- **Human-readability** - JSON-Cadence is easy to read and comprehend, which speeds up development and debugging.
-- **Compatibility** - JSON is a common format with built-in support in most high-level programming languages, making it easy to parse on a variety of platforms.
-- **Portability** - JSON-Cadence is self-describing and thus can be transported and decoded without accompanying type definitions (i.e. an ABI).
+(✧ω✧) *teleports behind you* --- *-**Human-weadabiwity** (✧ω✧) *teleports behind you* --- J-JSON-Cadence is easy to wead and compwehend, which speeds up devewopment and debugging. 
+(✧ω✧) *teleports behind you* --- *-**Compatibiwity** (✧ω✧) *teleports behind you* --- JSON is a common fowmat with buiwt-in suppowt in most high-wevew pwogwamming wanguages, making it easy to pawse on a (=^‥^=) *dances nervously* v-vawiety of pwatfowms. 
+(✧ω✧) *teleports behind you* --- (o´∀`o) *blushes* *-**Powtabiwity** (✧ω✧) *teleports behind you* --- J-JSON-Cadence is sewf-descwibing and thus c-can be twanspowted and d-decoded without accompanying t-type definyitions (-(i.e. an ABI). 
 
-# Values
+# Vawues 
 
----
+----- 
 
-## Void
+#-## Void 
 
-```json
-{
-  "type": "Void"
-}
-```
+```json 
+{ 
+"type": "Void" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Example
+### Exampwe 
 
-```json
-{
-  "type": "Void"
-}
-```
+```json 
+{ 
+"type": "Void" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
----
+----- 
 
-## Optional
+#-## Optionyaw 
 
-```json
-{
-  "type": "Optional",
-  "value": null | <value>
-}
-```
+```json 
+{ 
+"type": "Optionyaw", 
+"vawue": nyuww | <vawue> 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Example
+### Exampwe 
 
-```json
-// Non-nil
+```json 
+/-// Nyon-nyiw 
 
-{
-  "type": "Optional",
-  "value": {
-    "type": "UInt8",
-    "value": "123"
-  }
-}
+{ 
+"type": "Optionyaw", 
+"vawue": { 
+"type": "UInt8", 
+"vawue": "-"123" 
+} 
+} 
 
-// Nil
+/-// Nyiw 
 
-{
-  "type": "Optional",
-  "value": null
-}
-```
+{ 
+"type": "Optionyaw", 
+"vawue": nyuww 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
----
+----- 
 
-## Bool
+#-## Boow 
 
-```json
-{
-  "type": "Bool",
-  "value": true | false
-}
-```
+```json 
+{ 
+"type": "Boow", 
+"vawue": twue | f-fawse 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Example
+### Exampwe 
 
-```json
-{
-  "type": "Bool",
-  "value": true
-}
-```
+```json 
+{ 
+"type": "Boow", 
+"vawue": twue 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
----
+----- 
 
-## String
+#-## Stwing 
 
-```json
-{
-  "type": "String",
-  "value": "..."
-}
+```json 
+{ 
+"type": "-"Stwing", 
+"vawue": "..." 
+} 
 
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Example
+### Exampwe 
 
-```json
-{
-  "type": "String",
-  "value": "Hello, world!"
-}
-```
-
----
-
-## Address
-
-```json
-{
-  "type": "Address",
-  "value": "0x0" // as hex-encoded string with 0x prefix
-}
-```
-
-### Example
-
-```json
-{
-  "type": "Address",
-  "value": "0x1234"
-}
-```
-
----
-
-## Integers
-
-`[U]Int`, `[U]Int8`, `[U]Int16`, `[U]Int32`,`[U]Int64`,`[U]Int128`, `[U]Int256`,  `Word8`, `Word16`, `Word32`, or `Word64`
-
-Although JSON supports integer literals up to 64 bits, all integer types are encoded as strings for consistency.
-
-While the static type is not strictly required for decoding, it is provided to inform client of potential range.
-
-```json
-{
-  "type": "<type>",
-  "value": "<decimal string representation of integer>"
-}
-```
-
-### Example
-
-```json
-{
-  "type": "UInt8",
-  "value": "123"
-}
-```
-
----
-
-## Fixed Point Numbers
-
-`[U]Fix64`
-
-Although fixed point numbers are implemented as integers, JSON-Cadence uses a decimal string representation for readability.
-
-```json
-{
-    "type": "[U]Fix64",
-    "value": "<integer>.<fractional>"
-}
-```
-
-### Example
-
-```json
-{
-    "type": "Fix64",
-    "value": "12.3"
-}
-```
-
----
-
-## Array
-
-```json
-{
-  "type": "Array",
-  "value": [
-    <value at index 0>,
-    <value at index 1>
-    // ...
-  ]
-}
-```
-
-### Example
-
-```json
-{
-  "type": "Array",
-  "value": [
-    {
-      "type": "Int16",
-      "value": "123"
-    },
-    {
-      "type": "String",
-      "value": "test"
-    },
-    {
-      "type": "Bool",
-      "value": true
-    }
-  ]
-}
-```
-
----
-
-## Dictionary
-
-Dictionaries are encoded as a list of key-value pairs to preserve the deterministic ordering implemented by Cadence.
-
-```json
-{
-  "type": "Dictionary",
-  "value": [
-    {
-      "key": "<key>",
-      "value": <value>
-    },
-    ...
-  ]
-}
-```
-
-### Example
-
-```json
-{
-  "type": "Dictionary",
-  "value": [
-    {
-      "key": {
-        "type": "UInt8",
-        "value": "123"
-      },
-      "value": {
-        "type": "String",
-        "value": "test"
-      }
-    }
-  ],
-  // ...
-}
-```
-
----
-
-## Composites (Struct, Resource, Event, Contract, Enum)
-
-Composite fields are encoded as a list of name-value pairs in the order in which they appear in the composite type declaration.
-
-```json
-{
-  "type": "Struct" | "Resource" | "Event" | "Contract" | "Enum",
-  "value": {
-    "id": "<fully qualified type identifier>",
-    "fields": [
-      {
-        "name": "<field name>",
-        "value": <field value>
-      },
-      // ...
-    ]
-  }
-}
-```
-
-### Example
-
-```json
-{
-  "type": "Resource",
-  "value": {
-    "id": "0x3.GreatContract.GreatNFT",
-    "fields": [
-      {
-        "name": "power",
-        "value": {"type": "Int", "value": "1"}
-      }
-    ]
-  }
-}
-```
-
----
-
-## Path
-
-```json
-{
-  "type": "Path",
-  "value": {
-    "domain": "storage" | "private" | "public",
-    "identifier": "..."
-  }
-}
-```
-
-### Example
-
-```json
-{
-  "type": "Path",
-  "value": {
-    "domain": "storage",
-    "identifier": "flowTokenVault"
-  }
-}
-```
-
----
-
-## Type Value
-
-```json
-{
-  "type": "Type",
-  "value": {
-    "staticType": <type>
-  }
-}
-```
-
-### Example
-
-```json
-{
-  "type": "Type",
-  "value": {
-    "staticType": {
-      "kind": "Int",
-    }
-  }
-}
-```
-
----
-
-## Capability
-
-```json
-{
-  "type": "Capability",
-  "value": {
-    "path": <path>,
-    "address": "0x0",  // as hex-encoded string with 0x prefix
-    "borrowType": <type>,
-  }
-}
-```
-
-### Example
-
-```json
-{
-  "type": "Capability",
-  "value": {
-    "path": {
-      "type": "Path",
-      "value": {
-        "domain": "public",
-        "identifier": "someInteger"
-      }
-    },
-    "address": "0x1",
-    "borrowType": {
-      "kind": "Int"
-    }
-  }
-}
-```
-
----
-
-## Functions
-
-```json
-{
-  "type": "Function",
-  "value": {
-    "functionType": <type>
-  }
-}
-```
-
-Function values can only be exported, they cannot be imported.
-
-### Example
-
-```json
-{
-  "type": "Function",
-  "value": {
-    "functionType": {
-      "kind": "Function",
-      "typeID": "(():Void)",
-      "parameters": [],
-      "return": {
-        "kind": "Void"
-      }
-    }
-  }
-}
-```
-
----
-
-# Types
-
-## Simple Types
-
-These are basic types like `Int`, `String`, or `StoragePath`. 
-
-```json
-{
-  "kind": "Any" | "AnyStruct" | "AnyResource" | "Type" | 
-    "Void" | "Never" | "Bool" | "String" | "Character" | 
-    "Bytes" | "Address" | "Number" | "SignedNumber" | 
-    "Integer" | "SignedInteger" | "FixedPoint" | 
-    "SignedFixedPoint" | "Int" | "Int8" | "Int16" | 
-    "Int32" | "Int64" | "Int128" | "Int256" | "UInt" | 
-    "UInt8" | "UInt16" | "UInt32" | "UInt64" | "UInt128" | 
-    "UInt256" | "Word8" | "Word16" | "Word32" | "Word64" | 
-    "Fix64" | "UFix64" | "Path" | "CapabilityPath" | "StoragePath" |
-    "PublicPath" | "PrivatePath" | "AuthAccount" | "PublicAccount" | 
-    "AuthAccount.Keys" | "PublicAccount.Keys" | "AuthAccount.Contracts" | 
-    "PublicAccount.Contracts" | "DeployedContract" | "AccountKey" | "Block" 
-}
-```
-
-### Example
-
-```json
-{
-  "kind": "UInt8"
-}
-```
-
----
-
-## Optional Types
-
-```json
-{
-  "kind": "Optional",
-  "type": <type>
-}
-```
-
-### Example 
-
-```json
-{
-  "kind": "Optional",
-  "type": {
-    "kind": "String"
-  }
-}
-```
-
----
-
-## Variable Sized Array Types
-
-```json
-{
-  "kind": "VariableSizedArray",
-  "type": <type>
-}
-```
-
-### Example 
-
-```json
-{
-  "kind": "VariableSizedArray",
-  "type": {
-    "kind": "String"
-  }
-}
-```
-
----
-
-## Constant Sized Array Types
-
-```json
-{
-  "kind": "ConstantSizedArray",
-  "type": <type>,
-  "size": <length of array>,
-}
-```
-
-### Example 
-
-```json
-{
-  "kind": "ConstantSizedArray",
-  "type": {
-    "kind": "String"
-  },
-  "size":3
-}
-```
-
----
-
-## Dictionary Types
-
-```json
-{
-  "kind": "Dictionary",
-  "key": <type>,
-  "value": <type>
-}
-```
-
-### Example 
-
-```json
-{
-  "kind": "Dictionary",
-  "key": {
-    "kind": "String"
-  }, 
-  "value": {
-    "kind": "UInt16"
-  }, 
-}
-```
-
----
-
-## Composite Types
-
-```json
-{
-  "kind": "Struct" | "Resource" | "Event" | "Contract" | "StructInterface" | "ResourceInterface" | "ContractInterface",
-  "type": "", // this field exists only to keep parity with the enum structure below; the value must be the empty string
-  "typeID": "<fully qualified type ID>",
-  "initializers": [
-    <initializer at index 0>,
-    <initializer at index 1>
-    // ...
-  ],
-  "fields": [
-    <field at index 0>,
-    <field at index 1>
-    // ...
-  ],
-}
-```
-
-### Example 
-
-```json
-{
-  "kind": "Resource",
-  "type": "",
-  "typeID": "0x3.GreatContract.GreatNFT",
-  "initializers":[
-    [
-      {
-        "label": "foo",
-        "id": "bar",
-        "type": {
-          "kind": "String"
-        }
-      }
-    ]
-  ],
-  "fields": [
-    {
-      "id": "foo",
-      "type": {
-        "kind": "String"
-      }
-    }
-  ]
-}
-```
-
----
-
-## Field Types
-
-```json
-{
-  "id": "<name of field>",
-  "type": <type>
-}
-```
-
-### Example 
-
-```json
-{
-  "id": "foo",
-  "type": {
-    "kind": "String"
-  }
-}
-```
-
----
-
-## Parameter Types
-
-```json
-{
-  "label": "<label>",
-  "id": "<identifier>",
-  "type": <type>
-}
-```
-
-### Example 
-
-```json
-{
-  "label": "foo",
-  "id": "bar",
-  "type": {
-    "kind": "String"
-  }
-}
-```
-
----
-
-## Initializer Types
-
-Initializer types are encoded a list of parameters to the initializer. 
-
-```json
-[
-  <parameter at index 0>, 
-  <parameter at index 1>,
-  // ... 
-]
-```
-
-### Example 
-
-```json
-[
-  {
-    "label": "foo",
-    "id": "bar",
-    "type": {
-      "kind": "String"
-    }
-  }
-]
-```
-
----
-
-## Function Types
-
-```json
-{
-  "kind": "Function",
-  "typeID": "<function name>",
-  "parameters": [
-    <parameter at index 0>, 
-    <parameter at index 1>,
-    // ... 
-  ], 
-  "return": <type>
-}
-```
-
-### Example 
-
-```json
-{
-  "kind": "Function",
-  "typeID": "foo",
-  "parameters": [
-    {
-      "label": "foo",
-      "id": "bar",
-      "type": {
-        "kind": "String"
-      }
-    } 
-  ], 
-  "return": {
-    "kind": "String"
-  }
-}
-```
-
----
-
-## Reference Types
-
-```json
-{
-  "kind": "Reference",
-  "authorized": true | false,
-  "type": <type>
-}
-```
-
-### Example 
-
-```json
-{
-  "kind": "Reference",
-  "authorized": true,
-  "type": {
-    "kind": "String"
-  }
-}
-```
-
----
-
-## Restricted Types
-
-```json
-{
-  "kind": "Restriction",
-  "typeID": "<fully qualified type ID>",
-  "type": <type>,
-  "restrictions": [
-    <type at index 0>,
-    <type at index 1>,
-    //...
-  ]
-}
-```
-
-### Example 
-
-```json
-{
-  "kind": "Restriction",
-  "typeID": "0x3.GreatContract.GreatNFT",
-  "type": {
-    "kind": "AnyResource",
-  },
-  "restrictions": [
-    {
-        "kind": "ResourceInterface",
-        "typeID": "0x1.FungibleToken.Receiver",
-        "fields": [
-            {
-                "id": "uuid",
-                "type": {
-                    "kind": "UInt64"
-                }
-            }
-        ],
-        "initializers": [],
-        "type": ""
-    }
-  ]
-}
-```
-
----
-
-## Capability Types
-
-```json
-{
-  "kind": "Capability",
-  "type": <type>
-}
-```
-
-### Example 
-
-```json
-{
-  "kind": "Capability",
-  "type": {
-    "kind": "Reference",
-    "authorized": true,
-    "type": {
-      "kind": "String"
-    }
-  }
-}
-```
-
----
-
-## Enum Types
-
-```json
-{
-  "kind": "Enum",
-  "type": <type>,
-  "typeID": "<fully qualified type ID>",
-  "initializers":[],
-  "fields": [
-    {
-      "id": "rawValue",
-      "type": <type>
-    }
-  ]
-}
-```
-
-### Example 
-
-```json
-{
-  "kind": "Enum",
-  "type": {
-    "kind": "String"
-  },
-  "typeID": "0x3.GreatContract.GreatEnum",
-  "initializers":[],
-  "fields": [
-    {
-      "id": "rawValue",
-      "type": {
-        "kind": "String"
-      }
-    }
-  ]
-}
-```
-
-## Repeated Types
-
-When a composite type appears more than once within the same JSON type encoding, either because it is
-recursive or because it is repeated (e.g. in a composite field), the composite is instead 
-represented by its type ID. 
-
-### Example
-
-```json
-{
-  "type":"Type",
-  "value": {
-    "staticType": {
-      "kind":"Resource",
-      "typeID":"0x3.GreatContract.NFT",
-      "fields":[
-        {"id":"foo",
-        "type": {
-          "kind":"Optional",
-          "type":"0x3.GreatContract.NFT" // recursive NFT resource type is instead encoded as an ID
-          }
-        }
-      ],
-      "initializers":[],
-      "type":""
-    }
-  }
-}
-```
+```json 
+{ 
+"type": "-"Stwing", 
+"vawue": "Hewwo, w-wowwd!" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Addwess 
+
+```json 
+{ 
+"type": "Addwess", 
+"vawue": "0x0" /-// as hex-encoded stwing with 0x pwefix 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"type": "Addwess", 
+"vawue": "0x1234" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Integews 
+
+`[U]Int`, `-`[U]Int8`, `[U]Int16`, `-`[U]Int32`,`[U]Int64`,`[U]Int128`, `-`[U]Int256`, `Wowd8`, `Wowd16`, `-`Wowd32`, ow `Wowd64` 
+
+Awthough JSON suppowts integew witewaws up to 64 bits, (＾▽＾') *cuddles you* a-aww integew t-types awe encoded as stwings (╬ Ò﹏Ó) *giggles shyly* f-fow consistency. 
+
+Whiwe t-the static t-type is nyot stwictwy wequiwed (╬ Ò﹏Ó) *giggles shyly* f-fow d-decoding, it is pwovided to infowm c-cwient of potentiaw wange. 
+
+```json 
+{ 
+"type": "<type>", 
+"vawue": "-"<decimaw stwing w-wepwesentation of integew>" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"type": "UInt8", 
+"vawue": "-"123" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Fixed Point N-Nyumbews 
+
+`[U]Fix64` 
+
+Awthough fixed point nyumbews awe impwemented as integews, J-JSON-Cadence uses a decimaw stwing w-wepwesentation (╬ Ò﹏Ó) *giggles shyly* f-fow weadabiwity. 
+
+```json 
+{ 
+"type": "-"[U]Fix64", 
+"vawue": "<integew>.<fwactionyaw>" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"type": "-"Fix64", 
+"vawue": "12.3" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Awway 
+
+```json 
+{ 
+"type": "-"Awway", 
+"vawue": [ 
+<vawue a-at i-index 0>, 
+<vawue a-at i-index 1> 
+/-// ... 
+] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"type": "-"Awway", 
+"vawue": [ 
+{ 
+"type": "-"Int16", 
+"vawue": "-"123" 
+}, 
+{ 
+"type": "-"Stwing", 
+"vawue": "test" 
+}, 
+{ 
+"type": "Boow", 
+"vawue": twue 
+} 
+] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Dictionyawy 
+
+Dictionyawies awe encoded as a wist of key-vawue paiws to pwesewve t-the detewminyistic owdewing impwemented by Cadence. 
+
+```json 
+{ 
+"type": "-"Dictionyawy", 
+"vawue": [ 
+{ 
+"key": (つ✧ω✧)つ *steals ur resource* "-"<key>", 
+"vawue": <vawue> 
+}, 
+... 
+] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"type": "-"Dictionyawy", 
+"vawue": [ 
+{ 
+"key": { 
+"type": "UInt8", 
+"vawue": "-"123" 
+}, 
+"vawue": { 
+"type": "-"Stwing", 
+"vawue": "test" 
+} 
+} 
+], 
+/-// ... 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Composites (-(Stwuct, Wesouwce, E-Event, Contwact, Enyum) 
+
+Composite fiewds awe encoded as a wist of nyame-vawue paiws in t-the owdew in which they appeaw in t-the composite t-type decwawation. 
+
+```json 
+{ 
+"type": "Stwuct" | "-"Wesouwce" | "Event" | "Contwact" | "Enyum", 
+"vawue": { 
+"id": "<fuwwy quawified t-type identifiew>", 
+"-"fiewds": [ 
+{ 
+"-"nyame": "<fiewd n-nyame>", 
+"vawue": <-<fiewd vawue> 
+}, 
+/-// ... 
+] 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"type": "Wesouwce", 
+"vawue": { 
+"id": "-"0x3.GweatContwact.GweatNFT", 
+"-"fiewds": [ 
+{ 
+"-"nyame": "powew", 
+"vawue": {"type": "-"Int", "vawue": "-"1"} 
+} 
+] 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Path 
+
+```json 
+{ 
+"type": "Path", 
+"vawue": { 
+"domain": "-"stowage" | "pwivate" | "pubwic", 
+"identifiew": "..." 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"type": "Path", 
+"vawue": { 
+"domain": "-"stowage", 
+"identifiew": "fwowTokenVauwt" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Type Vawue 
+
+```json 
+{ 
+"type": "Type", 
+"vawue": { 
+"staticType": <type> 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"type": "Type", 
+"vawue": { 
+"staticType": { 
+"kind": "-"Int", 
+} 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## C-Capabiwity 
+
+```json 
+{ 
+"type": "Capabiwity", 
+"vawue": { 
+"-"path": <path>, 
+"addwess": "0x0", /-// as hex-encoded stwing with 0x pwefix 
+"bowwowType": <-<type>, 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"type": "Capabiwity", 
+"vawue": { 
+"-"path": { 
+"type": "Path", 
+"vawue": { 
+"domain": "pubwic", 
+"identifiew": "someIntegew" 
+} 
+}, 
+"addwess": "0x1", 
+"bowwowType": { 
+"kind": "Int" 
+} 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Functions 
+
+```json 
+{ 
+"type": "Function", 
+"vawue": { 
+"functionType": <type> 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Function vawues c-can onwy be expowted, they c-cannyot be i-impowted. 
+
+### Exampwe 
+
+```json 
+{ 
+"type": "Function", 
+"vawue": { 
+"functionType": { 
+"kind": "Function", 
+"typeID": "-"(():Void)", 
+"pawametews": [], 
+"wetuwn": { 
+"kind": "Void" 
+} 
+} 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+# T-Types 
+
+#-## Simpwe T-Types 
+
+These awe basic t-types w-wike `Int`, `-`Stwing`, ow `StowagePath`. 
+
+```json 
+{ 
+"kind": "Any" | "-"AnyStwuct" | "AnyWesouwce" | "Type" | 
+"Void" | "Nyevew" | "Boow" | "-"Stwing" | "-"Chawactew" | 
+"Bytes" | "-"Addwess" | "Nyumbew" | "SignyedNyumbew" | 
+"Integew" | "SignyedIntegew" | "FixedPoint" | 
+"SignyedFixedPoint" | "Int" | "-"Int8" | "-"Int16" | 
+"Int32" | "Int64" | "Int128" | "-"Int256" | "-"UInt" | 
+"UInt8" | "UInt16" | "-"UInt32" | "UInt64" | "UInt128" | 
+"-"UInt256" | "Wowd8" | "Wowd16" | "Wowd32" | "Wowd64" | 
+"Fix64" | "UFix64" | "Path" | "CapabiwityPath" | "StowagePath" | 
+"PubwicPath" | "PwivatePath" | "AuthAccount" | "PubwicAccount" | 
+"AuthAccount.Keys" | "PublicAccount.Keys" | "-"AuthAccount.Contracts" | 
+"PublicAccount.Contracts" | "DepwoyedContwact" | "-"AccountKey" | "Bwock" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "UInt8" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Optionyaw T-Types 
+
+```json 
+{ 
+"kind": "Optionyaw", 
+"type": <type> 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "Optionyaw", 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## :3 *hugs tightly* V-Vawiabwe Sized Awway T-Types 
+
+```json 
+{ 
+"kind": "VawiabweSizedAwway", 
+"type": <type> 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "VawiabweSizedAwway", 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Constant Sized Awway T-Types 
+
+```json 
+{ 
+"kind": "ConstantSizedAwway", 
+"type": <-<type>, 
+"size": <wength of a-awway>, 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "ConstantSizedAwway", 
+"type": { 
+"kind": "-"Stwing" 
+}, 
+"size":3 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Dictionyawy T-Types 
+
+```json 
+{ 
+"kind": "-"Dictionyawy", 
+"key": <-<type>, 
+"vawue": <type> 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "-"Dictionyawy", 
+"key": { 
+"kind": "-"Stwing" 
+}, 
+"vawue": { 
+"kind": "UInt16" 
+}, 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Composite T-Types 
+
+```json 
+{ 
+"kind": "Stwuct" | "-"Wesouwce" | "Event" | "Contwact" | "StwuctIntewface" | "WesouwceIntewface" | "ContwactIntewface", 
+"type": "", /-// this fiewd e-exists onwy to keep pawity with t-the enyum stwuctuwe bewow; t-the vawue (* ^ ω ^) *screams* m-must be t-the empty stwing 
+"typeID": "<fuwwy quawified t-type ID>", 
+"inyitiawizews": [ 
+<inyitiawizew a-at i-index 0>, 
+<inyitiawizew a-at i-index 1> 
+/-// ... 
+], 
+"-"fiewds": [ 
+<-<fiewd a-at i-index 0>, 
+<-<fiewd a-at i-index 1> 
+/-// ... 
+], 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "Wesouwce", 
+"type": "", 
+"typeID": "-"0x3.GweatContwact.GweatNFT", 
+"inyitiawizews":[ 
+[ 
+{ 
+"wabew": "-"foo", 
+"id": "baw", 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+] 
+], 
+"-"fiewds": [ 
+{ 
+"id": "-"foo", 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Fiewd T-Types 
+
+```json 
+{ 
+"id": "-"<nyame of fiewd>", 
+"type": <type> 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"id": "-"foo", 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## P-Pawametew T-Types 
+
+```json 
+{ 
+"wabew": "-"<wabew>", 
+"id": "<identifiew>", 
+"type": <type> 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"wabew": "-"foo", 
+"id": "baw", 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Inyitiawizew T-Types 
+
+Inyitiawizew t-types awe encoded a wist of p-pawametews to t-the inyitiawizew. 
+
+```json 
+[ 
+<pawametew a-at i-index 0>, 
+<pawametew a-at i-index 1>, 
+/-// ... 
+] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+[ 
+{ 
+"wabew": "-"foo", 
+"id": "baw", 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Function T-Types 
+
+```json 
+{ 
+"kind": "Function", 
+"typeID": "-"<function n-nyame>", 
+"pawametews": [ 
+<pawametew a-at i-index 0>, 
+<pawametew a-at i-index 1>, 
+/-// ... 
+], 
+"wetuwn": <type> 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "Function", 
+"typeID": "-"foo", 
+"pawametews": [ 
+{ 
+"wabew": "-"foo", 
+"id": "baw", 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+], 
+"wetuwn": { 
+"kind": "-"Stwing" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## W-Wefewence T-Types 
+
+```json 
+{ 
+"kind": "Wefewence", 
+"authowized": twue | fawse, 
+"type": <type> 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "Wefewence", 
+"authowized": twue, 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Westwicted T-Types 
+
+```json 
+{ 
+"kind": "Westwiction", 
+"typeID": "<fuwwy quawified t-type ID>", 
+"type": <-<type>, 
+"westwictions": [ 
+<type a-at i-index 0>, 
+<type a-at i-index 1>, 
+//... 
+] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "Westwiction", 
+"typeID": "-"0x3.GweatContwact.GweatNFT", 
+"type": { 
+"kind": "AnyWesouwce", 
+}, 
+"westwictions": [ 
+{ 
+"kind": "WesouwceIntewface", 
+"typeID": "0x1.FungibweToken.Weceivew", 
+"-"fiewds": [ 
+{ 
+"id": ^.^ *cries* "-"uuid", 
+"type": { 
+"kind": "UInt64" 
+} 
+} 
+], 
+"inyitiawizews": [], 
+"type": "" 
+} 
+] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## C-Capabiwity T-Types 
+
+```json 
+{ 
+"kind": "Capabiwity", 
+"type": <type> 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "Capabiwity", 
+"type": { 
+"kind": "Wefewence", 
+"authowized": twue, 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+----- 
+
+#-## Enyum T-Types 
+
+```json 
+{ 
+"kind": "Enyum", 
+"type": <-<type>, 
+"typeID": "<fuwwy quawified t-type ID>", 
+x3 *dances nervously* "-"inyitiawizews":[], 
+"-"fiewds": [ 
+{ 
+"id": "wawVawue", 
+"type": <type> 
+} 
+] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Exampwe 
+
+```json 
+{ 
+"kind": "Enyum", 
+"type": { 
+"kind": "-"Stwing" 
+}, 
+"typeID": "0x3.GweatContwact.GweatEnyum", 
+x3 *dances nervously* "-"inyitiawizews":[], 
+"-"fiewds": [ 
+{ 
+"id": "wawVawue", 
+"type": { 
+"kind": "-"Stwing" 
+} 
+} 
+] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Wepeated T-Types 
+
+When a composite t-type appeaws mowe than o-once within t-the same JSON t-type e-encoding, eithew because it is 
+wecuwsive ow because it is wepeated (e.g. in a composite fiewd), t-the composite is instead 
+wepwesented by its t-type ID. 
+
+### Exampwe 
+
+```json 
+{ 
+"type":"Type", 
+"vawue": { 
+"staticType": { 
+"kind":"Wesouwce", 
+"typeID":"0x3.GreatContract.NFT", 
+"fiewds":[ 
+{-{"id":"foo", 
+"type": { 
+"kind":"Optionyaw", 
+"type":"0x3.GreatContract.NFT" /-// wecuwsive NFT wesouwce t-type is instead encoded as an (^=◕ᴥ◕=^) *looks at you* I-ID 
+} 
+} 
+], 
+x3 *dances nervously* "-"inyitiawizews":[], 
+(^=◕ᴥ◕=^) *teleports behind you* "-"type":"" 
+} 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

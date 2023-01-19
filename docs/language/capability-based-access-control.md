@@ -1,234 +1,234 @@
----
-title: Capability-based Access Control
----
+----- 
+titwe: Capabiwity-based A-Access Contwow 
+----- 
 
-Users will often want to make it so that specific other users or even anyone else
-can access certain fields and functions of a stored object.
-This can be done by creating a capability.
+Usews wiww often want to make it so that specific othew usews ow even anyonye ewse 
+c-can a-access c-cewtain fiewds and functions of a stowed object. 
+This c-can be donye by cweating a capabiwity. 
 
-As was mentioned before, access to stored objects is governed by the
-tenets of [Capability Security](https://en.wikipedia.org/wiki/Capability-based_security).
-This means that if an account wants to be able to access another account's
-stored objects, it must have a valid capability to that object.
+As w-was m-mentionyed b-befowe, a-access to stowed objects is govewnyed by t-the 
+⊂(･ω･*⊂) *looks at you* t-tenyets of [Capabiwity Security](https://en.wikipedia.org/wiki/Capability-based_security). 
+This means that if an ( ~*-*)~ *cries* a-account wants to be abwe to a-access anyothew account's 
+stowed objects, it (* ^ ω ^) *screams* m-must have a vawid >_> *giggles shyly* c-capabiwity to that object. 
 
-Capabilities are identified by a path and link to a target path, not directly to an object.
-Capabilities are either public (any user can get access),
-or private (access to/from the authorized user is necessary).
+Capabiwities awe identified by a ヽ(・∀・)ﾉ *screams* p-path and w-wink to a tawget path, nyot diwectwy to an object. 
+Capabiwities awe eithew pubwic (any usew c-can get access), 
+ow pwivate (access to/fwom t-the authowized usew is nyecessawy). 
 
-Public capabilities are created using public paths, i.e. they have the domain `public`.
-After creation they can be obtained from both authorized accounts (`AuthAccount`)
-and public accounts (`PublicAccount`).
+P-Pubwic capabiwities awe cweated using pubwic (´ ω `♡) *looks at you* p-paths, i.e. they have t-the d-domain `pubwic`. 
+Aftew cweation they c-can be obtainyed fwom both authowized a-accounts (-(`AuthAccount`) 
+and pubwic a-accounts (`PubwicAccount`). 
 
-Private capabilities are created using private paths, i.e. they have the domain `private`.
-After creation they can be obtained from authorized accounts (`AuthAccount`),
-but not from public accounts (`PublicAccount`).
+Pwivate capabiwities awe cweated using pwivate (´ ω `♡) *looks at you* p-paths, i.e. they have t-the d-domain `pwivate`. 
+Aftew cweation they c-can be obtainyed fwom authowized a-accounts (`AuthAccount`), 
+but nyot fwom pubwic a-accounts (`PubwicAccount`). 
 
-Once a capability is created and obtained, it can be borrowed to get a reference
-to the stored object.
-When a capability is created, a type is specified that determines as what type
-the capability can be borrowed.
-This allows exposing and hiding certain functionality of a stored object.
+Once a >_> *giggles shyly* c-capabiwity is cweated and ( =ω=)..nyaa *looks at you* o-obtainyed, it c-can be bowwowed to get a wefewence 
+to t-the stowed object. 
+When a >_> *giggles shyly* c-capabiwity is cweated, a t-type is s-specified that detewminyes as what t-type 
+t-the >_> *giggles shyly* c-capabiwity c-can be bowwowed. 
+This awwows (o_O) *blushes* e-exposing and :3 *looks at you* h-hiding c-cewtain functionyawity of a stowed object. 
 
-Capabilities are created using the `link` function of an authorized account (`AuthAccount`):
+Capabiwities awe cweated using t-the `-`wink` f-function of an authowized ( ~*-*)~ *cries* a-account (`AuthAccount`): 
 
-- `cadence•fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?`
+(✧ω✧) *teleports behind you* --- `cadence•fun wink<T: &Any>(_ nyewCapabiwityPath: CapabiwityPath, t-tawget: Path): C-Capabiwity<T>?` 
 
-  `newCapabilityPath` is the public or private path identifying the new capability.
+`nyewCapabiwityPath` is t-the pubwic ow pwivate ヽ(・∀・)ﾉ *screams* p-path identifying t-the nyew capabiwity. 
 
-  `target` is any public, private, or storage path that leads to the object
-  that will provide the functionality defined by this capability.
+`-`tawget` is any pubwic, pwivate, ow stowage ヽ(・∀・)ﾉ *screams* p-path that weads to t-the object 
+that wiww pwovide t-the functionyawity definyed by this capabiwity. 
 
-  `T` is the type parameter for the capability type.
-  A type argument for the parameter must be provided explicitly.
+`T` is t-the t-type p-pawametew (╬ Ò﹏Ó) *giggles shyly* f-fow t-the >_> *giggles shyly* c-capabiwity (＃￣ω￣) *hugs tightly* t-type. 
+A-A t-type {{ (>_<) }} *leans over* a-awgument (╬ Ò﹏Ó) *giggles shyly* f-fow t-the p-pawametew (* ^ ω ^) *screams* m-must be pwovided expwicitwy. 
 
-  The type parameter defines how the capability can be borrowed,
-  i.e., how the stored value can be accessed.
+The t-type p-pawametew definyes how t-the >_> *giggles shyly* c-capabiwity c-can be bowwowed, 
+i.e., how t-the stowed vawue c-can be accessed. 
 
-  The link function returns `nil` if a link for the given capability path already exists,
-  or the newly created capability if not.
+The w-wink f-function wetuwns (＾• ω •＾) *teleports behind you* `-`nyiw` if a w-wink (╬ Ò﹏Ó) *giggles shyly* f-fow t-the given >_> *giggles shyly* c-capabiwity ヽ(・∀・)ﾉ *screams* p-path awweady e-exists, 
+ow t-the nyewwy cweated >_> *giggles shyly* c-capabiwity if n-nyot. 
 
-  It is not necessary for the target path to lead to a valid object;
-  the target path could be empty, or could lead to an object
-  which does not provide the necessary type interface:
+I-It is nyot nyecessawy (╬ Ò﹏Ó) *giggles shyly* f-fow t-the tawget ヽ(・∀・)ﾉ *screams* p-path to wead to a vawid o-object; 
+t-the tawget ヽ(・∀・)ﾉ *screams* p-path couwd be e-empty, ow couwd wead to an object 
+which does nyot pwovide t-the nyecessawy t-type i-intewface: 
 
-  The link function does **not** check if the target path is valid/exists at the time
-  the capability is created and does **not** check if the target value conforms to the given type.
+The w-wink f-function does *-**nyot** check if t-the tawget ヽ(・∀・)ﾉ *screams* p-path is vawid/exists a-at t-the time 
+t-the >_> *giggles shyly* c-capabiwity is cweated and does *-**nyot** check if t-the tawget vawue confowms to t-the given (＃￣ω￣) *hugs tightly* t-type. 
 
-  The link is latent.
-  The target value might be stored after the link is created,
-  and the target value might be moved out after the link has been created.
+The w-wink is w-watent. 
+The tawget vawue m-might be stowed aftew t-the w-wink is cweated, 
+and t-the tawget vawue m-might be moved out aftew t-the w-wink has b-been cweated. 
 
-Capabilities can be removed using the `unlink` function of an authorized account (`AuthAccount`):
+Capabiwities c-can be w-wemoved using t-the `unwink` f-function of an authowized ( ~*-*)~ *cries* a-account (`AuthAccount`): 
 
-- `cadence•fun unlink(_ path: CapabilityPath)`
+(✧ω✧) *teleports behind you* --- `cadence•fun unwink(_ path: CapabiwityPath)` 
 
-  `path` is the public or private path identifying the capability that should be removed.
+`path` is t-the pubwic ow pwivate ヽ(・∀・)ﾉ *screams* p-path identifying t-the >_> *giggles shyly* c-capabiwity that shouwd be wemoved. 
 
-To get the target path for a capability, the `getLinkTarget` function
-of an authorized account (`AuthAccount`) or public account (`PublicAccount`) can be used:
+To get t-the tawget ヽ(・∀・)ﾉ *screams* p-path (╬ Ò﹏Ó) *giggles shyly* f-fow a capabiwity, t-the `getWinkTawget` f-function 
+of an authowized ( ~*-*)~ *cries* a-account (-(`AuthAccount`) ow pubwic ( ~*-*)~ *cries* a-account (`PubwicAccount`) c-can be used: 
 
-- `cadence•fun getLinkTarget(_ path: CapabilityPath): Path?`
+(✧ω✧) *teleports behind you* --- `cadence•fun getWinkTawget(_ path: CapabiwityPath): Path?` 
 
-  `path` is the public or private path identifying the capability.
-  The function returns the link target path,
-  if a capability exists at the given path,
-  or `nil` if it does not.
+`path` is t-the pubwic ow pwivate ヽ(・∀・)ﾉ *screams* p-path identifying t-the capabiwity. 
+The f-function wetuwns t-the w-wink tawget path, 
+if a >_> *giggles shyly* c-capabiwity e-exists a-at t-the given path, 
+ow (＾• ω •＾) *teleports behind you* `-`nyiw` if it does n-nyot. 
 
-Existing capabilities can be obtained by using the `getCapability` function
-of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
+Existing capabiwities c-can be obtainyed by using t-the `getCapabiwity` f-function 
+of authowized a-accounts (-(`AuthAccount`) and pubwic a-accounts (`PubwicAccount`): 
 
-- `cadence•fun getCapability<T>(_ at: CapabilityPath): Capability<T>`
+(✧ω✧) *teleports behind you* --- `cadence•fun g-getCapabiwity<T>(_ at: CapabiwityPath): Capabiwity<T>` 
 
-  For public accounts, the function returns a capability
-  if the given path is public.
-  It is not possible to obtain private capabilities from public accounts.
-  If the path is private or a storage path, the function returns `nil`.
+Fow pubwic a-accounts, t-the f-function wetuwns a >_> *giggles shyly* c-capabiwity 
+if t-the given ヽ(・∀・)ﾉ *screams* p-path is pubwic. 
+I-It is nyot p-possibwe to obtain pwivate capabiwities fwom pubwic accounts. 
+If t-the ヽ(・∀・)ﾉ *screams* p-path is pwivate ow a stowage path, t-the f-function wetuwns `-`nyiw`. 
 
-  For authorized accounts, the function returns a capability
-  if the given path is public or private.
-  If the path is a storage path, the function returns `nil`.
+Fow authowized a-accounts, t-the f-function wetuwns a >_> *giggles shyly* c-capabiwity 
+if t-the given ヽ(・∀・)ﾉ *screams* p-path is pubwic ow pwivate. 
+If t-the ヽ(・∀・)ﾉ *screams* p-path is a stowage path, t-the f-function wetuwns `-`nyiw`. 
 
-  `T` is the type parameter that specifies how the capability can be borrowed.
-  The type argument is optional, i.e. it need not be provided.
+`T` is t-the t-type p-pawametew that s-specifies how t-the >_> *giggles shyly* c-capabiwity c-can be bowwowed. 
+The t-type {{ (>_<) }} *leans over* a-awgument is optionyaw, i.e. it nyeed nyot be pwovided. 
 
-The `getCapability` function does **not** check if the target exists.
-The link is latent.
-The `check` function of the capability can be used to check if the target currently exists and could be borrowed,
+The `getCapabiwity` f-function does *-**nyot** check if t-the tawget exists. 
+The w-wink is w-watent. 
+The `check` f-function of t-the >_> *giggles shyly* c-capabiwity c-can be used to check if t-the tawget cuwwentwy e-exists and couwd be bowwowed, 
 
-- `cadence•fun check<T: &Any>(): Bool`
+(✧ω✧) *teleports behind you* --- `cadence•fun check<T: &Any>(): Boow` 
 
-  `T` is the type parameter for the reference type.
-  A type argument for the parameter must be provided explicitly.
+`T` is t-the t-type p-pawametew (╬ Ò﹏Ó) *giggles shyly* f-fow t-the wefewence (＃￣ω￣) *hugs tightly* t-type. 
+A-A t-type {{ (>_<) }} *leans over* a-awgument (╬ Ò﹏Ó) *giggles shyly* f-fow t-the p-pawametew (* ^ ω ^) *screams* m-must be pwovided expwicitwy. 
 
-  The function returns true if the capability currently targets an object
-  that satisfies the given type, i.e. could be borrowed using the given type.
+The f-function wetuwns twue if t-the >_> *giggles shyly* c-capabiwity cuwwentwy t-tawgets an object 
+that satisfies t-the given type, i.e. couwd be bowwowed using t-the given (＃￣ω￣) *hugs tightly* t-type. 
 
-Finally, the capability can be borrowed to get a reference to the stored object.
-This can be done using the `borrow` function of the capability:
+Finyawwy, t-the >_> *giggles shyly* c-capabiwity c-can be bowwowed to get a wefewence to t-the stowed object. 
+This c-can be donye using t-the `-`bowwow` f-function of t-the capabiwity: 
 
-- `cadence•fun borrow<T: &Any>(): T?`
+(✧ω✧) *teleports behind you* --- `cadence•fun x3 *screams* b-bowwow<T: &Any>(): T-T?` 
 
-  The function returns a reference to the object targeted by the capability,
-  provided it can be borrowed using the given type.
+The f-function wetuwns a wefewence to t-the object tawgeted by t-the capabiwity, 
+pwovided it c-can be bowwowed using t-the given (＃￣ω￣) *hugs tightly* t-type. 
 
-  `T` is the type parameter for the reference type.
-  If the function is called on a typed capability, the capability's type is used when borrowing.
-  If the capability is untyped, a type argument must be provided explicitly in the call to `borrow`.
+`T` is t-the t-type p-pawametew (╬ Ò﹏Ó) *giggles shyly* f-fow t-the wefewence (＃￣ω￣) *hugs tightly* t-type. 
+If t-the f-function is cawwed on a t-typed capabiwity, t-the c-capabiwity's t-type is used when bowwowing. 
+If t-the >_> *giggles shyly* c-capabiwity is untyped, a t-type {{ (>_<) }} *leans over* a-awgument (* ^ ω ^) *screams* m-must be pwovided e-expwicitwy in t-the caww to `bowwow`. 
 
-  The function returns `nil` when the targeted path is empty, i.e. nothing is stored under it.
-  When the requested type exceeds what is allowed by the capability (or any interim capabilities),
-  execution will abort with an error.
+The f-function wetuwns (＾• ω •＾) *teleports behind you* `-`nyiw` when t-the tawgeted ヽ(・∀・)ﾉ *screams* p-path is e-empty, i.e. nyothing is stowed undew it. 
+When t-the wequested t-type exceeds what is awwowed by t-the >_> *giggles shyly* c-capabiwity (-(ow any intewim capabiwities), 
+execution wiww a-abowt with an ewwow. 
 
-```cadence
-// Declare a resource interface named `HasCount`, that has a field `count`
-//
-resource interface HasCount {
-    count: Int
-}
+```cadence 
+/-// Decwawe a wesouwce intewface nyamed `HasCount`, that has a fiewd `count` 
+/-// 
+wesouwce intewface HasCount { 
+c-count: Int 
+} 
 
-// Declare a resource named `Counter` that conforms to `HasCount`
-//
-resource Counter: HasCount {
-    pub var count: Int
+/-// Decwawe a wesouwce nyamed `Countew` that confowms to `HasCount` 
+/-// 
+wesouwce Countew: HasCount { 
+pub vaw c-count: Int 
 
-    pub init(count: Int) {
-        self.count = count
-    }
+pub inyit(count: Int) { 
+self.count = count 
+} 
 
-    pub fun increment(by amount: Int) {
-        self.count = self.count + amount
-    }
-}
+pub fun i-incwement(by a-amount: Int) { 
+self.count = self.count + amount 
+} 
+} 
 
-// In this example an authorized account is available through the constant `authAccount`.
+/-// In this e-exampwe an authowized ( ~*-*)~ *cries* a-account is avaiwabwe thwough t-the c-constant `-`authAccount`. 
 
-// Create a new instance of the resource type `Counter`
-// and save it in the storage of the account.
-//
-// The path `/storage/counter` is used to refer to the stored value.
-// Its identifier `counter` was chosen freely and could be something else.
-//
-authAccount.save(<-create Counter(count: 42), to: /storage/counter)
+/-// Cweate a nyew instance of t-the wesouwce t-type `Countew` 
+/-// and s-save it in t-the stowage of t-the account. 
+/-// 
+/-// The ヽ(・∀・)ﾉ *screams* p-path `-`/stowage/countew` is used to wefew to t-the stowed vawue. 
+/-// Its identifiew `-`countew` w-was chosen f-fweewy and couwd be something ewse. 
+/-// 
+authAccount.save(<-create Countew(count: ヽ(>∀<☆)ノ *looks at you* 4-42), to: /stowage/countew) 
 
-// Create a public capability that allows access to the stored counter object
-// as the type `{HasCount}`, i.e. only the functionality of reading the field
-//
-authAccount.link<&{HasCount}>(/public/hasCount, target: /storage/counter)
-```
+/-// Cweate a pubwic >_> *giggles shyly* c-capabiwity that awwows a-access to t-the stowed countew object 
+/-// as t-the t-type `{HasCount}`, i.e. onwy t-the functionyawity of weading t-the fiewd 
+/-// 
+authAccount.link<&{HasCount}>(/public/hasCount, t-tawget: /stowage/countew) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-To get the published portion of an account, the `getAccount` function can be used.
+To get t-the pubwished powtion of an account, t-the `getAccount` f-function c-can be u-used. 
 
-Imagine that the next example is from a different account as before.
+I-Imaginye that t-the nyext e-exampwe is fwom a diffewent ( ~*-*)~ *cries* a-account as b-befowe. 
 
-```cadence
+```cadence 
 
-// Get the public account for the address that stores the counter
-//
-let publicAccount = getAccount(0x1)
+/-// Get t-the pubwic ( ~*-*)~ *cries* a-account (╬ Ò﹏Ó) *giggles shyly* f-fow t-the addwess that stowes t-the countew 
+/-// 
+wet pubwicAccount = getAccount(0x1) 
 
-// Get a capability for the counter that is made publicly accessible
-// through the path `/public/hasCount`.
-//
-// Use the type `&{HasCount}`, a reference to some object that provides the functionality
-// of interface `HasCount`. This is the type that the capability can be borrowed as
-// (it was specified in the call to `link` above).
-// See the example below for borrowing using the type `&Counter`.
-//
-// After the call, the declared constant `countCap` has type `Capability<&{HasCount}>`,
-// a capability that results in a reference that has type `&{HasCount}` when borrowed.
-//
-let countCap = publicAccount.getCapability<&{HasCount}>(/public/hasCount)
+/-// Get a >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow t-the countew that is m-made pubwicwy accessibwe 
+/-// thwough t-the ヽ(・∀・)ﾉ *screams* p-path `/pubwic/hasCount`. 
+/-// 
+/-// ╰(▔∀▔)╯ *steals ur resource* U-Use t-the t-type (⌒▽⌒)☆ *blushes* `-`&{HasCount}`, a wefewence to s-some object that pwovides t-the functionyawity 
+/-// of intewface `HasCount`. This is t-the t-type that t-the >_> *giggles shyly* c-capabiwity c-can be bowwowed as 
+/-// (it w-was s-specified in t-the caww to `-`wink` above). 
+/-// See t-the e-exampwe bewow (╬ Ò﹏Ó) *giggles shyly* f-fow bowwowing using t-the t-type `&Countew`. 
+/-// 
+/-// Aftew t-the caww, t-the d-decwawed c-constant `countCap` has t-type `-`Capabiwity<&{HasCount}>`, 
+/-// a >_> *giggles shyly* c-capabiwity that w-wesuwts in a wefewence that has t-type `-`&{HasCount}` when bowwowed. 
+/-// 
+wet (☆ω☆) *whines* c-countCap = publicAccount.getCapability<&{HasCount}>(/public/hasCount) 
 
-// Borrow the capability to get a reference to the stored counter.
-//
-// This borrow succeeds, i.e. the result is not `nil`,
-// it is a valid reference, because:
-//
-// 1. Dereferencing the path chain results in a stored object
-//    (`/public/hasCount` links to `/storage/counter`,
-//    and there is an object stored under `/storage/counter`)
-//
-// 2. The stored value is a subtype of the requested type `{HasCount}`
-//    (the stored object has type `Counter` which conforms to interface `HasCount`)
-//
-let countRef = countCap.borrow()!
+/-// B-Bowwow t-the >_> *giggles shyly* c-capabiwity to get a wefewence to t-the stowed countew. 
+/-// 
+/-// This bowwow succeeds, i.e. t-the wesuwt is nyot `-`nyiw`, 
+/-// it is a vawid wefewence, b-because: 
+/-// 
+/-// 1. Dewefewencing t-the ヽ(・∀・)ﾉ *screams* p-path chain w-wesuwts in a stowed object 
+/-// (`/pubwic/hasCount` w-winks to `/stowage/countew`, 
+/-// and (⌒ω⌒) *hugs tightly* t-thewe is an object stowed undew `/stowage/countew`) 
+/-// 
+/-// 2-2. The stowed vawue is a subtype of t-the wequested t-type `{HasCount}` 
+/-// (-(the stowed object has t-type `Countew` which confowms to intewface (*・ω・)ﾉ *blushes* `-`HasCount`) 
+/-// 
+wet countWef = countCap.borrow()! 
 
-countRef.count  // is `42`
+countRef.count /-// is `42` 
 
-// Invalid: The `increment` function is not accessible for the reference,
-// because it has the type `&{HasCount}`, which does not expose an `increment` function,
-// only a `count` field
-//
-countRef.increment(by: 5)
+/-// Invawid: The `-`incwement` f-function is nyot accessibwe (╬ Ò﹏Ó) *giggles shyly* f-fow t-the wefewence, 
+/-// because it has t-the t-type (⌒▽⌒)☆ *blushes* `-`&{HasCount}`, which does nyot expose an `-`incwement` function, 
+/-// onwy a `count` fiewd 
+/-// 
+countRef.increment(by: 5) 
 
-// Again, attempt to get a get a capability for the counter, but use the type `&Counter`.
-//
-// Getting the capability succeeds, because it is latent, but borrowing fails
-// (the result s `nil`), because the capability was created/linked using the type `&{HasCount}`:
-//
-// The resource type `Counter` implements the resource interface `HasCount`,
-// so `Counter` is a subtype of `{HasCount}`, but the capability only allows
-// borrowing using unauthorized references of `{HasCount}` (`&{HasCount}`)
-// instead of authorized references (`auth &{HasCount}`),
-// so users of the capability are not allowed to borrow using subtypes,
-// and they can't escalate the type by casting the reference either.
-//
-// This shows how parts of the functionality of stored objects
-// can be safely exposed to other code
-//
-let countCapNew = publicAccount.getCapability<&Counter>(/public/hasCount)
-let counterRefNew = countCapNew.borrow()
+/-// A-Again, attempt to get a get a >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow t-the countew, but use t-the t-type `&Countew`. 
+/-// 
+/-// G-Getting t-the >_> *giggles shyly* c-capabiwity succeeds, because it is watent, but bowwowing faiws 
+/-// (-(the wesuwt s `nyiw`), because t-the >_> *giggles shyly* c-capabiwity w-was cweated/winked using t-the t-type `&{HasCount}`: 
+/-// 
+/-// The wesouwce t-type `Countew` impwements t-the wesouwce intewface `HasCount`, 
+/-// so `Countew` is a subtype of `{HasCount}`, but t-the >_> *giggles shyly* c-capabiwity onwy awwows 
+/-// bowwowing using unyauthowized wefewences of `{HasCount}` (`&{HasCount}`) 
+/-// instead of authowized wefewences (`auth &-&{HasCount}`), 
+/-// so usews of t-the >_> *giggles shyly* c-capabiwity awe nyot awwowed to bowwow using subtypes, 
+/-// and they can't escawate t-the t-type by c-casting t-the wefewence eithew. 
+/-// 
+/-// This s-shows how pawts of t-the functionyawity of stowed objects 
+/-// c-can be safewy ( =ω=)..nyaa *teleports behind you* e-exposed to othew code 
+/-// 
+wet countCapNyew = publicAccount.getCapability<&Counter>(/public/hasCount) 
+wet countewWefNyew = countCapNew.borrow() 
 
-// `counterRefNew` is `nil`, the borrow failed
+/-// `countewWefNyew` is `-`nyiw`, t-the bowwow faiwed 
 
-// Invalid: Cannot access the counter object in storage directly,
-// the `borrow` function is not available for public accounts
-//
-let counterRef2 = publicAccount.borrow<&Counter>(from: /storage/counter)
-```
+/-// Invawid: Cannyot a-access t-the countew object in stowage diwectwy, 
+/-// t-the `-`bowwow` f-function is nyot avaiwabwe (╬ Ò﹏Ó) *giggles shyly* f-fow pubwic a-accounts 
+/-// 
+wet countewWef2 = publicAccount.borrow<&Counter>(from: /stowage/countew) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The address of a capability can be obtained from the `address` field of the capability:
+The addwess of a >_> *giggles shyly* c-capabiwity c-can be obtainyed fwom t-the `-`addwess` fiewd of t-the capabiwity: 
 
-- `cadence•let address: Address`
+(✧ω✧) *teleports behind you* --- `cadence•wet addwess: Addwess` 
 
-  The address of the capability.
+The addwess of t-the capabiwity. 

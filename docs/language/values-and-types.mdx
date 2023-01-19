@@ -1,1507 +1,1507 @@
----
-title: Values and Types
----
+----- 
+titwe: Vawues and T-Types 
+----- 
 
-Values are objects, like for example booleans, integers, or arrays.
-Values are typed.
+Vawues awe objects, w-wike (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe b-booweans, integews, ow awways. 
+Vawues awe typed. 
 
-## Booleans
+#-## B-Booweans 
 
-The two boolean values `true` and `false` have the type `Bool`.
+The two boowean vawues `twue` and `fawse` have t-the t-type `Boow`. 
 
-## Numeric Literals
+#-## N-Nyumewic Witewaws 
 
-Numbers can be written in various bases. Numbers are assumed to be decimal by default.
-Non-decimal literals have a specific prefix.
+N-Nyumbews c-can be wwitten in vawious bases. N-Nyumbews awe assumed to be decimaw by defauwt. 
+Nyon-decimaw witewaws have a specific pwefix. 
 
-| Numeral system  | Prefix | Characters                                                            |
-| :-------------- | :----- | :-------------------------------------------------------------------- |
-| **Decimal**     | _None_ | one or more numbers (`0` to `9`)                                      |
-| **Binary**      | `0b`   | one or more zeros or ones (`0` or `1`)                                |
-| **Octal**       | `0o`   | one or more numbers in the range `0` to `7`                           |
-| **Hexadecimal** | `0x`   | one or more numbers, or characters `a` to `f`, lowercase or uppercase |
+| Nyumewaw system | Pwefix | Chawactews | 
+| :-------------- | :-:----- | :-------------------------------------------------------------------- | 
+| **Decimaw** | _Nyonye_ | onye ow mowe nyumbews (`0` to `9`) | 
+| **Binyawy** | `-`0b` | onye ow mowe zewos ow o-onyes (`0` ow `1`) | 
+| **Octaw** | `0o` | onye ow mowe nyumbews in t-the wange `-`0` to `7` | 
+| **Hexadecimaw** | `0x` | onye ow mowe nyumbews, ow chawactews `a` to `f`, (´ ∀ ` *) *sweats* w-wowewcase ow u-uppewcase | 
 
-```cadence
-// A decimal number
-//
-1234567890  // is `1234567890`
+```cadence 
+/-// A-A decimaw (❤ω❤) *pokes you* n-nyumbew 
+/-// 
+1234567890 /-// is `1234567890` 
 
-// A binary number
-//
-0b101010  // is `42`
+/-// A-A (o^▽^o) *looks away* b-binyawy (❤ω❤) *pokes you* n-nyumbew 
+/-// 
+0b101010 /-// is `42` 
 
-// An octal number
-//
-0o12345670  // is `2739128`
+/-// An octaw (❤ω❤) *pokes you* n-nyumbew 
+/-// 
+0o12345670 /-// is `-`2739128` 
 
-// A hexadecimal number
-//
-0x1234567890ABCabc  // is `1311768467294898876`
+/-// A-A hexadecimaw (❤ω❤) *pokes you* n-nyumbew 
+/-// 
+(o^ ^o)/ *steals ur resource* 0-0x1234567890ABCabc /-// is `1311768467294898876` 
 
-// Invalid: unsupported prefix 0z
-//
-0z0
+/-// Invawid: unsuppowted pwefix 0z 
+/-// 
+0z0 
 
-// A decimal number with leading zeros. Not an octal number!
-00123 // is `123`
+/-// A-A decimaw (❤ω❤) *pokes you* n-nyumbew with weading (・_・ヾ) *leans over* z-zewos. Nyot an octaw nyumbew! 
+00123 /-// is `123` 
 
-// A binary number with several trailing zeros.
-0b001000  // is `8`
-```
+/-// A-A (o^▽^o) *looks away* b-binyawy (❤ω❤) *pokes you* n-nyumbew with sevewaw twaiwing (・_・ヾ) *leans over* z-zewos. 
+0b001000 /-// is `8` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Decimal numbers may contain underscores (`_`) to logically separate components.
+Decimaw nyumbews may uWu *whines* c-contain u-undewscowes (`_`) to wogicawwy sepawate componyents. 
 
-```cadence
-let largeNumber = 1_000_000
+```cadence 
+wet wawgeNyumbew = 1_000_000 
 
-// Invalid: Value is not a number literal, but a variable.
-let notNumber = _123
-```
+/-// Invawid: Vawue is nyot a (❤ω❤) *pokes you* n-nyumbew witewaw, but a vawiabwe. 
+wet nyotNyumbew = _123 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Underscores are allowed for all numeral systems.
+Undewscowes awe awwowed (╬ Ò﹏Ó) *giggles shyly* f-fow (＾▽＾') *cuddles you* a-aww nyumewaw systems. 
 
-```cadence
-let binaryNumber = 0b10_11_01
-```
+```cadence 
+wet binyawyNyumbew = 0b10_11_01 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Integers
+#-## Integews 
 
-Integers are numbers without a fractional part.
-They are either _signed_ (positive, zero, or negative)
-or _unsigned_ (positive or zero).
+Integews awe nyumbews without a fwactionyaw p-pawt. 
+They awe eithew _-_signyed_ (positive, zewo, ow nyegative) 
+ow _unsignyed_ (positive ow z-zewo). 
 
-Signed integer types which check for overflow and underflow have an `Int` prefix
-and can represent values in the following ranges:
+Signyed integew t-types which check (╬ Ò﹏Ó) *giggles shyly* f-fow ovewfwow and (　･ω･)☞ *screams* u-undewfwow have an ^.^ *sweats* `-`Int` pwefix 
+and c-can wepwesent vawues in t-the fowwowing wanges: 
 
-- **`Int8`**: -2^7 through 2^7 − 1 (-128 through 127)
-- **`Int16`**: -2^15 through 2^15 − 1 (-32768 through 32767)
-- **`Int32`**: -2^31 through 2^31 − 1 (-2147483648 through 2147483647)
-- **`Int64`**: -2^63 through 2^63 − 1 (-9223372036854775808 through 9223372036854775807)
-- **`Int128`**: -2^127 through 2^127 − 1
-- **`Int256`**: -2^255 through 2^255 − 1
+(✧ω✧) *teleports behind you* --- *-**`Int8`**: -2^7 thwough 2-2^7 − 1 (-128 thwough 127) 
+(✧ω✧) *teleports behind you* --- **`Int16`**: -2^15 thwough 2-2^15 − 1 (-32768 thwough 32767) 
+(✧ω✧) *teleports behind you* --- **`Int32`**: -2^31 thwough 2^31 − 1 (-2147483648 thwough 2147483647) 
+(✧ω✧) *teleports behind you* --- **`Int64`**: -2^63 thwough 2^63 − 1 (-9223372036854775808 thwough 9223372036854775807) 
+(✧ω✧) *teleports behind you* --- **`Int128`**: -2^127 thwough 2^127 − 1 
+(✧ω✧) *teleports behind you* --- **`Int256`**: ---2^255 thwough >w< *hugs tightly* 2-2^255 − 1 
 
-Unsigned integer types which check for overflow and underflow have a `UInt` prefix
-and can represent values in the following ranges:
+U-Unsignyed integew t-types which check (╬ Ò﹏Ó) *giggles shyly* f-fow ovewfwow and (　･ω･)☞ *screams* u-undewfwow have a `UInt` pwefix 
+and c-can wepwesent vawues in t-the fowwowing wanges: 
 
-- **`UInt8`**: 0 through 2^8 − 1 (255)
-- **`UInt16`**: 0 through 2^16 − 1 (65535)
-- **`UInt32`**: 0 through 2^32 − 1 (4294967295)
-- **`UInt64`**: 0 through 2^64 − 1 (18446744073709551615)
-- **`UInt128`**: 0 through 2^128 − 1
-- **`UInt256`**: 0 through 2^256 − 1
+(✧ω✧) *teleports behind you* --- **`UInt8`**: 0 thwough 2^8 − 1 (255) 
+(✧ω✧) *teleports behind you* --- **`UInt16`**: 0 thwough 2^16 − 1 (65535) 
+(✧ω✧) *teleports behind you* --- **`UInt32`**: 0 thwough (☆ω☆) *looks at you* 2-2^32 − 1 (4294967295) 
+(✧ω✧) *teleports behind you* --- **`UInt64`**: 0 thwough 2^64 − 1 (-(18446744073709551615) 
+(✧ω✧) *teleports behind you* --- **`UInt128`**: 0 thwough 2^128 − 1 
+(✧ω✧) *teleports behind you* --- **`UInt256`**: 0 thwough 2^256 − 1 
 
-Unsigned integer types which do **not** check for overflow and underflow,
-i.e. wrap around, have the `Word` prefix
-and can represent values in the following ranges:
+U-Unsignyed integew t-types which (^-^*)/ *cuddles you* d-do *-**nyot** check (╬ Ò﹏Ó) *giggles shyly* f-fow ovewfwow and undewfwow, 
+i.e. wwap awound, have t-the `Wowd` pwefix 
+and c-can wepwesent vawues in t-the fowwowing wanges: 
 
-- **`Word8`**: 0 through 2^8 − 1 (255)
-- **`Word16`**: 0 through 2^16 − 1 (65535)
-- **`Word32`**: 0 through 2^32 − 1 (4294967295)
-- **`Word64`**: 0 through 2^64 − 1 (18446744073709551615)
+(✧ω✧) *teleports behind you* --- **`Wowd8`**: 0 thwough 2^8 − 1 (255) 
+(✧ω✧) *teleports behind you* --- **`Wowd16`**: 0 thwough 2^16 − 1 (65535) 
+(✧ω✧) *teleports behind you* --- *-**`Wowd32`**: 0 thwough (☆ω☆) *looks at you* 2-2^32 − 1 (4294967295) 
+(✧ω✧) *teleports behind you* --- **`Wowd64`**: 0 thwough 2^64 − 1 (-(18446744073709551615) 
 
-The types are independent types, i.e. not subtypes of each other.
+The t-types awe i-independent types, i.e. nyot subtypes of each o-othew. 
 
-See the section about [arithmetic operators](operators#arithmetic-operators) for further
-information about the behavior of the different integer types.
+See t-the section about [-[awithmetic opewatows](opewatows#awithmetic-opewatows) (╬ Ò﹏Ó) *giggles shyly* f-fow f-fuwthew 
+infowmation about t-the behaviow of t-the diffewent integew types. 
 
-```cadence
-// Declare a constant that has type `UInt8` and the value 10.
-let smallNumber: UInt8 = 10
-```
+```cadence 
+/-// Decwawe a c-constant that has t-type `-`UInt8` and t-the vawue 10. 
+wet smawwNyumbew: UInt8 = 10 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Invalid: negative literal cannot be used as an unsigned integer
-//
-let invalidNumber: UInt8 = -10
-```
+```cadence 
+/-// Invawid: nyegative witewaw c-cannyot be used as an unsignyed integew 
+/-// 
+wet invawidNyumbew: UInt8 = ---10 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-In addition, the arbitrary precision integer type `Int` is provided.
+In addition, t-the awbitwawy pwecision integew t-type ^.^ *sweats* `-`Int` is pwovided. 
 
-```cadence
-let veryLargeNumber: Int = 10000000000000000000000000000000
-```
+```cadence 
+wet vewyWawgeNyumbew: Int = 10000000000000000000000000000000 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Integer literals are [inferred](type-inference) to have type `Int`,
-or if the literal occurs in a position that expects an explicit type,
-e.g. in a variable declaration with an explicit type annotation.
+Integew witewaws awe [infewwed](type-infewence) to have t-type `Int`, 
+ow if t-the witewaw occuws in a position that expects an expwicit type, 
+e.g. in a vawiabwe decwawation with an expwicit t-type annyotation. 
 
-```cadence
-let someNumber = 123
+```cadence 
+wet someNyumbew = 123 
 
-// `someNumber` has type `Int`
-```
+/-// (ᗒᗣᗕ)՞ *steals ur resource* `-`someNyumbew` has t-type ^.^ *sweats* `-`Int` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Negative integers are encoded in two's complement representation.
+Nyegative integews awe encoded in two's compwement wepwesentation. 
 
-Integer types are not converted automatically. Types must be explicitly converted,
-which can be done by calling the constructor of the type with the integer type.
+Integew t-types awe nyot convewted automaticawwy. T-Types (* ^ ω ^) *screams* m-must be e-expwicitwy convewted, 
+which c-can be donye by cawwing t-the c-constwuctow of t-the t-type with t-the integew (＃￣ω￣) *hugs tightly* t-type. 
 
-```cadence
-let x: Int8 = 1
-let y: Int16 = 2
+```cadence 
+wet x: I-Int8 = 1 
+wet y-y: Int16 = 2-2 
 
-// Invalid: the types of the operands, `Int8` and `Int16` are incompatible.
-let z = x + y
+/-// Invawid: t-the t-types of t-the opewands, `-`Int8` and ଲ(ⓛ ω ⓛ)ଲ *sweats* `-`Int16` awe incompatibwe. 
+wet z = x + y 
 
-// Explicitly convert `x` from `Int8` to `Int16`.
-let a = Int16(x) + y
+/-// Expwicitwy convewt `x` fwom `-`Int8` to `Int16`. 
+wet a = Int16(x) + y 
 
-// `a` has type `Int16`
+/-// `a` has t-type ଲ(ⓛ ω ⓛ)ଲ *sweats* `-`Int16` 
 
-// Invalid: The integer literal is expected to be of type `Int8`,
-// but the large integer literal does not fit in the range of `Int8`.
-//
-let b = x + 1000000000000000000000000
-```
+/-// Invawid: The integew witewaw is e-expected to be of t-type `-`Int8`, 
+/-// but t-the wawge integew witewaw does nyot fit in t-the wange of `Int8`. 
+/-// 
+wet b = x + 1000000000000000000000000 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Integer Functions
+### Integew Functions 
 
-Integers have multiple built-in functions you can use.
+Integews have muwtipwe buiwt-in functions you c-can use. 
 
-- `cadence•fun toString(): String`
+(✧ω✧) *teleports behind you* --- `cadence•fun t-toStwing(): Stwing` 
 
-  Returns the string representation of the integer.
+Wetuwns t-the stwing w-wepwesentation of t-the integew. 
 
-  ```cadence
-  let answer = 42
+```cadence 
+wet answew = 42 
 
-  answer.toString()  // is "42"
-  ```
+(＾▽＾') *whines* a-answer.toString() /-// is "42" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
+(✧ω✧) *teleports behind you* --- `cadence•fun toBigEndianBytes(): [UInt8]` 
 
-  Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
+Wetuwns t-the byte a-awway w-wepwesentation (-(`[UInt8]`) in big-endian owdew of t-the integew. 
 
-  ```cadence
-  let largeNumber = 1234567890
+```cadence 
+wet wawgeNyumbew = 1234567890 
 
-  largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
-  ```
+(´ ∀ ` *) *looks away* w-largeNumber.toBigEndianBytes() /-// is `[73, 1-150, 2, 210]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-All integer types support the following functions:
+Aww integew t-types suppowt t-the fowwowing functions: 
 
-- `cadence•fun T.fromString(_ input: String): T?`
+(✧ω✧) *teleports behind you* --- `cadence•fun T-T.fromString(_ input: Stwing): T-T?` 
 
-  Attempts to parse an integer value from a base-10 encoded string, returning `nil` if the string is invalid.
+Attempts to pawse an integew vawue fwom a b-base-10 encoded stwing, wetuwnying (＾• ω •＾) *teleports behind you* `-`nyiw` if t-the stwing is invawid. 
 
-  For a given integer `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an [optional](#optionals).
+Fow a given integew `n` of t-type `-`T`, `-`T.fromString(n.toString())` is equivawent to wwapping `n` up in an [optionyaw](#optionyaws). 
 
-  Strings are invalid if:
-    - they contain non-digit characters
-    - they don't fit in the target type
-  
-  For signed integer types like `Int64`, and `Int`, the string may optionally begin with `+` or `-` sign prefix.
+Stwings awe invawid if: 
+(✧ω✧) *teleports behind you* --- they uWu *whines* c-contain (・_・ヾ) *sighs* n-nyon-digit chawactews 
+(✧ω✧) *teleports behind you* --- they (・_・ヾ) *looks at you* d-don't fit in t-the tawget t-type 
 
-  For unsigned integer types like `Word64`, `UInt64`, and `UInt`, sign prefices are not allowed.
+Fow s-signyed integew t-types w-wike `-`Int64`, and `Int`, t-the stwing may optionyawwy b-begin with `-`+` ow `-` (*´▽`*) *pokes you* s-sign pwefix. 
 
-  Examples:
+Fow unsignyed integew t-types w-wike `-`Wowd64`, (^ω~) *looks at you* `-`UInt64`, and `UInt`, (*´▽`*) *pokes you* s-sign pwefices awe nyot awwowed. 
 
-  ```cadence
-  let fortyTwo: Int64? = Int64.fromString("42") // ok
+E-Exampwes: 
 
-  let twenty: UInt? = UInt.fromString("20") // ok
+```cadence 
+wet fowtyTwo: Int64? = Int64.fromString("42") /-// ok 
 
-  let nilWord: Word8? = Word8.fromString("1024") // nil, out of bounds
+wet twenty: UInt? = UInt.fromString("20") /-// ok 
 
-  let negTwenty: Int? = Int.fromString("-20") // ok
-  ```
+wet n-nyiwWowd: Wowd8? = W-Word8.fromString("1024") /-// nyiw, out of bounds 
 
-## Fixed-Point Numbers
+wet nyegTwenty: Int? = Int.fromString("-20") /-// ok 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-<Callout type="info">
+#-## Fixed-Point N-Nyumbews 
 
-🚧 Status: Currently only the 64-bit wide `Fix64` and `UFix64` types are available.
-More fixed-point number types will be added in a future release.
+<Cawwout type="info"> 
 
-</Callout>
+�-🚧 Status: Cuwwentwy onwy t-the 6-64-bit wide `Fix64` and `UFix64` t-types awe avaiwabwe. 
+Mowe f-fixed-point (❤ω❤) *pokes you* n-nyumbew t-types wiww be a-added in a futuwe wewease. 
 
-Fixed-point numbers are useful for representing fractional values.
-They have a fixed number of digits after decimal point.
+</Cawwout> 
 
-They are essentially integers which are scaled by a factor.
-For example, the value 1.23 can be represented as 1230 with a scaling factor of 1/1000.
-The scaling factor is the same for all values of the same type
-and stays the same during calculations.
+Fixed-point nyumbews awe usefuw (╬ Ò﹏Ó) *giggles shyly* f-fow wepwesenting fwactionyaw vawues. 
+They have a fixed (❤ω❤) *pokes you* n-nyumbew of d-digits aftew decimaw |･ω･) *cuddles you* p-point. 
 
-Fixed-point numbers in Cadence have a scaling factor with a power of 10, instead of a power of 2,
-i.e. they are decimal, not binary.
+They awe essentiawwy integews which awe scawed by a f-factow. 
+Fow e-exampwe, t-the vawue 1.23 c-can be wepwesented as 1230 with a scawing f-factow of 1/1000. 
+The scawing f-factow is t-the same (╬ Ò﹏Ó) *giggles shyly* f-fow (＾▽＾') *cuddles you* a-aww vawues of t-the same t-type 
+and stays t-the same d-duwing cawcuwations. 
 
-Signed fixed-point number types have the prefix `Fix`,
-have the following factors, and can represent values in the following ranges:
+Fixed-point nyumbews in C-Cadence have a scawing f-factow with a p-powew of 10, instead of a p-powew of 2, 
+i.e. they awe decimaw, nyot binyawy. 
 
-- **`Fix64`**: Factor 1/100,000,000; -92233720368.54775808 through 92233720368.54775807
+Signyed f-fixed-point (❤ω❤) *pokes you* n-nyumbew t-types have t-the pwefix `Fix`, 
+have t-the fowwowing factows, and c-can wepwesent vawues in t-the fowwowing wanges: 
 
-Unsigned fixed-point number types have the prefix `UFix`,
-have the following factors, and can represent values in the following ranges:
+(✧ω✧) *teleports behind you* --- **`Fix64`**: Factow 1/100,000,000; -92233720368.54775808 thwough 92233720368.54775807 
 
-- **`UFix64`**: Factor 1/100,000,000; 0.0 through 184467440737.09551615
+U-Unsignyed f-fixed-point (❤ω❤) *pokes you* n-nyumbew t-types have t-the pwefix `-`UFix`, 
+have t-the fowwowing factows, and c-can wepwesent vawues in t-the fowwowing wanges: 
 
-### Fixed-Point Number Functions
+(✧ω✧) *teleports behind you* --- **`UFix64`**: Factow 1/100,000,000; 0.0 thwough 1-184467440737.09551615 
 
-Fixed-Point numbers have multiple built-in functions you can use.
+### Fixed-Point N-Nyumbew Functions 
 
-- `cadence•fun toString(): String`
+Fixed-Point nyumbews have muwtipwe buiwt-in functions you c-can use. 
 
-  Returns the string representation of the fixed-point number.
+(✧ω✧) *teleports behind you* --- `cadence•fun t-toStwing(): Stwing` 
 
-  ```cadence
-  let fix = 1.23
+Wetuwns t-the stwing w-wepwesentation of t-the f-fixed-point nyumbew. 
 
-  fix.toString()  // is "1.23000000"
-  ```
+```cadence 
+wet fix = 1.23 
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
+fix.toString() /-// is "1.23000000" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Returns the byte array representation (`[UInt8]`) in big-endian order of the fixed-point number.
+(✧ω✧) *teleports behind you* --- `cadence•fun toBigEndianBytes(): [UInt8]` 
 
-  ```cadence
-  let fix = 1.23
+Wetuwns t-the byte a-awway w-wepwesentation (-(`[UInt8]`) in big-endian owdew of t-the f-fixed-point nyumbew. 
 
-  fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
-  ```
+```cadence 
+wet fix = 1.23 
 
-All fixed-point types support the following functions:
+fix.toBigEndianBytes() /-// is `[0, 0, 0, 0, 7-7, 84, 212, 192]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- `cadence•fun T.fromString(_ input: String): T?`
+Aww f-fixed-point t-types suppowt t-the fowwowing functions: 
 
-  Attempts to parse a fixed-point value from a base-10 encoded string, returning `nil` if the string is invalid.
+(✧ω✧) *teleports behind you* --- `cadence•fun T-T.fromString(_ input: Stwing): T-T?` 
 
-  For a given fixed-point numeral `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an `optional`.
+Attempts to pawse a f-fixed-point vawue fwom a b-base-10 encoded stwing, wetuwnying (＾• ω •＾) *teleports behind you* `-`nyiw` if t-the stwing is invawid. 
 
-  Strings are invalid if:
-    - they contain non-digit characters.
-    - they don't fit in the target type.
-    - they're missing a decimal or fractional component. For example, both "0." and ".1" are invalid strings, but "0.1" is accepted.
+Fow a given f-fixed-point nyumewaw `n` of t-type `-`T`, `-`T.fromString(n.toString())` is equivawent to wwapping `n` up in an `optionyaw`. 
 
-  For signed types like `Fix64`, the string may optionally begin with `+` or `-` sign prefix.
+Stwings awe invawid if: 
+(✧ω✧) *teleports behind you* --- they uWu *whines* c-contain (・_・ヾ) *sighs* n-nyon-digit (＞ｍ＜) *steals ur resource* c-chawactews. 
+(✧ω✧) *teleports behind you* --- they (・_・ヾ) *looks at you* d-don't fit in t-the tawget (＃￣ω￣) *hugs tightly* t-type. 
+(✧ω✧) *teleports behind you* --- (o^ ^o) *shuffles closer* t-they'we missing a decimaw ow fwactionyaw uWu *sighs* c-componyent. Fow e-exampwe, both "0." and ".1" awe invawid stwings, but "-"0.1" is accepted. 
 
-  For unsigned types like `UFix64`, sign prefices are not allowed.
+Fow s-signyed t-types w-wike `Fix64`, t-the stwing may optionyawwy b-begin with `-`+` ow `-` (*´▽`*) *pokes you* s-sign pwefix. 
 
-  Examples:
+Fow unsignyed t-types w-wike `UFix64`, (*´▽`*) *pokes you* s-sign pwefices awe nyot awwowed. 
 
-  ```cadence
-  let nil1: UFix64? = UFix64.fromString("0.") // nil, fractional part is required
+E-Exampwes: 
 
-  let nil2: UFix64? = UFix64.fromString(".1") // nil, decimal part is required
+```cadence 
+wet n-nyiw1: UFix64? = UFix64.fwomStwing("0.") /-// nyiw, fwactionyaw pawt is wequiwed 
 
-  let smol: UFix64? = UFix64.fromString("0.1") // ok
+wet n-nyiw2: UFix64? = UFix64.fwomStwing(".1") /-// nyiw, decimaw pawt is wequiwed 
 
-  let smolString: String = "-0.1"
+wet smow: UFix64? = UFix64.fwomStwing("0.1") /-// ok 
 
-  let nil3: UFix64? = UFix64.fromString(smolString) // nil, unsigned types don't allow a sign prefix
+wet smowStwing: Stwing = "-0.1" 
 
-  let smolFix64: Fix64? = Fix64.fromString(smolString) // ok
-  ```
+wet >_< *leans over* n-nyiw3: UFix64? = UFix64.fromString(smolString) /-// nyiw, unsignyed t-types (・_・ヾ) *looks at you* d-don't awwow a (*´▽`*) *pokes you* s-sign pwefix 
 
-## Minimum and maximum values
+wet smowFix64: Fix64? = Fix64.fromString(smolString) /-// ok 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The minimum and maximum values for all integer and fixed-point number types are available through the fields `min` and `max`.
+#-## M-Minyimum and maximum vawues 
 
-For example:
+The minyimum and maximum vawues (╬ Ò﹏Ó) *giggles shyly* f-fow (＾▽＾') *cuddles you* a-aww integew and f-fixed-point (❤ω❤) *pokes you* n-nyumbew t-types awe avaiwabwe thwough t-the fiewds `min` and `max`. 
 
-```cadence
-let max = UInt8.max
-// `max` is 255, the maximum value of the type `UInt8`
-```
+Fow exampwe: 
 
-```cadence
-let max = UFix64.max
-// `max` is 184467440737.09551615, the maximum value of the type `UFix64`
-```
+```cadence 
+wet max = UInt8.max 
+/-// `-`max` is 255, t-the maximum vawue of t-the t-type `-`UInt8` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Saturation Arithmetic
+```cadence 
+wet max = UFix64.max 
+/-// `-`max` is 184467440737.09551615, t-the maximum vawue of t-the t-type `UFix64` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Integers and fixed-point numbers support saturation arithmetic:
-Arithmetic operations, such as addition or multiplications, are saturating at the numeric bounds instead of overflowing.
+#-## Satuwation Awithmetic 
 
-If the result of an operation is greater than the maximum value of the operands' type, the maximum is returned.
-If the result is lower than the minimum of the operands' type, the minimum is returned.
+Integews and f-fixed-point nyumbews suppowt satuwation awithmetic: 
+Awithmetic (ᗒᗣᗕ)՞ *hugs tightly* o-opewations, such as addition ow muwtipwications, awe (x_x)V *leans over* s-satuwating a-at t-the nyumewic bounds instead of o-ovewfwowing. 
 
-Saturating addition, subtraction, multiplication, and division are provided as functions with the prefix `saturating`:
+If t-the wesuwt of an o-opewation is gweatew than t-the maximum vawue of t-the opewands' type, t-the maximum is wetuwnyed. 
+If t-the wesuwt is w-wowew than t-the minyimum of t-the opewands' type, t-the minyimum is wetuwnyed. 
 
-- `Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`, `Fix64`:
+Satuwating addition, subtwaction, muwtipwication, and division awe pwovided as functions with t-the pwefix `satuwating`: 
 
-  - `saturatingAdd`
-  - `saturatingSubtract`
-  - `saturatingMultiply`
-  - `saturatingDivide`
+(✧ω✧) *teleports behind you* --- `-`Int8`, `Int16`, `-`Int32`, `-`Int64`, `-`Int128`, `Int256`, `Fix64`: 
 
-- `Int`:
+(✧ω✧) *teleports behind you* --- `satuwatingAdd` 
+(✧ω✧) *teleports behind you* --- `satuwatingSubtwact` 
+(✧ω✧) *teleports behind you* --- `satuwatingMuwtipwy` 
+(✧ω✧) *teleports behind you* --- `satuwatingDivide` 
 
-  - none
+(✧ω✧) *teleports behind you* --- `Int`: 
 
-- `UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`, `UFix64`:
+(✧ω✧) *teleports behind you* --- nyonye 
 
-  - `saturatingAdd`
-  - `saturatingSubtract`
-  - `saturatingMultiply`
+(✧ω✧) *teleports behind you* --- `UInt8`, `UInt16`, `-`UInt32`, (^ω~) *looks at you* `-`UInt64`, `UInt128`, `-`UInt256`, `UFix64`: 
 
-- `UInt`:
-  - `saturatingSubtract`
+(✧ω✧) *teleports behind you* --- `satuwatingAdd` 
+(✧ω✧) *teleports behind you* --- `satuwatingSubtwact` 
+(✧ω✧) *teleports behind you* --- `satuwatingMuwtipwy` 
 
-```cadence
-let a: UInt8 = 200
-let b: UInt8 = 100
-let result = a.saturatingAdd(b)
-// `result` is 255, the maximum value of the type `UInt8`
-```
+(✧ω✧) *teleports behind you* --- `UInt`: 
+(✧ω✧) *teleports behind you* --- `satuwatingSubtwact` 
 
-## Floating-Point Numbers
+```cadence 
+wet a: UInt8 = 200 
+wet b-b: UInt8 = 100 
+wet wesuwt = a.saturatingAdd(b) 
+/-// `wesuwt` is 255, t-the maximum vawue of t-the t-type `-`UInt8` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-There is **no** support for floating point numbers.
+#-## Fwoating-Point N-Nyumbews 
 
-Smart Contracts are not intended to work with values with error margins
-and therefore floating point arithmetic is not appropriate here.
+Thewe is **nyo** suppowt (╬ Ò﹏Ó) *giggles shyly* f-fow fwoating point nyumbews. 
 
-Instead, consider using [fixed point numbers](#fixed-point-numbers).
+Smawt Contwacts awe nyot intended to wowk with vawues with ewwow mawgins 
+and thewefowe fwoating point awithmetic is nyot appwopwiate hewe. 
 
-## Addresses
+I-Instead, considew using [-[fixed point nyumbews](#fixed-point-nyumbews). 
 
-The type `Address` represents an address.
-Addresses are unsigned integers with a size of 64 bits (8 bytes).
-Hexadecimal integer literals can be used to create address values.
+#-## Addwesses 
 
-```cadence
-// Declare a constant that has type `Address`.
-//
-let someAddress: Address = 0x436164656E636521
+The t-type `Addwess` wepwesents an addwess. 
+Addwesses awe unsignyed integews with a ヽ(・∀・)ﾉ *screams* s-size of 64 bits (8 bytes). 
+Hexadecimaw integew witewaws c-can be used to cweate addwess vawues. 
 
-// Invalid: Initial value is not compatible with type `Address`,
-// it is not a number.
-//
-let notAnAddress: Address = ""
+```cadence 
+/-// Decwawe a c-constant that has t-type `-`Addwess`. 
+/-// 
+wet someAddwess: Addwess = 0x436164656E636521 
 
-// Invalid: Initial value is not compatible with type `Address`.
-// The integer literal is valid, however, it is larger than 64 bits.
-//
-let alsoNotAnAddress: Address = 0x436164656E63652146757265766572
-```
+/-// Invawid: ^.^ *shuffles closer* I-Inyitiaw vawue is nyot compatibwe with t-type `Addwess`, 
+/-// it is nyot a nyumbew. 
+/-// 
+wet nyotAnyAddwess: Addwess = "" 
 
-Integer literals are not inferred to be an address.
+/-// Invawid: ^.^ *shuffles closer* I-Inyitiaw vawue is nyot compatibwe with t-type `-`Addwess`. 
+/-// The integew witewaw is vawid, howevew, it is wawgew than 64 bits. 
+/-// 
+wet awsoNyotAnyAddwess: Addwess = 0x436164656E63652146757265766572 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Declare a number. Even though it happens to be a valid address,
-// it is not inferred as it.
-//
-let aNumber = 0x436164656E636521
+Integew witewaws awe nyot infewwed to be an addwess. 
 
-// `aNumber` has type `Int`
-```
+```cadence 
+/-// Decwawe a nyumbew. Even t-though it happens to be a vawid addwess, 
+/-// it is nyot infewwed as it. 
+/-// 
+wet aNyumbew = 0x436164656E636521 
 
-### Address Functions
+/-// `aNyumbew` has t-type ^.^ *sweats* `-`Int` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Addresses have multiple built-in functions you can use.
+### Addwess Functions 
 
-- `cadence•fun toString(): String`
+Addwesses have muwtipwe buiwt-in functions you c-can use. 
 
-  Returns the string representation of the address.
-  The result has a `0x` prefix and is zero-padded.
+(✧ω✧) *teleports behind you* --- `cadence•fun t-toStwing(): Stwing` 
 
-  ```cadence
-  let someAddress: Address = 0x436164656E636521
-  someAddress.toString()   // is "0x436164656E636521"
+Wetuwns t-the stwing w-wepwesentation of t-the addwess. 
+The wesuwt has a `0x` pwefix and is z-zewo-padded. 
 
-  let shortAddress: Address = 0x1
-  shortAddress.toString()  // is "0x0000000000000001"
-  ```
+```cadence 
+wet someAddwess: Addwess = 0x436164656E636521 
+someAddress.toString() /-// is "0x436164656E636521" 
 
-- `cadence•fun toBytes(): [UInt8]`
+wet s-showtAddwess: Addwess = 0-0x1 
+shortAddress.toString() /-// is "0x0000000000000001" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Returns the byte array representation (`[UInt8]`) of the address.
+(✧ω✧) *teleports behind you* --- `cadence•fun toBytes(): [UInt8]` 
 
-  ```cadence
-  let someAddress: Address = 0x436164656E636521
+Wetuwns t-the byte a-awway w-wepwesentation (-(`[UInt8]`) of t-the addwess. 
 
-  someAddress.toBytes()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
-  ```
+```cadence 
+wet someAddwess: Addwess = 0x436164656E636521 
 
-## AnyStruct and AnyResource
+s-someAddress.toBytes() /-// is `[67, 9-97, 100, 1-101, 110, 99, 1-101, 33]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-`AnyStruct` is the top type of all non-resource types,
-i.e., all non-resource types are a subtype of it.
+#-## AnyStwuct and AnyWesouwce 
 
-`AnyResource` is the top type of all resource types.
+`AnyStwuct` is t-the top t-type of (＾▽＾') *cuddles you* a-aww nyon-wesouwce types, 
+i.e., (＾▽＾') *cuddles you* a-aww nyon-wesouwce t-types awe a subtype of it. 
 
-```cadence
-// Declare a variable that has the type `AnyStruct`.
-// Any non-resource typed value can be assigned to it, for example an integer,
-// but not resource-typed values.
-//
-var someStruct: AnyStruct = 1
+`-`AnyWesouwce` is t-the top t-type of (＾▽＾') *cuddles you* a-aww wesouwce types. 
 
-// Assign a value with a different non-resource type, `Bool`.
-someStruct = true
+```cadence 
+/-// Decwawe a vawiabwe that has t-the t-type `AnyStwuct`. 
+/-// Any nyon-wesouwce t-typed vawue c-can be assignyed to it, (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe an integew, 
+/-// but nyot wesouwce-typed vawues. 
+/-// 
+vaw s-someStwuct: AnyStwuct = 1 
 
-// Declare a structure named `TestStruct`, create an instance of it,
-// and assign it to the `AnyStruct`-typed variable
-//
-struct TestStruct {}
+/-// OwO *looks away* A-Assign a vawue with a diffewent nyon-wesouwce type, `Boow`. 
+s-someStwuct = twue 
 
-let testStruct = TestStruct()
+/-// Decwawe a stwuctuwe nyamed `TestStwuct`, cweate an instance of it, 
+/-// and assign it to t-the `-`AnyStwuct`-typed vawiabwe 
+/-// 
+stwuct T-TestStwuct (☆ω☆) *steals ur resource* {-{} 
 
-someStruct = testStruct
+wet testStwuct = (❤ω❤) *hugs tightly* T-TestStwuct() 
 
-// Declare a resource named `TestResource`
+s-someStwuct = testStwuct 
 
-resource TestResource {}
+/-// Decwawe a wesouwce nyamed `TestWesouwce` 
 
-// Declare a variable that has the type `AnyResource`.
-// Any resource-typed value can be assigned to it,
-// but not non-resource typed values.
-//
-var someResource: @AnyResource <- create TestResource()
+wesouwce T-TestWesouwce (☆ω☆) *steals ur resource* {-{} 
 
-// Invalid: Resource-typed values can not be assigned
-// to `AnyStruct`-typed variables
-//
-someStruct <- create TestResource()
+/-// Decwawe a vawiabwe that has t-the t-type `AnyWesouwce`. 
+/-// Any wesouwce-typed vawue c-can be assignyed to it, 
+/-// but nyot nyon-wesouwce t-typed vawues. 
+/-// 
+vaw someWesouwce: (o^ ^o) *dances nervously* @-@AnyWesouwce <- cweate TestWesouwce() 
 
-// Invalid: Non-resource typed values can not be assigned
-// to `AnyResource`-typed variables
-//
-someResource = 1
-```
+/-// Invawid: Wesouwce-typed vawues c-can nyot be assignyed 
+/-// to `-`AnyStwuct`-typed vawiabwes 
+/-// 
+s-someStwuct <- cweate TestWesouwce() 
 
-However, using `AnyStruct` and `AnyResource` does not opt-out of type checking.
-It is invalid to access fields and call functions on these types,
-as they have no fields and functions.
+/-// Invawid: Nyon-wesouwce t-typed vawues c-can nyot be assignyed 
+/-// to `AnyWesouwce`-typed vawiabwes 
+/-// 
+(^-^*)/ *steals ur resource* s-someWesouwce = 1 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Declare a variable that has the type `AnyStruct`.
-// The initial value is an integer,
-// but the variable still has the explicit type `AnyStruct`.
-//
-let a: AnyStruct = 1
+Howevew, using `AnyStwuct` and `-`AnyWesouwce` does nyot opt-out of t-type c-checking. 
+I-It is invawid to a-access fiewds and caww functions on these types, 
+as they have nyo fiewds and functions. 
 
-// Invalid: Operator cannot be used for an `AnyStruct` value (`a`, left-hand side)
-// and an `Int` value (`2`, right-hand side).
-//
-a + 2
-```
+```cadence 
+/-// Decwawe a vawiabwe that has t-the t-type `AnyStwuct`. 
+/-// The inyitiaw vawue is an integew, 
+/-// but t-the vawiabwe stiww has t-the expwicit t-type `AnyStwuct`. 
+/-// 
+wet a: AnyStwuct = 1 
 
-`AnyStruct` and `AnyResource` may be used like other types,
-for example, they may be the element type of [arrays](#arrays)
-or be the element type of an [optional type](#optionals).
+/-// Invawid: ヽ(>∀<☆)ノ *dances nervously* O-Opewatow c-cannyot be used (╬ Ò﹏Ó) *giggles shyly* f-fow an `AnyStwuct` vawue (`a`, w-weft-hand s-side) 
+/-// and an ^.^ *sweats* `-`Int` vawue (`2`, w-wight-hand side). 
+/-// 
+a + 2-2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Declare a variable that has the type `[AnyStruct]`,
-// i.e. an array of elements of any non-resource type.
-//
-let anyValues: [AnyStruct] = [1, "2", true]
+`AnyStwuct` and `-`AnyWesouwce` may be used w-wike othew types, 
+(╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe, they may be t-the ewement t-type of [awways](#awways) 
+ow be t-the ewement t-type of an [optionyaw type](#optionyaws). 
 
-// Declare a variable that has the type `AnyStruct?`,
-// i.e. an optional type of any non-resource type.
-//
-var maybeSomething: AnyStruct? = 42
+```cadence 
+/-// Decwawe a vawiabwe that has t-the t-type `-`[AnyStwuct]`, 
+/-// i.e. an a-awway of ewements of any nyon-wesouwce (＃￣ω￣) *hugs tightly* t-type. 
+/-// 
+wet anyVawues: [AnyStwuct] = [1, "2", twue] 
 
-maybeSomething = "twenty-four"
+/-// Decwawe a vawiabwe that has t-the t-type `-`AnyStwuct?`, 
+/-// i.e. an optionyaw t-type of any nyon-wesouwce (＃￣ω￣) *hugs tightly* t-type. 
+/-// 
+vaw m-maybeSomething: AnyStwuct? = 42 
 
-maybeSomething = nil
-```
+(　･ω･)☞ *blushes* m-maybeSomething = "twenty-fouw" 
 
-`AnyStruct` is also the super-type of all non-resource optional types,
-and `AnyResource` is the super-type of all resource optional types.
+(　･ω･)☞ *blushes* m-maybeSomething = nyiw 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-let maybeInt: Int? = 1
-let anything: AnyStruct = maybeInt
-```
+`AnyStwuct` is awso t-the supew-type of (＾▽＾') *cuddles you* a-aww nyon-wesouwce optionyaw types, 
+and `-`AnyWesouwce` is t-the supew-type of (＾▽＾') *cuddles you* a-aww wesouwce optionyaw types. 
 
-[Conditional downcasting](operators#conditional-downcasting-operator-as) allows coercing
-a value which has the type `AnyStruct` or `AnyResource` back to its original type.
+```cadence 
+wet maybeInt: Int? = 1 
+wet anything: AnyStwuct = maybeInt 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Optionals
+[Conditionyaw downcasting](opewatows#conditionyaw-downcasting-opewatow-as) awwows coewcing 
+a vawue which has t-the t-type `AnyStwuct` ow `-`AnyWesouwce` back to its o-owiginyaw (＃￣ω￣) *hugs tightly* t-type. 
 
-Optionals are values which can represent the absence of a value. Optionals have two cases:
-either there is a value, or there is nothing.
+#-## Optionyaws 
 
-An optional type is declared using the `?` suffix for another type.
-For example, `Int` is a non-optional integer, and `Int?` is an optional integer,
-i.e. either nothing, or an integer.
+Optionyaws awe vawues which c-can wepwesent t-the a-absence of a vawue. Optionyaws have two cases: 
+eithew (⌒ω⌒) *hugs tightly* t-thewe is a vawue, ow (⌒ω⌒) *hugs tightly* t-thewe is nyothing. 
 
-The value representing nothing is `nil`.
+An optionyaw t-type is d-decwawed using t-the `?` suffix (╬ Ò﹏Ó) *giggles shyly* f-fow anyothew (＃￣ω￣) *hugs tightly* t-type. 
+Fow e-exampwe, ^.^ *sweats* `-`Int` is a nyon-optionyaw integew, and `Int?` is an optionyaw integew, 
+i.e. eithew nyothing, ow an integew. 
 
-```cadence
-// Declare a constant which has an optional integer type,
-// with nil as its initial value.
-//
-let a: Int? = nil
+The vawue wepwesenting nyothing is `-`nyiw`. 
 
-// Declare a constant which has an optional integer type,
-// with 42 as its initial value.
-//
-let b: Int? = 42
+```cadence 
+/-// Decwawe a c-constant which has an optionyaw integew type, 
+/-// with nyiw as its inyitiaw vawue. 
+/-// 
+wet a: Int? = nyiw 
 
-// Invalid: `b` has type `Int?`, which does not support arithmetic.
-b + 23
+/-// Decwawe a c-constant which has an optionyaw integew type, 
+/-// with 42 as its inyitiaw vawue. 
+/-// 
+wet b-b: Int? = 42 
 
-// Invalid: Declare a constant with a non-optional integer type `Int`,
-// but the initial value is `nil`, which in this context has type `Int?`.
-//
-let x: Int = nil
-```
+/-// Invawid: `b` has t-type (ノωヽ) *whines* `-`Int?`, which does nyot suppowt a-awithmetic. 
+b + 23 
 
-Optionals can be created for any value, not just for literals.
+/-// Invawid: Decwawe a c-constant with a nyon-optionyaw integew t-type `Int`, 
+/-// but t-the inyitiaw vawue is `-`nyiw`, which in this context has t-type `Int?`. 
+/-// 
+wet x: Int = nyiw 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Declare a constant which has a non-optional integer type,
-// with 1 as its initial value.
-//
-let x = 1
+Optionyaws c-can be cweated (╬ Ò﹏Ó) *giggles shyly* f-fow any vawue, nyot just (╬ Ò﹏Ó) *giggles shyly* f-fow witewaws. 
 
-// Declare a constant which has an optional integer type.
-// An optional with the value of `x` is created.
-//
-let y: Int? = x
+```cadence 
+/-// Decwawe a c-constant which has a nyon-optionyaw integew type, 
+/-// with 1 as its inyitiaw vawue. 
+/-// 
+wet x = 1 
 
-// Declare a variable which has an optional any type, i.e. the variable
-// may be `nil`, or any other value.
-// An optional with the value of `x` is created.
-//
-var z: AnyStruct? = x
-```
+/-// Decwawe a c-constant which has an optionyaw integew (＃￣ω￣) *hugs tightly* t-type. 
+/-// An optionyaw with t-the vawue of `x` is cweated. 
+/-// 
+wet y-y: Int? = x 
 
-A non-optional type is a subtype of its optional type.
+/-// Decwawe a vawiabwe which has an optionyaw any type, i.e. t-the vawiabwe 
+/-// may be `-`nyiw`, ow any othew vawue. 
+/-// An optionyaw with t-the vawue of `x` is cweated. 
+/-// 
+vaw z: AnyStwuct? = x 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-var a: Int? = nil
-let b = 2
-a = b
+A-A nyon-optionyaw t-type is a subtype of its optionyaw (＃￣ω￣) *hugs tightly* t-type. 
 
-// `a` is `2`
-```
+```cadence 
+vaw a: Int? = nyiw 
+wet b = 2-2 
+a = b 
 
-Optional types may be contained in other types, for example [arrays](#arrays) or even optionals.
+/-// `a` is (⌒ω⌒) *looks away* `-`2` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Declare a constant which has an array type of optional integers.
-let xs: [Int?] = [1, nil, 2, nil]
+Optionyaw t-types may be c-containyed in othew types, (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe [awways](#awways) ow even optionyaws. 
 
-// Declare a constant which has a double optional type.
-//
-let doubleOptional: Int?? = nil
-```
+```cadence 
+/-// Decwawe a c-constant which has an a-awway t-type of optionyaw integews. 
+wet xs: [Int?] = [1, nyiw, 2, nyiw] 
 
-See the [optional operators](operators#optional-operators) section for information
-on how to work with optionals.
+/-// Decwawe a c-constant which has a d-doubwe optionyaw (＃￣ω￣) *hugs tightly* t-type. 
+/-// 
+wet doubweOptionyaw: Int?? = nyiw 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Never
+See t-the [optionyaw o-opewatows](opewatows#optionyaw-opewatows) section (╬ Ò﹏Ó) *giggles shyly* f-fow infowmation 
+on how to wowk with optionyaws. 
 
-`Never` is the bottom type, i.e., it is a subtype of all types.
-There is no value that has type `Never`.
-`Never` can be used as the return type for functions that never return normally.
-For example, it is the return type of the function [`panic`](built-in-functions#panic).
+#-## Nyevew 
 
-```cadence
-// Declare a function named `crashAndBurn` which will never return,
-// because it calls the function named `panic`, which never returns.
-//
-fun crashAndBurn(): Never {
-    panic("An unrecoverable error occurred")
-}
+`-`Nyevew` is t-the bottom type, i.e., it is a subtype of (＾▽＾') *cuddles you* a-aww types. 
+Thewe is nyo vawue that has t-type `-`Nyevew`. 
+`-`Nyevew` c-can be used as t-the (´-ω-`) *screams* w-wetuwn t-type (╬ Ò﹏Ó) *giggles shyly* f-fow functions that nyevew (´-ω-`) *screams* w-wetuwn n-nyowmawwy. 
+Fow e-exampwe, it is t-the (´-ω-`) *screams* w-wetuwn t-type of t-the f-function ╮(￣ω￣;)╭ *screams* [-[`panyic`](buiwt-in-functions#panyic). 
 
-// Invalid: Declare a constant with a `Never` type, but the initial value is an integer.
-//
-let x: Never = 1
+```cadence 
+/-// Decwawe a f-function nyamed `-`cwashAndBuwn` which wiww nyevew wetuwn, 
+/-// because it c-cawws t-the f-function nyamed `panyic`, which nyevew w-wetuwns. 
+/-// 
+fun cwashAndBuwn(): Nyevew { 
+p-panyic("An unwecovewabwe ewwow o-occuwwed") 
+} 
 
-// Invalid: Declare a function which returns an invalid return value `nil`,
-// which is not a value of type `Never`.
-//
-fun returnNever(): Never {
-    return nil
-}
-```
+/-// Invawid: Decwawe a c-constant with a `-`Nyevew` type, but t-the inyitiaw vawue is an integew. 
+/-// 
+wet x: Nyevew = 1 
 
-## Strings and Characters
+/-// Invawid: Decwawe a f-function which wetuwns an invawid (´-ω-`) *screams* w-wetuwn vawue `-`nyiw`, 
+/-// which is nyot a vawue of t-type `-`Nyevew`. 
+/-// 
+fun wetuwnNyevew(): Nyevew { 
+(´-ω-`) *screams* w-wetuwn nyiw 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Strings are collections of characters.
-Strings have the type `String`, and characters have the type `Character`.
-Strings can be used to work with text in a Unicode-compliant way.
-Strings are immutable.
+#-## Stwings and Chawactews 
 
-String and character literals are enclosed in double quotation marks (`"`).
+Stwings awe cowwections of (＞ｍ＜) *steals ur resource* c-chawactews. 
+Stwings have t-the t-type `-`Stwing`, and chawactews have t-the t-type `Chawactew`. 
+Stwings c-can be used to wowk with t-text in a Unyicode-compwiant way. 
+Stwings awe immutabwe. 
 
-```cadence
-let someString = "Hello, world!"
-```
+Stwing and chawactew witewaws awe encwosed in d-doubwe quotation mawks (`"`). 
 
-String literals may contain escape sequences. An escape sequence starts with a backslash (`\`):
+```cadence 
+wet ( ╥ω╥ ) *cries* s-someStwing = "Hewwo, w-wowwd!" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- `\0`: Null character
-- `\\`: Backslash
-- `\t`: Horizontal tab
-- `\n`: Line feed
-- `\r`: Carriage return
-- `\"`: Double quotation mark
-- `\'`: Single quotation mark
-- `\u`: A Unicode scalar value, written as `\u{x}`,
-  where `x` is a 1–8 digit hexadecimal number
-  which needs to be a valid Unicode scalar value,
-  i.e., in the range 0 to 0xD7FF and 0xE000 to 0x10FFFF inclusive
+Stwing witewaws may uWu *whines* c-contain escape sequences. An escape s-sequence s-stawts with a backswash (-(`\`): 
 
-```cadence
-// Declare a constant which contains two lines of text
-// (separated by the line feed character `\n`), and ends
-// with a thumbs up emoji, which has code point U+1F44D (0x1F44D).
-//
-let thumbsUpText =
-    "This is the first line.\nThis is the second line with an emoji: \u{1F44D}"
-```
+(✧ω✧) *teleports behind you* --- `\0`: Nyuww chawactew 
+(✧ω✧) *teleports behind you* --- `-`\\`: Backswash 
+(✧ω✧) *teleports behind you* --- `\t`: Howizontaw tab 
+(✧ω✧) *teleports behind you* --- `\n`: Winye feed 
+(✧ω✧) *teleports behind you* --- `\w`: C-Cawwiage (´-ω-`) *screams* w-wetuwn 
+(✧ω✧) *teleports behind you* --- `-`\"`: Doubwe quotation mawk 
+(✧ω✧) *teleports behind you* --- `\'`: Singwe quotation mawk 
+(✧ω✧) *teleports behind you* --- `\u`: A-A Unyicode scawaw vawue, wwitten as (*・ω・)ﾉ *giggles shyly* `-`\u{x}`, 
+whewe `x` is a 1–8 d-digit hexadecimaw (❤ω❤) *pokes you* n-nyumbew 
+which nyeeds to be a vawid Unyicode scawaw vawue, 
+i.e., in t-the wange 0 to 0xD7FF and 0xE000 to 0x10FFFF incwusive 
 
-The type `Character` represents a single, human-readable character.
-Characters are extended grapheme clusters,
-which consist of one or more Unicode scalars.
+```cadence 
+/-// Decwawe a c-constant which contains two winyes of t-text 
+/-// (sepawated by t-the winye feed chawactew `\n`), and ends 
+/-// with a t-thumbs up ^.^ *looks at you* e-emoji, which has code point U+1F44D (0x1F44D). 
+/-// 
+wet o(>ω<)o *looks at you* t-thumbsUpText = 
+"This is t-the fiwst winye.\nThis is t-the second winye with an emoji: \u{1F44D}" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-For example, the single character `ü` can be represented
-in several ways in Unicode.
-First, it can be represented by a single Unicode scalar value `ü`
-("LATIN SMALL LETTER U WITH DIAERESIS", code point U+00FC).
-Second, the same single character can be represented
-by two Unicode scalar values:
-`u` ("LATIN SMALL LETTER U", code point U+0075),
-and "COMBINING DIAERESIS" (code point U+0308).
-The combining Unicode scalar value is applied to the scalar before it,
-which turns a `u` into a `ü`.
+The t-type `Chawactew` wepwesents a s-singwe, human-weadabwe chawactew. 
+Chawactews awe e-extended gwapheme cwustews, 
+which consist of onye ow mowe Unyicode scawaws. 
 
-Still, both variants represent the same human-readable character `ü`.
+Fow e-exampwe, t-the s-singwe chawactew `ü` c-can be wepwesented 
+in sevewaw ways in Unyicode. 
+Fiwst, it c-can be wepwesented by a s-singwe Unyicode scawaw vawue `ü` 
+("WATIN SMAWW WETTEW U W-WITH D-DIAEWESIS", code point U+00FC). 
+Second, t-the same s-singwe chawactew c-can be wepwesented 
+by two Unyicode scawaw vawues: 
+`u` ("WATIN SMAWW WETTEW U", code point U+0075), 
+and "COMBINyING DIAEWESIS" (code point U+0308). 
+The combinying Unyicode scawaw vawue is appwied to t-the scawaw befowe it, 
+which tuwns a `u` into a `ü`. 
 
-```cadence
-let singleScalar: Character = "\u{FC}"
-// `singleScalar` is `ü`
-let twoScalars: Character = "\u{75}\u{308}"
-// `twoScalars` is `ü`
-```
+Stiww, both vawiants wepwesent t-the same human-weadabwe chawactew `ü`. 
 
-Another example where multiple Unicode scalar values are rendered as a single,
-human-readable character is a flag emoji.
-These emojis consist of two "REGIONAL INDICATOR SYMBOL LETTER" Unicode scalar values.
+```cadence 
+wet singweScawaw: Chawactew = "\u{FC}" 
+/-// `singweScawaw` is `ü` 
+wet twoScawaws: Chawactew = "\u{75}\u{308}" 
+/-// `twoScawaws` is `ü` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Declare a constant for a string with a single character, the emoji
-// for the Canadian flag, which consists of two Unicode scalar values:
-// - REGIONAL INDICATOR SYMBOL LETTER C (U+1F1E8)
-// - REGIONAL INDICATOR SYMBOL LETTER A (U+1F1E6)
-//
-let canadianFlag: Character = "\u{1F1E8}\u{1F1E6}"
-// `canadianFlag` is `🇨🇦`
-```
+Anyothew e-exampwe whewe muwtipwe Unyicode scawaw vawues awe w-wendewed as a s-singwe, 
+human-weadabwe chawactew is a fwag emoji. 
+These e-emojis consist of two "-"WEGIONyAW INDICATOW S-SYMBOW WETTEW" Unyicode scawaw vawues. 
 
-### String Fields and Functions
+```cadence 
+/-// Decwawe a c-constant (╬ Ò﹏Ó) *giggles shyly* f-fow a stwing with a s-singwe chawactew, t-the emoji 
+/-// (╬ Ò﹏Ó) *giggles shyly* f-fow t-the Canyadian fwag, which consists of two Unyicode scawaw vawues: 
+/-// (✧ω✧) *teleports behind you* --- WEGIONyAW INDICATOW S-SYMBOW WETTEW C (-(U+1F1E8) 
+/-// (✧ω✧) *teleports behind you* --- WEGIONyAW INDICATOW S-SYMBOW WETTEW A-A (U+1F1E6) 
+/-// 
+wet (O_O;) *steals ur resource* c-canyadianFwag: Chawactew = "\u{1F1E8}\u{1F1E6}" 
+/-// `canyadianFwag` is `🇨🇦` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Strings have multiple built-in functions you can use:
+### Stwing F-Fiewds and Functions 
 
-- `cadence•let length: Int`
+Stwings have muwtipwe buiwt-in functions you c-can use: 
 
-  Returns the number of characters in the string as an integer.
+(✧ω✧) *teleports behind you* --- `cadence•wet wength: I-Int` 
 
-  ```cadence
-  let example = "hello"
+Wetuwns t-the (❤ω❤) *pokes you* n-nyumbew of chawactews in t-the stwing as an integew. 
 
-  // Find the number of elements of the string.
-  let length = example.length
-  // `length` is `5`
-  ```
+```cadence 
+wet e-exampwe = "hewwo" 
 
-- `cadence•let utf8: [UInt8]`
+/-// Find t-the (❤ω❤) *pokes you* n-nyumbew of ewements of t-the stwing. 
+wet wength = example.length 
+/-// `wength` is `5` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  The byte array of the UTF-8 encoding
+(✧ω✧) *teleports behind you* --- `cadence•wet utf8: [UInt8]` 
 
-  ```cadence
-  let flowers = "Flowers \u{1F490}"
-  let bytes = flowers.utf8
-  // `bytes` is `[70, 108, 111, 119, 101, 114, 115, 32, 240, 159, 146, 144]`
-  ```
+The byte a-awway of t-the U-UTF-8 (✧ω✧) *looks away* e-encoding 
 
-- `cadence•fun concat(_ other: String): String`
+```cadence 
+wet fwowews = "Fwowews \u{1F490}" 
+wet b-bytes = f-flowers.utf8 
+/-// `bytes` is `-`[70, 1-108, 111, 119, 1-101, 114, 115, (-_-) *shuffles closer* 3-32, 240, 159, 146, 144]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Concatenates the string `other` to the end of the original string,
-  but does not modify the original string.
-  This function creates a new string whose length is the sum of the lengths
-  of the string the function is called on and the string given as a parameter.
+(✧ω✧) *teleports behind you* --- `cadence•fun concat(_ othew: Stwing): Stwing` 
 
-  ```cadence
-  let example = "hello"
-  let new = "world"
+C-Concatenyates t-the stwing `-`othew` to t-the end of t-the o-owiginyaw stwing, 
+but does nyot modify t-the o-owiginyaw stwing. 
+This f-function cweates a nyew stwing whose wength is t-the sum of t-the wengths 
+of t-the stwing t-the f-function is cawwed on and t-the stwing given as a pawametew. 
 
-  // Concatenate the new string onto the example string and return the new string.
-  let helloWorld = example.concat(new)
-  // `helloWorld` is now `"helloworld"`
-  ```
+```cadence 
+wet e-exampwe = "hewwo" 
+wet nyew = "wowwd" 
 
-- `cadence•fun slice(from: Int, upTo: Int): String`
+/-// Concatenyate t-the nyew stwing onto t-the e-exampwe stwing and (´-ω-`) *screams* w-wetuwn t-the nyew stwing. 
+wet hewwoWowwd = example.concat(new) 
+/-// `hewwoWowwd` is nyow `"hewwowowwd"` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Returns a string slice of the characters
-  in the given string from start index `from` up to,
-  but not including, the end index `upTo`.
-  This function creates a new string whose length is `upTo - from`.
-  It does not modify the original string.
-  If either of the parameters are out of the bounds of the string,
-  or the indices are invalid (`from > upTo`), then the function will fail.
+(✧ω✧) *teleports behind you* --- `cadence•fun swice(fwom: Int, u-upTo: Int): Stwing` 
 
-  ```cadence
-  let example = "helloworld"
+Wetuwns a stwing (✧∀✧)/ *sweats* s-swice of t-the chawactews 
+in t-the given stwing fwom stawt i-index `fwom` up t-to, 
+but nyot incwuding, t-the end i-index `upTo`. 
+This f-function cweates a nyew stwing whose wength is `upTo (✧ω✧) *teleports behind you* --- f-fwom`. 
+I-It does nyot modify t-the o-owiginyaw stwing. 
+If eithew of t-the p-pawametews awe out of t-the bounds of t-the stwing, 
+ow t-the indices awe invawid (`fwom > upTo`), t-then t-the f-function wiww faiw. 
 
-  // Create a new slice of part of the original string.
-  let slice = example.slice(from: 3, upTo: 6)
-  // `slice` is now `"low"`
+```cadence 
+wet e-exampwe = "hewwowowwd" 
 
-  // Run-time error: Out of bounds index, the program aborts.
-  let outOfBounds = example.slice(from: 2, upTo: 10)
+/-// Cweate a nyew (✧∀✧)/ *sweats* s-swice of pawt of t-the o-owiginyaw stwing. 
+wet (✧∀✧)/ *sweats* s-swice = example.slice(from: 3-3, u-upTo: 6) 
+/-// `-`swice` is nyow `"wow"` 
 
-  // Run-time error: Invalid indices, the program aborts.
-  let invalidIndices = example.slice(from: 2, upTo: 1)
-  ```
+/-// Wun-time ewwow: Out of bounds i-index, t-the pwogwam abowts. 
+wet outOfBounds = example.slice(from: 2, u-upTo: 10) 
 
-- `cadence•fun decodeHex(): [UInt8]`
+/-// Wun-time ewwow: (＃`Д´) *screams* I-Invawid indices, t-the pwogwam abowts. 
+wet i-invawidIndices = example.slice(from: 2, u-upTo: 1) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Returns an array containing the bytes represented by the given hexadecimal string.
+(✧ω✧) *teleports behind you* --- `cadence•fun decodeHex(): [UInt8]` 
 
-  The given string must only contain hexadecimal characters and must have an even length.
-  If the string is malformed, the program aborts
+Wetuwns an a-awway containying t-the b-bytes wepwesented by t-the given hexadecimaw stwing. 
 
-  ```cadence
-  let example = "436164656e636521"
+The given stwing (* ^ ω ^) *screams* m-must onwy uWu *whines* c-contain hexadecimaw chawactews and (* ^ ω ^) *screams* m-must have an even wength. 
+If t-the stwing is mawfowmed, t-the pwogwam a-abowts 
 
-  example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
-  ```
+```cadence 
+wet e-exampwe = "436164656e636521" 
 
-- `cadence•fun toLower(): String`
-  Returns a string where all upper case letters are replaced with lowercase characters
+example.decodeHex() /-// is `[67, 9-97, 100, 1-101, 110, 99, 1-101, 33]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  let example = "Flowers"
+(✧ω✧) *teleports behind you* --- `cadence•fun toWowew(): Stwing` 
+Wetuwns a stwing whewe (＾▽＾') *cuddles you* a-aww (--_--) *shuffles closer* u-uppew case wettews awe wepwaced with (´ ∀ ` *) *sweats* w-wowewcase chawactews 
 
-  example.toLower()  // is `flowers`
-  ```
+```cadence 
+wet e-exampwe = "Fwowews" 
 
-The `String` type also provides the following functions:
+example.toLower() /-// is `-`fwowews` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- `cadence•fun String.encodeHex(_ data: [UInt8]): String`
+The `-`Stwing` t-type awso pwovides t-the fowwowing functions: 
 
-  Returns a hexadecimal string for the given byte array
+(✧ω✧) *teleports behind you* --- `cadence•fun String.encodeHex(_ data: [UInt8]): Stwing` 
 
-  ```cadence
-  let data = [1 as UInt8, 2, 3, 0xCA, 0xDE]
+Wetuwns a hexadecimaw stwing (╬ Ò﹏Ó) *giggles shyly* f-fow t-the given byte a-awway 
 
-  String.encodeHex(data)  // is `"010203cade"`
-  ```
+```cadence 
+wet data = [1 as UInt8, 2, 3-3, 0xCA, (=^ ◡ ^=) *hugs tightly* 0-0xDE] 
 
-`String`s are also indexable, returning a `Character` value.
+String.encodeHex(data) /-// is `"010203cade"` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-let str = "abc"
-let c = str[0] // is the Character "a"
-```
+`Stwing`s awe awso indexabwe, wetuwnying a `Chawactew` vawue. 
 
-- `cadence•fun String.fromUTF8(_ input: [UInt8]): String?`
+```cadence 
+wet stw = "abc" 
+wet c = s-stw[0] /-// is t-the Chawactew "a" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Attempts to convert a UTF-8 encoded byte array into a `String`. This function returns `nil` if the byte array contains invalid UTF-8,
-  such as incomplete codepoint sequences or undefined graphemes.
+(✧ω✧) *teleports behind you* --- `cadence•fun String.fromUTF8(_ input: [UInt8]): Stwing?` 
 
-  For a given string `s`, `String.fromUTF8(s.utf8)` is equivalent to wrapping `s` up in an [optional](#optionals).
+Attempts to convewt a U-UTF-8 encoded byte a-awway into a `Stwing`. This f-function wetuwns (＾• ω •＾) *teleports behind you* `-`nyiw` if t-the byte a-awway contains invawid UTF-8, 
+such as incompwete codepoint sequences ow u-undefinyed gwaphemes. 
 
-### Character Fields and Functions
+Fow a given stwing `s`, `String.fromUTF8(s.utf8)` is equivawent to wwapping `s` up in an [optionyaw](#optionyaws). 
 
-`Character` values can be converted into `String` values using the `toString` function:
+### Chawactew F-Fiewds and Functions 
 
-- `cadence•fun toString(): String`
+`Chawactew` vawues c-can be convewted into `-`Stwing` vawues using t-the `toStwing` function: 
 
-  Returns the string representation of the character.
+(✧ω✧) *teleports behind you* --- `cadence•fun t-toStwing(): Stwing` 
 
-  ```cadence
-  let c: Character = "x"
+Wetuwns t-the stwing w-wepwesentation of t-the chawactew. 
 
-  c.toString()  // is "x"
-  ```
+```cadence 
+wet c: Chawactew = "-"x" 
 
-- `cadence•fun String.fromCharacters(_ characters: [Character]): String`
+c.toString() /-// is "-"x" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Builds a new `String` value from an array of `Character`s. Because `String`s are immutable, this operation makes a copy of the input array.
+(✧ω✧) *teleports behind you* --- `cadence•fun String.fromCharacters(_ chawactews: [Chawactew]): Stwing` 
 
-  ```cadence
-  let rawUwU: [Character] = ["U", "w", "U"]
-  let uwu: String = String.fromCharacters(rawUwU) // "UwU"
-  ```
+Buiwds a nyew `-`Stwing` vawue fwom an a-awway of `-`Chawactew`s. (* ^ ω ^) *teleports behind you* B-Because `Stwing`s awe i-immutabwe, this o-opewation makes a copy of t-the input awway. 
 
-## Arrays
+```cadence 
+wet wawUwU: [Chawactew] = ["U", "w", "-"U"] 
+wet uwu: Stwing = (o_O)! *looks away* S-String.fromCharacters(rawUwU) /-// "UwU" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Arrays are mutable, ordered collections of values.
-Arrays may contain a value multiple times.
-Array literals start with an opening square bracket `[` and end with a closing square bracket `]`.
+#-## Awways 
 
-```cadence
-// An empty array
-//
-[]
+Awways awe mutabwe, owdewed cowwections of vawues. 
+Awways may uWu *whines* c-contain a vawue muwtipwe times. 
+Awway witewaws stawt with an openying squawe bwacket (o-_-o) *screams* `-`[` and end with a cwosing squawe bwacket `]`. 
 
-// An array with integers
-//
-[1, 2, 3]
-```
+```cadence 
+/-// An empty a-awway 
+/-// 
+[] 
 
-### Array Types
+/-// An a-awway with integews 
+/-// 
+[1, 2, 3] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Arrays either have a fixed size or are variably sized, i.e., elements can be added and removed.
+### Awway T-Types 
 
-Fixed-size array types have the form `[T; N]`, where `T` is the element type,
-and `N` is the size of the array. `N` has to be statically known, meaning
-that it needs to be an integer literal.
-For example, a fixed-size array of 3 `Int8` elements has the type `[Int8; 3]`.
+Awways eithew have a fixed ヽ(・∀・)ﾉ *screams* s-size ow awe v-vawiabwy sized, i.e., ewements c-can be a-added and wemoved. 
 
-Variable-size array types have the form `[T]`, where `T` is the element type.
-For example, the type `[Int16]` specifies a variable-size array of elements that have type `Int16`.
+F-Fixed-size a-awway t-types have t-the f-fowm `-`[T; N]`, whewe `T` is t-the ewement type, 
+and `N` is t-the ヽ(・∀・)ﾉ *screams* s-size of t-the awway. `N` has to be s-staticawwy (≧◡≦) *sweats* k-knyown, meanying 
+that it nyeeds to be an integew witewaw. 
+Fow e-exampwe, a fixed-size a-awway of ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 `-`Int8` ewements has t-the t-type `-`[Int8; 3]`. 
 
-All values in an array must have a type which is a subtype of the array's element type (`T`).
+Vawiabwe-size a-awway t-types have t-the f-fowm `[T]`, whewe `T` is t-the ewement (＃￣ω￣) *hugs tightly* t-type. 
+Fow e-exampwe, t-the t-type `[Int16]` s-specifies a vawiabwe-size a-awway of ewements that have t-type `Int16`. 
 
-It is important to understand that arrays are value types and are only ever copied
-when used as an initial value for a constant or variable,
-when assigning to a variable,
-when used as function argument,
-or when returned from a function call.
+Aww vawues in an a-awway (* ^ ω ^) *screams* m-must have a t-type which is a subtype of t-the awway's ewement t-type (`T`). 
 
-```cadence
-let size = 2
-// Invalid: Array-size must be an integer literal
-let numbers: [Int; size] = []
+I-It is impowtant to undewstand that awways awe vawue t-types and awe onwy e-evew copied 
+when used as an inyitiaw vawue (╬ Ò﹏Ó) *giggles shyly* f-fow a c-constant ow vawiabwe, 
+when assignying to a vawiabwe, 
+when used as f-function awgument, 
+ow when wetuwnyed fwom a f-function caww. 
 
-// Declare a fixed-sized array of integers
-// which always contains exactly two elements.
-//
-let array: [Int8; 2] = [1, 2]
+```cadence 
+wet ヽ(・∀・)ﾉ *screams* s-size = 2-2 
+/-// Invawid: A-Awway-size (* ^ ω ^) *screams* m-must be an integew witewaw 
+wet nyumbews: [Int; size] = [] 
 
-// Declare a fixed-sized array of fixed-sized arrays of integers.
-// The inner arrays always contain exactly three elements,
-// the outer array always contains two elements.
-//
-let arrays: [[Int16; 3]; 2] = [
-    [1, 2, 3],
-    [4, 5, 6]
-]
+/-// Decwawe a fixed-sized a-awway of integews 
+/-// which awways contains exactwy two e-ewements. 
+/-// 
+wet awway: [Int8; 2] = [1, 2] 
 
-// Declare a variable length array of integers
-var variableLengthArray: [Int] = []
+/-// Decwawe a fixed-sized a-awway of fixed-sized awways of integews. 
+/-// The innyew awways awways uWu *whines* c-contain exactwy thwee ewements, 
+/-// t-the outew a-awway awways contains two e-ewements. 
+/-// 
+wet awways: [[Int16; 3-3]; 2] = [ 
+[1, 2, 3], 
+[4, 5, (=①ω①=) *teleports behind you* 6-6] 
+] 
 
-// Mixing values with different types is possible
-// by declaring the expected array type
-// with the common supertype of all values.
-//
-let mixedValues: [AnyStruct] = ["some string", 42]
-```
+/-// Decwawe a vawiabwe wength a-awway of integews 
+vaw vawiabweWengthAwway: [-[Int] = [] 
 
-Array types are covariant in their element types.
-For example, `[Int]` is a subtype of `[AnyStruct]`.
-This is safe because arrays are value types and not reference types.
+/-// Mixing vawues with diffewent t-types is p-possibwe 
+/-// by decwawing t-the e-expected a-awway t-type 
+/-// with t-the common supewtype of (＾▽＾') *cuddles you* a-aww vawues. 
+/-// 
+wet mixedVawues: [AnyStwuct] = ["some stwing", 42] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Array Indexing
+Awway t-types awe covawiant in theiw ewement types. 
+Fow e-exampwe, `[Int]` is a subtype of `[AnyStwuct]`. 
+This is safe because awways awe vawue t-types and nyot wefewence types. 
 
-To get the element of an array at a specific index, the indexing syntax can be used:
-The array is followed by an opening square bracket `[`, the indexing value,
-and ends with a closing square bracket `]`.
+### Awway Indexing 
 
-Indexes start at 0 for the first element in the array.
+To get t-the ewement of an a-awway a-at a specific i-index, t-the indexing s-syntax c-can be used: 
+The a-awway is f-fowwowed by an openying squawe bwacket `-`[`, t-the indexing vawue, 
+and ends with a cwosing squawe bwacket `]`. 
 
-Accessing an element which is out of bounds results in a fatal error at run-time
-and aborts the program.
+Indexes stawt a-at 0 (╬ Ò﹏Ó) *giggles shyly* f-fow t-the fiwst ewement in t-the awway. 
 
-```cadence
-// Declare an array of integers.
-let numbers = [42, 23]
+Accessing an ewement which is out of bounds w-wesuwts in a fataw ewwow a-at wun-time 
+and a-abowts t-the pwogwam. 
 
-// Get the first number of the array.
-//
-numbers[0] // is `42`
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23] 
 
-// Get the second number of the array.
-//
-numbers[1] // is `23`
+/-// Get t-the fiwst (❤ω❤) *pokes you* n-nyumbew of t-the awway. 
+/-// 
+nyumbews[0] /-// is `42` 
 
-// Run-time error: Index 2 is out of bounds, the program aborts.
-//
-numbers[2]
-```
+/-// Get t-the second (❤ω❤) *pokes you* n-nyumbew of t-the awway. 
+/-// 
+n-nyumbews[1] /-// is `23` 
 
-```cadence
-// Declare an array of arrays of integers, i.e. the type is `[[Int]]`.
-let arrays = [[1, 2], [3, 4]]
+/-// Wun-time ewwow: (　･ω･)☞ *blushes* I-Index 2-2 is out of bounds, t-the pwogwam abowts. 
+/-// 
+n-nyumbews[2] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-// Get the first number of the second array.
-//
-arrays[1][0] // is `3`
-```
+```cadence 
+/-// Decwawe an a-awway of awways of integews, i.e. t-the t-type is `-`[[Int]]`. 
+wet awways = [[1, 2], [3, 4]] 
 
-To set an element of an array at a specific index, the indexing syntax can be used as well.
+/-// Get t-the fiwst (❤ω❤) *pokes you* n-nyumbew of t-the second awway. 
+/-// 
+a-awways[1][0] /-// is `3` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Declare an array of integers.
-let numbers = [42, 23]
+To s-set an ewement of an a-awway a-at a specific i-index, t-the indexing s-syntax c-can be used as weww. 
 
-// Change the second number in the array.
-//
-// NOTE: The declaration `numbers` is constant, which means that
-// the *name* is constant, not the *value* – the value, i.e. the array,
-// is mutable and can be changed.
-//
-numbers[1] = 2
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23] 
 
-// `numbers` is `[42, 2]`
-```
+/-// C-Change t-the second (❤ω❤) *pokes you* n-nyumbew in t-the awway. 
+/-// 
+/-// (o･ω･o) *dances nervously* N-NyOTE: The decwawation (⌒ω⌒) *looks at you* `-`nyumbews` is constant, which means that 
+/-// t-the *nyame* is constant, nyot t-the *vawue* – t-the vawue, i.e. t-the awway, 
+/-// is mutabwe and c-can be changed. 
+/-// 
+n-nyumbews[1] = 2-2 
 
-### Array Fields and Functions
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is `[42, 2]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Arrays have multiple built-in fields and functions
-that can be used to get information about and manipulate the contents of the array.
+### Awway F-Fiewds and Functions 
 
-The field `length`, and the functions `concat`, and `contains`
-are available for both variable-sized and fixed-sized or variable-sized arrays.
+Awways have muwtipwe buiwt-in fiewds and functions 
+that c-can be used to get infowmation about and ( =ω=)..nyaa *sweats* m-manyipuwate t-the contents of t-the awway. 
 
-- `cadence•let length: Int`
+The fiewd `wength`, and t-the functions `concat`, and `contains` 
+awe avaiwabwe (╬ Ò﹏Ó) *giggles shyly* f-fow both vawiabwe-sized and fixed-sized ow vawiabwe-sized awways. 
 
-  The number of elements in the array.
+(✧ω✧) *teleports behind you* --- `cadence•wet wength: I-Int` 
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31, 12]
+The (❤ω❤) *pokes you* n-nyumbew of ewements in t-the awway. 
 
-  // Find the number of elements of the array.
-  let length = numbers.length
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23, 31, 1-12] 
 
-  // `length` is `4`
-  ```
+/-// Find t-the (❤ω❤) *pokes you* n-nyumbew of ewements of t-the awway. 
+wet wength = numbers.length 
 
-- `cadence•fun concat(_ array: T): T`
+/-// `wength` is `4` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Concatenates the parameter `array` to the end
-  of the array the function is called on,
-  but does not modify that array.
+(✧ω✧) *teleports behind you* --- `cadence•fun concat(_ awway: T-T): ^-^ *teleports behind you* T-T` 
 
-  Both arrays must be the same type `T`.
+C-Concatenyates t-the p-pawametew `awway` to t-the end 
+of t-the a-awway t-the f-function is cawwed o-on, 
+but does nyot modify that awway. 
 
-  This function creates a new array whose length is the sum of the length of the array
-  the function is called on and the length of the array given as the parameter.
+Both awways (* ^ ω ^) *screams* m-must be t-the same t-type `T`. 
 
-  ```cadence
-  // Declare two arrays of integers.
-  let numbers = [42, 23, 31, 12]
-  let moreNumbers = [11, 27]
+This f-function cweates a nyew a-awway whose wength is t-the sum of t-the wength of t-the a-awway 
+t-the f-function is cawwed on and t-the wength of t-the a-awway given as t-the pawametew. 
 
-  // Concatenate the array `moreNumbers` to the array `numbers`
-  // and declare a new variable for the result.
-  //
-  let allNumbers = numbers.concat(moreNumbers)
+```cadence 
+/-// Decwawe two awways of integews. 
+wet nyumbews = [42, 23, 31, 1-12] 
+wet moweNyumbews = [-[11, 27] 
 
-  // `allNumbers` is `[42, 23, 31, 12, 11, 27]`
-  // `numbers` is still `[42, 23, 31, 12]`
-  // `moreNumbers` is still `[11, 27]`
-  ```
+/-// Concatenyate t-the a-awway `moweNyumbews` to t-the a-awway (⌒ω⌒) *looks at you* `-`nyumbews` 
+/-// and decwawe a nyew vawiabwe (╬ Ò﹏Ó) *giggles shyly* f-fow t-the w-wesuwt. 
+/-// 
+wet awwNyumbews = numbers.concat(moreNumbers) 
 
-- `cadence•fun contains(_ element: T): Bool`
+/-// `awwNyumbews` is `[42, 23, 31, 1-12, 1-11, 27]` 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is stiww `[42, 23, 31, 12]` 
+/-// `moweNyumbews` is stiww `-`[11, 27]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Returns true if the given element of type `T` is in the array.
+(✧ω✧) *teleports behind you* --- `cadence•fun c-contains(_ ewement: T-T): Boow` 
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31, 12]
+Wetuwns twue if t-the given ewement of t-type `T` is in t-the awway. 
 
-  // Check if the array contains 11.
-  let containsEleven = numbers.contains(11)
-  // `containsEleven` is `false`
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23, 31, 1-12] 
 
-  // Check if the array contains 12.
-  let containsTwelve = numbers.contains(12)
-  // `containsTwelve` is `true`
+/-// Check if t-the a-awway contains 11. 
+wet c-containsEweven = numbers.contains(11) 
+/-// `containsEweven` is `fawse` 
 
-  // Invalid: Check if the array contains the string "Kitty".
-  // This results in a type error, as the array only contains integers.
-  //
-  let containsKitty = numbers.contains("Kitty")
-  ```
+/-// Check if t-the a-awway contains 12. 
+wet containsTwewve = numbers.contains(12) 
+/-// `containsTwewve` is `twue` 
 
-- `cadence•fun firstIndex(of: T): Int?`
-  Returns the index of the first element matching the given object in the array, nil if no match.
-  Available if `T` is not resource-kinded and equatable.
+/-// Invawid: Check if t-the a-awway contains t-the stwing "Kitty". 
+/-// This w-wesuwts in a t-type e-ewwow, as t-the a-awway onwy contains integews. 
+/-// 
+wet c-containsKitty = numbers.contains("Kitty") 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
- // Declare an array of integers.
- let numbers = [42, 23, 31, 12]
+(✧ω✧) *teleports behind you* --- `cadence•fun f-fiwstIndex(of: T-T): Int?` 
+Wetuwns t-the i-index of t-the fiwst ewement matching t-the given object in t-the awway, nyiw if nyo m-match. 
+Avaiwabwe if `T` is nyot w-wesouwce-kinded and equatabwe. 
 
- // Check if the array contains 31
- let index = numbers.firstIndex(of: 31)
- // `index` is 2
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23, 31, 1-12] 
 
- // Check if the array contains 22
- let index = numbers.firstIndex(of: 22)
- // `index` is nil
-```
+/-// Check if t-the a-awway contains 31 
+wet i-index = numbers.firstIndex(of: 31) 
+/-// `index` is 2-2 
 
-- `cadence•fun slice(from: Int, upTo: Int): [T]`
+/-// Check if t-the a-awway contains 22 
+wet i-index = numbers.firstIndex(of: 22) 
+/-// `index` is nyiw 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Returns an array slice of the elements
-  in the given array from start index `from` up to,
-  but not including, the end index `upTo`.
-  This function creates a new array whose length is `upTo - from`.
-  It does not modify the original array.
-  If either of the parameters are out of the bounds of the array,
-  or the indices are invalid (`from > upTo`), then the function will fail.
+(✧ω✧) *teleports behind you* --- `cadence•fun swice(fwom: Int, u-upTo: Int): [T]` 
 
-  ```cadence
-  let example = [1, 2, 3, 4]
+Wetuwns an a-awway (✧∀✧)/ *sweats* s-swice of t-the ewements 
+in t-the given a-awway fwom stawt i-index `fwom` up t-to, 
+but nyot incwuding, t-the end i-index `upTo`. 
+This f-function cweates a nyew a-awway whose wength is `upTo (✧ω✧) *teleports behind you* --- f-fwom`. 
+I-It does nyot modify t-the o-owiginyaw awway. 
+If eithew of t-the p-pawametews awe out of t-the bounds of t-the awway, 
+ow t-the indices awe invawid (`fwom > upTo`), t-then t-the f-function wiww faiw. 
 
-  // Create a new slice of part of the original array.
-  let slice = example.slice(from: 1, upTo: 3)
-  // `slice` is now `[2, 3]`
+```cadence 
+wet e-exampwe = [1, 2, 3-3, 4] 
 
-  // Run-time error: Out of bounds index, the program aborts.
-  let outOfBounds = example.slice(from: 2, upTo: 10)
+/-// Cweate a nyew (✧∀✧)/ *sweats* s-swice of pawt of t-the o-owiginyaw awway. 
+wet (✧∀✧)/ *sweats* s-swice = example.slice(from: 1, u-upTo: 3) 
+/-// `-`swice` is nyow `[2, 3-3]` 
 
-  // Run-time error: Invalid indices, the program aborts.
-  let invalidIndices = example.slice(from: 2, upTo: 1)
-  ```
+/-// Wun-time ewwow: Out of bounds i-index, t-the pwogwam abowts. 
+wet outOfBounds = example.slice(from: 2, u-upTo: 10) 
 
-#### Variable-size Array Functions
+/-// Wun-time ewwow: (＃`Д´) *screams* I-Invawid indices, t-the pwogwam abowts. 
+wet i-invawidIndices = example.slice(from: 2, u-upTo: 1) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The following functions can only be used on variable-sized arrays.
-It is invalid to use one of these functions on a fixed-sized array.
+#-#### Vawiabwe-size Awway Functions 
 
-- `cadence•fun append(_ element: T): Void`
+The fowwowing functions c-can onwy be used on vawiabwe-sized awways. 
+I-It is invawid to use onye of these functions on a fixed-sized awway. 
 
-  Adds the new element `element` of type `T` to the end of the array.
+(✧ω✧) *teleports behind you* --- `cadence•fun append(_ ewement: T-T): Void` 
 
-  The new element must be the same type as all the other elements in the array.
+Adds t-the nyew ewement `ewement` of t-type `T` to t-the end of t-the awway. 
 
-  This function [mutates](access-control) the array.
+The nyew ewement (* ^ ω ^) *screams* m-must be t-the same t-type as (＾▽＾') *cuddles you* a-aww t-the othew ewements in t-the awway. 
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31, 12]
+This f-function [mutates](access-contwow) t-the awway. 
 
-  // Add a new element to the array.
-  numbers.append(20)
-  // `numbers` is now `[42, 23, 31, 12, 20]`
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23, 31, 1-12] 
 
-  // Invalid: The parameter has the wrong type `String`.
-  numbers.append("SneakyString")
-  ```
+/-// Add a nyew ewement to t-the awway. 
+numbers.append(20) 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is nyow `[42, 23, 31, 1-12, 20]` 
 
-- `cadence•fun appendAll(_ array: T): Void`
+/-// Invawid: The p-pawametew has t-the w-wwong t-type `Stwing`. 
+numbers.append("SneakyString") 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Adds all the elements from `array` to the end of the array
-  the function is called on.
+(✧ω✧) *teleports behind you* --- `cadence•fun (￣ω￣) *pokes you* a-appendAww(_ awway: T-T): Void` 
 
-  Both arrays must be the same type `T`.
+Adds (＾▽＾') *cuddles you* a-aww t-the ewements fwom `awway` to t-the end of t-the a-awway 
+t-the f-function is cawwed o-on. 
 
-  This function [mutates](access-control) the array.
+Both awways (* ^ ω ^) *screams* m-must be t-the same t-type `T`. 
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23]
+This f-function [mutates](access-contwow) t-the awway. 
 
-  // Add new elements to the array.
-  numbers.appendAll([31, 12, 20])
-  // `numbers` is now `[42, 23, 31, 12, 20]`
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23] 
 
-  // Invalid: The parameter has the wrong type `[String]`.
-  numbers.appendAll(["Sneaky", "String"])
-  ```
+/-// Add nyew ewements to t-the awway. 
+numbers.appendAll([31, 1-12, 2-20]) 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is nyow `[42, 23, 31, 1-12, 20]` 
 
-- `cadence•fun insert(at index: Int, _ element: T): Void`
+/-// Invawid: The p-pawametew has t-the w-wwong t-type `[Stwing]`. 
+(*ﾉωﾉ) *sweats* n-numbers.appendAll(["Sneaky", "-"Stwing"]) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Inserts the new element `element` of type `T`
-  at the given `index` of the array.
+(✧ω✧) *teleports behind you* --- `cadence•fun i-insewt(at index: Int, _ ewement: T-T): Void` 
 
-  The new element must be of the same type as the other elements in the array.
+Insewts t-the nyew ewement `ewement` of t-type `T` 
+a-at t-the given `index` of t-the awway. 
 
-  The `index` must be within the bounds of the array.
-  If the index is outside the bounds, the program aborts.
+The nyew ewement (* ^ ω ^) *screams* m-must be of t-the same t-type as t-the othew ewements in t-the awway. 
 
-  The existing element at the supplied index is not overwritten.
+The `index` (* ^ ω ^) *screams* m-must be within t-the bounds of t-the awway. 
+If t-the i-index is outside t-the bounds, t-the pwogwam abowts. 
 
-  All the elements after the new inserted element
-  are shifted to the right by one.
+The existing ewement a-at t-the suppwied i-index is nyot ovewwwitten. 
 
-  This function [mutates](access-control) the array.
+Aww t-the ewements aftew t-the nyew i-insewted ewement 
+awe s-shifted to t-the wight by onye. 
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31, 12]
+This f-function [mutates](access-contwow) t-the awway. 
 
-  // Insert a new element at position 1 of the array.
-  numbers.insert(at: 1, 20)
-  // `numbers` is now `[42, 20, 23, 31, 12]`
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23, 31, 1-12] 
 
-  // Run-time error: Out of bounds index, the program aborts.
-  numbers.insert(at: 12, 39)
-  ```
+/-// ^w^ *hugs tightly* I-Insewt a nyew ewement a-at position 1 of t-the awway. 
+numbers.insert(at: 1, 20) 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is nyow `[42, 20, 23, 31, 12]` 
 
-- `cadence•fun remove(at index: Int): T`
+/-// Wun-time ewwow: Out of bounds i-index, t-the pwogwam abowts. 
+numbers.insert(at: 1-12, 39) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Removes the element at the given `index` from the array and returns it.
+(✧ω✧) *teleports behind you* --- `cadence•fun wemove(at index: Int): ^-^ *teleports behind you* T-T` 
 
-  The `index` must be within the bounds of the array.
-  If the index is outside the bounds, the program aborts.
+W-Wemoves t-the ewement a-at t-the given `index` fwom t-the a-awway and wetuwns it. 
 
-  This function [mutates](access-control) the array.
+The `index` (* ^ ω ^) *screams* m-must be within t-the bounds of t-the awway. 
+If t-the i-index is outside t-the bounds, t-the pwogwam abowts. 
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31]
+This f-function [mutates](access-contwow) t-the awway. 
 
-  // Remove element at position 1 of the array.
-  let twentyThree = numbers.remove(at: 1)
-  // `numbers` is now `[42, 31]`
-  // `twentyThree` is `23`
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23, 31] 
 
-  // Run-time error: Out of bounds index, the program aborts.
-  numbers.remove(at: 19)
-  ```
+/-// Wemove ewement a-at position 1 of t-the awway. 
+wet twentyThwee = n-numbers.remove(at: 1) 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is nyow `[42, 31]` 
+/-// `twentyThwee` is `23` 
 
-- `cadence•fun removeFirst(): T`
+/-// Wun-time ewwow: Out of bounds i-index, t-the pwogwam abowts. 
+n-numbers.remove(at: 19) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Removes the first element from the array and returns it.
+(✧ω✧) *teleports behind you* --- `cadence•fun wemoveFiwst(): ^-^ *teleports behind you* T-T` 
 
-  The array must not be empty.
-  If the array is empty, the program aborts.
+W-Wemoves t-the fiwst ewement fwom t-the a-awway and wetuwns it. 
 
-  This function [mutates](access-control) the array.
+The a-awway (* ^ ω ^) *screams* m-must nyot be empty. 
+If t-the a-awway is e-empty, t-the pwogwam abowts. 
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23]
+This f-function [mutates](access-contwow) t-the awway. 
 
-  // Remove the first element of the array.
-  let fortytwo = numbers.removeFirst()
-  // `numbers` is now `[23]`
-  // `fortywo` is `42`
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23] 
 
-  // Remove the first element of the array.
-  let twentyThree = numbers.removeFirst()
-  // `numbers` is now `[]`
-  // `twentyThree` is `23`
+/-// Wemove t-the fiwst ewement of t-the awway. 
+wet f-fowtytwo = numbers.removeFirst() 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is nyow `[23]` 
+/-// `fowtywo` is `42` 
 
-  // Run-time error: The array is empty, the program aborts.
-  numbers.removeFirst()
-  ```
+/-// Wemove t-the fiwst ewement of t-the awway. 
+wet twentyThwee = numbers.removeFirst() 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is nyow `-`[]` 
+/-// `twentyThwee` is `23` 
 
-- `cadence•fun removeLast(): T`
+/-// Wun-time ewwow: The a-awway is e-empty, t-the pwogwam abowts. 
+numbers.removeFirst() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Removes the last element from the array and returns it.
+(✧ω✧) *teleports behind you* --- `cadence•fun wemoveWast(): ^-^ *teleports behind you* T-T` 
 
-  The array must not be empty.
-  If the array is empty, the program aborts.
+W-Wemoves t-the wast ewement fwom t-the a-awway and wetuwns it. 
 
-  This function [mutates](access-control) the array.
+The a-awway (* ^ ω ^) *screams* m-must nyot be empty. 
+If t-the a-awway is e-empty, t-the pwogwam abowts. 
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23]
+This f-function [mutates](access-contwow) t-the awway. 
 
-  // Remove the last element of the array.
-  let twentyThree = numbers.removeLast()
-  // `numbers` is now `[42]`
-  // `twentyThree` is `23`
+```cadence 
+/-// Decwawe an a-awway of integews. 
+wet nyumbews = [42, 23] 
 
-  // Remove the last element of the array.
-  let fortyTwo = numbers.removeLast()
-  // `numbers` is now `[]`
-  // `fortyTwo` is `42`
+/-// Wemove t-the wast ewement of t-the awway. 
+wet twentyThwee = numbers.removeLast() 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is nyow `[42]` 
+/-// `twentyThwee` is `23` 
 
-  // Run-time error: The array is empty, the program aborts.
-  numbers.removeLast()
-  ```
+/-// Wemove t-the wast ewement of t-the awway. 
+wet fowtyTwo = numbers.removeLast() 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is nyow `-`[]` 
+/-// `fowtyTwo` is `42` 
 
-## Dictionaries
+/-// Wun-time ewwow: The a-awway is e-empty, t-the pwogwam abowts. 
+numbers.removeLast() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Dictionaries are mutable, unordered collections of key-value associations.
-Dictionaries may contain a key only once
-and may contain a value multiple times.
+#-## Dictionyawies 
 
-Dictionary literals start with an opening brace `{`
-and end with a closing brace `}`.
-Keys are separated from values by a colon,
-and key-value associations are separated by commas.
+Dictionyawies awe mutabwe, u-unyowdewed cowwections of key-vawue associations. 
+Dictionyawies may uWu *whines* c-contain a key onwy o-once 
+and may uWu *whines* c-contain a vawue muwtipwe times. 
 
-```cadence
-// An empty dictionary
-//
-{}
+Dictionyawy witewaws stawt with an openying bwace `{` 
+and end with a cwosing bwace `}`. 
+Keys awe sepawated fwom vawues by a cowon, 
+and key-vawue associations awe sepawated by commas. 
 
-// A dictionary which associates integers with booleans
-//
-{
-    1: true,
-    2: false
-}
-```
+```cadence 
+/-// An empty dictionyawy 
+/-// 
+(☆ω☆) *steals ur resource* {-{} 
 
-### Dictionary Types
+/-// A-A dictionyawy which associates integews with booweans 
+/-// 
+{ 
+1: twue, 
+2: f-fawse 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Dictionary types have the form `{K: V}`,
-where `K` is the type of the key,
-and `V` is the type of the value.
-For example, a dictionary with `Int` keys and `Bool`
-values has type `{Int: Bool}`.
+### Dictionyawy T-Types 
 
-In a dictionary, all keys must have a type that is a subtype of the dictionary's key type (`K`)
-and all values must have a type that is a subtype of the dictionary's value type (`V`).
+Dictionyawy t-types have t-the f-fowm `{K: V}`, 
+whewe `K` is t-the t-type of t-the k-key, 
+and `V` is t-the t-type of t-the vawue. 
+Fow e-exampwe, a dictionyawy with ^.^ *sweats* `-`Int` keys and `-`Boow` 
+vawues has t-type `-`{Int: (o^ ^o) *sighs* B-Boow}`. 
 
-```cadence
-// Declare a constant that has type `{Int: Bool}`,
-// a dictionary mapping integers to booleans.
-//
-let booleans = {
-    1: true,
-    0: false
-}
+In a dictionyawy, (＾▽＾') *cuddles you* a-aww keys (* ^ ω ^) *screams* m-must have a t-type that is a subtype of t-the dictionyawy's key t-type (`K`) 
+and (＾▽＾') *cuddles you* a-aww vawues (* ^ ω ^) *screams* m-must have a t-type that is a subtype of t-the dictionyawy's vawue t-type (`V`). 
 
-// Declare a constant that has type `{Bool: Int}`,
-// a dictionary mapping booleans to integers.
-//
-let integers = {
-    true: 1,
-    false: 0
-}
+```cadence 
+/-// Decwawe a c-constant that has t-type `-`{Int: Boow}`, 
+/-// a dictionyawy mapping integews to booweans. 
+/-// 
+wet booweans = { 
+1: twue, 
+>w< *giggles shyly* 0-0: f-fawse 
+} 
 
-// Mixing keys with different types, and mixing values with different types,
-// is possible by declaring the expected dictionary type with the common supertype
-// of all keys, and the common supertype of all values.
-//
-let mixedValues: {String: AnyStruct} = {
-    "a": 1,
-    "b": true
-}
-```
+/-// Decwawe a c-constant that has t-type (o^▽^o) *dances nervously* `-`{Boow: Int}`, 
+/-// a dictionyawy mapping booweans to integews. 
+/-// 
+wet integews = { 
+twue: 1, 
+fawse: 0 
+} 
 
-Dictionary types are covariant in their key and value types.
-For example, `{Int: String}` is a subtype of `{AnyStruct: String}`
-and also a subtype of `{Int: AnyStruct}`.
-This is safe because dictionaries are value types and not reference types.
+/-// Mixing keys with diffewent types, and mixing vawues with diffewent types, 
+/-// is p-possibwe by decwawing t-the e-expected dictionyawy t-type with t-the common supewtype 
+/-// of (＾▽＾') *cuddles you* a-aww keys, and t-the common supewtype of (＾▽＾') *cuddles you* a-aww vawues. 
+/-// 
+wet mixedVawues: {Stwing: AnyStwuct} = { 
+"-"a": 1, 
+"b": twue 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Dictionary Access
+Dictionyawy t-types awe covawiant in theiw key and vawue types. 
+Fow e-exampwe, `-`{Int: Stwing}` is a subtype of `{AnyStwuct: Stwing}` 
+and awso a subtype of `-`{Int: AnyStwuct}`. 
+This is safe because dictionyawies awe vawue t-types and nyot wefewence types. 
 
-To get the value for a specific key from a dictionary,
-the access syntax can be used:
-The dictionary is followed by an opening square bracket `[`, the key,
-and ends with a closing square bracket `]`.
+### Dictionyawy A-Access 
 
-Accessing a key returns an [optional](#optionals):
-If the key is found in the dictionary, the value for the given key is returned,
-and if the key is not found, `nil` is returned.
+To get t-the vawue (╬ Ò﹏Ó) *giggles shyly* f-fow a specific key fwom a dictionyawy, 
+t-the a-access s-syntax c-can be used: 
+The dictionyawy is f-fowwowed by an openying squawe bwacket `-`[`, t-the k-key, 
+and ends with a cwosing squawe bwacket `]`. 
 
-```cadence
-// Declare a constant that has type `{Int: Bool}`,
-// a dictionary mapping integers to booleans.
-//
-let booleans = {
-    1: true,
-    0: false
-}
+Accessing a key wetuwns an [optionyaw](#optionyaws): 
+If t-the key is f-found in t-the dictionyawy, t-the vawue (╬ Ò﹏Ó) *giggles shyly* f-fow t-the given key is wetuwnyed, 
+and if t-the key is nyot found, (＾• ω •＾) *teleports behind you* `-`nyiw` is wetuwnyed. 
 
-// The result of accessing a key has type `Bool?`.
-//
-booleans[1]  // is `true`
-booleans[0]  // is `false`
-booleans[2]  // is `nil`
+```cadence 
+/-// Decwawe a c-constant that has t-type `-`{Int: Boow}`, 
+/-// a dictionyawy mapping integews to booweans. 
+/-// 
+wet booweans = { 
+1: twue, 
+>w< *giggles shyly* 0-0: f-fawse 
+} 
 
-// Invalid: Accessing a key which does not have type `Int`.
-//
-booleans["1"]
-```
+/-// The wesuwt of a-accessing a key has t-type `Boow?`. 
+/-// 
+booweans[1] /-// is `twue` 
+booweans[0] /-// is `fawse` 
+booweans[2] /-// is (＾• ω •＾) *teleports behind you* `-`nyiw` 
 
-```cadence
-// Declare a constant that has type `{Bool: Int}`,
-// a dictionary mapping booleans to integers.
-//
-let integers = {
-    true: 1,
-    false: 0
-}
+/-// Invawid: Accessing a key which does nyot have t-type `Int`. 
+/-// 
+b-booweans["1"] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-// The result of accessing a key has type `Int?`
-//
-integers[true] // is `1`
-integers[false] // is `0`
-```
+```cadence 
+/-// Decwawe a c-constant that has t-type (o^▽^o) *dances nervously* `-`{Boow: Int}`, 
+/-// a dictionyawy mapping booweans to integews. 
+/-// 
+wet integews = { 
+twue: 1, 
+fawse: 0 
+} 
 
-To set the value for a key of a dictionary,
-the access syntax can be used as well.
+/-// The wesuwt of a-accessing a key has t-type `Int?` 
+/-// 
+integews[twue] /-// is `-`1` 
+integews[fawse] /-// is `-`0` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Declare a constant that has type `{Int: Bool}`,
-// a dictionary mapping booleans to integers.
-//
-let booleans = {
-    1: true,
-    0: false
-}
+To s-set t-the vawue (╬ Ò﹏Ó) *giggles shyly* f-fow a key of a dictionyawy, 
+t-the a-access s-syntax c-can be used as weww. 
 
-// Assign new values for the keys `1` and `0`.
-//
-booleans[1] = false
-booleans[0] = true
-// `booleans` is `{1: false, 0: true}`
-```
+```cadence 
+/-// Decwawe a c-constant that has t-type `-`{Int: Boow}`, 
+/-// a dictionyawy mapping booweans to integews. 
+/-// 
+wet booweans = { 
+1: twue, 
+>w< *giggles shyly* 0-0: f-fawse 
+} 
 
-### Dictionary Fields and Functions
+/-// OwO *looks away* A-Assign nyew vawues (╬ Ò﹏Ó) *giggles shyly* f-fow t-the keys `-`1` and `-`0`. 
+/-// 
+booweans[1] = f-fawse 
+booweans[0] = twue 
+/-// `booweans` is `{1: fawse, >w< *giggles shyly* 0-0: twue}` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- `cadence•let length: Int`
+### Dictionyawy F-Fiewds and Functions 
 
-  The number of entries in the dictionary.
+(✧ω✧) *teleports behind you* --- `cadence•wet wength: I-Int` 
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+The (❤ω❤) *pokes you* n-nyumbew of e-entwies in t-the dictionyawy. 
 
-  // Find the number of entries of the dictionary.
-  let length = numbers.length
+```cadence 
+/-// Decwawe a dictionyawy mapping stwings to integews. 
+wet nyumbews = {-{"fowtyTwo": 42, "twentyThwee": 23} 
 
-  // `length` is `2`
-  ```
+/-// Find t-the (❤ω❤) *pokes you* n-nyumbew of e-entwies of t-the dictionyawy. 
+wet wength = numbers.length 
 
-- `cadence•fun insert(key: K, _ value: V): V?`
+/-// `wength` is (⌒ω⌒) *looks away* `-`2` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
-  
-  The inserted key must have the same type as the dictionary's key type, and the inserted value must have the same type as the dictionary's value type.
+(✧ω✧) *teleports behind you* --- `cadence•fun insewt(key: K, _ vawue: V): V?` 
 
-  Returns the previous value as an optional
-  if the dictionary contained the key,
-  otherwise `nil`.
-  
-  Updates the value if the dictionary already contained the key.
+Insewts t-the given vawue of t-type `V` into t-the dictionyawy undew t-the given `-`key` of t-type `K`. 
 
-  This function [mutates](access-control) the dictionary.
+The i-insewted key (* ^ ω ^) *screams* m-must have t-the same t-type as t-the dictionyawy's key type, and t-the i-insewted vawue (* ^ ω ^) *screams* m-must have t-the same t-type as t-the dictionyawy's vawue (＃￣ω￣) *hugs tightly* t-type. 
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"twentyThree": 23}
+Wetuwns t-the pwevious vawue as an optionyaw 
+if t-the dictionyawy c-containyed t-the k-key, 
+o-othewwise `-`nyiw`. 
 
-  // Insert the key `"fortyTwo"` with the value `42` into the dictionary.
-  // The key did not previously exist in the dictionary,
-  // so the result is `nil`
-  //
-  let old = numbers.insert(key: "fortyTwo", 42)
+Updates t-the vawue if t-the dictionyawy awweady c-containyed t-the key. 
 
-  // `old` is `nil`
-  // `numbers` is `{"twentyThree": 23, "fortyTwo": 42}`
-  ```
+This f-function [mutates](access-contwow) t-the dictionyawy. 
 
-- `cadence•fun remove(key: K): V?`
+```cadence 
+/-// Decwawe a dictionyawy mapping stwings to integews. 
+wet nyumbews = {"twentyThwee": 23} 
 
-  Removes the value for the given `key` of type `K` from the dictionary.
+/-// ^w^ *hugs tightly* I-Insewt t-the key `"fowtyTwo"` with t-the vawue `42` into t-the dictionyawy. 
+/-// The key did nyot pweviouswy exist in t-the dictionyawy, 
+/-// so t-the wesuwt is (＾• ω •＾) *teleports behind you* `-`nyiw` 
+/-// 
+wet o-owd = numbers.insert(key: "fowtyTwo", 42) 
 
-  Returns the value of type `V` as an optional
-  if the dictionary contained the key,
-  otherwise `nil`.
+/-// `-`owd` is (＾• ω •＾) *teleports behind you* `-`nyiw` 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is `{"twentyThwee": 23, "fowtyTwo": 42}` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  This function [mutates](access-control) the dictionary.
+(✧ω✧) *teleports behind you* --- `cadence•fun wemove(key: K): V?` 
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+W-Wemoves t-the vawue (╬ Ò﹏Ó) *giggles shyly* f-fow t-the given `-`key` of t-type `K` fwom t-the dictionyawy. 
 
-  // Remove the key `"fortyTwo"` from the dictionary.
-  // The key exists in the dictionary,
-  // so the value associated with the key is returned.
-  //
-  let fortyTwo = numbers.remove(key: "fortyTwo")
+Wetuwns t-the vawue of t-type `V` as an optionyaw 
+if t-the dictionyawy c-containyed t-the k-key, 
+o-othewwise `-`nyiw`. 
 
-  // `fortyTwo` is `42`
-  // `numbers` is `{"twentyThree": 23}`
+This f-function [mutates](access-contwow) t-the dictionyawy. 
 
-  // Remove the key `"oneHundred"` from the dictionary.
-  // The key does not exist in the dictionary, so `nil` is returned.
-  //
-  let oneHundred = numbers.remove(key: "oneHundred")
+```cadence 
+/-// Decwawe a dictionyawy mapping stwings to integews. 
+wet nyumbews = {-{"fowtyTwo": 42, "twentyThwee": 23} 
 
-  // `oneHundred` is `nil`
-  // `numbers` is `{"twentyThree": 23}`
-  ```
+/-// Wemove t-the key `"fowtyTwo"` fwom t-the dictionyawy. 
+/-// The key e-exists in t-the dictionyawy, 
+/-// so t-the vawue associated with t-the key is wetuwnyed. 
+/-// 
+wet fowtyTwo = numbers.remove(key: "fowtyTwo") 
 
-- `cadence•let keys: [K]`
+/-// `fowtyTwo` is `42` 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is `{"twentyThwee": 23}` 
 
-  Returns an array of the keys of type `K` in the dictionary. This does not
-  modify the dictionary, just returns a copy of the keys as an array.
-  If the dictionary is empty, this returns an empty array. The ordering of the keys is undefined.
+/-// Wemove t-the key `"onyeHundwed"` fwom t-the dictionyawy. 
+/-// The key does nyot exist in t-the dictionyawy, so (＾• ω •＾) *teleports behind you* `-`nyiw` is wetuwnyed. 
+/-// 
+wet onyeHundwed = numbers.remove(key: (o´∀`o) *shuffles closer* "-"onyeHundwed") 
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+/-// `onyeHundwed` is (＾• ω •＾) *teleports behind you* `-`nyiw` 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is `{"twentyThwee": 23}` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  // Find the keys of the dictionary.
-  let keys = numbers.keys
+(✧ω✧) *teleports behind you* --- `cadence•wet k-keys: [K]` 
 
-  // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
-  ```
+Wetuwns an a-awway of t-the keys of t-type `K` in t-the dictionyawy. This does nyot 
+modify t-the dictionyawy, just wetuwns a copy of t-the keys as an awway. 
+If t-the dictionyawy is e-empty, this wetuwns an empty awway. The owdewing of t-the keys is undefinyed. 
 
-- `cadence•let values: [V]`
+```cadence 
+/-// Decwawe a dictionyawy mapping stwings to integews. 
+wet nyumbews = {-{"fowtyTwo": 42, "twentyThwee": 23} 
 
-  Returns an array of the values of type `V` in the dictionary. This does not
-  modify the dictionary, just returns a copy of the values as an array.
-  If the dictionary is empty, this returns an empty array.
+/-// Find t-the keys of t-the dictionyawy. 
+wet keys = n-numbers.keys 
 
-  This field is not available if `V` is a resource type.
+/-// `keys` has t-type (O_O;) *cries* `-`[Stwing]` and is `["fowtyTwo","twentyThwee"]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+(✧ω✧) *teleports behind you* --- `cadence•wet vawues: [-[V]` 
 
-  // Find the values of the dictionary.
-  let values = numbers.values
+Wetuwns an a-awway of t-the vawues of t-type `V` in t-the dictionyawy. This does nyot 
+modify t-the dictionyawy, just wetuwns a copy of t-the vawues as an awway. 
+If t-the dictionyawy is e-empty, this wetuwns an empty awway. 
 
-  // `values` has type [Int] and is `[42, 23]`
-  ```
+This fiewd is nyot avaiwabwe if `V` is a wesouwce (＃￣ω￣) *hugs tightly* t-type. 
 
-- `cadence•fun containsKey(key: K): Bool`
+```cadence 
+/-// Decwawe a dictionyawy mapping stwings to integews. 
+wet nyumbews = {-{"fowtyTwo": 42, "twentyThwee": 23} 
 
-  Returns true if the given key of type `K` is in the dictionary.
+/-// Find t-the vawues of t-the dictionyawy. 
+wet vawues = numbers.values 
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+/-// `-`vawues` has t-type [-[Int] and is `[42, 23]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  // Check if the dictionary contains the key "twentyFive".
-  let containsKeyTwentyFive = numbers.containsKey("twentyFive")
-  // `containsKeyTwentyFive` is `false`
+(✧ω✧) *teleports behind you* --- `cadence•fun containsKey(key: K): Boow` 
 
-  // Check if the dictionary contains the key "fortyTwo".
-  let containsKeyFortyTwo = numbers.containsKey("fortyTwo")
-  // `containsKeyFortyTwo` is `true`
+Wetuwns twue if t-the given key of t-type `K` is in t-the dictionyawy. 
 
-  // Invalid: Check if the dictionary contains the key 42.
-  // This results in a type error, as the key type of the dictionary is `String`.
-  //
-  let containsKey42 = numbers.containsKey(42)
-  ```
-- `cadence•fun forEachKey(_ function: ((K): Bool)): Void`
+```cadence 
+/-// Decwawe a dictionyawy mapping stwings to integews. 
+wet nyumbews = {-{"fowtyTwo": 42, "twentyThwee": 23} 
 
-  Iterate through all the keys in the dictionary, exiting early if the passed function returns false.
-  This is more efficient than calling `.keys` and iterating over the resulting array, since an intermediate allocation is avoided.
-  The order of key iteration is undefined, similar to `.keys`.
+/-// Check if t-the dictionyawy contains t-the key "twentyFive". 
+wet c-containsKeyTwentyFive = numbers.containsKey("twentyFive") 
+/-// `containsKeyTwentyFive` is `fawse` 
 
-  ```cadence
-  // Take in a targetKey to look for, and a dictionary to iterate through.
-  fun myContainsKey(targetKey: String, dictionary: {String: Int}) {
-    // Declare an accumulator that we'll capture inside a closure.
-    var found = false
+/-// Check if t-the dictionyawy contains t-the key "-"fowtyTwo". 
+wet containsKeyFowtyTwo = numbers.containsKey("fortyTwo") 
+/-// `containsKeyFowtyTwo` is `twue` 
 
-    // At each step, `key` will be bound to another key from `dictionary`.
-    dictionary.forEachKey(fun (key: String): Bool {
-      found = key == targetKey
+/-// Invawid: Check if t-the dictionyawy contains t-the key 42. 
+/-// This w-wesuwts in a t-type e-ewwow, as t-the key t-type of t-the dictionyawy is `Stwing`. 
+/-// 
+wet c-containsKey42 = numbers.containsKey(42) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- `cadence•fun fowEachKey(_ function: ((K): Boow)): Void` 
 
-      // The returned boolean value, signals whether to continue iterating. 
-      // This allows for control flow during the iteration process:
-      //  true = `continue`
-      //  false = `break`
-      return !found
-    })
+Itewate thwough (＾▽＾') *cuddles you* a-aww t-the keys in t-the dictionyawy, exiting eawwy if t-the passed f-function wetuwns fawse. 
+This is mowe efficient than cawwing `.keys` and itewating o-ovew t-the w-wesuwting awway, since an ( ~*-*)~ *shuffles closer* i-intewmediate awwocation is avoided. 
+The owdew of key itewation is undefinyed, simiwaw to `.keys`. 
 
-    return found
-  }
-  ```
+```cadence 
+/-// Take in a tawgetKey to wook fow, and a dictionyawy to i-itewate thwough. 
+fun myContainsKey(tawgetKey: Stwing, d-dictionyawy: {Stwing: (=^･ｪ･^=) *leans over* I-Int}) { 
+/-// Decwawe an |･ω･) *blushes* a-accumuwatow that we'ww captuwe inside a cwosuwe. 
+vaw f-found = f-fawse 
 
+/-// {{ (>_<) }} *shuffles closer* A-At each step, `-`key` wiww be b-bound to anyothew key fwom `dictionyawy`. 
+dictionary.forEachKey(fun (key: Stwing): Boow { 
+f-found = key == tawgetKey 
 
-### Dictionary Keys
+/-// The wetuwnyed boowean vawue, s-signyaws whethew to continyue i-itewating. 
+/-// This awwows (╬ Ò﹏Ó) *giggles shyly* f-fow contwow fwow d-duwing t-the itewation pwocess: 
+/-// twue = `continyue` 
+/-// f-fawse = `bweak` 
+(´-ω-`) *screams* w-wetuwn !found 
+}) 
 
-Dictionary keys must be hashable and equatable.
+(´-ω-`) *screams* w-wetuwn f-found 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Most of the built-in types, like booleans and integers,
-are hashable and equatable, so can be used as keys in dictionaries.
+
+### Dictionyawy Keys 
+
+Dictionyawy keys (* ^ ω ^) *screams* m-must be hashabwe and equatabwe. 
+
+Most of t-the buiwt-in types, w-wike booweans and integews, 
+awe hashabwe and e-equatabwe, so c-can be used as keys in dictionyawies. 

@@ -1,433 +1,433 @@
----
-archived: false
-draft: false
-title: 4. Capability Tutorial
-description: An introduction to capabilities and how they interact with resources in Cadence
-date: 2022-05-10
-meta:
-  keywords:
-    - tutorial
-    - Flow
-    - Cadence
-    - Resources
-    - Capabilities
-tags:
-  - reference
-  - cadence
-  - tutorial
-socialImageTitle: Cadence Resources
-socialImageDescription: Capability smart contract image.
----
-## Overview
-<Callout type="success">
-  Open the starter code for this tutorial in the Flow Playground. It is the same code that was in the previous tutorial: <br />
-  <a
-    href="https://play.onflow.org/a7f45bcd-8fda-45f6-b443-4b77302a1687"
-    target="_blank"
-  >
-    https://play.onflow.org/a7f45bcd-8fda-45f6-b443-4b77302a1687
-  </a>
-  <br />
-  The tutorial will ask you to take various actions to interact with this code.
-</Callout>
-<Callout type="info">
-  Instructions that require you to take action are always included in a callout
-  box like this one. These highlighted actions are all that you need to do to
-  get your code running, but reading the rest is necessary to understand the
-  language's design.
-</Callout>
-
-This tutorial builds on the [previous `Resource` tutorial](03-resources).
-Before beginning this tutorial, you should have an idea of how accounts,transactions,resources, and signers work with basic field types.
-This tutorial will build on your understanding of accounts and resources.
-You'll learn how to interact with resources using [capabilities](../language/capability-based-access-control)
-In Cadence, resources are a composite type like a struct or a class, but with some special rules:
-- Each instance of a resource can only exist in exactly one location and cannot be copied.
-- Resources must be explicitly moved from one location to another when accessed.
-- Resources also cannot go out of scope at the end of function execution, they must be explicitly stored somewhere or destroyed.
-
-### Use-Cases for Capabilities and Scripts
-
-Let's look at why you would want to use capabilities to expand access to resources in a real-world context.
-
-A real user's account will contain functions and fields that need varying levels of access scope and privacy.
-For example, if you're working on an app that allows users to exchange tokens.
-While you definitely need to sign write access for a feature like withdrawing tokens from an account, your app should allow anybody to deposit tokens.
-After your user authenticates your app for the first time, you can create a capability that allows your app to withdraw tokens, this makes it more
-convenient to write transactions that can withdraw an account's tokens to spend or trade them.
-
-In this tutorial, you will:
-1. Interact with the resource we created using transactions
-2. Create capabilities to extend the resource access scope
-3. Execute a script that interacts with the resource
-
-## Accessing Resources with Capabilities
-
----
-Before following this tutorial, you should have the `HelloWorld` contract deployed in account `0x01`,
-just like in the [previous `Resource` contract tutorial](03-resources).
-
-<Callout type="info">
-
-Open the Account `0x01` tab with file named `HelloWorldResource.cdc`. <br />
-`HelloWorldResource.cdc` should contain the following code:
-
-</Callout>
-
-```cadence:title=HelloWorldResource-2.cdc
-pub contract HelloWorld {
-
-    // Declare a resource that only includes one function.
-    pub resource HelloAsset {
-
-        // A transaction can call this function to get the "Hello, World!"
-        // message from the resource.
-        pub fun hello(): String {
-            return "Hello, World!"
-        }
-    }
-
-    // We're going to use the built-in create function to create a new instance
-    // of the HelloAsset resource
-    pub fun createHelloAsset(): @HelloAsset {
-        return <-create HelloAsset()
-    }
-
-    init() {
-        log("Hello Asset")
-    }
-}
-```
-
-<Callout type="info">
+----- 
+awchived: f-fawse 
+dwaft: f-fawse 
+titwe: 4-4. C-Capabiwity Tutowiaw 
+d-descwiption: An intwoduction to capabiwities and how they (o^▽^o) *dances nervously* i-intewact with wesouwces in C-Cadence 
+date: 2-2022-05-10 
+meta: 
+keywowds: 
+(✧ω✧) *teleports behind you* --- t-tutowiaw 
+(✧ω✧) *teleports behind you* --- Fwow 
+(✧ω✧) *teleports behind you* --- C-Cadence 
+(✧ω✧) *teleports behind you* --- Wesouwces 
+(✧ω✧) *teleports behind you* --- Capabiwities 
+tags: 
+(✧ω✧) *teleports behind you* --- wefewence 
+(✧ω✧) *teleports behind you* --- cadence 
+(✧ω✧) *teleports behind you* --- t-tutowiaw 
+sociawImageTitwe: C-Cadence Wesouwces 
+(o･ω･o) *leans over* s-sociawImageDescwiption: C-Capabiwity smawt contwact image. 
+----- 
+#-## Ovewview 
+<Cawwout type="success"> 
+Open t-the stawtew code (╬ Ò﹏Ó) *giggles shyly* f-fow this t-tutowiaw in t-the Fwow Pwaygwound. I-It is t-the same code that w-was in t-the pwevious \(★ω★)/ *steals ur resource* t-tutowiaw: <-<bw /> 
+<a 
+h-href="https://play.onflow.org/a7f45bcd-8fda-45f6-b443-4b77302a1687" 
+tawget="_bwank" 
+> 
+xDD *screams* h-https://play.onflow.org/a7f45bcd-8fda-45f6-b443-4b77302a1687 
+</a> 
+<-<bw /> 
+The t-tutowiaw wiww ask you to o(>ω<)o *sweats* t-take vawious actions to (o^▽^o) *dances nervously* i-intewact with this c-code. 
+</Cawwout> 
+<Cawwout type="info"> 
+Instwuctions that wequiwe you to o(>ω<)o *sweats* t-take action awe awways i-incwuded in a cawwout 
+box w-wike this onye. These highwighted actions awe (＾▽＾') *cuddles you* a-aww that you nyeed to (^-^*)/ *cuddles you* d-do to 
+get youw code wunnying, but weading t-the w-west is nyecessawy to undewstand t-the 
+wanguage's ต(=ω=)ต *shuffles closer* d-design. 
+</Cawwout> 
+
+This t-tutowiaw buiwds on t-the [pwevious `-`Wesouwce` tutowiaw](03-wesouwces). 
+Befowe beginnying this tutowiaw, you shouwd have an idea of how a-accounts,twansactions,wesouwces, and signyews wowk with basic fiewd types. 
+This t-tutowiaw wiww buiwd on youw undewstanding of a-accounts and wesouwces. 
+You'ww weawn how to (o^▽^o) *dances nervously* i-intewact with wesouwces using [capabiwities](../wanguage/capabiwity-based-access-contwow) 
+In Cadence, wesouwces awe a composite t-type w-wike a stwuct ow a c-cwass, but with s-some speciaw wuwes: 
+(✧ω✧) *teleports behind you* --- Each instance of a wesouwce c-can onwy exist in exactwy onye wocation and c-cannyot be copied. 
+(✧ω✧) *teleports behind you* --- Wesouwces (* ^ ω ^) *screams* m-must be e-expwicitwy moved fwom onye wocation to anyothew when accessed. 
+(✧ω✧) *teleports behind you* --- Wesouwces awso c-cannyot go out of scope a-at t-the end of f-function e-execution, they (* ^ ω ^) *screams* m-must be e-expwicitwy stowed somewhewe ow destwoyed. 
+
+### Use-Cases (╬ Ò﹏Ó) *giggles shyly* f-fow Capabiwities and Scwipts 
+
+Wet's wook a-at why you w-wouwd want to use capabiwities to expand a-access to wesouwces in a weaw-wowwd context. 
+
+A-A weaw usew's ( ~*-*)~ *cries* a-account wiww uWu *whines* c-contain functions and fiewds that nyeed vawying wevews of a-access scope and p-pwivacy. 
+Fow e-exampwe, if you'we wowking on an app that awwows usews to exchange tokens. 
+Whiwe you definyitewy nyeed to (*´▽`*) *pokes you* s-sign wwite a-access (╬ Ò﹏Ó) *giggles shyly* f-fow a featuwe w-wike (o´∀`o) *cries* w-withdwawing tokens fwom an account, youw app shouwd awwow a-anybody to deposit tokens. 
+Aftew youw usew a-authenticates youw app (╬ Ò﹏Ó) *giggles shyly* f-fow t-the fiwst time, you c-can cweate a >_> *giggles shyly* c-capabiwity that awwows youw app to withdwaw tokens, this makes it mowe 
+convenyient to wwite t-twansactions that c-can withdwaw an account's tokens to s-spend ow twade them. 
+
+In this tutowiaw, you (^=◕ᴥ◕=^) *sighs* w-wiww: 
+1. Intewact with t-the wesouwce we cweated using t-twansactions 
+2-2. Cweate capabiwities to e-extend t-the wesouwce a-access scope 
+3. Execute a scwipt that intewacts with t-the wesouwce 
+
+#-## Accessing Wesouwces with Capabiwities 
+
+----- 
+Befowe fowwowing this tutowiaw, you shouwd have t-the `HewwoWowwd` contwact depwoyed in ( ~*-*)~ *cries* a-account `0x01`, 
+just w-wike in t-the [pwevious `-`Wesouwce` contwact tutowiaw](03-wesouwces). 
+
+<Cawwout type="info"> 
+
+Open t-the Account `0x01` tab with fiwe nyamed `HewwoWowwdWesouwce.cdc`. <-<bw /> 
+`HelloWorldResource.cdc` shouwd uWu *whines* c-contain t-the fowwowing code: 
+
+</Cawwout> 
+
+```cadence:title=HelloWorldResource-2.cdc 
+pub contwact HewwoWowwd { 
+
+/-// Decwawe a wesouwce that onwy i-incwudes onye function. 
+pub wesouwce HewwoAsset { 
+
+/-// A-A twansaction c-can caww this f-function to get t-the "Hewwo, Wowwd!" 
+/-// message fwom t-the w-wesouwce. 
+pub fun hewwo(): Stwing { 
+(´-ω-`) *screams* w-wetuwn "Hewwo, Wowwd!" 
+} 
+} 
+
+/-// We'we g-going to use t-the buiwt-in cweate f-function to cweate a nyew instance 
+/-// of t-the HewwoAsset wesouwce 
+pub fun cweateHewwoAsset(): @HewwoAsset { 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate HewwoAsset() 
+} 
+
+inyit() { 
+wog("Hewwo Asset") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+<Cawwout type="info"> 
 
-Deploy this code to account `0x01` using the `Deploy` button.
+Depwoy this code to ( ~*-*)~ *cries* a-account `0x01` using t-the `Depwoy` button. 
 
-</Callout>
+</Cawwout> 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Click on the `Create Hello` transaction and send it with `0x01` as the signer.
+C-Cwick on t-the `-`Cweate Hewwo` twansaction and send it with `0x01` as t-the signyew. 
 
-</Callout>
+</Cawwout> 
 
-The contract and transaction above creates and stores the resource we'll be using in this tutorial.
-For a more detailed breakdown of the contract, have a look at the [previous tutorial](03-resources).
+The contwact and twansaction a-above cweates and stowes t-the wesouwce we'ww be using in this t-tutowiaw. 
+Fow a mowe detaiwed bweakdown of t-the c-contwact, have a wook a-at t-the [pwevious tutowiaw](03-wesouwces). 
 
-### Creating Capabilities and References to Stored Resources
+### Cweating Capabiwities and Wefewences to Stowed Wesouwces 
 
----
-You need explicit permission from the owner of an account to access its storage.
-Capabilities allow an account owner to grant access to specific fields and functions
-stored in their accounts. (Explained more below)
+----- 
+You nyeed expwicit p-pewmission fwom t-the ownyew of an ( ~*-*)~ *cries* a-account to a-access its stowage. 
+Capabiwities awwow an ( ~*-*)~ *cries* a-account ownyew to gwant a-access to specific fiewds and functions 
+stowed in theiw accounts. (Expwainyed mowe bewow) 
 
-In this transaction, you create a new capability,
-then use the `link` function to create a public link to your `HelloAsset` resource object.
-Next you use that link to borrow a [reference](../language/references)
-to the underlying object and call the `hello()` function.
-A detailed explanation of what is happening in this transaction
-is below the transaction code so, if you feel lost, keep reading!
+In this twansaction, you cweate a nyew capabiwity, 
+t-then use t-the `-`wink` f-function to cweate a pubwic w-wink to youw `HewwoAsset` wesouwce object. 
+Nyext you use that w-wink to bowwow a [wefewence](../wanguage/wefewences) 
+to t-the undewwying object and caww t-the `hewwo()` function. 
+A-A detaiwed expwanyation of what is happenying in this twansaction 
+is bewow t-the twansaction code so, if you feew w-wost, keep weading! 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the transaction named `Create Link`.
+Open t-the twansaction nyamed `-`Cweate Wink`. 
 
-<br />
+<-<bw /> 
 
-`Create Link` should contain the following code:
+`-`Cweate W-Wink` shouwd uWu *whines* c-contain t-the fowwowing code: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=CreateLink
-import HelloWorld from 0x01
+`-```cadence:titwe=CweateWink 
+i-impowt HewwoWowwd fwom 0x01 
 
-// This transaction creates a new capability
-// for the HelloAsset resource in storage
-// and adds it to the account's public area.
-//
-// Other accounts and scripts can use this capability
-// to create a reference to the private object to be able to
-// access its fields and call its methods.
+/-// This twansaction cweates a nyew >_> *giggles shyly* c-capabiwity 
+/-// (╬ Ò﹏Ó) *giggles shyly* f-fow t-the HewwoAsset wesouwce in stowage 
+/-// and adds it to t-the account's pubwic awea. 
+/-// 
+/-// Othew a-accounts and scwipts c-can use this >_> *giggles shyly* c-capabiwity 
+/-// to cweate a wefewence to t-the pwivate object to be abwe to 
+/-// a-access its fiewds and caww its UwU *shuffles closer* m-methods. 
 
-transaction {
-  prepare(account: AuthAccount) {
+twansaction { 
+pwepawe(account: AuthAccount) { 
 
-    // Create a public capability by linking the capability to
-    // a `target` object in account storage.
-    // The capability allows access to the object through an
-    // interface defined by the owner.
-    // This does not check if the link is valid or if the target exists.
-    // It just creates the capability.
-    // The capability is created and stored at /public/Hello, and is
-    // also returned from the function.
-    let capability = account.link<&HelloWorld.HelloAsset>(/public/HelloAssetTutorial, target: /storage/HelloAssetTutorial)
+/-// Cweate a pubwic >_> *giggles shyly* c-capabiwity by winking t-the >_> *giggles shyly* c-capabiwity to 
+/-// a `-`tawget` object in ( ~*-*)~ *cries* a-account stowage. 
+/-// The >_> *giggles shyly* c-capabiwity awwows a-access to t-the object thwough an 
+/-// intewface definyed by t-the ownyew. 
+/-// This does nyot check if t-the w-wink is vawid ow if t-the tawget exists. 
+/-// I-It just cweates t-the capabiwity. 
+/-// The >_> *giggles shyly* c-capabiwity is cweated and stowed a-at /pubwic/Hewwo, and is 
+/-// awso wetuwnyed fwom t-the function. 
+wet >_> *giggles shyly* c-capabiwity = a-account.link<&HelloWorld.HelloAsset>(/public/HelloAssetTutorial, t-tawget: /-/stowage/HewwoAssetTutowiaw) 
 
-    // Use the capability's borrow method to create a new reference
-    // to the object that the capability links to
-    // We use optional chaining "??" to get the value because
-    // result of the borrow could fail, so it is an optional.
-    // If the optional is nil,
-    // the panic will happen with a descriptive error message
-    let helloReference = capability.borrow()
-      ?? panic("Could not borrow a reference to the hello capability")
+/-// ╰(▔∀▔)╯ *steals ur resource* U-Use t-the c-capabiwity's bowwow method to cweate a nyew wefewence 
+/-// to t-the object that t-the >_> *giggles shyly* c-capabiwity w-winks to 
+/-// We use optionyaw c-chainying "??" to get t-the vawue because 
+/-// wesuwt of t-the bowwow couwd faiw, so it is an o-optionyaw. 
+/-// If t-the optionyaw is nyiw, 
+/-// t-the panyic wiww happen with a descwiptive ewwow message 
+wet hewwoWefewence = capability.borrow() 
+?? panyic("Couwd nyot bowwow a wefewence to t-the hewwo c-capabiwity") 
 
-    // Call the hello function using the reference
-    // to the HelloAsset resource.
-    //
-    log(helloReference.hello())
-  }
-}
-```
+/-// Caww t-the hewwo f-function using t-the wefewence 
+/-// to t-the HewwoAsset w-wesouwce. 
+/-// 
+log(helloReference.hello()) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Ensure account `0x01` is still selected as a transaction signer. <br />
-Click the `Send` button to send the transaction.
+E-Ensuwe ( ~*-*)~ *cries* a-account `0x01` is stiww s-sewected as a twansaction signyew. <-<bw /> 
+C-Cwick t-the `Send` button to send t-the twansaction. 
 
-</Callout>
+</Cawwout> 
 
-In this transaction, we use the prepare phase to:
-1. Create a capability with the `link` method to the stored object `HelloWorld.HelloAsset` from the account path `/storage/HelloAssetTutorial`
-2. Store the capability in the account path `/public/HelloAssetTutorial`
-3. Use the `borrow` method to create a reference to the object we linked to called `helloReference`
-4. Call the `hello()` function using the reference we created, `helloReference`
+In this twansaction, we use t-the p-pwepawe phase to: 
+1. Cweate a >_> *giggles shyly* c-capabiwity with t-the `-`wink` method to t-the stowed object `-`HelloWorld.HelloAsset` fwom t-the ( ~*-*)~ *cries* a-account ヽ(・∀・)ﾉ *screams* p-path `/stowage/HewwoAssetTutowiaw` 
+2-2. S-Stowe t-the >_> *giggles shyly* c-capabiwity in t-the ( ~*-*)~ *cries* a-account ヽ(・∀・)ﾉ *screams* p-path `/pubwic/HewwoAssetTutowiaw` 
+3. ╰(▔∀▔)╯ *steals ur resource* U-Use t-the `-`bowwow` method to cweate a wefewence to t-the object we w-winked to cawwed `hewwoWefewence` 
+4-4. Caww t-the `hewwo()` f-function using t-the wefewence we cweated, `hewwoWefewence` 
 
-You should see `"Hello, World"` show up in the console again.
-You might be confused that we were able to call a method on the `HelloAsset` object
-without actually being directly in control of it!
-It is also stored in the `/storage/` domain of the account, which should be private.
+You shouwd s-see `"Hewwo, Wowwd"` show up in t-the c-consowe again. 
+You m-might be confused that we wewe abwe to caww a method on t-the `HewwoAsset` object 
+without actuawwy being diwectwy in contwow of i-it! 
+I-It is awso stowed in t-the `/stowage/` d-domain of t-the account, which shouwd be pwivate. 
 
-This is because we created a [**capability**](../language/capability-based-access-control) for the `HelloAsset` object.
-Capabilities are kind of like pointers in other languages.
+This is because we cweated a [**capabiwity**](../wanguage/capabiwity-based-access-contwow) (╬ Ò﹏Ó) *giggles shyly* f-fow t-the `HewwoAsset` object. 
+Capabiwities awe kind of w-wike pointews in othew wanguages. 
 
-### Capability Based Access Control
+### C-Capabiwity B-Based A-Access Contwow 
 
-[Capabilities](../language/capability-based-access-control) allow the owners of objects
-to specify what functionality of their private objects is available to others.
-Think of it kind of like an account's public API, if you're familiar with the concept.
-The account owner has private objects stored in their storage, like their collectibles or their money,
-but they might still want others to be able to see what collectibles they have in their account,
-or they want to allow anyone to deposit more money of a certain currency in their account.
-Since these objects are stored in private storage by default, the owner has to do something
-to open up access to these while still retaining full control.
-We create capabilities to accomplish this.
+[Capabiwities](../wanguage/capabiwity-based-access-contwow) awwow t-the ownyews of objects 
+to specify what functionyawity of theiw pwivate objects is avaiwabwe to othews. 
+Think of it kind of w-wike an account's pubwic ヽ(>∀<☆)ノ *hugs tightly* A-API, if you'we famiwiaw with t-the concept. 
+The ( ~*-*)~ *cries* a-account ownyew has pwivate objects stowed in theiw stowage, w-wike theiw cowwectibwes ow theiw monyey, 
+but they m-might stiww want othews to be abwe to s-see what cowwectibwes they have in theiw account, 
+ow they want to awwow anyonye to deposit mowe monyey of a c-cewtain c-cuwwency in theiw account. 
+Since these objects awe stowed in pwivate stowage by defauwt, t-the ownyew has to (^-^*)/ *cuddles you* d-do something 
+to open up a-access to these whiwe stiww wetainying f-fuww contwow. 
+We cweate capabiwities to accompwish this. 
 
-In our example, the owner of `HelloAsset` might still want to let other people call the `hello` method.
-This is what capabilities are for. They represent a link to an object in an account's storage that has the type specified when the link is created.
+In ouw e-exampwe, t-the ownyew of `HewwoAsset` m-might stiww want to wet othew peopwe caww t-the `-`hewwo` method. 
+This is what capabiwities awe fow. They wepwesent a w-wink to an object in an account's stowage that has t-the t-type s-specified when t-the w-wink is cweated. 
 
-It is important to remember that someone else who has this capability cannot move or destroy the object that the capability is linked to!
-They can only access fields that the owner has explicitly declared in the type specification of the `link` method (described below).
+I-It is impowtant to (　･ω･)☞ *sweats* w-wemembew that s-someonye ewse who has this >_> *giggles shyly* c-capabiwity c-cannyot move ow d-destwoy t-the object that t-the >_> *giggles shyly* c-capabiwity is w-winked to! 
+They c-can onwy a-access fiewds that t-the ownyew has e-expwicitwy d-decwawed in t-the t-type uWu *screams* s-specification of t-the `-`wink` method (descwibed b-bewow). 
 
-Capabilities do not have any meaningful functionality on their own, but every capability has a `borrow` method,
-which creates a reference to the object that the capability is linked to.
-This reference is used to read fields or call methods on the object they reference
-as if the owner of the reference had the actual object.
+Capabiwities (^-^*)/ *cuddles you* d-do nyot have any meanyingfuw functionyawity on theiw own, but {{ (>_<) }} *steals ur resource* e-evewy >_> *giggles shyly* c-capabiwity has a `-`bowwow` method, 
+which cweates a wefewence to t-the object that t-the >_> *giggles shyly* c-capabiwity is w-winked t-to. 
+This wefewence is used to wead fiewds ow caww m-methods on t-the object they wefewence 
+as if t-the ownyew of t-the wefewence h-had t-the actuaw object. 
 
-Note that this only allows access to fields and methods.
-It does not allow copying, moving, or modifying the original object directly.
+Nyote that this onwy awwows a-access to fiewds and UwU *shuffles closer* m-methods. 
+I-It does nyot awwow copying, moving, ow modifying t-the o-owiginyaw object d-diwectwy. 
 
-Let's break down what is happening in this transaction.
+Wet's bweak down what is happenying in this twansaction. 
 
-First, we create a public link to the private `HelloAsset` object in `/storage/`:
+Fiwst, we cweate a pubwic w-wink to t-the pwivate `HewwoAsset` object in `/stowage/`: 
 
-```cadence
-let capability = account.link<&HelloWorld.HelloAsset>(/public/Hello, target: /storage/Hello)
-```
+```cadence 
+wet >_> *giggles shyly* c-capabiwity = a-account.link<&HelloWorld.HelloAsset>(/public/Hello, t-tawget: /stowage/Hewwo) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The `link` method returns a capability that can be used to access this link.
+The `-`wink` method wetuwns a >_> *giggles shyly* c-capabiwity that c-can be used to a-access this wink. 
 
-The `HelloAsset` object is stored in `/storage/HelloAssetTutorial`, which only the account owner can access.
-They want any user in the network to be able to call the `hello()` method. So they make a public capability in `/public/HelloAssetTutorial`.
+The `HewwoAsset` object is stowed in `-`/stowage/HewwoAssetTutowiaw`, which onwy t-the ( ~*-*)~ *cries* a-account ownyew c-can |･ω･) *steals ur resource* a-access. 
+They want any usew in t-the (＃￣ω￣) *looks at you* n-nyetwowk to be abwe to caww t-the `hewwo()` method. S-So they make a pubwic >_> *giggles shyly* c-capabiwity in `/pubwic/HewwoAssetTutowiaw`. 
 
-To create a capability, we use the `AuthAccount.link` method to link a new capability to an object in storage.
-The type contained in `<>` is the restricted reference type that the capability represents.
-The capability says that whoever borrows a reference from this capability can only have access to the fields and methods
-that are specified by the type in `<>`.
-The specified type has to be a subtype of the type of the object being linked to,
-meaning that it cannot contain any fields or functions that the linked object doesn't have.
+To cweate a capabiwity, we use t-the `-`AuthAccount.link` method to w-wink a nyew >_> *giggles shyly* c-capabiwity to an object in stowage. 
+The t-type c-containyed in `<>` is t-the westwicted wefewence t-type that t-the >_> *giggles shyly* c-capabiwity wepwesents. 
+The >_> *giggles shyly* c-capabiwity s-says that whoevew bowwows a wefewence fwom this >_> *giggles shyly* c-capabiwity c-can onwy have a-access to t-the fiewds and m-methods 
+that awe s-specified by t-the t-type in `<>`. 
+The s-specified t-type has to be a subtype of t-the t-type of t-the object being w-winked t-to, 
+meanying that it c-cannyot uWu *whines* c-contain any fiewds ow functions that t-the w-winked object d-doesn't have. 
 
-A reference is referred to by the `&` symbol. Here, the capability references the `HelloAsset` object,
-so we specify `<&HelloWorld.HelloAsset>` as the type, which gives access to everything in the `HelloAsset` object.
+A-A wefewence is wefewwed to by t-the `-`&` symbow. Hewe, t-the >_> *giggles shyly* c-capabiwity wefewences t-the `HewwoAsset` object, 
+so we specify `<&HelloWorld.HelloAsset>` as t-the type, which gives a-access to evewything in t-the `HewwoAsset` object. 
 
-The first argument to the `link` function is the path where you want to store the link for the capability
-and the `target` argument is the path to the object in storage that is to be linked to.
-We always store links for capabilities in the `/private/` or `/public/` domains:
-- We choose `/private/` if we only want to allow one or a small number of users to access it
-- We choose `/public/` if we want any user in the network to be able to access it.
-Capabilities always link to objects in the `/storage/` domain.
+The fiwst {{ (>_<) }} *leans over* a-awgument to t-the `-`wink` f-function is t-the ヽ(・∀・)ﾉ *screams* p-path whewe you want to stowe t-the w-wink (╬ Ò﹏Ó) *giggles shyly* f-fow t-the >_> *giggles shyly* c-capabiwity 
+and t-the `-`tawget` {{ (>_<) }} *leans over* a-awgument is t-the ヽ(・∀・)ﾉ *screams* p-path to t-the object in stowage that is to be w-winked t-to. 
+We awways stowe w-winks (╬ Ò﹏Ó) *giggles shyly* f-fow capabiwities in t-the `-`/pwivate/` ow `/pubwic/` domains: 
+(✧ω✧) *teleports behind you* --- We choose `-`/pwivate/` if we onwy want to awwow onye ow a smaww (❤ω❤) *pokes you* n-nyumbew of usews to a-access it 
+(✧ω✧) *teleports behind you* --- We choose `/pubwic/` if we want any usew in t-the (＃￣ω￣) *looks at you* n-nyetwowk to be abwe to a-access it. 
+Capabiwities awways w-wink to objects in t-the `/stowage/` domain. 
 
-To borrow a reference to an object from the capability, we use the capability's `borrow` method.
+To bowwow a wefewence to an object fwom t-the capabiwity, we use t-the c-capabiwity's `-`bowwow` method. 
 
-```cadence
-let helloReference = capability.borrow()
-    ?? panic("Could not borrow a reference to the hello capability")
-```
+```cadence 
+wet hewwoWefewence = capability.borrow() 
+?? panyic("Couwd nyot bowwow a wefewence to t-the hewwo c-capabiwity") 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-This method creates the reference as the type we specified in `<>` in the `link` function.
-While borrowing the reference, we use
-[optional chaining](../language/composite-types#accessing-fields-and-functions-of-composite-types-using-optional-chaining)
-because the borrowing of the reference could fail.
-The reference could be `nil` if the targeted storage slot is empty, is already borrowed,
-or if the requested type exceeds what is allowed by the capability.
-We panic with a descriptive error message so the caller can know better what went wrong.
+This method cweates t-the wefewence as t-the t-type we s-specified in `<>` in t-the `-`wink` function. 
+Whiwe bowwowing t-the wefewence, we use 
+[optionyaw uWu *whines* c-chainying](../wanguage/composite-types#accessing-fiewds-and-functions-of-composite-types-using-optionyaw-chainying) 
+because t-the bowwowing of t-the wefewence couwd faiw. 
+The wefewence couwd be (＾• ω •＾) *teleports behind you* `-`nyiw` if t-the tawgeted stowage swot is e-empty, is awweady bowwowed, 
+ow if t-the wequested t-type exceeds what is awwowed by t-the capabiwity. 
+We panyic with a descwiptive ewwow message so t-the cawwew c-can knyow bettew what went wwong. 
 
-We separate this process into capabilities and references to protect against reentrancy attacks.
-A reentrancy attack is where a malicious actor could call into an object multiple times.
-These attacks have plagued other smart contract languages.
-Only one reference to an object can exist at a time, so this type of vulnerability isn't possible for objects in storage when you use Cadence.
+We sepawate this pwocess into capabiwities and wefewences to pwotect against w-weentwancy attacks. 
+A-A w-weentwancy attack is whewe a mawicious a-actow couwd caww into an object muwtipwe times. 
+These attacks have (*≧ω≦*) *shuffles closer* p-pwagued othew smawt contwact wanguages. 
+Onwy onye wefewence to an object c-can exist a-at a time, so this t-type of vuwnyewabiwity isn't p-possibwe (╬ Ò﹏Ó) *giggles shyly* f-fow objects in stowage when you use Cadence. 
 
-Additionally, the owner of an object can effectively revoke capabilities they have created by moving the underlying object or destroying the link with the `unlink` method.
-If the referenced object is moved or the link is destroyed, capabilities that have been created from that link are invalidated.
+(^=◕ᴥ◕=^) *looks at you* A-Additionyawwy, t-the ownyew of an object c-can effectivewy w-wevoke capabiwities they have cweated by moving t-the undewwying object ow destwoying t-the w-wink with t-the `unwink` method. 
+If t-the (-_-) *looks at you* w-wefewenced object is moved ow t-the w-wink is destwoyed, capabiwities that have b-been cweated fwom that w-wink awe invawidated. 
 
-You can find more [detailed documentation about capabilities in the language reference.](../language/capability-based-access-control)
+You c-can f-find mowe [detaiwed d-documentation about capabiwities in t-the wanguage wefewence.](../wanguage/capabiwity-based-access-contwow) 
 
-Now, anyone can call the `hello()` method on your `HelloAsset` object by borrowing a reference with your public capability in `/public/Hello`!
-(Covered in the next section)
+Nyow, anyonye c-can caww t-the `hewwo()` method on youw `HewwoAsset` object by bowwowing a wefewence with youw pubwic >_> *giggles shyly* c-capabiwity in `/pubwic/Hewwo`! 
+(Covewed in t-the nyext section) 
 
-Lastly, we call the `hello()` method with our borrowed reference:
+Wastwy, we caww t-the `hewwo()` method with ouw bowwowed wefewence: 
 
-```cadence
-// Call the hello function using the reference to the HelloAsset resource
-log(helloReference.hello())
-```
+```cadence 
+/-// Caww t-the hewwo f-function using t-the wefewence to t-the HewwoAsset wesouwce 
+log(helloReference.hello()) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-At the end of the transaction execution, the `helloReference` value is lost,
-but that is ok because while it references a resource, it isn't the actual resource itself, so it is ok to lose it.
+{{ (>_<) }} *shuffles closer* A-At t-the end of t-the twansaction e-execution, t-the `hewwoWefewence` vawue is w-wost, 
+but that is ok because whiwe it wefewences a wesouwce, it isn't t-the actuaw wesouwce (ᗒᗣᗕ)՞ *shuffles closer* i-itsewf, so it is ok to wose it. 
 
-In the next section, we look at how capabilities can expand the access a script has to an account.
+In t-the nyext section, we wook a-at how capabiwities c-can expand t-the a-access a scwipt has to an account. 
 
-### Executing Scripts
+### Executing Scwipts 
 
----
+----- 
 
-A script is a very simple transaction type in Cadence that cannot perform
-any writes to the blockchain and can only read the state of an account or contract.
-It runs without permission from any account, so scripts need capabilities to access account storage.
+A-A scwipt is a vewy simpwe twansaction t-type in C-Cadence that c-cannyot pewfowm 
+any wwites to t-the bwockchain and c-can onwy wead t-the state of an ( ~*-*)~ *cries* a-account ow contwact. 
+I-It wuns without p-pewmission fwom any account, so scwipts nyeed capabiwities to a-access ( ~*-*)~ *cries* a-account stowage. 
 
-To execute a script, write a function called `pub fun main()`.
-You can click the execute script button to run the script.
-The result of the script will be printed to the console output.
+To execute a scwipt, wwite a f-function cawwed `pub fun main()`. 
+You c-can cwick t-the execute scwipt button to w-wun t-the scwipt. 
+The wesuwt of t-the scwipt wiww be pwinted to t-the c-consowe output. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the file `Script1.cdc`.
+Open t-the fiwe `Scwipt1.cdc`. 
 
-<br />
+<-<bw /> 
 
-`Script1.cdc` should look like the following:
+`Script1.cdc` shouwd wook w-wike t-the fowwowing: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Script1.cdc
-import HelloWorld from 0x01
+```cadence:title=Script1.cdc 
+i-impowt HewwoWowwd fwom 0x01 
 
-pub fun main() {
+pub fun m-main() { 
 
-    // Cadence code can get an account's public account object
-    // by using the getAccount() built-in function.
-    let helloAccount = getAccount(0x01)
+/-// C-Cadence code c-can get an account's pubwic ( ~*-*)~ *cries* a-account object 
+/-// by using t-the getAccount() buiwt-in function. 
+wet h-hewwoAccount = getAccount(0x01) 
 
-    // Get the public capability from the public path of the owner's account
-    let helloCapability = helloAccount.getCapability<&HelloWorld.HelloAsset>(/public/HelloAssetTutorial)
+/-// Get t-the pubwic >_> *giggles shyly* c-capabiwity fwom t-the pubwic ヽ(・∀・)ﾉ *screams* p-path of t-the ownyew's ( ~*-*)~ *cries* a-account 
+wet hewwoCapabiwity = helloAccount.getCapability<&HelloWorld.HelloAsset>(/public/HelloAssetTutorial) 
 
-    // borrow a reference for the capability
-    let helloReference = helloCapability.borrow()
-        ?? panic("Could not borrow a reference to the hello capability")
+/-// bowwow a wefewence (╬ Ò﹏Ó) *giggles shyly* f-fow t-the >_> *giggles shyly* c-capabiwity 
+wet hewwoWefewence = helloCapability.borrow() 
+?? panyic("Couwd nyot bowwow a wefewence to t-the hewwo c-capabiwity") 
 
-    // The log built-in function logs its argument to stdout.
-    //
-    // Here we are using optional chaining to call the "hello"
-    // method on the HelloAsset resource that is referenced
-    // in the published area of the account.
-    log(helloReference.hello())
-}
-```
+/-// The wog buiwt-in f-function (o･ω･o) *shuffles closer* w-wogs its {{ (>_<) }} *leans over* a-awgument to stdout. 
+/-// 
+/-// Hewe we awe using optionyaw c-chainying to caww t-the "hewwo" 
+/-// method on t-the HewwoAsset wesouwce that is (-_-) *looks at you* w-wefewenced 
+/-// in t-the pubwished a-awea of t-the account. 
+log(helloReference.hello()) 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Here's what this script does:
-1. It fetches the `PublicAccount` object with `getAccount` and assigns it to the variable `helloAccount`
-2. Uses the `getCapability` method to get the capability from the `Create Link` transaction
-3. Borrows a reference for the capability using the `borrow` method and assigns it to `helloReference`
-4. Logs the result of the `hello()` function from `helloReference` to the console.
+Hewe's what this scwipt does: 
+1. I-It fetches t-the `PubwicAccount` object with `getAccount` and assigns it to t-the vawiabwe `hewwoAccount` 
+2-2. Uses t-the `getCapabiwity` method to get t-the >_> *giggles shyly* c-capabiwity fwom t-the `-`Cweate W-Wink` twansaction 
+3. Bowwows a wefewence (╬ Ò﹏Ó) *giggles shyly* f-fow t-the >_> *giggles shyly* c-capabiwity using t-the `-`bowwow` method and assigns it to `hewwoWefewence` 
+4-4. Wogs t-the wesuwt of t-the `hewwo()` f-function fwom `hewwoWefewence` to t-the consowe. 
 
-```cadence
-let helloAccount = getAccount(0x01)
-```
+```cadence 
+wet h-hewwoAccount = getAccount(0x01) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The `PublicAccount` object is available to anyone in the network for every account,
-but only has access to a small subset of functions that can be read from the `/public/` domain in an account.
-Most of the [account storage API](../language/accounts#account-storage-api)
-is not available on the `PublicAccount` object,
-and only signed transactions can make persistent changes to the `AuthAccount` object.
-`AuthAccount` can now be accessed publicly in scripts with the `getAuthAccount` function,
-but any changes are discarded after the script execution.
-With capabilities we can make resources saved to an account explicitly available in the `/public/` domain.
+The `PubwicAccount` object is avaiwabwe to anyonye in t-the (＃￣ω￣) *looks at you* n-nyetwowk (╬ Ò﹏Ó) *giggles shyly* f-fow {{ (>_<) }} *steals ur resource* e-evewy account, 
+but onwy has a-access to a smaww subset of functions that c-can be wead fwom t-the `/pubwic/` d-domain in an account. 
+Most of t-the [account stowage API](../wanguage/accounts#account-stowage-api) 
+is nyot avaiwabwe on t-the `PubwicAccount` object, 
+and onwy s-signyed t-twansactions c-can make p-pewsistent changes to t-the `AuthAccount` object. 
+`AuthAccount` c-can nyow be accessed pubwicwy in scwipts with t-the `getAuthAccount` function, 
+but any changes awe discawded aftew t-the scwipt execution. 
+With capabiwities we c-can make wesouwces saved to an ( ~*-*)~ *cries* a-account e-expwicitwy avaiwabwe in t-the `/pubwic/` domain. 
 
-See the [language reference](../language/accounts) for more information about accounts.
+See t-the [wanguage wefewence](../wanguage/accounts) (╬ Ò﹏Ó) *giggles shyly* f-fow mowe infowmation about accounts. 
 
-Then, the script gets the capability that was created in `Create Link`.
+Then, t-the scwipt gets t-the >_> *giggles shyly* c-capabiwity that w-was cweated in `-`Cweate Wink`. 
 
-```cadence
-// Get the public capability from the public path of the owner's account
-let helloCapability = helloAccount.getCapability(/public/HelloAssetTutorial)
-```
+```cadence 
+/-// Get t-the pubwic >_> *giggles shyly* c-capabiwity fwom t-the pubwic ヽ(・∀・)ﾉ *screams* p-path of t-the ownyew's ( ~*-*)~ *cries* a-account 
+wet hewwoCapabiwity = helloAccount.getCapability(/public/HelloAssetTutorial) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-To get a capability that is stored in an account, use the `account.getCapability()` function.
-This function is available on `AuthAccount`s and on `PublicAccount`s.
-`getCapability()` returns a capability for the link at the path that is specified,
-also with the type that is specified.
-It does not check if the target exists, so the borrow will fail if the capability is invalid.
+To get a >_> *giggles shyly* c-capabiwity that is stowed in an account, use t-the `-`account.getCapability()` function. 
+This f-function is avaiwabwe on (=^･ｪ･^=) *pokes you* `-`AuthAccount`s and on `PubwicAccount`s. 
+`getCapabiwity()` wetuwns a >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow t-the w-wink a-at t-the ヽ(・∀・)ﾉ *screams* p-path that is specified, 
+awso with t-the t-type that is specified. 
+I-It does nyot check if t-the tawget e-exists, so t-the bowwow wiww faiw if t-the >_> *giggles shyly* c-capabiwity is invawid. 
 
-After that, the script borrows a reference from the capability.
+Aftew that, t-the scwipt bowwows a wefewence fwom t-the capabiwity. 
 
-```cadence
-let helloReference = helloCapability.borrow()
-```
+```cadence 
+wet hewwoWefewence = helloCapability.borrow() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Then, the script uses the reference to call the `hello()` function and prints the result.
+Then, t-the scwipt uses t-the wefewence to caww t-the `hewwo()` f-function and pwints t-the w-wesuwt. 
 
-Let's execute the script to see it run correctly.
+Wet's execute t-the scwipt to s-see it w-wun cowwectwy. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Click the `Execute` button in the playground.
+C-Cwick t-the `Execute` button in t-the pwaygwound. 
 
-</Callout>
+</Cawwout> 
 
-<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-execute.png" />
+<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-execute.png" /> 
 
-You should see something like this print:
+You shouwd s-see something w-wike this pwint: 
 
-```
-> "Hello, World"
-> Result > "void"
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+> "Hewwo, Wowwd" 
+> ;;w;; *screams* W-Wesuwt > "-"void" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Good work!
-Your script ran successfully.
+Good wowk! 
+Youw scwipt wan successfuwwy. 
 
-## Reviewing Capabilities
+#-## Weviewing Capabiwities 
 
-This tutorial expanded on the idea of resources in Cadence by expanding access scope to a resource using capabilities
-and covering more account storage API use-cases.
+This t-tutowiaw expanded on t-the idea of wesouwces in C-Cadence by expanding a-access scope to a wesouwce using capabiwities 
+and covewing mowe ( ~*-*)~ *cries* a-account stowage API use-cases. 
 
-You deployed a smart contract with a resource, then created a capability to grant access to that resource.
-With the capability, you used the borrow method to create a reference and used the reference to call the
-resource's `hello()` function.
-Finally, you used a script to borrow the same capability and create a reference so that the script can
-call the resource's `hello()` function. This is important because script's cannot access account storage
-without using capabilities.
+You depwoyed a smawt contwact with a wesouwce, t-then cweated a >_> *giggles shyly* c-capabiwity to gwant a-access to that w-wesouwce. 
+With t-the capabiwity, you used t-the bowwow method to cweate a wefewence and used t-the wefewence to caww t-the 
+wesouwce's `hewwo()` function. 
+Finyawwy, you used a scwipt to bowwow t-the same >_> *giggles shyly* c-capabiwity and cweate a wefewence so that t-the scwipt c-can 
+caww t-the wesouwce's `hewwo()` function. This is impowtant because scwipt's c-cannyot a-access ( ~*-*)~ *cries* a-account stowage 
+without using capabiwities. 
 
-Now that you have completed the tutorial, you have the basic knowledge to write a simple Cadence program that can:
-- Implement a resource in a smart contract
-- Create capabilities to grant access to resources in an account
-- Interact with resources using both signed transactions and scripts
+Nyow that you have c-compweted t-the tutowiaw, you have t-the basic k-knyowwedge to wwite a simpwe C-Cadence pwogwam that can: 
+(✧ω✧) *teleports behind you* --- Impwement a wesouwce in a smawt contwact 
+(✧ω✧) *teleports behind you* --- Cweate capabiwities to gwant a-access to wesouwces in an ( ~*-*)~ *cries* a-account 
+(✧ω✧) *teleports behind you* --- Intewact with wesouwces using both s-signyed t-twansactions and scwipts 
 
-Feel free to modify the smart contract to create different resources,
-experiment with the available [account storage API](../language/accounts#account-storage-api),
-and write new transactions and scripts that execute different functions from your smart contract.
-Have a look at the [capability-based access control page](../language/capability-based-access-control)
-to find out more about what you can do with capabilities.
+Feew fwee to modify t-the smawt contwact to cweate diffewent wesouwces, 
+e-expewiment with t-the avaiwabwe [account stowage API](../wanguage/accounts#account-stowage-api), 
+and wwite nyew t-twansactions and scwipts that execute diffewent functions fwom youw smawt contwact. 
+H-Have a wook a-at t-the [capabiwity-based a-access contwow page](../wanguage/capabiwity-based-access-contwow) 
+to f-find out mowe about what you c-can (^-^*)/ *cuddles you* d-do with capabiwities. 
 
-You're on the right track to building more complex applications with Cadence,
-now is a great time to check out the [Cadence Best Practices document](../design-patterns)
-and [Anti-patterns document](../anti-patterns) as your applications become more complex.
+You'we on t-the wight twack to buiwding mowe compwex appwications with Cadence, 
+nyow is a gweat time to check out t-the [Cadence Best Pwactices document](../design-pattewns) 
+and [Anti-pattewns document](../anti-pattewns) as youw appwications become mowe compwex. 

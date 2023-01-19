@@ -1,71 +1,71 @@
----
-title: Events
----
+----- 
+titwe: Events 
+----- 
 
-Events are special values that can be emitted during the execution of a program.
+Events awe speciaw vawues that c-can be emitted d-duwing t-the execution of a pwogwam. 
 
-An event type can be declared with the `event` keyword.
+An e-event t-type c-can be d-decwawed with t-the `event` (*・ω・)ﾉ *dances nervously* k-keywowd. 
 
-```cadence
-event FooEvent(x: Int, y: Int)
-```
+```cadence 
+e-event FooEvent(x: Int, y-y: Int) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The syntax of an event declaration is similar to that of
-a [function declaration](functions#function-declarations);
-events contain named parameters, each of which has an optional argument label.
+The s-syntax of an e-event decwawation is simiwaw to that of 
+a [function decwawation](functions#function-decwawations); 
+events uWu *whines* c-contain nyamed pawametews, each of which has an optionyaw {{ (>_<) }} *leans over* a-awgument (´ ∀ ` *) *looks away* w-wabew. 
 
-Event parameters may only have a valid event parameter type.
-Valid types are boolean, string, integer, arrays and dictionaries of these types,
-and structures where all fields have a valid event parameter type.
-Resource types are not allowed, because when a resource is used as an argument, it is moved.
+E-Event p-pawametews may onwy have a vawid e-event p-pawametew (＃￣ω￣) *hugs tightly* t-type. 
+V-Vawid t-types awe boowean, stwing, integew, awways and dictionyawies of these types, 
+and stwuctuwes whewe (＾▽＾') *cuddles you* a-aww fiewds have a vawid e-event p-pawametew (＃￣ω￣) *hugs tightly* t-type. 
+Wesouwce t-types awe nyot awwowed, because when a wesouwce is used as an awgument, it is moved. 
 
-Events can only be declared within a [contract](contracts) body.
-Events cannot be declared globally or within resource or struct types.
+Events c-can onwy be d-decwawed within a [contwact](contwacts) body. 
+Events c-cannyot be d-decwawed gwobawwy ow within wesouwce ow stwuct types. 
 
-```cadence
-// Invalid: An event cannot be declared globally
-//
-event GlobalEvent(field: Int)
+```cadence 
+/-// Invawid: An e-event c-cannyot be d-decwawed gwobawwy 
+/-// 
+e-event GwobawEvent(fiewd: Int) 
 
-pub contract Events {
-    // Event with explicit argument labels
-    //
-    event BarEvent(labelA fieldA: Int, labelB fieldB: Int)
+pub contwact Events { 
+/-// E-Event with expwicit {{ (>_<) }} *leans over* a-awgument w-wabews 
+/-// 
+e-event ฅ(• ɪ •)ฅ *sweats* B-BawEvent(wabewA fiewdA: Int, wabewB fiewdB: Int) 
 
-    // Invalid: A resource type is not allowed to be used
-    // because it would be moved and lost
-    //
-    event ResourceEvent(resourceField: @Vault)
-}
+/-// Invawid: A-A wesouwce t-type is nyot awwowed to be used 
+/-// because it w-wouwd be moved and wost 
+/-// 
+e-event WesouwceEvent(wesouwceFiewd: (=①ω①=) *steals ur resource* @-@Vauwt) 
+} 
 
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Emitting events
+### Emitting events 
 
-To emit an event from a program, use the `emit` statement:
+To emit an e-event fwom a pwogwam, use t-the `emit` statement: 
 
-```cadence
-pub contract Events {
-    event FooEvent(x: Int, y: Int)
+```cadence 
+pub contwact Events { 
+e-event FooEvent(x: Int, y-y: Int) 
 
-    // Event with argument labels
-    event BarEvent(labelA fieldA: Int, labelB fieldB: Int)
+/-// E-Event with {{ (>_<) }} *leans over* a-awgument w-wabews 
+e-event ฅ(• ɪ •)ฅ *sweats* B-BawEvent(wabewA fiewdA: Int, wabewB fiewdB: Int) 
 
-    fun events() {
-        emit FooEvent(x: 1, y: 2)
+fun events() { 
+emit FooEvent(x: 1, y-y: 2) 
 
-        // Emit event with explicit argument labels
-        // Note that the emitted event will only contain the field names,
-        // not the argument labels used at the invocation site.
-        emit BarEvent(labelA: 1, labelB: 2)
-    }
-}
-```
+/-// Emit e-event with expwicit {{ (>_<) }} *leans over* a-awgument w-wabews 
+/-// Nyote that t-the emitted e-event wiww onwy uWu *whines* c-contain t-the fiewd nyames, 
+/-// nyot t-the {{ (>_<) }} *leans over* a-awgument w-wabews used a-at t-the invocation site. 
+emit BawEvent(wabewA: 1, wabewB: 2) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Emitting events has the following restrictions:
+Emitting events has t-the fowwowing westwictions: 
 
-- Events can only be invoked in an `emit` statement.
+(✧ω✧) *teleports behind you* --- Events c-can onwy be invoked in an `emit` statement. 
 
-  This means events cannot be assigned to variables or used as function parameters.
+This means events c-cannyot be assignyed to vawiabwes ow used as f-function pawametews. 
 
-- Events can only be emitted from the location in which they are declared.
+(✧ω✧) *teleports behind you* --- Events c-can onwy be emitted fwom t-the wocation in which they awe d-decwawed. 

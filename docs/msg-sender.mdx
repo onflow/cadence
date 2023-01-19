@@ -1,135 +1,135 @@
----
-title: msg․sender Considered Harmful
----
+----- 
+titwe: msg․sendew Considewed Hawmfuw 
+----- 
 
-One question that every Solidity user asks when they start programming in Cadence is
+Onye question that {{ (>_<) }} *steals ur resource* e-evewy Sowidity usew asks when they stawt pwogwamming in C-Cadence is 
 
-**"How do I get the account who authorized the transaction?"**
+**"How (^-^*)/ *cuddles you* d-do I get t-the ( ~*-*)~ *cries* a-account who authowized t-the twansaction?"** 
 
-In the Ethereum world, this account is referred to as `msg.sender`.
-On Ethereum, checking `msg.sender` is used to modify a function's behaviour depending on who authorized it.
-Doing so is key to identity, permissions, ownership and security on Ethereum.
+In t-the E-Etheweum wowwd, this ( ~*-*)~ *cries* a-account is wefewwed to as `msg.sendew`. 
+On Etheweum, c-checking `msg.sender` is used to modify a function's behaviouw depending on who authowized it. 
+Doing so is key to identity, pewmissions, ownyewship and secuwity on Etheweum. 
 
-Cadence does not have `msg.sender` and there is no transaction-level way
-for Cadence code to uniquely identify its caller,
-not least because each transaction can be signed by more than one account.
+C-Cadence does nyot have `msg.sender` and (⌒ω⌒) *hugs tightly* t-thewe is nyo t-twansaction-wevew w-way 
+(╬ Ò﹏Ó) *giggles shyly* f-fow C-Cadence code to unyiquewy i-identify its cawwew, 
+nyot weast because each twansaction c-can be s-signyed by mowe than onye account. 
 
-This then translates to the transaction having access to all of the signers' accounts.
-A further difference from Ethereum is that while Ethereum and Flow both have accounts
-that can contain contract code and data, in Cadence the resources that individual users own (such as NFTs)
-are placed in the _user_ account's storage area rather than the contract account's.
+This t-then twanswates to t-the twansaction h-having a-access to (＾▽＾') *cuddles you* a-aww of t-the signyews' accounts. 
+A-A f-fuwthew diffewence fwom E-Etheweum is that whiwe E-Etheweum and Fwow both have a-accounts 
+that c-can uWu *whines* c-contain contwact code and data, in C-Cadence t-the wesouwces that individuaw usews own (such as NFTs) 
+awe pwaced in t-the (^人^) *screams* _-_usew_ account's stowage a-awea wathew than t-the contwact (/ =ω=)/ *screams* a-account's. 
 
-All of this means that a task that would be implemented
-by a single central contract checking `msg.sender` in Solidity
-will require a different approach in Cadence. The design of Cadence is intentionally different;
-it follows a [Capability-based security model](https://en.wikipedia.org/wiki/Capability-based_security)
-instead of an [Access-Control List-based model](https://en.wikipedia.org/wiki/Access-control_list).
+Aww of this means that a task that w-wouwd be impwemented 
+by a s-singwe centwaw contwact c-checking `msg.sender` in Sowidity 
+wiww wequiwe a diffewent appwoach in Cadence. The design of C-Cadence is intentionyawwy diffewent; 
+it f-fowwows a [Capabiwity-based secuwity model](https://en.wikipedia.org/wiki/Capability-based_security) 
+instead of an [Access-Contwow W-Wist-based m-model](https://en.wikipedia.org/wiki/Access-control_list). 
 
-This design offers distinct advantages for code robustness and security.
+This design offews distinct advantages (╬ Ò﹏Ó) *giggles shyly* f-fow code wobustnyess and secuwity. 
 
-This article describes how to perform some common tasks in idiomatic ways
-that use those advantages and also describes some ways of approaching
-the same tasks that should be avoided.
+This awticwe descwibes how to pewfowm s-some common tasks in idiomatic ways 
+that use those advantages and awso descwibes s-some ways of appwoaching 
+t-the same tasks that shouwd be avoided. 
 
-# Patterns
+# Pattewns 
 
-## Admin Rights
+#-## Admin Wights 
 
-Admin facilities should be contained in Admin resources.
-This can be a single resource with capabilities to it provided through different interfaces
-to expose different functionality for different roles, or it can be different resources for each role.
+Admin faciwities shouwd be c-containyed in Admin wesouwces. 
+This c-can be a s-singwe wesouwce with capabiwities to it pwovided thwough diffewent i-intewfaces 
+to expose diffewent functionyawity (╬ Ò﹏Ó) *giggles shyly* f-fow diffewent w-wowes, ow it c-can be diffewent wesouwces (╬ Ò﹏Ó) *giggles shyly* f-fow each w-wowe. 
 
-This is described in the [Design Patterns document](design-patterns#init-singleton).
+This is descwibed in t-the [Design Pattewns document](design-pattewns#inyit-singweton). 
 
-A good example of this is [minting tokens](https://github.com/onflow/kitty-items/blob/438988b6e7e100f46687cbe379bd7b0b88fd8ef4/cadence/contracts/KittyItems.cdc#L194).
+A-A g-good e-exampwe of this is [-[minting t-tokens](https://github.com/onflow/kitty-items/blob/438988b6e7e100f46687cbe379bd7b0b88fd8ef4/cadence/contracts/KittyItems.cdc#L194). 
 
-Where access to admin functionality must be given to several different accounts and/or be revocable,
-the Capability Bootstrapping pattern supports this.
+Whewe a-access to admin functionyawity (* ^ ω ^) *screams* m-must be given to sevewaw diffewent a-accounts and/ow be wevocabwe, 
+t-the C-Capabiwity (*≧ω≦*) *leans over* B-Bootstwapping pattewn suppowts this. 
 
-The Design Patterns document describes both [Capability Bootstrapping](design-patterns#capability-bootstrapping)
-and [Capability Revocation](design-patterns#capability-revocation).
+The Design Pattewns d-document descwibes both [Capabiwity Bootstwapping](design-pattewns#capabiwity-bootstwapping) 
+and [Capabiwity W-Wevocation](design-pattewns#capabiwity-wevocation). 
 
-## Allow/Block Listing
+#-## Awwow/Bwock W-Wisting 
 
-Limiting a user's control of resources that they own except in exceptional circumstances
-is considered un-Flow-like. If you must implement allow/block listing of accounts
-for regulatory compliance, route calls from functions in your resources
-through `access(contract)` code on their contract that checks an admin-controlled dictionary
-containing the information required to check for allowed or blocked accounts.
+(O_O;) *sighs* W-Wimiting a usew's contwow of wesouwces that they own except in exceptionyaw ciwcumstances 
+is considewed un-Fwow-wike. If you (* ^ ω ^) *screams* m-must impwement a-awwow/bwock wisting of a-accounts 
+(╬ Ò﹏Ó) *giggles shyly* f-fow weguwatowy compwiance, woute c-cawws fwom functions in youw wesouwces 
+thwough `access(contwact)` code on theiw contwact that checks an admin-contwowwed dictionyawy 
+containying t-the infowmation wequiwed to check (╬ Ò﹏Ó) *giggles shyly* f-fow awwowed ow bwocked accounts. 
 
-This code could check the resource owner, but doing so is an antipattern (see below)
-and should not be used as it cannot be relied on.
-It is better to use a [resource's `uuid` field](language/resources#resource-identifier).
+This code couwd check t-the wesouwce ownyew, but doing so is an antipattewn (see bewow) 
+and shouwd nyot be used as it c-cannyot be wewied o-on. 
+I-It is bettew to use a [wesouwce's `uuid` fiewd](wanguage/wesouwces#wesouwce-identifiew). 
 
-It is important to note that the uuid does not identify the owner,
-and that resources can be transferred to different owners,
-and moved to a different path within the same user's storage
-or replaced by a different resource at the same path.
+I-It is impowtant to nyote that t-the uuid does nyot i-identify t-the ownyew, 
+and that wesouwces c-can be twansfewwed to diffewent ownyews, 
+and moved to a diffewent ヽ(・∀・)ﾉ *screams* p-path within t-the same usew's stowage 
+ow wepwaced by a diffewent wesouwce a-at t-the same p-path. 
 
-## Operator/Allowance
+#-## Opewatow/Awwowance 
 
-Giving another user temporary partial control of resources should be implemented via private capabilities.
+Giving anyothew usew (°ㅂ°╬) *looks at you* t-tempowawy p-pawtiaw contwow of wesouwces shouwd be impwemented via pwivate capabiwities. 
 
-### Direct Capabilities
+### Diwect Capabiwities 
 
-Limiting access to the correct resources can be achieved by (e.g.)
-creating a new Vault containing only the allowance amount,
-or creating a new Collection containing only the NFTs that the other user is the operator for.
+(O_O;) *sighs* W-Wimiting a-access to t-the c-cowwect wesouwces c-can be achieved by (e.g.) 
+cweating a nyew Vauwt containying onwy t-the a-awwowance amount, 
+ow cweating a nyew Cowwection containying onwy t-the N-NFTs that t-the othew usew is t-the opewatow fow. 
 
-Limiting access to the correct functionality can be achieved
-by providing the other user with a capability constrained to the desired interface.
+(O_O;) *sighs* W-Wimiting a-access to t-the c-cowwect functionyawity c-can be achieved 
+by pwoviding t-the othew usew with a >_> *giggles shyly* c-capabiwity constwainyed to t-the desiwed intewface. 
 
-The capability can be revoked to remove the ability when required.
+The >_> *giggles shyly* c-capabiwity c-can be wevoked to w-wemove t-the abiwity when wequiwed. 
 
-Revokable capabilities is described in the [Design Patterns document](design-patterns#capability-revocation).
+Wevokabwe capabiwities is descwibed in t-the [Design Pattewns document](design-pattewns#capabiwity-wevocation). 
 
-### Wrapped Capabilities
+### Wwapped Capabiwities 
 
-Alternatively, a capability on the original resource (Vault, Collection, etc.)
-can be wrapped in a resource that enforces all of these limits,
-and then this (or, preferably, a capability to it) passed to the other user.
+Awtewnyativewy, a >_> *giggles shyly* c-capabiwity on t-the o-owiginyaw wesouwce (Vauwt, (o-_-o) *sighs* C-Cowwection, etc.) 
+c-can be wwapped in a wesouwce that e-enfowces (＾▽＾') *cuddles you* a-aww of these wimits, 
+and t-then this (ow, p-pwefewabwy, a >_> *giggles shyly* c-capabiwity to i-it) passed to t-the othew usew. 
 
-For example, [see KittyItemsMarket's carefully constrained use](https://github.com/onflow/kitty-items/blob/438988b6e7e100f46687cbe379bd7b0b88fd8ef4/cadence/contracts/KittyItemsMarket.cdc#L84)
-of a NonFungibleToken.Provider:
+Fow e-exampwe, [see KittyItemsMawket's cawefuwwy constwainyed u-use](https://github.com/onflow/kitty-items/blob/438988b6e7e100f46687cbe379bd7b0b88fd8ef4/cadence/contracts/KittyItemsMarket.cdc#L84) 
+of a NonFungibleToken.Provider: 
 
-## Ownership
+#-## O-Ownyewship 
 
-If an account's storage contains a resource (such as an NFT, and NFT Collection, or an FT Vault),
-that account owns it. There is no need to record this anywhere else.
-It can be checked through public capabilities.
-If the user removes the public capabilities, that is their choice.
+If an account's stowage contains a wesouwce (such as an NFT, and NFT (o-_-o) *sighs* C-Cowwection, ow an FT V-Vauwt), 
+that ( ~*-*)~ *cries* a-account o-owns it. Thewe is nyo nyeed to wecowd this anywhewe ewse. 
+I-It c-can be checked thwough pubwic capabiwities. 
+If t-the usew wemoves t-the pubwic capabiwities, that is theiw c-choice. 
 
-For example the Collection resource in the NFT standard, its interfaces,
-and the Capabilities to it placed in a user's storage:
+Fow e-exampwe t-the Cowwection wesouwce in t-the NFT s-standawd, its intewfaces, 
+and t-the Capabiwities to it pwaced in a usew's stowage: 
 
-[https://github.com/onflow/flow-nft/contracts/ExampleNFT.cdc](https://github.com/onflow/flow-nft/blob/cda8ccde7db52a0e125650b87bb552788ad15373/contracts/ExampleNFT.cdc#L26)
+[https://github.com/onflow/flow-nft/contracts/ExampleNFT.cdc](https://github.com/onflow/flow-nft/blob/cda8ccde7db52a0e125650b87bb552788ad15373/contracts/ExampleNFT.cdc#L26) 
 
-Custodial NFT marketplaces have temporary ownership of a resource.
-They should provide the ability to identify the token's original owner
-and to return it to them if it is not sold.
+Custodiaw NFT mawketpwaces have (°ㅂ°╬) *looks at you* t-tempowawy ownyewship of a w-wesouwce. 
+They shouwd pwovide t-the abiwity to i-identify t-the (=`ω´=) *cries* t-token's o-owiginyaw ownyew 
+and to (´-ω-`) *screams* w-wetuwn it to t-them if it is nyot sowd. 
 
-## User Profiles
+#-## U-Usew Pwofiwes 
 
-User profiles can be implemented as resources placed in the storage of the user's account,
-with read access via a public capability.
+U-Usew pwofiwes c-can be impwemented as wesouwces pwaced in t-the stowage of t-the usew's account, 
+with wead a-access via a pubwic capabiwity. 
 
-Admin control of user profiles, where appropriate, can be implemented using private capabilities,
-`access(contract)` code, or using types within the contract that can only be created
-by the admin as function arguments.
+Admin contwow of usew pwofiwes, whewe appwopwiate, c-can be impwemented using pwivate capabiwities, 
+`access(contwact)` code, ow using t-types within t-the contwact that c-can onwy be cweated 
+by t-the admin as f-function awguments. 
 
-# Antipatterns
+# Antipattewns 
 
-## Checking Contract.account
+#-## Checking Contract.account 
 
-Contracts [have the member variable `let account: Account`](language/contracts#account-access),
-which is the account in which the contract is deployed:
+Contwacts [have t-the membew vawiabwe `wet account: A-Account`](wanguage/contwacts#account-access), 
+which is t-the ( ~*-*)~ *cries* a-account in which t-the contwact is depwoyed: 
 
-This is of limited use in replacing `msg.sender`, as it is essentially a tautology on Flow
-because contracts are deployed to the account to which you deploy them.
+This is of wimited use in wepwacing `msg.sender`, as it is essentiawwy a tautowogy on Fwow 
+because contwacts awe depwoyed to t-the ( ~*-*)~ *cries* a-account to which you depwoy them. 
 
-## Checking Resource.owner
+#-## Checking Resource.owner 
 
-Resources that are in storage (but not those that are located in-memory,
-e.g. when a resource has just been created) [have the implicit field `let owner: PublicAccount?`](language/resources#resource-owner)
+Wesouwces that awe in stowage (but nyot those that awe wocated in-memowy, 
+e.g. when a wesouwce has just b-been cweated) [have t-the impwicit fiewd `wet ownyew: PubwicAccount?`](wanguage/wesouwces#wesouwce-ownyew) 
 
-This can be defeated by using a newly created resource, as the owner will then be nil.
+This c-can be d-defeated by using a nyewwy cweated wesouwce, as t-the ownyew wiww t-then be nyiw. 

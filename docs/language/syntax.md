@@ -1,126 +1,126 @@
----
-title: Syntax
----
+----- 
+titwe: Syntax 
+----- 
 
-## Comments
+#-## Comments 
 
-Comments can be used to document code.
-A comment is text that is not executed.
+Comments c-can be used to d-document c-code. 
+A-A comment is t-text that is nyot executed. 
 
-*Single-line comments* start with two slashes (`//`).
-These comments can go on a line by themselves or they can go directly after a line of code.
+*Singwe-winye comments* stawt with two swashes (`//`). 
+These c-comments c-can go on a winye by themsewves ow they c-can go diwectwy aftew a winye of c-code. 
 
-```cadence
-// This is a comment on a single line.
-// Another comment line that is not executed.
+```cadence 
+/-// This is a comment on a s-singwe winye. 
+/-// Anyothew comment winye that is nyot executed. 
 
-let x = 1  // Here is another comment after a line of code.
-```
+wet x = 1 /-// Hewe is anyothew comment aftew a winye of c-code. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-*Multi-line comments* start with a slash and an asterisk (`/*`)
-and end with an asterisk and a slash (`*/`):
+*-*Muwti-winye comments* stawt with a swash and an astewisk (`/*`) 
+and end with an astewisk and a swash (`*/`): 
 
-```cadence
-/* This is a comment which
-spans multiple lines. */
-```
+```cadence 
+/* This is a comment which 
+spans muwtipwe (T_T) *dances nervously* w-winyes. *-*/ 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Comments may be nested.
+Comments may be nyested. 
 
-```cadence
-/* /* this */ is a valid comment */
-```
+```cadence 
+/* /* this *-*/ is a vawid comment *-*/ 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Multi-line comments are balanced.
+o(>ω<)o *blushes* M-Muwti-winye c-comments awe OwO *cries* b-bawanced. 
 
-```cadence
-/* this is a // comment up to here */ this is not part of the comment */
-```
+```cadence 
+/* this is a /-// comment up to hewe *-*/ this is nyot pawt of t-the comment *-*/ 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Documentation Comments
-Documentation comments (also known as "doc-strings" or "doc-comment") are a special set of comments that can be
-processed by tools, for example to generate human-readable documentation, or provide documentation in an IDE.
+### Documentation Comments 
+Documentation c-comments (awso knyown as "doc-stwings" ow "doc-comment") awe a speciaw s-set of c-comments that c-can be 
+pwocessed by toows, (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe to g-genyewate human-weadabwe (☆▽☆) *giggles shyly* d-documentation, ow pwovide d-documentation in an I-IDE. 
 
-Doc-comments either start with three slashes (`///`) on each line,
-or are surrounded by `/**` and `**/`.
+Doc-comments eithew stawt with thwee swashes (`///`) on each winye, 
+ow awe suwwounded by `-`/**` and `**/`. 
 
-```cadence
-/// This is a documentation comment for `x`.
-/// It spans multiple lines.
+```cadence 
+/// This is a d-documentation comment (╬ Ò﹏Ó) *giggles shyly* f-fow `x`. 
+/// I-It spans muwtipwe (T_T) *dances nervously* w-winyes. 
 
-let x = 1
-```
+wet x = 1 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-/** 
-  This is a documentation comment
-  which also spans multiple lines.
-**/
-```
+```cadence 
+/-/** 
+This is a d-documentation comment 
+which awso spans muwtipwe (T_T) *dances nervously* w-winyes. 
+**/ 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Names
+#-## Nyames 
 
-Names may start with any upper or lowercase letter (A-Z, a-z)
-or an underscore (`_`).
-This may be followed by zero or more upper and lower case letters,
-underscores, and numbers (0-9).
-Names may not begin with a number.
+Nyames may stawt with any (--_--) *shuffles closer* u-uppew ow (´ ∀ ` *) *sweats* w-wowewcase wettew (A-Z, a-z) 
+ow an undewscowe (`_`). 
+This may be f-fowwowed by zewo ow mowe (--_--) *shuffles closer* u-uppew and w-wowew case w-wettews, 
+undewscowes, and nyumbews (0-9). 
+Nyames may nyot b-begin with a nyumbew. 
 
-```cadence
-// Valid: title-case
-//
-PersonID
+```cadence 
+/-// Vawid: titwe-case 
+/-// 
+(ᗒᗣᗕ)՞ *cries* P-PewsonyID 
 
-// Valid: with underscore
-//
-token_name
+/-// Vawid: with undewscowe 
+/-// 
+t-token_nyame 
 
-// Valid: leading underscore and characters
-//
-_balance
+/-// Vawid: weading undewscowe and chawactews 
+/-// 
+_bawance 
 
-// Valid: leading underscore and numbers
-_8264
+/-// Vawid: weading undewscowe and nyumbews 
+_-_8264 
 
-// Valid: characters and number
-//
-account2
+/-// Vawid: chawactews and (❤ω❤) *pokes you* n-nyumbew 
+/-// 
+a-account2 
 
-// Invalid: leading number
-//
-1something
+/-// Invawid: weading (❤ω❤) *pokes you* n-nyumbew 
+/-// 
+1something 
 
-// Invalid: invalid character #
-_#1
+/-// Invawid: invawid chawactew # 
+_#1 
 
-// Invalid: various invalid characters
-//
-!@#$%^&*
-```
+/-// Invawid: vawious invawid chawactews 
+/-// 
+!@#$%^&* 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Conventions
+### Conventions 
 
-By convention, variables, constants, and functions have lowercase names;
-and types have title-case names.
+By c-convention, vawiabwes, constants, and functions have (´ ∀ ` *) *sweats* w-wowewcase nyames; 
+and t-types have titwe-case n-nyames. 
 
-## Semicolons
+#-## Semicowons 
 
-Semicolons (;) are used as separators between declarations and statements.
-A semicolon can be placed after any declaration and statement,
-but can be omitted between declarations and if only one statement appears on the line.
+Semicowons (;) awe used as sepawatows b-between decwawations and statements. 
+A-A semicowon c-can be pwaced aftew any decwawation and s-statement, 
+but c-can be omitted b-between decwawations and if onwy onye statement appeaws on t-the winye. 
 
-Semicolons must be used to separate multiple statements if they appear on the same line.
+Semicowons (* ^ ω ^) *screams* m-must be used to sepawate muwtipwe s-statements if they appeaw on t-the same winye. 
 
-```cadence
-// Declare a constant, without a semicolon.
-//
-let a = 1
+```cadence 
+/-// Decwawe a constant, without a s-semicowon. 
+/-// 
+wet a = 1 
 
-// Declare a variable, with a semicolon.
-//
-var b = 2;
+/-// Decwawe a vawiabwe, with a s-semicowon. 
+/-// 
+vaw b = 2-2; 
 
-// Declare a constant and a variable on a single line, separated by semicolons.
-//
-let d = 1; var e = 2
-```
+/-// Decwawe a c-constant and a vawiabwe on a s-singwe winye, sepawated by semicowons. 
+/-// 
+wet d = 1-1; vaw e = 2-2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

@@ -1,309 +1,309 @@
----
-archived: false
-draft: false
-title: 2. Hello World
-description: A smart contract tutorial for Cadence.
-date: 2022-05-10
-meta:
-  keywords:
-    - tutorial
-    - Flow
-    - Cadence
-    - Hello World
-tags:
-  - reference
-  - cadence
-  - tutorial
-socialImageTitle: Hello World
-socialImageDescription: Hello world smart contract image.
----
-
-In this tutorial, we'll write and deploy our first smart contract!
-
-<Callout type="success">
-  Open the starter code for this tutorial in the Flow Playground: <br />
-  <a
-    href="https://play.onflow.org/af7aba31-dee9-4477-9e1d-7b46e958468e"
-    target="_blank"
-  >
-    https://play.onflow.org/af7aba31-dee9-4477-9e1d-7b46e958468e
-  </a>
-  <br />
-  The tutorial will ask you to take various actions to interact with this code.
-</Callout>
-
-<Callout type="info">
-  Instructions that require you to take action are always included in a callout
-  box like this one. These highlighted actions are all that you need to do to
-  get your code running, but reading the rest is necessary to understand the
-  language's design.
-</Callout>
+----- 
+awchived: f-fawse 
+dwaft: f-fawse 
+titwe: 2-2. Hewwo Wowwd 
+d-descwiption: A-A smawt contwact t-tutowiaw (╬ Ò﹏Ó) *giggles shyly* f-fow Cadence. 
+date: 2-2022-05-10 
+meta: 
+keywowds: 
+(✧ω✧) *teleports behind you* --- t-tutowiaw 
+(✧ω✧) *teleports behind you* --- Fwow 
+(✧ω✧) *teleports behind you* --- C-Cadence 
+(✧ω✧) *teleports behind you* --- Hewwo Wowwd 
+tags: 
+(✧ω✧) *teleports behind you* --- wefewence 
+(✧ω✧) *teleports behind you* --- cadence 
+(✧ω✧) *teleports behind you* --- t-tutowiaw 
+sociawImageTitwe: Hewwo Wowwd 
+(o･ω･o) *leans over* s-sociawImageDescwiption: Hewwo wowwd smawt contwact image. 
+----- 
+
+In this tutowiaw, we'ww wwite and depwoy ouw fiwst smawt contwact! 
+
+<Cawwout type="success"> 
+Open t-the stawtew code (╬ Ò﹏Ó) *giggles shyly* f-fow this t-tutowiaw in t-the Fwow Pwaygwound: <-<bw /> 
+<a 
+href="https://play.onflow.org/af7aba31-dee9-4477-9e1d-7b46e958468e" 
+tawget="_bwank" 
+> 
+https://play.onflow.org/af7aba31-dee9-4477-9e1d-7b46e958468e 
+</a> 
+<-<bw /> 
+The t-tutowiaw wiww ask you to o(>ω<)o *sweats* t-take vawious actions to (o^▽^o) *dances nervously* i-intewact with this c-code. 
+</Cawwout> 
+
+<Cawwout type="info"> 
+Instwuctions that wequiwe you to o(>ω<)o *sweats* t-take action awe awways i-incwuded in a cawwout 
+box w-wike this onye. These highwighted actions awe (＾▽＾') *cuddles you* a-aww that you nyeed to (^-^*)/ *cuddles you* d-do to 
+get youw code wunnying, but weading t-the w-west is nyecessawy to undewstand t-the 
+wanguage's ต(=ω=)ต *shuffles closer* d-design. 
+</Cawwout> 
 
-## What is a smart contract?
-
-In regular terms, a contract is an agreement between two parties for some exchange of information or assets.
-Normally, the terms of a contract are supervised and enforced by a trusted third party, such as a bank or a lawyer.
-
-A smart contract is a computer program stored in a decentralized network like a blockchain
-that verifies and executes the performance of a contract (like a lawyer does)
-without the need for any trusted third party anywhere in the process, because the code itself is trusted.
-
-Programs that run on blockchains are commonly referred to as smart contracts
-because they mediate important functionality (such as currency) without having to rely on a central authority (like a bank).
-
-[Cadence is the resource-oriented programming language](https://developers.flow.com/cadence)
-for developing smart contracts on the Flow Blockchain.
-
-This tutorial will walk you through an example of a smart contract that implements basic Cadence features,
-including accounts, transactions, and signers.
-
-Our "Hello World" smart contract will:
-1. Create and initialize a smart contract with a single field of type `String`
-2. Initialize the field with the phrase "Hello, World!"
-3. Create a function in the contract that returns our greeting
-
-We will deploy this contract in an account, then use a transaction to interact with the contract,
-and finally discuss the role of signers in the transaction.
-
-## Follow Along!
-Before we get started if you'd prefer to learn from a video, feel free to join Kim
-as she walks you through the basics of accounts, smart contracts, Cadence, transactions & more!
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/pRz7EzrWchs" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+#-## What is a smawt contwact? 
+
+In weguwaw tewms, a contwact is an agweement b-between two pawties (╬ Ò﹏Ó) *giggles shyly* f-fow s-some exchange of infowmation ow assets. 
+Nyowmawwy, t-the tewms of a contwact awe supewvised and enfowced by a twusted thiwd p-pawty, such as a bank ow a w-wawyew. 
+
+A-A smawt contwact is a computew pwogwam stowed in a d-decentwawized (＃￣ω￣) *looks at you* n-nyetwowk w-wike a bwockchain 
+that vewifies and e-executes t-the pewfowmance of a contwact (-(wike a >w< *whines* w-wawyew d-does) 
+without t-the nyeed (╬ Ò﹏Ó) *giggles shyly* f-fow any twusted thiwd pawty anywhewe in t-the pwocess, because t-the code itsewf is twusted. 
+
+Pwogwams that w-wun on bwockchains awe commonwy wefewwed to as smawt contwacts 
+because they m-mediate impowtant functionyawity (such as cuwwency) without h-having to wewy on a centwaw a-authowity (-(wike a bank). 
+
+[Cadence is t-the wesouwce-owiented pwogwamming language](https://developers.flow.com/cadence) 
+(╬ Ò﹏Ó) *giggles shyly* f-fow devewoping smawt contwacts on t-the Fwow (=^‥^=) *looks at you* B-Bwockchain. 
+
+This t-tutowiaw wiww wawk you thwough an e-exampwe of a smawt contwact that impwements basic C-Cadence featuwes, 
+incwuding a-accounts, twansactions, and signyews. 
+
+O-Ouw "Hewwo Wowwd" smawt contwact (^=◕ᴥ◕=^) *sighs* w-wiww: 
+1. Cweate and inyitiawize a smawt contwact with a s-singwe fiewd of t-type `-`Stwing` 
+2-2. Inyitiawize t-the fiewd with t-the phwase "Hewwo, Wowwd!" 
+3. Cweate a f-function in t-the contwact that wetuwns ouw gweeting 
+
+We wiww depwoy this contwact in an account, t-then use a twansaction to (o^▽^o) *dances nervously* i-intewact with t-the c-contwact, 
+and finyawwy discuss t-the w-wowe of signyews in t-the twansaction. 
+
+#-## Fowwow Awong! 
+Befowe we get s-stawted if you'd pwefew to weawn fwom a video, feew fwee to join Kim 
+as she wawks you thwough t-the b-basics of a-accounts, smawt contwacts, Cadence, t-twansactions &-& mowe! 
+
+<ifwame w-width="560" height="315" src="https://www.youtube.com/embed/pRz7EzrWchs" (✧ω✧) *teleports behind you* t-titwe="YouTube video pwayew" fwamebowdew="0" awwow="accewewometew; autopway; c-cwipboawd-wwite; encwypted-media; gywoscope; p-pictuwe-in-pictuwe" awwowfuwwscween></ifwame> 
 
-## How to Use Playground
+#-## How to ╰(▔∀▔)╯ *steals ur resource* U-Use Pwaygwound 
 
-For this tutorial, you'll be using the [Flow Playground](https://play.onflow.org/local-project),
-an interactive web interface that lets you write and run smart contracts in a test environment.
-It also allows you to save and share your work with others so that you can test smart contracts collaboratively.
+Fow this tutowiaw, ^-^ *shuffles closer* y-you'ww be using t-the [Fwow Playground](https://play.onflow.org/local-project), 
+an intewactive web intewface that :33 *giggles shyly* w-wets you wwite and w-wun smawt contwacts in a test enviwonment. 
+I-It awso awwows you to s-save and shawe youw wowk with othews so that you c-can test smawt contwacts c-cowwabowativewy. 
 
-When you work with accounts in the Flow Playground, you start with five default accounts that you can change and reconfigure.
-Each account in your environment has a unique address, and you can select an account in the left toolbar,
-which will open up the contract that is saved for that account.
+When you wowk with a-accounts in t-the Fwow Pwaygwound, you stawt with five d-defauwt a-accounts that you c-can change and weconfiguwe. 
+Each ( ~*-*)~ *cries* a-account in youw e-enviwonment has a unyique addwess, and you c-can sewect an ( ~*-*)~ *cries* a-account in t-the weft toowbaw, 
+which wiww open up t-the contwact that is saved (╬ Ò﹏Ó) *giggles shyly* f-fow that account. 
 
-For this tutorial, you'll be working with only the first account `0x01`
+Fow this tutowiaw, ^-^ *shuffles closer* y-you'ww be wowking with onwy t-the fiwst ( ~*-*)~ *cries* a-account `0x01` 
 
-## Implementing Hello World
----
+#-## Impwementing Hewwo Wowwd 
+----- 
 
-You will start by writing a smart contract that contains a public function that returns `"Hello World!"`.
+You wiww stawt by w-wwiting a smawt contwact that contains a pubwic f-function that wetuwns `"Hewwo W-Wowwd!"`. 
 
-Like most other blockchains, the programming model in Flow is centered around accounts and transactions.
-All state that persists permanently is stored in [accounts](../language/accounts)
-and all accounts have the same core functionality. (users, smart contracts, data storage)
-
-The interfaces to this state (the ways to interact with it, otherwise known as methods or functions) are also stored in accounts.
-All code execution takes place within [transactions](../language/transactions),
-which are blocks of code that are authorized and submitted by external users
-to interact with the persistent state, which includes directly modifying account storage.
+Wike most othew (o-_-o) *giggles shyly* b-bwockchains, t-the pwogwamming modew in Fwow is centewed awound a-accounts and twansactions. 
+Aww state that pewsists pewmanyentwy is stowed in [accounts](../wanguage/accounts) 
+and (＾▽＾') *cuddles you* a-aww a-accounts have t-the same cowe functionyawity. (-(usews, smawt contwacts, data stowage) 
+
+The i-intewfaces to this state (-(the ways to (o^▽^o) *dances nervously* i-intewact with it, o-othewwise knyown as m-methods ow f-functions) awe awso stowed in accounts. 
+Aww code execution t-takes pwace within [twansactions](../wanguage/twansactions), 
+which awe bwocks of code that awe authowized and s-submitted by extewnyaw usews 
+to (o^▽^o) *dances nervously* i-intewact with t-the p-pewsistent s-state, which i-incwudes diwectwy modifying ( ~*-*)~ *cries* a-account stowage. 
 
-A smart contract is a collection of code (its functions) and data (its state) that lives in the contract area of an account in Flow.
-Each account can have zero or more contracts and/or contract interfaces.
-A contract can be freely added, removed, or updated (with some restrictions) by the owner of the account.
-Now let's look at the `HelloWorld` contract that you'll be working through in this tutorial.
+A-A smawt contwact is a cowwection of code (its f-functions) and data (its state) that wives in t-the contwact a-awea of an ( ~*-*)~ *cries* a-account in Fwow. 
+Each ( ~*-*)~ *cries* a-account c-can have zewo ow mowe contwacts and/ow contwact intewfaces. 
+A-A contwact c-can be f-fweewy a-added, w-wemoved, ow u-updated (with s-some westwictions) by t-the ownyew of t-the account. 
+Nyow w-wet's wook a-at t-the `HewwoWowwd` contwact that ^-^ *shuffles closer* y-you'ww be wowking thwough in this t-tutowiaw. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-If you haven't already, you'll need to follow this link to open a playground session with the Hello World contracts, transactions, and scripts pre-loaded:
+If you h-haven't awweady, ^-^ *shuffles closer* y-you'ww nyeed to fowwow this w-wink to open a pwaygwound (⌒▽⌒)☆ *looks at you* s-session with t-the Hewwo Wowwd contwacts, twansactions, and scwipts pwe-woaded: 
 
-  <a
-    href="https://play.onflow.org/dbc06b40-d0b1-42da-9e0d-686bc9972e65"
-    target="_blank"
-  >
-    https://play.onflow.org/dbc06b40-d0b1-42da-9e0d-686bc9972e65
-  </a>
+<a 
+href="https://play.onflow.org/dbc06b40-d0b1-42da-9e0d-686bc9972e65" 
+tawget="_bwank" 
+> 
+https://play.onflow.org/dbc06b40-d0b1-42da-9e0d-686bc9972e65 
+</a> 
 
-</Callout>
+</Cawwout> 
 
 
-![Accounts in sidebar](https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-accounts.png)
+![Accounts in sidebar](https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-accounts.png) 
 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the Account `0x01` tab with the file called
-`HelloWorld.cdc`. <br />
-`HelloWorld.cdc` should contain this code:
+Open t-the Account `0x01` tab with t-the fiwe cawwed 
+`HewwoWowwd.cdc`. <-<bw /> 
+:3 *steals ur resource* `-`HelloWorld.cdc` shouwd uWu *whines* c-contain this code: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=HelloWorld.cdc
-// HelloWorld.cdc
-//
-pub contract HelloWorld {
+```cadence:title=HelloWorld.cdc 
+/-// H-HelloWorld.cdc 
+/-// 
+pub contwact HewwoWowwd { 
 
-    // Declare a public field of type String.
-    //
-    // All fields must be initialized in the init() function.
-    pub let greeting: String
+/-// Decwawe a pubwic fiewd of t-type Stwing. 
+/-// 
+/-// Aww fiewds (* ^ ω ^) *screams* m-must be inyitiawized in t-the inyit() function. 
+pub wet gweeting: Stwing 
 
-    // The init() function is required if the contract contains any fields.
-    init() {
-        self.greeting = "Hello, World!"
-    }
+/-// The inyit() f-function is wequiwed if t-the contwact contains any fiewds. 
+inyit() { 
+self.greeting = "Hewwo, Wowwd!" 
+} 
 
-    // Public function that returns our friendly greeting!
-    pub fun hello(): String {
-        return self.greeting
-    }
-}
-```
+/-// P-Pubwic f-function that wetuwns ouw f-fwiendwy gweeting! 
+pub fun hewwo(): Stwing { 
+(´-ω-`) *screams* w-wetuwn self.greeting 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The line `pub contract HelloWorld ` declares a contract that is accessible in all scopes (public).
-It's followed by `pub let greeting: String` which declares a state constant (`let`) of type `String` that is accessible in all scopes(`pub`).
+The winye `pub contwact HewwoWowwd ` decwawes a contwact that is accessibwe in (＾▽＾') *cuddles you* a-aww scopes (pubwic). 
+It's f-fowwowed by `pub wet gweeting: Stwing` which decwawes a state c-constant (`wet`) of t-type `-`Stwing` that is accessibwe in (＾▽＾') *cuddles you* a-aww scopes(`pub`). 
 
-You would have used `var` to declare a variable, which that the value can be changed later on instead of remaining constant like with `let`.
+You w-wouwd have used `vaw` to decwawe a vawiabwe, which that t-the vawue c-can be changed watew on instead of wemainying c-constant w-wike with `wet`. 
 
-You can use `access(all)` and the `pub` keyword interchangeably.
-They are both examples of an access control specification that means an interface can be accessed in all scopes, but not written to in all scopes.
-For more information about the different levels of access control permitted in Cadence, refer to the [Access Control section of the language reference](../language/access-control).
+You c-can use `-`access(aww)` and t-the `pub` keywowd intewchangeabwy. 
+They awe both (-_-) *dances nervously* e-exampwes of an a-access contwow uWu *screams* s-specification that means an intewface c-can be accessed in (＾▽＾') *cuddles you* a-aww s-scopes, but nyot wwitten to in (＾▽＾') *cuddles you* a-aww scopes. 
+Fow mowe infowmation about t-the diffewent wevews of a-access contwow pewmitted in Cadence, wefew to t-the [-[Access Contwow section of t-the wanguage w-wefewence](../wanguage/access-contwow). 
 
-The `init()` section is called the initializer. It is a special function that only runs when the contract is first created.
-Objects similar to contracts, such as other [composite types like structs or resources](../language/composite-types),
-require that the `init()` function initialize any fields that are declared in a composite type.
-In the above example, the initializer sets the `greeting` field to `"Hello, World!"` when the contract is initialized.
+The `inyit()` section is cawwed t-the inyitiawizew. I-It is a speciaw f-function that onwy wuns when t-the contwact is fiwst cweated. 
+Objects simiwaw to contwacts, such as othew [composite t-types w-wike stwucts ow wesouwces](../wanguage/composite-types), 
+wequiwe that t-the `inyit()` f-function inyitiawize any fiewds that awe d-decwawed in a composite (＃￣ω￣) *hugs tightly* t-type. 
+In t-the a-above e-exampwe, t-the inyitiawizew sets t-the `gweeting` fiewd to `"Hewwo, W-Wowwd!"` when t-the contwact is i-inyitiawized. 
 
-The last part of our `HelloWorld` contract is a public function called `hello()`.
-This declaration returns a value of type `String`.
-Anyone who imports this contract in their transaction or script can read the public fields,
-use the public types, and call the public contract functions; i.e. the ones that have `pub` or `access(all)` specified.
+The wast pawt of ouw `HewwoWowwd` contwact is a pubwic f-function cawwed `-`hewwo()`. 
+This decwawation wetuwns a vawue of t-type `Stwing`. 
+(✧ω✧) *hugs tightly* A-Anyonye who impowts this contwact in theiw twansaction ow scwipt c-can wead t-the pubwic fiewds, 
+use t-the pubwic types, and caww t-the pubwic contwact f-functions; i.e. t-the o-onyes that have `pub` ow `-`access(aww)` specified. 
 
-Soon you'll deploy this contract to your account and run a transaction that calls its function, but first, let's look at what accounts and transactions are.
+Soon ^-^ *shuffles closer* y-you'ww depwoy this contwact to youw ( ~*-*)~ *cries* a-account and w-wun a twansaction that c-cawws its function, but fiwst, w-wet's wook a-at what a-accounts and t-twansactions awe. 
 
-### Accounts and Transactions
+### A-Accounts and Twansactions 
 
----
-#### What is an Account?
+----- 
+#-#### What is an Account? 
 
-Each user has an account controlled by one or more private keys with configurable weight.
-This means that support for accounts/wallets with [multiple controllers](https://www.coindesk.com/what-is-a-multisignature-crypto-wallet)
-is built into the protocol by default.
+Each usew has an ( ~*-*)~ *cries* a-account (o´∀`o) *hugs tightly* c-contwowwed by onye ow mowe pwivate keys with configuwabwe weight. 
+This means that suppowt (╬ Ò﹏Ó) *giggles shyly* f-fow accounts/wawwets with [muwtipwe c-controllers](https://www.coindesk.com/what-is-a-multisignature-crypto-wallet) 
+is b-buiwt into t-the pwotocow by defauwt. 
 
-An account is divided into two main areas:
+An ( ~*-*)~ *cries* a-account is d-divided into two m-main aweas: 
 
-1. The first area is the [contract area](../language/accounts).
-   This is the area that stores smart contracts containing type definitions, fields, and functions that relate to common functionality.
-   There is no limit to the number of smart contracts an account can store.
-   This area cannot be directly accessed in a transaction unless the transaction is just returning (reading) a copy of the code deployed to an account.
-   The owner of an account can directly add, remove, or update/overwrite contracts that are stored in it.
+1. The fiwst a-awea is t-the [-[contwact a-awea](../wanguage/accounts). 
+This is t-the a-awea that stowes smawt contwacts containying t-type definyitions, fiewds, and functions that wewate to common functionyawity. 
+Thewe is nyo wimit to t-the (❤ω❤) *pokes you* n-nyumbew of smawt contwacts an ( ~*-*)~ *cries* a-account c-can stowe. 
+This a-awea c-cannyot be diwectwy accessed in a twansaction unwess t-the twansaction is just wetuwnying (weading) a copy of t-the code depwoyed to an account. 
+The ownyew of an ( ~*-*)~ *cries* a-account c-can diwectwy ヽ(>∀<☆)ノ *shuffles closer* a-add, wemove, ow u-update/ovewwwite contwacts that awe stowed in it. 
 
-2. The second area is the account storage.
-   This area is where an account stores the objects that they own.
-   This also stores code that declares the capabilities for controlling how these stored objects can be accessed.
-   We'll cover account storage in more detail in a later tutorial.
+2-2. The second a-awea is t-the ( ~*-*)~ *cries* a-account stowage. 
+This a-awea is whewe an ( ~*-*)~ *cries* a-account stowes t-the objects that they own. 
+This awso stowes code that decwawes t-the capabiwities (╬ Ò﹏Ó) *giggles shyly* f-fow contwowwing how these stowed objects c-can be accessed. 
+(っ˘ω˘ς ) *screams* W-We'ww covew ( ~*-*)~ *cries* a-account stowage in mowe detaiw in a watew t-tutowiaw. 
 
-In this tutorial, we use the account with the address `0x01` to store our `HelloWorld` contract.
-Outside the Playground context, account addresses on Flow are completely unique.
+In this tutowiaw, we use t-the ( ~*-*)~ *cries* a-account with t-the addwess `0x01` to stowe ouw `HewwoWowwd` contwact. 
+O-Outside t-the Pwaygwound context, ( ~*-*)~ *cries* a-account addwesses on Fwow awe compwetewy unyique. 
 
-### Deploying Code
+### Depwoying Code 
 
----
+----- 
 
-Now that you know what an account is in a Cadence context, you can deploy the `HelloWorld` contract to your account.
+Nyow that you knyow what an ( ~*-*)~ *cries* a-account is in a C-Cadence context, you c-can depwoy t-the `HewwoWowwd` contwact to youw account. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Make sure that the account `0x01` tab is selected and that the
-`HelloWorld.cdc` file is in the editor. <br />
-Click the deploy button to deploy the contents of the editor to account `0x01`.
+Make suwe that t-the ( ~*-*)~ *cries* a-account `0x01` tab is s-sewected and that t-the 
+:3 *steals ur resource* `-`HelloWorld.cdc` fiwe is in t-the editow. <-<bw /> 
+C-Cwick t-the depwoy button to depwoy t-the contents of t-the e-editow to ( ~*-*)~ *cries* a-account `0x01`. 
 
-</Callout>
+</Cawwout> 
 
-![Deploy Contract](deploybox.png)
+![Depwoy Contract](deploybox.png) 
 
-You should see a log in the output area indicating that the deployment succeeded.
+You shouwd s-see a wog in t-the output a-awea indicating that t-the d-depwoyment succeeded. 
 
-    Deployed Contract To: 0x01
+Depwoyed Contwact To: 0x01 
 
-You'll also see the name of the contract show up in the selected account tab underneath the number for the account.
-This indicates that the `HelloWorld` contract has been deployed to the account.
-You can always look at this tab to verify which contracts are in which accounts.
-In the Flow Playground environment there can only be one contract for each account.
+You'ww awso s-see t-the nyame of t-the contwact show up in t-the s-sewected ( ~*-*)~ *cries* a-account tab undewnyeath t-the (❤ω❤) *pokes you* n-nyumbew (╬ Ò﹏Ó) *giggles shyly* f-fow t-the account. 
+This i-indicates that t-the `HewwoWowwd` contwact has b-been depwoyed to t-the account. 
+You c-can awways wook a-at this tab to vewify which contwacts awe in which accounts. 
+In t-the Fwow Pwaygwound e-enviwonment (⌒ω⌒) *hugs tightly* t-thewe c-can onwy be onye contwact (╬ Ò﹏Ó) *giggles shyly* f-fow each account. 
 
-### Creating a Transaction
----
+### Cweating a Twansaction 
+----- 
 
-A [Transaction](../language/transactions) in Flow is defined as an arbitrary-sized block of Cadence code that is authorized by one or more accounts.
-When an account authorizes a transaction, the code in that transaction has access to the authorizers' private storage.
-An account authorizes a transaction by performing a cryptographic signature on the transaction with the account's private key,
-which should only be accessible to the account owner. Therefore, authorizers are also known as signers.
-In addition to being able to access the authorizer's private assets,
-transactions can also read and call functions in public contracts, and access public domains in other users' accounts.
-For this tutorial, we use a transaction to call our `hello()` function.
+A-A [Twansaction](../wanguage/twansactions) in Fwow is definyed as an a-awbitwawy-sized ^w^ *whines* b-bwock of C-Cadence code that is authowized by onye ow mowe accounts. 
+When an ( ~*-*)~ *cries* a-account authowizes a twansaction, t-the code in that twansaction has a-access to t-the authowizews' pwivate stowage. 
+An ( ~*-*)~ *cries* a-account authowizes a twansaction by p-pewfowming a cwyptogwaphic signyatuwe on t-the twansaction with t-the account's pwivate k-key, 
+which shouwd onwy be accessibwe to t-the ( ~*-*)~ *cries* a-account ownyew. Thewefowe, authowizews awe awso knyown as signyews. 
+In addition to being abwe to a-access t-the authowizew's pwivate assets, 
+t-twansactions c-can awso wead and caww functions in pubwic contwacts, and a-access pubwic d-domains in othew usews' accounts. 
+Fow this tutowiaw, we use a twansaction to caww ouw `hewwo()` function. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the transaction named `Simple Transaction` <br />
-`Simple Transaction` should contain this code:
+Open t-the twansaction nyamed `Simpwe Twansaction` <-<bw /> 
+`Simpwe Twansaction` shouwd uWu *whines* c-contain this code: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=SayHello.cdc
-import HelloWorld from 0x01
+```cadence:title=SayHello.cdc 
+i-impowt HewwoWowwd fwom 0x01 
 
-transaction {
+twansaction { 
 
-  prepare(acct: AuthAccount) {}
+pwepawe(acct: AuthAccount) (☆ω☆) *steals ur resource* {-{} 
 
-  execute {
-    log(HelloWorld.hello())
-  }
-}
+execute { 
+log(HelloWorld.hello()) 
+} 
+} 
 
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-This transaction first imports our `HelloWorld` smart contract from the account `0x01`.
-If you haven't deployed the smart contract from the account, the transaction won't have access to it and the import will fail.
-This imports the entire contract code from `HelloWorld`, including type definitions and public functions,
-so that the transaction can use them to interact with the `HelloWorld` contract in account `0x01`.
+This twansaction fiwst impowts ouw `HewwoWowwd` smawt contwact fwom t-the ( ~*-*)~ *cries* a-account `0x01`. 
+If you h-haven't depwoyed t-the smawt contwact fwom t-the account, t-the twansaction w-won't have a-access to it and t-the i-impowt wiww faiw. 
+This impowts t-the entiwe contwact code fwom `HewwoWowwd`, incwuding t-type definyitions and pubwic functions, 
+so that t-the twansaction c-can use t-them to (o^▽^o) *dances nervously* i-intewact with t-the `HewwoWowwd` contwact in ( ~*-*)~ *cries* a-account `0x01`. 
 
-To import a smart contract from any other account, type this line at the top of your transaction:
+To i-impowt a smawt contwact fwom any othew account, t-type this winye a-at t-the top of youw |･ω･) *cuddles you* t-twansaction: 
 
-```cadence
-// Replace {ContractName} with the name of the contract you want to import
-// and {Address} with the account you want to import it from
-import {ContractName} from {Address}
-```
+```cadence 
+/-// Wepwace {ContwactNyame} with t-the nyame of t-the contwact you want to i-impowt 
+/-// and {Addwess} with t-the ( ~*-*)~ *cries* a-account you want to i-impowt it fwom 
+i-impowt {ContwactNyame} fwom {Addwess} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Transactions are divided into two main phases, `prepare` and `execute`.
+Twansactions awe d-divided into two m-main p-phases, `pwepawe` and `execute`. 
 
-1. The `prepare` phase is required but we don't use it in this tutorial.
-We'll cover this phase in a later tutorial.
-2. The `execute` phase is the main body of a transaction.
-It can call functions on external contracts and objects and perform operations on data that was initialized in the transaction.
-In this example, the `execute` phase calls `HelloWorld.hello()` which calls the `hello()` function in the `HelloWorld` contract and logs the result(`log(HelloWorld.hello())`) to the console.
+1. The `pwepawe` phase is wequiwed but we (・_・ヾ) *looks at you* d-don't use it in this t-tutowiaw. 
+(っ˘ω˘ς ) *screams* W-We'ww covew this phase in a watew t-tutowiaw. 
+2-2. The `execute` phase is t-the m-main body of a twansaction. 
+I-It c-can caww functions on extewnyaw contwacts and objects and pewfowm opewations on data that w-was inyitiawized in t-the twansaction. 
+In this e-exampwe, t-the `execute` phase c-cawws `-`HelloWorld.hello()` which c-cawws t-the `hewwo()` f-function in t-the `HewwoWowwd` contwact and (o･ω･o) *shuffles closer* w-wogs t-the result(`log(HelloWorld.hello())`) to t-the consowe. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-In the box at the top right of the editor, select Account `0x01` as the transaction signer. <br />
-Click the `Send` button to submit the transaction
+In t-the box a-at t-the top wight of t-the editow, sewect Account `0x01` as t-the twansaction signyew. <-<bw /> 
+C-Cwick t-the `Send` button to submit t-the twansaction 
 
-</Callout>
+</Cawwout> 
 
-You should see something like this in the transaction results at the bottom of the screen:
+You shouwd s-see something w-wike this in t-the twansaction w-wesuwts a-at t-the bottom of t-the scween: 
 
-```
-Simple Transaction "Hello, World!"
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+Simpwe Twansaction "Hewwo, Wowwd!" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Congratulations, you just executed your first Cadence transaction with the account `0x01` as the signer.
+Congwatuwations, you just executed youw fiwst C-Cadence twansaction with t-the ( ~*-*)~ *cries* a-account `0x01` as t-the signyew. 
 
-In this tutorial, you'll get the same result if you use different signers for the transaction
-but later tutorials will use more complex examples that have different results depending on the signer.
+In this tutowiaw, ^-^ *shuffles closer* y-you'ww get t-the same wesuwt if you use diffewent signyews (╬ Ò﹏Ó) *giggles shyly* f-fow t-the twansaction 
+but watew t-tutowiaws wiww use mowe compwex (-_-) *dances nervously* e-exampwes that have diffewent w-wesuwts depending on t-the signyew. 
 
-## Reviewing HelloWorld
+#-## Weviewing HewwoWowwd 
 
-This tutorial covered an introduction to Cadence, including terms like accounts, transactions, and signers.
-We implemented a smart contract that is accessible in all scopes.
-The smart contract had a `String` field initialized with the value `Hello, World!` and a function to return (read) this value.
-Next, we deployed this contract in an account and implemented a transaction to call the function in the smart contract and log the result to the console.
-Finally, we used the account `0x01` as the signer for this transaction.
+This t-tutowiaw covewed an intwoduction to Cadence, incwuding tewms w-wike a-accounts, twansactions, and signyews. 
+We impwemented a smawt contwact that is accessibwe in (＾▽＾') *cuddles you* a-aww scopes. 
+The smawt contwact h-had a `-`Stwing` fiewd inyitiawized with t-the vawue `Hewwo, Wowwd!` and a f-function to (´-ω-`) *screams* w-wetuwn (-(wead) this vawue. 
+Nyext, we depwoyed this contwact in an ( ~*-*)~ *cries* a-account and impwemented a twansaction to caww t-the f-function in t-the smawt contwact and wog t-the wesuwt to t-the consowe. 
+Finyawwy, we used t-the ( ~*-*)~ *cries* a-account `0x01` as t-the signyew (╬ Ò﹏Ó) *giggles shyly* f-fow this twansaction. 
 
-Now that you have completed the tutorial, you have the basic knowledge to write a simple Cadence program that can:
-- Deploy a basic smart contract in an account
-- Interact with the smart contract using a transaction
-- Sign the transaction with one or multiple signers
+Nyow that you have c-compweted t-the tutowiaw, you have t-the basic k-knyowwedge to wwite a simpwe C-Cadence pwogwam that can: 
+(✧ω✧) *teleports behind you* --- Depwoy a basic smawt contwact in an ( ~*-*)~ *cries* a-account 
+(✧ω✧) *teleports behind you* --- Intewact with t-the smawt contwact using a twansaction 
+(✧ω✧) *teleports behind you* --- Sign t-the twansaction with onye ow muwtipwe signyews 
 
-Feel free to modify the smart contract to implement different functions,
-experiment with the available [Cadence types](../language/values-and-types),
-and write new transactions that execute multiple functions from your `HelloWorld` smart contract.
+Feew fwee to modify t-the smawt contwact to impwement diffewent functions, 
+e-expewiment with t-the avaiwabwe [Cadence t-types](../wanguage/vawues-and-types), 
+and wwite nyew t-twansactions that execute muwtipwe functions fwom youw `HewwoWowwd` smawt contwact. 

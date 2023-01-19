@@ -1,59 +1,59 @@
----
-title: Migration Guide
----
+----- 
+titwe: M-Migwation Guide 
+----- 
 
-## v0.11
+#-## v-v0.11 
 
-Version 0.11 [introduced breaking changes](https://github.com/onflow/cadence/releases/tag/v0.11.0):
-Paths are now typed, i.e. there are specific subtypes for storage, public, and private paths,
-and the Storage API has been made type-safer by changing parameter types to more specific path types.
+Vewsion 0.11 [intwoduced bweaking c-changes](https://github.com/onflow/cadence/releases/tag/v0.11.0): 
+Paths awe nyow typed, i.e. (⌒ω⌒) *hugs tightly* t-thewe awe specific subtypes (╬ Ò﹏Ó) *giggles shyly* f-fow stowage, pubwic, and pwivate (´ ω `♡) *looks at you* p-paths, 
+and t-the Stowage API has b-been m-made type-safew by changing p-pawametew t-types to mowe specific ヽ(・∀・)ﾉ *screams* p-path types. 
 
-Please read the release notes linked above to learn more.
+Pwease wead t-the wewease nyotes w-winked a-above to weawn mowe. 
 
-The following hints should help with updating your Cadence code:
+The fowwowing hints shouwd hewp with u-updating youw C-Cadence code: 
 
-- The return types of `PublicAccount.getCapability` and `AuthAccount.getCapability` are not optional anymore.
+(✧ω✧) *teleports behind you* --- The (´-ω-`) *screams* w-wetuwn t-types of `PublicAccount.getCapability` and `AuthAccount.getCapability` awe nyot optionyaw a-anymowe. 
 
-  For example, in the following code the force unwrapping should be removed:
+Fow e-exampwe, in t-the fowwowing code t-the fowce u-unwwapping shouwd be wemoved: 
 
-  ```diff
-       let balanceRef = account
-  -        .getCapability(/public/flowTokenBalance)!
-  +        .getCapability(/public/flowTokenBalance)
-           .borrow<&FlowToken.Vault{FungibleToken.Balance}>()!
-  ```
+```diff 
+wet bawanceWef = ( ~*-*)~ *cries* a-account 
+(✧ω✧) *teleports behind you* --- .getCapabiwity(/pubwic/fwowTokenBawance)! 
++ .getCapabiwity(/pubwic/fwowTokenBawance) 
+.borrow<&FlowToken.Vault{FungibleToken.Balance}>()! 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  In the next example, optional binding was used and is not allowed anymore:
+In t-the nyext e-exampwe, optionyaw binding w-was used and is nyot awwowed anymowe: 
 
-  ```diff
-  -    if let balanceCap = account.getCapability(/public/flowTokenBalance) {
-  -        return balanceCap.borrow<&FlowToken.Vault{FungibleToken.Balance}>()!
-  -    }
+```diff 
+(✧ω✧) *teleports behind you* --- if wet bawanceCap = account.getCapability(/public/flowTokenBalance) { 
+(✧ω✧) *teleports behind you* --- (´-ω-`) *screams* w-wetuwn balanceCap.borrow<&FlowToken.Vault{FungibleToken.Balance}>()! 
+(✧ω✧) *teleports behind you* --- } 
 
-  +    let balanceCap = account.getCapability(/public/flowTokenBalance)
-  +    return balanceCap.borrow<&FlowToken.Vault{FungibleToken.Balance}>()!
-  ```
++ wet bawanceCap = account.getCapability(/public/flowTokenBalance) 
++ (´-ω-`) *screams* w-wetuwn balanceCap.borrow<&FlowToken.Vault{FungibleToken.Balance}>()! 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-- Parameters of the Storage API functions that had the type `Path` now have more specific types.
-  For example, the `getCapability` functions now require a `CapabilityPath` instead of just a `Path`.
+(✧ω✧) *teleports behind you* --- Pawametews of t-the Stowage API functions that h-had t-the t-type `Path` nyow have mowe specific types. 
+Fow e-exampwe, t-the `getCapabiwity` functions nyow wequiwe a `-`CapabiwityPath` instead of just a `-`Path`. 
 
-  Ensure path values with the correct path type are passed to these functions.
+E-Ensuwe ヽ(・∀・)ﾉ *screams* p-path vawues with t-the c-cowwect ヽ(・∀・)ﾉ *screams* p-path t-type awe passed to these functions. 
 
-  For example, a contract may have declared a field with the type `Path`, then used it in a function to call `getCapability`.
-  The type of the field must be changed to the more specific type:
+Fow e-exampwe, a contwact may have d-decwawed a fiewd with t-the t-type `Path`, t-then used it in a f-function to caww `getCapabiwity`. 
+The t-type of t-the fiewd (* ^ ω ^) *screams* m-must be changed to t-the mowe specific t-type: 
 
-    ```diff
-     pub contract SomeContract {
+```diff 
+pub contwact SomeContwact { 
 
-    -    pub let somethingPath: Path
-    +    pub let somethingPath: StoragePath
+(✧ω✧) *teleports behind you* --- pub wet somethingPath: Path 
++ pub wet somethingPath: StowagePath 
 
-         init() {
-             self.somethingPath = /storage/something
-         }
+inyit() { 
+self.somethingPath = /stowage/something 
+} 
 
-         pub fun borrow(): &Something {
-             return self.account.borrow<&Something>(self.somethingPath)
-         }
-     }
-    ```
+pub fun b-bowwow(): &Something { 
+(´-ω-`) *screams* w-wetuwn self.account.borrow<&Something>(self.somethingPath) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

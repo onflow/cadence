@@ -1,292 +1,292 @@
 
-<Callout type="info">
-Tip: <kbd>CTRL</kbd>/<kbd>⌘</kbd> + <kbd>F</kbd> and type in the symbol or operator you want to look up.
-</Callout>
+<Cawwout type="info"> 
+Tip: <-<kbd>CTWW</kbd>/<kbd>⌘</kbd> + <kbd>F</kbd> and t-type in t-the symbow ow opewatow you want to wook (＞ｍ＜) *looks at you* u-up. 
+</Cawwout> 
 
-## `&` (ampersand)
+#-## `-`&` (ampewsand) 
 
-The `&` (ampersand) symbol has several uses.
+The `-`&` (ampewsand) symbow has sevewaw uses. 
 
-### Reference
+### W-Wefewence 
 
-If an expression starts with the `&` (ampersand) symbol, it creates a [reference](references).
+If an expwession s-stawts with t-the `-`&` (ampewsand) symbow, it cweates a [-[wefewence](wefewences). 
 
-```cadence
-let a: String = "hello"
-let refOfA: &String = &a as &String
-```
+```cadence 
+wet a: Stwing = "hewwo" 
+wet wefOfA: &Stwing = &a as &Stwing 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-References may also be authorized if the `&` symbol is preceded by `auth` (otherwise the reference is unauthorized).
+Wefewences may awso be authowized if t-the `-`&` symbow is pweceded by `auth` (othewwise t-the wefewence is unyauthowized). 
 
-Authorized references have the `auth` modifier, i.e. the full syntax is `auth &T`,
-whereas unauthorized references do not have a modifier.
+Authowized wefewences have t-the `auth` modifiew, i.e. t-the f-fuww s-syntax is :33 *leans over* `-`auth &-&T`, 
+w-wheweas unyauthowized wefewences (^-^*)/ *cuddles you* d-do nyot have a m-modifiew. 
 
-```cadence
-let a: String = "hello"
-let refOfA: &String = &a as auth &String
-```
+```cadence 
+wet a: Stwing = "hewwo" 
+wet wefOfA: &Stwing = &a as auth &Stwing 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Logical Operator
+### Wogicaw ヽ(>∀<☆)ノ *dances nervously* O-Opewatow 
 
-It can be also used as a [logical operator (AND)](operators#logical-operators),
-by appearing twice in succession (i.e. `&&`):
+I-It c-can be awso used as a [wogicaw opewatow (-(AND)](opewatows#wogicaw-opewatows), 
+by appeawing UwU *pokes you* t-twice in s-succession (-(i.e. `&&`): 
 
-```cadence
-let a = true
-let b = false
+```cadence 
+wet a = twue 
+wet b = f-fawse 
 
-let c = a && b // false
-```
+wet c = a && b /-// f-fawse 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## `@` (at)
+#-## `-`@` (-(at) 
 
-The `@` (at) symbol before a type is used to annotate whether the type is a [resource](resources).
+The `-`@` (-(at) symbow befowe a t-type is used to annyotate whethew t-the t-type is a [-[wesouwce](wesouwces). 
 
-The `@` symbol must appear at the beginning of the type, not inside.
-For example, an array of `NFT`s is `@[NFT]`, not `[@NFT]`.
-This emphasizes the whole type acts like a resource.
+The `-`@` symbow (* ^ ω ^) *screams* m-must appeaw a-at t-the beginnying of t-the type, nyot inside. 
+Fow e-exampwe, an a-awway of `NFT`s is `@[NFT]`, nyot `[@NFT]`. 
+This emphasizes t-the w-whowe t-type acts w-wike a w-wesouwce. 
 
-```cadence
-// Declare a resource named `SomeResource`
-pub resource SomeResource {
-    pub var value: Int
+```cadence 
+/-// Decwawe a wesouwce nyamed `SomeWesouwce` 
+pub wesouwce (^人^) *sighs* S-SomeWesouwce { 
+pub vaw vawue: Int 
 
-    init(value: Int) {
-        self.value = value
-    }
-}
+inyit(vawue: Int) { 
+self.value = vawue 
+} 
+} 
 
-// we use the '@' symbol to reference a resource type
-let a: @SomeResource <- create SomeResource(value: 0)
+/-// we use t-the '@' symbow to wefewence a wesouwce t-type 
+wet a: @SomeWesouwce <- cweate SomeWesouwce(vawue: 0) 
 
-// also in functions declarations
-pub fun use(resource: @SomeResource) {
-    destroy resource
-}
-```
+/-// awso in functions decwawations 
+pub fun use(wesouwce: UwU *giggles shyly* @-@SomeWesouwce) { 
+d-destwoy wesouwce 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## `:` (colon)
+#-## `:` (cowon) 
 
-The `:` (colon) symbol has several uses.
+The `:` (cowon) symbow has sevewaw uses. 
 
-### Type Declaration
+### Type Decwawation 
 
-If a `:` (colon) follows a variable/constant/function declaration, it is used to declare its type.
+If a `:` (cowon) f-fowwows a vawiabwe/constant/function decwawation, it is used to decwawe its (＃￣ω￣) *hugs tightly* t-type. 
 
-```cadence
-let a: Bool = true // declares variable `a` with type `Bool`
+```cadence 
+wet a: Boow = twue /-// decwawes vawiabwe `a` with t-type `-`Boow` 
 
-// or
+/-// ow 
 
-fun addOne(x: Int): Int { // return type of Int
-    return x + 1
-}
-```
+fun a-addOnye(x: Int): Int { /-// (´-ω-`) *screams* w-wetuwn t-type of Int 
+(´-ω-`) *screams* w-wetuwn x + 1 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Ternary Conditional Operator
+### Tewnyawy Conditionyaw ヽ(>∀<☆)ノ *dances nervously* O-Opewatow 
 
-The `:` (colon) is also be used in [ternary operations](operators#ternary-conditional-operator) to represent the "otherwise" section,
-such as the following:
+The `:` (cowon) is awso be used in (*´▽`*) *cries* [-[tewnyawy opewations](opewatows#tewnyawy-conditionyaw-opewatow) to wepwesent t-the "othewwise" section, 
+such as t-the fowwowing: 
 
-```cadence
-let a = 1 > 2 ? 3 : 4
-// should be read as:
-//   "is 1 greater than 2?"
-//   "if YES, then set a = 3,
-//   "otherwise, set a = 4.
-```
+```cadence 
+wet a = 1 > 2-2 ? ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 : 4 
+/-// shouwd be wead as: 
+/-// "is 1 gweatew than 2-2?" 
+/-// "if YES, t-then s-set a = 3-3, 
+/-// "othewwise, s-set a = 4-4. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## `=` (equals)
+#-## `=` (equaws) 
 
-The `=` (equals) symbol has several uses.
+The `=` (equaws) symbow has sevewaw uses. 
 
-### Variable Declaration
+### :3 *hugs tightly* V-Vawiabwe Decwawation 
 
-```cadence
-let a = 1 // declares a variable `a` with value `1`
-```
+```cadence 
+wet a = 1 /-// decwawes a vawiabwe `a` with vawue `-`1` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Assignment
+### Assignment 
 
-```cadence
-a = 1  // assigns the value `1` to variable `a `
-```
+```cadence 
+a = 1 /-// assigns t-the vawue `-`1` to vawiabwe `a ` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## `!` (exclamation mark)
+#-## `!` (-(excwamation mawk) 
 
-The `!` (exclamation mark) symbol has a different effect whether it precedes or succeeds a variable.
+The `!` (-(excwamation mawk) symbow has a diffewent effect whethew it pwecedes ow succeeds a vawiabwe. 
 
-When it immediately **precedes** a boolean-type variable, it negates it.
+When it immediatewy **pwecedes** a boowean-type vawiabwe, it nyegates it. 
 
-```cadence
-let a: Bool = true
-let b: Bool = !a
+```cadence 
+wet a: Boow = twue 
+wet b-b: Boow = !a 
 
-// b is false
-```
+/-// b is f-fawse 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-When it immediately **succeeds** an *optional* variable, it [force-unwraps](operators#force-unwrap-operator-) it.
-Force-unwrapping returns the value inside an optional if it contains a value,
-or panics and aborts the execution if the optional has no value, i.e. the optional value is nil.
+When it immediatewy **succeeds** an *optionyaw* vawiabwe, it [fowce-unwwaps](opewatows#fowce-unwwap-opewatow-) it. 
+Fowce-unwwapping wetuwns t-the vawue inside an optionyaw if it contains a vawue, 
+ow panyics and a-abowts t-the execution if t-the optionyaw has nyo vawue, i.e. t-the optionyaw vawue is nyiw. 
 
-```cadence
-let a: Int? = nil
-let b: Int? = 3
+```cadence 
+wet a: Int? = nyiw 
+wet b-b: Int? = ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 
 
-let c: Int = a! // panics, because = nil
-let d: Int = b! // initialized correctly as 3
-```
+wet c: Int = ヽ(>∀<☆)ノ *looks at you* a-a! /-// panyics, because = nyiw 
+wet d-d: Int = b! /-// inyitiawized cowwectwy as ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## `/` (forward slash)
+#-## (x_x)V *cuddles you* `-`/` (fowwawd (o･ω･o) *sighs* s-swash) 
 
-The `/` (forward slash) symbol has several uses.
+The (x_x)V *cuddles you* `-`/` (fowwawd (o･ω･o) *sighs* s-swash) symbow has sevewaw uses. 
 
-### Division Operator
+### Division ヽ(>∀<☆)ノ *dances nervously* O-Opewatow 
 
-Inbetween two expressions, the forward slash acts as the [division operator](operators#arithmetic-operators).
+Inbetween two expwessions, t-the fowwawd swash acts as t-the [division opewatow](opewatows#awithmetic-opewatows). 
 
-```cadence
-let result = 4 / 2
-```
+```cadence 
+wet wesuwt = 4 (T_T) *whines* /-/ 2-2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Path separator
+### Path sepawatow 
 
-In a [Path](accounts#paths), the forward slash separates the domain (e.g. `storage`, `private`, `public`) and the identifier.
+In a [Path](accounts#paths), t-the fowwawd swash sepawates t-the d-domain (e.g. `stowage`, `pwivate`, (╬ Ò﹏Ó) *giggles shyly* `-`pubwic`) and t-the identifiew. 
 
-```cadence
-let storagePath = /storage/path
-storagePath.toString()  // is "/storage/path"
-```
+```cadence 
+wet >w< *blushes* s-stowagePath = /stowage/path 
+storagePath.toString() /-// is "/stowage/path" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## `<-` (lower than, hyphen) (Move operator)
+#-## `<-` (wowew than, ＼(≧▽≦)／ *pokes you* h-hyphen) :33 *cries* (-(Move opewatow) 
 
-The [move operator `<-`](resources#the-move-operator--) is like the assignment operator `=`,
-but must be used when the value is a [resource](resources).
-To make assignment of resources explicit, the move operator `<-` must be used when:
+The [move opewatow `<-`](wesouwces#the-move-opewatow--) is w-wike t-the assignment opewatow `=`, 
+but (* ^ ω ^) *screams* m-must be used when t-the vawue is a [-[wesouwce](wesouwces). 
+To make assignment of wesouwces e-expwicit, t-the move opewatow `<-` (* ^ ω ^) *screams* m-must be used when: 
 
-- The resource is the initial value of a constant or variable,
-- The resource is moved to a different variable in an assignment,
-- The resource is moved to a function as an argument
-- The resource is returned from a function.
+(✧ω✧) *teleports behind you* --- The wesouwce is t-the inyitiaw vawue of a c-constant ow vawiabwe, 
+(✧ω✧) *teleports behind you* --- The wesouwce is moved to a diffewent vawiabwe in an assignment, 
+(✧ω✧) *teleports behind you* --- The wesouwce is moved to a f-function as an {{ (>_<) }} *leans over* a-awgument 
+(✧ω✧) *teleports behind you* --- The wesouwce is wetuwnyed fwom a function. 
 
-```cadence
-resource R {}
+```cadence 
+wesouwce W (☆ω☆) *steals ur resource* {-{} 
 
-let a <- create R() // we instantiate a new resource and move it into a
-```
+wet a <- cweate W() /-// we instantiate a nyew wesouwce and move it into a 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## `<-!` (lower than, hyphen, exclamation mark) (Force-assignment move operator)
+#-## `<-!` (wowew than, hyphen, excwamation mawk) (Fowce-assignment move opewatow) 
 
-The [force-assignment move operator `<-!`](operators#force-assignment-operator--) moves a resource value to an optional variable.
-If the variable is `nil`, the move succeeds.
-If it is not nil, the program aborts.
+The [fowce-assignment move opewatow `-`<-!`](opewatows#fowce-assignment-opewatow--) moves a wesouwce vawue to an optionyaw vawiabwe. 
+If t-the vawiabwe is `-`nyiw`, t-the move s-succeeds. 
+If it is nyot nyiw, t-the pwogwam abowts. 
 
-```cadence
-pub resource R {}
+```cadence 
+pub wesouwce W (☆ω☆) *steals ur resource* {-{} 
 
-var a: @R? <- nil
-a <-! create R()
-```
+vaw a: @W? <- nyiw 
+a <-<-! cweate W() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## `<->` (lower than, hyphen, greater than) (Swap operator)
+#-## `<->` (wowew than, hyphen, gweatew than) (-(Swap opewatow) 
 
-The [swapping operator `<->`](operators#swapping-operator--) swaps two resource between the variables to the left and right of it.
+The [swapping opewatow `<->`](opewatows#swapping-opewatow--) swaps two wesouwce b-between t-the vawiabwes to t-the weft and wight of it. 
 
 
-## `+` (plus), `-` (minus), `*` (asterisk), `%` (percentage sign)
+#-## `-`+` (pwus), `-` (minyus), `*` (astewisk), `%` (pewcentage sign) 
 
-These are all typical [arithmetic operators](operators#arithmetic-operators):
+These awe (＾▽＾') *cuddles you* a-aww typicaw [-[awithmetic opewatows](opewatows#awithmetic-opewatows): 
 
-- Addition: `+`
-- Subtraction: `-`
-- Multiplication: `*`
-- Remainder: `%`
+(✧ω✧) *teleports behind you* --- A-Addition: `-`+` 
+(✧ω✧) *teleports behind you* --- Subtwaction: `-` 
+(✧ω✧) *teleports behind you* --- Muwtipwication: `*` 
+(✧ω✧) *teleports behind you* --- Wemaindew: `%` 
 
-## `?` (question mark)
+#-## `?` (question mawk) 
 
-The `?` (question mark) symbol has several uses.
+The `?` (question mawk) symbow has sevewaw uses. 
 
-### Optional
+### Optionyaw 
 
-If a `?` (question mark) follows a variable/constant, it represents an optional.
-An optional can either have a value or *nothing at all*.
+If a `?` (question mawk) f-fowwows a vawiabwe/constant, it wepwesents an o-optionyaw. 
+An optionyaw c-can eithew have a vawue ow *nyothing a-at aww*. 
 
-```cadence
-// Declare a constant which has an optional integer type
-//
-let a: Int? = nil
-```
+```cadence 
+/-// Decwawe a c-constant which has an optionyaw integew t-type 
+/-// 
+wet a: Int? = nyiw 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Ternary Conditional Operator
+### Tewnyawy Conditionyaw ヽ(>∀<☆)ノ *dances nervously* O-Opewatow 
 
-The `?` (question mark) is also be used in [ternary operations](operators#ternary-conditional-operator) to represent the "then" section,
-such as the following:
+The `?` (question mawk) is awso be used in (*´▽`*) *cries* [-[tewnyawy opewations](opewatows#tewnyawy-conditionyaw-opewatow) to wepwesent t-the "then" section, 
+such as t-the fowwowing: 
 
-```cadence
-let a = 1 > 2 ? 3 : 4
-// should be read as:
-//   "is 1 greater than 2?"
-//   "if YES, then set a = 3,
-//   "otherwise, set a = 4.
-```
+```cadence 
+wet a = 1 > 2-2 ? ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 : 4 
+/-// shouwd be wead as: 
+/-// "is 1 gweatew than 2-2?" 
+/-// "if YES, t-then s-set a = 3-3, 
+/-// "othewwise, s-set a = 4-4. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Nil-Coalescing Operator
+### Nyiw-Coawescing ヽ(>∀<☆)ノ *dances nervously* O-Opewatow 
 
-The `?` (question mark) is also used in the [nil-coalescing operator `??`](operators#nil-coalescing-operator-).
+The `?` (question mawk) is awso used in t-the [nyiw-coawescing opewatow `??`](opewatows#nyiw-coawescing-opewatow-). 
 
-It returns the value inside the optional, if the optional contains a value,
-or returns an alternative value if the optional has no value, i.e., the optional value is nil.
+I-It wetuwns t-the vawue inside t-the optionyaw, if t-the optionyaw contains a vawue, 
+ow wetuwns an awtewnyative vawue if t-the optionyaw has nyo vawue, i.e., t-the optionyaw vawue is nyiw. 
 
-```cadence
-// Declare a constant which has an optional integer type
-//
-let a: Int? = nil
+```cadence 
+/-// Decwawe a c-constant which has an optionyaw integew t-type 
+/-// 
+wet a: Int? = nyiw 
 
-// Declare a constant with a non-optional integer type,
-// which is initialized to `a` if it is non-nil, or 42 otherwise.
-//
-let b: Int = a ?? 42
-// `b` is 42, as `a` is nil
+/-// Decwawe a c-constant with a nyon-optionyaw integew type, 
+/-// which is inyitiawized to `a` if it is nyon-nyiw, ow 42 othewwise. 
+/-// 
+wet b-b: Int = a ?? 42 
+/-// `b` is 42, as `a` is nyiw 
 
 
-// Invalid: nil-coalescing operator is applied to a value which has a non-optional type
-// (the integer literal is of type `Int`).
-//
-let c = 1 ?? 2
-```
+/-// Invawid: nyiw-coawescing opewatow is appwied to a vawue which has a nyon-optionyaw t-type 
+/-// (-(the integew witewaw is of t-type `Int`). 
+/-// 
+wet c = 1 ?? 2-2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## `_` (underscore)
+#-## `_` (undewscowe) 
 
-The `_` (underscore) symbol has several uses.
+The `_` (undewscowe) symbow has sevewaw uses. 
 
-### Names
+### Nyames 
 
-The `_` (underscore) can be used in names, e.g. in variables and types.
+The `_` (undewscowe) c-can be used in nyames, e.g. in vawiabwes and types. 
 
-```cadence
-let _a = true // used as a variable name
-let another_one = false
-```
+```cadence 
+wet _a = twue /-// used as a vawiabwe nyame 
+wet anyothew_onye = f-fawse 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Number Literals
+### N-Nyumbew Witewaws 
 
-The `_` (underscore) can also be used to split up numerical components.
+The `_` (undewscowe) c-can awso be used to spwit up nyumewicaw componyents. 
 
-```cadence
-let b = 100_000_000 // used to split up a number (supports all number types, e.g. 0b10_11_01)
-```
+```cadence 
+wet b = 1-100_000_000 /-// used to spwit up a (❤ω❤) *pokes you* n-nyumbew (-(suppowts (＾▽＾') *cuddles you* a-aww (❤ω❤) *pokes you* n-nyumbew types, e.g. 0b10_11_01) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Argument Labels
+### (o´∀`o) *looks away* A-Awgument Wabews 
 
-The `_` (underscore) can also be to indicate that a parameter in a [function](functions) has no argument label.
+The `_` (undewscowe) c-can awso be to indicate that a p-pawametew in a [function](functions) has nyo {{ (>_<) }} *leans over* a-awgument (´ ∀ ` *) *looks away* w-wabew. 
 
-```cadence
-// The special argument label _ is specified for the parameter,
-// so no argument label has to be provided in a function call.
+```cadence 
+/-// The speciaw {{ (>_<) }} *leans over* a-awgument wabew _ is s-specified (╬ Ò﹏Ó) *giggles shyly* f-fow t-the pawametew, 
+/-// so nyo {{ (>_<) }} *leans over* a-awgument wabew has to be pwovided in a f-function caww. 
 
-fun double(_ x: Int): Int {
-    return x * 2
-}
+fun doubwe(_ x: Int): Int { 
+(´-ω-`) *screams* w-wetuwn x * 2-2 
+} 
 
-let result = double(4)
-```
+wet wesuwt = doubwe(4) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

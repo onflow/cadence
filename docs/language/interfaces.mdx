@@ -1,550 +1,550 @@
----
-title: Interfaces
----
-
-An interface is an abstract type that specifies the behavior of types
-that *implement* the interface.
-Interfaces declare the required functions and fields,
-the access control for those declarations,
-and preconditions and postconditions that implementing types need to provide.
-
-There are three kinds of interfaces:
-
-- **Structure interfaces**: implemented by [structures](composite-types#structures)
-- **Resource interfaces**: implemented by [resources](composite-types#resources)
-- **Contract interfaces**: implemented by [contracts](contracts)
-
-Structure, resource, and contract types may implement multiple interfaces.
-
-There is no support for event and enum interfaces.
-
-Nominal typing applies to composite types that implement interfaces.
-This means that a type only implements an interface
-if it has explicitly declared the conformance,
-the composite type does not implicitly conform to an interface,
-even if it satisfies all requirements of the interface.
-
-Interfaces consist of the function and field requirements
-that a type implementing the interface must provide implementations for.
-Interface requirements, and therefore also their implementations,
-must always be at least public.
-
-Variable field requirements may be annotated
-to require them to be publicly settable.
-
-Function requirements consist of the name of the function,
-parameter types, an optional return type,
-and optional preconditions and postconditions.
-
-Field requirements consist of the name and the type of the field.
-Field requirements may optionally declare a getter requirement and a setter requirement,
-each with preconditions and postconditions.
-
-Calling functions with preconditions and postconditions on interfaces
-instead of concrete implementations can improve the security of a program,
-as it ensures that even if implementations change,
-some aspects of them will always hold.
-
-## Interface Declaration
-
-Interfaces are declared using the `struct`, `resource`, or `contract` keyword,
-followed by the `interface` keyword,
-the name of the interface,
-and the requirements, which must be enclosed in opening and closing braces.
-
-Field requirements can be annotated to
-require the implementation to be a variable field, by using the `var` keyword;
-require the implementation to be a constant field, by using the `let` keyword;
-or the field requirement may specify nothing,
-in which case the implementation may either be a variable or a constant field.
-
-Field requirements and function requirements must specify the required level of access.
-The access must be at least be public, so the `pub` keyword must be provided.
-Variable field requirements can be specified to also be publicly settable
-by using the `pub(set)` keyword.
-
-Interfaces can be used in types.
-This is explained in detail in the section [Interfaces in Types](#interfaces-in-types).
-For now, the syntax `{I}` can be read as the type of any value that implements the interface `I`.
-
-```cadence
-// Declare a resource interface for a fungible token.
-// Only resources can implement this resource interface.
-//
-pub resource interface FungibleToken {
-
-    // Require the implementing type to provide a field for the balance
-    // that is readable in all scopes (`pub`).
-    //
-    // Neither the `var` keyword, nor the `let` keyword is used,
-    // so the field may be implemented as either a variable
-    // or as a constant field.
-    //
-    pub balance: Int
-
-    // Require the implementing type to provide an initializer that
-    // given the initial balance, must initialize the balance field.
-    //
-    init(balance: Int) {
-        pre {
-            balance >= 0:
-                "Balances are always non-negative"
-        }
-        post {
-            self.balance == balance:
-                "the balance must be initialized to the initial balance"
-        }
-
-        // NOTE: The declaration contains no implementation code.
-    }
-
-    // Require the implementing type to provide a function that is
-    // callable in all scopes, which withdraws an amount from
-    // this fungible token and returns the withdrawn amount as
-    // a new fungible token.
-    //
-    // The given amount must be positive and the function implementation
-    // must add the amount to the balance.
-    //
-    // The function must return a new fungible token.
-    // The type `{FungibleToken}` is the type of any resource
-    // that implements the resource interface `FungibleToken`.
-    //
-    pub fun withdraw(amount: Int): @{FungibleToken} {
-        pre {
-            amount > 0:
-                "the amount must be positive"
-            amount <= self.balance:
-                "insufficient funds: the amount must be smaller or equal to the balance"
-        }
-        post {
-            self.balance == before(self.balance) - amount:
-                "the amount must be deducted from the balance"
-        }
-
-        // NOTE: The declaration contains no implementation code.
-    }
-
-    // Require the implementing type to provide a function that is
-    // callable in all scopes, which deposits a fungible token
-    // into this fungible token.
-    //
-    // No precondition is required to check the given token's balance
-    // is positive, as this condition is already ensured by
-    // the field requirement.
-    //
-    // The parameter type `{FungibleToken}` is the type of any resource
-    // that implements the resource interface `FungibleToken`.
-    //
-    pub fun deposit(_ token: @{FungibleToken}) {
-        post {
-            self.balance == before(self.balance) + token.balance:
-                "the amount must be added to the balance"
-        }
-
-        // NOTE: The declaration contains no implementation code.
-    }
-}
-```
-
-Note that the required initializer and functions do not have any executable code.
-
-Struct and resource Interfaces can only be declared directly inside contracts,
-i.e. not inside of functions.
-Contract interfaces can only be declared globally and not inside contracts.
-
-## Interface Implementation
-
-Declaring that a type implements (conforms) to an interface
-is done in the type declaration of the composite type (e.g., structure, resource):
-The kind and the name of the composite type is followed by a colon (`:`)
-and the name of one or more interfaces that the composite type implements.
-
-This will tell the checker to enforce any requirements from the specified interfaces
-onto the declared type.
-
-A type implements (conforms to) an interface if it declares
-the implementation in its signature, provides field declarations
-for all fields required by the interface,
-and provides implementations for all functions required by the interface.
-
-The field declarations in the implementing type must match the field requirements
-in the interface in terms of name, type, and declaration kind (e.g. constant, variable)
-if given. For example, an interface may require a field with a certain name and type,
-but leaves it to the implementation what kind the field is.
-
-The function implementations must match the function requirements in the interface
-in terms of name, parameter argument labels, parameter types, and the return type.
-
-```cadence
-// Declare a resource named `ExampleToken` that has to implement
-// the `FungibleToken` interface.
-//
-// It has a variable field named `balance`, that can be written
-// by functions of the type, but outer scopes can only read it.
-//
-pub resource ExampleToken: FungibleToken {
-
-    // Implement the required field `balance` for the `FungibleToken` interface.
-    // The interface does not specify if the field must be variable, constant,
-    // so in order for this type (`ExampleToken`) to be able to write to the field,
-    // but limit outer scopes to only read from the field, it is declared variable,
-    // and only has public access (non-settable).
-    //
-    pub var balance: Int
-
-    // Implement the required initializer for the `FungibleToken` interface:
-    // accept an initial balance and initialize the `balance` field.
-    //
-    // This implementation satisfies the required postcondition.
-    //
-    // NOTE: the postcondition declared in the interface
-    // does not have to be repeated here in the implementation.
-    //
-    init(balance: Int) {
-        self.balance = balance
-    }
-
-    // Implement the required function named `withdraw` of the interface
-    // `FungibleToken`, that withdraws an amount from the token's balance.
-    //
-    // The function must be public.
-    //
-    // This implementation satisfies the required postcondition.
-    //
-    // NOTE: neither the precondition nor the postcondition declared
-    // in the interface have to be repeated here in the implementation.
-    //
-    pub fun withdraw(amount: Int): @ExampleToken {
-        self.balance = self.balance - amount
-        return create ExampleToken(balance: amount)
-    }
-
-    // Implement the required function named `deposit` of the interface
-    // `FungibleToken`, that deposits the amount from the given token
-    // to this token.
-    //
-    // The function must be public.
-    //
-    // NOTE: the type of the parameter is `{FungibleToken}`,
-    // i.e., any resource that implements the resource interface `FungibleToken`,
-    // so any other token – however, we want to ensure that only tokens
-    // of the same type can be deposited.
-    //
-    // This implementation satisfies the required postconditions.
-    //
-    // NOTE: neither the precondition nor the postcondition declared
-    // in the interface have to be repeated here in the implementation.
-    //
-    pub fun deposit(_ token: @{FungibleToken}) {
-        if let exampleToken <- token as? ExampleToken {
-            self.balance = self.balance + exampleToken.balance
-            destroy exampleToken
-        } else {
-            panic("cannot deposit token which is not an example token")
-        }
-    }
-}
-
-// Declare a constant which has type `ExampleToken`,
-// and is initialized with such an example token.
-//
-let token <- create ExampleToken(balance: 100)
-
-// Withdraw 10 units from the token.
-//
-// The amount satisfies the precondition of the `withdraw` function
-// in the `FungibleToken` interface.
-//
-// Invoking a function of a resource does not destroy the resource,
-// so the resource `token` is still valid after the call of `withdraw`.
-//
-let withdrawn <- token.withdraw(amount: 10)
-
-// The postcondition of the `withdraw` function in the `FungibleToken`
-// interface ensured the balance field of the token was updated properly.
-//
-// `token.balance` is `90`
-// `withdrawn.balance` is `10`
-
-// Deposit the withdrawn token into another one.
-let receiver: @ExampleToken <- // ...
-receiver.deposit(<-withdrawn)
-
-// Run-time error: The precondition of function `withdraw` in interface
-// `FungibleToken` fails, the program aborts: the parameter `amount`
-// is larger than the field `balance` (100 > 90).
-//
-token.withdraw(amount: 100)
-
-// Withdrawing tokens so that the balance is zero does not destroy the resource.
-// The resource has to be destroyed explicitly.
-//
-token.withdraw(amount: 90)
-```
-
-The access level for variable fields in an implementation
-may be less restrictive than the interface requires.
-For example, an interface may require a field to be
-at least public (i.e. the `pub` keyword is specified),
-and an implementation may provide a variable field which is public,
-but also publicly settable (the `pub(set)` keyword is specified).
-
-```cadence
-pub struct interface AnInterface {
-    // Require the implementing type to provide a publicly readable
-    // field named `a` that has type `Int`. It may be a variable
-    // or a constant field.
-    //
-    pub a: Int
-}
-
-pub struct AnImplementation: AnInterface {
-    // Declare a publicly settable variable field named `a` that has type `Int`.
-    // This implementation satisfies the requirement for interface `AnInterface`:
-    // The field is at least publicly readable, but this implementation also
-    // allows the field to be written to in all scopes.
-    //
-    pub(set) var a: Int
-
-    init(a: Int) {
-        self.a = a
-    }
-}
-```
-
-## Interfaces in Types
-
-Interfaces can be used in types: The type `{I}` is the type of all objects
-that implement the interface `I`.
-
-This is called a [restricted type](restricted-types):
-Only the functionality (members and functions) of the interface can be used
-when accessing a value of such a type.
-
-```cadence
-// Declare an interface named `Shape`.
-//
-// Require implementing types to provide a field which returns the area,
-// and a function which scales the shape by a given factor.
-//
-pub struct interface Shape {
-    pub fun getArea(): Int
-    pub fun scale(factor: Int)
-}
-
-// Declare a structure named `Square` the implements the `Shape` interface.
-//
-pub struct Square: Shape {
-    // In addition to the required fields from the interface,
-    // the type can also declare additional fields.
-    //
-    pub var length: Int
-
-    // Provided the field `area`  which is required to conform
-    // to the interface `Shape`.
-    //
-    // Since `area` was not declared as a constant, variable,
-    // field in the interface, it can be declared.
-    //
-    pub fun getArea(): Int {
-        return self.length * self.length
-    }
-
-    pub init(length: Int) {
-        self.length = length
-    }
-
-    // Provided the implementation of the function `scale`
-    // which is required to conform to the interface `Shape`.
-    //
-    pub fun scale(factor: Int) {
-        self.length = self.length * factor
-    }
-}
-
-// Declare a structure named `Rectangle` that also implements the `Shape` interface.
-//
-pub struct Rectangle: Shape {
-    pub var width: Int
-    pub var height: Int
-
-    // Provided the field `area  which is required to conform
-    // to the interface `Shape`.
-    //
-    pub fun getArea(): Int {
-        return self.width * self.height
-    }
-
-    pub init(width: Int, height: Int) {
-        self.width = width
-        self.height = height
-    }
-
-    // Provided the implementation of the function `scale`
-    // which is required to conform to the interface `Shape`.
-    //
-    pub fun scale(factor: Int) {
-        self.width = self.width * factor
-        self.height = self.height * factor
-    }
-}
-
-// Declare a constant that has type `Shape`, which has a value that has type `Rectangle`.
-//
-var shape: {Shape} = Rectangle(width: 10, height: 20)
-```
-
-Values implementing an interface are assignable to variables that have the interface as their type.
-
-```cadence
-// Assign a value of type `Square` to the variable `shape` that has type `Shape`.
-//
-shape = Square(length: 30)
-
-// Invalid: cannot initialize a constant that has type `Rectangle`.
-// with a value that has type `Square`.
-//
-let rectangle: Rectangle = Square(length: 10)
-```
-
-Fields declared in an interface can be accessed
-and functions declared in an interface
-can be called on values of a type that implements the interface.
-
-```cadence
-// Declare a constant which has the type `Shape`.
-// and is initialized with a value that has type `Rectangle`.
-//
-let shape: {Shape} = Rectangle(width: 2, height: 3)
-
-// Access the field `area` declared in the interface `Shape`.
-//
-shape.area  // is `6`
-
-// Call the function `scale` declared in the interface `Shape`.
-//
-shape.scale(factor: 3)
-
-shape.area  // is `54`
-```
-
-## Interface Nesting
-
-<Callout type="info">
-
-🚧 Status: Currently only contracts and contract interfaces support nested interfaces.
-
-</Callout>
-
-Interfaces can be arbitrarily nested.
-Declaring an interface inside another does not require implementing types
-of the outer interface to provide an implementation of the inner interfaces.
-
-```cadence
-// Declare a resource interface `OuterInterface`, which declares
-// a nested structure interface named `InnerInterface`.
-//
-// Resources implementing `OuterInterface` do not need to provide
-// an implementation of `InnerInterface`.
-//
-// Structures may just implement `InnerInterface`.
-//
-resource interface OuterInterface {
-
-    struct interface InnerInterface {}
-}
-
-// Declare a resource named `SomeOuter` that implements the interface `OuterInterface`.
-//
-// The resource is not required to implement `OuterInterface.InnerInterface`.
-//
-resource SomeOuter: OuterInterface {}
-
-// Declare a structure named `SomeInner` that implements `InnerInterface`,
-// which is nested in interface `OuterInterface`.
-//
-struct SomeInner: OuterInterface.InnerInterface {}
-
-```
-
-## Interface Default Functions
-
-<Callout type="info">
-🚧 Status: This feature will be available in a future spork.
-</Callout>
-
-Interfaces can provide default functions:
-If the concrete type implementing the interface does not provide an implementation
-for the function required by the interface,
-then the interface's default function is used in the implementation.
-
-```cadence
-// Declare a struct interface `Container`,
-// which declares a default function `getCount`.
-//
-struct interface Container {
-
-    let items: [AnyStruct]
-
-    fun getCount(): Int {
-        return self.items.length
-    }
-}
-
-// Declare a concrete struct named `Numbers` that implements the interface `Container`.
-//
-// The struct does not implement the function `getCount` of the interface `Container`,
-// so the default function for `getCount` is used.
-//
-struct Numbers: Container {
-    let items: [AnyStruct]
-
-    init() {
-        self.items = []
-    }
-}
-
-let numbers = Numbers()
-numbers.getCount()  // is 0
-```
-
-Interfaces cannot provide default initializers or default destructors.
-
-Only one conformance may provide a default function.
-
-## Nested Type Requirements
-
-<Callout type="info">
-
-🚧 Status: Currently only contracts and contract interfaces support nested type requirements.
-
-</Callout>
-
-Interfaces can require implementing types to provide concrete nested types.
-For example, a resource interface may require an implementing type to provide a resource type.
-
-```cadence
-// Declare a resource interface named `FungibleToken`.
-//
-// Require implementing types to provide a resource type named `Vault`
-// which must have a field named `balance`.
-//
-resource interface FungibleToken {
-    pub resource Vault {
-        pub balance: Int
-    }
-}
-// Declare a resource named `ExampleToken` that implements the `FungibleToken` interface.
-//
-// The nested type `Vault` must be provided to conform to the interface.
-//
-resource ExampleToken: FungibleToken {
-    pub resource Vault {
-        pub var balance: Int
-        init(balance: Int) {
-            self.balance = balance
-        }
-    }
-}
-```
+----- 
+titwe: I-Intewfaces 
+----- 
+
+An intewface is an abstwact t-type that s-specifies t-the behaviow of t-types 
+that *-*impwement* t-the intewface. 
+I-Intewfaces decwawe t-the wequiwed functions and fiewds, 
+t-the a-access contwow (╬ Ò﹏Ó) *giggles shyly* f-fow those decwawations, 
+and pweconditions and p-postconditions that impwementing t-types nyeed to pwovide. 
+
+Thewe awe thwee (＾▽＾') *looks away* k-kinds of intewfaces: 
+
+(✧ω✧) *teleports behind you* --- **Stwuctuwe i-intewfaces**: impwemented by [stwuctuwes](composite-types#stwuctuwes) 
+(✧ω✧) *teleports behind you* --- **Wesouwce i-intewfaces**: impwemented by [wesouwces](composite-types#wesouwces) 
+(✧ω✧) *teleports behind you* --- **Contwact i-intewfaces**: impwemented by [contwacts](contwacts) 
+
+Stwuctuwe, wesouwce, and contwact t-types may impwement muwtipwe intewfaces. 
+
+Thewe is nyo suppowt (╬ Ò﹏Ó) *giggles shyly* f-fow e-event and enyum intewfaces. 
+
+Nyominyaw t-typing appwies to composite t-types that impwement intewfaces. 
+This means that a t-type onwy impwements an intewface 
+if it has e-expwicitwy d-decwawed t-the confowmance, 
+t-the composite t-type does nyot impwicitwy c-confowm to an intewface, 
+even if it satisfies (＾▽＾') *cuddles you* a-aww wequiwements of t-the intewface. 
+
+I-Intewfaces consist of t-the f-function and fiewd wequiwements 
+that a t-type impwementing t-the intewface (* ^ ω ^) *screams* m-must pwovide impwementations fow. 
+Intewface wequiwements, and thewefowe awso theiw impwementations, 
+(* ^ ω ^) *screams* m-must awways be a-at weast pubwic. 
+
+:3 *hugs tightly* V-Vawiabwe fiewd wequiwements may be annyotated 
+to wequiwe t-them to be pubwicwy settabwe. 
+
+Function wequiwements consist of t-the nyame of t-the function, 
+p-pawametew types, an optionyaw (´-ω-`) *screams* w-wetuwn type, 
+and optionyaw pweconditions and postconditions. 
+
+Fiewd wequiwements consist of t-the nyame and t-the t-type of t-the fiewd. 
+Fiewd wequiwements may optionyawwy decwawe a gettew wequiwement and a s-settew wequiwement, 
+each with pweconditions and postconditions. 
+
+Cawwing functions with pweconditions and p-postconditions on i-intewfaces 
+instead of concwete impwementations c-can impwove t-the secuwity of a pwogwam, 
+as it ensuwes that even if impwementations change, 
+s-some aspects of t-them wiww awways howd. 
+
+#-## Intewface Decwawation 
+
+I-Intewfaces awe d-decwawed using t-the `stwuct`, `wesouwce`, ow `contwact` keywowd, 
+f-fowwowed by t-the `-`intewface` keywowd, 
+t-the nyame of t-the intewface, 
+and t-the wequiwements, which (* ^ ω ^) *screams* m-must be encwosed in openying and cwosing >_> *screams* b-bwaces. 
+
+Fiewd wequiwements c-can be annyotated to 
+wequiwe t-the impwementation to be a vawiabwe fiewd, by using t-the `vaw` keywowd; 
+wequiwe t-the impwementation to be a c-constant fiewd, by using t-the `wet` keywowd; 
+ow t-the fiewd wequiwement may specify nyothing, 
+in which case t-the impwementation may eithew be a vawiabwe ow a c-constant fiewd. 
+
+Fiewd wequiwements and f-function wequiwements (* ^ ω ^) *screams* m-must specify t-the wequiwed w-wevew of |･ω･) *steals ur resource* a-access. 
+The a-access (* ^ ω ^) *screams* m-must be a-at weast be pubwic, so t-the `pub` keywowd (* ^ ω ^) *screams* m-must be pwovided. 
+:3 *hugs tightly* V-Vawiabwe fiewd wequiwements c-can be s-specified to awso be pubwicwy settabwe 
+by using t-the `pub(set)` (*・ω・)ﾉ *dances nervously* k-keywowd. 
+
+I-Intewfaces c-can be used in types. 
+This is e-expwainyed in detaiw in t-the section [Intewfaces in Types](#intewfaces-in-types). 
+Fow n-nyow, t-the s-syntax `{I}` c-can be wead as t-the t-type of any vawue that impwements t-the intewface `I`. 
+
+```cadence 
+/-// Decwawe a wesouwce intewface (╬ Ò﹏Ó) *giggles shyly* f-fow a fungibwe token. 
+/-// Onwy wesouwces c-can impwement this wesouwce intewface. 
+/-// 
+pub wesouwce intewface F-FungibweToken { 
+
+/-// Wequiwe t-the impwementing t-type to pwovide a fiewd (╬ Ò﹏Ó) *giggles shyly* f-fow t-the bawance 
+/-// that is weadabwe in (＾▽＾') *cuddles you* a-aww scopes (`pub`). 
+/-// 
+/-// N-Nyeithew t-the `vaw` keywowd, (=`ω´=) *blushes* n-nyow t-the `wet` keywowd is used, 
+/-// so t-the fiewd may be impwemented as eithew a vawiabwe 
+/-// ow as a c-constant fiewd. 
+/-// 
+pub bawance: Int 
+
+/-// Wequiwe t-the impwementing t-type to pwovide an inyitiawizew that 
+/-// given t-the inyitiaw bawance, (* ^ ω ^) *screams* m-must inyitiawize t-the bawance fiewd. 
+/-// 
+i-inyit(bawance: Int) { 
+pwe { 
+bawance >->= >w< *giggles shyly* 0-0: 
+(✯◡✯) *whines* "-"Bawances awe awways nyon-nyegative" 
+} 
+p-post { 
+self.balance == bawance: 
+"the bawance (* ^ ω ^) *screams* m-must be inyitiawized to t-the inyitiaw b-bawance" 
+} 
+
+/-// (o･ω･o) *dances nervously* N-NyOTE: The decwawation contains nyo impwementation c-code. 
+} 
+
+/-// Wequiwe t-the impwementing t-type to pwovide a f-function that is 
+/-// cawwabwe in (＾▽＾') *cuddles you* a-aww s-scopes, which ~(>_<~) *steals ur resource* w-withdwaws an amount fwom 
+/-// this fungibwe token and wetuwns t-the withdwawn amount as 
+/-// a nyew fungibwe token. 
+/-// 
+/-// The given amount (* ^ ω ^) *screams* m-must be positive and t-the f-function impwementation 
+/-// (* ^ ω ^) *screams* m-must a-add t-the amount to t-the bawance. 
+/-// 
+/-// The f-function (* ^ ω ^) *screams* m-must (´-ω-`) *screams* w-wetuwn a nyew fungibwe token. 
+/-// The t-type `-`{FungibweToken}` is t-the t-type of any wesouwce 
+/-// that impwements t-the wesouwce intewface `FungibweToken`. 
+/-// 
+pub fun withdwaw(amount: Int): @-@{FungibweToken} { 
+pwe { 
+amount > >w< *giggles shyly* 0-0: 
+"the amount (* ^ ω ^) *screams* m-must be positive" 
+amount ♡(｡- ω -) *dances nervously* <-<= self.balance: 
+"insufficient funds: t-the amount (* ^ ω ^) *screams* m-must be smawwew ow (*´▽`*) *pokes you* e-equaw to t-the b-bawance" 
+} 
+p-post { 
+self.balance == before(self.balance) (✧ω✧) *teleports behind you* --- a-amount: 
+"the amount (* ^ ω ^) *screams* m-must be deducted fwom t-the b-bawance" 
+} 
+
+/-// (o･ω･o) *dances nervously* N-NyOTE: The decwawation contains nyo impwementation c-code. 
+} 
+
+/-// Wequiwe t-the impwementing t-type to pwovide a f-function that is 
+/-// cawwabwe in (＾▽＾') *cuddles you* a-aww s-scopes, which deposits a fungibwe token 
+/-// into this fungibwe token. 
+/-// 
+/-// N-Nyo pwecondition is wequiwed to check t-the given (=`ω´=) *cries* t-token's bawance 
+/-// is positive, as this condition is awweady ensuwed by 
+/-// t-the fiewd w-wequiwement. 
+/-// 
+/-// The p-pawametew t-type `-`{FungibweToken}` is t-the t-type of any wesouwce 
+/-// that impwements t-the wesouwce intewface `FungibweToken`. 
+/-// 
+pub fun deposit(_ token: @{FungibweToken}) { 
+p-post { 
+self.balance == before(self.balance) + token.balance: 
+"the amount (* ^ ω ^) *screams* m-must be a-added to t-the b-bawance" 
+} 
+
+/-// (o･ω･o) *dances nervously* N-NyOTE: The decwawation contains nyo impwementation c-code. 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Nyote that t-the wequiwed inyitiawizew and functions (^-^*)/ *cuddles you* d-do nyot have any executabwe c-code. 
+
+Stwuct and wesouwce I-Intewfaces c-can onwy be d-decwawed diwectwy inside contwacts, 
+i.e. nyot inside of functions. 
+Contwact i-intewfaces c-can onwy be d-decwawed gwobawwy and nyot inside ~(>_<~) *screams* c-contwacts. 
+
+#-## Intewface Impwementation 
+
+:33 *screams* D-Decwawing that a t-type impwements (confowms) to an intewface 
+is donye in t-the t-type decwawation of t-the composite t-type (e.g., stwuctuwe, w-wesouwce): 
+The kind and t-the nyame of t-the composite t-type is f-fowwowed by a (⌒▽⌒)☆ *cries* c-cowon (`:`) 
+and t-the nyame of onye ow mowe i-intewfaces that t-the composite t-type impwements. 
+
+This wiww teww t-the checkew to enfowce any wequiwements fwom t-the s-specified i-intewfaces 
+onto t-the d-decwawed (＃￣ω￣) *hugs tightly* t-type. 
+
+A-A t-type impwements (confowms to) an intewface if it decwawes 
+t-the impwementation in its signyatuwe, pwovides fiewd decwawations 
+(╬ Ò﹏Ó) *giggles shyly* f-fow (＾▽＾') *cuddles you* a-aww fiewds wequiwed by t-the intewface, 
+and pwovides impwementations (╬ Ò﹏Ó) *giggles shyly* f-fow (＾▽＾') *cuddles you* a-aww functions wequiwed by t-the intewface. 
+
+The fiewd decwawations in t-the impwementing t-type (* ^ ω ^) *screams* m-must match t-the fiewd wequiwements 
+in t-the intewface in tewms of nyame, type, and decwawation kind (e.g. constant, v-vawiabwe) 
+if given. Fow e-exampwe, an intewface may wequiwe a fiewd with a c-cewtain nyame and type, 
+but weaves it to t-the impwementation what kind t-the fiewd is. 
+
+The f-function impwementations (* ^ ω ^) *screams* m-must match t-the f-function wequiwements in t-the intewface 
+in tewms of nyame, p-pawametew {{ (>_<) }} *leans over* a-awgument w-wabews, p-pawametew types, and t-the (´-ω-`) *screams* w-wetuwn (＃￣ω￣) *hugs tightly* t-type. 
+
+```cadence 
+/-// Decwawe a wesouwce nyamed (✧∀✧)/ *screams* `-`ExampweToken` that has to impwement 
+/-// t-the `FungibweToken` intewface. 
+/-// 
+/-// I-It has a vawiabwe fiewd nyamed `bawance`, that c-can be wwitten 
+/-// by functions of t-the type, but outew scopes c-can onwy wead it. 
+/-// 
+pub wesouwce ExampweToken: F-FungibweToken { 
+
+/-// Impwement t-the wequiwed fiewd `-`bawance` (╬ Ò﹏Ó) *giggles shyly* f-fow t-the `FungibweToken` intewface. 
+/-// The intewface does nyot specify if t-the fiewd (* ^ ω ^) *screams* m-must be vawiabwe, constant, 
+/-// so in owdew (╬ Ò﹏Ó) *giggles shyly* f-fow this t-type (`ExampweToken`) to be abwe to wwite to t-the fiewd, 
+/-// but wimit outew scopes to onwy wead fwom t-the fiewd, it is d-decwawed vawiabwe, 
+/-// and onwy has pubwic a-access (nyon-settabwe). 
+/-// 
+pub vaw bawance: Int 
+
+/-// Impwement t-the wequiwed inyitiawizew (╬ Ò﹏Ó) *giggles shyly* f-fow t-the `FungibweToken` i-intewface: 
+/-// a-accept an inyitiaw bawance and inyitiawize t-the `-`bawance` fiewd. 
+/-// 
+/-// This impwementation satisfies t-the wequiwed postcondition. 
+/-// 
+/-// (o･ω･o) *dances nervously* N-NyOTE: t-the postcondition d-decwawed in t-the intewface 
+/-// does nyot have to be wepeated hewe in t-the impwementation. 
+/-// 
+i-inyit(bawance: Int) { 
+self.balance = bawance 
+} 
+
+/-// Impwement t-the wequiwed f-function nyamed `withdwaw` of t-the intewface 
+/-// `FungibweToken`, that ~(>_<~) *steals ur resource* w-withdwaws an amount fwom t-the (=`ω´=) *cries* t-token's bawance. 
+/-// 
+/-// The f-function (* ^ ω ^) *screams* m-must be pubwic. 
+/-// 
+/-// This impwementation satisfies t-the wequiwed postcondition. 
+/-// 
+/-// (o･ω･o) *dances nervously* N-NyOTE: nyeithew t-the pwecondition (=`ω´=) *blushes* n-nyow t-the postcondition d-decwawed 
+/-// in t-the intewface have to be wepeated hewe in t-the impwementation. 
+/-// 
+pub fun withdwaw(amount: Int): @ExampweToken { 
+self.balance = self.balance (✧ω✧) *teleports behind you* --- amount 
+(´-ω-`) *screams* w-wetuwn cweate ExampweToken(bawance: a-amount) 
+} 
+
+/-// Impwement t-the wequiwed f-function nyamed `deposit` of t-the intewface 
+/-// `FungibweToken`, that deposits t-the amount fwom t-the given token 
+/-// to this token. 
+/-// 
+/-// The f-function (* ^ ω ^) *screams* m-must be pubwic. 
+/-// 
+/-// (o･ω･o) *dances nervously* N-NyOTE: t-the t-type of t-the p-pawametew is `{FungibweToken}`, 
+/-// i.e., any wesouwce that impwements t-the wesouwce intewface `FungibweToken`, 
+/-// so any othew token – howevew, we want to ensuwe that onwy tokens 
+/-// of t-the same t-type c-can be deposited. 
+/-// 
+/-// This impwementation satisfies t-the wequiwed postconditions. 
+/-// 
+/-// (o･ω･o) *dances nervously* N-NyOTE: nyeithew t-the pwecondition (=`ω´=) *blushes* n-nyow t-the postcondition d-decwawed 
+/-// in t-the intewface have to be wepeated hewe in t-the impwementation. 
+/-// 
+pub fun deposit(_ token: @{FungibweToken}) { 
+if wet exampweToken <- token (っ˘ω˘ς ) *screams* a-as? E-ExampweToken { 
+self.balance = self.balance + exampleToken.balance 
+d-destwoy exampweToken 
+} ewse { 
+panyic("cannyot deposit token which is nyot an e-exampwe token") 
+} 
+} 
+} 
+
+/-// Decwawe a c-constant which has t-type `ExampweToken`, 
+/-// and is inyitiawized with such an e-exampwe token. 
+/-// 
+wet token <- cweate ExampweToken(bawance: 100) 
+
+/-// Withdwaw 10 unyits fwom t-the token. 
+/-// 
+/-// The amount satisfies t-the pwecondition of t-the `withdwaw` f-function 
+/-// in t-the `FungibweToken` intewface. 
+/-// 
+/-// Invoking a f-function of a wesouwce does nyot d-destwoy t-the wesouwce, 
+/-// so t-the wesouwce `-`token` is stiww vawid aftew t-the caww of `-`withdwaw`. 
+/-// 
+wet withdwawn <- (　･ω･)☞ *hugs tightly* t-token.withdraw(amount: 10) 
+
+/-// The postcondition of t-the `withdwaw` f-function in t-the `FungibweToken` 
+/-// intewface ensuwed t-the bawance fiewd of t-the token w-was u-updated pwopewwy. 
+/-// 
+/-// `token.balance` is `-`90` 
+/-// `withdrawn.balance` is ต(=ω=)ต *sweats* `-`10` 
+
+/-// Deposit t-the withdwawn token into anyothew onye. 
+wet weceivew: @ExampweToken <- /-// ... 
+receiver.deposit(<-withdrawn) 
+
+/-// Wun-time ewwow: The pwecondition of f-function `withdwaw` in intewface 
+/-// `FungibweToken` faiws, t-the pwogwam abowts: t-the p-pawametew `amount` 
+/-// is wawgew than t-the fiewd `-`bawance` (100 > 90). 
+/-// 
+(　･ω･)☞ *hugs tightly* t-token.withdraw(amount: 100) 
+
+/-// W-Withdwawing tokens so that t-the bawance is zewo does nyot d-destwoy t-the w-wesouwce. 
+/-// The wesouwce has to be destwoyed expwicitwy. 
+/-// 
+(　･ω･)☞ *hugs tightly* t-token.withdraw(amount: 90) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The a-access w-wevew (╬ Ò﹏Ó) *giggles shyly* f-fow vawiabwe fiewds in an impwementation 
+may be w-wess westwictive than t-the intewface wequiwes. 
+Fow e-exampwe, an intewface may wequiwe a fiewd to be 
+a-at weast pubwic (-(i.e. t-the `pub` keywowd is specified), 
+and an impwementation may pwovide a vawiabwe fiewd which is pubwic, 
+but awso pubwicwy settabwe (-(the `pub(set)` keywowd is specified). 
+
+```cadence 
+pub stwuct intewface AnyIntewface { 
+/-// Wequiwe t-the impwementing t-type to pwovide a pubwicwy weadabwe 
+/-// fiewd nyamed `a` that has t-type `Int`. I-It may be a vawiabwe 
+/-// ow a c-constant fiewd. 
+/-// 
+pub a: Int 
+} 
+
+pub stwuct AnyImpwementation: AnyIntewface { 
+/-// Decwawe a pubwicwy settabwe vawiabwe fiewd nyamed `a` that has t-type `Int`. 
+/-// This impwementation satisfies t-the wequiwement (╬ Ò﹏Ó) *giggles shyly* f-fow intewface `AnyIntewface`: 
+/-// The fiewd is a-at weast pubwicwy weadabwe, but this impwementation awso 
+/-// awwows t-the fiewd to be wwitten to in (＾▽＾') *cuddles you* a-aww scopes. 
+/-// 
+pub(set) vaw a: Int 
+
+inyit(a: Int) { 
+sewf.a = a 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## I-Intewfaces in T-Types 
+
+I-Intewfaces c-can be used in types: The t-type `{I}` is t-the t-type of (＾▽＾') *cuddles you* a-aww objects 
+that impwement t-the intewface `I`. 
+
+This is cawwed a [-[westwicted type](westwicted-types): 
+Onwy t-the functionyawity (membews and f-functions) of t-the intewface c-can be used 
+when a-accessing a vawue of such a (＃￣ω￣) *hugs tightly* t-type. 
+
+```cadence 
+/-// Decwawe an intewface nyamed `Shape`. 
+/-// 
+/-// Wequiwe impwementing t-types to pwovide a fiewd which wetuwns t-the awea, 
+/-// and a f-function which scawes t-the shape by a given f-factow. 
+/-// 
+pub stwuct intewface Shape { 
+pub fun getAwea(): Int 
+pub fun s-scawe(factow: Int) 
+} 
+
+/-// Decwawe a stwuctuwe nyamed `Squawe` t-the impwements t-the `Shape` intewface. 
+/-// 
+pub stwuct Squawe: Shape { 
+/-// In addition to t-the wequiwed fiewds fwom t-the intewface, 
+/-// t-the t-type c-can awso decwawe additionyaw fiewds. 
+/-// 
+pub vaw wength: Int 
+
+/-// Pwovided t-the fiewd `awea` which is wequiwed to c-confowm 
+/-// to t-the intewface `Shape`. 
+/-// 
+/-// Since `awea` w-was nyot d-decwawed as a constant, vawiabwe, 
+/-// fiewd in t-the intewface, it c-can be d-decwawed. 
+/-// 
+pub fun getAwea(): Int { 
+(´-ω-`) *screams* w-wetuwn s-self.length * s-self.length 
+} 
+
+pub i-inyit(wength: Int) { 
+s-self.length = wength 
+} 
+
+/-// Pwovided t-the impwementation of t-the f-function `-`scawe` 
+/-// which is wequiwed to c-confowm to t-the intewface `Shape`. 
+/-// 
+pub fun s-scawe(factow: Int) { 
+s-self.length = s-self.length * f-factow 
+} 
+} 
+
+/-// Decwawe a stwuctuwe nyamed `Wectangwe` that awso impwements t-the `Shape` intewface. 
+/-// 
+pub stwuct Wectangwe: Shape { 
+pub vaw width: Int 
+pub vaw h-height: Int 
+
+/-// Pwovided t-the fiewd `-`awea which is wequiwed to c-confowm 
+/-// to t-the intewface `Shape`. 
+/-// 
+pub fun getAwea(): Int { 
+(´-ω-`) *screams* w-wetuwn self.width * self.height 
+} 
+
+pub inyit(width: Int, h-height: Int) { 
+self.width = width 
+self.height = height 
+} 
+
+/-// Pwovided t-the impwementation of t-the f-function `-`scawe` 
+/-// which is wequiwed to c-confowm to t-the intewface `Shape`. 
+/-// 
+pub fun s-scawe(factow: Int) { 
+self.width = self.width * f-factow 
+self.height = self.height * f-factow 
+} 
+} 
+
+/-// Decwawe a c-constant that has t-type (╯✧▽✧)╯ *cries* `-`Shape`, which has a vawue that has t-type `Wectangwe`. 
+/-// 
+vaw s-shape: {-{Shape} = Wectangwe(width: 10, h-height: 20) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Vawues impwementing an intewface awe assignyabwe to vawiabwes that have t-the intewface as theiw (＃￣ω￣) *hugs tightly* t-type. 
+
+```cadence 
+/-// OwO *looks away* A-Assign a vawue of t-type `Squawe` to t-the vawiabwe ( ╥ω╥ ) *shuffles closer* `-`shape` that has t-type `Shape`. 
+/-// 
+shape = Squawe(wength: 30) 
+
+/-// Invawid: c-cannyot inyitiawize a c-constant that has t-type `Wectangwe`. 
+/-// with a vawue that has t-type `Squawe`. 
+/-// 
+wet wectangwe: W-Wectangwe = Squawe(wength: 10) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+F-Fiewds d-decwawed in an intewface c-can be accessed 
+and functions d-decwawed in an intewface 
+c-can be cawwed on vawues of a t-type that impwements t-the intewface. 
+
+```cadence 
+/-// Decwawe a c-constant which has t-the t-type `Shape`. 
+/-// and is inyitiawized with a vawue that has t-type `Wectangwe`. 
+/-// 
+wet s-shape: {-{Shape} = Wectangwe(width: 2, h-height: 3) 
+
+/-// A-Access t-the fiewd `awea` d-decwawed in t-the intewface `Shape`. 
+/-// 
+shape.area /-// is `6` 
+
+/-// Caww t-the f-function `-`scawe` d-decwawed in t-the intewface `Shape`. 
+/-// 
+shape.scale(factor: 3) 
+
+shape.area /-// is `54` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Intewface Nyesting 
+
+<Cawwout type="info"> 
+
+�-🚧 Status: Cuwwentwy onwy contwacts and contwact i-intewfaces suppowt nyested intewfaces. 
+
+</Cawwout> 
+
+I-Intewfaces c-can be awbitwawiwy nyested. 
+:33 *screams* D-Decwawing an intewface inside anyothew does nyot wequiwe impwementing t-types 
+of t-the outew intewface to pwovide an impwementation of t-the innyew intewfaces. 
+
+```cadence 
+/-// Decwawe a wesouwce intewface `-`OutewIntewface`, which decwawes 
+/-// a nyested stwuctuwe intewface nyamed `-`InnyewIntewface`. 
+/-// 
+/-// Wesouwces impwementing `OutewIntewface` (^-^*)/ *cuddles you* d-do nyot nyeed to pwovide 
+/-// an impwementation of `-`InnyewIntewface`. 
+/-// 
+/-// xDD *looks at you* S-Stwuctuwes may just impwement `-`InnyewIntewface`. 
+/-// 
+wesouwce intewface O-OutewIntewface { 
+
+stwuct intewface InnyewIntewface (☆ω☆) *steals ur resource* {-{} 
+} 
+
+/-// Decwawe a wesouwce nyamed `-`SomeOutew` that impwements t-the intewface `OutewIntewface`. 
+/-// 
+/-// The wesouwce is nyot wequiwed to impwement `OutewIntewface.InnyewIntewface`. 
+/-// 
+wesouwce SomeOutew: O-OutewIntewface (☆ω☆) *steals ur resource* {-{} 
+
+/-// Decwawe a stwuctuwe nyamed `SomeInnyew` that impwements `InnyewIntewface`, 
+/-// which is nyested in intewface `OutewIntewface`. 
+/-// 
+stwuct S-SomeInnyew: O-OuterInterface.InnerInterface (☆ω☆) *steals ur resource* {-{} 
+
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Intewface Defauwt Functions 
+
+<Cawwout type="info"> 
+�-🚧 Status: This featuwe wiww be avaiwabwe in a futuwe spowk. 
+</Cawwout> 
+
+I-Intewfaces c-can pwovide d-defauwt functions: 
+If t-the concwete t-type impwementing t-the intewface does nyot pwovide an impwementation 
+(╬ Ò﹏Ó) *giggles shyly* f-fow t-the f-function wequiwed by t-the intewface, 
+t-then t-the intewface's d-defauwt f-function is used in t-the impwementation. 
+
+```cadence 
+/-// Decwawe a stwuct intewface `Containyew`, 
+/-// which decwawes a d-defauwt f-function `getCount`. 
+/-// 
+stwuct intewface (=`ω´=) *giggles shyly* C-Containyew { 
+
+wet items: [AnyStwuct] 
+
+fun getCount(): Int { 
+(´-ω-`) *screams* w-wetuwn self.items.length 
+} 
+} 
+
+/-// Decwawe a concwete stwuct nyamed `Nyumbews` that impwements t-the intewface `Containyew`. 
+/-// 
+/-// The stwuct does nyot impwement t-the f-function `getCount` of t-the intewface `Containyew`, 
+/-// so t-the d-defauwt f-function (╬ Ò﹏Ó) *giggles shyly* f-fow `getCount` is u-used. 
+/-// 
+stwuct Nyumbews: (=`ω´=) *giggles shyly* C-Containyew { 
+wet items: [AnyStwuct] 
+
+inyit() { 
+self.items = [] 
+} 
+} 
+
+wet nyumbews = Nyumbews() 
+numbers.getCount() /-// is 0 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+I-Intewfaces c-cannyot pwovide d-defauwt inyitiawizews ow d-defauwt destwuctows. 
+
+Onwy onye c-confowmance may pwovide a d-defauwt function. 
+
+#-## Nyested Type Wequiwements 
+
+<Cawwout type="info"> 
+
+�-🚧 Status: Cuwwentwy onwy contwacts and contwact i-intewfaces suppowt nyested t-type wequiwements. 
+
+</Cawwout> 
+
+I-Intewfaces c-can wequiwe impwementing t-types to pwovide concwete nyested types. 
+Fow e-exampwe, a wesouwce intewface may wequiwe an impwementing t-type to pwovide a wesouwce (＃￣ω￣) *hugs tightly* t-type. 
+
+```cadence 
+/-// Decwawe a wesouwce intewface nyamed `FungibweToken`. 
+/-// 
+/-// Wequiwe impwementing t-types to pwovide a wesouwce t-type nyamed `-`Vauwt` 
+/-// which (* ^ ω ^) *screams* m-must have a fiewd nyamed `bawance`. 
+/-// 
+wesouwce intewface F-FungibweToken { 
+pub wesouwce Vauwt { 
+pub bawance: Int 
+} 
+} 
+/-// Decwawe a wesouwce nyamed (✧∀✧)/ *screams* `-`ExampweToken` that impwements t-the `FungibweToken` intewface. 
+/-// 
+/-// The nyested t-type `-`Vauwt` (* ^ ω ^) *screams* m-must be pwovided to c-confowm to t-the intewface. 
+/-// 
+wesouwce ExampweToken: F-FungibweToken { 
+pub wesouwce Vauwt { 
+pub vaw bawance: Int 
+i-inyit(bawance: Int) { 
+self.balance = bawance 
+} 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

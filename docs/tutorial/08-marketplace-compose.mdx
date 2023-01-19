@@ -1,855 +1,855 @@
----
-title: 8. Marketplace
----
-
-In this tutorial, we're going to create a marketplace that uses both the fungible
-and non-fungible token (NFTs) contracts that we have learned about in previous tutorials.
-This is only for educational purposes and is not meant to be used in production
-See a production-ready marketplace in the [NFT storefront repo.](https://github.com/onflow/nft-storefront)
-This contract is already deployed to testnet and mainnet and can be used by anyone for any generic NFT sale!
-
----
-
-<Callout type="success">
-  Open the starter code for this tutorial in the Flow Playground: 
-  <a 
-    href="https://play.onflow.org/49ec2856-1258-4675-bac3-850b4bae1929"
-    target="_blank"
-  >
-    https://play.onflow.org/49ec2856-1258-4675-bac3-850b4bae1929
-  </a>
-  <br/>
-  The tutorial will be asking you to take various actions to interact with this code.
-  [The marketplace setup guide](07-marketplace-setup) shows you how to get the playground set up to do this tutorial.
-</Callout>
-
-<Callout type="info">
-Instructions that require you to take action are always included in a callout box like this one.
-These highlighted actions are all that you need to do to get your code running,
-but reading the rest is necessary to understand the language's design.
-</Callout>
-
-Marketplaces are a popular application of blockchain technology and smart contracts.
-When there are NFTs in existence, users usually want to be able to buy and sell them with their fungible tokens.
-
-Now that there is an example for both fungible and non-fungible tokens,
-we can build a marketplace that uses both. This is referred to as **composability**:
-the ability for developers to leverage shared resources, such as code or userbases,
-and use them as building blocks for new applications. Flow is designed to enable composability
-because of the way that interfaces, resources and capabilities are designed.
-[Interfaces](../language/interfaces) allow projects to support any generic type as long as it supports a standard set of functionality specified by an interface.
-[Resources](../language/resources) can be passed around and owned by accounts, contracts or even other resources,
-unlocking different use-cases depending on where the resource is stored.
-[Capabilities](../language/capability-based-access-control) allow exposing user-defined sets of functionality through special objects
-that enforce strict security with Cadence's type system.
-The combination of these allows developers to do more with less, re-using known safe code and design patterns
-to create new, powerful, and unique interactions!
-
-<Callout type="info">
-
-At some point before or after this tutorial, you should definitely check out the formal documentation
-linked above about interfaces, resources, and capabilities. It will help complete your understanding
-of these complex, but powerful features.
-
-</Callout>
-
-To create a marketplace, we need to integrate the functionality of both fungible
-and non-fungible tokens into a single contract that gives users control over their money and assets.
-To accomplish this, we're going to take you through these steps to create a composable smart contract and get comfortable with the marketplace:
-
-1. Ensure that your fungible token and non-fungible token contracts are deployed and set up correctly.
-2. Deploy the marketplace type declarations to account `0x03`.
-3. Create a marketplace object and store it in your account storage, putting an NFT up for sale and publishing a public capability for your sale.
-4. Use a different account to purchase the NFT from the sale.
-5. Run a script to verify that the NFT was purchased.
-
-**Before proceeding with this tutorial**, you need to complete the [Fungible Tokens](06-fungible-tokens)
-and [Non-Fungible Token](05-non-fungible-tokens-1) tutorials
-to understand the building blocks of this smart contract.
-
-## Marketplace Design
-
----
-
-One way to implement a marketplace is to have a central smart contract that users deposit their NFTs and their price into,
-and have anyone come by and be able to buy the token for that price.
-This approach is reasonable, but it centralizes the process and takes away options from the owners.
-We want users to be able to maintain ownership of the NFTs that they are trying to sell while they are trying to sell them.
-
-Instead of taking this centralized approach, each user can list a sale from within their own account.
-
-Then, users could either provide a link to their sale to an application that can list it centrally on a website,
-or to a central sale aggregator smart contract if they want the entire transaction to stay on-chain.
-This way, the owner of the token keeps custody of their token while it is on sale.
-
-<Callout type="info">
-
-Before we start, we need to confirm the state of your accounts. <br/>
-If you haven't already, please perform the steps in the [marketplace setup guide](07-marketplace-setup)
-to ensure that the Fungible Token and Non-Fungible Token contracts are deployed to account 1 and 2 and own some tokens.
-Your accounts should look like this:
-
-</Callout>
-
-<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/accounts-nft-storage.png" />
-
-<Callout type="info">
-
-You can run the `1. CheckSetupScript.cdc` script to ensure that your accounts are correctly set up:
-
-</Callout>
-
-```cadence:title=CheckSetupScript.cdc
-// CheckSetupScript.cdc
-
-import ExampleToken from 0x01
-import ExampleNFT from 0x02
-
-// This script checks that the accounts are set up correctly for the marketplace tutorial.
-//
-// Account 0x01: Vault Balance = 40, NFT.id = 1
-// Account 0x02: Vault Balance = 20, No NFTs
-pub fun main() {
-    // Get the accounts' public account objects
-    let acct1 = getAccount(0x01)
-    let acct2 = getAccount(0x02)
-
-    // Get references to the account's receivers
-    // by getting their public capability
-    // and borrowing a reference from the capability
-    let acct1ReceiverRef = acct1.getCapability(/public/CadenceFungibleTokenTutorialReceiver)
-                          .borrow<&ExampleToken.Vault{ExampleToken.Balance}>()
-                          ?? panic("Could not borrow acct1 vault reference")
-
-    let acct2ReceiverRef = acct2.getCapability(/public/CadenceFungibleTokenTutorialReceiver)
-                          .borrow<&ExampleToken.Vault{ExampleToken.Balance}>()
-                          ?? panic("Could not borrow acct2 vault reference")
-
-    // Log the Vault balance of both accounts and ensure they are
-    // the correct numbers.
-    // Account 0x01 should have 40.
-    // Account 0x02 should have 20.
-    log("Account 1 Balance")
-    log(acct1ReceiverRef.balance)
-    log("Account 2 Balance")
-    log(acct2ReceiverRef.balance)
-
-    // verify that the balances are correct
-    if acct1ReceiverRef.balance != 40.0 || acct2ReceiverRef.balance != 20.0 {
-        panic("Wrong balances!")
-    }
-
-    // Find the public Receiver capability for their Collections
-    let acct1Capability = acct1.getCapability(ExampleNFT.CollectionPublicPath)
-    let acct2Capability = acct2.getCapability(ExampleNFT.CollectionPublicPath)
-
-    // borrow references from the capabilities
-    let nft1Ref = acct1Capability.borrow<&{ExampleNFT.NFTReceiver}>()
-        ?? panic("Could not borrow acct1 nft collection reference")
-
-    let nft2Ref = acct2Capability.borrow<&{ExampleNFT.NFTReceiver}>()
-        ?? panic("Could not borrow acct2 nft collection reference")
-
-    // Print both collections as arrays of IDs
-    log("Account 1 NFTs")
-    log(nft1Ref.getIDs())
-
-    log("Account 2 NFTs")
-    log(nft2Ref.getIDs())
-
-    // verify that the collections are correct
-    if nft1Ref.getIDs()[0] != 1 || nft2Ref.getIDs().length != 0 {
-        panic("Wrong Collections!")
-    }
-}
-```
-
-You should see something similar to this output if your accounts are set up correctly.
-They are in the same state that they would have been in if you followed
-the [Fungible Tokens](06-fungible-tokens)
-and [Non-Fungible Tokens](05-non-fungible-tokens-1) tutorials in succession:
-
-```
-"Account 1 Vault Balance"
-40
-"Account 2 Vault Balance"
-20
-"Account 1 NFTs"
-[1]
-"Account 2 NFTs"
-[]
-```
-
-Now that your accounts are in the correct state, we can build a marketplace that enables the sale of NFT's between accounts.
-
-## Setting up an NFT **Marketplace**
-
----
-
-Every user who wants to sell an NFT will store an instance of a `SaleCollection` resource in their account storage.
-
-<Callout type="info">
-
-Switch to account `0x03`.
-Open `ExampleMarketplace.cdc`<br/>
-With `ExampleMarketplace.cdc` open, click the `Deploy` button that appears at the top right of the editor.
-`ExampleMarketplace.cdc` should contain the following contract definition:
-
-</Callout>
-
-```cadence:title=ExampleMarketplace.cdc
-import ExampleToken from 0x01
-import ExampleNFT from 0x02
-
-// ExampleMarketplace.cdc
-//
-// The ExampleMarketplace contract is a very basic sample implementation of an NFT ExampleMarketplace on Flow.
-//
-// This contract allows users to put their NFTs up for sale. Other users
-// can purchase these NFTs with fungible tokens.
-//
-// Learn more about marketplaces in this tutorial: https://docs.onflow.org/cadence/tutorial/08-marketplace-compose
-//
-// This contract is a learning tool and is not meant to be used in production.
-// See the NFTStorefront contract for a generic marketplace smart contract that
-// is used by many different projects on the Flow blockchain:
-//
-// https://github.com/onflow/nft-storefront
-
-pub contract ExampleMarketplace {
-
-    // Event that is emitted when a new NFT is put up for sale
-    pub event ForSale(id: UInt64, price: UFix64, owner: Address?)
-
-    // Event that is emitted when the price of an NFT changes
-    pub event PriceChanged(id: UInt64, newPrice: UFix64, owner: Address?)
-
-    // Event that is emitted when a token is purchased
-    pub event TokenPurchased(id: UInt64, price: UFix64, seller: Address?, buyer: Address?)
-
-    // Event that is emitted when a seller withdraws their NFT from the sale
-    pub event SaleCanceled(id: UInt64, seller: Address?)
-
-    // Interface that users will publish for their Sale collection
-    // that only exposes the methods that are supposed to be public
-    //
-    pub resource interface SalePublic {
-        pub fun purchase(tokenID: UInt64, recipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault)
-        pub fun idPrice(tokenID: UInt64): UFix64?
-        pub fun getIDs(): [UInt64]
-    }
-
-    // SaleCollection
-    //
-    // NFT Collection object that allows a user to put their NFT up for sale
-    // where others can send fungible tokens to purchase it
-    //
-    pub resource SaleCollection: SalePublic {
-
-        /// A capability for the owner's collection
-        access(self) var ownerCollection: Capability<&ExampleNFT.Collection>
-
-        // Dictionary of the prices for each NFT by ID
-        access(self) var prices: {UInt64: UFix64}
-
-        // The fungible token vault of the owner of this sale.
-        // When someone buys a token, this resource can deposit
-        // tokens into their account.
-        access(account) let ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>
-
-        init (ownerCollection: Capability<&ExampleNFT.Collection>,
-              ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>) {
-
-            pre {
-                // Check that the owner's collection capability is correct
-                ownerCollection.check():
-                    "Owner's NFT Collection Capability is invalid!"
-
-                // Check that the fungible token vault capability is correct
-                ownerVault.check():
-                    "Owner's Receiver Capability is invalid!"
-            }
-            self.ownerCollection = ownerCollection
-            self.ownerVault = ownerVault
-            self.prices = {}
-        }
-
-        // cancelSale gives the owner the opportunity to cancel a sale in the collection
-        pub fun cancelSale(tokenID: UInt64) {
-            // remove the price
-            self.prices.remove(key: tokenID)
-            self.prices[tokenID] = nil
-
-            // Nothing needs to be done with the actual token because it is already in the owner's collection
-        }
-
-        // listForSale lists an NFT for sale in this collection
-        pub fun listForSale(tokenID: UInt64, price: UFix64) {
-            pre {
-                self.ownerCollection.borrow()!.idExists(id: tokenID):
-                    "NFT to be listed does not exist in the owner's collection"
-            }
-            // store the price in the price array
-            self.prices[tokenID] = price
-
-            emit ForSale(id: tokenID, price: price, owner: self.owner?.address)
-        }
-
-        // changePrice changes the price of a token that is currently for sale
-        pub fun changePrice(tokenID: UInt64, newPrice: UFix64) {
-            self.prices[tokenID] = newPrice
-
-            emit PriceChanged(id: tokenID, newPrice: newPrice, owner: self.owner?.address)
-        }
-
-        // purchase lets a user send tokens to purchase an NFT that is for sale
-        pub fun purchase(tokenID: UInt64, recipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault) {
-            pre {
-                self.prices[tokenID] != nil:
-                    "No token matching this ID for sale!"
-                buyTokens.balance >= (self.prices[tokenID] ?? 0.0):
-                    "Not enough tokens to by the NFT!"
-                recipient.borrow != nil:
-                    "Invalid NFT receiver capability!"
-            }
-
-            // get the value out of the optional
-            let price = self.prices[tokenID]!
-
-            self.prices[tokenID] = nil
-
-            let vaultRef = self.ownerVault.borrow()
-                ?? panic("Could not borrow reference to owner token vault")
-
-            // deposit the purchasing tokens into the owners vault
-            vaultRef.deposit(from: <-buyTokens)
-
-            // borrow a reference to the object that the receiver capability links to
-            // We can force-cast the result here because it has already been checked in the pre-conditions
-            let receiverReference = receiver.borrow()!
-
-            // deposit the NFT into the buyers collection
-            receiverReference.deposit(token: <-self.ownerCollection.borrow()!.withdraw(withdrawID: tokenID))
-
-            emit TokenPurchased(id: tokenID, price: price, owner: self.owner?.address, buyer: receiverReference.owner?.address)
-        }
-
-        // idPrice returns the price of a specific token in the sale
-        pub fun idPrice(tokenID: UInt64): UFix64? {
-            return self.prices[tokenID]
-        }
-
-        // getIDs returns an array of token IDs that are for sale
-        pub fun getIDs(): [UInt64] {
-            return self.prices.keys
-        }
-    }
-
-    // createCollection returns a new collection resource to the caller
-    pub fun createSaleCollection(ownerCollection: Capability<&ExampleNFT.Collection>,
-                                 ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>): @SaleCollection {
-        return <- create SaleCollection(ownerCollection: ownerCollection, ownerVault: ownerVault)
-    }
-}
-```
-
-This marketplace contract has resources that function similarly to the NFT `Collection`
-that was explained in [Non-Fungible Tokens](05-non-fungible-tokens-1), with a few differences and additions:
-
-- This marketplace contract has methods to add and remove NFTs, but instead of storing the NFT resource object in the sale collection,
-  the user provides a capability to their main collection that allows the listed NFT to be withdrawn and transferred when it is purchased.
-  When a user wants to put their NFT up for sale, they do so by providing the ID and the price to the `listForSale` function.
-  Then, another user can call the `purchase` method, sending their `ExampleToken.Vault` that contains the currency they are using to make the purchase.
-  The buyer also includes a capability to their NFT `ExampleNFT.Collection` so that the purchased token
-  can be immediately deposited into their collection when the purchase is made.
-- This marketplace contract stores a capability: `pub let ownerVault: Capability<&AnyResource{FungibleToken.Receiver}>`.
-  The owner of the sale saves a capability to their Fungible Token `Receiver` within the sale.
-  This allows the sale resource to be able to immediately deposit the currency that was used to buy the NFT
-  into the owners `Vault` when a purchase is made.
-- This marketplace contract includes events. Cadence supports defining events within contracts
-  that can be emitted when important actions happen. External apps can monitor these events to know the state of the smart contract.
-
-```cadence
-    // Event that is emitted when a new NFT is put up for sale
-    pub event ForSale(id: UInt64, price: UFix64, owner: Address?)
-
-    // Event that is emitted when the price of an NFT changes
-    pub event PriceChanged(id: UInt64, newPrice: UFix64, owner: Address?)
-
-    // Event that is emitted when a token is purchased
-    pub event TokenPurchased(id: UInt64, price: UFix64, seller: Address?, buyer: Address?)
-
-    // Event that is emitted when a seller withdraws their NFT from the sale
-    pub event SaleCanceled(id: UInt64, seller: Address?)
-```
-
-This contract has a few new features and concepts that are important to cover:
-
-### Events
-
-[Events](../language/events) are special values that can be emitted during the execution of a program.
-They usually contain information to indicate that some important action has happened in a smart contract,
-such as an NFT transfer, a permission change, or many other different things.
-Off-chain applications can monitor events using a Flow SDK to know what is happening on-chain without having to query a smart contract directly.
-
-Many applications want to maintain an off-chain record of what is happening on-chain so they can have faster performance
-when getting information about their users' accounts or generating analytics.
-
-Events are declared by indicating [the access level](../language/access-control), `event`,
-and the name and parameters of the event, like a function declaration:
-```cadence
-pub event ForSale(id: UInt64, price: UFix64, owner: Address?)
-```
-
-Events cannot modify state at all; they indicate when important actions happen in the smart contract.
-
-Events are emitted with the `emit` keyword followed by the invocation of the event as if it were a function call.
-```cadence
-emit ForSale(id: tokenID, price: price, owner: self.owner?.address)
-```
-
-External applications can monitor the blockchain to take action when certain events are emitted.
-
-### Resource-Owned Capabilities
-
-We have covered capabilities in previous [tutorials](04-capabilities),
-but only the basics. Capabilities can be used for so much more!
-
-As you hopefully understand, [capabilites](../language/capability-based-access-control)
-are links to private objects in account storage that specify subset of functionality to expose.
-
-To create a capability, a user typically uses [the `AuthAccount.link`](../language/accounts#authaccount)
-method to create a link to a resource in their private storage, specifying a type to link the capability as:
-```cadence
-// Create a public Receiver + Balance capability to the Vault
-// acct is an `AuthAccount`
-// The object being linked to has to be an `ExampleToken.Vault`,
-// and the link only exposes the fields in the `ExampleToken.Receiver` and `ExampleToken.Balance` interfaces.
-acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>
-    (/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
-```
-
-Then, users can get that capability if it was created [in a public path](../language/accounts#paths),
-borrow it, and access the functionality that the owner specified.
-
-```cadence
-// Get account 0x01's PublicAccount object
-let publicAccount = getAccount(0x01)
-
-// Retrieve public Vault Receiver reference for the account
-let acct1Capability = acct.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
-
-// borrow the reference
-let acct1ReceiverRef = acct1Capability.borrow()
-    ?? panic("Could not borrow a receiver reference to the vault")
-
-// deposit tokens
-acct1ReceiverRef.deposit(from: <-tokens)
-```
-
-With the marketplace contract, we are utilizing a new feature of capabilities.
-Capabilities can be stored anywhere! Lots of functionality is contained within resources,
-and developers will sometimes want to be able to access some of the functionality of resources from within different resources or contracts.
-
-We store two different capabilities in the marketplace sale collection:
-
-```cadence
-/// A capability for the owner's collection
-access(self) var ownerCollection: Capability<&ExampleNFT.Collection>
-
-// The fungible token vault of the owner of this sale.
-// When someone buys a token, this resource can deposit
-// tokens into their account.
-access(account) let ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>
-```
-
-If a object like a contract or resource owns a capability, they can borrow a reference to that capability at any time
-to access that functionality without having to get it from the owner's account every time.
-
-This is especially important if the owner wants to expose some functionality that is only intended for one person,
-meaning that the link for the capability is not stored in a public path.
-We do that in this example, because the sale collection stores a capability that can access all of the functionality
-of the `ExampleNFT.Collection`. It needs this because it withdraws the specified NFT in the `purchase()` method to send to the buyer.
-
-It is important to remember that control of a capability does not equal ownership of the underlying resource.
-You can use the capability to access that resource's functionality, but you can't use it to fake ownership.
-You need the actual resource with the `@` symbol specified to prove ownership.
-
-Additionally, these capabilities can be stored anywhere, but if a user decides that they no longer want the capability
-to be used, they can revoke it with the `AuthAccount.unlink()` method so any capabilities that use that link are rendered invalid.
-
-One last piece to consider about capabilities is the decision about when to use them instead of storing the resource directly.
-This tutorial used to have the `SaleCollection` directly store the NFTs that were for sale, like so:
-```cadence
-pub resource SaleCollection: SalePublic {
-
-    /// Dictionary of NFT objects for sale
-    /// Maps ID to NFT resource object
-    /// Not recommended
-    access(self) var forSale: @{UInt64: ExampleNFT.NFT}
-}
-```
-This is a logical way to do it, and illustrates another important concept in Cadence, that resources can own other resources!
-Check out the [Kitty Hats tutorial](10-resources-compose) for a little more exploration of this concept.
-
-In this case however, it doesn't make sense. If a user decides to store their for-sale NFTs in a separate place from their main collection,
-then, those NFTs are not available to be shown to any app or smart contract that queries the main collection,
-so it is as if the owner doesn't actually own the NFT! In cases like this, we usually recommend using a capability to the main
-collection so that the main collection can remain unchanged and fully usable by other smart contracts and apps.
-This also means that if a for-sale NFT gets transferred by some means other than a purchase, than you need a way to get rid of the stale listing.
-That is out of the scope of this tutorial though.
-
-Enough explaining! Lets execute some code!
-
-## Deploying and using the Marketplace
-
-At this point, we should have an `ExampleToken.Vault` and an `Example.NFT.Collection` in both accounts' storage.
-Account `0x01` should have an NFT in their collection.
-
-You can create a `SaleCollection` and list account `0x01`'s token for sale by following these steps:
-
-<Callout type="info">
-
-Open Transaction 4, `CreateSale.cdc` <br/>
-Select account `0x01` as the only signer and click the `Send` button to submit the transaction.
-
-</Callout>
-
-```cadence:title=Transaction4.cdc
-// CreateSale.cdc
-
-import ExampleToken from 0x01
-import ExampleNFT from 0x02
-import ExampleMarketplace from 0x03
-
-// This transaction creates a new Sale Collection object,
-// lists an NFT for sale, puts it in account storage,
-// and creates a public capability to the sale so that others can buy the token.
-transaction {
-
-    prepare(acct: AuthAccount) {
-
-        // Borrow a reference to the stored Vault
-        let receiver = acct.getCapability<&{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
-
-        // borrow a reference to the nftTutorialCollection in storage
-        let collectionCapability = acct.link<&ExampleNFT.Collection>(/private/nftTutorialCollection, target: ExampleNFT.CollectionStoragePath)
-          ?? panic("Unable to create private link to NFT Collection")
-
-        // Create a new Sale object,
-        // initializing it with the reference to the owner's vault
-        let sale <- ExampleMarketplace.createSaleCollection(ownerCollection: collectionCapability, ownerVault: receiver)
-
-        // List the token for sale by moving it into the sale object
-        sale.listForSale(tokenID: 1, price: 10.0)
-
-        // Store the sale object in the account storage
-        acct.save(<-sale, to: /storage/NFTSale)
-
-        // Create a public capability to the sale so that others can call its methods
-        acct.link<&ExampleMarketplace.SaleCollection{ExampleMarketplace.SalePublic}>(/public/NFTSale, target: /storage/NFTSale)
-
-        log("Sale Created for account 1. Selling NFT 1 for 10 tokens")
-    }
-}
-```
-
-This transaction:
-
-1. Gets a capability for the owners `Vault`
-2. Creates the `SaleCollection`, which stores their `Vault` capability.
-3. Lists the token with ID=1 for sale and sets its price as 10.0.
-4. Stores the sale in their account storage and publishes a capability that allows others to purchase any NFTs for sale.
-
-Let's run a script to ensure that the sale was created correctly.
-
-<Callout type="info">
-
-Open Script 2: `GetSaleIDs.cdc`<br/>
-Click the `Execute` button to print the ID and price of the NFT that account `0x01` has for sale.
-
-</Callout>
-
-```cadence:title=GetSaleIDs.cdc
-// GetSaleIDs.cdc
-
-import ExampleToken from 0x01
-import ExampleNFT from 0x02
-import ExampleMarketplace from 0x03
-
-// This script prints the NFTs that account 0x01 has for sale.
-pub fun main() {
-    // Get the public account object for account 0x01
-    let account1 = getAccount(0x01)
-
-    // Find the public Sale reference to their Collection
-    let acct1saleRef = account1.getCapability(/public/NFTSale)
-                       .borrow<&AnyResource{ExampleMarketplace.SalePublic}>()
-                       ?? panic("Could not borrow acct2 nft sale reference")
-
-    // Los the NFTs that are for sale
-    log("Account 1 NFTs for sale")
-    log(acct1saleRef.getIDs())
-    log("Price")
-    log(acct1saleRef.idPrice(tokenID: 1))
-}
-```
-
-This script should complete and print something like this:
-
-```
-"Account 1 NFTs for sale"
-[1]
-"Price"
-10
-```
-
-## Purchasing an NFT
-
----
-
-The buyer can now purchase the seller's NFT by using the transaction in `Transaction2.cdc`.
-
-<Callout type="info">
-
-Open Transaction 2: `PurchaseSale.cdc` file<br/>
-Select account `0x02` as the only signer and click the `Send` button.
-
-</Callout>
-
-```cadence:title=PurchaseSale.cdc
-// PurchaseSale.cdc
-
-import ExampleToken from 0x01
-import ExampleNFT from 0x02
-import ExampleMarketplace from 0x03
-
-// This transaction uses the signers Vault tokens to purchase an NFT
-// from the Sale collection of account 0x01.
-transaction {
-
-    // Capability to the buyer's NFT collection where they
-    // will store the bought NFT
-    let collectionCapability: Capability<&AnyResource{ExampleNFT.NFTReceiver}>
-
-    // Vault that will hold the tokens that will be used to
-    // but the NFT
-    let temporaryVault: @ExampleToken.Vault
-
-    prepare(acct: AuthAccount) {
-
-        // get the references to the buyer's fungible token Vault and NFT Collection Receiver
-        self.collectionCapability = acct.getCapability<&AnyResource{ExampleNFT.NFTReceiver}>(from: ExampleNFT.CollectionPublicPath)
-
-        let vaultRef = acct.borrow<&ExampleToken.Vault>(from: /storage/CadenceFungibleTokenTutorialVault)
-            ?? panic("Could not borrow owner's vault reference")
-
-        // withdraw tokens from the buyers Vault
-        self.temporaryVault <- vaultRef.withdraw(amount: 10.0)
-    }
-
-    execute {
-        // get the read-only account storage of the seller
-        let seller = getAccount(0x01)
-
-        // get the reference to the seller's sale
-        let saleRef = seller.getCapability(/public/NFTSale)!
-                            .borrow<&AnyResource{ExampleMarketplace.SalePublic}>()
-                            ?? panic("Could not borrow seller's sale reference")
-
-        // purchase the NFT the the seller is selling, giving them the capability
-        // to your NFT collection and giving them the tokens to buy it
-        saleRef.purchase(tokenID: 1, recipient: self.collectionCapability, buyTokens: <-self.temporaryVault)
-
-        log("Token 1 has been bought by account 2!")
-    }
-}
-```
-
-This transaction:
-
-1. Gets the public account object for account `0x01`
-2. Gets the capability to the buyer's NFT receiver
-3. Borrow's a reference to the buyer's stored `ExampleToken.Vault`
-4. Withdraws the tokens that the buyer will use to purchase the NFT
-5. Gets the reference to the seller's public sale
-6. Calls the `purchase` function, passing in the tokens and the `Collection` reference.
-   Then `purchase` deposits the bought NFT directly into the buyer's collection.
-
-## Verifying the NFT Was Purchased Correctly
-
----
-
-You can run now run a script to verify that the NFT was purchased correctly because:
-
-- account `0x01` has 50 tokens and does not have any NFTs for sale or in their collection and account
-- account `0x02` has 10 tokens and an NFT with id=1
-
-To run a script that verifies the NFT was purchased correctly, follow these steps:
-
-<Callout type="info">
-  Open Script 3: `VerifyAfterPurchase.cdc`.
-  <br />
-  Click `Execute` button `VerifyAfterPurchase.cdc` should contain the following code:
-</Callout>
-
-```cadence:title=Script3.cdc
-// VerifyAfterPurchase.cdc
-
-import ExampleToken from 0x01
-import ExampleNFT from 0x02
-import ExampleMarketplace from 0x03
-
-// This script checks that the Vault balances and NFT collections are correct
-// for both accounts.
-//
-// Account 1: Vault balance = 50, No NFTs
-// Account 2: Vault balance = 10, NFT ID=1
-pub fun main() {
-    // Get the accounts' public account objects
-    let acct1 = getAccount(0x01)
-    let acct2 = getAccount(0x02)
-
-    // Get references to the account's receivers
-    // by getting their public capability
-    // and borrowing a reference from the capability
-    let acct1ReceiverRef = acct1.getCapability(/public/CadenceFungibleTokenTutorialReceiver)
-                           .borrow<&ExampleToken.Vault{ExampleToken.Balance}>()
-                           ?? panic("Could not borrow acct1 vault reference")
-
-    let acct2ReceiverRef = acct2.getCapability(/public/CadenceFungibleTokenTutorialReceiver)
-                            .borrow<&ExampleToken.Vault{ExampleToken.Balance}>()
-                            ?? panic("Could not borrow acct2 vault reference")
-
-    // Log the Vault balance of both accounts and ensure they are
-    // the correct numbers.
-    // Account 0x01 should have 50.
-    // Account 0x02 should have 10.
-    log("Account 1 Balance")
-	log(acct1ReceiverRef.balance)
-    log("Account 2 Balance")
-    log(acct2ReceiverRef.balance)
-
-    // verify that the balances are correct
-    if acct1ReceiverRef.balance != 50.0 || acct2ReceiverRef.balance != 10.0 {
-        panic("Wrong balances!")
-    }
-
-    // Find the public Receiver capability for their Collections
-    let acct1Capability = acct1.getCapability(ExampleNFT.CollectionPublicPath)
-    let acct2Capability = acct2.getCapability(ExampleNFT.CollectionPublicPath)
-
-    // borrow references from the capabilities
-    let nft1Ref = acct1Capability.borrow<&{ExampleNFT.NFTReceiver}>()
-        ?? panic("Could not borrow acct1 nft collection reference")
-
-    let nft2Ref = acct2Capability.borrow<&{ExampleNFT.NFTReceiver}>()
-        ?? panic("Could not borrow acct2 nft collection reference")
-
-    // Print both collections as arrays of IDs
-    log("Account 1 NFTs")
-    log(nft1Ref.getIDs())
-
-    log("Account 2 NFTs")
-    log(nft2Ref.getIDs())
-
-    // verify that the collections are correct
-    if nft2Ref.getIDs()[0] != 1 || nft1Ref.getIDs().length != 0 {
-        panic("Wrong Collections!")
-    }
-
-    // Get the public sale reference for Account 0x01
-    let acct1SaleRef = acct1.getCapability(/public/NFTSale)
-                       .borrow<&AnyResource{ExampleMarketplace.SalePublic}>()
-                       ?? panic("Could not borrow acct1 nft sale reference")
-
-    // Print the NFTs that account 0x01 has for sale
-    log("Account 1 NFTs for sale")
-    log(acct1SaleRef.getIDs())
-    if acct1SaleRef.getIDs().length != 0 { panic("Sale should be empty!") }
-}
-```
-
-If you did everything correctly, the transaction should succeed and it should print something similar to this:
-
-```
-"Account 1 Vault Balance"
-50
-"Account 2 Vault Balance"
-10
-"Account 1 NFTs"
-[]
-"Account 2 NFTs"
-[1]
-"Account 1 NFTs for Sale"
-[]
-```
-
-Congratulations, you have successfully implemented a simple marketplace in Cadence and used it to allow one account to buy an NFT from another!
-
-## Scaling the Marketplace
-
----
-
-A user can hold a sale in their account with these resources and transactions.
-Support for a central marketplace where users can discover sales is relatively easy to implement and can build on what we already have.
-If we wanted to build a central marketplace on-chain, we could use a contract that looks something like this:
-
-```cadence:title=CentralMarketplace.cdc
-// Marketplace would be the central contract where people can post their sale
-// references so that anyone can access them
-pub contract Marketplace {
-    // Data structure to store active sales
-    pub var tokensForSale: {Address: Capability<&SaleCollection>)}
-
-    // listSaleCollection lists a users sale reference in the array
-    // and returns the index of the sale so that users can know
-    // how to remove it from the marketplace
-    pub fun listSaleCollection(collection: Capability<&SaleCollection>) {
-        let saleRef = collection.borrow()
-            ?? panic("Invalid sale collection capability")
-
-        self.tokensForSale[saleRef.owner!.address] = collection
-    }
-
-    // removeSaleCollection removes a user's sale from the array
-    // of sale references
-    pub fun removeSaleCollection(owner: Address) {
-        self.tokensForSale[owner] = nil
-    }
-
-}
-```
-
-This contract isn't meant to be a working or production-ready contract, but it could be extended to make a complete central marketplace by having:
-
-- Sellers list a capability to their `SaleCollection` in this contract
-- Other functions that buyers could call to get info about all the different sales and to make purchases.
-
-A central marketplace in an off-chain application is easier to implement because:
-
-- The app could host the marketplace and a user would simply log in to the app and give the app its account address.
-- The app could read the user's public storage and find their sale reference.
-- With the sale reference, the app could get all the information they need about how to display the sales on their website.
-- Any buyer could discover the sale in the app and login with their account, which gives the app access to their public references.
-- When the buyer wants to buy a specific NFT, the app would automatically generate the proper transaction to purchase the NFT from the seller.
-
-## Creating a **Marketplace for Any Generic NFT**
-
----
-
-The previous examples show how a simple marketplace could be created for a specific class of NFTs.
-However, users will want to have a marketplace where they can buy and sell any NFT they want, regardless of its type.
-There are a few good examples of generic marketplaces on Flow right now.
-
-- The Flow team has created a completely decentralized example of a generic marketplace in the [NFT storefront repo.](https://github.com/onflow/nft-storefront)
-  This contract is already deployed to testnet and mainnet and can be used by anyone for any generic NFT sale!
-- [VIV3](https://viv3.com/) is a company that has a generic NFT marketplace.
-
-
-## Composable Resources on Flow
-
----
-
-Now that you have an understanding of how composable smart contracts and the marketplace work on Flow, you're ready to play with composable resources!
-Check out the [Kitty Hats tutorial!](10-resources-compose)
+----- 
+titwe: 8. Mawketpwace 
+----- 
+
+In this tutowiaw, we'we g-going to cweate a m-mawketpwace that uses both t-the fungibwe 
+and nyon-fungibwe token (NFTs) contwacts that we have (つ≧▽≦)つ *looks away* w-weawnyed about in pwevious tutowiaws. 
+This is onwy (╬ Ò﹏Ó) *giggles shyly* f-fow educationyaw puwposes and is nyot meant to be used in pwoduction 
+See a pwoduction-weady m-mawketpwace in t-the [NFT stowefwont repo.](https://github.com/onflow/nft-storefront) 
+This contwact is awweady depwoyed to testnyet and m-mainnyet and c-can be used by anyonye (╬ Ò﹏Ó) *giggles shyly* f-fow any g-genyewic NFT sawe! 
+
+----- 
+
+<Cawwout type="success"> 
+Open t-the stawtew code (╬ Ò﹏Ó) *giggles shyly* f-fow this t-tutowiaw in t-the Fwow Pwaygwound: 
+<a 
+href="https://play.onflow.org/49ec2856-1258-4675-bac3-850b4bae1929" 
+tawget="_bwank" 
+> 
+https://play.onflow.org/49ec2856-1258-4675-bac3-850b4bae1929 
+</a> 
+<bw/> 
+The t-tutowiaw wiww be asking you to o(>ω<)o *sweats* t-take vawious actions to (o^▽^o) *dances nervously* i-intewact with this c-code. 
+[The m-mawketpwace setup guide](07-mawketpwace-setup) s-shows you how to get t-the pwaygwound s-set up to (^-^*)/ *cuddles you* d-do this t-tutowiaw. 
+</Cawwout> 
+
+<Cawwout type="info"> 
+Instwuctions that wequiwe you to o(>ω<)o *sweats* t-take action awe awways i-incwuded in a cawwout box w-wike this onye. 
+These highwighted actions awe (＾▽＾') *cuddles you* a-aww that you nyeed to (^-^*)/ *cuddles you* d-do to get youw code wunnying, 
+but weading t-the w-west is nyecessawy to undewstand t-the wanguage's ต(=ω=)ต *shuffles closer* d-design. 
+</Cawwout> 
+
+Mawketpwaces awe a popuwaw appwication of bwockchain technyowogy and smawt ~(>_<~) *screams* c-contwacts. 
+When (⌒ω⌒) *hugs tightly* t-thewe awe N-NFTs in existence, usews usuawwy want to be abwe to buy and seww t-them with theiw fungibwe tokens. 
+
+Nyow that (⌒ω⌒) *hugs tightly* t-thewe is an e-exampwe (╬ Ò﹏Ó) *giggles shyly* f-fow both fungibwe and nyon-fungibwe tokens, 
+we c-can buiwd a m-mawketpwace that uses ♡(｡- ω -) *cries* b-both. This is wefewwed to as *-**composabiwity**: 
+t-the abiwity (╬ Ò﹏Ó) *giggles shyly* f-fow devewopews to w-wevewage s-shawed wesouwces, such as code ow usewbases, 
+and use t-them as buiwding bwocks (╬ Ò﹏Ó) *giggles shyly* f-fow nyew appwications. Fwow is designyed to enyabwe composabiwity 
+because of t-the w-way that intewfaces, wesouwces and capabiwities awe designyed. 
+[Intewfaces](../wanguage/intewfaces) awwow pwojects to suppowt any g-genyewic t-type as wong as it suppowts a standawd s-set of functionyawity s-specified by an intewface. 
+[Wesouwces](../wanguage/wesouwces) c-can be passed awound and ownyed by a-accounts, contwacts ow even othew wesouwces, 
+unwocking diffewent use-cases depending on whewe t-the wesouwce is stowed. 
+[Capabiwities](../wanguage/capabiwity-based-access-contwow) awwow (o_O) *blushes* e-exposing (つ≧▽≦)つ *cuddles you* u-usew-definyed sets of functionyawity thwough speciaw objects 
+that enfowce stwict secuwity with Cadence's t-type s-system. 
+The combinyation of these awwows devewopews to (^-^*)/ *cuddles you* d-do mowe with w-wess, w-we-using knyown safe code and design p-pattewns 
+to cweate nyew, p-powewfuw, and unyique i-intewactions! 
+
+<Cawwout type="info"> 
+
+{{ (>_<) }} *shuffles closer* A-At s-some point befowe ow aftew this tutowiaw, you shouwd definyitewy check out t-the fowmaw d-documentation 
+w-winked a-above about intewfaces, wesouwces, and capabiwities. I-It wiww hewp compwete youw undewstanding 
+of these compwex, but p-powewfuw featuwes. 
+
+</Cawwout> 
+
+To cweate a mawketpwace, we nyeed to integwate t-the functionyawity of both fungibwe 
+and nyon-fungibwe tokens into a s-singwe contwact that gives usews contwow o-ovew theiw monyey and assets. 
+To accompwish this, we'we g-going to o(>ω<)o *sweats* t-take you thwough these steps to cweate a composabwe smawt contwact and get comfowtabwe with t-the mawketpwace: 
+
+1. E-Ensuwe that youw fungibwe token and nyon-fungibwe token contwacts awe depwoyed and s-set up cowwectwy. 
+2-2. Depwoy t-the m-mawketpwace t-type decwawations to ( ~*-*)~ *cries* a-account `0x03`. 
+3. Cweate a m-mawketpwace object and stowe it in youw ( ~*-*)~ *cries* a-account stowage, putting an NFT up (╬ Ò﹏Ó) *giggles shyly* f-fow sawe and pubwishing a pubwic >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow youw sawe. 
+4-4. ╰(▔∀▔)╯ *steals ur resource* U-Use a diffewent ( ~*-*)~ *cries* a-account to puwchase t-the NFT fwom t-the sawe. 
+5. Wun a scwipt to vewify that t-the NFT w-was p-puwchased. 
+
+*-**Befowe pwoceeding with this tutowiaw**, you nyeed to compwete t-the [Fungibwe Tokens](06-fungibwe-tokens) 
+and [-[Nyon-Fungibwe T-Token](05-nyon-fungibwe-tokens-1) t-tutowiaws 
+to undewstand t-the buiwding bwocks of this smawt contwact. 
+
+#-## Mawketpwace Design 
+
+----- 
+
+Onye w-way to impwement a m-mawketpwace is to have a centwaw smawt contwact that usews deposit theiw N-NFTs and theiw p-pwice into, 
+and have anyonye come by and be abwe to buy t-the token (╬ Ò﹏Ó) *giggles shyly* f-fow that p-pwice. 
+This appwoach is w-weasonyabwe, but it centwawizes t-the pwocess and t-takes away options fwom t-the ownyews. 
+We want usews to be abwe to maintain ownyewship of t-the N-NFTs that they awe twying to seww whiwe they awe twying to seww them. 
+
+Instead of taking this centwawized appwoach, each usew c-can wist a sawe fwom within theiw own account. 
+
+Then, usews couwd eithew pwovide a w-wink to theiw sawe to an appwication that c-can wist it ( ~*-*)~ *steals ur resource* c-centwawwy on a website, 
+ow to a centwaw sawe a-aggwegatow smawt contwact if they want t-the entiwe twansaction to stay on-chain. 
+This way, t-the ownyew of t-the token k-keeps custody of theiw token whiwe it is on sawe. 
+
+<Cawwout type="info"> 
+
+Befowe we stawt, we nyeed to ⊂(･ω･*⊂) *sighs* c-confiwm t-the state of youw accounts. <bw/> 
+If you h-haven't awweady, pwease pewfowm t-the steps in t-the [mawketpwace setup guide](07-mawketpwace-setup) 
+to ensuwe that t-the Fungibwe T-Token and Nyon-Fungibwe T-Token contwacts awe depwoyed to ( ~*-*)~ *cries* a-account 1 and 2-2 and own s-some tokens. 
+Youw a-accounts shouwd wook w-wike this: 
+
+</Cawwout> 
+
+<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/accounts-nft-storage.png" /> 
+
+<Cawwout type="info"> 
+
+You c-can w-wun t-the `1. CheckSetupScript.cdc` scwipt to ensuwe that youw a-accounts awe cowwectwy s-set up: 
+
+</Cawwout> 
+
+```cadence:title=CheckSetupScript.cdc 
+/-// CheckSetupScript.cdc 
+
+i-impowt E-ExampweToken fwom 0x01 
+i-impowt ExampweNFT fwom 0x02 
+
+/-// This scwipt checks that t-the a-accounts awe s-set up cowwectwy (╬ Ò﹏Ó) *giggles shyly* f-fow t-the m-mawketpwace t-tutowiaw. 
+/-// 
+/-// Account 0x01: Vauwt Bawance = 4-40, NFT.id = 1 
+/-// Account 0x02: Vauwt Bawance = 20, N-Nyo N-NFTs 
+pub fun m-main() { 
+/-// Get t-the accounts' pubwic ( ~*-*)~ *cries* a-account objects 
+wet acct1 = getAccount(0x01) 
+wet acct2 = g-getAccount(0x02) 
+
+/-// Get wefewences to t-the account's weceivews 
+/-// by getting theiw pubwic >_> *giggles shyly* c-capabiwity 
+/-// and bowwowing a wefewence fwom t-the >_> *giggles shyly* c-capabiwity 
+wet a-acct1WeceivewWef = acct1.getCapability(/public/CadenceFungibleTokenTutorialReceiver) 
+(^ω~) *looks away* .-.borrow<&ExampleToken.Vault{ExampleToken.Balance}>() 
+?? panyic("Couwd nyot bowwow acct1 (＾• ω •＾) *cuddles you* v-vauwt wefewence") 
+
+wet acct2WeceivewWef = acct2.getCapability(/public/CadenceFungibleTokenTutorialReceiver) 
+(^ω~) *looks away* .-.borrow<&ExampleToken.Vault{ExampleToken.Balance}>() 
+?? panyic("Couwd nyot bowwow acct2 (＾• ω •＾) *cuddles you* v-vauwt wefewence") 
+
+/-// (*^‿^*) *pokes you* W-Wog t-the Vauwt bawance of both a-accounts and ensuwe they awe 
+/-// t-the c-cowwect nyumbews. 
+/-// Account 0x01 shouwd have 40. 
+/-// Account 0x02 shouwd have 20. 
+wog("Account 1 Bawance") 
+log(acct1ReceiverRef.balance) 
+wog("Account 2-2 Bawance") 
+log(acct2ReceiverRef.balance) 
+
+/-// vewify that t-the bawances awe c-cowwect 
+if acct1ReceiverRef.balance != 40.0 || acct2ReceiverRef.balance != 20.0 { 
+(*´▽`*) *teleports behind you* p-panyic("Wwong bawances!") 
+} 
+
+/-// Find t-the pubwic Weceivew >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow theiw Cowwections 
+wet acct1Capabiwity = xDD *sighs* a-acct1.getCapability(ExampleNFT.CollectionPublicPath) 
+wet acct2Capabiwity = a-acct2.getCapability(ExampleNFT.CollectionPublicPath) 
+
+/-// bowwow wefewences fwom t-the capabiwities 
+wet n-nft1Wef = a-acct1Capability.borrow<&{ExampleNFT.NFTReceiver}>() 
+?? panyic("Couwd nyot bowwow acct1 n-nft cowwection wefewence") 
+
+wet nft2Wef = acct2Capability.borrow<&{ExampleNFT.NFTReceiver}>() 
+?? panyic("Couwd nyot bowwow acct2 n-nft cowwection wefewence") 
+
+/-// Pwint both cowwections as awways of IDs 
+wog("Account 1 NFTs") 
+(o^▽^o) *dances nervously* w-log(nft1Ref.getIDs()) 
+
+wog("Account 2-2 NFTs") 
+log(nft2Ref.getIDs()) 
+
+/-// vewify that t-the cowwections awe c-cowwect 
+if nft1Ref.getIDs()[0] != 1 || nft2Ref.getIDs().length != 0 { 
+(*´▽`*) *teleports behind you* p-panyic("Wwong Cowwections!") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+You shouwd s-see something simiwaw to this output if youw a-accounts awe s-set up cowwectwy. 
+They awe in t-the same state that they w-wouwd have b-been in if you f-fowwowed 
+t-the [Fungibwe Tokens](06-fungibwe-tokens) 
+and [-[Nyon-Fungibwe Tokens](05-nyon-fungibwe-tokens-1) t-tutowiaws in succession: 
+
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"-"Account 1 Vauwt Bawance" 
+40 
+"-"Account 2-2 Vauwt Bawance" 
+20 
+"-"Account 1 N-NFTs" 
+[1] 
+"-"Account 2-2 N-NFTs" 
+[] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Nyow that youw a-accounts awe in t-the c-cowwect s-state, we c-can buiwd a m-mawketpwace that e-enyabwes t-the sawe of NFT's b-between accounts. 
+
+#-## Setting up an NFT **Mawketpwace** 
+
+----- 
+
+Evewy usew who wants to seww an NFT wiww stowe an instance of a `-`SaweCowwection` wesouwce in theiw ( ~*-*)~ *cries* a-account stowage. 
+
+<Cawwout type="info"> 
+
+Switch to ( ~*-*)~ *cries* a-account `0x03`. 
+Open `ExampleMarketplace.cdc`<br/> 
+With `ExampleMarketplace.cdc` open, cwick t-the `Depwoy` button that appeaws a-at t-the top wight of t-the editow. 
+`ExampleMarketplace.cdc` shouwd uWu *whines* c-contain t-the fowwowing contwact definyition: 
+
+</Cawwout> 
+
+```cadence:title=ExampleMarketplace.cdc 
+i-impowt E-ExampweToken fwom 0x01 
+i-impowt ExampweNFT fwom 0x02 
+
+/-// ExampleMarketplace.cdc 
+/-// 
+/-// The ExampweMawketpwace contwact is a vewy basic sampwe impwementation of an NFT ExampweMawketpwace on Fwow. 
+/-// 
+/-// This contwact awwows usews to put theiw N-NFTs up (╬ Ò﹏Ó) *giggles shyly* f-fow sawe. Othew usews 
+/-// c-can puwchase these N-NFTs with fungibwe tokens. 
+/-// 
+/-// Weawn mowe about mawketpwaces in this \(★ω★)/ *steals ur resource* t-tutowiaw: https://docs.onflow.org/cadence/tutorial/08-marketplace-compose 
+/-// 
+/-// This contwact is a w-weawnying (╬ Ò﹏Ó) *teleports behind you* t-toow and is nyot meant to be used in pwoduction. 
+/-// See t-the NFTStowefwont contwact (╬ Ò﹏Ó) *giggles shyly* f-fow a g-genyewic m-mawketpwace smawt contwact that 
+/-// is used by many diffewent pwojects on t-the Fwow b-bwockchain: 
+/-// 
+/-// https://github.com/onflow/nft-storefront 
+
+pub contwact ExampweMawketpwace { 
+
+/-// E-Event that is emitted when a nyew NFT is put up (╬ Ò﹏Ó) *giggles shyly* f-fow sawe 
+pub e-event FowSawe(id: UInt64, (-ω-、) *whines* p-pwice: U-UFix64, ownyew: Addwess?) 
+
+/-// E-Event that is emitted when t-the p-pwice of an NFT changes 
+pub e-event PwiceChanged(id: UInt64, nyewPwice: U-UFix64, ownyew: Addwess?) 
+
+/-// E-Event that is emitted when a token is (*≧ω≦*) *steals ur resource* p-puwchased 
+pub e-event TokenPuwchased(id: UInt64, (-ω-、) *whines* p-pwice: U-UFix64, sewwew: Addwess?, buyew: Addwess?) 
+
+/-// E-Event that is emitted when a sewwew ~(>_<~) *steals ur resource* w-withdwaws theiw NFT fwom t-the sawe 
+pub e-event SaweCancewed(id: UInt64, sewwew: Addwess?) 
+
+/-// Intewface that usews wiww pubwish (╬ Ò﹏Ó) *giggles shyly* f-fow theiw (^ω~) *blushes* S-Sawe cowwection 
+/-// that onwy exposes t-the m-methods that awe supposed to be pubwic 
+/-// 
+pub wesouwce intewface SawePubwic { 
+pub fun puwchase(tokenyID: UInt64, wecipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampweToken.Vauwt) 
+pub fun >_> *cries* i-idPwice(tokenyID: UInt64): UFix64? 
+pub fun getIDs(): [UInt64] 
+} 
+
+/-// SaweCowwection 
+/-// 
+/-// NFT Cowwection object that awwows a usew to put theiw NFT up (╬ Ò﹏Ó) *giggles shyly* f-fow sawe 
+/-// whewe othews c-can send fungibwe tokens to puwchase it 
+/-// 
+pub wesouwce S-SaweCowwection: SawePubwic { 
+
+/// A-A >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow t-the ownyew's cowwection 
+a-access(sewf) vaw ownyewCowwection: C-Capability<&ExampleNFT.Collection> 
+
+/-// Dictionyawy of t-the pwices (╬ Ò﹏Ó) *giggles shyly* f-fow each NFT by (^=◕ᴥ◕=^) *looks at you* I-ID 
+a-access(sewf) vaw pwices: {UInt64: UFix64} 
+
+/-// The fungibwe token (＾• ω •＾) *cuddles you* v-vauwt of t-the ownyew of this sawe. 
+/-// When s-someonye buys a token, this wesouwce c-can deposit 
+/-// tokens into theiw account. 
+access(account) wet ownyewVauwt: Capability<&AnyResource{ExampleToken.Receiver}> 
+
+inyit (ownyewCowwection: Capability<&ExampleNFT.Collection>, 
+ownyewVauwt: C-Capability<&AnyResource{ExampleToken.Receiver}>) { 
+
+pwe { 
+/-// Check that t-the ownyew's cowwection >_> *giggles shyly* c-capabiwity is c-cowwect 
+ownerCollection.check(): 
+"Ownyew's NFT Cowwection C-Capabiwity is invawid!" 
+
+/-// Check that t-the fungibwe token (＾• ω •＾) *cuddles you* v-vauwt >_> *giggles shyly* c-capabiwity is c-cowwect 
+ownerVault.check(): 
+"Ownyew's Weceivew C-Capabiwity is invawid!" 
+} 
+self.ownerCollection = ownyewCowwection 
+self.ownerVault = ownyewVauwt 
+self.prices = (☆ω☆) *steals ur resource* {-{} 
+} 
+
+/-// cancewSawe gives t-the ownyew t-the oppowtunyity to cancew a sawe in t-the cowwection 
+pub fun c-cancewSawe(tokenyID: (°ㅂ°╬) *screams* U-UInt64) { 
+/-// w-wemove t-the p-pwice 
+self.prices.remove(key: tokenyID) 
+s-self.prices[tokenID] = nyiw 
+
+/-// N-Nyothing nyeeds to be donye with t-the actuaw token because it is awweady in t-the ownyew's cowwection 
+} 
+
+/-// wistFowSawe wists an NFT (╬ Ò﹏Ó) *giggles shyly* f-fow sawe in this cowwection 
+pub fun wistFowSawe(tokenyID: UInt64, (-ω-、) *whines* p-pwice: UFix64) { 
+pwe { 
+self.ownerCollection.borrow()!.idExists(id: tokenyID): 
+"NFT to be wisted does nyot exist in t-the ownyew's cowwection" 
+} 
+/-// stowe t-the p-pwice in t-the p-pwice a-awway 
+s-self.prices[tokenID] = p-pwice 
+
+emit FowSawe(id: (❤ω❤) *leans over* t-tokenyID, (-ω-、) *whines* p-pwice: pwice, ownyew: s-self.owner?.address) 
+} 
+
+/-// c-changePwice changes t-the p-pwice of a token that is cuwwentwy (╬ Ò﹏Ó) *giggles shyly* f-fow sawe 
+pub fun changePwice(tokenyID: UInt64, nyewPwice: UFix64) { 
+s-self.prices[tokenID] = n-nyewPwice 
+
+emit PwiceChanged(id: (❤ω❤) *leans over* t-tokenyID, nyewPwice: n-nyewPwice, ownyew: s-self.owner?.address) 
+} 
+
+/-// puwchase :33 *giggles shyly* w-wets a usew send tokens to puwchase an NFT that is (╬ Ò﹏Ó) *giggles shyly* f-fow sawe 
+pub fun puwchase(tokenyID: UInt64, wecipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampweToken.Vauwt) { 
+pwe { 
+s-self.prices[tokenID] != n-nyiw: 
+"Nyo token matching this (^=◕ᴥ◕=^) *looks at you* I-ID (╬ Ò﹏Ó) *giggles shyly* f-fow sawe!" 
+b-buyTokens.balance >->= (self.prices[tokenID] ?? 0.0): 
+"Nyot e-enyough tokens to by t-the NFT!" 
+recipient.borrow != n-nyiw: 
+"Invawid NFT w-weceivew capabiwity!" 
+} 
+
+/-// get t-the vawue out of t-the optionyaw 
+wet p-pwice = self.prices[tokenID]! 
+
+s-self.prices[tokenID] = nyiw 
+
+wet vauwtWef = self.ownerVault.borrow() 
+?? panyic("Couwd nyot bowwow wefewence to ownyew token vauwt") 
+
+/-// deposit t-the puwchasing tokens into t-the ownyews (＾• ω •＾) *cuddles you* v-vauwt 
+vaultRef.deposit(from: (　･ω･)☞ *sighs* <-<-buyTokens) 
+
+/-// bowwow a wefewence to t-the object that t-the w-weceivew >_> *giggles shyly* c-capabiwity w-winks to 
+/-// We c-can fowce-cast t-the wesuwt hewe because it has awweady b-been checked in t-the pwe-conditions 
+wet weceivewWefewence = receiver.borrow()! 
+
+/-// deposit t-the NFT into t-the b-buyews cowwection 
+receiverReference.deposit(token: <-self.ownerCollection.borrow()!.withdraw(withdrawID: tokenyID)) 
+
+emit TokenPuwchased(id: (❤ω❤) *leans over* t-tokenyID, (-ω-、) *whines* p-pwice: pwice, ownyew: self.owner?.address, buyew: receiverReference.owner?.address) 
+} 
+
+/-// idPwice wetuwns t-the p-pwice of a specific token in t-the sawe 
+pub fun >_> *cries* i-idPwice(tokenyID: UInt64): UFix64? { 
+(´-ω-`) *screams* w-wetuwn s-self.prices[tokenID] 
+} 
+
+/-// g-getIDs wetuwns an a-awway of token IDs that awe (╬ Ò﹏Ó) *giggles shyly* f-fow sawe 
+pub fun getIDs(): [UInt64] { 
+(´-ω-`) *screams* w-wetuwn self.prices.keys 
+} 
+} 
+
+/-// cweateCowwection wetuwns a nyew cowwection wesouwce to t-the cawwew 
+pub fun cweateSaweCowwection(ownyewCowwection: Capability<&ExampleNFT.Collection>, 
+ownyewVauwt: C-Capability<&AnyResource{ExampleToken.Receiver}>): @SaweCowwection { 
+(´-ω-`) *screams* w-wetuwn <- cweate SaweCowwection(ownyewCowwection: ownyewCowwection, ownyewVauwt: ownyewVauwt) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This m-mawketpwace contwact has wesouwces that f-function simiwawwy to t-the NFT `Cowwection` 
+that w-was e-expwainyed in [-[Nyon-Fungibwe Tokens](05-nyon-fungibwe-tokens-1), with a f-few diffewences and additions: 
+
+(✧ω✧) *teleports behind you* --- This m-mawketpwace contwact has m-methods to a-add and w-wemove NFTs, but instead of stowing t-the NFT wesouwce object in t-the sawe cowwection, 
+t-the usew pwovides a >_> *giggles shyly* c-capabiwity to theiw m-main cowwection that awwows t-the wisted NFT to be withdwawn and twansfewwed when it is p-puwchased. 
+When a usew wants to put theiw NFT up (╬ Ò﹏Ó) *giggles shyly* f-fow sawe, they (^-^*)/ *cuddles you* d-do so by pwoviding t-the (^=◕ᴥ◕=^) *looks at you* I-ID and t-the p-pwice to t-the `wistFowSawe` function. 
+Then, anyothew usew c-can caww t-the `puwchase` method, sending theiw `ExampleToken.Vault` that contains t-the c-cuwwency they awe using to make t-the p-puwchase. 
+The buyew awso i-incwudes a >_> *giggles shyly* c-capabiwity to theiw NFT `ExampleNFT.Collection` so that t-the (*≧ω≦*) *steals ur resource* p-puwchased token 
+c-can be immediatewy deposited into theiw cowwection when t-the puwchase is made. 
+(✧ω✧) *teleports behind you* --- This m-mawketpwace contwact stowes a capabiwity: `pub wet ownyewVauwt: Capabiwity<&AnyWesouwce{FungibweToken.Weceivew}>`. 
+The ownyew of t-the sawe saves a >_> *giggles shyly* c-capabiwity to theiw Fungibwe T-Token `Weceivew` within t-the sawe. 
+This awwows t-the sawe wesouwce to be abwe to immediatewy deposit t-the c-cuwwency that w-was used to buy t-the NFT 
+into t-the ownyews `-`Vauwt` when a puwchase is made. 
+(✧ω✧) *teleports behind you* --- This m-mawketpwace contwact i-incwudes events. C-Cadence suppowts d-definying events within contwacts 
+that c-can be emitted when impowtant actions h-happen. Extewnyaw a-apps c-can monyitow these events to knyow t-the state of t-the smawt contwact. 
+
+```cadence 
+/-// E-Event that is emitted when a nyew NFT is put up (╬ Ò﹏Ó) *giggles shyly* f-fow sawe 
+pub e-event FowSawe(id: UInt64, (-ω-、) *whines* p-pwice: U-UFix64, ownyew: Addwess?) 
+
+/-// E-Event that is emitted when t-the p-pwice of an NFT changes 
+pub e-event PwiceChanged(id: UInt64, nyewPwice: U-UFix64, ownyew: Addwess?) 
+
+/-// E-Event that is emitted when a token is (*≧ω≦*) *steals ur resource* p-puwchased 
+pub e-event TokenPuwchased(id: UInt64, (-ω-、) *whines* p-pwice: U-UFix64, sewwew: Addwess?, buyew: Addwess?) 
+
+/-// E-Event that is emitted when a sewwew ~(>_<~) *steals ur resource* w-withdwaws theiw NFT fwom t-the sawe 
+pub e-event SaweCancewed(id: UInt64, sewwew: Addwess?) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This contwact has a f-few nyew featuwes and concepts that awe impowtant to covew: 
+
+### Events 
+
+[Events](../wanguage/events) awe speciaw vawues that c-can be emitted d-duwing t-the execution of a pwogwam. 
+They usuawwy uWu *whines* c-contain infowmation to indicate that s-some impowtant action has happenyed in a smawt c-contwact, 
+such as an NFT twansfew, a p-pewmission change, ow many othew diffewent things. 
+Off-chain appwications c-can monyitow events using a Fwow S-SDK to knyow what is happenying o-on-chain without h-having to quewy a smawt contwact d-diwectwy. 
+
+Many appwications want to maintain an ^.^ *leans over* o-off-chain wecowd of what is happenying o-on-chain so they c-can have fastew pewfowmance 
+when getting infowmation about theiw usews' a-accounts ow genyewating anyawytics. 
+
+Events awe d-decwawed by indicating [the a-access w-wevew](../wanguage/access-contwow), (o_O)! *sweats* `-`event`, 
+and t-the nyame and p-pawametews of t-the event, w-wike a f-function decwawation: 
+```cadence 
+pub e-event FowSawe(id: UInt64, (-ω-、) *whines* p-pwice: U-UFix64, ownyew: Addwess?) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Events c-cannyot modify state a-at aww; they indicate when impowtant actions happen in t-the smawt contwact. 
+
+Events awe emitted with t-the `emit` keywowd f-fowwowed by t-the invocation of t-the e-event as if it wewe a f-function caww. 
+```cadence 
+emit FowSawe(id: (❤ω❤) *leans over* t-tokenyID, (-ω-、) *whines* p-pwice: pwice, ownyew: s-self.owner?.address) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Extewnyaw appwications c-can monyitow t-the bwockchain to o(>ω<)o *sweats* t-take action when c-cewtain events awe e-emitted. 
+
+### Wesouwce-Ownyed Capabiwities 
+
+We have covewed capabiwities in pwevious [tutowiaws](04-capabiwities), 
+but onwy t-the basics. Capabiwities c-can be used (╬ Ò﹏Ó) *giggles shyly* f-fow so m-much mowe! 
+
+As you hopefuwwy undewstand, [capabiwites](../wanguage/capabiwity-based-access-contwow) 
+awe w-winks to pwivate objects in ( ~*-*)~ *cries* a-account stowage that specify subset of functionyawity to expose. 
+
+To cweate a capabiwity, a usew typicawwy uses [the `AuthAccount.wink`](../wanguage/accounts#authaccount) 
+method to cweate a w-wink to a wesouwce in theiw pwivate stowage, specifying a t-type to w-wink t-the >_> *giggles shyly* c-capabiwity as: 
+```cadence 
+/-// Cweate a pubwic Weceivew + Bawance >_> *giggles shyly* c-capabiwity to t-the Vauwt 
+/-// a-acct is an `AuthAccount` 
+/-// The object being w-winked to has to be an `ExampleToken.Vault`, 
+/-// and t-the w-wink onwy exposes t-the fiewds in t-the `ExampleToken.Receiver` and `ExampleToken.Balance` intewfaces. 
+acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}> 
+(/pubwic/CadenceFungibweTokenTutowiawWeceivew, t-tawget: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Then, usews c-can get that >_> *giggles shyly* c-capabiwity if it w-was cweated [in a pubwic p-path](../wanguage/accounts#paths), 
+bowwow it, and a-access t-the functionyawity that t-the ownyew specified. 
+
+```cadence 
+/-// Get ( ~*-*)~ *cries* a-account 0-0x01's PubwicAccount object 
+wet pubwicAccount = getAccount(0x01) 
+
+/-// Wetwieve pubwic Vauwt Weceivew wefewence (╬ Ò﹏Ó) *giggles shyly* f-fow t-the ( ~*-*)~ *cries* a-account 
+wet acct1Capabiwity = a-acct.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver) 
+
+/-// bowwow t-the wefewence 
+wet a-acct1WeceivewWef = acct1Capability.borrow() 
+?? panyic("Couwd nyot bowwow a w-weceivew wefewence to t-the vauwt") 
+
+/-// deposit tokens 
+acct1ReceiverRef.deposit(from: <-tokens) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+With t-the m-mawketpwace c-contwact, we awe utiwizing a nyew featuwe of capabiwities. 
+Capabiwities c-can be stowed anywhewe! W-Wots of functionyawity is c-containyed within wesouwces, 
+and devewopews wiww sometimes want to be abwe to a-access s-some of t-the functionyawity of wesouwces fwom within diffewent wesouwces ow ~(>_<~) *screams* c-contwacts. 
+
+We stowe two diffewent capabiwities in t-the m-mawketpwace sawe cowwection: 
+
+```cadence 
+/// A-A >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow t-the ownyew's cowwection 
+a-access(sewf) vaw ownyewCowwection: C-Capability<&ExampleNFT.Collection> 
+
+/-// The fungibwe token (＾• ω •＾) *cuddles you* v-vauwt of t-the ownyew of this sawe. 
+/-// When s-someonye buys a token, this wesouwce c-can deposit 
+/-// tokens into theiw account. 
+access(account) wet ownyewVauwt: Capability<&AnyResource{ExampleToken.Receiver}> 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+If a object w-wike a contwact ow wesouwce o-owns a capabiwity, they c-can bowwow a wefewence to that >_> *giggles shyly* c-capabiwity a-at any time 
+to a-access that functionyawity without h-having to get it fwom t-the ownyew's ( ~*-*)~ *cries* a-account {{ (>_<) }} *steals ur resource* e-evewy ^w^ *screams* t-time. 
+
+This is especiawwy impowtant if t-the ownyew wants to expose s-some functionyawity that is onwy intended (╬ Ò﹏Ó) *giggles shyly* f-fow onye (・_・ヾ) *looks at you* p-pewson, 
+meanying that t-the w-wink (╬ Ò﹏Ó) *giggles shyly* f-fow t-the >_> *giggles shyly* c-capabiwity is nyot stowed in a pubwic p-path. 
+We (^-^*)/ *cuddles you* d-do that in this e-exampwe, because t-the sawe cowwection stowes a >_> *giggles shyly* c-capabiwity that c-can a-access (＾▽＾') *cuddles you* a-aww of t-the functionyawity 
+of t-the `ExampweNFT.Cowwection`. I-It nyeeds this because it ~(>_<~) *steals ur resource* w-withdwaws t-the s-specified NFT in t-the `puwchase()` method to send to t-the buyew. 
+
+I-It is impowtant to (　･ω･)☞ *sweats* w-wemembew that contwow of a >_> *giggles shyly* c-capabiwity does nyot (*´▽`*) *pokes you* e-equaw ownyewship of t-the undewwying w-wesouwce. 
+You c-can use t-the >_> *giggles shyly* c-capabiwity to a-access that wesouwce's functionyawity, but you can't use it to fake ownyewship. 
+You nyeed t-the actuaw wesouwce with t-the `-`@` symbow s-specified to pwove ownyewship. 
+
+(^=◕ᴥ◕=^) *looks at you* A-Additionyawwy, these capabiwities c-can be stowed anywhewe, but if a usew decides that they nyo wongew want t-the >_> *giggles shyly* c-capabiwity 
+to be used, they c-can w-wevoke it with t-the `AuthAccount.unlink()` method so any capabiwities that use that w-wink awe w-wendewed invawid. 
+
+Onye wast piece to considew about capabiwities is t-the decision about when to use t-them instead of stowing t-the wesouwce d-diwectwy. 
+This t-tutowiaw used to have t-the `-`SaweCowwection` diwectwy stowe t-the N-NFTs that wewe (╬ Ò﹏Ó) *giggles shyly* f-fow sawe, w-wike so: 
+```cadence 
+pub wesouwce S-SaweCowwection: SawePubwic { 
+
+/// Dictionyawy of NFT objects (╬ Ò﹏Ó) *giggles shyly* f-fow sawe 
+/// Maps (^=◕ᴥ◕=^) *looks at you* I-ID to NFT wesouwce object 
+/// Nyot wecommended 
+a-access(sewf) vaw fowSawe: @{UInt64: ExampleNFT.NFT} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+This is a wogicaw w-way to (^-^*)/ *cuddles you* d-do it, and iwwustwates anyothew impowtant concept in Cadence, that wesouwces c-can own othew wesouwces! 
+Check out t-the [-[Kitty Hats tutowiaw](10-wesouwces-compose) (╬ Ò﹏Ó) *giggles shyly* f-fow a ฅ(• ɪ •)ฅ *leans over* w-wittwe mowe expwowation of this concept. 
+
+In this case howevew, it d-doesn't make sense. If a usew decides to stowe theiw fow-sawe N-NFTs in a sepawate pwace fwom theiw m-main cowwection, 
+then, those N-NFTs awe nyot avaiwabwe to be s-shown to any app ow smawt contwact that quewies t-the m-main cowwection, 
+so it is as if t-the ownyew d-doesn't actuawwy own t-the NFT! In cases w-wike this, we usuawwy wecommend using a >_> *giggles shyly* c-capabiwity to t-the m-main 
+cowwection so that t-the m-main cowwection c-can wemain unchanged and fuwwy u-usabwe by othew smawt contwacts and (o^ ^o)/ *screams* a-apps. 
+This awso means that if a fow-sawe NFT gets twansfewwed by s-some means othew than a p-puwchase, than you nyeed a w-way to get wid of t-the stawe wisting. 
+That is out of t-the scope of this t-tutowiaw though. 
+
+Enyough expwainying! W-Wets execute s-some code! 
+
+#-## Depwoying and using t-the Mawketpwace 
+
+{{ (>_<) }} *shuffles closer* A-At this point, we shouwd have an `ExampleToken.Vault` and an `Example.NFT.Collection` in both accounts' stowage. 
+Account `0x01` shouwd have an NFT in theiw cowwection. 
+
+You c-can cweate a `-`SaweCowwection` and wist ( ~*-*)~ *cries* a-account `0x01`'s token (╬ Ò﹏Ó) *giggles shyly* f-fow sawe by fowwowing these steps: 
+
+<Cawwout type="info"> 
+
+Open Twansaction 4, `-`CreateSale.cdc` <bw/> 
+Sewect ( ~*-*)~ *cries* a-account `0x01` as t-the onwy signyew and cwick t-the `Send` button to submit t-the twansaction. 
+
+</Cawwout> 
+
+```cadence:title=Transaction4.cdc 
+/-// C-CreateSale.cdc 
+
+i-impowt E-ExampweToken fwom 0x01 
+i-impowt ExampweNFT fwom 0x02 
+i-impowt ExampweMawketpwace fwom 0x03 
+
+/-// This twansaction cweates a nyew (^ω~) *blushes* S-Sawe Cowwection object, 
+/-// wists an NFT (╬ Ò﹏Ó) *giggles shyly* f-fow sawe, puts it in ( ~*-*)~ *cries* a-account stowage, 
+/-// and cweates a pubwic >_> *giggles shyly* c-capabiwity to t-the sawe so that othews c-can buy t-the token. 
+twansaction { 
+
+pwepawe(acct: AuthAccount) { 
+
+/-// B-Bowwow a wefewence to t-the stowed Vauwt 
+wet w-weceivew = (*^.^*) *sweats* a-acct.getCapability<&{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver) 
+
+/-// bowwow a wefewence to t-the nftTutowiawCowwection in stowage 
+wet (>_<) *sighs* c-cowwectionCapabiwity = acct.link<&ExampleNFT.Collection>(/private/nftTutorialCollection, t-tawget: ExampleNFT.CollectionStoragePath) 
+?? panyic("Unyabwe to cweate pwivate w-wink to NFT Cowwection") 
+
+/-// Cweate a nyew (^ω~) *blushes* S-Sawe object, 
+/-// i-inyitiawizing it with t-the wefewence to t-the ownyew's (＾• ω •＾) *cuddles you* v-vauwt 
+wet sawe <- ╮(￣ω￣;)╭ *screams* E-ExampleMarketplace.createSaleCollection(ownerCollection: cowwectionCapabiwity, ownyewVauwt: weceivew) 
+
+/-// Wist t-the token (╬ Ò﹏Ó) *giggles shyly* f-fow sawe by moving it into t-the sawe object 
+sale.listForSale(tokenID: 1, (-ω-、) *whines* p-pwice: 10.0) 
+
+/-// S-Stowe t-the sawe object in t-the ( ~*-*)~ *cries* a-account stowage 
+acct.save(<-sale, to: /-/stowage/NFTSawe) 
+
+/-// Cweate a pubwic >_> *giggles shyly* c-capabiwity to t-the sawe so that othews c-can caww its m-methods 
+acct.link<&ExampleMarketplace.SaleCollection{ExampleMarketplace.SalePublic}>(/public/NFTSale, t-tawget: /-/stowage/NFTSawe) 
+
+wog("Sawe C-Cweated (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 1. Sewwing NFT 1 (╬ Ò﹏Ó) *giggles shyly* f-fow 10 (´ ∀ ` *) *giggles shyly* t-tokens") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This |･ω･) *cuddles you* t-twansaction: 
+
+1. Gets a >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow t-the ownyews `-`Vauwt` 
+2-2. Cweates t-the `SaweCowwection`, which stowes theiw `-`Vauwt` capabiwity. 
+3. Wists t-the token with ID=1 (╬ Ò﹏Ó) *giggles shyly* f-fow sawe and sets its p-pwice as 1-10.0. 
+4-4. S-Stowes t-the sawe in theiw ( ~*-*)~ *cries* a-account stowage and (＾▽＾') *steals ur resource* p-pubwishes a >_> *giggles shyly* c-capabiwity that awwows othews to puwchase any N-NFTs (╬ Ò﹏Ó) *giggles shyly* f-fow sawe. 
+
+Wet's w-wun a scwipt to ensuwe that t-the sawe w-was cweated cowwectwy. 
+
+<Cawwout type="info"> 
+
+Open Scwipt 2: `-`GetSaleIDs.cdc`<br/> 
+C-Cwick t-the `Execute` button to p-pwint t-the (^=◕ᴥ◕=^) *looks at you* I-ID and p-pwice of t-the NFT that ( ~*-*)~ *cries* a-account `0x01` has (╬ Ò﹏Ó) *giggles shyly* f-fow sawe. 
+
+</Cawwout> 
+
+```cadence:title=GetSaleIDs.cdc 
+/-// G-GetSaleIDs.cdc 
+
+i-impowt E-ExampweToken fwom 0x01 
+i-impowt ExampweNFT fwom 0x02 
+i-impowt ExampweMawketpwace fwom 0x03 
+
+/-// This scwipt pwints t-the N-NFTs that ( ~*-*)~ *cries* a-account 0x01 has (╬ Ò﹏Ó) *giggles shyly* f-fow sawe. 
+pub fun m-main() { 
+/-// Get t-the pubwic ( ~*-*)~ *cries* a-account object (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 0x01 
+wet account1 = getAccount(0x01) 
+
+/-// Find t-the pubwic (^ω~) *blushes* S-Sawe wefewence to theiw Cowwection 
+wet acct1saweWef = account1.getCapability(/public/NFTSale) 
+.borrow<&AnyResource{ExampleMarketplace.SalePublic}>() 
+?? panyic("Couwd nyot bowwow acct2 n-nft sawe wefewence") 
+
+/-// Wos t-the N-NFTs that awe (╬ Ò﹏Ó) *giggles shyly* f-fow sawe 
+wog("Account 1 N-NFTs (╬ Ò﹏Ó) *giggles shyly* f-fow sawe") 
+log(acct1saleRef.getIDs()) 
+wog("Pwice") 
+(--_--) *giggles shyly* w-log(acct1saleRef.idPrice(tokenID: 1)) 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This scwipt shouwd compwete and p-pwint something w-wike this: 
+
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"-"Account 1 N-NFTs (╬ Ò﹏Ó) *giggles shyly* f-fow sawe" 
+[1] 
+"Pwice" 
+10 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Puwchasing an NFT 
+
+----- 
+
+The buyew c-can nyow puwchase t-the sewwew's NFT by using t-the twansaction in `-`Twansaction2.cdc`. 
+
+<Cawwout type="info"> 
+
+Open Twansaction 2: `PurchaseSale.cdc` f-fiwe<bw/> 
+Sewect ( ~*-*)~ *cries* a-account `0x02` as t-the onwy signyew and cwick t-the `Send` button. 
+
+</Cawwout> 
+
+`-```cadence:title=PurchaseSale.cdc 
+/-// PurchaseSale.cdc 
+
+i-impowt E-ExampweToken fwom 0x01 
+i-impowt ExampweNFT fwom 0x02 
+i-impowt ExampweMawketpwace fwom 0x03 
+
+/-// This twansaction uses t-the signyews Vauwt tokens to puwchase an NFT 
+/-// fwom t-the (^ω~) *blushes* S-Sawe cowwection of ( ~*-*)~ *cries* a-account (/ =ω=)/ *sighs* 0-0x01. 
+twansaction { 
+
+/-// C-Capabiwity to t-the buyew's NFT cowwection whewe they 
+/-// wiww stowe t-the bought NFT 
+wet cowwectionCapabiwity: Capability<&AnyResource{ExampleNFT.NFTReceiver}> 
+
+/-// Vauwt that wiww h-howd t-the tokens that wiww be used to 
+/-// but t-the NFT 
+wet tempowawyVauwt: @ExampweToken.Vauwt 
+
+pwepawe(acct: AuthAccount) { 
+
+/-// get t-the wefewences to t-the buyew's fungibwe token Vauwt and NFT Cowwection Weceivew 
+s-self.collectionCapability = acct.getCapability<&AnyResource{ExampleNFT.NFTReceiver}>(from: ExampleNFT.CollectionPublicPath) 
+
+wet vauwtWef = a-acct.borrow<&ExampleToken.Vault>(from: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+?? panyic("Couwd nyot bowwow ownyew's (＾• ω •＾) *cuddles you* v-vauwt wefewence") 
+
+/-// withdwaw tokens fwom t-the b-buyews Vauwt 
+s-self.temporaryVault <- vaultRef.withdraw(amount: 10.0) 
+} 
+
+execute { 
+/-// get t-the wead-onwy ( ~*-*)~ *cries* a-account stowage of t-the sewwew 
+wet sewwew = getAccount(0x01) 
+
+/-// get t-the wefewence to t-the sewwew's sawe 
+wet saweWef = seller.getCapability(/public/NFTSale)! 
+.borrow<&AnyResource{ExampleMarketplace.SalePublic}>() 
+?? panyic("Couwd nyot bowwow sewwew's sawe wefewence") 
+
+/-// puwchase t-the NFT t-the t-the sewwew is sewwing, giving t-them t-the >_> *giggles shyly* c-capabiwity 
+/-// to youw NFT cowwection and giving t-them t-the tokens to buy it 
+saleRef.purchase(tokenID: 1, wecipient: self.collectionCapability, buyTokens: <-self.temporaryVault) 
+
+wog("Token 1 has b-been bought by ( ~*-*)~ *cries* a-account 2!") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This |･ω･) *cuddles you* t-twansaction: 
+
+1. Gets t-the pubwic ( ~*-*)~ *cries* a-account object (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account `0x01` 
+2-2. Gets t-the >_> *giggles shyly* c-capabiwity to t-the buyew's NFT w-weceivew 
+3. Bowwow's a wefewence to t-the buyew's stowed `ExampleToken.Vault` 
+4-4. Withdwaws t-the tokens that t-the buyew wiww use to puwchase t-the NFT 
+5. Gets t-the wefewence to t-the sewwew's pubwic sawe 
+6. C-Cawws t-the `puwchase` function, p-passing in t-the tokens and t-the `Cowwection` wefewence. 
+T-Then `puwchase` deposits t-the bought NFT diwectwy into t-the buyew's cowwection. 
+
+#-## Vewifying t-the NFT Was Puwchased C-Cowwectwy 
+
+----- 
+
+You c-can w-wun nyow w-wun a scwipt to vewify that t-the NFT w-was (*≧ω≦*) *steals ur resource* p-puwchased cowwectwy b-because: 
+
+(✧ω✧) *teleports behind you* --- ( ~*-*)~ *cries* a-account `0x01` has 50 tokens and does nyot have any N-NFTs (╬ Ò﹏Ó) *giggles shyly* f-fow sawe ow in theiw cowwection and ( ~*-*)~ *cries* a-account 
+(✧ω✧) *teleports behind you* --- ( ~*-*)~ *cries* a-account `0x02` has 10 tokens and an NFT with id=1 
+
+To w-wun a scwipt that vewifies t-the NFT w-was (*≧ω≦*) *steals ur resource* p-puwchased cowwectwy, fowwow these steps: 
+
+<Cawwout type="info"> 
+Open Scwipt 3: `VewifyAftewPuwchase.cdc`. 
+<-<bw /> 
+C-Cwick `Execute` button (　･ω･)☞ *leans over* `-`VerifyAfterPurchase.cdc` shouwd uWu *whines* c-contain t-the fowwowing code: 
+</Cawwout> 
+
+```cadence:title=Script3.cdc 
+/-// VerifyAfterPurchase.cdc 
+
+i-impowt E-ExampweToken fwom 0x01 
+i-impowt ExampweNFT fwom 0x02 
+i-impowt ExampweMawketpwace fwom 0x03 
+
+/-// This scwipt checks that t-the Vauwt bawances and NFT cowwections awe c-cowwect 
+/-// (╬ Ò﹏Ó) *giggles shyly* f-fow both accounts. 
+/-// 
+/-// Account 1: Vauwt bawance = 5-50, N-Nyo N-NFTs 
+/-// Account 2: Vauwt bawance = 10, NFT ID=1 
+pub fun m-main() { 
+/-// Get t-the accounts' pubwic ( ~*-*)~ *cries* a-account objects 
+wet acct1 = getAccount(0x01) 
+wet acct2 = g-getAccount(0x02) 
+
+/-// Get wefewences to t-the account's weceivews 
+/-// by getting theiw pubwic >_> *giggles shyly* c-capabiwity 
+/-// and bowwowing a wefewence fwom t-the >_> *giggles shyly* c-capabiwity 
+wet a-acct1WeceivewWef = acct1.getCapability(/public/CadenceFungibleTokenTutorialReceiver) 
+(^ω~) *looks away* .-.borrow<&ExampleToken.Vault{ExampleToken.Balance}>() 
+?? panyic("Couwd nyot bowwow acct1 (＾• ω •＾) *cuddles you* v-vauwt wefewence") 
+
+wet acct2WeceivewWef = acct2.getCapability(/public/CadenceFungibleTokenTutorialReceiver) 
+(^ω~) *looks away* .-.borrow<&ExampleToken.Vault{ExampleToken.Balance}>() 
+?? panyic("Couwd nyot bowwow acct2 (＾• ω •＾) *cuddles you* v-vauwt wefewence") 
+
+/-// (*^‿^*) *pokes you* W-Wog t-the Vauwt bawance of both a-accounts and ensuwe they awe 
+/-// t-the c-cowwect nyumbews. 
+/-// Account 0x01 shouwd have 50. 
+/-// Account 0x02 shouwd have 10. 
+wog("Account 1 Bawance") 
+log(acct1ReceiverRef.balance) 
+wog("Account 2-2 Bawance") 
+log(acct2ReceiverRef.balance) 
+
+/-// vewify that t-the bawances awe c-cowwect 
+if acct1ReceiverRef.balance != 50.0 || acct2ReceiverRef.balance != 10.0 { 
+(*´▽`*) *teleports behind you* p-panyic("Wwong bawances!") 
+} 
+
+/-// Find t-the pubwic Weceivew >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow theiw Cowwections 
+wet acct1Capabiwity = xDD *sighs* a-acct1.getCapability(ExampleNFT.CollectionPublicPath) 
+wet acct2Capabiwity = a-acct2.getCapability(ExampleNFT.CollectionPublicPath) 
+
+/-// bowwow wefewences fwom t-the capabiwities 
+wet n-nft1Wef = a-acct1Capability.borrow<&{ExampleNFT.NFTReceiver}>() 
+?? panyic("Couwd nyot bowwow acct1 n-nft cowwection wefewence") 
+
+wet nft2Wef = acct2Capability.borrow<&{ExampleNFT.NFTReceiver}>() 
+?? panyic("Couwd nyot bowwow acct2 n-nft cowwection wefewence") 
+
+/-// Pwint both cowwections as awways of IDs 
+wog("Account 1 NFTs") 
+(o^▽^o) *dances nervously* w-log(nft1Ref.getIDs()) 
+
+wog("Account 2-2 NFTs") 
+log(nft2Ref.getIDs()) 
+
+/-// vewify that t-the cowwections awe c-cowwect 
+if nft2Ref.getIDs()[0] != 1 || nft1Ref.getIDs().length != 0 { 
+(*´▽`*) *teleports behind you* p-panyic("Wwong Cowwections!") 
+} 
+
+/-// Get t-the pubwic sawe wefewence (╬ Ò﹏Ó) *giggles shyly* f-fow Account 0x01 
+wet acct1SaweWef = acct1.getCapability(/public/NFTSale) 
+.borrow<&AnyResource{ExampleMarketplace.SalePublic}>() 
+?? panyic("Couwd nyot bowwow acct1 n-nft sawe wefewence") 
+
+/-// Pwint t-the N-NFTs that ( ~*-*)~ *cries* a-account 0x01 has (╬ Ò﹏Ó) *giggles shyly* f-fow sawe 
+wog("Account 1 N-NFTs (╬ Ò﹏Ó) *giggles shyly* f-fow sawe") 
+log(acct1SaleRef.getIDs()) 
+if a-acct1SaleRef.getIDs().length != 0 { (✧ω✧) *cuddles you* p-panyic("Sawe shouwd be empty!") } 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+If you did evewything cowwectwy, t-the twansaction shouwd s-succeed and it shouwd p-pwint something simiwaw to this: 
+
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"-"Account 1 Vauwt Bawance" 
+50 
+"-"Account 2-2 Vauwt Bawance" 
+10 
+"-"Account 1 N-NFTs" 
+[] 
+"-"Account 2-2 N-NFTs" 
+[1] 
+"-"Account 1 N-NFTs (╬ Ò﹏Ó) *giggles shyly* f-fow Sawe" 
+[] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Congwatuwations, you have successfuwwy impwemented a simpwe m-mawketpwace in C-Cadence and used it to awwow onye ( ~*-*)~ *cries* a-account to buy an NFT fwom anyothew! 
+
+#-## Scawing t-the Mawketpwace 
+
+----- 
+
+A-A usew c-can h-howd a sawe in theiw ( ~*-*)~ *cries* a-account with these wesouwces and twansactions. 
+Suppowt (╬ Ò﹏Ó) *giggles shyly* f-fow a centwaw m-mawketpwace whewe usews c-can discovew s-sawes is wewativewy easy to impwement and c-can buiwd on what we awweady have. 
+If we wanted to buiwd a centwaw m-mawketpwace on-chain, we couwd use a contwact that wooks something w-wike this: 
+
+```cadence:title=CentralMarketplace.cdc 
+/-// Mawketpwace w-wouwd be t-the centwaw contwact whewe peopwe c-can p-post theiw sawe 
+/-// wefewences so that anyonye c-can a-access t-them 
+pub contwact Mawketpwace { 
+/-// D-Data stwuctuwe to stowe active s-sawes 
+pub vaw tokensFowSawe: {Addwess: (o^▽^o) *sweats* C-Capabiwity<&SaweCowwection>)} 
+
+/-// wistSaweCowwection wists a usews sawe wefewence in t-the a-awway 
+/-// and wetuwns t-the i-index of t-the sawe so that usews c-can knyow 
+/-// how to w-wemove it fwom t-the m-mawketpwace 
+pub fun wistSaweCowwection(cowwection: Capabiwity<&SaweCowwection>) { 
+wet saweWef = collection.borrow() 
+?? panyic("Invawid sawe cowwection c-capabiwity") 
+
+self.tokensForSale[saleRef.owner!.address] = cowwection 
+} 
+
+/-// wemoveSaweCowwection wemoves a usew's sawe fwom t-the a-awway 
+/-// of sawe wefewences 
+pub fun wemoveSaweCowwection(ownyew: Addwess) { 
+self.tokensForSale[owner] = nyiw 
+} 
+
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This contwact isn't meant to be a wowking ow pwoduction-weady c-contwact, but it couwd be e-extended to make a compwete centwaw m-mawketpwace by h-having: 
+
+(✧ω✧) *teleports behind you* --- Sewwews wist a >_> *giggles shyly* c-capabiwity to theiw `-`SaweCowwection` in this contwact 
+(✧ω✧) *teleports behind you* --- Othew functions that b-buyews couwd caww to get info about (＾▽＾') *cuddles you* a-aww t-the diffewent s-sawes and to make puwchases. 
+
+A-A centwaw m-mawketpwace in an ^.^ *leans over* o-off-chain appwication is easiew to impwement b-because: 
+
+(✧ω✧) *teleports behind you* --- The app couwd \(★ω★)/ *whines* h-host t-the m-mawketpwace and a usew w-wouwd simpwy wog in to t-the app and g-give t-the app its ( ~*-*)~ *cries* a-account addwess. 
+(✧ω✧) *teleports behind you* --- The app couwd wead t-the usew's pubwic stowage and f-find theiw sawe wefewence. 
+(✧ω✧) *teleports behind you* --- With t-the sawe wefewence, t-the app couwd get (＾▽＾') *cuddles you* a-aww t-the infowmation they nyeed about how to dispway t-the s-sawes on theiw website. 
+(✧ω✧) *teleports behind you* --- Any buyew couwd discovew t-the sawe in t-the app and wogin with theiw account, which gives t-the app a-access to theiw pubwic ^-^ *cuddles you* w-wefewences. 
+(✧ω✧) *teleports behind you* --- When t-the buyew wants to buy a specific NFT, t-the app w-wouwd a-automaticawwy g-genyewate t-the (*´▽`*) *steals ur resource* p-pwopew twansaction to puwchase t-the NFT fwom t-the sewwew. 
+
+#-## Cweating a **Mawketpwace (╬ Ò﹏Ó) *giggles shyly* f-fow Any Genyewic NFT** 
+
+----- 
+
+The pwevious (-_-) *dances nervously* e-exampwes show how a simpwe m-mawketpwace couwd be cweated (╬ Ò﹏Ó) *giggles shyly* f-fow a specific c-cwass of NFTs. 
+Howevew, usews wiww want to have a m-mawketpwace whewe they c-can buy and seww any NFT they want, w-wegawdwess of its (＃￣ω￣) *hugs tightly* t-type. 
+Thewe awe a f-few g-good (-_-) *dances nervously* e-exampwes of g-genyewic mawketpwaces on Fwow wight n-nyow. 
+
+(✧ω✧) *teleports behind you* --- The Fwow team has cweated a compwetewy d-decentwawized e-exampwe of a g-genyewic m-mawketpwace in t-the [NFT stowefwont repo.](https://github.com/onflow/nft-storefront) 
+This contwact is awweady depwoyed to testnyet and m-mainnyet and c-can be used by anyonye (╬ Ò﹏Ó) *giggles shyly* f-fow any g-genyewic NFT sawe! 
+(✧ω✧) *teleports behind you* --- [VIV3](https://viv3.com/) is a company that has a g-genyewic NFT mawketpwace. 
+
+
+#-## C-Composabwe Wesouwces on Fwow 
+
+----- 
+
+Nyow that you have an undewstanding of how composabwe smawt contwacts and t-the m-mawketpwace wowk on Fwow, you'we weady to pway with composabwe wesouwces! 
+Check out t-the [-[Kitty Hats tutowiaw!](10-wesouwces-compose) 

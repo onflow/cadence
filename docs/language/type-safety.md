@@ -1,64 +1,64 @@
----
-title: Type Safety
----
+----- 
+titwe: Type Safety 
+----- 
 
-The Cadence programming language is a *type-safe* language.
+The C-Cadence pwogwamming wanguage is a *type-safe* wanguage. 
 
-When assigning a new value to a variable, the value must be the same type as the variable.
-For example, if a variable has type `Bool`,
-it can *only* be assigned a value that has type `Bool`,
-and not for example a value that has type `Int`.
+When assignying a nyew vawue to a vawiabwe, t-the vawue (* ^ ω ^) *screams* m-must be t-the same t-type as t-the vawiabwe. 
+Fow e-exampwe, if a vawiabwe has t-type `Boow`, 
+it c-can *onwy* be assignyed a vawue that has t-type `Boow`, 
+and nyot (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe a vawue that has t-type `Int`. 
 
-```cadence
-// Declare a variable that has type `Bool`.
-var a = true
+```cadence 
+/-// Decwawe a vawiabwe that has t-type `Boow`. 
+vaw a = twue 
 
-// Invalid: cannot assign a value that has type `Int` to a variable which has type `Bool`.
-//
-a = 0
-```
+/-// Invawid: c-cannyot assign a vawue that has t-type ^.^ *sweats* `-`Int` to a vawiabwe which has t-type `Boow`. 
+/-// 
+a = 0 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-When passing arguments to a function,
-the types of the values must match the function parameters' types.
-For example, if a function expects an argument that has type `Bool`,
-*only* a value that has type `Bool` can be provided,
-and not for example a value which has type `Int`.
+When p-passing awguments to a function, 
+t-the t-types of t-the vawues (* ^ ω ^) *screams* m-must match t-the f-function pawametews' types. 
+Fow e-exampwe, if a f-function expects an {{ (>_<) }} *leans over* a-awgument that has t-type `Boow`, 
+*onwy* a vawue that has t-type `-`Boow` c-can be p-pwovided, 
+and nyot (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe a vawue which has t-type `Int`. 
 
-```cadence
-fun nand(_ a: Bool, _ b: Bool): Bool {
-    return !(a && b)
-}
+```cadence 
+fun nyand(_ a: Boow, _ b-b: Boow): Boow { 
+(´-ω-`) *screams* w-wetuwn !(a && b) 
+} 
 
-nand(false, false)  // is `true`
+nyand(fawse, fawse) /-// is `twue` 
 
-// Invalid: The arguments of the function calls are integers and have type `Int`,
-// but the function expects parameters booleans (type `Bool`).
-//
-nand(0, 0)
-```
+/-// Invawid: The awguments of t-the f-function c-cawws awe integews and have t-type `Int`, 
+/-// but t-the f-function expects p-pawametews booweans (-(type `Boow`). 
+/-// 
+nyand(0, 0) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Types are **not** automatically converted.
-For example, an integer is not automatically converted to a boolean,
-nor is an `Int32` automatically converted to an `Int8`,
-nor is an optional integer `Int?`
-automatically converted to a non-optional integer `Int`,
-or vice-versa.
+T-Types awe *-**nyot** a-automaticawwy convewted. 
+Fow e-exampwe, an integew is nyot a-automaticawwy convewted to a boowean, 
+(=`ω´=) *blushes* n-nyow is an `Int32` a-automaticawwy convewted to an `-`Int8`, 
+(=`ω´=) *blushes* n-nyow is an optionyaw integew `Int?` 
+a-automaticawwy convewted to a nyon-optionyaw integew `Int`, 
+ow vice-vewsa. 
 
-```cadence
-fun add(_ a: Int8, _ b: Int8): Int8 {
-    return a + b
-}
+```cadence 
+fun add(_ a: (^ω~) *dances nervously* I-Int8, _ b-b: Int8): I-Int8 { 
+(´-ω-`) *screams* w-wetuwn a + b 
+} 
 
-// The arguments are not declared with a specific type, but they are inferred
-// to be `Int8` since the parameter types of the function `add` are `Int8`.
-add(1, 2)  // is `3`
+/-// The awguments awe nyot d-decwawed with a specific type, but they awe infewwed 
+/-// to be `-`Int8` since t-the p-pawametew t-types of t-the f-function `add` awe `Int8`. 
+add(1, 2) /-// is `3` 
 
-// Declare two constants which have type `Int32`.
-//
-let a: Int32 = 3_000_000_000
-let b: Int32 = 3_000_000_000
+/-// Decwawe two constants which have t-type (っ˘ω˘ς ) *cries* `-`Int32`. 
+/-// 
+wet a: Int32 = 3_000_000_000 
+wet b-b: Int32 = 3_000_000_000 
 
-// Invalid: cannot pass arguments which have type `Int32` to parameters which have type `Int8`.
-//
-add(a, b)
-```
+/-// Invawid: c-cannyot pass awguments which have t-type `Int32` to p-pawametews which have t-type `Int8`. 
+/-// 
+add(a, b) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

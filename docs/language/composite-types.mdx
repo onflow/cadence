@@ -1,507 +1,507 @@
----
-title: Composite Types
----
+----- 
+titwe: Composite T-Types 
+----- 
 
-Composite types allow composing simpler types into more complex types,
-i.e., they allow the composition of multiple values into one.
-Composite types have a name and consist of zero or more named fields,
-and zero or more functions that operate on the data.
-Each field may have a different type.
+Composite t-types awwow composing (*´▽`*) *dances nervously* s-simpwew t-types into mowe compwex types, 
+i.e., they awwow t-the composition of muwtipwe vawues into onye. 
+Composite t-types have a nyame and consist of zewo ow mowe nyamed fiewds, 
+and zewo ow mowe functions that opewate on t-the d-data. 
+Each fiewd may have a diffewent (＃￣ω￣) *hugs tightly* t-type. 
 
-Composite types can only be declared within a [contract](contracts) and nowhere else.
+Composite t-types c-can onwy be d-decwawed within a [contwact](contwacts) and nyowhewe ewse. 
 
-There are two kinds of composite types.
-The kinds differ in their usage and the behaviour
-when a value is used as the initial value for a constant or variable,
-when the value is assigned to a variable,
-when the value is passed as an argument to a function,
-and when the value is returned from a function:
+Thewe awe two (＾▽＾') *looks away* k-kinds of composite types. 
+The (＾▽＾') *looks away* k-kinds diffew in theiw u-usage and t-the behaviouw 
+when a vawue is used as t-the inyitiaw vawue (╬ Ò﹏Ó) *giggles shyly* f-fow a c-constant ow vawiabwe, 
+when t-the vawue is assignyed to a vawiabwe, 
+when t-the vawue is passed as an {{ (>_<) }} *leans over* a-awgument to a function, 
+and when t-the vawue is wetuwnyed fwom a function: 
 
-- [**Structures**](#structures) are **copied**, they are value types.
+(✧ω✧) *teleports behind you* --- [**Stwuctuwes**](#stwuctuwes) awe **copied**, they awe vawue types. 
 
-    Structures are useful when copies with independent state are desired.
+xDD *looks at you* S-Stwuctuwes awe usefuw when c-copies with i-independent state awe desiwed. 
 
-- [**Resources**](#resources) are **moved**, they are linear types and **must** be used **exactly once**.
+(✧ω✧) *teleports behind you* --- [-[**Wesouwces**](#wesouwces) awe **moved**, they awe w-winyeaw t-types and **must** be used *-**exactwy once**. 
 
-    Resources are useful when it is desired to model ownership
-    (a value exists exactly in one location and it should not be lost).
+Wesouwces awe usefuw when it is desiwed to modew ownyewship 
+(a vawue e-exists exactwy in onye wocation and it shouwd nyot be wost). 
 
-    Certain constructs in a blockchain represent assets of real, tangible value,
-    as much as a house or car or bank account.
-    We have to worry about literal loss and theft,
-    perhaps even on the scale of millions of dollars.
+Cewtain constwucts in a bwockchain wepwesent assets of weaw, tangibwe vawue, 
+as m-much as a house ow c-caw ow bank account. 
+We have to wowwy about witewaw w-woss and theft, 
+pewhaps even on t-the scawe of miwwions of dowwaws. 
 
-    Structures are not an ideal way to represent this ownership because they are copied.
-    This would mean that there could be a risk of having multiple copies
-    of certain assets floating around,
-    which breaks the scarcity requirements needed for these assets to have real value.
+xDD *looks at you* S-Stwuctuwes awe nyot an ideaw w-way to wepwesent this ownyewship because they awe copied. 
+This w-wouwd mean that (⌒ω⌒) *hugs tightly* t-thewe couwd be a wisk of h-having muwtipwe c-copies 
+of c-cewtain assets fwoating awound, 
+which bweaks t-the scawcity wequiwements n-nyeeded (╬ Ò﹏Ó) *giggles shyly* f-fow these assets to have weaw vawue. 
 
-    A structure is much more useful for representing information
-    that can be grouped together in a logical way,
-    but doesn't have value or a need to be able to be owned or transferred.
+A-A stwuctuwe is m-much mowe usefuw (╬ Ò﹏Ó) *giggles shyly* f-fow wepwesenting infowmation 
+that c-can be gwouped togethew in a wogicaw way, 
+but d-doesn't have vawue ow a nyeed to be abwe to be ownyed ow twansfewwed. 
 
-    A structure could for example be used to contain the information associated
-    with a division of a company,
-    but a resource would be used to represent the assets that have been allocated
-    to that organization for spending.
+A-A stwuctuwe couwd (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe be used to uWu *whines* c-contain t-the infowmation associated 
+with a division of a company, 
+but a wesouwce w-wouwd be used to wepwesent t-the assets that have b-been (＞ｍ＜) *looks at you* a-awwocated 
+to that owganyization (╬ Ò﹏Ó) *giggles shyly* f-fow spending. 
 
-Nesting of resources is only allowed within other resource types,
-or in data structures like arrays and dictionaries,
-but not in structures, as that would allow resources to be copied.
+Nyesting of wesouwces is onwy awwowed within othew wesouwce types, 
+ow in data stwuctuwes w-wike awways and dictionyawies, 
+but nyot in stwuctuwes, as that w-wouwd awwow wesouwces to be copied. 
 
-## Composite Type Declaration and Creation
+#-## Composite Type Decwawation and Cweation 
 
-Structures are declared using the `struct` keyword
-and resources are declared using the `resource` keyword.
-The keyword is followed by the name.
+xDD *looks at you* S-Stwuctuwes awe d-decwawed using t-the `stwuct` keywowd 
+and wesouwces awe d-decwawed using t-the `-`wesouwce` (*・ω・)ﾉ *dances nervously* k-keywowd. 
+The keywowd is f-fowwowed by t-the nyame. 
 
-```cadence
-pub struct SomeStruct {
-    // ...
-}
+```cadence 
+pub stwuct SomeStwuct { 
+/-// ... 
+} 
 
-pub resource SomeResource {
-    // ...
-}
-```
+pub wesouwce (^人^) *sighs* S-SomeWesouwce { 
+/-// ... 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Structures and resources are types.
+xDD *looks at you* S-Stwuctuwes and wesouwces awe types. 
 
-Structures are created (instantiated) by calling the type like a function.
+xDD *looks at you* S-Stwuctuwes awe cweated (instantiated) by cawwing t-the t-type w-wike a function. 
 
-```cadence
-// instantiate a new struct object and assign it to a constant
-let a = SomeStruct()
-```
+```cadence 
+/-// instantiate a nyew stwuct object and assign it to a c-constant 
+wet a = (o-_-o) *giggles shyly* S-SomeStwuct() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The constructor function may require parameters if the [initializer](#composite-type-fields)
-of the composite type requires them.
+The c-constwuctow f-function may wequiwe p-pawametews if t-the [inyitiawizew](#composite-type-fiewds) 
+of t-the composite t-type wequiwes them. 
 
-Composite types can only be declared within [contracts](contracts)
-and not locally in functions.
+Composite t-types c-can onwy be d-decwawed within [contwacts](contwacts) 
+and nyot w-wocawwy in functions. 
 
 
-Resource must be created (instantiated) by using the `create` keyword
-and calling the type like a function.
+Wesouwce (* ^ ω ^) *screams* m-must be cweated (instantiated) by using t-the `cweate` keywowd 
+and cawwing t-the t-type w-wike a function. 
 
-Resources can only be created in functions and types
-that are declared in the same contract in which the resource is declared.
+Wesouwces c-can onwy be cweated in functions and t-types 
+that awe d-decwawed in t-the same contwact in which t-the wesouwce is d-decwawed. 
 
-```cadence
-// instantiate a new resource object and assign it to a constant
-let b <- create SomeResource()
-```
+```cadence 
+/-// instantiate a nyew wesouwce object and assign it to a c-constant 
+wet b <- cweate SomeWesouwce() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Composite Type Fields
+#-## Composite Type F-Fiewds 
 
-Fields are declared like variables and constants.
-However, the initial values for fields are set in the initializer,
-**not** in the field declaration.
-All fields **must** be initialized in the initializer, exactly once.
+F-Fiewds awe d-decwawed w-wike vawiabwes and constants. 
+Howevew, t-the inyitiaw vawues (╬ Ò﹏Ó) *giggles shyly* f-fow fiewds awe s-set in t-the (＃`Д´) *screams* i-inyitiawizew, 
+*-**nyot** in t-the fiewd decwawation. 
+Aww fiewds **must** be inyitiawized in t-the (＃`Д´) *screams* i-inyitiawizew, exactwy once. 
 
-Having to provide initial values in the initializer might seem restrictive,
-but this ensures that all fields are always initialized in one location, the initializer,
-and the initialization order is clear.
-
-The initialization of all fields is checked statically
-and it is invalid to not initialize all fields in the initializer.
-Also, it is statically checked that a field is definitely initialized before it is used.
-
-The initializer's main purpose is to initialize fields, though it may also contain other code.
-Just like a function, it may declare parameters and may contain arbitrary code.
-However, it has no return type, i.e., it is always `Void`.
-
-The initializer is declared using the `init` keyword.
-
-The initializer always follows any fields.
-
-There are three kinds of fields:
-
-- **Constant fields** are also stored in the composite value,
-    but after they have been initialized with a value
-    they **cannot** have new values assigned to them afterwards.
-    A constant field must be initialized exactly once.
+^w^ *screams* H-Having to pwovide inyitiaw vawues in t-the inyitiawizew m-might seem westwictive, 
+but this ensuwes that (＾▽＾') *cuddles you* a-aww fiewds awe awways inyitiawized in onye wocation, t-the (＃`Д´) *screams* i-inyitiawizew, 
+and t-the i-inyitiawization owdew is cweaw. 
+
+The i-inyitiawization of (＾▽＾') *cuddles you* a-aww fiewds is checked s-staticawwy 
+and it is invawid to nyot inyitiawize (＾▽＾') *cuddles you* a-aww fiewds in t-the inyitiawizew. 
+Awso, it is s-staticawwy checked that a fiewd is definyitewy inyitiawized befowe it is u-used. 
+
+The inyitiawizew's m-main puwpose is to inyitiawize fiewds, t-though it may awso uWu *whines* c-contain othew c-code. 
+Just w-wike a function, it may decwawe p-pawametews and may uWu *whines* c-contain awbitwawy c-code. 
+Howevew, it has nyo (´-ω-`) *screams* w-wetuwn type, i.e., it is awways `Void`. 
+
+The inyitiawizew is d-decwawed using t-the `inyit` (*・ω・)ﾉ *dances nervously* k-keywowd. 
+
+The inyitiawizew awways f-fowwows any fiewds. 
+
+Thewe awe thwee (＾▽＾') *looks away* k-kinds of f-fiewds: 
+
+(✧ω✧) *teleports behind you* --- **Constant f-fiewds** awe awso stowed in t-the composite vawue, 
+but aftew they have b-been inyitiawized with a vawue 
+they (o^▽^o) *dances nervously* *-**cannyot** have nyew vawues assignyed to t-them aftewwawds. 
+A-A c-constant fiewd (* ^ ω ^) *screams* m-must be inyitiawized exactwy once. 
 
-    Constant fields are declared using the `let` keyword.
-
-- **Variable fields** are stored in the composite value
-    and can have new values assigned to them.
+Constant fiewds awe d-decwawed using t-the `wet` (*・ω・)ﾉ *dances nervously* k-keywowd. 
+
+(✧ω✧) *teleports behind you* --- **Vawiabwe f-fiewds** awe stowed in t-the composite vawue 
+and c-can have nyew vawues assignyed to them. 
 
-    Variable fields are declared using the `var` keyword.
+:3 *hugs tightly* V-Vawiabwe fiewds awe d-decwawed using t-the `vaw` (*・ω・)ﾉ *dances nervously* k-keywowd. 
 
-| Field Kind           | Assignable         | Keyword     |
-|----------------------|--------------------|-------------|
-| **Variable field**   | Yes                | `var`       |
-| **Constant field**   | **No**             | `let`       |
+| Fiewd Kind | Assignyabwe | K-Keywowd | 
+|----------------------|--------------------|-------------| 
+| **Vawiabwe fiewd** | Yes | `vaw` | 
+| **Constant fiewd** | (o_O)! *sighs* *-**Nyo** | `wet` | 
 
-In initializers, the special constant `self` refers to the composite value
-that is to be initialized.
+In inyitiawizews, t-the speciaw c-constant `sewf` w-wefews to t-the composite vawue 
+that is to be i-inyitiawized. 
 
-If a composite type is to be stored, all its field types must be storable. Non-storable types are:
+If a composite t-type is to be s-stowed, (＾▽＾') *cuddles you* a-aww its fiewd t-types (* ^ ω ^) *screams* m-must be stowabwe. Nyon-stowabwe t-types awe: 
 
-- Functions
-- [Accounts (`AuthAccount` / `PublicAccount`)](accounts)
-- [Transactions](transactions)
-- [References](references): References are ephemeral.
-  Consider [storing a capability and borrowing it](capability-based-access-control) when needed instead.
-
-Fields can be read (if they are constant or variable) and set (if they are variable),
-using the access syntax: the composite value is followed by a dot (`.`)
-and the name of the field.
-
-```cadence
-// Declare a structure named `Token`, which has a constant field
-// named `id` and a variable field named `balance`.
-//
-// Both fields are initialized through the initializer.
-//
-// The public access modifier `pub` is used in this example to allow
-// the fields to be read in outer scopes. Fields can also be declared
-// private so they cannot be accessed in outer scopes.
-// Access control will be explained in a later section.
-//
-pub struct Token {
-    pub let id: Int
-    pub var balance: Int
-
-    init(id: Int, balance: Int) {
-        self.id = id
-        self.balance = balance
-    }
-}
-```
-
-Note that it is invalid to provide the initial value for a field in the field declaration.
-
-```cadence
-pub struct StructureWithConstantField {
-    // Invalid: It is invalid to provide an initial value in the field declaration.
-    // The field must be initialized by setting the initial value in the initializer.
-    //
-    pub let id: Int = 1
-}
-```
-
-The field access syntax must be used to access fields –  fields are not available as variables.
-
-```cadence
-pub struct Token {
-    pub let id: Int
-
-    init(initialID: Int) {
-        // Invalid: There is no variable with the name `id` available.
-        // The field `id` must be initialized by setting `self.id`.
-        //
-        id = initialID
-    }
-}
-```
-
-The initializer is **not** automatically derived from the fields, it must be explicitly declared.
-
-```cadence
-pub struct Token {
-    pub let id: Int
-
-    // Invalid: Missing initializer initializing field `id`.
-}
-```
-
-A composite value can be created by calling the constructor and providing
-the field values as arguments.
-
-The value's fields can be accessed on the object after it is created.
-
-```cadence
-let token = Token(id: 42, balance: 1_000_00)
-
-token.id  // is `42`
-token.balance  // is `1_000_000`
-
-token.balance = 1
-// `token.balance` is `1`
-
-// Invalid: assignment to constant field
-//
-token.id = 23
-```
-
-Initializers do not support overloading.
-
-## Composite Type Functions
-
-Composite types may contain functions.
-Just like in the initializer, the special constant `self` refers to the composite value
-that the function is called on.
-
-```cadence
-// Declare a structure named "Rectangle", which represents a rectangle
-// and has variable fields for the width and height.
-//
-pub struct Rectangle {
-    pub var width: Int
-    pub var height: Int
-
-    init(width: Int, height: Int) {
-        self.width = width
-        self.height = height
-    }
-
-    // Declare a function named "scale", which scales
-    // the rectangle by the given factor.
-    //
-    pub fun scale(factor: Int) {
-        self.width = self.width * factor
-        self.height = self.height * factor
-    }
-}
-
-let rectangle = Rectangle(width: 2, height: 3)
-rectangle.scale(factor: 4)
-// `rectangle.width` is `8`
-// `rectangle.height` is `12`
-```
-
- Functions do not support overloading.
-
-## Composite Type Subtyping
-
-Two composite types are compatible if and only if they refer to the same declaration by name,
-i.e., nominal typing applies instead of structural typing.
-
-Even if two composite types declare the same fields and functions,
-the types are only compatible if their names match.
-
-```cadence
-// Declare a structure named `A` which has a function `test`
-// which has type `((): Void)`.
-//
-struct A {
-    fun test() {}
-}
-
-// Declare a structure named `B` which has a function `test`
-// which has type `((): Void)`.
-//
-struct B {
-    fun test() {}
-}
-
-// Declare a variable named which accepts values of type `A`.
-//
-var something: A = A()
-
-// Invalid: Assign a value of type `B` to the variable.
-// Even though types `A` and `B` have the same declarations,
-// a function with the same name and type, the types' names differ,
-// so they are not compatible.
-//
-something = B()
-
-// Valid: Reassign a new value of type `A`.
-//
-something = A()
-```
-
-## Composite Type Behaviour
-
-### Structures
-
-Structures are **copied** when
-used as an initial value for constant or variable,
-when assigned to a different variable,
-when passed as an argument to a function,
-and when returned from a function.
-
-Accessing a field or calling a function of a structure does not copy it.
-
-```cadence
-// Declare a structure named `SomeStruct`, with a variable integer field.
-//
-pub struct SomeStruct {
-    pub var value: Int
-
-    init(value: Int) {
-        self.value = value
-    }
-
-    fun increment() {
-        self.value = self.value + 1
-    }
-}
-
-// Declare a constant with value of structure type `SomeStruct`.
-//
-let a = SomeStruct(value: 0)
-
-// *Copy* the structure value into a new constant.
-//
-let b = a
-
-b.value = 1
-// NOTE: `b.value` is 1, `a.value` is *`0`*
-
-b.increment()
-// `b.value` is 2, `a.value` is `0`
-```
-
-### Accessing Fields and Functions of Composite Types Using Optional Chaining
-
-If a composite type with fields and functions is wrapped in an optional,
-optional chaining can be used to get those values or call the function without
-having to get the value of the optional first.
-
-Optional chaining is used by adding a `?`
-before the `.` access operator for fields or
-functions of an optional composite type.
-
-When getting a field value or
-calling a function with a return value, the access returns
-the value as an optional.
-If the object doesn't exist, the value will always be `nil`
-
-When calling a function on an optional like this, if the object doesn't exist,
-nothing will happen and the execution will continue.
-
-It is still invalid to access an undeclared field
-of an optional composite type.
-
-```cadence
-// Declare a struct with a field and method.
-pub struct Value {
-    pub var number: Int
-
-    init() {
-        self.number = 2
-    }
-
-    pub fun set(new: Int) {
-        self.number = new
-    }
-
-    pub fun setAndReturn(new: Int): Int {
-        self.number = new
-        return new
-    }
-}
-
-// Create a new instance of the struct as an optional
-let value: Value? = Value()
-// Create another optional with the same type, but nil
-let noValue: Value? = nil
-
-// Access the `number` field using optional chaining
-let twoOpt = value?.number
-// Because `value` is an optional, `twoOpt` has type `Int?`
-let two = twoOpt ?? 0
-// `two` is `2`
-
-// Try to access the `number` field of `noValue`, which has type `Value?`.
-// This still returns an `Int?`
-let nilValue = noValue?.number
-// This time, since `noValue` is `nil`, `nilValue` will also be `nil`
-
-// Try to call the `set` function of `value`.
-// The function call is performed, as `value` is not nil
-value?.set(new: 4)
-
-// Try to call the `set` function of `noValue`.
-// The function call is *not* performed, as `noValue` is nil
-noValue?.set(new: 4)
-
-// Call the `setAndReturn` function, which returns an `Int`.
-// Because `value` is an optional, the return value is type `Int?`
-let sixOpt = value?.setAndReturn(new: 6)
-let six = sixOpt ?? 0
-// `six` is `6`
-```
-
-This is also possible by using the force-unwrap operator (`!`).
-
-Forced-Optional chaining is used by adding a `!`
-before the `.` access operator for fields or
-functions of an optional composite type.
-
-When getting a field value or calling a function with a return value,
-the access returns the value.
-If the object doesn't exist, the execution will panic and revert.
-
-It is still invalid to access an undeclared field
-of an optional composite type.
-
-```cadence
-// Declare a struct with a field and method.
-pub struct Value {
-    pub var number: Int
-
-    init() {
-        self.number = 2
-    }
-
-    pub fun set(new: Int) {
-        self.number = new
-    }
-
-    pub fun setAndReturn(new: Int): Int {
-        self.number = new
-        return new
-    }
-}
-
-// Create a new instance of the struct as an optional
-let value: Value? = Value()
-// Create another optional with the same type, but nil
-let noValue: Value? = nil
-
-// Access the `number` field using force-optional chaining
-let two = value!.number
-// `two` is `2`
-
-// Try to access the `number` field of `noValue`, which has type `Value?`
-// Run-time error: This time, since `noValue` is `nil`,
-// the program execution will revert
-let number = noValue!.number
-
-// Call the `set` function of the struct
-
-// This succeeds and sets the value to 4
-value!.set(new: 4)
-
-// Run-time error: Since `noValue` is nil, the value is not set
-// and the program execution reverts.
-noValue!.set(new: 4)
-
-// Call the `setAndReturn` function, which returns an `Int`
-// Because we use force-unwrap before calling the function,
-// the return value is type `Int`
-let six = value!.setAndReturn(new: 6)
-// `six` is `6`
-```
-
-### Resources
-
-Resources are explained in detail [in the following page](resources).
-
-## Unbound References / Nulls
-
-There is **no** support for `null`.
-
-## Inheritance and Abstract Types
-
-There is **no** support for inheritance.
-Inheritance is a feature common in other programming languages,
-that allows including the fields and functions of one type in another type.
-
-Instead, follow the "composition over inheritance" principle,
-the idea of composing functionality from multiple individual parts,
-rather than building an inheritance tree.
-
-Furthermore, there is also **no** support for abstract types.
-An abstract type is a feature common in other programming languages,
-that prevents creating values of the type and only
-allows the creation of values of a subtype.
-In addition, abstract types may declare functions,
-but omit the implementation of them
-and instead require subtypes to implement them.
-
-Instead, consider using [interfaces](interfaces).
+(✧ω✧) *teleports behind you* --- Functions 
+(✧ω✧) *teleports behind you* --- (*^.^*) *sweats* [-[Accounts (`AuthAccount` (T_T) *whines* /-/ `-`PubwicAccount`)](accounts) 
+(✧ω✧) *teleports behind you* --- [Twansactions](twansactions) 
+(✧ω✧) *teleports behind you* --- [-[Wefewences](wefewences): Wefewences awe e-ephemewaw. 
+Considew [stowing a >_> *giggles shyly* c-capabiwity and bowwowing it](capabiwity-based-access-contwow) when n-nyeeded instead. 
+
+F-Fiewds c-can be wead (if they awe c-constant ow v-vawiabwe) and s-set (if they awe vawiabwe), 
+using t-the a-access syntax: t-the composite vawue is f-fowwowed by a dot (`.`) 
+and t-the nyame of t-the fiewd. 
+
+```cadence 
+/-// Decwawe a stwuctuwe nyamed ฅ(• ɪ •)ฅ *sighs* `-`Token`, which has a c-constant fiewd 
+/-// nyamed `id` and a vawiabwe fiewd nyamed `bawance`. 
+/-// 
+/-// Both fiewds awe inyitiawized thwough t-the inyitiawizew. 
+/-// 
+/-// The pubwic a-access modifiew `pub` is used in this e-exampwe to awwow 
+/-// t-the fiewds to be wead in outew scopes. F-Fiewds c-can awso be d-decwawed 
+/-// pwivate so they c-cannyot be accessed in outew scopes. 
+/-// A-Access contwow wiww be e-expwainyed in a watew section. 
+/-// 
+pub stwuct T-Token { 
+pub wet id: Int 
+pub vaw bawance: Int 
+
+i-inyit(id: Int, bawance: Int) { 
+self.id = id 
+self.balance = bawance 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Nyote that it is invawid to pwovide t-the inyitiaw vawue (╬ Ò﹏Ó) *giggles shyly* f-fow a fiewd in t-the fiewd decwawation. 
+
+```cadence 
+pub stwuct StwuctuweWithConstantFiewd { 
+/-// Invawid: I-It is invawid to pwovide an inyitiaw vawue in t-the fiewd decwawation. 
+/-// The fiewd (* ^ ω ^) *screams* m-must be inyitiawized by setting t-the inyitiaw vawue in t-the inyitiawizew. 
+/-// 
+pub wet id: Int = 1 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The fiewd a-access s-syntax (* ^ ω ^) *screams* m-must be used to a-access fiewds – fiewds awe nyot avaiwabwe as ଲ(ⓛ ω ⓛ)ଲ *leans over* v-vawiabwes. 
+
+```cadence 
+pub stwuct T-Token { 
+pub wet id: Int 
+
+inyit(inyitiawID: Int) { 
+/-// Invawid: Thewe is nyo vawiabwe with t-the nyame `id` avaiwabwe. 
+/-// The fiewd `id` (* ^ ω ^) *screams* m-must be inyitiawized by setting `sewf.id`. 
+/-// 
+id = inyitiawID 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The inyitiawizew is *-**nyot** a-automaticawwy dewived fwom t-the fiewds, it (* ^ ω ^) *screams* m-must be e-expwicitwy d-decwawed. 
+
+```cadence 
+pub stwuct T-Token { 
+pub wet id: Int 
+
+/-// Invawid: M-Missing inyitiawizew i-inyitiawizing fiewd `-`id`. 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+A-A composite vawue c-can be cweated by cawwing t-the c-constwuctow and pwoviding 
+t-the fiewd vawues as awguments. 
+
+The vawue's fiewds c-can be accessed on t-the object aftew it is cweated. 
+
+```cadence 
+wet token = Token(id: 42, bawance: 1_000_00) 
+
+token.id /-// is `42` 
+t-token.balance /-// is `1_000_000` 
+
+t-token.balance = 1 
+/-// `token.balance` is `-`1` 
+
+/-// Invawid: assignment to c-constant fiewd 
+/-// 
+token.id = 23 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Inyitiawizews (^-^*)/ *cuddles you* d-do nyot suppowt o-ovewwoading. 
+
+#-## Composite Type Functions 
+
+Composite t-types may uWu *whines* c-contain functions. 
+Just w-wike in t-the (＃`Д´) *screams* i-inyitiawizew, t-the speciaw c-constant `sewf` w-wefews to t-the composite vawue 
+that t-the f-function is cawwed o-on. 
+
+```cadence 
+/-// Decwawe a stwuctuwe nyamed "Wectangwe", which wepwesents a wectangwe 
+/-// and has vawiabwe fiewds (╬ Ò﹏Ó) *giggles shyly* f-fow t-the width and h-height. 
+/-// 
+pub stwuct W-Wectangwe { 
+pub vaw width: Int 
+pub vaw h-height: Int 
+
+inyit(width: Int, h-height: Int) { 
+self.width = width 
+self.height = height 
+} 
+
+/-// Decwawe a f-function nyamed "-"scawe", which scawes 
+/-// t-the wectangwe by t-the given f-factow. 
+/-// 
+pub fun s-scawe(factow: Int) { 
+self.width = self.width * f-factow 
+self.height = self.height * f-factow 
+} 
+} 
+
+wet wectangwe = Wectangwe(width: 2, h-height: 3) 
+(っ˘ω˘ς ) *looks at you* w-rectangle.scale(factor: 4) 
+/-// `rectangle.width` is `8` 
+/-// `rectangle.height` is `12` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Functions (^-^*)/ *cuddles you* d-do nyot suppowt o-ovewwoading. 
+
+#-## Composite Type S-Subtyping 
+
+Two composite t-types awe compatibwe if and onwy if they wefew to t-the same decwawation by nyame, 
+i.e., nyominyaw t-typing appwies instead of stwuctuwaw typing. 
+
+Even if two composite t-types decwawe t-the same fiewds and functions, 
+t-the t-types awe onwy compatibwe if theiw nyames m-match. 
+
+```cadence 
+/-// Decwawe a stwuctuwe nyamed `A` which has a f-function `test` 
+/-// which has t-type `((): V-Void)`. 
+/-// 
+stwuct A-A { 
+fun t-test() (☆ω☆) *steals ur resource* {-{} 
+} 
+
+/-// Decwawe a stwuctuwe nyamed `B` which has a f-function `test` 
+/-// which has t-type `((): V-Void)`. 
+/-// 
+stwuct B { 
+fun t-test() (☆ω☆) *steals ur resource* {-{} 
+} 
+
+/-// Decwawe a vawiabwe nyamed which a-accepts vawues of t-type `A`. 
+/-// 
+vaw something: A-A = A-A() 
+
+/-// Invawid: OwO *looks away* A-Assign a vawue of t-type `B` to t-the vawiabwe. 
+/-// Even t-though t-types `A` and `B` have t-the same decwawations, 
+/-// a f-function with t-the same nyame and type, t-the types' nyames diffew, 
+/-// so they awe nyot compatibwe. 
+/-// 
+something = B() 
+
+/-// Vawid: W-Weassign a nyew vawue of t-type `A`. 
+/-// 
+something = A-A() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Composite Type B-Behaviouw 
+
+### xDD *looks at you* S-Stwuctuwes 
+
+xDD *looks at you* S-Stwuctuwes awe **copied** when 
+used as an inyitiaw vawue (╬ Ò﹏Ó) *giggles shyly* f-fow c-constant ow vawiabwe, 
+when assignyed to a diffewent vawiabwe, 
+when passed as an {{ (>_<) }} *leans over* a-awgument to a function, 
+and when wetuwnyed fwom a function. 
+
+Accessing a fiewd ow cawwing a f-function of a stwuctuwe does nyot copy it. 
+
+```cadence 
+/-// Decwawe a stwuctuwe nyamed `SomeStwuct`, with a vawiabwe integew fiewd. 
+/-// 
+pub stwuct SomeStwuct { 
+pub vaw vawue: Int 
+
+inyit(vawue: Int) { 
+self.value = vawue 
+} 
+
+fun incwement() { 
+self.value = self.value + 1 
+} 
+} 
+
+/-// Decwawe a c-constant with vawue of stwuctuwe t-type `SomeStwuct`. 
+/-// 
+wet a = SomeStwuct(vawue: 0) 
+
+/-// *Copy* t-the stwuctuwe vawue into a nyew constant. 
+/-// 
+wet b = a 
+
+b-b.value = 1 
+/-// (o･ω･o) *dances nervously* N-NyOTE: `b.value` is 1, `a.value` is *-*`0`* 
+
+b.increment() 
+/-// `b.value` is 2, `a.value` is `-`0` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Accessing F-Fiewds and Functions of Composite T-Types Using Optionyaw Chainying 
+
+If a composite t-type with fiewds and functions is wwapped in an optionyaw, 
+optionyaw c-chainying c-can be used to get those vawues ow caww t-the f-function without 
+h-having to get t-the vawue of t-the optionyaw fiwst. 
+
+Optionyaw c-chainying is used by adding a `?` 
+befowe t-the `.` a-access opewatow (╬ Ò﹏Ó) *giggles shyly* f-fow fiewds ow 
+functions of an optionyaw composite (＃￣ω￣) *hugs tightly* t-type. 
+
+When getting a fiewd vawue ow 
+cawwing a f-function with a (´-ω-`) *screams* w-wetuwn vawue, t-the a-access wetuwns 
+t-the vawue as an o-optionyaw. 
+If t-the object d-doesn't e-exist, t-the vawue wiww awways be (＾• ω •＾) *teleports behind you* `-`nyiw` 
+
+When cawwing a f-function on an optionyaw w-wike this, if t-the object d-doesn't e-exist, 
+nyothing wiww happen and t-the execution wiww continyue. 
+
+I-It is stiww invawid to a-access an undecwawed fiewd 
+of an optionyaw composite (＃￣ω￣) *hugs tightly* t-type. 
+
+```cadence 
+/-// Decwawe a stwuct with a fiewd and method. 
+pub stwuct Vawue { 
+pub vaw n-nyumbew: Int 
+
+inyit() { 
+s-self.number = 2-2 
+} 
+
+pub fun set(nyew: Int) { 
+s-self.number = nyew 
+} 
+
+pub fun setAndWetuwn(nyew: Int): Int { 
+s-self.number = nyew 
+(´-ω-`) *screams* w-wetuwn nyew 
+} 
+} 
+
+/-// Cweate a nyew instance of t-the stwuct as an optionyaw 
+wet vawue: Vawue? = Vawue() 
+/-// Cweate anyothew optionyaw with t-the same type, but nyiw 
+wet (´ ω `♡) *steals ur resource* n-nyoVawue: Vawue? = nyiw 
+
+/-// A-Access t-the `-`nyumbew` fiewd using optionyaw c-chainying 
+wet twoOpt = value?.number 
+/-// (* ^ ω ^) *teleports behind you* B-Because `vawue` is an optionyaw, `-`twoOpt` has t-type `Int?` 
+wet two = twoOpt ?? 0 
+/-// `two` is (⌒ω⌒) *looks away* `-`2` 
+
+/-// Twy to a-access t-the `-`nyumbew` fiewd of `nyoVawue`, which has t-type `Vawue?`. 
+/-// This stiww wetuwns an `Int?` 
+wet nyiwVawue = noValue?.number 
+/-// This time, since `nyoVawue` is `-`nyiw`, `nyiwVawue` wiww awso be (＾• ω •＾) *teleports behind you* `-`nyiw` 
+
+/-// Twy to caww t-the `set` f-function of `vawue`. 
+/-// The f-function caww is pewfowmed, as `vawue` is nyot nyiw 
+value?.set(new: 4) 
+
+/-// Twy to caww t-the `set` f-function of `nyoVawue`. 
+/-// The f-function caww is *nyot* pewfowmed, as `nyoVawue` is nyiw 
+n-noValue?.set(new: 4) 
+
+/-// Caww t-the `setAndWetuwn` function, which wetuwns an `Int`. 
+/-// (* ^ ω ^) *teleports behind you* B-Because `vawue` is an optionyaw, t-the (´-ω-`) *screams* w-wetuwn vawue is t-type `Int?` 
+wet sixOpt = value?.setAndReturn(new: 6) 
+wet six = sixOpt ?? 0 
+/-// `six` is `6` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This is awso p-possibwe by using t-the fowce-unwwap opewatow (`!`). 
+
+Fowced-Optionyaw c-chainying is used by adding a `!` 
+befowe t-the `.` a-access opewatow (╬ Ò﹏Ó) *giggles shyly* f-fow fiewds ow 
+functions of an optionyaw composite (＃￣ω￣) *hugs tightly* t-type. 
+
+When getting a fiewd vawue ow cawwing a f-function with a (´-ω-`) *screams* w-wetuwn vawue, 
+t-the a-access wetuwns t-the vawue. 
+If t-the object d-doesn't e-exist, t-the execution wiww panyic and (o･ω･o) *looks away* w-wevewt. 
+
+I-It is stiww invawid to a-access an undecwawed fiewd 
+of an optionyaw composite (＃￣ω￣) *hugs tightly* t-type. 
+
+```cadence 
+/-// Decwawe a stwuct with a fiewd and method. 
+pub stwuct Vawue { 
+pub vaw n-nyumbew: Int 
+
+inyit() { 
+s-self.number = 2-2 
+} 
+
+pub fun set(nyew: Int) { 
+s-self.number = nyew 
+} 
+
+pub fun setAndWetuwn(nyew: Int): Int { 
+s-self.number = nyew 
+(´-ω-`) *screams* w-wetuwn nyew 
+} 
+} 
+
+/-// Cweate a nyew instance of t-the stwuct as an optionyaw 
+wet vawue: Vawue? = Vawue() 
+/-// Cweate anyothew optionyaw with t-the same type, but nyiw 
+wet (´ ω `♡) *steals ur resource* n-nyoVawue: Vawue? = nyiw 
+
+/-// A-Access t-the `-`nyumbew` fiewd using fowce-optionyaw c-chainying 
+wet two = value!.number 
+/-// `two` is (⌒ω⌒) *looks away* `-`2` 
+
+/-// Twy to a-access t-the `-`nyumbew` fiewd of `nyoVawue`, which has t-type `Vawue?` 
+/-// Wun-time ewwow: This time, since `nyoVawue` is `-`nyiw`, 
+/-// t-the pwogwam execution wiww wevewt 
+wet (❤ω❤) *pokes you* n-nyumbew = noValue!.number 
+
+/-// Caww t-the `set` f-function of t-the stwuct 
+
+/-// This succeeds and sets t-the vawue to 4 
+v-value!.set(new: 4) 
+
+/-// Wun-time ewwow: Since `nyoVawue` is nyiw, t-the vawue is nyot s-set 
+/-// and t-the pwogwam execution wevewts. 
+noValue!.set(new: 4) 
+
+/-// Caww t-the `setAndWetuwn` function, which wetuwns an ^.^ *sweats* `-`Int` 
+/-// (* ^ ω ^) *teleports behind you* B-Because we use fowce-unwwap befowe cawwing t-the function, 
+/-// t-the (´-ω-`) *screams* w-wetuwn vawue is t-type ^.^ *sweats* `-`Int` 
+wet six = value!.setAndReturn(new: 6) 
+/-// `six` is `6` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Wesouwces 
+
+Wesouwces awe e-expwainyed in detaiw [in t-the fowwowing page](wesouwces). 
+
+#-## Unbound Wefewences (T_T) *whines* /-/ Nyuwws 
+
+Thewe is **nyo** suppowt (╬ Ò﹏Ó) *giggles shyly* f-fow `nyuww`. 
+
+#-## Inhewitance and Abstwact T-Types 
+
+Thewe is **nyo** suppowt (╬ Ò﹏Ó) *giggles shyly* f-fow inhewitance. 
+Inhewitance is a featuwe common in othew pwogwamming wanguages, 
+that awwows incwuding t-the fiewds and functions of onye t-type in anyothew (＃￣ω￣) *hugs tightly* t-type. 
+
+I-Instead, fowwow t-the ╮(￣ω￣;)╭ *screams* "-"composition o-ovew inhewitance" pwincipwe, 
+t-the idea of composing functionyawity fwom muwtipwe individuaw pawts, 
+wathew than buiwding an (♡°▽°♡) *teleports behind you* i-inhewitance t-twee. 
+
+Fuwthewmowe, (⌒ω⌒) *hugs tightly* t-thewe is awso **nyo** suppowt (╬ Ò﹏Ó) *giggles shyly* f-fow abstwact types. 
+An abstwact t-type is a featuwe common in othew pwogwamming wanguages, 
+that p-pwevents cweating vawues of t-the t-type and onwy 
+awwows t-the cweation of vawues of a subtype. 
+In addition, abstwact t-types may decwawe functions, 
+but o-omit t-the impwementation of t-them 
+and instead wequiwe subtypes to impwement them. 
+
+I-Instead, considew using [intewfaces](intewfaces). 

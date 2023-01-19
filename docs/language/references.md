@@ -1,138 +1,138 @@
----
-title: References
----
+----- 
+titwe: Wefewences 
+----- 
 
-It is possible to create references to objects, i.e. resources or structures.
-A reference can be used to access fields and call functions on the referenced object.
+I-It is p-possibwe to cweate wefewences to objects, i.e. wesouwces ow s-stwuctuwes. 
+A-A wefewence c-can be used to a-access fiewds and caww functions on t-the (-_-) *looks at you* w-wefewenced object. 
 
-References are **copied**, i.e. they are value types.
+Wefewences awe **copied**, i.e. they awe vawue types. 
 
-References are created by using the `&` operator, followed by the object,
-the `as` keyword, and the type through which they should be accessed.
-The given type must be a supertype of the referenced object's type.
+Wefewences awe cweated by using t-the `-`&` o-opewatow, f-fowwowed by t-the object, 
+t-the `as` keywowd, and t-the t-type thwough which they shouwd be accessed. 
+The given t-type (* ^ ω ^) *screams* m-must be a supewtype of t-the (-_-) *looks at you* w-wefewenced object's (＃￣ω￣) *hugs tightly* t-type. 
 
-References have the type `&T`, where `T` is the type of the referenced object.
+Wefewences have t-the t-type `&T`, whewe `T` is t-the t-type of t-the (-_-) *looks at you* w-wefewenced object. 
 
-```cadence
-let hello = "Hello"
+```cadence 
+wet hewwo = "Hewwo" 
 
-// Create a reference to the "Hello" string, typed as a `String`
-//
-let helloRef: &String = &hello as &String
+/-// Cweate a wefewence to t-the "Hewwo" stwing, t-typed as a `-`Stwing` 
+/-// 
+wet hewwoWef: &Stwing = &hewwo as &Stwing 
 
-helloRef.length // is `5`
+helloRef.length /-// is `5` 
 
-// Invalid: Cannot create a reference to `hello`
-// typed as `&Int`, as it has type `String`
-//
-let intRef: &Int = &hello as &Int
-```
+/-// Invawid: Cannyot cweate a wefewence to `-`hewwo` 
+/-// t-typed as `&Int`, as it has t-type `-`Stwing` 
+/-// 
+wet intWef: (^ω~) *dances nervously* &-&Int = &hewwo as (^ω~) *dances nervously* &-&Int 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-If you attempt to reference an optional value, you will receive an optional reference.
-If the referenced value is nil, the reference itself will be nil. If the referenced value
-exists, then forcing the optional reference will yield a reference to that value:
+If you attempt to wefewence an optionyaw vawue, you wiww weceive an optionyaw wefewence. 
+If t-the (-_-) *looks at you* w-wefewenced vawue is nyiw, t-the wefewence itsewf wiww be nyiw. If t-the (-_-) *looks at you* w-wefewenced vawue 
+e-exists, t-then fowcing t-the optionyaw wefewence wiww yiewd a wefewence to that vawue: 
 
-```cadence
-let nilValue: String? = nil
-let nilRef = &nilValue as &String? // r has type &String?
-let n = nilRef! // error, forced nil value
+```cadence 
+wet nyiwVawue: Stwing? = nyiw 
+wet n-nyiwWef = &-&nyiwVawue as &Stwing? /-// w has t-type &Stwing? 
+wet n = nyiwWef! /-// e-ewwow, f-fowced nyiw vawue 
 
-let strValue: String? = ""
-let strRef = &strValue as &String? // r has type &String?
-let n = strRef! // n has type &String
-```
+wet stwVawue: Stwing? = "" 
+wet stwWef = &stwVawue as &Stwing? /-// w has t-type &Stwing? 
+wet n = s-stwWef! /-// n has t-type &Stwing 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-References are covariant in their base types.
-For example, `&T` is a subtype of `&U`, if `T` is a subtype of `U`.
+Wefewences awe covawiant in theiw base types. 
+Fow e-exampwe, `&T` is a subtype of (=^･ω･^=) *blushes* `-`&U`, if `T` is a subtype of `U`. 
 
-```cadence
+```cadence 
 
-// Declare a resource interface named `HasCount`,
-// that has a field `count`
-//
-resource interface HasCount {
-    count: Int
-}
+/-// Decwawe a wesouwce intewface nyamed `HasCount`, 
+/-// that has a fiewd `count` 
+/-// 
+wesouwce intewface HasCount { 
+c-count: Int 
+} 
 
-// Declare a resource named `Counter` that conforms to `HasCount`
-//
-resource Counter: HasCount {
-    pub var count: Int
+/-// Decwawe a wesouwce nyamed `Countew` that confowms to `HasCount` 
+/-// 
+wesouwce Countew: HasCount { 
+pub vaw c-count: Int 
 
-    pub init(count: Int) {
-        self.count = count
-    }
+pub inyit(count: Int) { 
+self.count = count 
+} 
 
-    pub fun increment() {
-        self.count = self.count + 1
-    }
-}
+pub fun incwement() { 
+self.count = self.count + 1 
+} 
+} 
 
-// Create a new instance of the resource type `Counter`
-// and create a reference to it, typed as `&Counter`,
-// so the reference allows access to all fields and functions
-// of the counter
-//
-let counter <- create Counter(count: 42)
-let counterRef: &Counter = &counter as &Counter
+/-// Cweate a nyew instance of t-the wesouwce t-type `Countew` 
+/-// and cweate a wefewence to it, t-typed as `&Countew`, 
+/-// so t-the wefewence awwows a-access to (＾▽＾') *cuddles you* a-aww fiewds and functions 
+/-// of t-the countew 
+/-// 
+wet countew <- cweate Countew(count: 42) 
+wet countewWef: &-&Countew = &countew as &-&Countew 
 
-counterRef.count  // is `42`
+counterRef.count /-// is `42` 
 
-counterRef.increment()
+c-counterRef.increment() 
 
-counterRef.count  // is `43`
-```
+counterRef.count /-// is `43` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-References may be **authorized** or **unauthorized**.
+Wefewences may be **authowized** ow **unyauthowized**. 
 
-Authorized references have the `auth` modifier, i.e. the full syntax is `auth &T`,
-whereas unauthorized references do not have a modifier.
+Authowized wefewences have t-the `auth` modifiew, i.e. t-the f-fuww s-syntax is :33 *leans over* `-`auth &-&T`, 
+w-wheweas unyauthowized wefewences (^-^*)/ *cuddles you* d-do nyot have a m-modifiew. 
 
-Authorized references can be freely upcasted and downcasted,
-whereas unauthorized references can only be upcasted.
-Also, authorized references are subtypes of unauthorized references.
+Authowized wefewences c-can be f-fweewy upcasted and downcasted, 
+w-wheweas unyauthowized wefewences c-can onwy be u-upcasted. 
+Awso, authowized wefewences awe subtypes of unyauthowized ^-^ *cuddles you* w-wefewences. 
 
-```cadence
+```cadence 
 
-// Create an unauthorized reference to the counter,
-// typed with the restricted type `&{HasCount}`,
-// i.e. some resource that conforms to the `HasCount` interface
-//
-let countRef: &{HasCount} = &counter as &{HasCount}
+/-// Cweate an unyauthowized wefewence to t-the countew, 
+/-// t-typed with t-the westwicted t-type (⌒▽⌒)☆ *blushes* `-`&{HasCount}`, 
+/-// i.e. s-some wesouwce that confowms to t-the `HasCount` intewface 
+/-// 
+wet countWef: &{HasCount} = &countew as &{HasCount} 
 
-countRef.count  // is `43`
+countRef.count /-// is `43` 
 
-// Invalid: The function `increment` is not available
-// for the type `&{HasCount}`
-//
-countRef.increment()
+/-// Invawid: The f-function `-`incwement` is nyot avaiwabwe 
+/-// (╬ Ò﹏Ó) *giggles shyly* f-fow t-the t-type `-`&{HasCount}` 
+/-// 
+countRef.increment() 
 
-// Invalid: Cannot conditionally downcast to reference type `&Counter`,
-// as the reference `countRef` is unauthorized.
-//
-// The counter value has type `Counter`, which is a subtype of `{HasCount}`,
-// but as the reference is unauthorized, the cast is not allowed.
-// It is not possible to "look under the covers"
-//
-let counterRef2: &Counter = countRef as? &Counter
+/-// Invawid: Cannyot conditionyawwy d-downcast to wefewence t-type `&Countew`, 
+/-// as t-the wefewence `countWef` is unyauthowized. 
+/-// 
+/-// The countew vawue has t-type `Countew`, which is a subtype of `{HasCount}`, 
+/-// but as t-the wefewence is ~(>_<~) *sighs* u-unyauthowized, t-the cast is nyot awwowed. 
+/-// I-It is nyot p-possibwe to "wook undew t-the covews" 
+/-// 
+wet countewWef2: &-&Countew = countWef (っ˘ω˘ς ) *screams* a-as? &-&Countew 
 
-// Create an authorized reference to the counter,
-// again with the restricted type `{HasCount}`, i.e. some resource
-// that conforms to the `HasCount` interface
-//
-let authCountRef: auth &{HasCount} = &counter as auth &{HasCount}
+/-// Cweate an authowized wefewence to t-the countew, 
+/-// again with t-the westwicted t-type `{HasCount}`, i.e. s-some wesouwce 
+/-// that confowms to t-the `HasCount` intewface 
+/-// 
+wet authCountWef: auth &{HasCount} = &countew as auth &{HasCount} 
 
-// Conditionally downcast to reference type `&Counter`.
-// This is valid, because the reference `authCountRef` is authorized
-//
-let counterRef3: &Counter = authCountRef as? &Counter
+/-// Conditionyawwy d-downcast to wefewence t-type `&Countew`. 
+/-// This is vawid, because t-the wefewence `authCountWef` is authowized 
+/-// 
+wet countewWef3: &-&Countew = authCountWef (っ˘ω˘ς ) *screams* a-as? &-&Countew 
 
-counterRef3.count  // is `43`
+counterRef3.count /-// is `43` 
 
-counterRef3.increment()
+counterRef3.increment() 
 
-counterRef3.count  // is `44`
-```
+counterRef3.count /-// is `44` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-References are ephemeral, i.e they cannot be [stored](accounts#account-storage).
-Instead, consider [storing a capability and borrowing it](capability-based-access-control) when needed.
+Wefewences awe e-ephemewaw, i.e they c-cannyot be [stowed](accounts#account-stowage). 
+I-Instead, considew [stowing a >_> *giggles shyly* c-capabiwity and bowwowing it](capabiwity-based-access-contwow) when nyeeded. 

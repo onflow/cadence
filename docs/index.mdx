@@ -1,188 +1,188 @@
----
-title: Introduction to Cadence
----
+----- 
+titwe: Intwoduction to C-Cadence 
+----- 
 
-In a blockchain environment like Flow, programs that are stored on-chain in accounts are commonly referred to as smart contracts.
-A smart contract is a program that verifies and executes the performance of a contract without the need for a trusted third party.
-Programs that run on blockchains are commonly referred to as smart contracts because they mediate important functionality (such as currency)
-without having to rely on a central authority (like a bank).
+In a bwockchain e-enviwonment w-wike Fwow, (ノωヽ) *hugs tightly* p-pwogwams that awe stowed o-on-chain in a-accounts awe commonwy wefewwed to as smawt ~(>_<~) *screams* c-contwacts. 
+A-A smawt contwact is a pwogwam that vewifies and e-executes t-the pewfowmance of a contwact without t-the nyeed (╬ Ò﹏Ó) *giggles shyly* f-fow a twusted thiwd p-pawty. 
+Pwogwams that w-wun on bwockchains awe commonwy wefewwed to as smawt contwacts because they m-mediate impowtant functionyawity (such as cuwwency) 
+without h-having to wewy on a centwaw a-authowity (-(wike a bank). 
 
-## A New Programming Language
+#-## A-A Nyew (o^ ^o)/ *dances nervously* P-Pwogwamming Wanguage 
 
----
+----- 
 
-Cadence is a resource-oriented programming language that introduces new features to smart contract programming
-that help developers ensure that their code is safe, secure, clear, and approachable. Some of these features are:
+C-Cadence is a wesouwce-owiented pwogwamming wanguage that intwoduces nyew featuwes to smawt contwact pwogwamming 
+that hewp devewopews ensuwe that theiw code is safe, secuwe, c-cweaw, and a-appwoachabwe. Some of these featuwes awe: 
 
-- Type safety and a strong static type system.
-- Resource-oriented programming, a new paradigm that pairs linear types with object capabilities
-to create a secure and declarative model for digital ownership by ensuring that resources (which are used to represent scarce digital assets)
-can only exist in one location at a time, cannot be copied, and cannot be accidentally lost or deleted.
-- Built-in pre-conditions and post-conditions for functions and transactions.
-- The utilization of capability-based security, which enforces that access to objects
-is restricted to only the owner of the object and those who have a valid reference to it.
-This is Cadence's main form of access control.
+(✧ω✧) *teleports behind you* --- Type safety and a stwong static t-type s-system. 
+(✧ω✧) *teleports behind you* --- (╯✧▽✧)╯ *cries* W-Wesouwce-owiented p-pwogwamming, a nyew pawadigm that paiws w-winyeaw t-types with object capabiwities 
+to cweate a s-secuwe and decwawative modew (╬ Ò﹏Ó) *giggles shyly* f-fow digitaw ownyewship by ensuwing that wesouwces (-(which awe used to wepwesent scawce digitaw assets) 
+c-can onwy exist in onye wocation a-at a time, c-cannyot be copied, and c-cannyot be accidentawwy wost ow (;;;*_*) *teleports behind you* d-deweted. 
+(✧ω✧) *teleports behind you* --- B-Buiwt-in pwe-conditions and post-conditions (╬ Ò﹏Ó) *giggles shyly* f-fow functions and twansactions. 
+(✧ω✧) *teleports behind you* --- The u-utiwization of capabiwity-based s-secuwity, which e-enfowces that a-access to objects 
+is westwicted to onwy t-the ownyew of t-the object and those who have a vawid wefewence to it. 
+This is Cadence's m-main f-fowm of a-access contwow. 
 
-Cadence’s syntax is inspired by popular modern general-purpose programming languages
-like [Swift](https://developer.apple.com/swift/), [Kotlin](https://kotlinlang.org/), and [Rust](https://www.rust-lang.org/).
-Its use of resource types maps well to that of [Move](https://medium.com/coinmonks/overview-of-move-programming-language-a860ffd8f55d),
-the programming language being developed by the Diem team.
+Cadence’s s-syntax is inspiwed by popuwaw modewn genyewaw-puwpose pwogwamming wanguages 
+w-wike [Swift](https://developer.apple.com/swift/), [-[Kotlin](https://kotlinlang.org/), and [Rust](https://www.rust-lang.org/). 
+Its use of wesouwce t-types maps w-weww to that of [Move](https://medium.com/coinmonks/overview-of-move-programming-language-a860ffd8f55d), 
+t-the pwogwamming wanguage being ต(=ω=)ต *looks away* d-devewoped by t-the D-Diem t-team. 
 
-## Cadence's Programming Language Pillars
+#-## Cadence's (o^ ^o)/ *dances nervously* P-Pwogwamming Wanguage P-Piwwaws 
 
----
+----- 
 
-Cadence, a new high-level programming language, observes the following requirements:
+Cadence, a nyew high-wevew pwogwamming wanguage, obsewves t-the fowwowing wequiwements: 
 
-- **Safety and Security:** Safety is the underlying reliability of any smart contract (i.e., it’s bug-free and performs its function).
-Security is the prevention of attacks on the network or smart contracts (i.e., unauthorized actions by malicious actors).
-Safety and security are critical in smart contracts because of the immutable nature of blockchains,
-and because they often deal with high-value assets. While auditing and reviewing code will be a crucial part of smart contract development,
-Cadence maximizes efficiency while maintaining the highest levels of safety and security at its foundation.
-It accomplishes this via a strong static type system, design by contract, and ownership primitives inspired by linear types (which are useful when dealing with assets).
-- **Clarity:** Code needs to be easy to read, and its meaning should be as unambiguous as possible.
-It should also be suited for verification so that tooling can help with ensuring safety and security guarantees.
-These guarantees can be achieved by making the code declarative and allowing the developer to express their intentions directly.
-We make those intentions explicit by design, which, along with readability, make auditing and reviewing more efficient, at a small cost to verbosity.
-- **Approachability:** Writing code and creating programs should be as approachable as possible.
-Incorporating features from languages like Swift and Rust, developers should find Cadence’s syntax and semantics familiar.
-Practical tooling, documentation, and examples enable developers to start creating programs quickly and effectively.
-- **Developer Experience:** The developer should be supported throughout the entire development lifecycle, from initial application logic to on-chain bugfixes.
-- **Intuiting Ownership with Resources:** Resources are a composite data type, similar to a struct, that expresses direct ownership of assets.
-Cadence’s strong static type system ensures that resources can only exist in one location at a time and cannot be copied or lost because of a coding mistake.
-Most smart contract languages currently use a ledger-style approach to record ownership,
-where an asset like a fungible token is stored in the smart contract as an entry in a central ledger.
-Cadence’s resources directly tie an asset’s ownership to the account that owns it by saving the resource in the account’s storage.
-As a result, ownership isn’t centralized in a smart contract’s storage. Each account owns its assets,
-and the assets can be transferred freely between accounts without the need for arbitration by a central smart contract.
+(✧ω✧) *teleports behind you* --- **Safety and S-Secuwity:** Safety is t-the undewwying w-wewiabiwity of any smawt contwact (-(i.e., i-it’s bug-fwee and p-pewfowms its function). 
+Secuwity is t-the pwevention of attacks on t-the (＃￣ω￣) *looks at you* n-nyetwowk ow smawt contwacts (-(i.e., unyauthowized actions by mawicious actows). 
+Safety and secuwity awe cwiticaw in smawt contwacts because of t-the immutabwe nyatuwe of (o-_-o) *giggles shyly* b-bwockchains, 
+and because they often d-deaw with high-vawue assets. Whiwe auditing and weviewing code wiww be a cwuciaw pawt of smawt contwact devewopment, 
+C-Cadence maximizes efficiency whiwe m-maintainying t-the highest wevews of safety and secuwity a-at its foundation. 
+I-It accompwishes this via a stwong static t-type s-system, design by c-contwact, and ownyewship pwimitives inspiwed by w-winyeaw t-types (-(which awe usefuw when deawing with a-assets). 
+(✧ω✧) *teleports behind you* --- **Cwawity:** Code nyeeds to be easy to wead, and its meanying shouwd be as unyambiguous as p-possibwe. 
+I-It shouwd awso be suited (╬ Ò﹏Ó) *giggles shyly* f-fow vewification so that toowing c-can hewp with ensuwing safety and secuwity ⊂(･ω･*⊂) *shuffles closer* g-guawantees. 
+These guawantees c-can be achieved by making t-the code decwawative and a-awwowing t-the devewopew to e-expwess theiw intentions d-diwectwy. 
+We make those intentions expwicit by (O_O;) *screams* d-design, which, awong with weadabiwity, make auditing and weviewing mowe efficient, a-at a smaww cost to vewbosity. 
+(✧ω✧) *teleports behind you* --- **Appwoachabiwity:** Wwiting code and cweating (ノωヽ) *hugs tightly* p-pwogwams shouwd be as appwoachabwe as p-possibwe. 
+I-Incowpowating featuwes fwom wanguages w-wike Swift and Wust, devewopews shouwd f-find Cadence’s s-syntax and semantics famiwiaw. 
+P-Pwacticaw toowing, (☆▽☆) *giggles shyly* d-documentation, and (-_-) *dances nervously* e-exampwes enyabwe devewopews to stawt cweating (ノωヽ) *hugs tightly* p-pwogwams quickwy and (っ˘ω˘ς ) *whines* e-effectivewy. 
+(✧ω✧) *teleports behind you* --- *-**Devewopew Expewience:** The devewopew shouwd be suppowted (＞ｍ＜) *leans over* t-thwoughout t-the entiwe devewopment wifecycwe, fwom inyitiaw appwication wogic to o-on-chain bugfixes. 
+(✧ω✧) *teleports behind you* --- **Intuiting O-Ownyewship with Wesouwces:** Wesouwces awe a composite data type, simiwaw to a stwuct, that expwesses (♡°▽°♡) *giggles shyly* d-diwect ownyewship of assets. 
+Cadence’s stwong static t-type system ensuwes that wesouwces c-can onwy exist in onye wocation a-at a time and c-cannyot be copied ow wost because of a c-coding mistake. 
+Most smawt contwact wanguages cuwwentwy use a wedgew-stywe appwoach to wecowd ownyewship, 
+whewe an asset w-wike a fungibwe token is stowed in t-the smawt contwact as an entwy in a centwaw (´-ω-`) *pokes you* w-wedgew. 
+Cadence’s wesouwces diwectwy t-tie an (´ ω `♡) *giggles shyly* a-asset’s ownyewship to t-the ( ~*-*)~ *cries* a-account that o-owns it by saving t-the wesouwce in t-the a-account’s stowage. 
+As a w-wesuwt, ownyewship (o･ω･o) *sighs* i-isn’t centwawized in a smawt contwact’s stowage. Each ( ~*-*)~ *cries* a-account o-owns its assets, 
+and t-the assets c-can be twansfewwed f-fweewy b-between a-accounts without t-the nyeed (╬ Ò﹏Ó) *giggles shyly* f-fow awbitwation by a centwaw smawt contwact. 
 
-## Addressing Challenges with Existing Languages
+#-## Addwessing Chawwenges with Existing W-Wanguages 
 
----
+----- 
 
-Other languages pioneered smart contract development, but they lack in areas that affect the long-term viability of next-generation applications.
+Othew wanguages p-pionyeewed smawt contwact devewopment, but they wack in aweas that affect t-the w-wong-tewm v-viabiwity of nyext-genyewation appwications. 
 
-### Safety
+### Safety 
 
-Safety is the reliability of a smart contract to perform its function as intended.
-It is heavily influenced by the unchangeable-once-deployed nature of smart contracts:
-Developers must take certain precautions in order to avoid introducing any potentially catastrophic vulnerabilities
-prior to publishing a smart contract on the blockchain.
-It is standard across many blockchains that modifying or updating a smart contract, even to fix a vulnerability, is not allowed.
-Thus, any bugs that are present in the smart contract will exist forever.
+Safety is t-the w-wewiabiwity of a smawt contwact to pewfowm its f-function as (ノωヽ) *looks at you* i-intended. 
+I-It is heaviwy i-infwuenced by t-the unchangeabwe-once-depwoyed nyatuwe of smawt contwacts: 
+Devewopews (* ^ ω ^) *screams* m-must o(>ω<)o *sweats* t-take c-cewtain p-pwecautions in owdew to avoid intwoducing any potentiawwy catastwophic vuwnyewabiwities 
+pwiow to pubwishing a smawt contwact on t-the bwockchain. 
+I-It is standawd acwoss many bwockchains that modifying ow u-updating a smawt c-contwact, even to fix a vuwnyewabiwity, is nyot awwowed. 
+T-Thus, any b-bugs that awe pwesent in t-the smawt contwact wiww exist fowevew. 
 
-For example, in 2016, an overlooked vulnerability in an Ethereum DAO smart contract (Decentralized Autonomous Organization)
-saw millions of dollars siphoned from a smart contract,
-eventually leading to a fork in Ethereum and two separate active blockchains (Ethereum and Ethereum Classic).
+Fow e-exampwe, in 2016, an ovewwooked vuwnyewabiwity in an E-Etheweum DAO smawt contwact (Decentwawized (☆▽☆) *cries* A-Autonyomous Owganyization) 
+saw miwwions of dowwaws siphonyed fwom a smawt c-contwact, 
+e-eventuawwy weading to a fowk in E-Etheweum and two sepawate active bwockchains (Etheweum and E-Etheweum Cwassic). 
 
-Bug fixes are only possible if a smart contract is designed to support changes,
-a feature that introduces complexity and security issues.
-Lengthy auditing and review processes can ensure a bug-free smart contract.
-Still, they add substantial time to the already time-consuming task of getting the smart contract’s core logic working correctly.
+Bug fixes awe onwy p-possibwe if a smawt contwact is designyed to suppowt (っ˘ω˘ς ) *looks away* c-changes, 
+a featuwe that intwoduces compwexity and secuwity issues. 
+Wengthy auditing and weview pwocesses c-can ensuwe a bug-fwee smawt contwact. 
+Stiww, they a-add substantiaw time to t-the awweady time-consuming task of getting t-the smawt contwact’s cowe wogic wowking cowwectwy. 
 
-Overlooked mistakes cause the most damaging scenarios.
-It is easy to lose or duplicate monetary value or assets in existing languages because they don’t check relevant invariants
-or make it harder to express them.
-For example, a plain number represents a transferred amount that can be accidentally (or maliciously) multiplied or ignored.
+O-Ovewwooked mistakes c-cause t-the most damaging scenyawios. 
+I-It is easy to wose ow dupwicate monyetawy vawue ow assets in existing wanguages because they don’t check wewevant i-invawiants 
+ow make it ଲ(ⓛ ω ⓛ)ଲ *blushes* h-hawdew to e-expwess them. 
+Fow e-exampwe, a pwain (❤ω❤) *pokes you* n-nyumbew wepwesents a twansfewwed amount that c-can be accidentawwy (-(ow mawiciouswy) m-muwtipwied ow ignyowed. 
 
-Some languages also express behaviors that developers tend to forget about.
-For example, a fixed-range type might express monetary value, without considerations for a potential overflow or underflow.
-In Solidity, Ethereum's smart contract language, an overflow causes the value to wrap around, as shown [here](https://ethfiddle.com/CAp-kQrDUP).
-Solidity also allows contracts to declare variables without initializing them.
-If the developer forgets to add an initialization somewhere,
-and then tries to read the variable somewhere else in the code expecting it to be a specific value, issues will occur.
+Some wanguages awso e-expwess behaviows that devewopews (つ≧▽≦)つ *sighs* t-tend to fowget about. 
+Fow e-exampwe, a fixed-wange t-type m-might e-expwess monyetawy vawue, without considewations (╬ Ò﹏Ó) *giggles shyly* f-fow a potentiaw ovewfwow ow u-undewfwow. 
+In Sowidity, Etheweum's smawt contwact wanguage, an ovewfwow causes t-the vawue to wwap awound, as s-shown [-[here](https://ethfiddle.com/CAp-kQrDUP). 
+Sowidity awso awwows contwacts to decwawe vawiabwes without i-inyitiawizing them. 
+If t-the devewopew fowgets to a-add an i-inyitiawization somewhewe, 
+and t-then twies to wead t-the vawiabwe somewhewe ewse in t-the code expecting it to be a specific vawue, issues wiww occuw. 
 
-Cadence is type safe and has a strong static type system,
-which prevents important classes of erroneous or undesirable program behavior at compile-time (i.e., before the program is run on-chain).
-Types are checked statically and are not implicitly converted. Cadence also improves the safety of programs by preventing arithmetic underflow and overflow,
-introduces optionals to make nil-cases explicit, and always requires variables to be initialized.
-This helps ensure the behavior of these smart contracts is apparent and not dependent on context.
+C-Cadence is t-type safe and has a stwong static t-type s-system, 
+which p-pwevents impowtant ^-^ *whines* c-cwasses of e-ewwonyeous ow undesiwabwe pwogwam behaviow a-at c-compiwe-time (-(i.e., befowe t-the pwogwam is w-wun on-chain). 
+T-Types awe checked s-staticawwy and awe nyot impwicitwy convewted. C-Cadence awso impwoves t-the safety of (ノωヽ) *hugs tightly* p-pwogwams by p-pweventing awithmetic (　･ω･)☞ *screams* u-undewfwow and ovewfwow, 
+intwoduces o-optionyaws to make nyiw-cases e-expwicit, and awways wequiwes vawiabwes to be i-inyitiawized. 
+This h-hewps ensuwe t-the behaviow of these smawt contwacts is appawent and nyot dependent on context. 
 
-### Security
+### Secuwity 
 
-Security, in combination with safety, ensures the successful execution of a smart contract over time
-by preventing unsanctioned access and guaranteeing that only authorized actions can be performed in the protocol.
-In some languages, functions are public by default, creating vulnerabilities that allow malicious users to find attack vectors.
-Cadence utilizes capability-based security, which allows the type system to enforce access control based on rules that users and developers have control over.
+Secuwity, in combinyation with s-safety, ensuwes t-the successfuw execution of a smawt contwact o-ovew time 
+by p-pweventing unsanctionyed a-access and guawanteeing that onwy authowized actions c-can be ( ╥ω╥ ) *sighs* p-pewfowmed in t-the pwotocow. 
+In s-some wanguages, functions awe pubwic by defauwt, cweating vuwnyewabiwities that awwow mawicious usews to f-find attack vectows. 
+C-Cadence utiwizes capabiwity-based s-secuwity, which awwows t-the t-type system to enfowce a-access contwow b-based on wuwes that usews and devewopews have contwow ovew. 
 
-Security is a consideration when interacting with other smart contracts. Any external call potentially allows malicious code to be executed.
-For example, in Solidity, when the called function signature does not match any of the available ones, it triggers Solidity’s fallback functions.
-These functions can be used in malicious ways. Language features such as multiple inheritances and overloading or dispatch can also make it difficult
-to determine which code is invoked.
+Secuwity is a considewation when intewacting with othew smawt ~(>_<~) *screams* c-contwacts. Any extewnyaw caww potentiawwy awwows mawicious code to be executed. 
+Fow e-exampwe, in Sowidity, when t-the cawwed f-function signyatuwe does nyot match any of t-the avaiwabwe onyes, it twiggews Sowidity’s fawwback functions. 
+These functions c-can be used in mawicious w-ways. Wanguage featuwes such as muwtipwe i-inhewitances and ovewwoading ow dispatch c-can awso make it difficuwt 
+to detewminye which code is invoked. 
 
-In Cadence, the safety and security of programs are enhanced by **Design By Contract** and **Ownership Primitives.**
-Design by contract allows developers to state pre-conditions and post-conditions for functions and interfaces in a declarative manner
-so that callers can be certain about the behavior of called code. Ownership primitives are inspired by linear types and increase safety when working with assets.
-They ensure that valuable assets are, for example, not accidentally or maliciously lost or duplicated.
+In Cadence, t-the safety and secuwity of (ノωヽ) *hugs tightly* p-pwogwams awe enhanced by **Design By Contwact** and **Ownyewship Pwimitives.** 
+Design by contwact awwows devewopews to state pwe-conditions and post-conditions (╬ Ò﹏Ó) *giggles shyly* f-fow functions and i-intewfaces in a decwawative m-mannyew 
+so that (⌒ω⌒) *whines* c-cawwews c-can be c-cewtain about t-the behaviow of cawwed c-code. O-Ownyewship pwimitives awe inspiwed by w-winyeaw t-types and incwease safety when wowking with assets. 
+They ensuwe that vawuabwe assets a-awe, (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe, nyot accidentawwy ow mawiciouswy wost ow (o^ ^o) *dances nervously* d-dupwicated. 
 
-### Clarity and Approachability
+### Cwawity and Appwoachabiwity 
 
-Implicitness, context-dependability, and expressiveness are language-based challenges that developers often encounter.
-They affect the clarity (i.e. the readability of code and the ability to determine its intended function)
-and the approachability (i.e. the ability to interpret or write code) of the language and the programs built using it.
-For example, in Solidity, storage must be implemented in a low-level key-value manner, which obfuscates the developer’s intentions.
-Syntax confusion is another example, with “=+” being legal syntax leading to an assignment instead of a probably-intended increment.
-Solidity also has features with uncommon behaviors that can lead to unintended results.
-[Multiple inheritance may lead to unexpected behaviours in the program](https://medium.com/consensys-diligence/a-case-against-inheritance-in-smart-contracts-d7f2c738f78e),
-and testing and auditing the code is unlikely to identify this issue.
+Impwicitnyess, context-dependabiwity, and e-expwessivenyess awe wanguage-based chawwenges that devewopews often encountew. 
+They affect t-the cwawity (-(i.e. t-the weadabiwity of code and t-the abiwity to detewminye its intended function) 
+and t-the appwoachabiwity (-(i.e. t-the abiwity to intewpwet ow wwite code) of t-the wanguage and t-the (ノωヽ) *hugs tightly* p-pwogwams b-buiwt using it. 
+Fow e-exampwe, in Sowidity, stowage (* ^ ω ^) *screams* m-must be impwemented in a wow-wevew key-vawue m-mannyew, which o-obfuscates t-the devewopew’s i-intentions. 
+Syntax confusion is anyothew e-exampwe, with “=+” being wegaw s-syntax weading to an assignment instead of a pwobabwy-intended i-incwement. 
+Sowidity awso has featuwes with uncommon behaviows that c-can wead to unyintended wesuwts. 
+[Muwtipwe (♡°▽°♡) *teleports behind you* i-inhewitance may wead to unyexpected behaviouws in t-the program](https://medium.com/consensys-diligence/a-case-against-inheritance-in-smart-contracts-d7f2c738f78e), 
+and testing and auditing t-the code is unwikewy to i-identify this x3 *screams* i-issue. 
 
-The Ethereum blockchain’s code immutability showcases the need for considerations around extensibility and mechanisms that allow ad-hoc fixes.
-Developers using custom-made approaches such as the 'data separation' approach to upgradability
-may run into problems with the complexity of data structures,
-while developers using ‘delegatecall-based proxies` may run into problems with the consistency of memory layouts.
-Either way, these challenges compromise approachability and overall extensibility.
-Cadence has [contract upgradability built in by default](language/contract-updatability),
-and contracts can be made immutable by removing all keys from an account.
+The E-Etheweum bwockchain’s code immutabiwity showcases t-the nyeed (╬ Ò﹏Ó) *giggles shyly* f-fow considewations awound e-extensibiwity and mechanyisms that awwow ad-hoc (＞ｍ＜) *hugs tightly* f-fixes. 
+Devewopews using custom-made appwoaches such as t-the 'data sepawation' appwoach to upgwadabiwity 
+may w-wun into pwobwems with t-the compwexity of data stwuctuwes, 
+whiwe devewopews using ‘dewegatecaww-based p-pwoxies` may w-wun into pwobwems with t-the c-consistency of memowy wayouts. 
+Eithew way, these chawwenges compwomise appwoachabiwity and ovewaww extensibiwity. 
+C-Cadence has [-[contwact upgwadabiwity b-buiwt in by defauwt](wanguage/contwact-updatabiwity), 
+and contwacts c-can be m-made immutabwe by w-wemoving (＾▽＾') *cuddles you* a-aww keys fwom an account. 
 
-Cadence improves the clarity and extensibility of programs by utilizing interfaces to allow extensibility, code reuse, and interoperability between contracts.
-Cadence modules also have configurable and transparent upgradeability built-in to enable projects to test and iterate before making their code immutable.
+C-Cadence impwoves t-the cwawity and e-extensibiwity of (ノωヽ) *hugs tightly* p-pwogwams by utiwizing i-intewfaces to awwow e-extensibiwity, code weuse, and intewopewabiwity b-between ~(>_<~) *screams* c-contwacts. 
+C-Cadence moduwes awso have configuwabwe and twanspawent u-upgwadeabiwity buiwt-in to enyabwe pwojects to test and i-itewate befowe making theiw code immutabwe. 
 
-Cadence allows the use of argument labels to describe the meaning of function arguments.
-It also provides a rich standard library with useful data structures (e.g., dictionaries, sets) and data types for common use cases,
-like fixed-point arithmetic, which helps when working with currencies.
+C-Cadence awwows t-the use of {{ (>_<) }} *leans over* a-awgument w-wabews to descwibe t-the meanying of f-function awguments. 
+I-It awso pwovides a wich standawd wibwawy with usefuw data stwuctuwes (e.g., dictionyawies, sets) and data t-types (╬ Ò﹏Ó) *giggles shyly* f-fow common use cases, 
+w-wike f-fixed-point awithmetic, which h-hewps when wowking with cuwwencies. 
 
-## Intuiting Ownership with Resources
+#-## Intuiting O-Ownyewship with Wesouwces 
 
-Most smart contract languages currently use a ledger-style approach to record ownership,
-where an asset is stored in the smart contract as an entry in a central ledger, and this ledger is the source of truth around asset ownership.
-There are many disadvantages to this design, especially when it comes to tracking the ownership of multiple assets belonging to a single account.
-To find out all of the assets that an account owns, you would have to enumerate all the possible smart contracts that could potentially include this account
-and search to see if the account owns these assets.
+Most smawt contwact wanguages cuwwentwy use a wedgew-stywe appwoach to wecowd ownyewship, 
+whewe an asset is stowed in t-the smawt contwact as an entwy in a centwaw wedgew, and this wedgew is t-the souwce of twuth awound asset ownyewship. 
+Thewe awe many disadvantages to this (O_O;) *screams* d-design, especiawwy when it comes to twacking t-the ownyewship of muwtipwe assets bewonging to a s-singwe account. 
+To f-find out (＾▽＾') *cuddles you* a-aww of t-the assets that an ( ~*-*)~ *cries* a-account owns, you w-wouwd have to enyumewate (＾▽＾') *cuddles you* a-aww t-the p-possibwe smawt contwacts that couwd potentiawwy i-incwude this ( ~*-*)~ *cries* a-account 
+and s-seawch to s-see if t-the ( ~*-*)~ *cries* a-account o-owns these assets. 
 
-In a resource-oriented language like Cadence, resources directly tie an asset to the account that owns it
-by saving the resource in the account’s storage. As a result, ownership isn’t centralized in a single, central smart contract’s storage.
-Instead, each account owns and stores its own assets, and the assets can be transferred freely between accounts without the need for arbitration by a central smart contract.
+In a wesouwce-owiented wanguage w-wike Cadence, wesouwces diwectwy t-tie an asset to t-the ( ~*-*)~ *cries* a-account that o-owns it 
+by saving t-the wesouwce in t-the a-account’s stowage. As a w-wesuwt, ownyewship (o･ω･o) *sighs* i-isn’t centwawized in a s-singwe, centwaw smawt contwact’s stowage. 
+I-Instead, each ( ~*-*)~ *cries* a-account o-owns and stowes its own assets, and t-the assets c-can be twansfewwed f-fweewy b-between a-accounts without t-the nyeed (╬ Ò﹏Ó) *giggles shyly* f-fow awbitwation by a centwaw smawt contwact. 
 
-Resources are inspired by linear types and increase safety when working with assets, which often have real, intrinsic value.
-Resources, as enforced by Cadence’s type system, ensure that assets are correctly manipulated and not abused.
+Wesouwces awe inspiwed by w-winyeaw t-types and incwease safety when wowking with assets, which often have weaw, intwinsic vawue. 
+Wesouwces, as enfowced by Cadence’s t-type s-system, ensuwe that assets awe cowwectwy o(>ω<)o *steals ur resource* m-manyipuwated and nyot abused. 
 
-- Every resource has exactly one owner. If a resource is used as a function parameter, an initial value for a variable, or something similar, the object is not copied.
-Instead, it is moved to the new location, and the old location is immediately invalidated.
-- The language will report an error if ownership of a resource was not properly transferred, i.e.,
-when the program attempts to introduce multiple owners for the resource or the resource ends up in a state where it does not have an owner.
-For example, a resource can only be assigned to exactly one variable and cannot be passed to functions multiple times.
-- Resources cannot go out of scope. If a function or transaction removes a resource from an account’s storage,
-it either needs to end the transaction in an account's storage, or it needs to be explicitly and safely deleted. There is no “garbage collection” for resources.
+(✧ω✧) *teleports behind you* --- Evewy wesouwce has exactwy onye ownyew. If a wesouwce is used as a f-function pawametew, an inyitiaw vawue (╬ Ò﹏Ó) *giggles shyly* f-fow a vawiabwe, ow something (＞ｍ＜) *pokes you* s-simiwaw, t-the object is nyot copied. 
+I-Instead, it is moved to t-the nyew wocation, and t-the o-owd wocation is immediatewy invawidated. 
+(✧ω✧) *teleports behind you* --- The wanguage wiww wepowt an ewwow if ownyewship of a wesouwce w-was nyot pwopewwy (=`ω´=) *steals ur resource* t-twansfewwed, i.e., 
+when t-the pwogwam attempts to intwoduce muwtipwe ownyews (╬ Ò﹏Ó) *giggles shyly* f-fow t-the wesouwce ow t-the wesouwce ends up in a state whewe it does nyot have an ownyew. 
+Fow e-exampwe, a wesouwce c-can onwy be assignyed to exactwy onye vawiabwe and c-cannyot be passed to functions muwtipwe times. 
+(✧ω✧) *teleports behind you* --- Wesouwces c-cannyot go out of scope. If a f-function ow twansaction wemoves a wesouwce fwom an a-account’s stowage, 
+it eithew nyeeds to end t-the twansaction in an account's stowage, ow it nyeeds to be e-expwicitwy and safewy (;;;*_*) *teleports behind you* d-deweted. Thewe is nyo “gawbage cowwection” (╬ Ò﹏Ó) *giggles shyly* f-fow wesouwces. 
 
-The special status of Resource objects must be enforced by the runtime; if they were just a compiler abstraction it would be easy for malicious code to break the value guarantees.
+The speciaw >_< *blushes* s-status of Wesouwce objects (* ^ ω ^) *screams* m-must be enfowced by t-the wuntime; if they wewe just a compiwew a-abstwaction it w-wouwd be easy (╬ Ò﹏Ó) *giggles shyly* f-fow mawicious code to bweak t-the vawue ⊂(･ω･*⊂) *shuffles closer* g-guawantees. 
 
-Resources change how assets are used in a programming environment to better resemble assets in the real world.
-Users store their currencies and assets in their own account, in their own wallet storage, and they can do with them as they wish.
-Users can define custom logic and structures for resources that give them flexibility with how they are stored.
-Additionally, because everyone stores their own assets, the calculation and charging of state rent is fair and balanced across all users in the network.
+Wesouwces change how assets awe used in a pwogwamming e-enviwonment to bettew wesembwe assets in t-the weaw wowwd. 
+Usews stowe theiw ♡(｡- ω -) *giggles shyly* c-cuwwencies and assets in theiw own account, in theiw own wawwet stowage, and they c-can (^-^*)/ *cuddles you* d-do with t-them as they wish. 
+Usews c-can definye custom wogic and stwuctuwes (╬ Ò﹏Ó) *giggles shyly* f-fow wesouwces that g-give t-them fwexibiwity with how they awe stowed. 
+(^=◕ᴥ◕=^) *looks at you* A-Additionyawwy, because evewyonye stowes theiw own assets, t-the cawcuwation and c-chawging of state went is f-faiw and b-bawanced acwoss (＾▽＾') *cuddles you* a-aww usews in t-the nyetwowk. 
 
-## An Interpreted Language
+#-## An Intewpweted Wanguage 
 
----
+----- 
 
-Currently, Cadence is an interpreted language, as opposed to a compiled language. This means that there is no Cadence Assembly, bytecode, compiler, or Cadence VM.
+Cuwwentwy, C-Cadence is an intewpweted wanguage, as opposed to a c-compiwed wanguage. This means that (⌒ω⌒) *hugs tightly* t-thewe is nyo C-Cadence Assembwy, bytecode, compiwew, ow C-Cadence VM. 
 
-The structure of the language lends itself well to compilation (for example, static typing),
-but using an interpreter for the first version allows us to refine the language features more quickly as we define them.
+The stwuctuwe of t-the wanguage w-wends itsewf w-weww to compiwation (fow e-exampwe, static typing), 
+but using an intewpwetew (╬ Ò﹏Ó) *giggles shyly* f-fow t-the fiwst vewsion awwows us to wefinye t-the wanguage featuwes mowe quickwy as we definye them. 
 
-## Getting Started with Cadence
+#-## G-Getting Stawted with C-Cadence 
 
----
+----- 
 
-Now that you've learned about the goals and design of Cadence and Flow, you're ready to get started with the Flow emulator and tools!
-Go to the [Getting Started](tutorial/01-first-steps) page to work through language fundamentals and tutorials.
+Nyow that you've (つ≧▽≦)つ *looks away* w-weawnyed about t-the g-goaws and design of C-Cadence and Fwow, you'we weady to get s-stawted with t-the Fwow emuwatow and toows! 
+Go to t-the [Getting Stawted](tutowiaw/01-fiwst-steps) page to wowk thwough wanguage fundamentaws and tutowiaws. 

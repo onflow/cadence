@@ -1,252 +1,252 @@
----
-title: 7. Marketplace Setup
----
+----- 
+titwe: 7. Mawketpwace S-Setup 
+----- 
 
-In this tutorial, we're going to create a marketplace that uses both the fungible
-and non-fungible token (NFTs) contracts that we have learned about in previous tutorials.
-This page requires you to execute a series of transactions to setup your accounts to complete the Marketplace tutorial.
-The next page contains the main content of the tutorial.
+In this tutowiaw, we'we g-going to cweate a m-mawketpwace that uses both t-the fungibwe 
+and nyon-fungibwe token (NFTs) contwacts that we have (つ≧▽≦)つ *looks away* w-weawnyed about in pwevious tutowiaws. 
+This page wequiwes you to execute a sewies of t-twansactions to setup youw a-accounts to compwete t-the Mawketpwace t-tutowiaw. 
+The nyext page contains t-the m-main content of t-the t-tutowiaw. 
 
-When you are done with the tutorial, check out the [NFTStorefront repo](https://github.com/onflow/nft-storefront)
-for an example of a production ready marketplace that you can use right now on testnet or mainnet!
+When you awe donye with t-the tutowiaw, check out t-the [NFTStowefwont repo](https://github.com/onflow/nft-storefront) 
+(╬ Ò﹏Ó) *giggles shyly* f-fow an e-exampwe of a pwoduction weady m-mawketpwace that you c-can use wight nyow on testnyet ow mainnyet! 
 
----
+----- 
 
-<Callout type="success">
-  Open the starter code for this tutorial in the Flow Playground: 
-  <a 
-    href="https://play.onflow.org/49ec2856-1258-4675-bac3-850b4bae1929"
-    target="_blank"
-  >
-    https://play.onflow.org/49ec2856-1258-4675-bac3-850b4bae1929
-  </a>
-  <br/>
-  The tutorial will be asking you to take various actions to interact with this code.
-</Callout>
+<Cawwout type="success"> 
+Open t-the stawtew code (╬ Ò﹏Ó) *giggles shyly* f-fow this t-tutowiaw in t-the Fwow Pwaygwound: 
+<a 
+href="https://play.onflow.org/49ec2856-1258-4675-bac3-850b4bae1929" 
+tawget="_bwank" 
+> 
+https://play.onflow.org/49ec2856-1258-4675-bac3-850b4bae1929 
+</a> 
+<bw/> 
+The t-tutowiaw wiww be asking you to o(>ω<)o *sweats* t-take vawious actions to (o^▽^o) *dances nervously* i-intewact with this c-code. 
+</Cawwout> 
 
-If you have already completed the Marketplace tutorial, please move on to [Composable Resources: Kitty Hats](10-resources-compose).
+If you have awweady c-compweted t-the Mawketpwace tutowiaw, pwease move on to [Composabwe Wesouwces: Kitty Hats](10-wesouwces-compose). 
 
-This guide will help you quickly get the playground to the state you need to complete the Marketplace tutorial.
-The marketplace tutorial uses the Fungible Token and Non-Fungible token contracts
-to allow users to buy and sell NFTs with fungible tokens.
+This guide wiww hewp you quickwy get t-the pwaygwound to t-the state you nyeed to compwete t-the Mawketpwace t-tutowiaw. 
+The m-mawketpwace t-tutowiaw uses t-the Fungibwe T-Token and Nyon-Fungibwe token contwacts 
+to awwow usews to buy and seww N-NFTs with fungibwe tokens. 
 
-The state of the accounts is the same as if you had completed the Fungible Token
-and Non-Fungible Token tutorials in the same playground session.
-Having your playground in this state is necessary to follow the [Composable Smart Contracts: Marketplace](08-marketplace-compose) tutorial.
+The state of t-the a-accounts is t-the same as if you h-had c-compweted t-the Fungibwe T-Token 
+and Nyon-Fungibwe T-Token t-tutowiaws in t-the same pwaygwound session. 
+^w^ *screams* H-Having youw pwaygwound in this state is nyecessawy to fowwow t-the [Composabwe Smawt Contwacts: Mawketpwace](08-mawketpwace-compose) t-tutowiaw. 
 
----
+----- 
 
-1. Open account `0x01`. Make sure the Fungible Token definitions in `ExampleToken.cdc` from the fungible token tutorial are in this account.
-2. Deploy the ExampleToken code to account `0x01`.
-3. Switch to account `0x02` by selecting account `0x02` from the account selection menu.
-4. Make sure you have the NFT definitions in `ExampleNFT.cdc` from the Non-fungible token tutorial in account `0x02`.
-5. Deploy the NFT code to account `0x02`.
-6. Run the transaction in Transaction 1. This is the `SetupAccount1Transaction.cdc` file.
-   Use account `0x01` as the only signer to set up account `0x01`'s storage.
+1. Open ( ~*-*)~ *cries* a-account `0x01`. Make suwe t-the Fungibwe T-Token definyitions in `ExampleToken.cdc` fwom t-the fungibwe token t-tutowiaw awe in this account. 
+2-2. Depwoy t-the E-ExampweToken code to ( ~*-*)~ *cries* a-account `0x01`. 
+3. Switch to ( ~*-*)~ *cries* a-account `0x02` by sewecting ( ~*-*)~ *cries* a-account `0x02` fwom t-the ( ~*-*)~ *cries* a-account sewection menyu. 
+4-4. Make suwe you have t-the NFT definyitions in `ExampleNFT.cdc` fwom t-the Nyon-fungibwe token t-tutowiaw in ( ~*-*)~ *cries* a-account `0x02`. 
+5. Depwoy t-the NFT code to ( ~*-*)~ *cries* a-account `0x02`. 
+6. Wun t-the twansaction in Twansaction 1. This is t-the `SetupAccount1Transaction.cdc` fiwe. 
+╰(▔∀▔)╯ *steals ur resource* U-Use ( ~*-*)~ *cries* a-account `0x01` as t-the onwy signyew to s-set up ( ~*-*)~ *cries* a-account `0x01`'s stowage. 
 
-```cadence:title=SetupAccount1Transaction.cdc
-// SetupAccount1Transaction.cdc
+```cadence:title=SetupAccount1Transaction.cdc 
+/-// SetupAccount1Transaction.cdc 
 
-import ExampleToken from 0x01
-import ExampleNFT from 0x02
+i-impowt E-ExampweToken fwom 0x01 
+i-impowt ExampweNFT fwom 0x02 
 
-// This transaction sets up account 0x01 for the marketplace tutorial
-// by publishing a Vault reference and creating an empty NFT Collection.
-transaction {
-  prepare(acct: AuthAccount) {
-    // Create a public Receiver capability to the Vault
-    acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>
-             (/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
+/-// This twansaction sets up ( ~*-*)~ *cries* a-account 0x01 (╬ Ò﹏Ó) *giggles shyly* f-fow t-the m-mawketpwace t-tutowiaw 
+/-// by pubwishing a Vauwt wefewence and cweating an empty NFT Cowwection. 
+twansaction { 
+pwepawe(acct: AuthAccount) { 
+/-// Cweate a pubwic Weceivew >_> *giggles shyly* c-capabiwity to t-the Vauwt 
+acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}> 
+(/pubwic/CadenceFungibweTokenTutowiawWeceivew, t-tawget: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
 
-    log("Created Vault references")
+wog("Cweated Vauwt wefewences") 
 
-    // store an empty NFT Collection in account storage
-    acct.save<@ExampleNFT.Collection>(<-ExampleNFT.createEmptyCollection(), to: /storage/nftTutorialCollection)
+/-// stowe an empty NFT Cowwection in ( ~*-*)~ *cries* a-account stowage 
+acct.save<@ExampleNFT.Collection>(<-ExampleNFT.createEmptyCollection(), to: /stowage/nftTutowiawCowwection) 
 
-    // publish a capability to the Collection in storage
-    acct.link<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath, target: ExampleNFT.CollectionStoragePath)
+/-// pubwish a >_> *giggles shyly* c-capabiwity to t-the Cowwection in stowage 
+acct.link<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath, t-tawget: ExampleNFT.CollectionStoragePath) 
 
-    log("Created a new empty collection and published a reference")
-  }
-}
-```
+wog("Cweated a nyew empty cowwection and pubwished a wefewence") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-7. Run the transaction in Transaction 2. This is the `SetupAccount2Transaction.cdc` file.
-Use account `0x02` as the only signer to set up account `0x02`'s storage.
+7. Wun t-the twansaction in Twansaction 2-2. This is t-the `SetupAccount2Transaction.cdc` fiwe. 
+╰(▔∀▔)╯ *steals ur resource* U-Use ( ~*-*)~ *cries* a-account `0x02` as t-the onwy signyew to s-set up ( ~*-*)~ *cries* a-account `0x02`'s stowage. 
 
-```cadence:title=SetupAccount2Transaction.cdc
-// SetupAccount2Transaction.cdc
+ต(=ω=)ต *screams* `-```cadence:title=SetupAccount2Transaction.cdc 
+/-// SetupAccount2Transaction.cdc 
 
-import ExampleToken from 0x01
-import ExampleNFT from 0x02
+i-impowt E-ExampweToken fwom 0x01 
+i-impowt ExampweNFT fwom 0x02 
 
-// This transaction adds an empty Vault to account 0x02
-// and mints an NFT with id=1 that is deposited into
-// the NFT collection on account 0x01.
-transaction {
+/-// This twansaction adds an empty Vauwt to ( ~*-*)~ *cries* a-account 0x02 
+/-// and m-mints an NFT with id=1 that is deposited into 
+/-// t-the NFT cowwection on ( ~*-*)~ *cries* a-account (/ =ω=)/ *sighs* 0-0x01. 
+twansaction { 
 
-  // Private reference to this account's minter resource
-  let minterRef: &ExampleNFT.NFTMinter
+/-// Pwivate wefewence to this account's mintew wesouwce 
+wet mintewWef: &ExampleNFT.NFTMinter 
 
-  prepare(acct: AuthAccount) {
-    // create a new vault instance with an initial balance of 30
-    let vaultA <- ExampleToken.createEmptyVault()
+pwepawe(acct: AuthAccount) { 
+/-// cweate a nyew (＾• ω •＾) *cuddles you* v-vauwt instance with an inyitiaw bawance of 30 
+wet vauwtA <- ExampleToken.createEmptyVault() 
 
-    // Store the vault in the account storage
-    acct.save<@ExampleToken.Vault>(<-vaultA, to: /storage/CadenceFungibleTokenTutorialVault)
+/-// S-Stowe t-the (＾• ω •＾) *cuddles you* v-vauwt in t-the ( ~*-*)~ *cries* a-account stowage 
+acct.save<@ExampleToken.Vault>(<-vaultA, to: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
 
-    // Create a public Receiver capability to the Vault
-    let ReceiverRef = acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>(/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
+/-// Cweate a pubwic Weceivew >_> *giggles shyly* c-capabiwity to t-the Vauwt 
+wet WeceivewWef = acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>(/public/CadenceFungibleTokenTutorialReceiver, t-tawget: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
 
-    log("Created a Vault and published a reference")
+wog("Cweated a Vauwt and pubwished a wefewence") 
 
-    // Borrow a reference for the NFTMinter in storage
-    self.minterRef = acct.borrow<&ExampleNFT.NFTMinter>(from: ExampleNFT.MinterStoragePath)
-        ?? panic("Could not borrow owner's NFT minter reference")
-  }
-  execute {
-    // Get the recipient's public account object
-    let recipient = getAccount(0x01)
+/-// B-Bowwow a wefewence (╬ Ò﹏Ó) *giggles shyly* f-fow t-the NFTMintew in stowage 
+self.minterRef = a-acct.borrow<&ExampleNFT.NFTMinter>(from: ExampleNFT.MinterStoragePath) 
+?? panyic("Couwd nyot bowwow ownyew's NFT mintew wefewence") 
+} 
+execute { 
+/-// Get t-the wecipient's pubwic ( ~*-*)~ *cries* a-account object 
+wet w-wecipient = getAccount(0x01) 
 
-    // Get the Collection reference for the receiver
-    // getting the public capability and borrowing a reference from it
-    let receiverRef = recipient.getCapability(ExampleNFT.CollectionPublicPath)
-                               .borrow<&{ExampleNFT.NFTReceiver}>()
-                               ?? panic("Could not borrow nft receiver reference")
+/-// Get t-the Cowwection wefewence (╬ Ò﹏Ó) *giggles shyly* f-fow t-the w-weceivew 
+/-// getting t-the pubwic >_> *giggles shyly* c-capabiwity and bowwowing a wefewence fwom it 
+wet weceivewWef = recipient.getCapability(ExampleNFT.CollectionPublicPath) 
+.borrow<&{ExampleNFT.NFTReceiver}>() 
+?? panyic("Couwd nyot bowwow n-nft w-weceivew wefewence") 
 
-    // Mint an NFT and deposit it into account 0x01's collection
-    receiverRef.deposit(token: <-self.minterRef.mintNFT())
+/-// Mint an NFT and deposit it into ( ~*-*)~ *cries* a-account 0-0x01's cowwection 
+receiverRef.deposit(token: <-self.minterRef.mintNFT()) 
 
-    log("New NFT minted for account 1")
-  }
-}
-```
+wog("Nyew NFT minted (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 1") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-8. Run the transaction in Transaction 3. This is the `SetupAccount1TransactionMinting.cdc` file.
-   Use account `0x01` as the only signer to mint fungible tokens for account 1 and 2.
+8. Wun t-the twansaction in Twansaction 3. This is t-the `SetupAccount1TransactionMinting.cdc` fiwe. 
+╰(▔∀▔)╯ *steals ur resource* U-Use ( ~*-*)~ *cries* a-account `0x01` as t-the onwy signyew to mint fungibwe tokens (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 1 and 2-2. 
 
-```cadence:title=SetupAccount1TransactionMinting.cdc
-// SetupAccount1TransactionMinting.cdc
+UwU *looks away* `-```cadence:title=SetupAccount1TransactionMinting.cdc 
+/-// SetupAccount1TransactionMinting.cdc 
 
-import ExampleToken from 0x01
-import ExampleNFT from 0x02
+i-impowt E-ExampweToken fwom 0x01 
+i-impowt ExampweNFT fwom 0x02 
 
-// This transaction mints tokens for both accounts using
-// the minter stored on account 0x01.
-transaction {
+/-// This twansaction m-mints tokens (╬ Ò﹏Ó) *giggles shyly* f-fow both a-accounts using 
+/-// t-the mintew stowed on ( ~*-*)~ *cries* a-account (/ =ω=)/ *sighs* 0-0x01. 
+twansaction { 
 
-  // Public Vault Receiver References for both accounts
-  let acct1Capability: Capability<&AnyResource{ExampleToken.Receiver}>
-  let acct2Capability: Capability<&AnyResource{ExampleToken.Receiver}>
+/-// P-Pubwic Vauwt Weceivew Wefewences (╬ Ò﹏Ó) *giggles shyly* f-fow both a-accounts 
+wet acct1Capabiwity: Capability<&AnyResource{ExampleToken.Receiver}> 
+wet acct2Capabiwity: Capability<&AnyResource{ExampleToken.Receiver}> 
 
-  // Private minter references for this account to mint tokens
-  let minterRef: &ExampleToken.VaultMinter
+/-// Pwivate mintew wefewences (╬ Ò﹏Ó) *giggles shyly* f-fow this ( ~*-*)~ *cries* a-account to mint tokens 
+wet mintewWef: &ExampleToken.VaultMinter 
 
-  prepare(acct: AuthAccount) {
-    // Get the public object for account 0x02
-    let account2 = getAccount(0x02)
+pwepawe(acct: AuthAccount) { 
+/-// Get t-the pubwic object (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 0x02 
+wet a-account2 = g-getAccount(0x02) 
 
-    // Retrieve public Vault Receiver references for both accounts
-    self.acct1Capability = acct.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
-    self.acct2Capability = account2.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
+/-// Wetwieve pubwic Vauwt Weceivew wefewences (╬ Ò﹏Ó) *giggles shyly* f-fow both a-accounts 
+self.acct1Capability = a-acct.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver) 
+(=`ω´=) *screams* s-self.acct2Capability = account2.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver) 
 
-    // Get the stored Minter reference for account 0x01
-    self.minterRef = acct.borrow<&ExampleToken.VaultMinter>(from: /storage/CadenceFungibleTokenTutorialMinter)
-        ?? panic("Could not borrow owner's vault minter reference")
-  }
+/-// Get t-the stowed Mintew wefewence (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 0x01 
+self.minterRef = a-acct.borrow<&ExampleToken.VaultMinter>(from: /-/stowage/CadenceFungibweTokenTutowiawMintew) 
+?? panyic("Couwd nyot bowwow ownyew's (＾• ω •＾) *cuddles you* v-vauwt mintew wefewence") 
+} 
 
-  execute {
-    // Mint tokens for both accounts
-    self.minterRef.mintTokens(amount: 20.0, recipient: self.acct2Capability)
-    self.minterRef.mintTokens(amount: 10.0, recipient: self.acct1Capability)
+execute { 
+/-// Mint tokens (╬ Ò﹏Ó) *giggles shyly* f-fow both a-accounts 
+s-self.minterRef.mintTokens(amount: (*^‿^*) *screams* 2-20.0, wecipient: self.acct2Capability) 
+s-self.minterRef.mintTokens(amount: 1-10.0, wecipient: self.acct1Capability) 
 
-    log("Minted new fungible tokens for account 1 and 2")
-  }
-}
-```
+wog("Minted nyew fungibwe tokens (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 1 and 2") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-9. Run the script `CheckSetupScript.cdc` file in Script 1 to ensure everything is set up.
+9. Wun t-the scwipt `CheckSetupScript.cdc` fiwe in Scwipt 1 to ensuwe evewything is s-set (＞ｍ＜) *looks at you* u-up. 
 
-```cadence:title=CheckSetupScript.cdc
-// CheckSetupScript.cdc
+```cadence:title=CheckSetupScript.cdc 
+/-// CheckSetupScript.cdc 
 
-import ExampleToken from 0x01
-import ExampleNFT from 0x02
+i-impowt E-ExampweToken fwom 0x01 
+i-impowt ExampweNFT fwom 0x02 
 
-// This script checks that the accounts are set up correctly for the marketplace tutorial.
-//
-// Account 0x01: Vault Balance = 40, NFT.id = 1
-// Account 0x02: Vault Balance = 20, No NFTs
-pub fun main() {
-    // Get the accounts' public account objects
-    let acct1 = getAccount(0x01)
-    let acct2 = getAccount(0x02)
+/-// This scwipt checks that t-the a-accounts awe s-set up cowwectwy (╬ Ò﹏Ó) *giggles shyly* f-fow t-the m-mawketpwace t-tutowiaw. 
+/-// 
+/-// Account 0x01: Vauwt Bawance = 4-40, NFT.id = 1 
+/-// Account 0x02: Vauwt Bawance = 20, N-Nyo N-NFTs 
+pub fun m-main() { 
+/-// Get t-the accounts' pubwic ( ~*-*)~ *cries* a-account objects 
+wet acct1 = getAccount(0x01) 
+wet acct2 = g-getAccount(0x02) 
 
-    // Get references to the account's receivers
-    // by getting their public capability
-    // and borrowing a reference from the capability
-    let acct1ReceiverRef = acct1.getCapability(/public/CadenceFungibleTokenTutorialReceiver)
-                          .borrow<&ExampleToken.Vault{ExampleToken.Balance}>()
-                          ?? panic("Could not borrow acct1 vault reference")
+/-// Get wefewences to t-the account's weceivews 
+/-// by getting theiw pubwic >_> *giggles shyly* c-capabiwity 
+/-// and bowwowing a wefewence fwom t-the >_> *giggles shyly* c-capabiwity 
+wet a-acct1WeceivewWef = acct1.getCapability(/public/CadenceFungibleTokenTutorialReceiver) 
+(^ω~) *looks away* .-.borrow<&ExampleToken.Vault{ExampleToken.Balance}>() 
+?? panyic("Couwd nyot bowwow acct1 (＾• ω •＾) *cuddles you* v-vauwt wefewence") 
 
-    let acct2ReceiverRef = acct2.getCapability(/public/CadenceFungibleTokenTutorialReceiver)
-                          .borrow<&ExampleToken.Vault{ExampleToken.Balance}>()
-                          ?? panic("Could not borrow acct2 vault reference")
+wet acct2WeceivewWef = acct2.getCapability(/public/CadenceFungibleTokenTutorialReceiver) 
+(^ω~) *looks away* .-.borrow<&ExampleToken.Vault{ExampleToken.Balance}>() 
+?? panyic("Couwd nyot bowwow acct2 (＾• ω •＾) *cuddles you* v-vauwt wefewence") 
 
-    // Log the Vault balance of both accounts and ensure they are
-    // the correct numbers.
-    // Account 0x01 should have 40.
-    // Account 0x02 should have 20.
-    log("Account 1 Balance")
-    log(acct1ReceiverRef.balance)
-    log("Account 2 Balance")
-    log(acct2ReceiverRef.balance)
+/-// (*^‿^*) *pokes you* W-Wog t-the Vauwt bawance of both a-accounts and ensuwe they awe 
+/-// t-the c-cowwect nyumbews. 
+/-// Account 0x01 shouwd have 40. 
+/-// Account 0x02 shouwd have 20. 
+wog("Account 1 Bawance") 
+log(acct1ReceiverRef.balance) 
+wog("Account 2-2 Bawance") 
+log(acct2ReceiverRef.balance) 
 
-    // verify that the balances are correct
-    if acct1ReceiverRef.balance != 40.0 || acct2ReceiverRef.balance != 20.0 {
-        panic("Wrong balances!")
-    }
+/-// vewify that t-the bawances awe c-cowwect 
+if acct1ReceiverRef.balance != 40.0 || acct2ReceiverRef.balance != 20.0 { 
+(*´▽`*) *teleports behind you* p-panyic("Wwong bawances!") 
+} 
 
-    // Find the public Receiver capability for their Collections
-    let acct1Capability = acct1.getCapability(ExampleNFT.CollectionPublicPath)
-    let acct2Capability = acct2.getCapability(ExampleNFT.CollectionPublicPath)
+/-// Find t-the pubwic Weceivew >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow theiw Cowwections 
+wet acct1Capabiwity = xDD *sighs* a-acct1.getCapability(ExampleNFT.CollectionPublicPath) 
+wet acct2Capabiwity = a-acct2.getCapability(ExampleNFT.CollectionPublicPath) 
 
-    // borrow references from the capabilities
-    let nft1Ref = acct1Capability.borrow<&{ExampleNFT.NFTReceiver}>()
-        ?? panic("Could not borrow acct1 nft collection reference")
+/-// bowwow wefewences fwom t-the capabiwities 
+wet n-nft1Wef = a-acct1Capability.borrow<&{ExampleNFT.NFTReceiver}>() 
+?? panyic("Couwd nyot bowwow acct1 n-nft cowwection wefewence") 
 
-    let nft2Ref = acct2Capability.borrow<&{ExampleNFT.NFTReceiver}>()
-        ?? panic("Could not borrow acct2 nft collection reference")
+wet nft2Wef = acct2Capability.borrow<&{ExampleNFT.NFTReceiver}>() 
+?? panyic("Couwd nyot bowwow acct2 n-nft cowwection wefewence") 
 
-    // Print both collections as arrays of IDs
-    log("Account 1 NFTs")
-    log(nft1Ref.getIDs())
+/-// Pwint both cowwections as awways of IDs 
+wog("Account 1 NFTs") 
+(o^▽^o) *dances nervously* w-log(nft1Ref.getIDs()) 
 
-    log("Account 2 NFTs")
-    log(nft2Ref.getIDs())
+wog("Account 2-2 NFTs") 
+log(nft2Ref.getIDs()) 
 
-    // verify that the collections are correct
-    if nft1Ref.getIDs()[0] != 1 || nft2Ref.getIDs().length != 0 {
-        panic("Wrong Collections!")
-    }
-}
-```
+/-// vewify that t-the cowwections awe c-cowwect 
+if nft1Ref.getIDs()[0] != 1 || nft2Ref.getIDs().length != 0 { 
+(*´▽`*) *teleports behind you* p-panyic("Wwong Cowwections!") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-10. The script should not panic and you should see something like this output
+10. The scwipt shouwd nyot panyic and you shouwd s-see something w-wike this output 
 
-```
-"Account 1 Vault Balance"
-40
-"Account 2 Vault Balance"
-20
-"Account 1 NFTs"
-[1]
-"Account 2 NFTs"
-[]
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"-"Account 1 Vauwt Bawance" 
+40 
+"-"Account 2-2 Vauwt Bawance" 
+20 
+"-"Account 1 N-NFTs" 
+[1] 
+"-"Account 2-2 N-NFTs" 
+[] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
----
+----- 
 
-With your playground now in the correct state, you're ready to continue with the next tutorial.
+With youw pwaygwound nyow in t-the c-cowwect s-state, you'we weady to continyue with t-the nyext t-tutowiaw. 
 
-You do not need to open a new playground session for the marketplace tutorial. You can just continue using this one.
+You (^-^*)/ *cuddles you* d-do nyot nyeed to open a nyew pwaygwound (⌒▽⌒)☆ *looks at you* s-session (╬ Ò﹏Ó) *giggles shyly* f-fow t-the m-mawketpwace t-tutowiaw. You c-can just continyue using this onye. 

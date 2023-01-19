@@ -1,276 +1,276 @@
----
-title: 10. Composable Resources
----
+----- 
+titwe: 10. C-Composabwe Wesouwces 
+----- 
 
-In this tutorial, we're going to walk through how resources can own other resources by creating, deploying, and moving composable NFTs.
+In this tutowiaw, we'we g-going to wawk thwough how wesouwces c-can own othew wesouwces by c-cweating, depwoying, and moving composabwe NFTs. 
 
----
+----- 
 
-<Callout type="info">
-  Open the starter code for this tutorial in the Flow Playground:
-  <a 
-    href="https://play.onflow.org/01f812d7-799a-42fd-b9cb-9ffe556e02ad"
-    target="_blank"
-  >
-    https://play.onflow.org/01f812d7-799a-42fd-b9cb-9ffe556e02ad
-  </a>
-  <br/>
-  The tutorial will be asking you do take various actions to interact with this code.
-</Callout>
+<Cawwout type="info"> 
+Open t-the stawtew code (╬ Ò﹏Ó) *giggles shyly* f-fow this t-tutowiaw in t-the Fwow Pwaygwound: 
+<a 
+href="https://play.onflow.org/01f812d7-799a-42fd-b9cb-9ffe556e02ad" 
+tawget="_bwank" 
+> 
+https://play.onflow.org/01f812d7-799a-42fd-b9cb-9ffe556e02ad 
+</a> 
+<bw/> 
+The t-tutowiaw wiww be asking you (^-^*)/ *cuddles you* d-do o(>ω<)o *sweats* t-take vawious actions to (o^▽^o) *dances nervously* i-intewact with this c-code. 
+</Cawwout> 
 
-<Callout type="info">
-Instructions that require you to take action are always included in a callout box like this one.
-These highlighted actions are all that you need to do to get your code running,
-but reading the rest is necessary to understand the language's design.
-</Callout>
+<Cawwout type="info"> 
+Instwuctions that wequiwe you to o(>ω<)o *sweats* t-take action awe awways i-incwuded in a cawwout box w-wike this onye. 
+These highwighted actions awe (＾▽＾') *cuddles you* a-aww that you nyeed to (^-^*)/ *cuddles you* d-do to get youw code wunnying, 
+but weading t-the w-west is nyecessawy to undewstand t-the wanguage's ต(=ω=)ต *shuffles closer* d-design. 
+</Cawwout> 
 
-Resources owning other resources is a powerful feature in the world of blockchain and smart contracts.
-To showcase how this feature works on Flow, this tutorial will take you through these steps with a composable NFT:
+Wesouwces ownying othew wesouwces is a p-powewfuw featuwe in t-the wowwd of bwockchain and smawt ~(>_<~) *screams* c-contwacts. 
+To showcase how this featuwe wowks on Fwow, this t-tutowiaw wiww o(>ω<)o *sweats* t-take you thwough these steps with a composabwe NFT: 
 
-1. Deploy the `Kitty` and `KittyHat` definitions to account `0x01`
-2. Create a `Kitty` and two `KittyHat`s and store them in your account
-3. Move the Kitties and Hats around to see how composable NFTs function on Flow
+1. Depwoy t-the `Kitty` and `-`KittyHat` definyitions to ( ~*-*)~ *cries* a-account `0x01` 
+2-2. Cweate a `Kitty` and two `KittyHat`s and stowe t-them in youw ( ~*-*)~ *cries* a-account 
+3. Move t-the Kitties and Hats awound to s-see how composabwe N-NFTs f-function on Fwow 
 
-**Before proceeding with this tutorial**, we recommend following the instructions in [Getting Started](01-first-steps)
-and [Hello, World!](02-hello-world) to learn about the Playground and Cadence.
+*-**Befowe pwoceeding with this tutowiaw**, we wecommend fowwowing t-the instwuctions in [Getting Stawted](01-fiwst-steps) 
+and [-[Hewwo, Wowwd!](02-hewwo-wowwd) to weawn about t-the Pwaygwound and Cadence. 
 
 
-## Resources Owning Resources
+#-## Wesouwces Ownying Wesouwces 
 
----
+----- 
 
-The NFT collections talked about in [Non-Fungible Tokens](05-non-fungible-tokens-1) are examples of resources that own other resources.
-We have a resource, the NFT collection, that has ownership of the NFT resources that are stored within it.
-The owner and anyone with a reference can move these resources around,
-but they still belong to the collection while they are in it and the code defined in the collection has ultimate control over the resources.
+The NFT cowwections t-tawked about in [-[Nyon-Fungibwe Tokens](05-nyon-fungibwe-tokens-1) awe (-_-) *dances nervously* e-exampwes of wesouwces that own othew wesouwces. 
+We have a wesouwce, t-the NFT cowwection, that has ownyewship of t-the NFT wesouwces that awe stowed within it. 
+The ownyew and anyonye with a wefewence c-can move these wesouwces awound, 
+but they stiww bewong to t-the cowwection whiwe they awe in it and t-the code definyed in t-the cowwection has u-uwtimate contwow o-ovew t-the wesouwces. 
 
-When the collection is moved or destroyed, all of the NFTs inside of it are moved or destroyed with it.
+When t-the cowwection is moved ow destwoyed, (＾▽＾') *cuddles you* a-aww of t-the N-NFTs inside of it awe moved ow destwoyed with it. 
 
-If the owner of the collection transferred the whole collection resource to another user's account,
-all of the tokens will move to the other user's account with it. The tokens don't stay in the original owner's account.
-This is like handing someone your wallet instead of just a dollar bill. It isn't a common action, but certainly is possible.
+If t-the ownyew of t-the cowwection twansfewwed t-the w-whowe cowwection wesouwce to anyothew usew's account, 
+(＾▽＾') *cuddles you* a-aww of t-the tokens wiww move to t-the othew usew's ( ~*-*)~ *cries* a-account with it. The tokens (・_・ヾ) *looks at you* d-don't stay in t-the o-owiginyaw ownyew's account. 
+This is w-wike h-handing s-someonye youw wawwet instead of just a d-dowwaw biww. I-It isn't a common a-action, but cewtainwy is p-possibwe. 
 
-References cannot be created for resources that are stored in other resources.
-The owning resource has control over it and therefore controls the type of access that external calls have on the stored resource.
+Wefewences c-cannyot be cweated (╬ Ò﹏Ó) *giggles shyly* f-fow wesouwces that awe stowed in othew wesouwces. 
+The ownying wesouwce has contwow o-ovew it and thewefowe contwows t-the t-type of a-access that extewnyaw c-cawws have on t-the stowed w-wesouwce. 
 
-## Resources Owning Resources: An Example
+#-## Wesouwces Ownying Wesouwces: An Exampwe 
 
----
+----- 
 
-The NFT collection is a simple example of how resources can own other resources, but innovative and more powerful versions can be made.
+The NFT cowwection is a simpwe e-exampwe of how wesouwces c-can own othew wesouwces, but innyovative and mowe p-powewfuw vewsions c-can be made. 
 
-An important feature of CryptoKitties (and other applications on the Ethereum blockchain) is that any developer can make new experiences around the existing application.
-Even though the original contract didn't include specific support for CryptoKitty accessories (like hats), an independent developer was still able to make hats that Kitties from the original contract could use.
+An impowtant featuwe of CwyptoKitties (and othew appwications on t-the E-Etheweum bwockchain) is that any devewopew c-can make nyew e-expewiences awound t-the existing (☆ω☆) *whines* a-appwication. 
+Even t-though t-the o-owiginyaw contwact didn't i-incwude specific suppowt (╬ Ò﹏Ó) *giggles shyly* f-fow CwyptoKitty accessowies (-(wike h-hats), an i-independent devewopew w-was stiww abwe to make hats that Kitties fwom t-the o-owiginyaw contwact couwd use. 
 
-Here is a basic example of how we can replicate this feature in Cadence:
+Hewe is a basic e-exampwe of how we c-can wepwicate this featuwe in Cadence: 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the account `0x01` tab which has the contract named `KittyVerse.cdc`. Deploy the code to account `0x01`
+Open t-the ( ~*-*)~ *cries* a-account `0x01` tab which has t-the contwact nyamed `KittyVewse.cdc`. Depwoy t-the code to ( ~*-*)~ *cries* a-account `0x01` 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=KittyVerse.cdc
-// KittyVerse.cdc
-//
-// The KittyVerse contract defines two types of NFTs.
-// One is a KittyHat, which represents a special hat, and
-// the second is the Kitty resource, which can own Kitty Hats.
-//
-// You can put the hats on the cats and then call a hat function
-// that tips the hat and prints a fun message.
-//
-// This is a simple example of how Cadence supports
-// extensibility for smart contracts, but the language will soon
-// support even more powerful versions of this.
-//
+`-```cadence:title=KittyVerse.cdc 
+/-// K-KittyVerse.cdc 
+/-// 
+/-// The KittyVewse contwact definyes two t-types of NFTs. 
+/-// Onye is a K-KittyHat, which wepwesents a speciaw hat, and 
+/-// t-the second is t-the Kitty wesouwce, which c-can own Kitty Hats. 
+/-// 
+/-// You c-can put t-the hats on t-the cats and t-then caww a hat f-function 
+/-// that tips t-the hat and pwints a fun message. 
+/-// 
+/-// This is a simpwe e-exampwe of how C-Cadence suppowts 
+/-// e-extensibiwity (╬ Ò﹏Ó) *giggles shyly* f-fow smawt contwacts, but t-the wanguage wiww soon 
+/-// suppowt even mowe p-powewfuw vewsions of this. 
+/-// 
 
-pub contract KittyVerse {
+pub contwact KittyVewse { 
 
-    // KittyHat is a special resource type that represents a hat
-    pub resource KittyHat {
-        pub let id: Int
-        pub let name: String
+/-// K-KittyHat is a speciaw wesouwce t-type that wepwesents a hat 
+pub wesouwce K-KittyHat { 
+pub wet id: Int 
+pub wet nyame: Stwing 
 
-        init(id: Int, name: String) {
-            self.id = id
-            self.name = name
-        }
+i-inyit(id: Int, nyame: Stwing) { 
+self.id = id 
+self.name = nyame 
+} 
 
-        // An example of a function someone might put in their hat resource
-        pub fun tipHat(): String {
-            if self.name == "Cowboy Hat" {
-                return "Howdy Y'all"
-            } else if self.name == "Top Hat" {
-                return "Greetings, fellow aristocats!"
-            }
+/-// An e-exampwe of a f-function s-someonye m-might put in theiw hat wesouwce 
+pub fun tipHat(): Stwing { 
+if self.name == "Cowboy Hat" { 
+(´-ω-`) *screams* w-wetuwn "Howdy Y'aww" 
+} ewse if self.name == "-"Top Hat" { 
+(´-ω-`) *screams* w-wetuwn (⌒▽⌒)☆ *looks at you* "-"Gweetings, f-fewwow awistocats!" 
+} 
 
-            return "Hello"
-        }
-    }
+(´-ω-`) *screams* w-wetuwn "Hewwo" 
+} 
+} 
 
-    // Create a new hat
-    pub fun createHat(id: Int, name: String): @KittyHat {
-        return <-create KittyHat(id: id, name: name)
-    }
+/-// Cweate a nyew hat 
+pub fun c-cweateHat(id: Int, nyame: Stwing): @KittyHat { 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate KittyHat(id: id, nyame: nyame) 
+} 
 
-    pub resource Kitty {
+pub wesouwce Kitty { 
 
-        pub let id: Int
+pub wet id: Int 
 
-        // place where the Kitty hats are stored
-        pub var items: @{String: KittyHat}
+/-// pwace whewe t-the Kitty hats awe stowed 
+pub vaw items: @{Stwing: KittyHat} 
 
-        init(newID: Int) {
-            self.id = newID
-            self.items <- {}
-        }
+inyit(nyewID: Int) { 
+self.id = n-nyewID 
+self.items <- (☆ω☆) *steals ur resource* {-{} 
+} 
 
-        pub fun getKittyItems(): @{String: KittyHat} {
-            var other: @{String:KittyHat} <- {}
-            self.items <-> other
-            return <- other
-        }
+pub fun getKittyItems(): @{Stwing: KittyHat} { 
+vaw othew: @{Stwing:KittyHat} <- (☆ω☆) *steals ur resource* {-{} 
+self.items <-> othew 
+(´-ω-`) *screams* w-wetuwn <- othew 
+} 
 
-        pub fun setKittyItems(items: @{String: KittyHat}) {
-            var other <- items
-            self.items <-> other
-            destroy other
-        }
+pub fun setKittyItems(items: @{Stwing: KittyHat}) { 
+vaw othew <- i-items 
+self.items <-> othew 
+d-destwoy othew 
+} 
 
-        pub fun removeKittyItem(key: String): @KittyHat? {
-            var removed <- self.items.remove(key: key)
-            return <- removed
-        }
+pub fun wemoveKittyItem(key: Stwing): @KittyHat? { 
+vaw w-wemoved <- self.items.remove(key: key) 
+(´-ω-`) *screams* w-wetuwn <- w-wemoved 
+} 
 
-        destroy() {
-            destroy self.items
-        }
-    }
+destwoy() { 
+d-destwoy self.items 
+} 
+} 
 
-    pub fun createKitty(): @Kitty {
-        return <-create Kitty(newID: 1)
-    }
+pub fun c-cweateKitty(): @Kitty { 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate Kitty(nyewID: 1) 
+} 
 
-}
+} 
 
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-These definitions show how a Kitty resource could own hats.
+These definyitions show how a Kitty wesouwce couwd own hats. 
 
-The hats are stored in a variable in the Kitty resource.
+The hats awe stowed in a vawiabwe in t-the Kitty w-wesouwce. 
 
-```cadence
-    // place where the Kitty hats are stored
-    pub var items: <-{String: KittyHat}
-```
+```cadence 
+/-// pwace whewe t-the Kitty hats awe stowed 
+pub vaw items: <-{Stwing: KittyHat} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-A Kitty owner can take the hats off the Kitty and transfer them individually. Or the owner can transfer a Kitty that owns a hat, and the hat will go along with the Kitty.
+A-A Kitty ownyew c-can o(>ω<)o *sweats* t-take t-the hats off t-the Kitty and t-twansfew t-them individuawwy. Ow t-the ownyew c-can t-twansfew a Kitty that o-owns a hat, and t-the hat wiww go awong with t-the Kitty. 
 
-Here is a transaction to create a `Kitty` and a `KittyHat`, store the hat in the Kitty, then store it in your account storage.
+Hewe is a twansaction to cweate a `Kitty` and a (^=◕ᴥ◕=^) *looks at you* `-`KittyHat`, stowe t-the hat in t-the Kitty, t-then stowe it in youw ( ~*-*)~ *cries* a-account stowage. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open `Transaction1.cdc`. <br/>
-Select account `0x01` as the only signer<br/>
-Send the transaction by clicking the Send button. <br/>
-`Transaction1.cdc` should contain the following code:
+Open `-`Twansaction1.cdc`. <bw/> 
+Sewect ( ~*-*)~ *cries* a-account `0x01` as t-the onwy signyew<bw/> 
+Send t-the twansaction by cwicking t-the Send button. <bw/> 
+`Transaction1.cdc` shouwd uWu *whines* c-contain t-the fowwowing code: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Transaction1.cdc
-import KittyVerse from 0x01
+```cadence:title=Transaction1.cdc 
+i-impowt KittyVewse fwom 0x01 
 
-// This transaction creates a new kitty, creates two new hats and
-// puts the hats on the cat. Then it stores the kitty in account storage.
-transaction {
-    prepare(acct: AuthAccount) {
+/-// This twansaction cweates a nyew kitty, cweates two nyew hats and 
+/-// puts t-the hats on t-the cat. T-Then it stowes t-the k-kitty in ( ~*-*)~ *cries* a-account stowage. 
+twansaction { 
+pwepawe(acct: AuthAccount) { 
 
-        // Create the Kitty object
-        let kitty <- KittyVerse.createKitty()
+/-// Cweate t-the Kitty object 
+wet k-kitty <- KittyVerse.createKitty() 
 
-        // Create the KittyHat objects
-        let hat1 <- KittyVerse.createHat(id: 1, name: "Cowboy Hat")
-        let hat2 <- KittyVerse.createHat(id: 2, name: "Top Hat")
+/-// Cweate t-the K-KittyHat objects 
+wet hat1 <- (^-^*)/ *teleports behind you* K-KittyVerse.createHat(id: 1, nyame: "Cowboy Hat") 
+wet hat2 <- (^-^*)/ *teleports behind you* K-KittyVerse.createHat(id: 2, nyame: "-"Top Hat") 
 
-        let kittyItems <- kitty.getKittyItems()
+wet kittyItems <- kitty.getKittyItems() 
 
-        // Put the hat on the cat!
-        let oldCowboyHat <- kittyItems["Cowboy Hat"] <- hat1
-        destroy oldCowboyHat
-        let oldTopHat <- kittyItems["Top Hat"] <- hat2
-        destroy oldTopHat
+/-// Put t-the hat on t-the cat! 
+wet owdCowboyHat <- kittyItems["Cowboy Hat"] <- hat1 
+d-destwoy owdCowboyHat 
+wet o-owdTopHat <- kittyItems["Top Hat"] <- hat2 
+d-destwoy o-owdTopHat 
 
-        kitty.setKittyItems(items: <-kittyItems)
+kitty.setKittyItems(items: <-<-kittyItems) 
 
-        log("The cat has the hats")
+wog("The cat has t-the hats") 
 
-        // Store the Kitty in storage
-        acct.save(<-kitty, to: /storage/kitty)
-    }
-}
-```
+/-// S-Stowe t-the Kitty in stowage 
+acct.save(<-kitty, to: /stowage/kitty) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-You should see an output that looks something like this:
+You shouwd s-see an output that wooks something w-wike this: 
 
-```
-> "The Cat has the Hats"
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+> "The C-Cat has t-the Hats" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Now we can run a transaction to move the Kitty along with its hat, remove the cowboy hat from the Kitty, then make the Kitty tip its hat.
+Nyow we c-can w-wun a twansaction to move t-the Kitty awong with its hat, w-wemove t-the c-cowboy hat fwom t-the Kitty, t-then make t-the Kitty t-tip its hat. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open `Transaction2.cdc`<br/>
-Select account `0x01` as the only signer.<br/>
-Send the transaction.<br/>
-Transaction2.cdc` should contain the following code:
+Open `Transaction2.cdc`<br/> 
+Sewect ( ~*-*)~ *cries* a-account `0x01` as t-the onwy s-signyew.<bw/> 
+Send t-the (つ✧ω✧)つ *whines* t-twansaction.<bw/> 
+Transaction2.cdc` shouwd uWu *whines* c-contain t-the fowwowing code: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Transaction2.cdc
-import KittyVerse from 0x01
+```cadence:title=Transaction2.cdc 
+i-impowt KittyVewse fwom 0x01 
 
-// This transaction moves a kitty out of storage, takes the cowboy hat off of the kitty,
-// calls its tip hat function, and then moves it back into storage.
-transaction {
-    prepare(acct: AuthAccount) {
+/-// This twansaction moves a k-kitty out of stowage, t-takes t-the c-cowboy hat off of t-the kitty, 
+/-// c-cawws its t-tip hat function, and t-then moves it back into stowage. 
+twansaction { 
+pwepawe(acct: AuthAccount) { 
 
-        // Move the Kitty out of storage, which also moves its hat along with it
-        let kitty <- acct.load<@KittyVerse.Kitty>(from: /storage/kitty)
-            ?? panic("Kitty doesn't exist!")
+/-// Move t-the Kitty out of stowage, which awso moves its hat awong with it 
+wet k-kitty <- (*^.^*) *cries* a-acct.load<@KittyVerse.Kitty>(from: /stowage/kitty) 
+?? panyic("Kitty d-doesn't e-exist!") 
 
-        // Take the cowboy hat off the Kitty
-        let cowboyHat <- kitty.removeKittyItem(key: "Cowboy Hat")
-            ?? panic("cowboy hat doesn't exist!")
+/-// Take t-the c-cowboy hat off t-the Kitty 
+wet cowboyHat <- kitty.removeKittyItem(key: "Cowboy Hat") 
+?? p-panyic("cowboy hat d-doesn't e-exist!") 
 
-        // Tip the cowboy hat
-        log(cowboyHat.tipHat())
-        destroy cowboyHat
+/-// Tip t-the c-cowboy hat 
+(*´▽`*) *dances nervously* w-log(cowboyHat.tipHat()) 
+d-destwoy cowboyHat 
 
-        // Tip the top hat that is on the Kitty
-        log(kitty.items["Top Hat"]?.tipHat())
+/-// Tip t-the top hat that is on t-the Kitty 
+log(kitty.items["Top Hat"]?.tipHat()) 
 
-        // Move the Kitty to storage, which
-        // also moves its hat along with it.
-        acct.save(<-kitty, to: /storage/kitty)
-    }
-}
-```
+/-// Move t-the Kitty to stowage, which 
+/-// awso moves its hat awong with it. 
+acct.save(<-kitty, to: /stowage/kitty) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-You should see something like this output:
+You shouwd s-see something w-wike this output: 
 
-```
-> "Howdy Y'all"
-> "Greetings, fellow aristocats!"
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+> "Howdy Y'aww" 
+> (⌒▽⌒)☆ *looks at you* "-"Gweetings, f-fewwow awistocats!" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Whenever the Kitty is moved, its hats are implicitly moved along with it. This is because the hats are owned by the Kitty.
+Whenyevew t-the Kitty is moved, its hats awe impwicitwy moved awong with it. This is because t-the hats awe ownyed by t-the Kitty. 
 
-## The Future is Meow! Extensibility is coming!
+#-## The Futuwe is Meow! Extensibiwity is coming! 
 
----
+----- 
 
-The above is a simple example of composable resources. We had to explicitly say that a Kitty could own a Hat in this example, but in the near future, Cadence will support more powerful ways of achieving resource extensibility where developers can declare types that separate resources can own even if the owning resource never specified the ownership possibility in the first place. This is a very complex problem to solve in a safe way, and the Flow community is working very hard to design a solution for this, but it is coming.
+The a-above is a simpwe e-exampwe of composabwe wesouwces. We h-had to e-expwicitwy say that a Kitty couwd own a Hat in this e-exampwe, but in t-the (=^･ω･^=) *dances nervously* n-nyeaw f-futuwe, C-Cadence wiww suppowt mowe p-powewfuw ways of achieving wesouwce e-extensibiwity whewe devewopews c-can decwawe t-types that sepawate wesouwces c-can own even if t-the ownying wesouwce nyevew s-specified t-the ownyewship >w< *looks away* p-possibiwity in t-the fiwst pwace. This is a vewy compwex pwobwem to sowve in a safe way, and t-the Fwow communyity is wowking vewy hawd to design a sowution (╬ Ò﹏Ó) *giggles shyly* f-fow this, but it is coming. 
 
-Practice what you're learned in the Flow Playground!
+P-Pwactice what you'we (つ≧▽≦)つ *looks away* w-weawnyed in t-the Fwow Pwaygwound! 

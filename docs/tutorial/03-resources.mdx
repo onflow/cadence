@@ -1,516 +1,516 @@
----
-archived: false
-draft: false
-title: 3. Resource Contract Tutorial
-description: An introduction to resources, capabilities, and account storage in Cadence
-date: 2022-05-10
-meta:
-  keywords:
-    - tutorial
-    - Flow
-    - Cadence
-    - Resources
-    - Capabilities
-tags:
-  - reference
-  - cadence
-  - tutorial
-socialImageTitle: Cadence Resources
-socialImageDescription: Resource smart contract image.
----
-
-## Overview
-
-<Callout type="success">
-  Open the starter code for this tutorial in the Flow Playground: <br />
-  <a
-    href="https://play.onflow.org/b70199ae-6488-4e58-ae58-9f4ffecbd66a"
-    target="_blank"
-  >
-    https://play.onflow.org/b70199ae-6488-4e58-ae58-9f4ffecbd66a
-  </a>
-  <br />
-  The tutorial will ask you to take various actions to interact with this code.
-</Callout>
-<Callout type="info">
-  Instructions that require you to take action are always included in a callout
-  box like this one. These highlighted actions are all that you need to do to
-  get your code running, but reading the rest is necessary to understand the
-  language's design.
-</Callout>
-
-This tutorial builds on the previous `Hello World` tutorial.
-Before beginning this tutorial, you should understand :
-
-- [Accounts](../language/accounts)
-- [Transactions](../language/transactions)
-- Signers
-- [Field types](../language/composite-types)
-
-This tutorial will build on your understanding of accounts and how to interact with them by introducing resources.
-Resources are one of the Cadence's defining features.
-In Cadence, resources are a composite type like a struct or a class, but with some special rules.
-
-Resources are useful when you want to model direct ownership.
-Traditional structs or classes from other conventional programming languages are not an ideal way to represent ownership because they can be _copied_.
-This means a coding error can easily result in creating multiple copies of the same asset, which breaks the scarcity requirements needed for these assets to have real value.
-We have to consider loss and theft at the scale of a house, a car, or a bank account with millions of dollars, or a horse.
-Resources, in turn, solve this problem by making creation, destruction, and movement of assets explicit.
-
-In this tutorial, you will:
-
-1. Deploy a contract that declares a resource
-2. Save the resource into the account storage
-3. Interact with the resource we created using a transaction
-
-## Implementing a Contract with Resources
-
----
-
-To interact with resources, you'll learn a few important concepts:
-
-- Using the create keyword
-- The move operator `<-`
-- The [Account Storage API](../language/accounts#account-storage-api)
-
-Let's start by looking at how to create a resource with the `create` keyword and the move operator `<-`.
-
-You use the `create` keyword used to initialize a resource.
-Resources **must** be created before you can use them.
-
-The move operator `<-` is used to move a resource into a variable.
-You cannot use the assignment operator `=` with resources, so when you initialize a resource you will need to use the move operator `<-`.
-
-<Callout type="info">
-
-Open the Account `0x01` tab with file named `HelloWorldResource.cdc`. <br />
-`HelloWorldResource.cdc` should contain the following code:
-
-</Callout>
-
-```cadence:title=HelloWorldResource.cdc
-pub contract HelloWorld {
-
-    // Declare a resource that only includes one function.
-    pub resource HelloAsset {
-
-        // A transaction can call this function to get the "Hello, World!"
-        // message from the resource.
-        pub fun hello(): String {
-            return "Hello, World!"
-        }
-    }
+----- 
+awchived: f-fawse 
+dwaft: f-fawse 
+titwe: 3. Wesouwce Contwact Tutowiaw 
+d-descwiption: An intwoduction to wesouwces, capabiwities, and ( ~*-*)~ *cries* a-account stowage in C-Cadence 
+date: 2-2022-05-10 
+meta: 
+keywowds: 
+(✧ω✧) *teleports behind you* --- t-tutowiaw 
+(✧ω✧) *teleports behind you* --- Fwow 
+(✧ω✧) *teleports behind you* --- C-Cadence 
+(✧ω✧) *teleports behind you* --- Wesouwces 
+(✧ω✧) *teleports behind you* --- Capabiwities 
+tags: 
+(✧ω✧) *teleports behind you* --- wefewence 
+(✧ω✧) *teleports behind you* --- cadence 
+(✧ω✧) *teleports behind you* --- t-tutowiaw 
+sociawImageTitwe: C-Cadence Wesouwces 
+(o･ω･o) *leans over* s-sociawImageDescwiption: Wesouwce smawt contwact image. 
+----- 
+
+#-## Ovewview 
+
+<Cawwout type="success"> 
+Open t-the stawtew code (╬ Ò﹏Ó) *giggles shyly* f-fow this t-tutowiaw in t-the Fwow Pwaygwound: <-<bw /> 
+<a 
+href="https://play.onflow.org/b70199ae-6488-4e58-ae58-9f4ffecbd66a" 
+tawget="_bwank" 
+> 
+h-https://play.onflow.org/b70199ae-6488-4e58-ae58-9f4ffecbd66a 
+</a> 
+<-<bw /> 
+The t-tutowiaw wiww ask you to o(>ω<)o *sweats* t-take vawious actions to (o^▽^o) *dances nervously* i-intewact with this c-code. 
+</Cawwout> 
+<Cawwout type="info"> 
+Instwuctions that wequiwe you to o(>ω<)o *sweats* t-take action awe awways i-incwuded in a cawwout 
+box w-wike this onye. These highwighted actions awe (＾▽＾') *cuddles you* a-aww that you nyeed to (^-^*)/ *cuddles you* d-do to 
+get youw code wunnying, but weading t-the w-west is nyecessawy to undewstand t-the 
+wanguage's ต(=ω=)ต *shuffles closer* d-design. 
+</Cawwout> 
+
+This t-tutowiaw buiwds on t-the pwevious `-`Hewwo Wowwd` t-tutowiaw. 
+Befowe beginnying this tutowiaw, you shouwd undewstand : 
+
+(✧ω✧) *teleports behind you* --- [Accounts](../wanguage/accounts) 
+(✧ω✧) *teleports behind you* --- [Twansactions](../wanguage/twansactions) 
+(✧ω✧) *teleports behind you* --- Signyews 
+(✧ω✧) *teleports behind you* --- [Fiewd types](../wanguage/composite-types) 
+
+This t-tutowiaw wiww buiwd on youw undewstanding of a-accounts and how to (o^▽^o) *dances nervously* i-intewact with t-them by intwoducing wesouwces. 
+Wesouwces awe onye of t-the Cadence's d-definying featuwes. 
+In Cadence, wesouwces awe a composite t-type w-wike a stwuct ow a c-cwass, but with s-some speciaw (^ω~) *whines* w-wuwes. 
+
+Wesouwces awe usefuw when you want to modew (♡°▽°♡) *giggles shyly* d-diwect ownyewship. 
+Twaditionyaw stwucts ow ^-^ *whines* c-cwasses fwom othew conventionyaw pwogwamming wanguages awe nyot an ideaw w-way to wepwesent ownyewship because they c-can be _copied_. 
+This means a c-coding ewwow c-can easiwy wesuwt in cweating muwtipwe c-copies of t-the same asset, which bweaks t-the scawcity wequiwements n-nyeeded (╬ Ò﹏Ó) *giggles shyly* f-fow these assets to have weaw vawue. 
+We have to considew w-woss and theft a-at t-the scawe of a h-house, a caw, ow a bank ( ~*-*)~ *cries* a-account with miwwions of dowwaws, ow a howse. 
+Wesouwces, in tuwn, sowve this pwobwem by making (⌒ω⌒) *shuffles closer* c-cweation, destwuction, and movement of assets (*≧ω≦*) *looks away* e-expwicit. 
+
+In this tutowiaw, you (^=◕ᴥ◕=^) *sighs* w-wiww: 
+
+1. Depwoy a contwact that decwawes a wesouwce 
+2-2. Save t-the wesouwce into t-the ( ~*-*)~ *cries* a-account stowage 
+3. Intewact with t-the wesouwce we cweated using a twansaction 
+
+#-## Impwementing a Contwact with Wesouwces 
+
+----- 
+
+To (o^▽^o) *dances nervously* i-intewact with wesouwces, ^-^ *shuffles closer* y-you'ww weawn a f-few impowtant c-concepts: 
+
+(✧ω✧) *teleports behind you* --- Using t-the cweate keywowd 
+(✧ω✧) *teleports behind you* --- The move opewatow `<-` 
+(✧ω✧) *teleports behind you* --- The [Account Stowage API](../wanguage/accounts#account-stowage-api) 
+
+Wet's stawt by wooking a-at how to cweate a wesouwce with t-the `cweate` keywowd and t-the move opewatow `<-`. 
+
+You use t-the `cweate` keywowd used to inyitiawize a w-wesouwce. 
+Wesouwces **must** be cweated befowe you c-can use them. 
+
+The move opewatow `<-` is used to move a wesouwce into a vawiabwe. 
+You c-cannyot use t-the assignment opewatow `=` with wesouwces, so when you inyitiawize a wesouwce you wiww nyeed to use t-the move opewatow `<-`. 
+
+<Cawwout type="info"> 
+
+Open t-the Account `0x01` tab with fiwe nyamed `HewwoWowwdWesouwce.cdc`. <-<bw /> 
+`HelloWorldResource.cdc` shouwd uWu *whines* c-contain t-the fowwowing code: 
+
+</Cawwout> 
+
+```cadence:title=HelloWorldResource.cdc 
+pub contwact HewwoWowwd { 
+
+/-// Decwawe a wesouwce that onwy i-incwudes onye function. 
+pub wesouwce HewwoAsset { 
+
+/-// A-A twansaction c-can caww this f-function to get t-the "Hewwo, Wowwd!" 
+/-// message fwom t-the w-wesouwce. 
+pub fun hewwo(): Stwing { 
+(´-ω-`) *screams* w-wetuwn "Hewwo, Wowwd!" 
+} 
+} 
 
-    // We're going to use the built-in create function to create a new instance
-    // of the HelloAsset resource
-    pub fun createHelloAsset(): @HelloAsset {
-        return <-create HelloAsset()
-    }
+/-// We'we g-going to use t-the buiwt-in cweate f-function to cweate a nyew instance 
+/-// of t-the HewwoAsset wesouwce 
+pub fun cweateHewwoAsset(): @HewwoAsset { 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate HewwoAsset() 
+} 
 
-    init() {
-        log("Hello Asset")
-    }
-}
-```
+inyit() { 
+wog("Hewwo Asset") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Deploy this code to account `0x01` using the `Deploy` button.
+Depwoy this code to ( ~*-*)~ *cries* a-account `0x01` using t-the `Depwoy` button. 
 
-</Callout>
+</Cawwout> 
 
-We start by declaring a new `HelloWorld` contract in account `0x01`, inside this new `HelloWorld` contract we:
+We stawt by decwawing a nyew `HewwoWowwd` contwact in ( ~*-*)~ *cries* a-account `0x01`, inside this nyew `HewwoWowwd` contwact we: 
 
-1. Declare the resource `HelloAsset` with public scope `pub`
-2. Declare the function `hello()` inside `HelloAsset` with public scope `pub`
-3. Declare the function `createHelloAsset()` which will `create` a `HelloAsset` resource
-4. The `createHelloAsset()` function will use the the move operator (`<-`) to return the resource
+1. Decwawe t-the wesouwce `HewwoAsset` with pubwic scope `pub` 
+2-2. Decwawe t-the f-function `hewwo()` inside `HewwoAsset` with pubwic scope `pub` 
+3. Decwawe t-the f-function `cweateHewwoAsset()` which wiww `cweate` a `HewwoAsset` wesouwce 
+4-4. The `cweateHewwoAsset()` f-function wiww use t-the t-the move opewatow (`<-`) to (´-ω-`) *screams* w-wetuwn t-the wesouwce 
 
-This is another example of what we can do with a contract.
-Cadence can declare type definitions within deployed contracts.
-A type definition is simply a description of how a particular set of data is organized.
-It **isn't** a copy of that data on its own.
-Any account can import these definitions and use them to create an object that follows that definition or to interact with other objects of those types.
+This is anyothew e-exampwe of what we c-can (^-^*)/ *cuddles you* d-do with a contwact. 
+C-Cadence c-can decwawe t-type definyitions within depwoyed ~(>_<~) *screams* c-contwacts. 
+A-A t-type definyition is simpwy a (☆▽☆) *blushes* d-descwiption of how a pawticuwaw s-set of data is owganyized. 
+I-It *-**isn't** a copy of that data on its own. 
+Any ( ~*-*)~ *cries* a-account c-can i-impowt these definyitions and use t-them to cweate an object that f-fowwows that definyition ow to (o^▽^o) *dances nervously* i-intewact with othew objects of those types. 
 
-This contract that we just deployed declares a definition for the `HelloAsset` resource and a function to create the resource.
+This contwact that we just depwoyed decwawes a definyition (╬ Ò﹏Ó) *giggles shyly* f-fow t-the `HewwoAsset` wesouwce and a f-function to cweate t-the w-wesouwce. 
 
-Let's walk through this contract in more detail, starting with the resource.
-Resources are one of the most important things that Cadence introduces to the smart contract design experience:
+Wet's wawk thwough this contwact in mowe detaiw, stawting with t-the w-wesouwce. 
+Wesouwces awe onye of t-the most impowtant things that C-Cadence intwoduces to t-the smawt contwact design e-expewience: 
 
-```cadence
-pub resource HelloAsset {
-    pub fun hello(): String {
-        return "Hello, World!"
-    }
-}
-```
+```cadence 
+pub wesouwce HewwoAsset { 
+pub fun hewwo(): Stwing { 
+(´-ω-`) *screams* w-wetuwn "Hewwo, Wowwd!" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Resources
+### Wesouwces 
 
-The key difference between a resource and a struct or class is the access scope for resources:
+The key diffewence b-between a wesouwce and a stwuct ow c-cwass is t-the a-access scope (╬ Ò﹏Ó) *giggles shyly* f-fow wesouwces: 
 
-- Each instance of a resource can only exist in exactly one location and cannot be copied.
-  Here, location refers to account storage, a temporary variable in a function, a storage field in a contract, etc.
-- Resources must be explicitly moved from one location to another when accessed.
-- Resources also cannot go out of scope at the end of function execution.
-  They must be explicitly stored somewhere or destroyed.
+(✧ω✧) *teleports behind you* --- Each instance of a wesouwce c-can onwy exist in exactwy onye wocation and c-cannyot be copied. 
+Hewe, wocation w-wefews to ( ~*-*)~ *cries* a-account stowage, a (°ㅂ°╬) *looks at you* t-tempowawy vawiabwe in a function, a stowage fiewd in a c-contwact, etc. 
+(✧ω✧) *teleports behind you* --- Wesouwces (* ^ ω ^) *screams* m-must be e-expwicitwy moved fwom onye wocation to anyothew when accessed. 
+(✧ω✧) *teleports behind you* --- Wesouwces awso c-cannyot go out of scope a-at t-the end of f-function execution. 
+They (* ^ ω ^) *screams* m-must be e-expwicitwy stowed somewhewe ow destwoyed. 
 
-These characteristics make it impossible to accidentally lose a resource from a coding mistake.
+These chawactewistics make it impossibwe to accidentawwy wose a wesouwce fwom a c-coding mistake. 
 
-```cadence
-init() {
-// ...
-```
+```cadence 
+inyit() { 
+/-// ... 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-All composite types like contracts, resources,
-and structs can have an optional `init()` function that only runs when the object is initially created.
-Cadence requires that all fields must be explicitly initialized,
-so if the object has any fields,
-this function has to be used to initialize them.
+Aww composite t-types w-wike contwacts, wesouwces, 
+and stwucts c-can have an optionyaw `inyit()` f-function that onwy wuns when t-the object is inyitiawwy cweated. 
+C-Cadence wequiwes that (＾▽＾') *cuddles you* a-aww fiewds (* ^ ω ^) *screams* m-must be e-expwicitwy (*・ω・)ﾉ *shuffles closer* i-inyitiawized, 
+so if t-the object has any fiewds, 
+this f-function has to be used to inyitiawize them. 
 
-Contracts also have read and write access to the storage of the account that they are deployed to by using the built-in
-[`self.account`](../language/contracts) object.
-This is an [`AuthAccount` object](../language/accounts#authaccount)
-that gives them access to many different functions to interact with the private storage of the account.
+Contwacts awso have wead and wwite a-access to t-the stowage of t-the ( ~*-*)~ *cries* a-account that they awe depwoyed to by using t-the buiwt-in 
+[`sewf.account`](../wanguage/contwacts) object. 
+This is an [`AuthAccount` (o^▽^o) *giggles shyly* o-object](../wanguage/accounts#authaccount) 
+that gives t-them a-access to many diffewent functions to (o^▽^o) *dances nervously* i-intewact with t-the pwivate stowage of t-the account. 
 
-This contract's `init` function is simple, it logs the phrase `"Hello Asset"` to the console.
+This contwact's `inyit` f-function is s-simpwe, it (o･ω･o) *shuffles closer* w-wogs t-the phwase `"Hewwo Asset"` to t-the consowe. 
 
 
-**A resource can only be created in the scope that it is defined in.**
+**A wesouwce c-can onwy be cweated in t-the scope that it is definyed in.** 
 
-This prevents anyone from being able to create arbitrary amounts of resource objects that others have defined.
+This p-pwevents anyonye fwom being abwe to cweate awbitwawy amounts of wesouwce objects that othews have definyed. 
 
-### The Move Operator (`<-`)
+### The Move ヽ(>∀<☆)ノ *dances nervously* O-Opewatow (`<-`) 
 
-In this example, we declared a function that can create `HelloAsset` resources:
-```cadence
-pub fun createHelloAsset(): @HelloAsset {
-    return <-create HelloAsset()
-}
-```
-The `@` symbol specifies that it is a resource, of the type `HelloAsset` which we defined in the contract.
-This function uses the move operator to create a resource of type `HelloAsset` and return it
-To create a new resource object, we use the `create` keyword
+In this e-exampwe, we d-decwawed a f-function that c-can cweate `HewwoAsset` wesouwces: 
+```cadence 
+pub fun cweateHewwoAsset(): @HewwoAsset { 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate HewwoAsset() 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+The `-`@` symbow s-specifies that it is a wesouwce, of t-the t-type `HewwoAsset` which we definyed in t-the contwact. 
+This f-function uses t-the move opewatow to cweate a wesouwce of t-type `HewwoAsset` and (´-ω-`) *screams* w-wetuwn it 
+To cweate a nyew wesouwce object, we use t-the `cweate` keywowd 
 
-Here we use the `<-` symbol. [This is the move operator](../language/resources#the-move-operator--).
-The move operator `<-` replaces the assignment operator `=` in assignments that involve resources.
-To make the assignment of resources explicit, the move operator `<-` must be used when:
+Hewe we use t-the `<-` symbow. [This is t-the move opewatow](../wanguage/wesouwces#the-move-opewatow--). 
+The move opewatow `<-` wepwaces t-the assignment opewatow `=` in assignments that invowve wesouwces. 
+To make t-the assignment of wesouwces e-expwicit, t-the move opewatow `<-` (* ^ ω ^) *screams* m-must be used when: 
 
-- the resource is the initial value of a constant or variable,
-- the resource is moved to a different variable in an assignment,
-- the resource is moved to a function as an argument
-- the resource is returned from a function.
+(✧ω✧) *teleports behind you* --- t-the wesouwce is t-the inyitiaw vawue of a c-constant ow vawiabwe, 
+(✧ω✧) *teleports behind you* --- t-the wesouwce is moved to a diffewent vawiabwe in an assignment, 
+(✧ω✧) *teleports behind you* --- t-the wesouwce is moved to a f-function as an {{ (>_<) }} *leans over* a-awgument 
+(✧ω✧) *teleports behind you* --- t-the wesouwce is wetuwnyed fwom a function. 
 
-When a resource is moved, the old location is invalidated, and the object moves into the context of the new location.
+When a wesouwce is moved, t-the o-owd wocation is invawidated, and t-the object moves into t-the context of t-the nyew wocation. 
 
-So if I have a resource in the variable `first_resource`, like so:
+S-So if I have a wesouwce in t-the vawiabwe `-`fiwst_wesouwce`, w-wike so: 
 
-```cadence
-// Note the `@` symbol to specify that it is a resource
-var first_resource: @AnyResource <- create AnyResource()
-```
+```cadence 
+/-// Nyote t-the `-`@` symbow to specify that it is a wesouwce 
+vaw fiwst_wesouwce: (o^ ^o) *dances nervously* @-@AnyWesouwce <- cweate AnyWesouwce() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-and I want to assign it to a new variable, `second_resource`,
-after I do the assignment, `first_resource` is invalid because the underlying resource has been moved to the new variable.
+and I want to assign it to a nyew vawiabwe, `-`second_wesouwce`, 
+aftew I (^-^*)/ *cuddles you* d-do t-the assignment, `-`fiwst_wesouwce` is invawid because t-the undewwying wesouwce has b-been moved to t-the nyew vawiabwe. 
 
-```cadence
-var second_resource <- first_resource
-// first_resource is now invalid. Nothing can be done with it
-```
+```cadence 
+vaw second_wesouwce <- fiwst_wesouwce 
+/-// fiwst_wesouwce is nyow invawid. N-Nyothing c-can be donye with it 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Regular assignments of resources are not allowed because assignments only copy the value.
-Resources can only exist in one location at a time, so movement must be explicitly shown in the code by using the move operator `<-`.
+Weguwaw assignments of wesouwces awe nyot awwowed because assignments onwy copy t-the vawue. 
+Wesouwces c-can onwy exist in onye wocation a-at a time, so movement (* ^ ω ^) *screams* m-must be e-expwicitwy s-shown in t-the code by using t-the move opewatow `<-`. 
 
-### Create Hello Transaction
+### Cweate Hewwo Twansaction 
 
-Now we're going to use a transaction to that calls the `createHelloAsset()` function
-and saves a `HelloAsset` resource to the account storage.
+Nyow we'we g-going to use a twansaction to that c-cawws t-the `cweateHewwoAsset()` f-function 
+and saves a `HewwoAsset` wesouwce to t-the ( ~*-*)~ *cries* a-account stowage. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the transaction named `Create Hello`.
+Open t-the twansaction nyamed `-`Cweate Hewwo`. 
 
-<br />
+<-<bw /> 
 
-`Create Hello` should contain the following code:
+`-`Cweate Hewwo` shouwd uWu *whines* c-contain t-the fowwowing code: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=CreateHello.cdc
-// Transaction1.cdc
-// This transaction calls the createHelloAsset() function from the contract
-// to create a resource, then saves the resource in account storage using the "save" method.
-import HelloWorld from 0x01
+```cadence:title=CreateHello.cdc 
+/-// Transaction1.cdc 
+/-// This twansaction c-cawws t-the cweateHewwoAsset() f-function fwom t-the contwact 
+/-// to cweate a wesouwce, t-then saves t-the wesouwce in ( ~*-*)~ *cries* a-account stowage using t-the "save" method. 
+i-impowt HewwoWowwd fwom 0x01 
 
-transaction {
+twansaction { 
 
-	prepare(acct: AuthAccount) {
-        // Here we create a resource and move it to the variable newHello,
-        // then we save it in the account storage
-        let newHello <- HelloWorld.createHelloAsset()
+pwepawe(acct: AuthAccount) { 
+/-// Hewe we cweate a wesouwce and move it to t-the vawiabwe n-nyewHewwo, 
+/-// t-then we s-save it in t-the ( ~*-*)~ *cries* a-account stowage 
+wet nyewHewwo <- HelloWorld.createHelloAsset() 
 
-        acct.save(<-newHello, to: /storage/HelloAssetTutorial)
-    }
+acct.save(<-newHello, to: /-/stowage/HewwoAssetTutowiaw) 
+} 
 
-    // In execute, we log a string to confirm that the transaction executed successfully.
-	execute {
-        log("Saved Hello Resource to account.")
-	}
-}
-```
+/-// In execute, we wog a stwing to ⊂(･ω･*⊂) *sighs* c-confiwm that t-the twansaction executed successfuwwy. 
+execute { 
+wog("Saved Hewwo Wesouwce to account.") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Here's what this transaction does:
+Hewe's what this twansaction does: 
 
-1. Import the `HelloWorld` definitions from account `0x01`
-2. Uses the `createHelloAsset()` function to create a resource and move it to `newHello`
-3. `save` the created resource in the account storage of the account that deployed this contract, at the path `/storage/HelloAssetTutorial`
-4. `log` the text `HelloAsset created and stored` to the console.
+1. I-Impowt t-the `HewwoWowwd` definyitions fwom ( ~*-*)~ *cries* a-account `0x01` 
+2-2. Uses t-the `cweateHewwoAsset()` f-function to cweate a wesouwce and move it to `nyewHewwo` 
+3. `save` t-the cweated wesouwce in t-the ( ~*-*)~ *cries* a-account stowage of t-the ( ~*-*)~ *cries* a-account that depwoyed this c-contwact, a-at t-the ヽ(・∀・)ﾉ *screams* p-path `/stowage/HewwoAssetTutowiaw` 
+4-4. `wog` t-the t-text `HewwoAsset cweated and stowed` to t-the consowe. 
 
-This is our first transaction using the `prepare` phase!
-The `prepare` phase is the only place that has access to the signing accounts'
-[private `AuthAccount` object](../language/accounts#authaccount).
-`AuthAccount` objects have many different methods that are used to interact with account storage.
-You can see the documentation for all of these in the [account section of the language reference](../language/accounts#authaccount).
-In this tutorial, we'll be using `AuthAccount` methods to save and load from `/storage/`.
-The `prepare` phase can also create `/private/` and `/public/` links to the objects in `/storage/`,
-called [capabilities](../language/capability-based-access-control) (more on these later).
+This is ouw fiwst twansaction using t-the `pwepawe` phase! 
+The `pwepawe` phase is t-the onwy pwace that has a-access to t-the signying accounts' 
+[pwivate `AuthAccount` object](../wanguage/accounts#authaccount). 
+`AuthAccount` objects have many diffewent m-methods that awe used to (o^▽^o) *dances nervously* i-intewact with ( ~*-*)~ *cries* a-account stowage. 
+You c-can s-see t-the d-documentation (╬ Ò﹏Ó) *giggles shyly* f-fow (＾▽＾') *cuddles you* a-aww of these in t-the [account section of t-the wanguage wefewence](../wanguage/accounts#authaccount). 
+In this tutowiaw, we'ww be using `AuthAccount` m-methods to s-save and woad fwom `/stowage/`. 
+The `pwepawe` phase c-can awso cweate `-`/pwivate/` and `/pubwic/` w-winks to t-the objects in `/stowage/`, 
+cawwed [capabiwities](../wanguage/capabiwity-based-access-contwow) (-(mowe on these w-watew). 
 
-By not allowing the execute phase to access account storage,
-we can statically verify which assets and areas of the signers' storage a given transaction can modify.
-Browser wallets and applications that submit transactions for users can use this to show what a transaction could alter,
-giving users information about transactions that wallets will be executing for them,
-and confidence that they aren't getting fed a malicious or dangerous transaction from an app or wallet.
+By nyot a-awwowing t-the execute phase to a-access ( ~*-*)~ *cries* a-account stowage, 
+we c-can s-staticawwy vewify which assets and aweas of t-the signyews' stowage a given twansaction c-can modify. 
+Bwowsew w-wawwets and appwications that submit t-twansactions (╬ Ò﹏Ó) *giggles shyly* f-fow usews c-can use this to show what a twansaction couwd awtew, 
+giving usews infowmation about t-twansactions that w-wawwets wiww be executing (╬ Ò﹏Ó) *giggles shyly* f-fow t-them, 
+and confidence that they awen't getting fed a mawicious ow dangewous twansaction fwom an app ow wawwet. 
 
-Let's go over the transaction in more detail.
-To create a `HelloAsset` resource, we accessed the function `createHelloAsset()` from our contract, and moved the
-resource it created to the variable `newHello`.
+Wet's go o-ovew t-the twansaction in mowe d-detaiw. 
+To cweate a `HewwoAsset` wesouwce, we accessed t-the f-function `cweateHewwoAsset()` fwom ouw c-contwact, and moved t-the 
+wesouwce it cweated to t-the vawiabwe `-`nyewHewwo`. 
 
-```cadence
-let newHello <- HelloWorld.createHelloAsset()
-```
+```cadence 
+wet nyewHewwo <- HelloWorld.createHelloAsset() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Next, we save the resource to the account storage.
-We use the [account storage API](../language/accounts#account-storage-api) to interact with the account storage in Flow.
-To save the resource, we'll be using the
-[`save()`](../language/accounts#account-storage-api)
-method from the account storage API to store the resource in the account at the path `/storage/HelloAssetTutorial`.
+Nyext, we s-save t-the wesouwce to t-the ( ~*-*)~ *cries* a-account stowage. 
+We use t-the [account stowage API](../wanguage/accounts#account-stowage-api) to (o^▽^o) *dances nervously* i-intewact with t-the ( ~*-*)~ *cries* a-account stowage in Fwow. 
+To s-save t-the wesouwce, we'ww be using t-the 
+[`save()`](../wanguage/accounts#account-stowage-api) 
+method fwom t-the ( ~*-*)~ *cries* a-account stowage API to stowe t-the wesouwce in t-the ( ~*-*)~ *cries* a-account a-at t-the ヽ(・∀・)ﾉ *screams* p-path `/stowage/HewwoAssetTutowiaw`. 
 
-```cadence
-acct.save(<-newHello, to: /storage/HelloAssetTutorial)
-```
-The first parameter to `save` is the object that is being stored,
-and the `to` parameter is the path that the object is being stored at.
-The path must be a storage path, so only the domain `/storage/` is allowed as the `to` parameter.
+```cadence 
+acct.save(<-newHello, to: /-/stowage/HewwoAssetTutowiaw) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+The fiwst p-pawametew to `save` is t-the object that is being s-stowed, 
+and t-the `to` p-pawametew is t-the ヽ(・∀・)ﾉ *screams* p-path that t-the object is being stowed at. 
+The ヽ(・∀・)ﾉ *screams* p-path (* ^ ω ^) *screams* m-must be a stowage path, so onwy t-the d-domain `/stowage/` is awwowed as t-the `to` pawametew. 
 
-If there is already an object stored under the given path, the program aborts.
-Remember, the Cadence type system ensures that a resource can never be accidentally lost.
-When moving a resource to a field, into an array, into a dictionary, or into storage,
-there is the possibility that the location already contains a resource.
-Cadence forces the developer to handle the case of an existing resource so that it is not accidentally lost through an overwrite.
+If (⌒ω⌒) *hugs tightly* t-thewe is awweady an object stowed undew t-the given path, t-the pwogwam abowts. 
+Wemembew, t-the C-Cadence t-type system ensuwes that a wesouwce c-can nyevew be accidentawwy w-wost. 
+When moving a wesouwce to a fiewd, into an awway, into a dictionyawy, ow into stowage, 
+(⌒ω⌒) *hugs tightly* t-thewe is t-the >w< *looks away* p-possibiwity that t-the wocation awweady contains a w-wesouwce. 
+C-Cadence f-fowces t-the devewopew to handwe t-the case of an existing wesouwce so that it is nyot accidentawwy wost thwough an ovewwwite. 
 
-It is also very important when choosing the name of your paths to pick an identifier
-that is very specific and unique to your project.
-Currently, account storage paths are global, so there is a chance that projects could use the same storage paths,
-**which could cause path conflicts**!
-This could be a headache for you, so choose unique path names to avoid this problem.
+I-It is awso vewy impowtant when choosing t-the nyame of youw paths to pick an identifiew 
+that is vewy specific and unyique to youw pwoject. 
+Cuwwentwy, ( ~*-*)~ *cries* a-account stowage paths awe gwobaw, so (⌒ω⌒) *hugs tightly* t-thewe is a chance that pwojects couwd use t-the same stowage (´ ω `♡) *looks at you* p-paths, 
+**which couwd c-cause ヽ(・∀・)ﾉ *screams* p-path confwicts**! 
+This couwd be a h-headache (╬ Ò﹏Ó) *giggles shyly* f-fow y-you, so choose unyique ヽ(・∀・)ﾉ *screams* p-path nyames to avoid this pwobwem. 
 
-Finally, in the execute phase we log the phrase `"Saved Hello Resource to account."` to the console.
+Finyawwy, in t-the execute phase we wog t-the phwase `"Saved Hewwo Wesouwce to account."` to t-the consowe. 
 
-```cadence
-log("Saved Hello Resource to account.")
-```
+```cadence 
+wog("Saved Hewwo Wesouwce to account.") 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Select account `0x01` as the only signer. Click the `Send` button to submit
-the transaction.
+Sewect ( ~*-*)~ *cries* a-account `0x01` as t-the onwy signyew. C-Cwick t-the `Send` button to submit 
+t-the twansaction. 
 
-</Callout>
+</Cawwout> 
 
-You should see something like this:
+You shouwd s-see something w-wike this: 
 
-```
-"Saved Hello Resource to account."
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"-"Saved Hewwo Wesouwce to account." 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-You can also try removing the line of code that saves `newHello` to storage.
+You c-can awso twy w-wemoving t-the winye of code that saves `nyewHewwo` to stowage. 
 
-<br />
-You should see an error for `newHello` that says `loss of resource`.
-This means that you are not handling the resource properly.
-If you ever see this error in any of your programs,
-it means there is a resource somewhere that is not being explicitly stored or destroyed, meaning the program is invalid.
-<br />
-Add the line back to make the contract check properly.
-</Callout>
+<-<bw /> 
+You shouwd s-see an ewwow (╬ Ò﹏Ó) *giggles shyly* f-fow `nyewHewwo` that s-says `woss of w-wesouwce`. 
+This means that you awe nyot handwing t-the wesouwce pwopewwy. 
+If you e-evew s-see this ewwow in any of youw pwogwams, 
+it means (⌒ω⌒) *hugs tightly* t-thewe is a wesouwce somewhewe that is nyot being e-expwicitwy stowed ow destwoyed, meanying t-the pwogwam is invawid. 
+<-<bw /> 
+Add t-the winye back to make t-the contwact check pwopewwy. 
+</Cawwout> 
 
-In this case, this is the first time we have saved anything with the selected account,
-so we know that the storage spot at `/storage/HelloAssetTutorial` is empty.
-In real applications, we would likely perform necessary checks and actions with the location path we are storing in
-to make sure we don't abort a transaction because of an accidental overwrite.
+In this case, this is t-the fiwst time we have saved anything with t-the s-sewected account, 
+so we knyow that t-the stowage spot a-at `/stowage/HewwoAssetTutowiaw` is empty. 
+In weaw a-appwications, we w-wouwd w-wikewy pewfowm nyecessawy checks and actions with t-the wocation ヽ(・∀・)ﾉ *screams* p-path we awe stowing in 
+to make suwe we (・_・ヾ) *looks at you* d-don't a-abowt a twansaction because of an a-accidentaw ovewwwite. 
 
-Now that you have executed the transaction, account `0x01` should have the newly created `HelloWorld.HelloAsset`
-resource stored in its storage.
+Nyow that you have executed t-the twansaction, ( ~*-*)~ *cries* a-account `0x01` shouwd have t-the nyewwy cweated `-`HelloWorld.HelloAsset` 
+wesouwce stowed in its stowage. 
 
-### Load Hello Transaction
+### Woad Hewwo Twansaction 
 
-Now we're going to use a transaction to call the `hello()` method from the `HelloAsset` resource.
+Nyow we'we g-going to use a twansaction to caww t-the `hewwo()` method fwom t-the `HewwoAsset` w-wesouwce. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the transaction named `Load Hello`.
+Open t-the twansaction nyamed `-`Woad Hewwo`. 
 
-<br />
+<-<bw /> 
 
-`Load Hello` should contain the following code:
+`-`Woad Hewwo` shouwd uWu *whines* c-contain t-the fowwowing code: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=LoadHello.cdc
-import HelloWorld from 0x01
+```cadence:title=LoadHello.cdc 
+i-impowt HewwoWowwd fwom 0x01 
 
-// This transaction calls the "hello" method on the HelloAsset object
-// that is stored in the account's storage by removing that object
-// from storage, calling the method, and then putting it back in storage
+/-// This twansaction c-cawws t-the "hewwo" method on t-the HewwoAsset object 
+/-// that is stowed in t-the account's stowage by w-wemoving that object 
+/-// fwom stowage, cawwing t-the method, and t-then putting it back in stowage 
 
-transaction {
+twansaction { 
 
-    prepare(acct: AuthAccount) {
+pwepawe(acct: AuthAccount) { 
 
-        // Load the resource from storage, specifying the type to load it as
-        // and the path where it is stored
-        let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/HelloAssetTutorial)
+/-// Woad t-the wesouwce fwom stowage, specifying t-the t-type to woad it as 
+/-// and t-the ヽ(・∀・)ﾉ *screams* p-path whewe it is stowed 
+wet hewwoWesouwce <- a-acct.load<@HelloWorld.HelloAsset>(from: /-/stowage/HewwoAssetTutowiaw) 
 
-        // We use optional chaining (?) because the value in storage
-        // may or may not exist, and thus is considered optional.
-        log(helloResource?.hello())
+/-// We use optionyaw c-chainying (?) because t-the vawue in stowage 
+/-// may ow may nyot e-exist, and thus is considewed o-optionyaw. 
+log(helloResource?.hello()) 
 
-        // Put the resource back in storage at the same spot
-        // We use the force-unwrap operator `!` to get the value
-        // out of the optional. It aborts if the optional is nil
-        acct.save(<-helloResource!, to: /storage/HelloAssetTutorial)
-    }
-}
-```
+/-// Put t-the wesouwce back in stowage a-at t-the same spot 
+/-// We use t-the fowce-unwwap opewatow `!` to get t-the vawue 
+/-// out of t-the o-optionyaw. I-It a-abowts if t-the optionyaw is nyiw 
+acct.save(<-helloResource!, to: /-/stowage/HewwoAssetTutowiaw) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Here's what this transaction does:
+Hewe's what this twansaction does: 
 
-1. Import the `HelloWorld` definitions from account `0x01`
-2. Moves the `HelloAsset` object from storage to `helloResource` with the move operator
-  and the `load` function from the [account storage API](../language/accounts#account-storage-api)
-3. Calls the `hello()` function of the `HelloAsset` resource stored in `helloResource` and logs the result
-4. Saves the resource in the account that we originally moved it from at the path `/storage/HelloAssetTutorial`
+1. I-Impowt t-the `HewwoWowwd` definyitions fwom ( ~*-*)~ *cries* a-account `0x01` 
+2-2. Moves t-the `HewwoAsset` object fwom stowage to `hewwoWesouwce` with t-the move opewatow 
+and t-the `woad` f-function fwom t-the [account stowage API](../wanguage/accounts#account-stowage-api) 
+3. C-Cawws t-the `hewwo()` f-function of t-the `HewwoAsset` wesouwce stowed in `hewwoWesouwce` and (o･ω･o) *shuffles closer* w-wogs t-the wesuwt 
+4-4. Saves t-the wesouwce in t-the ( ~*-*)~ *cries* a-account that we o-owiginyawwy moved it fwom a-at t-the ヽ(・∀・)ﾉ *screams* p-path `/stowage/HewwoAssetTutowiaw` 
 
-We're going to be using the `prepare` phase again to load the resource because it
-has access to the signing accounts' [private `AuthAccount` object](../language/accounts#authaccount).
+We'we g-going to be using t-the `pwepawe` phase again to woad t-the wesouwce because it 
+has a-access to t-the signying accounts' [pwivate `AuthAccount` object](../wanguage/accounts#authaccount). 
 
-Let's go over the transaction in more detail.
-To remove an object from storage, we use the `load` method from the [account storage API](../language/accounts#account-storage-api)
+Wet's go o-ovew t-the twansaction in mowe d-detaiw. 
+To w-wemove an object fwom stowage, we use t-the `woad` method fwom t-the [account stowage API](../wanguage/accounts#account-stowage-api) 
 
-```cadence
-let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/HelloAssetTutorial)
-```
+```cadence 
+wet hewwoWesouwce <- a-acct.load<@HelloWorld.HelloAsset>(from: /-/stowage/HewwoAssetTutowiaw) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-If no object of the specified type is stored under the given path, the function returns `nil`.
-(This is an [Optional](../language/values-and-types#optionals),
-a special type of data that we will cover later)
+If nyo object of t-the s-specified t-type is stowed undew t-the given path, t-the f-function wetuwns `-`nyiw`. 
+(This is an [Optionyaw](../wanguage/vawues-and-types#optionyaws), 
+a speciaw t-type of data that we wiww covew w-watew) 
 
-If the object at the given path is not of the specified type, Cadence will throw an error and the transaction will fail.
+If t-the object a-at t-the given ヽ(・∀・)ﾉ *screams* p-path is nyot of t-the s-specified type, C-Cadence wiww thwow an ewwow and t-the twansaction wiww faiw. 
 
-If there is an object of the specified type at the path,
-the function returns that object and the account storage will no longer contain an object under the given path.
+If (⌒ω⌒) *hugs tightly* t-thewe is an object of t-the s-specified t-type a-at t-the path, 
+t-the f-function wetuwns that object and t-the ( ~*-*)~ *cries* a-account stowage wiww nyo wongew uWu *whines* c-contain an object undew t-the given p-path. 
 
-The type parameter for the object type to load is contained in `<>`.
-A type argument for the parameter must be provided explicitly, which is `@HelloWorld.HelloAsset` here.
-(Note the `@` symbol to specify that it is a resource)
+The t-type p-pawametew (╬ Ò﹏Ó) *giggles shyly* f-fow t-the object t-type to woad is c-containyed in `<>`. 
+A-A t-type {{ (>_<) }} *leans over* a-awgument (╬ Ò﹏Ó) *giggles shyly* f-fow t-the p-pawametew (* ^ ω ^) *screams* m-must be pwovided expwicitwy, which is `@HelloWorld.HelloAsset` hewe. 
+(-(Nyote t-the `-`@` symbow to specify that it is a wesouwce) 
 
-The path `from` must be a storage path, so only the domain `/storage/` is allowed.
+The ヽ(・∀・)ﾉ *screams* p-path `fwom` (* ^ ω ^) *screams* m-must be a stowage path, so onwy t-the d-domain `/stowage/` is awwowed. 
 
-Next, we call the `hello()` function and log the output.
+Nyext, we caww t-the `hewwo()` f-function and wog t-the output. 
 
-```cadence
-log(helloResource?.hello())
-```
+```cadence 
+log(helloResource?.hello()) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-We use `?` because the values in the storage are returned as [optionals](../language/values-and-types#optionals).
-Optionals are values that can represent the absence of a value.
-Optionals have two cases: either there is a value of the specified type, or there is nothing (`nil`).
-An optional type is declared using the `?` suffix.
+We use `?` because t-the vawues in t-the stowage awe wetuwnyed as [optionyaws](../wanguage/vawues-and-types#optionyaws). 
+Optionyaws awe vawues that c-can wepwesent t-the a-absence of a vawue. 
+Optionyaws have two cases: eithew (⌒ω⌒) *hugs tightly* t-thewe is a vawue of t-the s-specified type, ow (⌒ω⌒) *hugs tightly* t-thewe is nyothing (`nyiw`). 
+An optionyaw t-type is d-decwawed using t-the `?` suffix. 
 
-```cadence
-let newResource: HelloAsset?  // could either have a value of type `HelloAsset`
-                              // or it could have a value of `nil`
-```
+```cadence 
+wet nyewWesouwce: HewwoAsset? /-// couwd eithew have a vawue of t-type `HewwoAsset` 
+/-// ow it couwd have a vawue of (＾• ω •＾) *teleports behind you* `-`nyiw` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Optionals allow developers to account for `nil` cases more gracefully.
-Here, we explicitly have to account for the possibility that the `helloResource` object we got with `load` is `nil`
-(because `load` will return `nil` if there is nothing there to load).
+Optionyaws awwow devewopews to ( ~*-*)~ *cries* a-account (╬ Ò﹏Ó) *giggles shyly* f-fow (＾• ω •＾) *teleports behind you* `-`nyiw` cases mowe gwacefuwwy. 
+Hewe, we e-expwicitwy have to ( ~*-*)~ *cries* a-account (╬ Ò﹏Ó) *giggles shyly* f-fow t-the >w< *looks away* p-possibiwity that t-the `hewwoWesouwce` object we got with `woad` is (＾• ω •＾) *teleports behind you* `-`nyiw` 
+(because `woad` wiww (´-ω-`) *screams* w-wetuwn (＾• ω •＾) *teleports behind you* `-`nyiw` if (⌒ω⌒) *hugs tightly* t-thewe is nyothing (⌒ω⌒) *hugs tightly* t-thewe to woad). 
 
-Using `?` "unwraps" the optional, meaning that it gets the value if it is there, before calling `hello`,
-but only if the value isn't `nil`. If the value is nil, the `?` returns `nil`.
+Using `?` "unwwaps" t-the optionyaw, meanying that it gets t-the vawue if it is thewe, befowe cawwing `hewwo`, 
+but onwy if t-the vawue isn't `-`nyiw`. If t-the vawue is nyiw, t-the `?` wetuwns `-`nyiw`. 
 
-Because `?` is used when calling the `hello` function, the function call only happens if the stored value is not `nil`.
-In this case, the result of the `hello` function will be returned as an optional.
-However, if the stored value was `nil`, the function call would not occur and the result is `nil`.
+(* ^ ω ^) *teleports behind you* B-Because `?` is used when cawwing t-the `-`hewwo` function, t-the f-function caww onwy happens if t-the stowed vawue is nyot `-`nyiw`. 
+In this case, t-the wesuwt of t-the `-`hewwo` f-function wiww be wetuwnyed as an o-optionyaw. 
+Howevew, if t-the stowed vawue w-was `-`nyiw`, t-the f-function caww w-wouwd nyot occuw and t-the wesuwt is `-`nyiw`. 
 
-Next, we use `save` again to put the object back in storage in the same spot:
+Nyext, we use `save` again to put t-the object back in stowage in t-the same spot: 
 
-```cadence
-acct.save(<-helloResource!, to: /storage/HelloAssetTutorial)
-```
+```cadence 
+acct.save(<-helloResource!, to: /-/stowage/HewwoAssetTutowiaw) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Remember, `helloResource` is still an optional, so we have to handle the possibility that it is `nil`.
-Here, we use the force-unwrap operator (`!`). This operator gets the value in the optional if it contains a value,
-and aborts the entire transaction if the object is `nil`.
-It is a more risky way of dealing with optionals, but if your program is ever in a state where a value being `nil`
-would defeat the purpose of the whole transaction, then the force-unwrap operator might be a good choice to deal with that.
+Wemembew, `hewwoWesouwce` is stiww an optionyaw, so we have to handwe t-the >w< *looks away* p-possibiwity that it is `-`nyiw`. 
+Hewe, we use t-the fowce-unwwap opewatow (`!`). This opewatow gets t-the vawue in t-the optionyaw if it contains a vawue, 
+and a-abowts t-the entiwe twansaction if t-the object is `-`nyiw`. 
+I-It is a mowe wisky w-way of deawing with optionyaws, but if youw pwogwam is e-evew in a state whewe a vawue being (＾• ω •＾) *teleports behind you* `-`nyiw` 
+w-wouwd defeat t-the puwpose of t-the w-whowe twansaction, t-then t-the fowce-unwwap opewatow m-might be a g-good choice to d-deaw with that. 
 
-Refer to [Optionals In Cadence](../language/values-and-types#optionals) to learn more about optionals and how they are used.
+W-Wefew to [Optionyaws In Cadence](../wanguage/vawues-and-types#optionyaws) to weawn mowe about o-optionyaws and how they awe u-used. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Select account `0x01` as the only signer. Click the `Send` button to submit
-the transaction.
+Sewect ( ~*-*)~ *cries* a-account `0x01` as t-the onwy signyew. C-Cwick t-the `Send` button to submit 
+t-the twansaction. 
 
-</Callout>
+</Cawwout> 
 
-You should see something like this:
+You shouwd s-see something w-wike this: 
 
-```
-"Hello, World!"
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"Hewwo, Wowwd!" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Reviewing the Resource Contract
+#-## Weviewing t-the Wesouwce Contwact 
 
-This tutorial covered an introduction to resources in Cadence,
-using the account storage API and interacting with resources using transactions.
+This t-tutowiaw covewed an intwoduction to wesouwces in Cadence, 
+using t-the ( ~*-*)~ *cries* a-account stowage API and intewacting with wesouwces using twansactions. 
 
-You implemented a smart contract that is accessible in all scopes.
-The smart contract had a resource declared that implemented a function called `hello()`
-that returns the string `"Hello, World!"`
-and declared a function that can create a resource.
+You impwemented a smawt contwact that is accessibwe in (＾▽＾') *cuddles you* a-aww scopes. 
+The smawt contwact h-had a wesouwce d-decwawed that impwemented a f-function cawwed `hewwo()` 
+that wetuwns t-the stwing `"Hewwo, W-Wowwd!"` 
+and d-decwawed a f-function that c-can cweate a w-wesouwce. 
 
-Next, you deployed this contract in an account and implemented a transaction to create the resource in the smart contract
-and save it in the account `0x01` by using it as the signer for this transaction.
+Nyext, you depwoyed this contwact in an ( ~*-*)~ *cries* a-account and impwemented a twansaction to cweate t-the wesouwce in t-the smawt contwact 
+and s-save it in t-the ( ~*-*)~ *cries* a-account `0x01` by using it as t-the signyew (╬ Ò﹏Ó) *giggles shyly* f-fow this twansaction. 
 
-Finally, you used a transaction to move the `HelloAsset` resource from account storage, call the `hello` method,
-and return it to the account storage.
+Finyawwy, you used a twansaction to move t-the `HewwoAsset` wesouwce fwom ( ~*-*)~ *cries* a-account stowage, caww t-the `-`hewwo` method, 
+and (´-ω-`) *screams* w-wetuwn it to t-the ( ~*-*)~ *cries* a-account stowage. 
 
-Now that you have completed the tutorial, you have the basic knowledge to write a simple Cadence program that can:
+Nyow that you have c-compweted t-the tutowiaw, you have t-the basic k-knyowwedge to wwite a simpwe C-Cadence pwogwam that can: 
 
-- Implement a resource in a smart contract
-- Save, move, and load resources using the account storage API and the move operator `<-`
-- Use the `prepare` phase of a transaction to load resources from account storage
+(✧ω✧) *teleports behind you* --- Impwement a wesouwce in a smawt contwact 
+(✧ω✧) *teleports behind you* --- Save, move, and woad wesouwces using t-the ( ~*-*)~ *cries* a-account stowage API and t-the move opewatow `<-` 
+(✧ω✧) *teleports behind you* --- ╰(▔∀▔)╯ *steals ur resource* U-Use t-the `pwepawe` phase of a twansaction to woad wesouwces fwom ( ~*-*)~ *cries* a-account stowage 
 
-Feel free to modify the smart contract to create different resources,
-experiment with the available [account storage API](../language/accounts#account-storage-api),
-and write new transactions and scripts that execute different functions from your smart contract.
-Have a look at the [resource reference page](../language/resources)
-to find out more about what you can do with resources.
+Feew fwee to modify t-the smawt contwact to cweate diffewent wesouwces, 
+e-expewiment with t-the avaiwabwe [account stowage API](../wanguage/accounts#account-stowage-api), 
+and wwite nyew t-twansactions and scwipts that execute diffewent functions fwom youw smawt contwact. 
+H-Have a wook a-at t-the [-[wesouwce wefewence (^ω~) *giggles shyly* p-page](../wanguage/wesouwces) 
+to f-find out mowe about what you c-can (^-^*)/ *cuddles you* d-do with wesouwces. 
 
-You're on the right track to building more complex applications with Cadence,
-now is a great time to check out the [Cadence Best Practices document](../design-patterns)
-and [Anti-patterns document](../anti-patterns)
-as your applications become more complex.
+You'we on t-the wight twack to buiwding mowe compwex appwications with Cadence, 
+nyow is a gweat time to check out t-the [Cadence Best Pwactices document](../design-pattewns) 
+and [Anti-pattewns document](../anti-pattewns) 
+as youw appwications become mowe compwex. 

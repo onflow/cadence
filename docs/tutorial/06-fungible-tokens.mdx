@@ -1,1115 +1,1115 @@
----
-title: 6. Fungible Tokens
----
-
-In this tutorial, we're going to deploy, store, and transfer fungible tokens.
-
----
-
-<Callout type="success">
-  Open the starter code for this tutorial in the Flow Playground:
-  <br />
-  <a
-    href="https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363"
-    target="_blank"
-  >
-    https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363
-  </a>
-  <br />
-  The tutorial will ask you to take various actions to interact with this code.
-</Callout>
-<Callout type="info">
-  Instructions that require you to take action are always included in a callout
-  box like this one. These highlighted actions are all that you need to do to
-  get your code running, but reading the rest is necessary to understand the
-  language's design.
-</Callout>
-
-## Follow Along!
-Developer advocate Kim dives deep on an array of topics, building on top of the information she shared in the Hello World tutorial. Learn core concepts such as creating a fungible token smart contract by using resources, resource interfaces, and using transactions to mint and transfer tokens!
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/DInibYmxUsc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
----
-
-Some of the most popular contract classes on blockchains today are fungible tokens.
-These contracts create homogeneous tokens that can be transferred to other users and spent as currency (e.g., ERC-20 on Ethereum).
-
-In traditional software and smart contracts, balances for each user are tracked by a central ledger, such as a dictionary:
-
-```cadence
-// DO NOT USE THIS CODE FOR YOUR PROJECT
-contract LedgerToken {
-    // Tracks every user's balance
-    access(contract) let balances: {Address: UFix64}
-
-    // Transfer tokens from one user to the other
-    // by updating their balances in the central ledger
-    pub fun transfer(from: Address, to: Address, amount: UFix64) {
-        balances[from] = balances[from] - amount
-        balances[to] = balances[to] + amount
-    }
-}
-```
-
-With Cadence, we use the new resource-oriented paradigm to implement fungible tokens and avoid using a central ledger
-because there are inherent problems with using a central ledger
-that are detailed in [the Fungible Tokens section below.](#fungible-tokens-an-in-depth-exploration)
-
-### Flow Network Token
-
-In Flow, the native network token
-[(FLOW) is implemented as a normal fungible token smart contract](https://github.com/onflow/flow-core-contracts/blob/master/contracts/FlowToken.cdc)
-using a smart contract similar to the one in this tutorial.
-
-There are special transactions and hooks that allow it to be used for transaction execution fees, storage fees, and staking,
-but besides that, developers and users are able to treat it and use it just like any other token in the network!
-
-<Callout type="warning">
-  It is important to remember that while this tutorial implements a working
-  fungible token, it has been simplified for educational purposes and is not
-  what any project should use in production. See the
-  <a href="https://github.com/onflow/flow-ft" target="_blank">Flow Fungible Token standard</a>
-  for the standard interface and example implementation.
-</Callout>
-
-We're going to take you through these steps to get comfortable with the fungible token:
-
-1. Deploy the fungible token contract to account `0x01`
-2. Create a fungible token object and store it in your account storage.
-3. Create a reference to your tokens that others can use to send you tokens.
-4. Set up another account the same way.
-5. Transfer tokens from one account to another.
-6. Use a script to read the accounts' balances.
-
-**Before proceeding with this tutorial**, we recommend following the instructions in [Getting Started](01-first-steps)
-and [Hello, World!](02-hello-world) to learn the basics of the language and the playground.
-
-# Fungible Tokens on the Flow Emulator
-
----
-
-<Callout type="info">
-  First, you'll need to follow this link to open a playground session with the
-  Fungible Token contracts, transactions, and scripts pre-loaded:{" "}
-  <a
-    href="https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363"
-    target="_blank"
-  >
-    https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363
-  </a>
-</Callout>
-<Callout type="info">
+----- 
+titwe: 6. Fungibwe Tokens 
+----- 
+
+In this tutowiaw, we'we g-going to depwoy, s-stowe, and t-twansfew fungibwe tokens. 
+
+----- 
+
+<Cawwout type="success"> 
+Open t-the stawtew code (╬ Ò﹏Ó) *giggles shyly* f-fow this t-tutowiaw in t-the Fwow Pwaygwound: 
+<-<bw /> 
+<a 
+href="https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363" 
+tawget="_bwank" 
+> 
+https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363 
+</a> 
+<-<bw /> 
+The t-tutowiaw wiww ask you to o(>ω<)o *sweats* t-take vawious actions to (o^▽^o) *dances nervously* i-intewact with this c-code. 
+</Cawwout> 
+<Cawwout type="info"> 
+Instwuctions that wequiwe you to o(>ω<)o *sweats* t-take action awe awways i-incwuded in a cawwout 
+box w-wike this onye. These highwighted actions awe (＾▽＾') *cuddles you* a-aww that you nyeed to (^-^*)/ *cuddles you* d-do to 
+get youw code wunnying, but weading t-the w-west is nyecessawy to undewstand t-the 
+wanguage's ต(=ω=)ต *shuffles closer* d-design. 
+</Cawwout> 
+
+#-## Fowwow Awong! 
+Devewopew advocate Kim dives (☆▽☆) *leans over* d-deep on an a-awway of topics, buiwding on top of t-the infowmation she s-shawed in t-the Hewwo Wowwd t-tutowiaw. Weawn cowe concepts such as cweating a fungibwe token smawt contwact by using wesouwces, wesouwce intewfaces, and using t-twansactions to mint and t-twansfew tokens! 
+
+<ifwame w-width="560" height="315" src="https://www.youtube.com/embed/DInibYmxUsc" (✧ω✧) *teleports behind you* t-titwe="YouTube video pwayew" fwamebowdew="0" awwow="accewewometew; autopway; c-cwipboawd-wwite; encwypted-media; gywoscope; p-pictuwe-in-pictuwe" awwowfuwwscween></ifwame> 
+
+----- 
+
+Some of t-the most popuwaw contwact ^-^ *whines* c-cwasses on bwockchains today awe fungibwe tokens. 
+These contwacts cweate h-homogenyeous tokens that c-can be twansfewwed to othew usews and spent as c-cuwwency (e.g., EWC-20 on Etheweum). 
+
+In twaditionyaw softwawe and smawt contwacts, bawances (╬ Ò﹏Ó) *giggles shyly* f-fow each usew awe twacked by a centwaw wedgew, such as a d-dictionyawy: 
+
+```cadence 
+/-// DO N-NyOT U-USE THIS CODE FOW Y-YOUW PWOJECT 
+contwact WedgewToken { 
+/-// Twacks {{ (>_<) }} *steals ur resource* e-evewy usew's bawance 
+access(contwact) wet b-bawances: {Addwess: UFix64} 
+
+/-// (´-ω-`) *cuddles you* T-Twansfew tokens fwom onye usew to t-the othew 
+/-// by u-updating theiw bawances in t-the centwaw wedgew 
+pub fun twansfew(fwom: A-Addwess, to: A-Addwess, a-amount: UFix64) { 
+b-bawances[fwom] = b-bawances[fwom] (✧ω✧) *teleports behind you* --- amount 
+bawances[to] = bawances[to] + amount 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+With Cadence, we use t-the nyew wesouwce-owiented pawadigm to impwement fungibwe tokens and avoid using a centwaw wedgew 
+because (⌒ω⌒) *hugs tightly* t-thewe awe inhewent pwobwems with using a centwaw wedgew 
+that awe detaiwed in [the Fungibwe Tokens section bewow.](#fungibwe-tokens-an-in-depth-expwowation) 
+
+### Fwow Nyetwowk T-Token 
+
+In Fwow, t-the nyative (＃￣ω￣) *looks at you* n-nyetwowk token 
+[(FWOW) is impwemented as a nyowmaw fungibwe token smawt contract](https://github.com/onflow/flow-core-contracts/blob/master/contracts/FlowToken.cdc) 
+using a smawt contwact simiwaw to t-the onye in this t-tutowiaw. 
+
+Thewe awe speciaw t-twansactions and hooks that awwow it to be used (╬ Ò﹏Ó) *giggles shyly* f-fow twansaction execution fees, stowage fees, and staking, 
+but besides that, devewopews and usews awe abwe to tweat it and use it just w-wike any othew token in t-the nyetwowk! 
+
+<Cawwout type="wawnying"> 
+I-It is impowtant to (　･ω･)☞ *sweats* w-wemembew that whiwe this t-tutowiaw impwements a wowking 
+fungibwe token, it has b-been s-simpwified (╬ Ò﹏Ó) *giggles shyly* f-fow educationyaw puwposes and is nyot 
+what any pwoject shouwd use in pwoduction. See t-the 
+<a href="https://github.com/onflow/flow-ft" tawget="_bwank">Fwow Fungibwe T-Token standawd</a> 
+(╬ Ò﹏Ó) *giggles shyly* f-fow t-the standawd intewface and e-exampwe impwementation. 
+</Cawwout> 
+
+We'we g-going to o(>ω<)o *sweats* t-take you thwough these steps to get comfowtabwe with t-the fungibwe token: 
+
+1. Depwoy t-the fungibwe token contwact to ( ~*-*)~ *cries* a-account `0x01` 
+2-2. Cweate a fungibwe token object and stowe it in youw ( ~*-*)~ *cries* a-account stowage. 
+3. Cweate a wefewence to youw tokens that othews c-can use to send you tokens. 
+4-4. Set up anyothew ( ~*-*)~ *cries* a-account t-the same way. 
+5. (´-ω-`) *cuddles you* T-Twansfew tokens fwom onye ( ~*-*)~ *cries* a-account to anyothew. 
+6. ╰(▔∀▔)╯ *steals ur resource* U-Use a scwipt to wead t-the accounts' b-bawances. 
+
+*-**Befowe pwoceeding with this tutowiaw**, we wecommend fowwowing t-the instwuctions in [Getting Stawted](01-fiwst-steps) 
+and [-[Hewwo, Wowwd!](02-hewwo-wowwd) to weawn t-the b-basics of t-the wanguage and t-the pwaygwound. 
+
+# Fungibwe Tokens on t-the Fwow Emuwatow 
+
+----- 
+
+<Cawwout type="info"> 
+Fiwst, ^-^ *shuffles closer* y-you'ww nyeed to fowwow this w-wink to open a pwaygwound (⌒▽⌒)☆ *looks at you* s-session with t-the 
+Fungibwe T-Token contwacts, twansactions, and scwipts pwe-woaded:{" "} 
+<a 
+href="https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363" 
+tawget="_bwank" 
+> 
+https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363 
+</a> 
+</Cawwout> 
+<Cawwout type="info"> 
 
-Open the account `0x01` tab to see the file named
-`BasicToken.cdc`. `BasicToken.cdc` should contain the full code for the
-fungible token, which provides the core functionality to store fungible tokens
-in your account and transfer to and accept tokens from other users.
+Open t-the ( ~*-*)~ *cries* a-account `0x01` tab to s-see t-the fiwe nyamed 
+`BasicToken.cdc`. `BasicToken.cdc` shouwd uWu *whines* c-contain t-the f-fuww code (╬ Ò﹏Ó) *giggles shyly* f-fow t-the 
+fungibwe token, which pwovides t-the cowe functionyawity to stowe fungibwe tokens 
+in youw ( ~*-*)~ *cries* a-account and t-twansfew to and a-accept tokens fwom othew usews. 
 
-</Callout>
+</Cawwout> 
 
-The concepts involved in implementing a fungible token in Cadence can be unfamiliar at first.
-For an in-depth explanation of this functionality and code, continue reading the next section.
+The concepts invowved in impwementing a fungibwe token in C-Cadence c-can be o(>< )o *dances nervously* u-unfamiwiaw a-at fiwst. 
+Fow an in-depth expwanyation of this functionyawity and code, continyue weading t-the nyext section. 
 
-Or, if you'd like to go immediately into deploying it and using it in the playground,
-you can skip to the [Interacting with the Fungible Token](#interacting-with-the-fungible-token-in-the-flow-playground) section of this tutorial.
+Ow, if you'd w-wike to go immediatewy into d-depwoying it and using it in t-the pwaygwound, 
+you c-can {{ (>_<) }} *screams* s-skip to t-the [Intewacting with t-the Fungibwe Token](#intewacting-with-the-fungibwe-token-in-the-fwow-pwaygwound) section of this t-tutowiaw. 
 
-# Fungible Tokens: An In-Depth Exploration
+# Fungibwe Tokens: An In-Depth Expwowation 
 
----
+----- 
 
-How Flow implements fungible tokens is different from other programming languages. As a result:
+How Fwow impwements fungibwe tokens is diffewent fwom othew pwogwamming wanguages. As a wesuwt: 
 
-- Ownership is decentralized and does not rely on a central ledger
-- Bugs and exploits present less risk for users and less opportunity for attackers
-- There is no risk of integer underflow or overflow
-- Assets cannot be duplicated, and it is very hard for them to be lost, stolen, or destroyed
-- Code can be composable
-- Rules can be immutable
-- Code is not unintentionally made public
+(✧ω✧) *teleports behind you* --- O-Ownyewship is d-decentwawized and does nyot wewy on a centwaw wedgew 
+(✧ω✧) *teleports behind you* --- Bugs and expwoits pwesent w-wess wisk (╬ Ò﹏Ó) *giggles shyly* f-fow usews and w-wess oppowtunyity (╬ Ò﹏Ó) *giggles shyly* f-fow attackews 
+(✧ω✧) *teleports behind you* --- Thewe is nyo wisk of integew (　･ω･)☞ *screams* u-undewfwow ow ovewfwow 
+(✧ω✧) *teleports behind you* --- Assets c-cannyot be dupwicated, and it is vewy hawd (╬ Ò﹏Ó) *giggles shyly* f-fow t-them to be w-wost, stowen, ow destwoyed 
+(✧ω✧) *teleports behind you* --- Code c-can be composabwe 
+(✧ω✧) *teleports behind you* --- Wuwes c-can be immutabwe 
+(✧ω✧) *teleports behind you* --- Code is nyot u-unyintentionyawwy m-made pubwic 
 
-## Decentralizing Ownership
+#-## Decentwawizing O-Ownyewship 
 
----
+----- 
 
-Instead of using a central ledger system, Flow ties ownership to each account via a new paradigm for asset ownership.
-The example below showcases how Solidity (the smart contract language for the Ethereum Blockchain, among others)
-implements fungible tokens, with only the code for storage and transferring tokens shown for brevity.
+Instead of using a centwaw wedgew s-system, Fwow ties ownyewship to each ( ~*-*)~ *cries* a-account via a nyew pawadigm (╬ Ò﹏Ó) *giggles shyly* f-fow asset ownyewship. 
+The e-exampwe bewow showcases how Sowidity (-(the smawt contwact wanguage (╬ Ò﹏Ó) *giggles shyly* f-fow t-the E-Etheweum Bwockchain, among o-othews) 
+impwements fungibwe tokens, with onwy t-the code (╬ Ò﹏Ó) *giggles shyly* f-fow stowage and twansfewwing tokens s-shown (╬ Ò﹏Ó) *giggles shyly* f-fow bwevity. 
 
-```solidity:title=ERC20.sol
-contract ERC20 {
-    // Maps user addresses to balances, similar to a dictionary in Cadence
-    mapping (address => uint256) private _balances;
+```solidity:title=ERC20.sol 
+contwact E-EWC20 { 
+/-// Maps usew addwesses to b-bawances, simiwaw to a dictionyawy in C-Cadence 
+mapping (-(addwess => uint256) pwivate _bawances; 
 
-    function _transfer(address sender, address recipient, uint256 amount) {
-        // ensure the sender has a valid balance
-        require(_balances[sender] >= amount);
+f-function _twansfew(addwess sendew, addwess wecipient, uint256 a-amount) { 
+/-// ensuwe t-the sendew has a vawid bawance 
+wequiwe(_bawances[sendew] >->= amount); 
 
-        // subtract the amount from the senders ledger balance
-        _balances[sender] = _balances[sender] - amount;
+/-// subtwact t-the amount fwom t-the sendews wedgew bawance 
+_bawances[sendew] = _bawances[sendew] (✧ω✧) *teleports behind you* --- amount; 
 
-        // add the amount to the recipient’s ledger balance
-        _balances[recipient] = _balances[recipient] + amount
-    }
-}
-```
+/-// a-add t-the amount to t-the w-wecipient’s wedgew bawance 
+_bawances[wecipient] = _bawances[wecipient] + amount 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-As you can see, Solidity uses a central ledger system for its fungible tokens. There is one contract that manages the state of the tokens
-and every time that a user wants to do anything with their tokens, they have to interact with the central ERC20 contract,
-calling its functions to update their balance. This contract handles access control for all functionality, implements all of its own correctness checks,
-and enforces rules for all of its users.
+As you c-can see, Sowidity uses a centwaw wedgew system (╬ Ò﹏Ó) *giggles shyly* f-fow its fungibwe tokens. Thewe is onye contwact that manyages t-the state of t-the tokens 
+and {{ (>_<) }} *steals ur resource* e-evewy time that a usew wants to (^-^*)/ *cuddles you* d-do anything with theiw tokens, they have to (o^▽^o) *dances nervously* i-intewact with t-the centwaw E-EWC20 c-contwact, 
+cawwing its functions to update theiw bawance. This contwact (つ≧▽≦)つ *leans over* h-handwes a-access contwow (╬ Ò﹏Ó) *giggles shyly* f-fow (＾▽＾') *cuddles you* a-aww functionyawity, impwements (＾▽＾') *cuddles you* a-aww of its own cowwectnyess checks, 
+and e-enfowces wuwes (╬ Ò﹏Ó) *giggles shyly* f-fow (＾▽＾') *cuddles you* a-aww of its usews. 
 
-Instead of using a central ledger system, Flow utilizes a few different concepts
-to provide better safety, security, and clarity for smart contract developers and users.
-In this section, we'll show how Flow's resources, interfaces, and other features are employed via a fungible token example.
+Instead of using a centwaw wedgew s-system, Fwow utiwizes a f-few diffewent concepts 
+to pwovide bettew s-safety, s-secuwity, and cwawity (╬ Ò﹏Ó) *giggles shyly* f-fow smawt contwact devewopews and usews. 
+In this section, we'ww show how Fwow's wesouwces, intewfaces, and othew featuwes awe empwoyed via a fungibwe token exampwe. 
 
-## Intuiting Ownership with Resources
+#-## Intuiting O-Ownyewship with Wesouwces 
 
----
+----- 
 
-An important concept in Cadence is **Resources**, which are linear types.
-A resource is a composite type (like a struct) that has its own defined fields and functions.
-The difference is that resource objects have special rules that keep them from being copied or lost.
-Resources are a new paradigm for asset ownership. Instead of representing token ownership in a central ledger smart contract,
-each account owns its own resource object in its account storage that records the number of tokens they own.
-This way, when users want to transact with each other, they can do so peer-to-peer without having to interact with a central token contract.
-To transfer tokens to each other, they call a `transfer` function (or something equivalent)
-on their own resource object and other users' resources, instead of a central `transfer` function.
+An impowtant concept in C-Cadence is **Wesouwces**, which awe w-winyeaw types. 
+A-A wesouwce is a composite t-type (-(wike a stwuct) that has its own definyed fiewds and functions. 
+The diffewence is that wesouwce objects have speciaw wuwes that keep t-them fwom being copied ow w-wost. 
+Wesouwces awe a nyew pawadigm (╬ Ò﹏Ó) *giggles shyly* f-fow asset ownyewship. Instead of wepwesenting token ownyewship in a centwaw wedgew smawt c-contwact, 
+each ( ~*-*)~ *cries* a-account o-owns its own wesouwce object in its ( ~*-*)~ *cries* a-account stowage that (o´∀`o) *looks at you* w-wecowds t-the (❤ω❤) *pokes you* n-nyumbew of tokens they own. 
+This way, when usews want to :3 *shuffles closer* t-twansact with each othew, they c-can (^-^*)/ *cuddles you* d-do so peew-to-peew without h-having to (o^▽^o) *dances nervously* i-intewact with a centwaw token contwact. 
+To t-twansfew tokens to each othew, they caww a `twansfew` f-function (-(ow something equivawent) 
+on theiw own wesouwce object and othew usews' wesouwces, instead of a centwaw `twansfew` function. 
 
-This approach simplifies access control because instead of a central contract having to check the sender of a function call,
-most function calls happen on resource objects stored in users' account,
-and each user controls who is able to call the functions on resources in their account.
-This concept, called Capability-based security, will be explained more in a later section.
+This appwoach simpwifies a-access contwow because instead of a centwaw contwact h-having to check t-the sendew of a f-function caww, 
+most f-function c-cawws happen on wesouwce objects stowed in usews' account, 
+and each usew contwows who is abwe to caww t-the functions on wesouwces in theiw account. 
+This concept, cawwed Capabiwity-based s-secuwity, wiww be e-expwainyed mowe in a watew section. 
 
-This approach also helps protect against potential bugs. In a Solidity contract with all the logic and state contained in a central contract,
-an exploit is likely to affect all users who are involved in the contract.
+This appwoach awso h-hewps pwotect against potentiaw bugs. In a Sowidity contwact with (＾▽＾') *cuddles you* a-aww t-the wogic and state c-containyed in a centwaw c-contwact, 
+an expwoit is w-wikewy to affect (＾▽＾') *cuddles you* a-aww usews who awe invowved in t-the contwact. 
 
-In Cadence, if there is a bug in the resource logic, an attacker would have to exploit the bug in each token holder's account individually,
-which is much more complicated and time-consuming than it is in a central ledger system.
+In Cadence, if (⌒ω⌒) *hugs tightly* t-thewe is a bug in t-the wesouwce w-wogic, an attackew w-wouwd have to expwoit t-the bug in each token howdew's ( ~*-*)~ *cries* a-account individuawwy, 
+which is m-much mowe (*´▽`*) *teleports behind you* c-compwicated and time-consuming than it is in a centwaw wedgew s-system. 
 
-Below is an example of a resource for a fungible token vault. Every user who owns these tokens would have this resource stored in their account.
-It is important to remember that each account stores only a copy of the `Vault` resource, and not a copy of the entire `ExampleToken` contract.
-The `ExampleToken` contract only needs to be stored in the initial account that manages the token definitions.
+Bewow is an e-exampwe of a wesouwce (╬ Ò﹏Ó) *giggles shyly* f-fow a fungibwe token vauwt. Evewy usew who o-owns these tokens w-wouwd have this wesouwce stowed in theiw account. 
+I-It is impowtant to (　･ω･)☞ *sweats* w-wemembew that each ( ~*-*)~ *cries* a-account stowes onwy a copy of t-the `-`Vauwt` wesouwce, and nyot a copy of t-the entiwe (✧∀✧)/ *screams* `-`ExampweToken` contwact. 
+The (✧∀✧)/ *screams* `-`ExampweToken` contwact onwy nyeeds to be stowed in t-the inyitiaw ( ~*-*)~ *cries* a-account that manyages t-the token definyitions. 
 
-```cadence:title=Token.cdc
-pub resource Vault: Provider, Receiver {
+```cadence:title=Token.cdc 
+pub wesouwce V-Vauwt: Pwovidew, Weceivew { 
 
-    // Balance of a user's Vault
-    // we use unsigned fixed point numbers for balances
-    // because they can represent decimals and do not allow negative values
-    pub var balance: UFix64
+/-// Bawance of a usew's Vauwt 
+/-// we use unsignyed fixed point nyumbews (╬ Ò﹏Ó) *giggles shyly* f-fow bawances 
+/-// because they c-can wepwesent decimaws and (^-^*)/ *cuddles you* d-do nyot awwow nyegative vawues 
+pub vaw bawance: UFix64 
 
-    init(balance: UFix64) {
-        self.balance = balance
-    }
+i-inyit(bawance: UFix64) { 
+self.balance = bawance 
+} 
 
-    pub fun withdraw(amount: UFix64): @Vault {
-        self.balance = self.balance - amount
-        return <-create Vault(balance: amount)
-    }
+pub fun withdwaw(amount: U-UFix64): @Vauwt { 
+self.balance = self.balance (✧ω✧) *teleports behind you* --- amount 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate Vauwt(bawance: a-amount) 
+} 
 
-    pub fun deposit(from: @Vault) {
-        self.balance = self.balance + from.balance
-        destroy from
-    }
-}
-```
+pub fun deposit(fwom: (=①ω①=) *steals ur resource* @-@Vauwt) { 
+self.balance = self.balance + (=^･ω･^=) *sweats* f-from.balance 
+d-destwoy fwom 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-This piece of code is for educational purposes and is not comprehensive. However, it still showcases how a resource for a token works.
+This piece of code is (╬ Ò﹏Ó) *giggles shyly* f-fow educationyaw puwposes and is nyot (/ =ω=)/ *whines* c-compwehensive. Howevew, it stiww showcases how a wesouwce (╬ Ò﹏Ó) *giggles shyly* f-fow a token wowks. 
 
-### Token Balances and Initialization
+### T-Token B-Bawances and Inyitiawization 
 
-Each token resource object has a balance and associated functions (e.g., `deposit`, `withdraw`, etc).
-When a user wants to use these tokens, they instantiate a zero-balance copy of this resource in their account storage.
-The language requires that the initialization function `init`, which is only run once, must initialize all member variables.
+Each token wesouwce object has a bawance and associated functions (e.g., `deposit`, `withdwaw`, etc). 
+When a usew wants to use these tokens, they instantiate a zewo-bawance copy of this wesouwce in theiw ( ~*-*)~ *cries* a-account stowage. 
+The wanguage wequiwes that t-the i-inyitiawization f-function `inyit`, which is onwy w-wun once, (* ^ ω ^) *screams* m-must inyitiawize (＾▽＾') *cuddles you* a-aww membew ଲ(ⓛ ω ⓛ)ଲ *leans over* v-vawiabwes. 
 
-```cadence
-// Balance of a user's Vault
-// we use unsigned fixed-point integers for balances because they do not require the
-// concept of a negative number and allow for more clear precision
-pub var balance: UFix64
+```cadence 
+/-// Bawance of a usew's Vauwt 
+/-// we use unsignyed f-fixed-point integews (╬ Ò﹏Ó) *giggles shyly* f-fow bawances because they (^-^*)/ *cuddles you* d-do nyot wequiwe t-the 
+/-// concept of a nyegative (❤ω❤) *pokes you* n-nyumbew and awwow (╬ Ò﹏Ó) *giggles shyly* f-fow mowe ╰(▔∀▔)╯ *hugs tightly* c-cweaw pwecision 
+pub vaw bawance: UFix64 
 
-init(balance: UFix64) {
-    self.balance = balance
-}
-```
+i-inyit(bawance: UFix64) { 
+self.balance = bawance 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-If you remove the `init` function from your `ExampleToken` contract, it will cause an error because
-the balance field is no longer initialized.
+If you w-wemove t-the `inyit` f-function fwom youw (✧∀✧)/ *screams* `-`ExampweToken` c-contwact, it wiww c-cause an ewwow because 
+t-the bawance fiewd is nyo wongew i-inyitiawized. 
 
-### Deposit
+### Deposit 
 
-Then, the deposit function is available for any account to transfer tokens to.
+Then, t-the deposit f-function is avaiwabwe (╬ Ò﹏Ó) *giggles shyly* f-fow any ( ~*-*)~ *cries* a-account to t-twansfew tokens t-to. 
 
-```cadence
-pub fun deposit(from: @Vault) {
-    self.balance = self.balance + from.balance
-    destroy from
-}
-```
+```cadence 
+pub fun deposit(fwom: (=①ω①=) *steals ur resource* @-@Vauwt) { 
+self.balance = self.balance + (=^･ω･^=) *sweats* f-from.balance 
+d-destwoy fwom 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Transferring Tokens
+### Twansfewwing Tokens 
 
-When an account wants to send tokens to a different account, the sending account calls their own withdraw function first,
-which subtracts tokens from their resource’s balance and temporarily creates a new resource object that holds this balance.
-The sending account then calls the recipient account’s deposit function, which literally moves the resource instance to the other account,
-adds it to their balance, and then destroys the used resource.
-The resource needs to be destroyed because Cadence enforces strict rules around resource interactions.
-A resource can never be left hanging in a piece of code. It either needs to be explicitly destroyed or stored in an account's storage.
+When an ( ~*-*)~ *cries* a-account wants to send tokens to a diffewent account, t-the sending ( ~*-*)~ *cries* a-account c-cawws theiw own withdwaw f-function fiwst, 
+which o(≧▽≦)o *blushes* s-subtwacts tokens fwom theiw wesouwce’s bawance and tempowawiwy cweates a nyew wesouwce object that howds this bawance. 
+The sending ( ~*-*)~ *cries* a-account t-then c-cawws t-the w-wecipient a-account’s deposit function, which witewawwy moves t-the wesouwce instance to t-the othew account, 
+adds it to theiw bawance, and t-then destwoys t-the used w-wesouwce. 
+The wesouwce nyeeds to be destwoyed because C-Cadence e-enfowces stwict wuwes awound wesouwce intewactions. 
+A-A wesouwce c-can nyevew be weft hanging in a piece of c-code. I-It eithew nyeeds to be e-expwicitwy destwoyed ow stowed in an account's stowage. 
 
-When interacting with resources, you use the `@` symbol to specify the type, and a special “move operator” `<-`
-when moving the resource, such as assigning the resource, when passing it as an argument to a function, or when returning it from a function.
+When intewacting with wesouwces, you use t-the `-`@` symbow to specify t-the type, and a speciaw “move opewatow” `<-` 
+when moving t-the wesouwce, such as assignying t-the wesouwce, when p-passing it as an {{ (>_<) }} *leans over* a-awgument to a function, ow when wetuwnying it fwom a function. 
 
-```cadence
-pub fun withdraw(amount: UInt64): @Vault {
-```
+```cadence 
+pub fun withdwaw(amount: UInt64): @Vauwt { 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-This `@` symbol is required when specifying a resource **type** for a field, an argument, or a return value.
-The move operator `<-` makes it clear that when a resource is used in an **assignment**, parameter, or return value,
-it is moved to a new location and the old location is invalidated. This ensures that the resource only ever exists in one location at a time.
-
-If a resource is moved out of an account's storage, it either needs to be moved to an account’s storage or explicitly destroyed.
+This `-`@` symbow is wequiwed when specifying a wesouwce **type** (╬ Ò﹏Ó) *giggles shyly* f-fow a fiewd, an awgument, ow a (´-ω-`) *screams* w-wetuwn vawue. 
+The move opewatow `<-` makes it ╰(▔∀▔)╯ *hugs tightly* c-cweaw that when a wesouwce is used in an **assignment**, pawametew, ow (´-ω-`) *screams* w-wetuwn vawue, 
+it is moved to a nyew wocation and t-the o-owd wocation is invawidated. This ensuwes that t-the wesouwce onwy e-evew e-exists in onye wocation a-at a ^w^ *screams* t-time. 
+
+If a wesouwce is moved out of an account's stowage, it eithew nyeeds to be moved to an a-account’s stowage ow e-expwicitwy destwoyed. 
 
-```cadence
-destroy from
-```
-
-This rule ensures that resources, which often represent real value, do not get lost because of a coding error.
-
-You’ll notice that the arithmetic operations aren't explicitly protected against overflow or underflow.
-
-```cadence
-self.balance = self.balance - amount
-```
-
-In Solidity, this could be a risk for integer overflow or underflow, but Cadence has built-in overflow and underflow protection, so it is not a risk.
-We are also using unsigned numbers in this example, so as mentioned earlier, the vault`s balance cannot go below 0.
-
-Additionally, the requirement that an account contains a copy of the token’s resource type in its storage
-ensures that funds cannot be lost by being sent to the wrong address.
-
-If an address doesn’t have the correct resource type imported, the transaction will revert, ensuring that transactions sent to the wrong address are not lost.
-
-**Important note: This protection is not in place for the Flow network currency,**
-**because every Flow account is initialized with a default Flow Token Vault**
-**in order to pay for [storage fees and transaction fees](https://developers.flow.com/flow-token/concepts#fees).**
-
-### Function Parameters
-
-The line in `withdraw` that creates a new `Vault` has the parameter name `balance` specified in the function call.
-
-```cadence
-return <-create Vault(balance: amount)
-```
-
-This is another feature that Cadence uses to improve the clarity of code.
-All function calls are required to specify the names of the arguments they are sending
-unless the developer has specifically overridden the requirement in the funtion declaration.
-
-## Interacting with the Fungible Token in the Flow Playground
-
-Now that you have read about how the Fungible Token works,
-we can deploy a basic version of it to your account and send some transactions to interact with it.
-
-<Callout type="info">
-
-Make sure that you have opened the Fungible Token templates in the playground
-by following the link at the top of this page. You should have Account `0x01`
-open and should see the code below.
-
-</Callout>
-
-```cadence
-// BasicToken.cdc
-//
-// The BasicToken contract is a sample implementation of a fungible token on Flow.
-//
-// Fungible tokens behave like everyday currencies -- they can be minted, transferred or
-// traded for digital goods.
-//
-// This is a basic implementation of a Fungible Token and is NOT meant to be used in production
-// See the Flow Fungible Token standard for real examples: https://github.com/onflow/flow-ft
-
-pub contract BasicToken {
-
-    // Vault
-    //
-    // Each user stores an instance of only the Vault in their storage
-    // The functions in the Vault are governed by the pre and post conditions
-    // in the interfaces when they are called.
-    // The checks happen at runtime whenever a function is called.
-    //
-    // Resources can only be created in the context of the contract that they
-    // are defined in, so there is no way for a malicious user to create Vaults
-    // out of thin air. A special Minter resource or constructor function needs to be defined to mint
-    // new tokens.
-    //
-    pub resource Vault {
-
-		// keeps track of the total balance of the account's tokens
-        pub var balance: UFix64
-
-        // initialize the balance at resource creation time
-        init(balance: UFix64) {
-            self.balance = balance
-        }
-
-        // withdraw
-        //
-        // Function that takes an integer amount as an argument
-        // and withdraws that amount from the Vault.
-        //
-        // It creates a new temporary Vault that is used to hold
-        // the money that is being transferred. It returns the newly
-        // created Vault to the context that called so it can be deposited
-        // elsewhere.
-        //
-        pub fun withdraw(amount: UFix64): @Vault {
-            self.balance = self.balance - amount
-            return <-create Vault(balance: amount)
-        }
-
-        // deposit
-        //
-        // Function that takes a Vault object as an argument and adds
-        // its balance to the balance of the owners Vault.
-        //
-        // It is allowed to destroy the sent Vault because the Vault
-        // was a temporary holder of the tokens. The Vault's balance has
-        // been consumed and therefore can be destroyed.
-        pub fun deposit(from: @Vault) {
-            self.balance = self.balance + from.balance
-            destroy from
-        }
-    }
-
-    // createVault
-    //
-    // Function that creates a new Vault with an initial balance
-    // and returns it to the calling context. A user must call this function
-    // and store the returned Vault in their storage in order to allow their
-    // account to be able to receive deposits of this token type.
-    //
-    pub fun createVault(): @Vault {
-        return <-create Vault(balance: 30.0)
-    }
-
-    // The init function for the contract. All fields in the contract must
-    // be initialized at deployment. This is just an example of what
-    // an implementation could do in the init function. The numbers are arbitrary.
-    init() {
-        // create the Vault with the initial balance and put it in storage
-        // account.save saves an object to the specified `to` path
-        // The path is a literal path that consists of a domain and identifier
-        // The domain must be `storage`, `private`, or `public`
-        // the identifier can be any name
-        let vault <- self.createVault()
-        self.account.save(<-vault, to: /storage/CadenceFungibleTokenTutorialVault)
-    }
-}
-```
-
-<Callout type="info">
-
-Click the `Deploy` button at the top right of the editor to deploy the code.
-
-</Callout>
-
-<img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-deploy.png" />
-
-This deployment stores the contract for the basic fungible token
-in your active account (account `0x01`) so that it can be imported into transactions.
-
-A contract's `init` function runs at contract creation, and never again afterwards.
-In our example, this function stores an instance of the `Vault` object with an initial balance of 30.
-
-```cadence
-// create the Vault with the initial balance and put it in storage
-// account.save saves an object to the specified `to` path
-// The path is a literal path that consists of a domain and identifier
-// The domain must be `storage`, `private`, or `public`
-// the identifier can be any name
-let vault <- self.createVault()
-self.account.save(<-vault, to: /storage/CadenceFungibleTokenTutorialVault)
-```
-
-This line saves the new `@Vault` object to storage.
-Account storage is indexed with paths, which consist of a domain and identifier. `/domain/identifier`. Only three domains are allowed for paths:
-
-- `storage`: The place where all objects are stored. Only accessible by the owner of the account.
-- `private`: Stores links, otherwise known as capabilities, to objects in storage. Only accessible by the owner of the account
-- `public`: Stores links to objects in storage: Accessible by anyone in the network.
-
-Contracts have access to the private `AuthAccount` object of the account it is deployed to, using `self.account`.
-This object has methods that can modify storage in many ways.
-See the [account](../language/accounts) documentation for a list of all the methods it can call.
-
-In this line, we call the `save` method to store an object in storage.
-The first argument is the value to store, and the second argument is the path where the value is being stored.
-For `save` the path has to be in the `/storage/` domain.
-
-You are now ready to run transactions that use the fungible tokens!
-
-### Perform a Basic Transfer
-
-As we talked about above, a token transfer with resources is not a simple update to a ledger.
-In Cadence, you have to first withdraw tokens from your vault, then deposit them to the vault
-that you want to transfer to. We'll start a simple transaction that withdraws tokens from a vault
-and deposits them back into the same vault.
-
-<Callout type="info">
-
-Open the transaction named `Basic Transfer`. <br/>
-`Basic Transfer` should contain the following code for withdrawing and depositing with a stored Vault:
-
-</Callout>
-
-```cadence:title=Basic Transfer.cdc
-// Basic Transfer
-
-import BasicToken from 0x01
-
-// This transaction is used to withdraw and deposit tokens with a Vault
-
-transaction {
-
-  prepare(acct: AuthAccount) {
-    // withdraw tokens from your vault by borrowing a reference to it
-    // and calling the withdraw function with that reference
-    let vaultRef = acct.borrow<&BasicToken.Vault>(from: /storage/CadenceFungibleTokenTutorialVault)
-        ?? panic("Could not borrow a reference to the owner's vault")
-
-    let temporaryVault <- vaultRef.withdraw(amount: 10.0)
-
-    // deposit your tokens to the Vault
-    vaultRef.deposit(from: <-temporaryVault)
-
-    log("Withdraw/Deposit succeeded!")
-  }
-}
-```
-
-<Callout type="info">
-  Select account `0x01` as the only signer. <br />
-  Click the `Send` button to submit the transaction. <br />
-  This transaction withdraws tokens from the main vault and deposits them back
-  to it.
-</Callout>
-
-This transaction is a basic example of a transfer within an account.
-It withdraws tokens from the main vault and deposits back to the main vault.
-It is simply to illustrate the basic functionality of how transfers work.
-
-You'll see in this transaction that
-you can borrow a reference directly from an object in storage.
-
-```cadence
-// Borrow a reference to the stored, private Vault resource
-let vaultRef = acct.borrow<&BasicToken.Vault>(from: /storage/CadenceFungibleTokenTutorialVault)
-    ?? panic("Could not borrow a reference to the owner's vault")
-```
-
-This allows you to efficiently access objects in storage without having to load them,
-which is a much more costly interaction.
-
-In production code, you'll likely be transferring tokens to other accounts.
-Capabilities allow us to accomplish this safely.
-
-## Ensuring Security in Public: Capability Security
-
----
-
-Another important feature in Cadence is its utilization of [**Capability Security.**](../language/capability-based-access-control)
-This feature ensures that while the withdraw function is declared public on the resource,
-no one except the intended user and those they approve of can withdraw tokens from their vault.
-
-Cadence's security model ensures that objects stored in an account's storage can only be accessed by the account that owns them.
-If a user wants to give another user access to their stored objects, they can link a public capability,
-which is like an "API" that allows others to call specified functions on their objects.
-
-An account only has access to the fields and methods of an object in a different account if they hold a capability to that object
-that explicitly allows them to access those fields and methods.
-Only the owner of an object can create a capability for it.
-Therefore, when a user creates a Vault in their account, they only publish a capability
-that exposes the deposit function and the balance field.
-
-The withdraw function can remain hidden as a function that only the owner can call.
-
-This removes the need to check the address of the account that made the function call
-(`msg.sender` in Ethereum) for access control purposes, because this functionality is handled by the protocol and type checker.
-If you aren't the owner of an object or don't have a valid reference to it that was created by the owner, you cannot access the object at all!
-
-### Using Interfaces to Secure Implementations
-
----
-
-The next important concept in Cadence is design-by-contract,
-which uses preconditions and postconditions to document and programmatically assert the change in state caused by a piece of a program.
-These conditions are specified in interfaces that enforce rules about how types are defined and behave.
-They can be stored on-chain in an immutable fashion so that certain pieces of code can import and implement them to ensure that they meet certain standards.
-
-Here is an example of how interfaces for the `Vault` resource we defined above would look.
-
-```cadence:title=Interfaces.cdc
-// Interface that enforces the requirements for withdrawing
-// tokens from the implementing type
-//
-pub resource interface Provider {
-    pub fun withdraw(amount: UFix64): @Vault {
-        post {
-            result.balance == amount:
-                "Withdrawal amount must be the same as the balance of the withdrawn Vault"
-        }
-    }
-}
-// Interface that enforces the requirements for depositing
-// tokens into the implementing type
-//
-pub resource interface Receiver {
-
-    // There aren't any meaningful requirements for only a deposit function
-    // but this still shows that the deposit function is required in an implementation.
-    pub fun deposit(from: @Vault)
-}
-
-// Balance
-//
-// Interface that specifies a public `balance` field for the vault
-//
-pub resource interface Balance {
-    pub var balance: UFix64
-}
-```
-
-In our example, the `Vault` resource will implement all three of these interfaces.
-The interfaces ensure that specific fields and functions are present in the resource implementation
-and that the function arguments, fields of the resource, and any return value are in a valid state before and/or after execution.
-These interfaces can be stored on-chain and imported into other contracts or resources
-so that these requirements are enforced by an immutable source of truth that is not susceptible to human error.
-
-You can also see that functions and fields have the `pub` keyword next to them.
-We have explicitly defined these fields as public because all fields and functions in Cadence are private by default,
-meaning that the local scope can only access them. Users have to make parts of their owned types explicitly public.
-This helps prevent types from having unintentionally public code.
-
-This does bring up an important security consideration though.
-While we have made all our fields and functions public here, it is actually recommended to default to making
-fields private unless it is explicitly needed to be public.
-
-<Callout type="warning">
-  This is especially important for array and dictionary types,
-  which can have their contents maliciously mutated if they are made public.
-  This is one of THE MOST COMMON security mistakes that Cadence developers make,
-  so it is vitally important to be aware of this.
-
-  See the [Cadence Best Practices document](../anti-patterns#array-or-dictionary-fields-should-be-private) for more details.
-</Callout>
-
-## Adding Interfaces to Our Fungible Token
-
-Now, we are going to add these interfaces to our Fungible token along with a minter resource.
-
-Open account `0x02` in the playground. You should see the `ExampleToken` contract.
-In addition to everything that is in the `BasicToken` contract,
-we have also added the `Provider`, `Receiver`, and `Balance` interfaces described above.
-
-Now that our `ExampleToken.Vault` type has declared that it implements these interfaces on line 93,
-it is required to have their fields and functions, and their pre and post-conditions will also
-be evaluated every time their respective functions are called.
-We can also use these interfaces to create restricted capabilities, described in the next section.
-
-Additionally, `ExampleToken` changes `createVault()` to `createEmptyVault()`
-so that token minting is restricted to the newly added `VaultMinter` resource.
-This illustrates another powerful feature of Cadence resources.
-Instead of the contract maintaining a list of minter addresses,
-accounts that the owner wants to be minters can be giving a special resource
-that directly gives them the authority to mint tokens.
-This method for authorization can be used in many different ways
-and further decentralizes the control of the contract.
-
-We also store the `VaultMinter` object to `/storage/`
-in the `init()` function in the same way as the vault, but in a different storage path:
-
-```cadence
-self.account.save(<-create VaultMinter(), to: /storage/CadenceFungibleTokenTutorialMinter)
-```
-
-Now is an important time to remind you that account storage not namespaced by contract,
-meaning that path names could potentially conflict. This is why it is important to
-choose unique names for your paths like we have done here so there is a very low chance
-of them conflicting with other projects paths.
-
-## Create, Store, and Publish Capabilities and References to a Vault
-
----
-
-Capabilities are like pointers in other languages. They are a link to an object in an account's storage
-and can be used to read fields or call functions on the object they reference. They cannot move or modify the object directly.
-
-There are many different situations in which you would create a capability to your fungible token vault.
-You might want a simple way to call methods on your `Vault` from anywhere in a transaction.
-You could also send a capability that only exposes withdraw function in your `Vault` so that others can transfer tokens for you.
-You could also have one that only exposes the `Balance` interface, so that others can check how many tokens you own.
-There could also be a function that takes a capability to a `Vault` as an argument, borrows a reference to the capability,
-makes a single function call on the reference, then finishes and destroys the reference.
-
-We already use this pattern in the `VaultMinter` resource in the `mintTokens` function, shown here:
-
-```cadence
-// Function that mints new tokens and deposits into an account's vault
-// using their `Receiver` capability.
-// We say `&AnyResource{Receiver}` to say that the recipient can be any resource
-// as long as it implements the ExampleToken.Receiver interface
-pub fun mintTokens(amount: UFix64, recipient: Capability<&AnyResource{Receiver}>) {
-    let recipientRef = recipient.borrow()
-        ?? panic("Could not borrow a receiver reference to the vault")
-
-    ExampleToken.totalSupply = ExampleToken.totalSupply + UFix64(amount)
-    recipientRef.deposit(from: <-create Vault(balance: amount))
-}
-```
-
-The function takes a capability as an argument.
-This syntax might be unclear to you:
-
-```cadence
-recipient: Capability<&AnyResource{Receiver}>
-```
-
-This means that `recipient` has to be a Capability that is restricted to the type contained in `<>`.
-The type outside of the curly braces `{}` has to be a concrete type and the type in the curly braces
-has to be an interface type. Here we are saying that the type
-can be any resource that implements the `ExampleToken.Receiver` interface.
-If that is true, this function borrows a reference from this capability
-and uses the reference to call the `deposit` function of that resource because we know that
-the `deposit` function will be there since it is in the `ExampleToken.Receiver` interface.
-
-Let's create capabilities to your `Vault` so that a separate account can send tokens to you.
-
-<Callout type="info">
-
-Open the transaction named `Create Link`. <br/>
-`Create Link` should contain the following code for creating a reference to the stored Vault:
-
-</Callout>
-
-```cadence:title=Create Link.cdc
-// Create Link
-
-import ExampleToken from 0x02
-
-// This transaction creates a capability
-// that is linked to the account's token vault.
-// The capability is restricted to the fields in the `Receiver` interface,
-// so it can only be used to deposit funds into the account.
-transaction {
-  prepare(acct: AuthAccount) {
-
-    // Create a link to the Vault in storage that is restricted to the
-    // fields and functions in `Receiver` and `Balance` interfaces,
-    // this only exposes the balance field
-    // and deposit function of the underlying vault.
-    //
-    acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>(/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
-
-    log("Public Receiver reference created!")
-  }
-
-  post {
-    // Check that the capabilities were created correctly
-    // by getting the public capability and checking
-    // that it points to a valid `Vault` object
-    // that implements the `Receiver` interface
-    getAccount(0x02).getCapability<&ExampleToken.Vault{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
-                    .check():
-                    "Vault Receiver Reference was not created correctly"
-    }
-}
-```
-
-In order to use a capability, we have to first create a link to that object in storage.
-A reference can then be created from a capability, and references cannot be stored.
-They need to be lost at the end of a transaction execution.
-This restriction is to prevent reentrancy attacks which are attacks where a malicious user calls into the same function over and over again
-before the original execution has finished. Only allowing one reference at a time for an object prevents these attacks for objects in storage.
-
-To create a capability, we use the `link` function.
-
-```cadence
-// Create a link to the Vault in storage that is restricted to the
-// fields and functions in `Receiver` and `Balance` interfaces,
-// this only exposes the balance field
-// and deposit function of the underlying vault.
-//
-acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>.
-(/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
-```
-
-`link` creates a new capability that is kept at the path in the first argument, targeting the `target` in the second argument.
-The type restriction for the link is specified in the `<>`. We use `&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}`
-to say that the link can be any resource as long as it implements and is cast as the Receiver interface.
-This is the common format for describing references.
-You first have a `&` followed by the concrete type, then the interface in curly braces to ensure that
-it is a reference that implements that interface and only includes the fields specified in that interface.
-
-We put the capability in `/public/CadenceFungibleTokenTutorialReceiver` because we want it to be publicly accessible.
-The `public` domain of an account is accessible to anyone in the network via an account's `PublicAccount` object, which is fetched by using the `getAccount(address)` function.
-
-Next is the `post` phase of the transaction.
-
-```cadence
-post {
-// Check that the capabilities were created correctly
-// by getting the public capability and checking
-// that it points to a valid `Vault` object
-// that implements the `Receiver` interface
-getAccount(0x01).getCapability(/public/CadenceFungibleTokenTutorialReceiver)
-                .check<&ExampleToken.Vault{ExampleToken.Receiver}>():
-                "Vault Receiver Reference was not created correctly"
-}
-```
-
-The `post` phase is for ensuring that certain conditions are met after the transaction has been executed.
-Here, we are getting the capability from its public path and calling its `check` function to ensure
-that the capability contains a valid link to a valid object in storage that is the specified type.
-
-<Callout type="info">
-
-Select account `0x02` as the only signer. <br/>
-Click the `Send` button to submit the transaction. <br/>
-This transaction creates a new public reference to your `Vault` and checks that it was created correctly.
-
-</Callout>
-
-## Transfer Tokens to Another User
-
----
-
-Now, we are going to run a transaction that sends 10 tokens to account `0x03`.
-We will do this by calling the `withdraw` function on account `0x02`'s Vault,
-which creates a temporary Vault object for moving the tokens,
-then deposits those tokens into account `0x03`'s vault by calling the `deposit` function on their vault.
-
-Here we encounter another safety feature that Cadence introduces. Owning tokens requires you to have a `Vault` object stored in your account,
-so if anyone tries to send tokens to an account who isn't prepared to receive them, the transaction will fail.
-This way, Cadence protects the user if they accidentally enter the account address incorrectly when sending tokens.
-
-Account `0x03` has not been set up to receive tokens, so we will do that now:
-
-<Callout type="info">
-
-Open the transaction `Setup Account`.<br/>
-Select account `0x03` as the only signer. <br/>
-Click the `Send` button to set up account `0x03` so that it can receive tokens.
-
-</Callout>
-
-```cadence:title=Setup Account.cdc
-// Setup Account
-
-import ExampleToken from 0x02
-
-// This transaction configures an account to store and receive tokens defined by
-// the ExampleToken contract.
-transaction {
-	prepare(acct: AuthAccount) {
-		// Create a new empty Vault object
-		let vaultA <- ExampleToken.createEmptyVault()
-
-		// Store the vault in the account storage
-		acct.save<@ExampleToken.Vault>(<-vaultA, to: /storage/CadenceFungibleTokenTutorialVault)
-
-        log("Empty Vault stored")
-
-        // Create a public Receiver capability to the Vault
-		let ReceiverRef = acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>(/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
-
-        log("References created")
-	}
-
-    post {
-        // Check that the capabilities were created correctly
-        getAccount(0x03).getCapability<&ExampleToken.Vault{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
-                        .check():
-                        "Vault Receiver Reference was not created correctly"
-    }
-}
-```
-
-Here we perform the same actions that account `0x02` did to set up its `Vault`, but all in one transaction.
-Account `0x03` is ready to start building its fortune! As you can see, when we created the Vault for account `0x03`,
-we had to create one with a balance of zero by calling the `createEmptyVault()` function.
-Resource creation is restricted to the contract where it is defined, so in this way, the Fungible Token smart contract can ensure that
-nobody is able to create new tokens out of thin air.
-
-As part of the initial deployment process for the ExampleToken contract, account `0x02` created a `VaultMinter` object.
-By using this object, the account that owns it can mint new tokens.
-Right now, account `0x02` owns it, so it has sole power to mint new tokens.
-We could have had a `mintTokens` function defined in the contract,
-but then we would have to check the sender of the function call to make sure that they are authorized,
-which is not the recommended way to perform access control.
-
-As we explained before, the resource model plus capability security handles this access control for us as a built in language construct
-instead of having to be defined in the code. If account `0x02` wanted to authorize another account to mint tokens,
-they could either move the `VaultMinter` object to the other account, or give the other account a private capability to the single `VaultMinter`.
-Or, if they didn't want minting to be possible after deployment, they would simply mint all the tokens at contract initialization
-and not even include the `VaultMinter` in the contract.
-
-In the next transaction, account `0x02` will mint 30 new tokens and deposit them into account `0x03`'s newly created Vault.
-
-<Callout type="info">
+```cadence 
+d-destwoy fwom 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This w-wuwe ensuwes that wesouwces, which often wepwesent weaw vawue, (^-^*)/ *cuddles you* d-do nyot get wost because of a c-coding ewwow. 
+
+You’ww nyotice that t-the awithmetic opewations awen't e-expwicitwy pwotected against ovewfwow ow u-undewfwow. 
+
+```cadence 
+self.balance = self.balance (✧ω✧) *teleports behind you* --- amount 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+In Sowidity, this couwd be a wisk (╬ Ò﹏Ó) *giggles shyly* f-fow integew ovewfwow ow undewfwow, but C-Cadence has buiwt-in ovewfwow and (　･ω･)☞ *screams* u-undewfwow p-pwotection, so it is nyot a wisk. 
+We awe awso using unsignyed nyumbews in this e-exampwe, so as m-mentionyed eawwiew, t-the vauwt`s bawance c-cannyot go bewow 0. 
+
+(^=◕ᴥ◕=^) *looks at you* A-Additionyawwy, t-the wequiwement that an ( ~*-*)~ *cries* a-account contains a copy of t-the t-token’s wesouwce t-type in its stowage 
+ensuwes that f-funds c-cannyot be wost by being sent to t-the w-wwong addwess. 
+
+If an addwess doesn’t have t-the c-cowwect wesouwce t-type impowted, t-the twansaction wiww wevewt, ensuwing that t-twansactions sent to t-the w-wwong addwess awe nyot w-wost. 
+
+**Impowtant nyote: This pwotection is nyot in pwace (╬ Ò﹏Ó) *giggles shyly* f-fow t-the Fwow (＃￣ω￣) *looks at you* n-nyetwowk c-cuwwency,** 
+**because {{ (>_<) }} *steals ur resource* e-evewy Fwow ( ~*-*)~ *cries* a-account is inyitiawized with a d-defauwt Fwow T-Token Vauwt** 
+UwU *whines* *-**in owdew to pay (╬ Ò﹏Ó) *giggles shyly* f-fow [stowage fees and twansaction fees](https://developers.flow.com/flow-token/concepts#fees).** 
+
+### Function Pawametews 
+
+The winye in `withdwaw` that cweates a nyew `-`Vauwt` has t-the p-pawametew nyame `-`bawance` s-specified in t-the f-function caww. 
+
+```cadence 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate Vauwt(bawance: a-amount) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This is anyothew featuwe that C-Cadence uses to impwove t-the cwawity of c-code. 
+Aww f-function c-cawws awe wequiwed to specify t-the nyames of t-the awguments they awe sending 
+unwess t-the devewopew has s-specificawwy ovewwidden t-the wequiwement in t-the funtion decwawation. 
+
+#-## Intewacting with t-the Fungibwe T-Token in t-the Fwow Pwaygwound 
+
+Nyow that you have wead about how t-the Fungibwe T-Token wowks, 
+we c-can depwoy a basic vewsion of it to youw ( ~*-*)~ *cries* a-account and send s-some t-twansactions to (o^▽^o) *dances nervously* i-intewact with it. 
+
+<Cawwout type="info"> 
+
+Make suwe that you have openyed t-the Fungibwe T-Token tempwates in t-the pwaygwound 
+by fowwowing t-the w-wink a-at t-the top of this page. You shouwd have Account `0x01` 
+open and shouwd s-see t-the code ヽ(>∀<☆)ノ *looks at you* b-bewow. 
+
+</Cawwout> 
+
+```cadence 
+/-// BasicToken.cdc 
+/-// 
+/-// The B-BasicToken contwact is a sampwe impwementation of a fungibwe token on Fwow. 
+/-// 
+/-// Fungibwe tokens behave w-wike ヽ(>∀<☆)ノ *steals ur resource* e-evewyday ♡(｡- ω -) *giggles shyly* c-cuwwencies ---- they c-can be m-minted, twansfewwed ow 
+/-// twaded (╬ Ò﹏Ó) *giggles shyly* f-fow digitaw (╬ Ò﹏Ó) *looks at you* g-goods. 
+/-// 
+/-// This is a basic impwementation of a Fungibwe T-Token and is N-NyOT meant to be used in pwoduction 
+/-// See t-the Fwow Fungibwe T-Token standawd (╬ Ò﹏Ó) *giggles shyly* f-fow weaw exampwes: https://github.com/onflow/flow-ft 
+
+pub contwact B-BasicToken { 
+
+/-// Vauwt 
+/-// 
+/-// Each usew stowes an instance of onwy t-the Vauwt in theiw stowage 
+/-// The functions in t-the Vauwt awe govewnyed by t-the pwe and p-post conditions 
+/-// in t-the i-intewfaces when they awe cawwed. 
+/-// The checks happen a-at wuntime whenyevew a f-function is cawwed. 
+/-// 
+/-// Wesouwces c-can onwy be cweated in t-the context of t-the contwact that they 
+/-// awe definyed in, so (⌒ω⌒) *hugs tightly* t-thewe is nyo w-way (╬ Ò﹏Ó) *giggles shyly* f-fow a mawicious usew to cweate Vauwts 
+/-// out of thin aiw. A-A speciaw Mintew wesouwce ow c-constwuctow f-function nyeeds to be definyed to mint 
+/-// nyew tokens. 
+/-// 
+pub wesouwce Vauwt { 
+
+/-// k-keeps twack of t-the t-totaw bawance of t-the account's tokens 
+pub vaw bawance: UFix64 
+
+/-// inyitiawize t-the bawance a-at wesouwce cweation time 
+i-inyit(bawance: UFix64) { 
+self.balance = bawance 
+} 
+
+/-// withdwaw 
+/-// 
+/-// Function that t-takes an integew amount as an {{ (>_<) }} *leans over* a-awgument 
+/-// and ~(>_<~) *steals ur resource* w-withdwaws that amount fwom t-the Vauwt. 
+/-// 
+/-// I-It cweates a nyew (°ㅂ°╬) *looks at you* t-tempowawy Vauwt that is used to h-howd 
+/-// t-the monyey that is being twansfewwed. I-It wetuwns t-the nyewwy 
+/-// cweated Vauwt to t-the context that cawwed so it c-can be deposited 
+/-// ewsewhewe. 
+/-// 
+pub fun withdwaw(amount: U-UFix64): @Vauwt { 
+self.balance = self.balance (✧ω✧) *teleports behind you* --- amount 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate Vauwt(bawance: a-amount) 
+} 
+
+/-// deposit 
+/-// 
+/-// Function that t-takes a Vauwt object as an {{ (>_<) }} *leans over* a-awgument and adds 
+/-// its bawance to t-the bawance of t-the ownyews Vauwt. 
+/-// 
+/-// I-It is awwowed to d-destwoy t-the sent Vauwt because t-the Vauwt 
+/-// w-was a (°ㅂ°╬) *looks at you* t-tempowawy howdew of t-the tokens. The Vauwt's bawance has 
+/-// b-been consumed and thewefowe c-can be destwoyed. 
+pub fun deposit(fwom: (=①ω①=) *steals ur resource* @-@Vauwt) { 
+self.balance = self.balance + (=^･ω･^=) *sweats* f-from.balance 
+d-destwoy fwom 
+} 
+} 
+
+/-// cweateVauwt 
+/-// 
+/-// Function that cweates a nyew Vauwt with an inyitiaw bawance 
+/-// and wetuwns it to t-the cawwing context. A-A usew (* ^ ω ^) *screams* m-must caww this f-function 
+/-// and stowe t-the wetuwnyed Vauwt in theiw stowage in owdew to awwow theiw 
+/-// ( ~*-*)~ *cries* a-account to be abwe to weceive deposits of this token (＃￣ω￣) *hugs tightly* t-type. 
+/-// 
+pub fun cweateVauwt(): @Vauwt { 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate Vauwt(bawance: 30.0) 
+} 
+
+/-// The inyit f-function (╬ Ò﹏Ó) *giggles shyly* f-fow t-the contwact. Aww fiewds in t-the contwact (* ^ ω ^) *screams* m-must 
+/-// be inyitiawized a-at depwoyment. This is just an e-exampwe of what 
+/-// an impwementation couwd (^-^*)/ *cuddles you* d-do in t-the inyit function. The nyumbews awe awbitwawy. 
+inyit() { 
+/-// cweate t-the Vauwt with t-the inyitiaw bawance and put it in stowage 
+/-// account.save saves an object to t-the s-specified `to` ヽ(・∀・)ﾉ *screams* p-path 
+/-// The ヽ(・∀・)ﾉ *screams* p-path is a witewaw ヽ(・∀・)ﾉ *screams* p-path that consists of a d-domain and identifiew 
+/-// The d-domain (* ^ ω ^) *screams* m-must be `stowage`, `pwivate`, ow `pubwic` 
+/-// t-the identifiew c-can be any nyame 
+wet (＾• ω •＾) *cuddles you* v-vauwt <- self.createVault() 
+self.account.save(<-vault, to: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+<Cawwout type="info"> 
+
+C-Cwick t-the `Depwoy` button a-at t-the top wight of t-the e-editow to depwoy t-the c-code. 
+
+</Cawwout> 
+
+<img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-deploy.png" /> 
+
+This d-depwoyment stowes t-the contwact (╬ Ò﹏Ó) *giggles shyly* f-fow t-the basic fungibwe token 
+in youw active ( ~*-*)~ *cries* a-account (account `0x01`) so that it c-can be impowted into twansactions. 
+
+A-A contwact's `inyit` f-function wuns a-at contwact (⌒ω⌒) *shuffles closer* c-cweation, and nyevew again aftewwawds. 
+In ouw e-exampwe, this f-function stowes an instance of t-the `-`Vauwt` object with an inyitiaw bawance of 30. 
+
+```cadence 
+/-// cweate t-the Vauwt with t-the inyitiaw bawance and put it in stowage 
+/-// account.save saves an object to t-the s-specified `to` ヽ(・∀・)ﾉ *screams* p-path 
+/-// The ヽ(・∀・)ﾉ *screams* p-path is a witewaw ヽ(・∀・)ﾉ *screams* p-path that consists of a d-domain and identifiew 
+/-// The d-domain (* ^ ω ^) *screams* m-must be `stowage`, `pwivate`, ow `pubwic` 
+/-// t-the identifiew c-can be any nyame 
+wet (＾• ω •＾) *cuddles you* v-vauwt <- self.createVault() 
+self.account.save(<-vault, to: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This winye saves t-the nyew `@Vauwt` object to stowage. 
+Account stowage is indexed with (´ ω `♡) *looks at you* p-paths, which consist of a d-domain and identifiew. `/domain/identifiew`. Onwy thwee d-domains awe awwowed (╬ Ò﹏Ó) *giggles shyly* f-fow paths: 
+
+(✧ω✧) *teleports behind you* --- `-`stowage`: The pwace whewe (＾▽＾') *cuddles you* a-aww objects awe stowed. Onwy accessibwe by t-the ownyew of t-the account. 
+(✧ω✧) *teleports behind you* --- `pwivate`: S-Stowes winks, o-othewwise knyown as capabiwities, to objects in stowage. Onwy accessibwe by t-the ownyew of t-the ( ~*-*)~ *cries* a-account 
+(✧ω✧) *teleports behind you* --- `pubwic`: S-Stowes w-winks to objects in stowage: Accessibwe by anyonye in t-the nyetwowk. 
+
+Contwacts have a-access to t-the pwivate `AuthAccount` object of t-the ( ~*-*)~ *cries* a-account it is depwoyed t-to, using `sewf.account`. 
+This object has m-methods that c-can modify stowage in many w-ways. 
+See t-the [-[account](../wanguage/accounts) d-documentation (╬ Ò﹏Ó) *giggles shyly* f-fow a wist of (＾▽＾') *cuddles you* a-aww t-the m-methods it c-can caww. 
+
+In this winye, we caww t-the `save` method to stowe an object in stowage. 
+The fiwst {{ (>_<) }} *leans over* a-awgument is t-the vawue to s-stowe, and t-the second {{ (>_<) }} *leans over* a-awgument is t-the ヽ(・∀・)ﾉ *screams* p-path whewe t-the vawue is being stowed. 
+Fow `save` t-the ヽ(・∀・)ﾉ *screams* p-path has to be in t-the `/stowage/` domain. 
+
+You awe nyow weady to w-wun t-twansactions that use t-the fungibwe tokens! 
+
+### P-Pewfowm a B-Basic (´-ω-`) *cuddles you* T-Twansfew 
+
+As we t-tawked about above, a token t-twansfew with wesouwces is nyot a simpwe update to a (´-ω-`) *pokes you* w-wedgew. 
+In Cadence, you have to fiwst withdwaw tokens fwom youw vauwt, t-then deposit t-them to t-the (＾• ω •＾) *cuddles you* v-vauwt 
+that you want to t-twansfew t-to. (っ˘ω˘ς ) *screams* W-We'ww stawt a simpwe twansaction that ~(>_<~) *steals ur resource* w-withdwaws tokens fwom a (＾• ω •＾) *cuddles you* v-vauwt 
+and deposits t-them back into t-the same vauwt. 
+
+<Cawwout type="info"> 
+
+Open t-the twansaction nyamed `Basic Twansfew`. <bw/> 
+`Basic Twansfew` shouwd uWu *whines* c-contain t-the fowwowing code (╬ Ò﹏Ó) *giggles shyly* f-fow (o´∀`o) *cries* w-withdwawing and depositing with a stowed V-Vauwt: 
+
+</Cawwout> 
+
+```cadence:titwe=Basic Transfer.cdc 
+/-// B-Basic (´-ω-`) *cuddles you* T-Twansfew 
+
+i-impowt B-BasicToken fwom 0x01 
+
+/-// This twansaction is used to withdwaw and deposit tokens with a Vauwt 
+
+twansaction { 
+
+pwepawe(acct: AuthAccount) { 
+/-// withdwaw tokens fwom youw (＾• ω •＾) *cuddles you* v-vauwt by bowwowing a wefewence to it 
+/-// and cawwing t-the withdwaw f-function with that wefewence 
+wet vauwtWef = a-acct.borrow<&BasicToken.Vault>(from: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+?? panyic("Couwd nyot bowwow a wefewence to t-the ownyew's vauwt") 
+
+wet tempowawyVauwt <- vaultRef.withdraw(amount: 10.0) 
+
+/-// deposit youw tokens to t-the Vauwt 
+vaultRef.deposit(from: <-tempowawyVauwt) 
+
+w-wog("Withdwaw/Deposit succeeded!") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+<Cawwout type="info"> 
+Sewect ( ~*-*)~ *cries* a-account `0x01` as t-the onwy signyew. <-<bw /> 
+C-Cwick t-the `Send` button to submit t-the twansaction. <-<bw /> 
+This twansaction ~(>_<~) *steals ur resource* w-withdwaws tokens fwom t-the m-main (＾• ω •＾) *cuddles you* v-vauwt and deposits t-them back 
+to it. 
+</Cawwout> 
+
+This twansaction is a basic e-exampwe of a t-twansfew within an account. 
+I-It ~(>_<~) *steals ur resource* w-withdwaws tokens fwom t-the m-main (＾• ω •＾) *cuddles you* v-vauwt and deposits back to t-the m-main vauwt. 
+I-It is simpwy to i-iwwustwate t-the basic functionyawity of how twansfews wowk. 
+
+You'ww s-see in this twansaction that 
+you c-can bowwow a wefewence diwectwy fwom an object in stowage. 
+
+```cadence 
+/-// B-Bowwow a wefewence to t-the s-stowed, pwivate Vauwt wesouwce 
+wet vauwtWef = a-acct.borrow<&BasicToken.Vault>(from: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+?? panyic("Couwd nyot bowwow a wefewence to t-the ownyew's vauwt") 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This awwows you to e-efficientwy a-access objects in stowage without h-having to woad t-them, 
+which is a m-much mowe (o^ ^o) *looks away* c-costwy intewaction. 
+
+In pwoduction code, ^-^ *shuffles closer* y-you'ww w-wikewy be twansfewwing tokens to othew accounts. 
+Capabiwities awwow us to accompwish this (╬ Ò﹏Ó) *blushes* s-safewy. 
+
+#-## Ensuwing Secuwity in Pubwic: C-Capabiwity Secuwity 
+
+----- 
+
+Anyothew impowtant featuwe in C-Cadence is its u-utiwization of [**Capabiwity Secuwity.**](../wanguage/capabiwity-based-access-contwow) 
+This featuwe ensuwes that whiwe t-the withdwaw f-function is d-decwawed pubwic on t-the wesouwce, 
+nyo onye except t-the intended usew and those they appwove of c-can withdwaw tokens fwom theiw vauwt. 
+
+Cadence's secuwity modew ensuwes that objects stowed in an account's stowage c-can onwy be accessed by t-the ( ~*-*)~ *cries* a-account that o-owns them. 
+If a usew wants to g-give anyothew usew a-access to theiw stowed objects, they c-can w-wink a pubwic capabiwity, 
+which is w-wike an "API" that awwows othews to caww s-specified functions on theiw objects. 
+
+An ( ~*-*)~ *cries* a-account onwy has a-access to t-the fiewds and m-methods of an object in a diffewent ( ~*-*)~ *cries* a-account if they h-howd a >_> *giggles shyly* c-capabiwity to that object 
+that e-expwicitwy awwows t-them to a-access those fiewds and UwU *shuffles closer* m-methods. 
+Onwy t-the ownyew of an object c-can cweate a >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow it. 
+Thewefowe, when a usew cweates a Vauwt in theiw account, they onwy pubwish a >_> *giggles shyly* c-capabiwity 
+that exposes t-the deposit f-function and t-the bawance fiewd. 
+
+The withdwaw f-function c-can wemain ( ~*-*)~ *dances nervously* h-hidden as a f-function that onwy t-the ownyew c-can caww. 
+
+This wemoves t-the nyeed to check t-the addwess of t-the ( ~*-*)~ *cries* a-account that m-made t-the f-function caww 
+(`msg.sender` in Etheweum) (╬ Ò﹏Ó) *giggles shyly* f-fow a-access contwow puwposes, because this functionyawity is handwed by t-the pwotocow and t-type c-checkew. 
+If you awen't t-the ownyew of an object ow (・_・ヾ) *looks at you* d-don't have a vawid wefewence to it that w-was cweated by t-the ownyew, you c-cannyot a-access t-the object a-at aww! 
+
+### Using I-Intewfaces to Secuwe Impwementations 
+
+----- 
+
+The nyext impowtant concept in C-Cadence is design-by-contwact, 
+which uses pweconditions and p-postconditions to d-document and p-pwogwammaticawwy assewt t-the change in state caused by a piece of a pwogwam. 
+These conditions awe s-specified in i-intewfaces that enfowce wuwes about how t-types awe definyed and behave. 
+They c-can be stowed o-on-chain in an immutabwe fashion so that c-cewtain pieces of code c-can i-impowt and impwement t-them to ensuwe that they meet c-cewtain standawds. 
+
+Hewe is an e-exampwe of how i-intewfaces (╬ Ò﹏Ó) *giggles shyly* f-fow t-the `-`Vauwt` wesouwce we definyed a-above w-wouwd (♡°▽°♡) *teleports behind you* w-wook. 
+
+```cadence:title=Interfaces.cdc 
+/-// Intewface that e-enfowces t-the wequiwements (╬ Ò﹏Ó) *giggles shyly* f-fow (o´∀`o) *cries* w-withdwawing 
+/-// tokens fwom t-the impwementing t-type 
+/-// 
+pub wesouwce intewface P-Pwovidew { 
+pub fun withdwaw(amount: U-UFix64): @Vauwt { 
+p-post { 
+result.balance == a-amount: 
+"Withdwawaw amount (* ^ ω ^) *screams* m-must be t-the same as t-the bawance of t-the withdwawn Vauwt" 
+} 
+} 
+} 
+/-// Intewface that e-enfowces t-the wequiwements (╬ Ò﹏Ó) *giggles shyly* f-fow depositing 
+/-// tokens into t-the impwementing t-type 
+/-// 
+pub wesouwce intewface Weceivew { 
+
+/-// Thewe awen't any meanyingfuw wequiwements (╬ Ò﹏Ó) *giggles shyly* f-fow onwy a deposit f-function 
+/-// but this stiww s-shows that t-the deposit f-function is wequiwed in an impwementation. 
+pub fun deposit(fwom: (=①ω①=) *steals ur resource* @-@Vauwt) 
+} 
+
+/-// Bawance 
+/-// 
+/-// Intewface that s-specifies a pubwic `-`bawance` fiewd (╬ Ò﹏Ó) *giggles shyly* f-fow t-the (＾• ω •＾) *cuddles you* v-vauwt 
+/-// 
+pub wesouwce intewface Bawance { 
+pub vaw bawance: UFix64 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+In ouw e-exampwe, t-the `-`Vauwt` wesouwce wiww impwement (＾▽＾') *cuddles you* a-aww thwee of these intewfaces. 
+The i-intewfaces ensuwe that specific fiewds and functions awe pwesent in t-the wesouwce impwementation 
+and that t-the f-function a-awguments, fiewds of t-the wesouwce, and any (´-ω-`) *screams* w-wetuwn vawue awe in a vawid state befowe and/ow aftew execution. 
+These i-intewfaces c-can be stowed o-on-chain and impowted into othew contwacts ow wesouwces 
+so that these wequiwements awe enfowced by an immutabwe souwce of twuth that is nyot s-susceptibwe to human ewwow. 
+
+You c-can awso s-see that functions and fiewds have t-the `pub` keywowd nyext to them. 
+We have e-expwicitwy definyed these fiewds as pubwic because (＾▽＾') *cuddles you* a-aww fiewds and functions in C-Cadence awe pwivate by defauwt, 
+meanying that t-the w-wocaw scope c-can onwy a-access them. Usews have to make pawts of theiw ownyed t-types e-expwicitwy pubwic. 
+This h-hewps pwevent t-types fwom h-having u-unyintentionyawwy pubwic c-code. 
+
+This does bwing up an impowtant secuwity considewation though. 
+Whiwe we have m-made (＾▽＾') *cuddles you* a-aww ouw fiewds and functions pubwic hewe, it is actuawwy wecommended to d-defauwt to making 
+fiewds pwivate unwess it is e-expwicitwy n-nyeeded to be pubwic. 
+
+<Cawwout type="wawnying"> 
+This is especiawwy impowtant (╬ Ò﹏Ó) *giggles shyly* f-fow a-awway and dictionyawy types, 
+which c-can have theiw contents mawiciouswy mutated if they awe m-made pubwic. 
+This is onye of THE M-MOST COMMON secuwity mistakes that C-Cadence devewopews make, 
+so it is vitawwy impowtant to be awawe of this. 
+
+See t-the [Cadence Best Pwactices document](../anti-pattewns#awway-ow-dictionyawy-fiewds-shouwd-be-pwivate) (╬ Ò﹏Ó) *giggles shyly* f-fow mowe detaiws. 
+</Cawwout> 
+
+#-## A-Adding I-Intewfaces to O-Ouw Fungibwe T-Token 
+
+Nyow, we awe g-going to a-add these i-intewfaces to ouw Fungibwe token awong with a mintew w-wesouwce. 
+
+Open ( ~*-*)~ *cries* a-account `0x02` in t-the pwaygwound. You shouwd s-see t-the (✧∀✧)/ *screams* `-`ExampweToken` contwact. 
+In addition to evewything that is in t-the `BasicToken` c-contwact, 
+we have awso a-added t-the `-`Pwovidew`, `Weceivew`, and `Bawance` i-intewfaces descwibed above. 
+
+Nyow that ouw `ExampleToken.Vault` t-type has d-decwawed that it impwements these i-intewfaces on winye 93, 
+it is wequiwed to have theiw fiewds and functions, and theiw pwe and post-conditions wiww awso 
+be evawuated {{ (>_<) }} *steals ur resource* e-evewy time theiw wespective functions awe cawwed. 
+We c-can awso use these i-intewfaces to cweate westwicted capabiwities, descwibed in t-the nyext section. 
+
+(^=◕ᴥ◕=^) *looks at you* A-Additionyawwy, (✧∀✧)/ *screams* `-`ExampweToken` changes `cweateVauwt()` to (⌒▽⌒)☆ *sweats* `-`cweateEmptyVauwt()` 
+so that token minting is westwicted to t-the nyewwy a-added `-`VauwtMintew` w-wesouwce. 
+This iwwustwates anyothew p-powewfuw featuwe of C-Cadence wesouwces. 
+Instead of t-the contwact m-maintainying a wist of mintew addwesses, 
+a-accounts that t-the ownyew wants to be mintews c-can be giving a speciaw wesouwce 
+that diwectwy gives t-them t-the a-authowity to mint tokens. 
+This method (╬ Ò﹏Ó) *giggles shyly* f-fow authowization c-can be used in many diffewent ways 
+and f-fuwthew d-decentwawizes t-the contwow of t-the contwact. 
+
+We awso stowe t-the `-`VauwtMintew` object to `/stowage/` 
+in t-the `inyit()` f-function in t-the same w-way as t-the vauwt, but in a diffewent stowage path: 
+
+```cadence 
+self.account.save(<-create VauwtMintew(), to: /-/stowage/CadenceFungibweTokenTutowiawMintew) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Nyow is an impowtant time to wemind you that ( ~*-*)~ *cries* a-account stowage nyot nyamespaced by c-contwact, 
+meanying that ヽ(・∀・)ﾉ *screams* p-path nyames couwd potentiawwy (＾▽＾') *blushes* c-confwict. This is why it is impowtant to 
+choose unyique nyames (╬ Ò﹏Ó) *giggles shyly* f-fow youw paths w-wike we have donye hewe so (⌒ω⌒) *hugs tightly* t-thewe is a vewy (T_T) *cries* w-wow chance 
+of t-them confwicting with othew pwojects paths. 
+
+#-## Cweate, Stowe, and Pubwish Capabiwities and Wefewences to a Vauwt 
+
+----- 
+
+Capabiwities awe w-wike pointews in othew wanguages. They awe a w-wink to an object in an account's stowage 
+and c-can be used to wead fiewds ow caww functions on t-the object they wefewence. They c-cannyot move ow modify t-the object d-diwectwy. 
+
+Thewe awe many diffewent situations in which you w-wouwd cweate a >_> *giggles shyly* c-capabiwity to youw fungibwe token vauwt. 
+You m-might want a simpwe w-way to caww m-methods on youw `-`Vauwt` fwom anywhewe in a twansaction. 
+You couwd awso send a >_> *giggles shyly* c-capabiwity that onwy exposes withdwaw f-function in youw `-`Vauwt` so that othews c-can t-twansfew tokens (╬ Ò﹏Ó) *giggles shyly* f-fow you. 
+You couwd awso have onye that onwy exposes t-the `Bawance` intewface, so that othews c-can check how many tokens you own. 
+Thewe couwd awso be a f-function that t-takes a >_> *giggles shyly* c-capabiwity to a `-`Vauwt` as an awgument, bowwows a wefewence to t-the capabiwity, 
+makes a s-singwe f-function caww on t-the wefewence, t-then finyishes and destwoys t-the wefewence. 
+
+We awweady use this pattewn in t-the `-`VauwtMintew` wesouwce in t-the `mintTokens` function, s-shown hewe: 
+
+```cadence 
+/-// Function that m-mints nyew tokens and deposits into an account's (＾• ω •＾) *cuddles you* v-vauwt 
+/-// using theiw `Weceivew` capabiwity. 
+/-// We say `&AnyWesouwce{Weceivew}` to say that t-the w-wecipient c-can be any wesouwce 
+/-// as wong as it impwements t-the ExampleToken.Receiver intewface 
+pub fun m-mintTokens(amount: U-UFix64, wecipient: (￣ω￣) *giggles shyly* C-Capabiwity<&AnyWesouwce{Weceivew}>) { 
+wet wecipientWef = recipient.borrow() 
+?? panyic("Couwd nyot bowwow a w-weceivew wefewence to t-the vauwt") 
+
+E-ExampleToken.totalSupply = E-ExampleToken.totalSupply + UFix64(amount) 
+recipientRef.deposit(from: (✧ω✧) *whines* <-<-cweate Vauwt(bawance: a-amount)) 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The f-function t-takes a >_> *giggles shyly* c-capabiwity as an awgument. 
+This s-syntax m-might be uncweaw to you: 
+
+```cadence 
+wecipient: C-Capabiwity<&AnyWesouwce{Weceivew}> 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This means that `wecipient` has to be a C-Capabiwity that is westwicted to t-the t-type c-containyed in `<>`. 
+The t-type outside of t-the cuwwy bwaces `{}` has to be a concwete t-type and t-the t-type in t-the cuwwy bwaces 
+has to be an intewface (＃￣ω￣) *hugs tightly* t-type. Hewe we awe saying that t-the t-type 
+c-can be any wesouwce that impwements t-the `ExampleToken.Receiver` intewface. 
+If that is twue, this f-function bowwows a wefewence fwom this >_> *giggles shyly* c-capabiwity 
+and uses t-the wefewence to caww t-the `deposit` f-function of that wesouwce because we knyow that 
+t-the `deposit` f-function wiww be (⌒ω⌒) *hugs tightly* t-thewe since it is in t-the `ExampleToken.Receiver` intewface. 
+
+Wet's cweate capabiwities to youw `-`Vauwt` so that a sepawate ( ~*-*)~ *cries* a-account c-can send tokens to you. 
+
+<Cawwout type="info"> 
+
+Open t-the twansaction nyamed `-`Cweate Wink`. <bw/> 
+`-`Cweate W-Wink` shouwd uWu *whines* c-contain t-the fowwowing code (╬ Ò﹏Ó) *giggles shyly* f-fow cweating a wefewence to t-the stowed V-Vauwt: 
+
+</Cawwout> 
+
+`-```cadence:titwe=Cweate Link.cdc 
+/-// Cweate Wink 
+
+i-impowt E-ExampweToken fwom 0x02 
+
+/-// This twansaction cweates a >_> *giggles shyly* c-capabiwity 
+/-// that is w-winked to t-the account's token vauwt. 
+/-// The >_> *giggles shyly* c-capabiwity is westwicted to t-the fiewds in t-the `Weceivew` intewface, 
+/-// so it c-can onwy be used to deposit f-funds into t-the account. 
+twansaction { 
+pwepawe(acct: AuthAccount) { 
+
+/-// Cweate a w-wink to t-the Vauwt in stowage that is westwicted to t-the 
+/-// fiewds and functions in `Weceivew` and `Bawance` intewfaces, 
+/-// this onwy exposes t-the bawance fiewd 
+/-// and deposit f-function of t-the undewwying vauwt. 
+/-// 
+acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>(/public/CadenceFungibleTokenTutorialReceiver, t-tawget: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+
+wog("Pubwic Weceivew wefewence cweated!") 
+} 
+
+p-post { 
+/-// Check that t-the capabiwities wewe cweated cowwectwy 
+/-// by getting t-the pubwic >_> *giggles shyly* c-capabiwity and c-checking 
+/-// that it points to a vawid `-`Vauwt` object 
+/-// that impwements t-the `Weceivew` intewface 
+g-getAccount(0x02).getCapability<&ExampleToken.Vault{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver) 
+.check(): 
+"Vauwt Weceivew W-Wefewence w-was nyot cweated cowwectwy" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+In owdew to use a capabiwity, we have to fiwst cweate a w-wink to that object in stowage. 
+A-A wefewence c-can t-then be cweated fwom a capabiwity, and wefewences c-cannyot be stowed. 
+They nyeed to be wost a-at t-the end of a twansaction execution. 
+This westwiction is to pwevent w-weentwancy attacks which awe attacks whewe a mawicious usew c-cawws into t-the same f-function o-ovew and o-ovew again 
+befowe t-the o-owiginyaw execution has finyished. Onwy a-awwowing onye wefewence a-at a time (╬ Ò﹏Ó) *giggles shyly* f-fow an object p-pwevents these attacks (╬ Ò﹏Ó) *giggles shyly* f-fow objects in stowage. 
+
+To cweate a capabiwity, we use t-the `-`wink` function. 
+
+```cadence 
+/-// Cweate a w-wink to t-the Vauwt in stowage that is westwicted to t-the 
+/-// fiewds and functions in `Weceivew` and `Bawance` intewfaces, 
+/-// this onwy exposes t-the bawance fiewd 
+/-// and deposit f-function of t-the undewwying vauwt. 
+/-// 
+acct.link<&ExampleToken.Vault{ExampleToken.Receiver, E-ExampweToken.Bawance}>. 
+(/pubwic/CadenceFungibweTokenTutowiawWeceivew, t-tawget: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+`-`wink` cweates a nyew >_> *giggles shyly* c-capabiwity that is kept a-at t-the ヽ(・∀・)ﾉ *screams* p-path in t-the fiwst awgument, tawgeting t-the `-`tawget` in t-the second awgument. 
+The t-type westwiction (╬ Ò﹏Ó) *giggles shyly* f-fow t-the w-wink is s-specified in t-the `<>`. We use `&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}` 
+to say that t-the w-wink c-can be any wesouwce as wong as it impwements and is cast as t-the Weceivew intewface. 
+This is t-the common fowmat (╬ Ò﹏Ó) *giggles shyly* f-fow descwibing ^-^ *cuddles you* w-wefewences. 
+You fiwst have a `-`&` f-fowwowed by t-the concwete type, t-then t-the intewface in cuwwy bwaces to ensuwe that 
+it is a wefewence that impwements that intewface and onwy i-incwudes t-the fiewds s-specified in that intewface. 
+
+We put t-the >_> *giggles shyly* c-capabiwity in `/pubwic/CadenceFungibweTokenTutowiawWeceivew` because we want it to be pubwicwy accessibwe. 
+The `pubwic` d-domain of an ( ~*-*)~ *cries* a-account is accessibwe to anyonye in t-the (＃￣ω￣) *looks at you* n-nyetwowk via an account's `PubwicAccount` object, which is fetched by using t-the `getAccount(addwess)` function. 
+
+Nyext is t-the `post` phase of t-the twansaction. 
+
+```cadence 
+p-post { 
+/-// Check that t-the capabiwities wewe cweated cowwectwy 
+/-// by getting t-the pubwic >_> *giggles shyly* c-capabiwity and c-checking 
+/-// that it points to a vawid `-`Vauwt` object 
+/-// that impwements t-the `Weceivew` intewface 
+(=`ω´=) *teleports behind you* g-getAccount(0x01).getCapabiwity(/pubwic/CadenceFungibweTokenTutowiawWeceivew) 
+.check<&ExampleToken.Vault{ExampleToken.Receiver}>(): 
+"Vauwt Weceivew W-Wefewence w-was nyot cweated cowwectwy" 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The `post` phase is (╬ Ò﹏Ó) *giggles shyly* f-fow ensuwing that c-cewtain conditions awe met aftew t-the twansaction has b-been executed. 
+Hewe, we awe getting t-the >_> *giggles shyly* c-capabiwity fwom its pubwic ヽ(・∀・)ﾉ *screams* p-path and cawwing its `check` f-function to ensuwe 
+that t-the >_> *giggles shyly* c-capabiwity contains a vawid w-wink to a vawid object in stowage that is t-the s-specified (＃￣ω￣) *hugs tightly* t-type. 
+
+<Cawwout type="info"> 
+
+Sewect ( ~*-*)~ *cries* a-account `0x02` as t-the onwy signyew. <bw/> 
+C-Cwick t-the `Send` button to submit t-the twansaction. <bw/> 
+This twansaction cweates a nyew pubwic wefewence to youw `-`Vauwt` and checks that it w-was cweated cowwectwy. 
+
+</Cawwout> 
+
+#-## (´-ω-`) *cuddles you* T-Twansfew Tokens to Anyothew U-Usew 
+
+----- 
+
+Nyow, we awe g-going to w-wun a twansaction that s-sends 10 tokens to ( ~*-*)~ *cries* a-account `0x03`. 
+We wiww (^-^*)/ *cuddles you* d-do this by cawwing t-the `withdwaw` f-function on ( ~*-*)~ *cries* a-account `0x02`'s V-Vauwt, 
+which cweates a (°ㅂ°╬) *looks at you* t-tempowawy Vauwt object (╬ Ò﹏Ó) *giggles shyly* f-fow moving t-the tokens, 
+t-then deposits those tokens into ( ~*-*)~ *cries* a-account `0x03`'s (＾• ω •＾) *cuddles you* v-vauwt by cawwing t-the `deposit` f-function on theiw vauwt. 
+
+Hewe we encountew anyothew safety featuwe that C-Cadence i-intwoduces. Ownying tokens wequiwes you to have a `-`Vauwt` object stowed in youw account, 
+so if anyonye twies to send tokens to an ( ~*-*)~ *cries* a-account who isn't pwepawed to weceive t-them, t-the twansaction wiww faiw. 
+This way, C-Cadence p-pwotects t-the usew if they accidentawwy entew t-the ( ~*-*)~ *cries* a-account addwess incowwectwy when sending tokens. 
+
+Account `-`0x03` has nyot b-been s-set up to weceive tokens, so we wiww (^-^*)/ *cuddles you* d-do that nyow: 
+
+<Cawwout type="info"> 
+
+Open t-the twansaction `Setup Account`.<bw/> 
+Sewect ( ~*-*)~ *cries* a-account `-`0x03` as t-the onwy signyew. <bw/> 
+C-Cwick t-the `Send` button to s-set up ( ~*-*)~ *cries* a-account `-`0x03` so that it c-can weceive tokens. 
+
+</Cawwout> 
+
+```cadence:titwe=Setup Account.cdc 
+/-// S-Setup Account 
+
+i-impowt E-ExampweToken fwom 0x02 
+
+/-// This twansaction c-configuwes an ( ~*-*)~ *cries* a-account to stowe and weceive tokens definyed by 
+/-// t-the E-ExampweToken contwact. 
+twansaction { 
+pwepawe(acct: AuthAccount) { 
+/-// Cweate a nyew empty Vauwt object 
+wet vauwtA <- ExampleToken.createEmptyVault() 
+
+/-// S-Stowe t-the (＾• ω •＾) *cuddles you* v-vauwt in t-the ( ~*-*)~ *cries* a-account stowage 
+acct.save<@ExampleToken.Vault>(<-vaultA, to: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+
+wog("Empty Vauwt s-stowed") 
+
+/-// Cweate a pubwic Weceivew >_> *giggles shyly* c-capabiwity to t-the Vauwt 
+wet WeceivewWef = acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>(/public/CadenceFungibleTokenTutorialReceiver, t-tawget: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+
+w-wog("Wefewences cweated") 
+} 
+
+p-post { 
+/-// Check that t-the capabiwities wewe cweated cowwectwy 
+getAccount(0x03).getCapability<&ExampleToken.Vault{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver) 
+.check(): 
+"Vauwt Weceivew W-Wefewence w-was nyot cweated cowwectwy" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Hewe we pewfowm t-the same actions that ( ~*-*)~ *cries* a-account `0x02` did to s-set up its `Vauwt`, but (＾▽＾') *cuddles you* a-aww in onye twansaction. 
+Account `-`0x03` is weady to stawt buiwding its f-fowtunye! As you c-can see, when we cweated t-the Vauwt (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account `0x03`, 
+we h-had to cweate onye with a bawance of zewo by cawwing t-the (⌒▽⌒)☆ *sweats* `-`cweateEmptyVauwt()` function. 
+Wesouwce cweation is westwicted to t-the contwact whewe it is definyed, so in this way, t-the Fungibwe T-Token smawt contwact c-can ensuwe that 
+nyobody is abwe to cweate nyew tokens out of thin aiw. 
+
+As pawt of t-the inyitiaw d-depwoyment pwocess (╬ Ò﹏Ó) *giggles shyly* f-fow t-the E-ExampweToken c-contwact, ( ~*-*)~ *cries* a-account `0x02` cweated a `-`VauwtMintew` object. 
+By using this object, t-the ( ~*-*)~ *cries* a-account that o-owns it c-can mint nyew tokens. 
+Wight n-nyow, ( ~*-*)~ *cries* a-account `0x02` o-owns it, so it has sowe p-powew to mint nyew tokens. 
+We couwd have h-had a `mintTokens` f-function definyed in t-the c-contwact, 
+but t-then we w-wouwd have to check t-the sendew of t-the f-function caww to make suwe that they awe a-authowized, 
+which is nyot t-the wecommended w-way to pewfowm a-access contwow. 
+
+As we e-expwainyed b-befowe, t-the wesouwce modew pwus >_> *giggles shyly* c-capabiwity secuwity (つ≧▽≦)つ *leans over* h-handwes this a-access contwow (╬ Ò﹏Ó) *giggles shyly* f-fow us as a b-buiwt in wanguage :3 *looks away* c-constwuct 
+instead of h-having to be definyed in t-the c-code. If ( ~*-*)~ *cries* a-account `0x02` wanted to authowize anyothew ( ~*-*)~ *cries* a-account to mint tokens, 
+they couwd eithew move t-the `-`VauwtMintew` object to t-the othew account, ow g-give t-the othew ( ~*-*)~ *cries* a-account a pwivate >_> *giggles shyly* c-capabiwity to t-the s-singwe `-`VauwtMintew`. 
+Ow, if they didn't want minting to be p-possibwe aftew depwoyment, they w-wouwd simpwy mint (＾▽＾') *cuddles you* a-aww t-the tokens a-at contwact i-inyitiawization 
+and nyot even i-incwude t-the `-`VauwtMintew` in t-the contwact. 
+
+In t-the nyext twansaction, ( ~*-*)~ *cries* a-account `0x02` wiww mint 30 nyew tokens and deposit t-them into ( ~*-*)~ *cries* a-account `0x03`'s nyewwy cweated Vauwt. 
+
+<Cawwout type="info"> 
 
-Open the `Mint Tokens` transaction.
-Select only account `0x02` as a signer and send `Mint Tokens` to mint 30 tokens for account `0x03`.
+Open t-the `-`Mint Tokens` twansaction. 
+Sewect onwy ( ~*-*)~ *cries* a-account `0x02` as a signyew and send `-`Mint Tokens` to mint 30 tokens (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account `0x03`. 
 
-<br />
+<-<bw /> 
 
-`Mint Tokens` should contain the code below.
+`-`Mint Tokens` shouwd uWu *whines* c-contain t-the code ヽ(>∀<☆)ノ *looks at you* b-bewow. 
 
-</Callout>
-
-```cadence:title=Mint Tokens.cdc
-// Mint Tokens
+</Cawwout> 
+
+```cadence:titwe=Mint Tokens.cdc 
+/-// Mint Tokens 
 
-import ExampleToken from 0x02
-
-// This transaction mints tokens and deposits them into account 3's vault
-transaction {
-
-    // Local variable for storing the reference to the minter resource
-    let mintingRef: &ExampleToken.VaultMinter
-
-    // Local variable for storing the reference to the Vault of
-    // the account that will receive the newly minted tokens
-    var receiver: Capability<&ExampleToken.Vault{ExampleToken.Receiver}>
-
-	prepare(acct: AuthAccount) {
-        // Borrow a reference to the stored, private minter resource
-        self.mintingRef = acct.borrow<&ExampleToken.VaultMinter>(from: /storage/CadenceFungibleTokenTutorialMinter)
-            ?? panic("Could not borrow a reference to the minter")
-
-        // Get the public account object for account 0x03
-        let recipient = getAccount(0x03)
-
-        // Get their public receiver capability
-        self.receiver = recipient.getCapability<&ExampleToken.Vault{ExampleToken.Receiver}>
-(/public/CadenceFungibleTokenTutorialReceiver)
-
-	}
-
-    execute {
-        // Mint 30 tokens and deposit them into the recipient's Vault
-        self.mintingRef.mintTokens(amount: 30.0, recipient: self.receiver)
+i-impowt E-ExampweToken fwom 0x02 
+
+/-// This twansaction m-mints tokens and deposits t-them into ( ~*-*)~ *cries* a-account 3's (＾• ω •＾) *cuddles you* v-vauwt 
+twansaction { 
+
+/-// Wocaw vawiabwe (╬ Ò﹏Ó) *giggles shyly* f-fow stowing t-the wefewence to t-the mintew wesouwce 
+wet mintingWef: &ExampleToken.VaultMinter 
+
+/-// Wocaw vawiabwe (╬ Ò﹏Ó) *giggles shyly* f-fow stowing t-the wefewence to t-the Vauwt of 
+/-// t-the ( ~*-*)~ *cries* a-account that wiww weceive t-the nyewwy minted tokens 
+vaw weceivew: Capability<&ExampleToken.Vault{ExampleToken.Receiver}> 
+
+pwepawe(acct: AuthAccount) { 
+/-// B-Bowwow a wefewence to t-the s-stowed, pwivate mintew wesouwce 
+self.mintingRef = a-acct.borrow<&ExampleToken.VaultMinter>(from: /-/stowage/CadenceFungibweTokenTutowiawMintew) 
+?? panyic("Couwd nyot bowwow a wefewence to t-the mintew") 
+
+/-// Get t-the pubwic ( ~*-*)~ *cries* a-account object (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 0x03 
+wet w-wecipient = getAccount(0x03) 
+
+/-// Get theiw pubwic w-weceivew >_> *giggles shyly* c-capabiwity 
+s-self.receiver = recipient.getCapability<&ExampleToken.Vault{ExampleToken.Receiver}> 
+(/pubwic/CadenceFungibweTokenTutowiawWeceivew) 
+
+} 
+
+execute { 
+/-// Mint 30 tokens and deposit t-them into t-the wecipient's Vauwt 
+self.mintingRef.mintTokens(amount: 30.0, wecipient: (o^▽^o) *looks away* s-self.receiver) 
 
-        log("30 tokens minted and deposited to account 0x03")
-    }
-}
-
-
-```
-
-This is the first example of a transaction where we utilize local transaction variables that span different stages in the transaction.
-We declare the `mintingRef` and `receiverRef` variables outside of the prepare stage but must initialize them in prepare.
-We can then use them in later stages in the transaction.
-
-Then we borrow a refernce to the `VaultMinter`. We specify the borrow as a `VaultMinter` reference
-and have the reference point to `/storage/CadenceFungibleTokenTutorialMinter`.
-The reference is borrowed as an optional so we use the nil-coalescing operator (`??`) to make sure the value isn't nil.
-If the value is nil, the transaction will execute the code after the `??`. The code is a panic, so it will revert and print the error message.
+wog("30 tokens minted and deposited to ( ~*-*)~ *cries* a-account 0x03") 
+} 
+} 
+
+
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This is t-the fiwst e-exampwe of a twansaction whewe we utiwize w-wocaw twansaction vawiabwes that span diffewent stages in t-the twansaction. 
+We decwawe t-the `mintingWef` and `weceivewWef` vawiabwes outside of t-the p-pwepawe s-stage but (* ^ ω ^) *screams* m-must inyitiawize t-them in pwepawe. 
+We c-can t-then use t-them in watew stages in t-the twansaction. 
+
+T-Then we bowwow a ต(=ω=)ต *pokes you* w-wefewnce to t-the `-`VauwtMintew`. We specify t-the bowwow as a `-`VauwtMintew` wefewence 
+and have t-the wefewence point to `-`/stowage/CadenceFungibweTokenTutowiawMintew`. 
+The wefewence is bowwowed as an optionyaw so we use t-the nyiw-coawescing opewatow (`??`) to make suwe t-the vawue isn't nyiw. 
+If t-the vawue is nyiw, t-the twansaction wiww execute t-the code aftew t-the `-`??`. The code is a ଲ(ⓛ ω ⓛ)ଲ *teleports behind you* p-panyic, so it wiww wevewt and p-pwint t-the ewwow message. 
 
-You can use the `getAccount()` built-in function to get any account's public account object.
-The public account object lets you get capabilities from the `public` domain of an account, where public capabilities are stored.
+You c-can use t-the `getAccount()` buiwt-in f-function to get any account's pubwic ( ~*-*)~ *cries* a-account object. 
+The pubwic ( ~*-*)~ *cries* a-account object :33 *giggles shyly* w-wets you get capabiwities fwom t-the `pubwic` d-domain of an account, whewe pubwic capabiwities awe stowed. 
 
-We use the `getCapability` function to get the public capability from a public path,
-then use the `borrow` function on the capability to get the reference from it, typed as a `ExampleToken.Vault{ExampleToken.Receiver}`.
+We use t-the `getCapabiwity` f-function to get t-the pubwic >_> *giggles shyly* c-capabiwity fwom a pubwic path, 
+t-then use t-the `-`bowwow` f-function on t-the >_> *giggles shyly* c-capabiwity to get t-the wefewence fwom it, t-typed as a `ExampweToken.Vauwt{ExampweToken.Weceivew}`. 
 
-```cadence
-// Get the public receiver capability
-let cap = recipient.getCapability(/public/CadenceFungibleTokenTutorialReceiver)
+```cadence 
+/-// Get t-the pubwic w-weceivew >_> *giggles shyly* c-capabiwity 
+wet c-cap = recipient.getCapability(/public/CadenceFungibleTokenTutorialReceiver) 
 
-// Borrow a reference from the capability
-self.receiverRef = cap.borrow<&ExampleToken.Vault{ExampleToken.Receiver}>()
-        ?? panic("Could not borrow a reference to the receiver")
-```
+/-// B-Bowwow a wefewence fwom t-the >_> *giggles shyly* c-capabiwity 
+self.receiverRef = cap.borrow<&ExampleToken.Vault{ExampleToken.Receiver}>() 
+?? panyic("Couwd nyot bowwow a wefewence to t-the (=`ω´=) *giggles shyly* w-weceivew") 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-In the execute phase, we simply use the reference to mint 30 tokens and deposit them into the `Vault` of account `0x03`.
+In t-the execute phase, we simpwy use t-the wefewence to mint 30 tokens and deposit t-them into t-the `-`Vauwt` of ( ~*-*)~ *cries* a-account `0x03`. 
 
-## Check Account Balances
+#-## Check Account B-Bawances 
 
-Now, both account `0x02` and account `0x03` should have a `Vault` object in their storage that has a balance of 30 tokens.
-They both should also have a `Receiver` capability stored in their `/public/` domains that links to their stored `Vault`.
+Nyow, both ( ~*-*)~ *cries* a-account `0x02` and ( ~*-*)~ *cries* a-account `-`0x03` shouwd have a `-`Vauwt` object in theiw stowage that has a bawance of 30 tokens. 
+They both shouwd awso have a `Weceivew` >_> *giggles shyly* c-capabiwity stowed in theiw `/pubwic/` d-domains that w-winks to theiw stowed `Vauwt`. 
 
-<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/account-balances.png" />
+<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/account-balances.png" /> 
 
-An account cannot receive any token type unless it is specifically configured to accept those tokens.
-As a result, it is difficult to send tokens to the wrong address accidentally.
-But, if you make a mistake setting up the `Vault` in the new account, you won't be able to send tokens to it.
+An ( ~*-*)~ *cries* a-account c-cannyot weceive any token t-type unwess it is s-specificawwy configuwed to a-accept those tokens. 
+As a w-wesuwt, it is difficuwt to send tokens to t-the w-wwong addwess a-accidentawwy. 
+B-But, if you make a mistake setting up t-the `-`Vauwt` in t-the nyew account, you w-won't be abwe to send tokens to it. 
 
-Let's run a script to make sure we have our vaults set up correctly.
+Wet's w-wun a scwipt to make suwe we have ouw vauwts s-set up cowwectwy. 
 
-You can use scripts to access an account's public state. Scripts aren't signed by any account and cannot modify state.
+You c-can use scwipts to a-access an account's pubwic state. Scwipts awen't s-signyed by any ( ~*-*)~ *cries* a-account and c-cannyot modify state. 
 
-In this example, we will query the balance of each account's vault. The following will print out the balance of each account in the emulator.
+In this e-exampwe, we wiww quewy t-the bawance of each account's vauwt. The fowwowing wiww p-pwint out t-the bawance of each ( ~*-*)~ *cries* a-account in t-the emuwatow. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the script named `Get Balances` in the scripts pane.<br/>
-`Get Balances` should contain the following code:
+Open t-the scwipt nyamed (☆ω☆) *cuddles you* `-`Get Bawances` in t-the scwipts panye.<bw/> 
+(☆ω☆) *cuddles you* `-`Get Bawances` shouwd uWu *whines* c-contain t-the fowwowing code: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Script1.cdc
-// Get Balances
+```cadence:title=Script1.cdc 
+/-// Get B-Bawances 
 
-import FungibleToken from 0x02
+i-impowt F-FungibweToken fwom 0x02 
 
-// This script reads the Vault balances of two accounts.
-pub fun main() {
-    // Get the accounts' public account objects
-    let acct2 = getAccount(0x02)
-    let acct3 = getAccount(0x03)
+/-// This scwipt weads t-the Vauwt bawances of two accounts. 
+pub fun m-main() { 
+/-// Get t-the accounts' pubwic ( ~*-*)~ *cries* a-account objects 
+wet acct2 = g-getAccount(0x02) 
+wet acct3 = getAccount(0x03) 
 
-    // Get references to the account's receivers
-    // by getting their public capability
-    // and borrowing a reference from the capability
-    let acct2ReceiverRef = acct2.getCapability(/public/CadenceFungibleTokenTutorialReceiver)
-                            .borrow<&FungibleToken.Vault{FungibleToken.Balance}>()
-                            ?? panic("Could not borrow a reference to the acct2 receiver")
-    let acct3ReceiverRef = acct3.getCapability(/public/CadenceFungibleTokenTutorialReceiver)
-                            .borrow<&FungibleToken.Vault{FungibleToken.Balance}>()
-                            ?? panic("Could not borrow a reference to the acct3 receiver")
+/-// Get wefewences to t-the account's weceivews 
+/-// by getting theiw pubwic >_> *giggles shyly* c-capabiwity 
+/-// and bowwowing a wefewence fwom t-the >_> *giggles shyly* c-capabiwity 
+wet acct2WeceivewWef = acct2.getCapability(/public/CadenceFungibleTokenTutorialReceiver) 
+.borrow<&FungibleToken.Vault{FungibleToken.Balance}>() 
+?? panyic("Couwd nyot bowwow a wefewence to t-the acct2 (=`ω´=) *giggles shyly* w-weceivew") 
+wet acct3WeceivewWef = a-acct3.getCapability(/public/CadenceFungibleTokenTutorialReceiver) 
+.borrow<&FungibleToken.Vault{FungibleToken.Balance}>() 
+?? panyic("Couwd nyot bowwow a wefewence to t-the acct3 (=`ω´=) *giggles shyly* w-weceivew") 
 
-    // Use optional chaining to read and log balance fields
-    log("Account 2 Balance")
-	log(acct2ReceiverRef.balance)
-    log("Account 3 Balance")
-    log(acct3ReceiverRef.balance)
-}
+/-// ╰(▔∀▔)╯ *steals ur resource* U-Use optionyaw c-chainying to wead and wog bawance fiewds 
+wog("Account 2-2 Bawance") 
+log(acct2ReceiverRef.balance) 
+wog("Account ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 Bawance") 
+log(acct3ReceiverRef.balance) 
+} 
 
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Execute `Get Balances` by clicking the Execute button.<br/>
-This should ensure the following:
+Execute (☆ω☆) *cuddles you* `-`Get Bawances` by cwicking t-the Execute button.<bw/> 
+This shouwd ensuwe t-the fowwowing: 
 
-</Callout>
+</Cawwout> 
 
-- Account `0x02`'s balance is 30
-- Account `0x03`'s balance is 30
+(✧ω✧) *teleports behind you* --- Account `0x02`'s bawance is 30 
+(✧ω✧) *teleports behind you* --- Account `0x03`'s bawance is 30 
 
-If correct, you should see the following lines:
+If cowwect, you shouwd s-see t-the fowwowing winyes: 
 
-```
-"Account 1 Balance"
-30
-"Account 2 Balance"
-30
-Result > "void"
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"-"Account 1 Bawance" 
+30 
+"-"Account 2-2 Bawance" 
+30 
+;;w;; *screams* W-Wesuwt > "-"void" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-If there is an error, this probably means that you missed a step earlier
-and might need to restart from the beginning.
+If (⌒ω⌒) *hugs tightly* t-thewe is an e-ewwow, this p-pwobabwy means that you missed a step e-eawwiew 
+and m-might nyeed to westawt fwom t-the beginnying. 
 
-To restart the playground, close your current session and open the link at the top of the tutorial.
+To westawt t-the pwaygwound, cwose youw cuwwent (⌒▽⌒)☆ *looks at you* s-session and open t-the w-wink a-at t-the top of t-the t-tutowiaw. 
 
-Now that we have two accounts, each with a `Vault`, we can see how they transfer tokens to each other!
+Nyow that we have two a-accounts, each with a `Vauwt`, we c-can s-see how they t-twansfew tokens to each o-othew! 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the transaction named `Transfer Tokens`. <br/>
-Select account `0x03` as a signer and send the transaction. <br/>
-`Transfer Tokens` should contain the following code for sending tokens to another user:
+Open t-the twansaction nyamed `-`Twansfew T-Tokens`. <bw/> 
+Sewect ( ~*-*)~ *cries* a-account `-`0x03` as a signyew and send t-the twansaction. <bw/> 
+`-`Twansfew Tokens` shouwd uWu *whines* c-contain t-the fowwowing code (╬ Ò﹏Ó) *giggles shyly* f-fow sending tokens to anyothew usew: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Transfer Tokens.cdc
-// Transfer Tokens
+```cadence:titwe=Twansfew Tokens.cdc 
+/-// (´-ω-`) *cuddles you* T-Twansfew Tokens 
 
-import ExampleToken from 0x02
+i-impowt E-ExampweToken fwom 0x02 
 
-// This transaction is a template for a transaction that
-// could be used by anyone to send tokens to another account
-// that owns a Vault
-transaction {
+/-// This twansaction is a t-tempwate (╬ Ò﹏Ó) *giggles shyly* f-fow a twansaction that 
+/-// couwd be used by anyonye to send tokens to anyothew ( ~*-*)~ *cries* a-account 
+/-// that o-owns a Vauwt 
+twansaction { 
 
-  // Temporary Vault object that holds the balance that is being transferred
-  var temporaryVault: @ExampleToken.Vault
+/-// Tempowawy Vauwt object that howds t-the bawance that is being twansfewwed 
+vaw tempowawyVauwt: @ExampweToken.Vauwt 
 
-  prepare(acct: AuthAccount) {
-    // withdraw tokens from your vault by borrowing a reference to it
-    // and calling the withdraw function with that reference
-    let vaultRef = acct.borrow<&ExampleToken.Vault>(from: /storage/CadenceFungibleTokenTutorialVault)
-        ?? panic("Could not borrow a reference to the owner's vault")
+pwepawe(acct: AuthAccount) { 
+/-// withdwaw tokens fwom youw (＾• ω •＾) *cuddles you* v-vauwt by bowwowing a wefewence to it 
+/-// and cawwing t-the withdwaw f-function with that wefewence 
+wet vauwtWef = a-acct.borrow<&ExampleToken.Vault>(from: /-/stowage/CadenceFungibweTokenTutowiawVauwt) 
+?? panyic("Couwd nyot bowwow a wefewence to t-the ownyew's vauwt") 
 
-    self.temporaryVault <- vaultRef.withdraw(amount: 10.0)
-  }
+s-self.temporaryVault <- vaultRef.withdraw(amount: 10.0) 
+} 
 
-  execute {
-    // get the recipient's public account object
-    let recipient = getAccount(0x02)
+execute { 
+/-// get t-the wecipient's pubwic ( ~*-*)~ *cries* a-account object 
+wet w-wecipient = g-getAccount(0x02) 
 
-    // get the recipient's Receiver reference to their Vault
-    // by borrowing the reference from the public capability
-    let receiverRef = recipient.getCapability(/public/CadenceFungibleTokenTutorialReceiver)
-                      .borrow<&ExampleToken.Vault{ExampleToken.Receiver}>()
-                      ?? panic("Could not borrow a reference to the receiver")
+/-// get t-the wecipient's Weceivew wefewence to theiw Vauwt 
+/-// by bowwowing t-the wefewence fwom t-the pubwic >_> *giggles shyly* c-capabiwity 
+wet weceivewWef = recipient.getCapability(/public/CadenceFungibleTokenTutorialReceiver) 
+.borrow<&ExampleToken.Vault{ExampleToken.Receiver}>() 
+?? panyic("Couwd nyot bowwow a wefewence to t-the (=`ω´=) *giggles shyly* w-weceivew") 
 
-    // deposit your tokens to their Vault
-    receiverRef.deposit(from: <-self.temporaryVault)
+/-// deposit youw tokens to theiw Vauwt 
+w-receiverRef.deposit(from: <-self.temporaryVault) 
 
-    log("Transfer succeeded!")
-  }
-}
+wog("Twansfew succeeded!") 
+} 
+} 
 
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-In this example, the signer withdraws tokens from their `Vault`,
-which creates and returns a temporary `Vault` resource object with `balance=10`
-that is used for transferring the tokens. In the execute phase,
-the transaction moves that resource to another user's `Vault` using their `deposit` method.
-The temporary `Vault` is destroyed after its balance is added to the recipient's `Vault`.
+In this e-exampwe, t-the signyew ~(>_<~) *steals ur resource* w-withdwaws tokens fwom theiw `Vauwt`, 
+which cweates and wetuwns a (°ㅂ°╬) *looks at you* t-tempowawy `-`Vauwt` wesouwce object with `-`bawance=10` 
+that is used (╬ Ò﹏Ó) *giggles shyly* f-fow twansfewwing t-the tokens. In t-the execute phase, 
+t-the twansaction moves that wesouwce to anyothew usew's `-`Vauwt` using theiw `deposit` method. 
+The (°ㅂ°╬) *looks at you* t-tempowawy `-`Vauwt` is destwoyed aftew its bawance is a-added to t-the wecipient's `Vauwt`. 
 
-You might be wondering why we have to use two function calls to complete a token transfer when it is possible to do it in one.
-This is because of the way resources work in Cadence.
-In a ledger-based model, you would just call transfer, which just updates the ledger,
-but in Cadence, the location of the tokens matters,
-and therefore most token transfer situations will not just be a direct account-to-account transfer.
+You m-might be ( =ω=)..nyaa *teleports behind you* w-wondewing why we have to use two f-function c-cawws to compwete a token t-twansfew when it is p-possibwe to (^-^*)/ *cuddles you* d-do it in onye. 
+This is because of t-the w-way wesouwces wowk in Cadence. 
+In a wedgew-based modew, you w-wouwd just caww twansfew, which just updates t-the wedgew, 
+but in Cadence, t-the wocation of t-the tokens mattews, 
+and thewefowe most token t-twansfew situations wiww nyot just be a (♡°▽°♡) *giggles shyly* d-diwect account-to-account twansfew. 
 
-Most of the time, tokens will be used for a different purpose first,
-like purchasing something, and that requires the `Vault` to be separately sent
-and verified before being deposited to the storage of an account.
+Most of t-the time, tokens wiww be used (╬ Ò﹏Ó) *giggles shyly* f-fow a diffewent puwpose fiwst, 
+w-wike puwchasing s-something, and that wequiwes t-the `-`Vauwt` to be sepawatewy sent 
+and vewified befowe being deposited to t-the stowage of an account. 
 
-Separating the two also allows us to take advantage of being able
-to statically verify which parts of accounts can be modified in the `prepare` section of a transaction,
-which will help users have peace of mind when getting fed transactions to sign from an app.
+Sepawating t-the two awso awwows us to o(>ω<)o *sweats* t-take advantage of being abwe 
+to s-staticawwy vewify which pawts of a-accounts c-can be m-modified in t-the `pwepawe` section of a twansaction, 
+which wiww hewp usews have peace of mind when getting fed t-twansactions to (*´▽`*) *pokes you* s-sign fwom an app. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Execute `Get Balances` again.
+Execute (☆ω☆) *cuddles you* `-`Get Bawances` again. 
 
-</Callout>
+</Cawwout> 
 
-If correct, you should see the following lines indicating that account `0x02`'s balance is 40 and account `0x03`'s balance is 20:
+If cowwect, you shouwd s-see t-the fowwowing winyes indicating that ( ~*-*)~ *cries* a-account `0x02`'s bawance is 40 and ( ~*-*)~ *cries* a-account `0x03`'s bawance is 2-20: 
 
-```
-"Account 2 Balance"
-40
-"Account 3 Balance"
-20
-Result > "void"
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"-"Account 2-2 Bawance" 
+40 
+"-"Account ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 Bawance" 
+20 
+;;w;; *screams* W-Wesuwt > "-"void" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-You now know how a basic fungible token is used in Cadence and Flow!
+You nyow knyow how a basic fungibwe token is used in C-Cadence and Fwow! 
 
-From here, you could try to extend the functionality of fungible tokens by making:
+Fwom hewe, you couwd twy to e-extend t-the functionyawity of fungibwe tokens by making: 
 
-- A faucet for these tokens
-- An escrow that can be deposited to (but only withdrawn when the balance reaches a certain point)
-- A function to the resource that mints new tokens!
+(✧ω✧) *teleports behind you* --- A-A faucet (╬ Ò﹏Ó) *giggles shyly* f-fow these tokens 
+(✧ω✧) *teleports behind you* --- An escwow that c-can be deposited to (but onwy withdwawn when t-the bawance w-weaches a c-cewtain point) 
+(✧ω✧) *teleports behind you* --- A-A f-function to t-the wesouwce that m-mints nyew tokens! 
 
-## Create a Flow Marketplace
+#-## Cweate a Fwow Mawketpwace 
 
----
-Now that you have an understanding of how fungible tokens work on Flow and have a working NFT, you can learn how to create 
-a marketplace that uses both fungible tokens and NFTs. Move on to the next tutorial to learn about Marketplaces in Cadence!
+----- 
+Nyow that you have an undewstanding of how fungibwe tokens wowk on Fwow and have a wowking NFT, you c-can weawn how to cweate 
+a m-mawketpwace that uses both fungibwe tokens and NFTs. Move on to t-the nyext t-tutowiaw to weawn about Mawketpwaces in Cadence! 

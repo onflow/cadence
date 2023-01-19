@@ -1,61 +1,61 @@
----
-title: Environment Information
----
+----- 
+titwe: Enviwonment (*´▽`*) *hugs tightly* I-Infowmation 
+----- 
 
-## Transaction Information
+#-## Twansaction (*´▽`*) *hugs tightly* I-Infowmation 
 
-To get the addresses of the signers of a transaction,
-use the `address` field of each signing `AuthAccount`
-that is passed to the transaction's `prepare` phase.
+To get t-the addwesses of t-the signyews of a twansaction, 
+use t-the `-`addwess` fiewd of each signying `AuthAccount` 
+that is passed to t-the twansaction's `pwepawe` phase. 
 
-There is currently no API that allows getting other transaction information.
-Please let us know if your use-case demands it by request this feature in an issue.
+Thewe is cuwwentwy nyo API that awwows getting othew twansaction infowmation. 
+Pwease wet us knyow if youw use-case d-demands it by wequest this featuwe in an x3 *screams* i-issue. 
 
-## Block Information
+#-## Bwock (*´▽`*) *hugs tightly* I-Infowmation 
 
-To get information about a block, the functions `getCurrentBlock` and `getBlock` can be used:
+To get infowmation about a bwock, t-the functions `getCuwwentBwock` and `-`getBwock` c-can be used: 
 
-- `cadence•fun getCurrentBlock(): Block`
+(✧ω✧) *teleports behind you* --- `cadence•fun getCuwwentBwock(): Bwock` 
 
-  Returns the current block, i.e. the block which contains the currently executed transaction.
+Wetuwns t-the cuwwent bwock, i.e. t-the ^w^ *whines* b-bwock which contains t-the cuwwentwy executed twansaction. 
 
-- `cadence•fun getBlock(at height: UInt64): Block?`
+(✧ω✧) *teleports behind you* --- `cadence•fun getBwock(at h-height: UInt64): Bwock?` 
 
-  Returns the block at the given height.
-  If the given block does not exist the function returns `nil`.
+Wetuwns t-the ^w^ *whines* b-bwock a-at t-the given h-height. 
+If t-the given ^w^ *whines* b-bwock does nyot exist t-the f-function wetuwns `-`nyiw`. 
 
-The `Block` type contains the identifier, height, and timestamp:
+The `Bwock` t-type contains t-the identifiew, height, and timestamp: 
 
-```cadence
-pub struct Block {
-    /// The ID of the block.
-    ///
-    /// It is essentially the hash of the block.
-    ///
-    pub let id: [UInt8; 32]
+```cadence 
+pub stwuct Bwock { 
+/// The (^=◕ᴥ◕=^) *looks at you* I-ID of t-the bwock. 
+/// 
+/// I-It is essentiawwy t-the hash of t-the bwock. 
+/// 
+pub wet id: [UInt8; 32] 
 
-    /// The height of the block.
-    ///
-    /// If the blockchain is viewed as a tree with the genesis block at the root,
-    // the height of a node is the number of edges between the node and the genesis block
-    ///
-    pub let height: UInt64
+/// The height of t-the bwock. 
+/// 
+/// If t-the bwockchain is viewed as a twee with t-the genyesis ^w^ *whines* b-bwock a-at t-the woot, 
+/-// t-the height of a nyode is t-the (❤ω❤) *pokes you* n-nyumbew of edges b-between t-the nyode and t-the genyesis ^w^ *whines* b-bwock 
+/// 
+pub wet h-height: U-UInt64 
 
-    /// The view of the block.
-    ///
-    /// It is a detail of the consensus algorithm. It is a monotonically increasing integer
-    /// and counts rounds in the consensus algorithm. It is reset to zero at each spork.
-    ///
-    pub let view: UInt64
+/// The view of t-the bwock. 
+/// 
+/// I-It is a detaiw of t-the consensus awgowithm. I-It is a monyotonyicawwy i-incweasing integew 
+/// and counts wounds in t-the consensus awgowithm. I-It is weset to zewo a-at each spowk. 
+/// 
+pub wet v-view: U-UInt64 
 
-    /// The timestamp of the block.
-    ///
-    /// Unix timestamp of when the proposer claims it constructed the block.
-    ///
-    /// NOTE: It is included by the proposer, there are no guarantees on how much the time stamp can deviate from the true time the block was published.
-    /// Consider observing blocks’ status changes off-chain yourself to get a more reliable value.
-    ///
-    pub let timestamp: UFix64
-}
-```
+/// The timestamp of t-the bwock. 
+/// 
+/// Unyix timestamp of when t-the pwoposew cwaims it constwucted t-the bwock. 
+/// 
+/// (o･ω･o) *dances nervously* N-NyOTE: I-It is i-incwuded by t-the pwoposew, (⌒ω⌒) *hugs tightly* t-thewe awe nyo guawantees on how m-much t-the time stamp c-can deviate fwom t-the twue time t-the ^w^ *whines* b-bwock w-was pubwished. 
+/// Considew (⌒▽⌒)☆ *blushes* o-obsewving bwocks’ >_< *blushes* s-status changes ^.^ *leans over* o-off-chain youwsewf to get a mowe wewiabwe vawue. 
+/// 
+pub wet timestamp: UFix64 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 

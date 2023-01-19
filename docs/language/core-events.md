@@ -1,183 +1,183 @@
----
-title: Core Events
----
+----- 
+titwe: Cowe Events 
+----- 
 
-Core events are events emitted directly from the FVM (Flow Virtual Machine).
-The events have the same name on all networks and do not follow the standard naming (they have no address).
+Cowe events awe events emitted diwectwy fwom t-the FVM (Fwow Viwtuaw Machinye). 
+The events have t-the same nyame on (＾▽＾') *cuddles you* a-aww o(>< )o *sighs* n-nyetwowks and (^-^*)/ *cuddles you* d-do nyot fowwow t-the standawd nyaming (they have nyo addwess). 
 
-Refer to the [`PublicKey` section](crypto#publickey) for more details on the information provided for account key events.
+W-Wefew to t-the [-[`PubwicKey` section](cwypto#pubwickey) (╬ Ò﹏Ó) *giggles shyly* f-fow mowe detaiws on t-the infowmation pwovided (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account key events. 
 
-### Account Created
+### Account C-Cweated 
 
-Event that is emitted when a new account gets created.
+E-Event that is emitted when a nyew ( ~*-*)~ *cries* a-account gets cweated. 
 
-Event name: `flow.AccountCreated`
-
-
-```cadence
-pub event AccountCreated(address: Address)
-```
-
-| Field             | Type      | Description                              |
-| ----------------- | --------- | ---------------------------------------- |
-| `address`         | `Address` | The address of the newly created account |
+E-Event nyame: `-`flow.AccountCreated` 
 
 
-### Account Key Added
+```cadence 
+pub e-event AccountCweated(addwess: Addwess) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Event that is emitted when a key gets added to an account.
-
-Event name: `flow.AccountKeyAdded`
-
-```cadence
-pub event AccountKeyAdded(
-    address: Address,
-    publicKey: PublicKey
-)
-```
-
-| Field         | Type        | Description                                     |
-| ------------- | ----------- | ----------------------------------------------- |
-| `address`     | `Address`   | The address of the account the key is added to  |
-| `publicKey`   | `PublicKey` | The public key added to the account             |
+| Fiewd | Type | Descwiption | 
+| ----------------- | --------- | ---------------------------------------- | 
+| `-`addwess` | `Addwess` | The addwess of t-the nyewwy cweated ( ~*-*)~ *cries* a-account | 
 
 
-### Account Key Removed
+### Account Key Added 
 
-Event that is emitted when a key gets removed from an account.
+E-Event that is emitted when a key gets a-added to an account. 
 
-Event name: `flow.AccountKeyRemoved`
+E-Event nyame: `flow.AccountKeyAdded` 
 
-```cadence
-pub event AccountKeyRemoved(
-    address: Address,
-    publicKey: PublicKey
-)
-```
+```cadence 
+pub e-event AccountKeyAdded( 
+addwess: A-Addwess, 
+pubwicKey: PubwicKey 
+)-) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-| Field       | Type        | Description                                         |
-| ----------- | ----------- | --------------------------------------------------- |
-| `address`   | `Address`   | The address of the account the key is removed from  |
-| `publicKey` | `PublicKey` | Public key removed from the account                 |
-
-
-### Account Contract Added
-
-Event that is emitted when a contract gets deployed to an account.
-
-Event name: `flow.AccountContractAdded`
-
-```cadence
-pub event AccountContractAdded(
-    address: Address,
-    codeHash: [UInt8],
-    contract: String
-)
-```
-
-| Field       | Type   | Description                                                  |
-| ----------- | ------ | ------------------------------------------------------------ |
-| `address`   | `Address` | The address of the account the contract gets deployed to  |
-| `codeHash`  | `[UInt8]` | Hash of the contract source code                          |
-| `contract`  | `String`  | The name of the the contract                              |
-
-### Account Contract Updated
-
-Event that is emitted when a contract gets updated on an account.
-
-Event name: `flow.AccountContractUpdated`
-
-```cadence
-pub event AccountContractUpdated(
-    address: Address,
-    codeHash: [UInt8],
-    contract: String
-)
-```
-
-| Field       | Type      | Description                                              |
-| ----------- | --------- | -------------------------------------------------------- |
-| `address`   | `Address` | The address of the account where the updated contract is deployed  |
-| `codeHash`  | `[UInt8]` | Hash of the contract source code                         |
-| `contract`  | `String`  | The name of the the contract                             |
+| Fiewd | Type | Descwiption | 
+| ------------- | ----------- | ----------------------------------------------- | 
+| `-`addwess` | `Addwess` | The addwess of t-the ( ~*-*)~ *cries* a-account t-the key is a-added to | 
+| `pubwicKey` | `PubwicKey` | The pubwic key a-added to t-the ( ~*-*)~ *cries* a-account | 
 
 
-### Account Contract Removed
+### Account Key Wemoved 
 
-Event that is emitted when a contract gets removed from an account.
+E-Event that is emitted when a key gets w-wemoved fwom an account. 
 
-Event name: `flow.AccountContractRemoved`
+E-Event nyame: `flow.AccountKeyRemoved` 
 
-```cadence
-pub event AccountContractRemoved(
-    address: Address,
-    codeHash: [UInt8],
-    contract: String
-)
-```
+```cadence 
+pub e-event AccountKeyWemoved( 
+addwess: A-Addwess, 
+pubwicKey: PubwicKey 
+)-) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-| Field       | Type      | Description                                               |
-| ----------- | --------- | --------------------------------------------------------- |
-| `address`   | `Address` | The address of the account the contract gets removed from |
-| `codeHash`  | `[UInt8]` | Hash of the contract source code                          |
-| `contract`  | `String`  | The name of the the contract                              |
+| Fiewd | Type | Descwiption | 
+| ----------- | ----------- | --------------------------------------------------- | 
+| `-`addwess` | `Addwess` | The addwess of t-the ( ~*-*)~ *cries* a-account t-the key is w-wemoved fwom | 
+| `pubwicKey` | `PubwicKey` | P-Pubwic key w-wemoved fwom t-the ( ~*-*)~ *cries* a-account | 
 
-### Inbox Value Published
 
-Event that is emitted when a Capability is published from an account.
+### Account Contwact Added 
 
-Event name: `flow.InboxValuePublished`
+E-Event that is emitted when a contwact gets depwoyed to an account. 
 
-```cadence
-pub event InboxValuePublished(provider: Address, recipient: Address, name: String, type: Type) 
-```
+E-Event nyame: `flow.AccountContractAdded` 
 
-| Field             | Type      | Description                                  |
-| ----------------- | --------- | -------------------------------------------- |
-| `provider`        | `Address` | The address of the publishing account        |
-| `recipient`       | `Address` | The address of the intended recipient        |
-| `name`            | `String`  | The name associated with the published value |
-| `type`            | `Type`    | The type of the published value              |
+```cadence 
+pub e-event AccountContwactAdded( 
+addwess: A-Addwess, 
+codeHash: [UInt8], 
+contwact: Stwing 
+)-) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-To reduce the potential for spam, 
-we recommend that user agents that display events do not display this event as-is to their users, 
-and allow users to restrict whom they see events from. 
+| Fiewd | Type | Descwiption | 
+| ----------- | ------ | -------------------------------------------------------------- | 
+| `-`addwess` | `Addwess` | The addwess of t-the ( ~*-*)~ *cries* a-account t-the contwact gets depwoyed to | 
+| `codeHash` | `[UInt8]` | Hash of t-the contwact souwce code | 
+| `contwact` | `-`Stwing` | The nyame of t-the t-the contwact | 
 
-### Inbox Value Unpublished
+### Account Contwact Updated 
 
-Event that is emitted when a Capability is unpublished from an account. 
+E-Event that is emitted when a contwact gets u-updated on an account. 
 
-Event name: `flow.InboxValueUnpublished`
+E-Event nyame: `flow.AccountContractUpdated` 
 
-```cadence
-pub event InboxValueUnpublished(provider: Address, name: String)
-```
+```cadence 
+pub e-event AccountContwactUpdated( 
+addwess: A-Addwess, 
+codeHash: [UInt8], 
+contwact: Stwing 
+)-) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-| Field           | Type      | Description                                  |
-| --------------- | --------- | -------------------------------------------- |
-| `provider`      | `Address` | The address of the publishing account        |
-| `name`          | `String`  | The name associated with the published value |
+| Fiewd | Type | Descwiption | 
+| ----------- | --------- | -------------------------------------------------------- | 
+| `-`addwess` | `Addwess` | The addwess of t-the ( ~*-*)~ *cries* a-account whewe t-the u-updated contwact is depwoyed | 
+| `codeHash` | `[UInt8]` | Hash of t-the contwact souwce code | 
+| `contwact` | `-`Stwing` | The nyame of t-the t-the contwact | 
 
-To reduce the potential for spam, 
-we recommend that user agents that display events do not display this event as-is to their users, 
-and allow users to restrict whom they see events from. 
 
-### Inbox Value Claimed
+### Account Contwact Wemoved 
 
-Event that is emitted when a Capability is claimed by an account. 
+E-Event that is emitted when a contwact gets w-wemoved fwom an account. 
 
-Event name: `flow.InboxValueClaimed`
+E-Event nyame: `flow.AccountContractRemoved` 
 
-```cadence
-pub event InboxValueClaimed(provider: Address, recipient: Address, name: String)
-```
+```cadence 
+pub e-event (o_O)! *cries* A-AccountContwactWemoved( 
+addwess: A-Addwess, 
+codeHash: [UInt8], 
+contwact: Stwing 
+)-) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-| Field           | Type      | Description                                  |
-| --------------- | --------- | -------------------------------------------- |
-| `provider`      | `Address` | The address of the publishing account        |
-| `recipient`     | `Address` | The address of the claiming recipient        |
-| `name`          | `String`  | The name associated with the published value |
+| Fiewd | Type | Descwiption | 
+| ----------- | --------- | --------------------------------------------------------- | 
+| `-`addwess` | `Addwess` | The addwess of t-the ( ~*-*)~ *cries* a-account t-the contwact gets w-wemoved fwom | 
+| `codeHash` | `[UInt8]` | Hash of t-the contwact souwce code | 
+| `contwact` | `-`Stwing` | The nyame of t-the t-the contwact | 
 
-To reduce the potential for spam, 
-we recommend that user agents that display events do not display this event as-is to their users, 
-and allow users to restrict whom they see events from. 
+### I-Inbox Vawue Pubwished 
+
+E-Event that is emitted when a C-Capabiwity is pubwished fwom an account. 
+
+E-Event nyame: `flow.InboxValuePublished` 
+
+```cadence 
+pub e-event InboxVawuePubwished(pwovidew: A-Addwess, wecipient: A-Addwess, nyame: Stwing, t-type: Type) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+| Fiewd | Type | Descwiption | 
+| ----------------- | --------- | -------------------------------------------- | 
+| `-`pwovidew` | `Addwess` | The addwess of t-the pubwishing ( ~*-*)~ *cries* a-account | 
+| `wecipient` | `Addwess` | The addwess of t-the intended w-wecipient | 
+| `nyame` | `-`Stwing` | The nyame associated with t-the pubwished vawue | 
+| `type` | `Type` | The t-type of t-the pubwished vawue | 
+
+To weduce t-the potentiaw (╬ Ò﹏Ó) *giggles shyly* f-fow spam, 
+we wecommend that usew agents that dispway events (^-^*)/ *cuddles you* d-do nyot dispway this e-event a-as-is to theiw u-usews, 
+and awwow usews to westwict whom they s-see events f-fwom. 
+
+### I-Inbox Vawue Unpubwished 
+
+E-Event that is emitted when a C-Capabiwity is unpubwished fwom an account. 
+
+E-Event nyame: `flow.InboxValueUnpublished` 
+
+```cadence 
+pub e-event InboxVawueUnpubwished(pwovidew: A-Addwess, nyame: Stwing) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+| Fiewd | Type | Descwiption | 
+| --------------- | --------- | -------------------------------------------- | 
+| `-`pwovidew` | `Addwess` | The addwess of t-the pubwishing ( ~*-*)~ *cries* a-account | 
+| `nyame` | `-`Stwing` | The nyame associated with t-the pubwished vawue | 
+
+To weduce t-the potentiaw (╬ Ò﹏Ó) *giggles shyly* f-fow spam, 
+we wecommend that usew agents that dispway events (^-^*)/ *cuddles you* d-do nyot dispway this e-event a-as-is to theiw u-usews, 
+and awwow usews to westwict whom they s-see events f-fwom. 
+
+### I-Inbox Vawue Cwaimed 
+
+E-Event that is emitted when a C-Capabiwity is cwaimed by an account. 
+
+E-Event nyame: `-`flow.InboxValueClaimed` 
+
+```cadence 
+pub e-event InboxVawueCwaimed(pwovidew: A-Addwess, wecipient: A-Addwess, nyame: Stwing) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+| Fiewd | Type | Descwiption | 
+| --------------- | --------- | -------------------------------------------- | 
+| `-`pwovidew` | `Addwess` | The addwess of t-the pubwishing ( ~*-*)~ *cries* a-account | 
+| `wecipient` | `Addwess` | The addwess of t-the cwaiming w-wecipient | 
+| `nyame` | `-`Stwing` | The nyame associated with t-the pubwished vawue | 
+
+To weduce t-the potentiaw (╬ Ò﹏Ó) *giggles shyly* f-fow spam, 
+we wecommend that usew agents that dispway events (^-^*)/ *cuddles you* d-do nyot dispway this e-event a-as-is to theiw u-usews, 
+and awwow usews to westwict whom they s-see events f-fwom. 

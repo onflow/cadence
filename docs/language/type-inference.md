@@ -1,145 +1,145 @@
----
-title: Type Inference
----
+----- 
+titwe: Type I-Infewence 
+----- 
 
-If a variable or constant declaration is not annotated explicitly with a type,
-the declaration's type is inferred from the initial value.
+If a vawiabwe ow c-constant decwawation is nyot annyotated e-expwicitwy with a type, 
+t-the decwawation's t-type is infewwed fwom t-the inyitiaw vawue. 
 
-### Basic Literals
-Decimal integer literals and hex literals are inferred to type `Int`.
+### B-Basic Witewaws 
+Decimaw integew witewaws and hex witewaws awe infewwed to t-type `Int`. 
 
-```cadence
-let a = 1
-// `a` has type `Int`
+```cadence 
+wet a = 1 
+/-// `a` has t-type ^.^ *sweats* `-`Int` 
 
-let b = -45
-// `b` has type `Int`
+wet b = -45 
+/-// `b` has t-type ^.^ *sweats* `-`Int` 
 
-let c = 0x02
-// `c` has type `Int`
-```
+wet c = 0x02 
+/-// `c` has t-type ^.^ *sweats* `-`Int` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Unsigned fixed-point literals are inferred to type `UFix64`.
-Signed fixed-point literals are inferred to type `Fix64`.
+U-Unsignyed f-fixed-point witewaws awe infewwed to t-type `-`UFix64`. 
+Signyed f-fixed-point witewaws awe infewwed to t-type `Fix64`. 
 
-```cadence
-let a = 1.2
-// `a` has type `UFix64`
+```cadence 
+wet a = 1.2 
+/-// `a` has t-type `UFix64` 
 
-let b = -1.2
-// `b` has type `Fix64`
-```
+wet b = -1.2 
+/-// `b` has t-type `Fix64` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Similarly, for other basic literals, the types are inferred in the following manner:
+S-Simiwawwy, (╬ Ò﹏Ó) *giggles shyly* f-fow othew basic witewaws, t-the t-types awe infewwed in t-the fowwowing mannyew: 
 
-| Literal Kind      | Example           | Inferred Type (x) |
-|:-----------------:|:-----------------:|:-----------------:|
-| String literal    | `let x = "hello"` |  String           |
-| Boolean literal   | `let x = true`    |  Bool             |
-| Nil literal       | `let x = nil`     |  Never?           |
+| Witewaw Kind | Exampwe | Infewwed Type (x) | 
+|:-----------------:|:-----------------:|:-----------------:| 
+| Stwing witewaw | `wet x = "hewwo"` | Stwing | 
+| Boowean witewaw | `wet x = twue` | Boow | 
+| Nyiw witewaw | `wet x = n-nyiw` | Nyevew? | 
 
 
-### Array Literals
-Array literals are inferred based on the elements of the literal, and to be variable-size.
-The inferred element type is the _least common super-type_ of all elements.
+### Awway Witewaws 
+Awway witewaws awe infewwed b-based on t-the ewements of t-the witewaw, and to be vawiabwe-size. 
+The infewwed ewement t-type is t-the _weast common supew-type_ of (＾▽＾') *cuddles you* a-aww e-ewements. 
 
-```cadence
-let integers = [1, 2]
-// `integers` has type `[Int]`
+```cadence 
+wet integews = [1, 2] 
+/-// `integews` has t-type `[Int]` 
 
-let int8Array = [Int8(1), Int8(2)]
-// `int8Array` has type `[Int8]`
+wet int8Awway = [-[Int8(1), Int8(2)] 
+/-// `int8Awway` has t-type `[Int8]` 
 
-let mixedIntegers = [UInt(65), 6, 275, Int128(13423)]
-// `mixedIntegers` has type `[Integer]`
+wet mixedIntegews = [UInt(65), 6, 275, Int128(13423)] 
+/-// `-`mixedIntegews` has t-type `[Integew]` 
 
-let nilableIntegers = [1, nil, 2, 3, nil]
-// `nilableIntegers` has type `[Int?]`
+wet nyiwabweIntegews = [1, nyiw, 2, 3-3, nyiw] 
+/-// `-`nyiwabweIntegews` has t-type `-`[Int?]` 
 
-let mixed = [1, true, 2, false]
-// `mixed` has type `[AnyStruct]`
-```
+wet mixed = [1, twue, 2, o(>ω<)o *cuddles you* f-fawse] 
+/-// `-`mixed` has t-type `[AnyStwuct]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Dictionary Literals
-Dictionary literals are inferred based on the keys and values of the literal.
-The inferred type of keys and values is the _least common super-type_ of all keys and values, respectively.
+### Dictionyawy Witewaws 
+Dictionyawy witewaws awe infewwed b-based on t-the keys and vawues of t-the witewaw. 
+The infewwed t-type of keys and vawues is t-the _weast common supew-type_ of (＾▽＾') *cuddles you* a-aww keys and vawues, wespectivewy. 
 
-```cadence
-let booleans = {
-    1: true,
-    2: false
-}
-// `booleans` has type `{Int: Bool}`
+```cadence 
+wet booweans = { 
+1: twue, 
+2: f-fawse 
+} 
+/-// `booweans` has t-type `-`{Int: Boow}` 
 
-let mixed = {
-    Int8(1): true,
-    Int64(2): "hello"
-}
-// `mixed` has type `{Integer: AnyStruct}`
+wet mixed = { 
+Int8(1): twue, 
+Int64(2): "hewwo" 
+} 
+/-// `-`mixed` has t-type `{Integew: A-AnyStwuct}` 
 
-// Invalid: mixed keys
-//
-let invalidMixed = {
-    1: true,
-    false: 2
-}
-// The least common super-type of the keys is `AnyStruct`.
-// But it is not a valid type for dictionary keys.
-```
+/-// Invawid: mixed keys 
+/-// 
+wet invawidMixed = { 
+1: twue, 
+fawse: 2-2 
+} 
+/-// The weast common supew-type of t-the keys is `AnyStwuct`. 
+/-// But it is nyot a vawid t-type (╬ Ò﹏Ó) *giggles shyly* f-fow dictionyawy keys. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Ternary Expression
-Ternary expression type is inferred  to be the least common super-type of the second and third operands.
-```cadence
-let a = true ? 1 : 2
-// `a` has type `Int`
+### Tewnyawy Expwession 
+Tewnyawy expwession t-type is infewwed to be t-the weast common supew-type of t-the second and thiwd opewands. 
+```cadence 
+wet a = twue ? 1 : 2-2 
+/-// `a` has t-type ^.^ *sweats* `-`Int` 
 
-let b = true ? 1 : nil
-// `b` has type `Int?`
+wet b = twue ? 1 : nyiw 
+/-// `b` has t-type `Int?` 
 
-let c = true ? 5 : (false ? "hello" : nil)
-// `c` has type `AnyStruct`
-```
+wet c = twue ? 5 : (fawse ? "hewwo" : nyiw) 
+/-// `c` has t-type `AnyStwuct` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Functions
-Functions are inferred based on the parameter types and the return type.
+### Functions 
+Functions awe infewwed b-based on t-the p-pawametew t-types and t-the (´-ω-`) *screams* w-wetuwn (＃￣ω￣) *hugs tightly* t-type. 
 
-```cadence
-let add = (a: Int8, b: Int8): Int {
-    return a + b
-}
+```cadence 
+wet a-add = (a: (^ω~) *dances nervously* I-Int8, b-b: Int8): Int { 
+(´-ω-`) *screams* w-wetuwn a + b 
+} 
 
-// `add` has type `((Int8, Int8): Int)`
-```
+/-// `add` has t-type `((Int8, Int8): Int)` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Type inference is performed for each expression / statement, and not across statements.
+Type infewence is ( ╥ω╥ ) *sighs* p-pewfowmed (╬ Ò﹏Ó) *giggles shyly* f-fow each expwession (T_T) *whines* /-/ s-statement, and nyot acwoss statements. 
 
-## Ambiguities
-There are cases where types cannot be inferred.
-In these cases explicit type annotations are required.
+#-## A-Ambiguities 
+Thewe awe cases whewe t-types c-cannyot be infewwed. 
+In these cases expwicit t-type annyotations awe wequiwed. 
 
-```cadence
-// Invalid: not possible to infer type based on array literal's elements.
-//
-let array = []
+```cadence 
+/-// Invawid: nyot p-possibwe to infew t-type b-based on a-awway witewaw's e-ewements. 
+/-// 
+wet a-awway = [] 
 
-// Instead, specify the array type and the concrete element type, e.g. `Int`.
-//
-let array: [Int] = []
+/-// I-Instead, specify t-the a-awway t-type and t-the concwete ewement type, e.g. `Int`. 
+/-// 
+wet awway: [-[Int] = [] 
 
-// Or, use a simple-cast to annotate the expression with a type.
-let array = [] as [Int]
-```
+/-// Ow, use a simpwe-cast to annyotate t-the expwession with a (＃￣ω￣) *hugs tightly* t-type. 
+wet a-awway = [] as [-[Int] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-```cadence
-// Invalid: not possible to infer type based on dictionary literal's keys and values.
-//
-let dictionary = {}
+```cadence 
+/-// Invawid: nyot p-possibwe to infew t-type b-based on dictionyawy witewaw's keys and vawues. 
+/-// 
+wet dictionyawy = (☆ω☆) *steals ur resource* {-{} 
 
-// Instead, specify the dictionary type and the concrete key
-// and value types, e.g. `String` and `Int`.
-//
-let dictionary: {String: Int} = {}
+/-// I-Instead, specify t-the dictionyawy t-type and t-the concwete key 
+/-// and vawue types, e.g. `-`Stwing` and `Int`. 
+/-// 
+wet d-dictionyawy: {Stwing: Int} = (☆ω☆) *steals ur resource* {-{} 
 
-// Or, use a simple-cast to annotate the expression with a type.
-let dictionary = {} as {String: Int}
-```
+/-// Ow, use a simpwe-cast to annyotate t-the expwession with a (＃￣ω￣) *hugs tightly* t-type. 
+wet dictionyawy = (☆ω☆) *steals ur resource* {-{} as {Stwing: Int} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

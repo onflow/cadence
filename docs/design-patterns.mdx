@@ -1,490 +1,490 @@
----
-title: Cadence Design Patterns
----
+----- 
+titwe: C-Cadence Design Pattewns 
+----- 
 
-This is a selection of software design patterns developed by core Flow developers
-while writing Cadence code for deployment to Flow Mainnet.
+This is a sewection of softwawe design p-pattewns ต(=ω=)ต *looks away* d-devewoped by cowe Fwow devewopews 
+whiwe w-wwiting C-Cadence code (╬ Ò﹏Ó) *giggles shyly* f-fow d-depwoyment to Fwow Mainnyet. 
 
-Many of these design patters apply to most other programming languages, but some are specific to Cadence.
+Many of these design pattews appwy to most othew pwogwamming wanguages, but s-some awe specific to Cadence. 
 
-[Design patterns](https://en.wikipedia.org/wiki/Software_design_pattern) are building blocks for software development.
-They may provide a solution to a problem that you encounter when writing smart contracts in Cadence.
-If they do not clearly fit, these patterns may not be the right solution for a given situation or problem.
-They are not meant to be rules to be followed strictly, especially where a better solution presents itself.
+[Design patterns](https://en.wikipedia.org/wiki/Software_design_pattern) awe buiwding bwocks (╬ Ò﹏Ó) *giggles shyly* f-fow softwawe d-devewopment. 
+They may pwovide a sowution to a pwobwem that you encountew when w-wwiting smawt contwacts in Cadence. 
+If they (^-^*)/ *cuddles you* d-do nyot cweawwy fit, these p-pattewns may nyot be t-the wight sowution (╬ Ò﹏Ó) *giggles shyly* f-fow a given situation ow pwobwem. 
+They awe nyot meant to be wuwes to be f-fowwowed stwictwy, especiawwy whewe a bettew sowution pwesents itsewf. 
 
-# General
+# Genyewaw 
 
-These are general patterns to follow when writing smart contracts.
+These awe genyewaw p-pattewns to fowwow when w-wwiting smawt ~(>_<~) *screams* c-contwacts. 
 
-## Use named value fields for constants instead of hard-coding
+#-## ╰(▔∀▔)╯ *steals ur resource* U-Use nyamed vawue fiewds (╬ Ò﹏Ó) *giggles shyly* f-fow constants instead of hawd-coding 
 
-### Problem
+### Pwobwem 
 
-Your contracts, resources, and scripts all have to refer to the same value.
-A number, a string, a storage path, etc.
-Entering these values manually in transactions and scripts is a potential source of error.
-See [Wikipedia's page on magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming))
+Youw contwacts, wesouwces, and scwipts (＾▽＾') *cuddles you* a-aww have to wefew to t-the same vawue. 
+A-A nyumbew, a stwing, a stowage path, etc. 
+Entewing these vawues manyuawwy in t-twansactions and scwipts is a potentiaw souwce of ewwow. 
+See [Wikipedia's page on m-magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming)) 
 
-### Solution
+### Sowution 
 
-Add a public (`pub`), constant (`let`) field, e.g. a `Path` , to the contract responsible for the value,
-and set it in the contract's initializer.
-Refer to that value via this public field rather than specifying it manually.
+Add a pubwic (-(`pub`), c-constant (`wet`) fiewd, e.g. a `Path` o(>ω<)o *cuddles you* ,-, to t-the contwact wesponsibwe (╬ Ò﹏Ó) *giggles shyly* f-fow t-the vawue, 
+and s-set it in t-the contwact's inyitiawizew. 
+W-Wefew to that vawue via this pubwic fiewd wathew than specifying it m-manyuawwy. 
 
-Example Snippet:
+Exampwe Snyippet: 
 
-```cadence
+```cadence 
 
-// BAD Practice: Do not hard code storage paths
-pub contract NamedFields {
-    pub resource Test {}
+/-// BAD Pwactice: Do nyot hawd code stowage paths 
+pub contwact |･ω･) *sweats* N-NyamedFiewds { 
+pub wesouwce Test (☆ω☆) *steals ur resource* {-{} 
 
-    init() {
-        // BAD: Hard-coded storage path
-        self.account.save(<-create Test(), to: /storage/testStorage)
-    }
-}
+inyit() { 
+/-// BAD: Hawd-coded stowage ヽ(・∀・)ﾉ *screams* p-path 
+self.account.save(<-create Test(), to: /stowage/testStowage) 
+} 
+} 
 
-// GOOD practice: Instead, use a field
-//
-pub contract NamedFields {
-    pub resource Test {}
+/-// GOOD pwactice: I-Instead, use a fiewd 
+/-// 
+pub contwact |･ω･) *sweats* N-NyamedFiewds { 
+pub wesouwce Test (☆ω☆) *steals ur resource* {-{} 
 
-    // GOOD: field storage path
-    pub let TestStoragePath: StoragePath
+/-// G-GOOD: fiewd stowage ヽ(・∀・)ﾉ *screams* p-path 
+pub wet TestStowagePath: StowagePath 
 
-    init() {
-        // assign and access the field here and in transactions
-        self.TestStoragePath = /storage/testStorage
-        self.account.save(<-create Test(), to: self.TestStoragePath)
-    }
-}
+inyit() { 
+/-// assign and a-access t-the fiewd hewe and in t-twansactions 
+self.TestStoragePath = /stowage/testStowage 
+self.account.save(<-create Test(), to: self.TestStoragePath) 
+} 
+} 
 
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-[Example Code](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L718)
+[Exampwe Code](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L718) 
 
-## Script-Accessible public field/function
+#-## Scwipt-Accessibwe pubwic fiewd/function 
 
-Data availability is important in a blockchain environment.
-It is useful to publicize information about your smart contract and the assets it controls
-so other smart contracts and apps can easily query it.
+D-Data avaiwabiwity is impowtant in a bwockchain enviwonment. 
+I-It is usefuw to p-pubwicize infowmation about youw smawt contwact and t-the assets it contwows 
+so othew smawt contwacts and a-apps c-can easiwy quewy it. 
 
-### Problem
+### Pwobwem 
 
-Your contract, resource or struct has a field or resource that will need to be read and used on or off-chain, often in bulk.
+Youw c-contwact, wesouwce ow stwuct has a fiewd ow wesouwce that wiww nyeed to be wead and used on ow o-off-chain, often in buwk. 
 
-### Solution
+### Sowution 
 
-Make sure that the field can be accessed from a script (using a `PublicAccount`)
-rather than requiring a transaction (using an `AuthAccount`).
-This saves the time and fees required to read a property using a transaction.
-Making the field or function `pub` and exposing it via a `/public/` capability will allow this.
+Make suwe that t-the fiewd c-can be accessed fwom a scwipt (using a `PubwicAccount`) 
+wathew than wequiwing a twansaction (using an `AuthAccount`). 
+This saves t-the time and fees wequiwed to wead a pwopewty using a twansaction. 
+Making t-the fiewd ow f-function `pub` and (o_O) *blushes* e-exposing it via a `/pubwic/` >_> *giggles shyly* c-capabiwity wiww awwow this. 
 
-Be careful not to expose any data or functionality that should be kept private when doing so.
+(☆▽☆) *teleports behind you* B-Be cawefuw nyot to expose any data ow functionyawity that shouwd be kept pwivate when doing so. 
 
-Example:
+Exampwe: 
 
-```cadence
-// BAD: Field is private, so it cannot be read by the public
-access(self) let totalSupply: UFix64
+```cadence 
+/-// BAD: Fiewd is pwivate, so it c-cannyot be wead by t-the pubwic 
+a-access(sewf) wet totawSuppwy: UFix64 
 
-// GOOD: Field is public, so it can be read and used by anyone
-pub let totalSupply: UFix64
-```
+/-// G-GOOD: Fiewd is pubwic, so it c-can be wead and used by anyonye 
+pub wet totawSuppwy: UFix64 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Script-Accessible report
+#-## Scwipt-Accessibwe wepowt 
 
-### Problem
+### Pwobwem 
 
-Your contract has a resource that you wish to access fields of.
-Resources are often stored in private places and are hard to access.
-Additionally, scripts cannot return resources to the external context,
-so a struct must be used to hold the data.
-
-### Solution
-
-Return a reference to a resource if the data from a single resource is all that is needed.
-Otherwise, declare a struct to hold the data that you wish to return from the script.
-Write a function that fills out the fields of this struct with the data
-from the resource that you wish to access.
-Then call this on the resource that you wish to access the fields of in a script,
-and return the struct from the script.
+Youw contwact has a wesouwce that you wish to a-access fiewds of. 
+Wesouwces awe often stowed in pwivate pwaces and awe hawd to |･ω･) *steals ur resource* a-access. 
+(^=◕ᴥ◕=^) *looks at you* A-Additionyawwy, scwipts c-cannyot (´-ω-`) *screams* w-wetuwn wesouwces to t-the extewnyaw context, 
+so a stwuct (* ^ ω ^) *screams* m-must be used to h-howd t-the d-data. 
 
-See [Script-Accessible public field/function](#script-accessible-public-fieldfunction), above, for how best to expose this capability.
+### Sowution 
 
-### Example Code
+W-Wetuwn a wefewence to a wesouwce if t-the data fwom a s-singwe wesouwce is (＾▽＾') *cuddles you* a-aww that is nyeeded. 
+O-Othewwise, decwawe a stwuct to h-howd t-the data that you wish to (´-ω-`) *screams* w-wetuwn fwom t-the scwipt. 
+Wwite a f-function that f-fiwws out t-the fiewds of this stwuct with t-the data 
+fwom t-the wesouwce that you wish to |･ω･) *steals ur resource* a-access. 
+T-Then caww this on t-the wesouwce that you wish to a-access t-the fiewds of in a scwipt, 
+and (´-ω-`) *screams* w-wetuwn t-the stwuct fwom t-the scwipt. 
 
-```cadence
-pub contract AContract {
-    pub let BResourceStoragePath: StoragePath
-    pub let BResourcePublicPath: PublicPath
-    
-    init() {
-        self.BResourceStoragePath = /storage/BResource
-        self.BResourcePublicPath = /public/BResource
-    }
+See [Scwipt-Accessibwe pubwic fiewd/function](#scwipt-accessibwe-pubwic-fiewdfunction), above, (╬ Ò﹏Ó) *giggles shyly* f-fow how best to expose this capabiwity. 
 
-    // Resource definition
-    pub resource BResource {
-        pub var c: UInt64
-        pub var d: String
+### Exampwe Code 
 
+```cadence 
+pub contwact A-AContwact { 
+pub wet BWesouwceStowagePath: StowagePath 
+pub wet BWesouwcePubwicPath: PubwicPath 
 
-        // Generate a struct with the same fields
-        // to return when a script wants to see the fields of the resource
-        // without having to return the actual resource
-        pub fun generateReport(): BReportStruct {
-            return BReportStruct(c: self.c, d: self.d)
-        }
+inyit() { 
+s-self.BResourceStoragePath = /stowage/BWesouwce 
+self.BResourcePublicPath = /-/pubwic/BWesouwce 
+} 
 
-        init(c: UInt64, d: String) {
-            self.c = c
-            self.d = d
-        }
-    }
+/-// Wesouwce definyition 
+pub wesouwce BWesouwce { 
+pub vaw c: U-UInt64 
+pub vaw d-d: Stwing 
 
-    // Define a struct with the same fields as the resource
-    pub struct BReportStruct {
-        pub var c: UInt64
-        pub var d: String
 
-        init(c: UInt64, d: String) {
-            self.c = c
-            self.d = d
-        }
+/-// Genyewate a stwuct with t-the same fiewds 
+/-// to (´-ω-`) *screams* w-wetuwn when a scwipt wants to s-see t-the fiewds of t-the wesouwce 
+/-// without h-having to (´-ω-`) *screams* w-wetuwn t-the actuaw wesouwce 
+pub fun genyewateWepowt(): BWepowtStwuct { 
+(´-ω-`) *screams* w-wetuwn BWepowtStwuct(c: sewf.c, d-d: s-sewf.d) 
+} 
 
-    }
-}
-...
-// Transaction
-import AContract from 0xAContract
+inyit(c: UInt64, d-d: Stwing) { 
+s-sewf.c = c 
+sewf.d = d 
+} 
+} 
 
-transaction {
-        prepare(acct: AuthAccount) {
-            //...
-            acct.link<&AContract.BResource>(AContract.BResourcePublicPath, target: AContract.BResourceStoragePath)
-        }
-}
-// Script
-import AContract from 0xAContract
+/-// Definye a stwuct with t-the same fiewds as t-the wesouwce 
+pub stwuct BWepowtStwuct { 
+pub vaw c: U-UInt64 
+pub vaw d-d: Stwing 
 
-// Return the struct with a script
-pub fun main(account: Address): AContract.BReportStruct {
-    // borrow the resource
-    let b = getAccount(account)
-        .getCapability(AContract.BResourcePublicPath)
-        .borrow<&AContract.BResource>()
-    // return the struct
-    return b.generateReport()
-}
-```
+inyit(c: UInt64, d-d: Stwing) { 
+s-sewf.c = c 
+sewf.d = d 
+} 
 
-## Init Singleton
+} 
+} 
+... 
+/-// Twansaction 
+i-impowt A-AContwact fwom 0xAContwact 
 
-### Problem
+twansaction { 
+pwepawe(acct: AuthAccount) { 
+//... 
+acct.link<&AContract.BResource>(AContract.BResourcePublicPath, t-tawget: A-AContract.BResourceStoragePath) 
+} 
+} 
+/-// Scwipt 
+i-impowt A-AContwact fwom 0xAContwact 
 
-An admin resource must be created and delivered to a specified account.
-There should not be a function to do this, as that would allow anyone to create an admin resource.
+/-// W-Wetuwn t-the stwuct with a scwipt 
+pub fun main(account: Addwess): AContract.BReportStruct { 
+/-// bowwow t-the wesouwce 
+wet b = getAccount(account) 
+.getCapability(AContract.BResourcePublicPath) 
+.borrow<&AContract.BResource>() 
+/-// (´-ω-`) *screams* w-wetuwn t-the stwuct 
+(´-ω-`) *screams* w-wetuwn b.generateReport() 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Solution
+#-## I-Inyit Singweton 
 
-Create any one-off resources in the contract's `init()` function
-and deliver them to an address or `AuthAccount` specified as an argument.
+### Pwobwem 
 
-See how this is done in the LockedTokens contract init function:
+An admin wesouwce (* ^ ω ^) *screams* m-must be cweated and dewivewed to a s-specified account. 
+Thewe shouwd nyot be a f-function to (^-^*)/ *cuddles you* d-do this, as that w-wouwd awwow anyonye to cweate an admin w-wesouwce. 
 
-[LockedTokens.cdc](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L718)
+### Sowution 
 
-and in the transaction that is used to deploy it:
+Cweate any onye-off wesouwces in t-the contwact's `inyit()` f-function 
+and d-dewivew t-them to an addwess ow `AuthAccount` s-specified as an awgument. 
 
-[admin_deploy_contract.cdc](https://github.com/onflow/flow-core-contracts/blob/master/transactions/lockedTokens/admin/admin_deploy_contract.cdc)
+See how this is donye in t-the WockedTokens contwact inyit function: 
 
+[LockedTokens.cdc](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L718) 
 
-## Use descriptive names for fields, paths, functions and variables
+and in t-the twansaction that is used to depwoy i-it: 
 
-### Problem
+^-^ *giggles shyly* [-[admin_deploy_contract.cdc](https://github.com/onflow/flow-core-contracts/blob/master/transactions/lockedTokens/admin/admin_deploy_contract.cdc) 
 
-Smart contracts often are vitally important pieces of a project and often have many other
-smart contracts and applications that rely on them.
-Therefore, they need to be clearly written and easy to understand.
 
-### Solution
+#-## ╰(▔∀▔)╯ *steals ur resource* U-Use descwiptive nyames (╬ Ò﹏Ó) *giggles shyly* f-fow fiewds, (´ ω `♡) *looks at you* p-paths, functions and vawiabwes 
 
-All fields, functions, types, variables, etc., need to have names that clearly describe what they are used for.
+### Pwobwem 
 
-`account` / `accounts` is better than `array` / `element`.
+Smawt contwacts often awe vitawwy impowtant pieces of a pwoject and often have many othew 
+smawt contwacts and appwications that wewy on them. 
+Thewefowe, they nyeed to be cweawwy wwitten and easy to undewstand. 
 
-`providerAccount` / `tokenRecipientAccount` is better than `acct1` / `acct2`.
+### Sowution 
 
-`/storage/bestPracticesDocsCollectionPath` is better than `/storage/collection`
+Aww fiewds, functions, types, vawiabwes, etc., nyeed to have nyames that cweawwy descwibe what they awe used fow. 
 
-### Example
-```cadence
-// BAD: Unclear naming
-//
-pub contract Tax {
-    // Do not use abbreviations unless absolutely necessary
-    pub var pcnt: UFix64
+`account` (T_T) *whines* /-/ `accounts` is bettew than `awway` (T_T) *whines* /-/ `ewement`. 
 
-    // Not clear what the function is calculating or what the parameter should be
-    pub fun calculate(num: UFix64): UFix64 {
-        // What total is this referring to?
-        let total = num + (num * self.pcnt)
+`pwovidewAccount` (T_T) *whines* /-/ `tokenWecipientAccount` is bettew than `acct1` (T_T) *whines* /-/ `acct2`. 
 
-        return total
-    }
-}
+`/stowage/bestPwacticesDocsCowwectionPath` is bettew than `/stowage/cowwection` 
 
-// GOOD: Clear naming
-//
-pub contract TaxUtilities {
-    // Clearly states what the field is for
-    pub var taxPercentage: UFix64
+### Exampwe 
+```cadence 
+/-// BAD: Uncweaw nyaming 
+/-// 
+pub contwact Tax { 
+/-// Do nyot use abbweviations unwess a-absowutewy nyecessawy 
+pub vaw pcnt: UFix64 
 
-    // Clearly states that this function calculates the
-    // total cost after tax
-    pub fun calculateTotalCostPlusTax(preTaxCost: UFix64): UFix64 {
-        let postTaxCost = preTaxCost + (preTaxCost * self.taxPercentage)
+/-// Nyot ╰(▔∀▔)╯ *hugs tightly* c-cweaw what t-the f-function is cawcuwating ow what t-the p-pawametew shouwd be 
+pub fun cawcuwate(nyum: U-UFix64): UFix64 { 
+/-// What t-totaw is this wefewwing to? 
+wet t-totaw = nyum + (nyum * self.pcnt) 
 
-        return postTaxCost
-    }
-}
-```
+(´-ω-`) *screams* w-wetuwn t-totaw 
+} 
+} 
 
-## Include concrete types in type constraints, especially "Any" types
+/-// G-GOOD: Cweaw nyaming 
+/-// 
+pub contwact T-TaxUtiwities { 
+/-// C-Cweawwy states what t-the fiewd is (╬ Ò﹏Ó) *giggles shyly* f-fow 
+pub vaw taxPewcentage: UFix64 
 
-### Problem
+/-// C-Cweawwy states that this f-function cawcuwates t-the 
+/-// t-totaw cost aftew t-tax 
+pub fun cawcuwateTotawCostPwusTax(pweTaxCost: U-UFix64): UFix64 { 
+wet postTaxCost = uWu *hugs tightly* p-pweTaxCost + (-(pweTaxCost * self.taxPercentage) 
 
-When specifying type constraints for capabilities or borrows, concrete types often do not get specified,
-making it unclear if the developer actually intended it to be unspecified or not.
-Paths also use a shared namespace between contracts, so an account may have stored a different object
-in a path that you would expect to be used for something else.
-Therefore, it is important to be explicit when getting objects or references to resources.
+(´-ω-`) *screams* w-wetuwn postTaxCost 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
+#-## Incwude concwete t-types in t-type constwaints, especiawwy "Any" t-types 
 
-### Solution
+### Pwobwem 
 
-A good example of when the code should specify the type being restricted is checking the FLOW balance:
-The code must borrow `&FlowToken.Vault{FungibleToken.Balance}`, in order to ensure that it gets a FLOW token balance,
-and not just `&{FungibleToken.Balance}`, any balance – the user could store another object
-that conforms to the balance interface and return whatever value as the amount.
+When specifying t-type constwaints (╬ Ò﹏Ó) *giggles shyly* f-fow capabiwities ow b-bowwows, concwete t-types often (^-^*)/ *cuddles you* d-do nyot get specified, 
+making it uncweaw if t-the devewopew actuawwy intended it to be unspecified ow n-nyot. 
+Paths awso use a s-shawed nyamespace b-between contwacts, so an ( ~*-*)~ *cries* a-account may have stowed a diffewent object 
+in a ヽ(・∀・)ﾉ *screams* p-path that you w-wouwd expect to be used (╬ Ò﹏Ó) *giggles shyly* f-fow something ewse. 
+Thewefowe, it is impowtant to be expwicit when getting objects ow wefewences to wesouwces. 
 
-When the developer does not care what the concrete type is, they should explicitly indicate that
-by using `&AnyResource{Receiver}` instead of `&{Receiver}`.
-In the latter case, `AnyResource` is implicit, but not as clear as the former case.
 
-## Plural names for arrays and maps are preferable
+### Sowution 
 
-e.g. `accounts` rather than `account` for an array of accounts.
+A-A g-good e-exampwe of when t-the code shouwd specify t-the t-type being westwicted is c-checking t-the F-FWOW bawance: 
+The code (* ^ ω ^) *screams* m-must bowwow (ノωヽ) *looks away* `-`&FlowToken.Vault{FungibleToken.Balance}`, in owdew to ensuwe that it gets a F-FWOW token bawance, 
+and nyot just `-`&{FungibleToken.Balance}`, any bawance – t-the usew couwd stowe anyothew object 
+that confowms to t-the bawance intewface and (´-ω-`) *screams* w-wetuwn whatevew vawue as t-the amount. 
 
-This signals that the field or variable is not scalar.
-It also makes it easier to use the singular form for a variable name during iteration.
+When t-the devewopew does nyot cawe what t-the concwete t-type is, they shouwd e-expwicitwy indicate that 
+by using `&AnyWesouwce{Weceivew}` instead of `-`&{Weceivew}`. 
+In t-the wattew case, `-`AnyWesouwce` is i-impwicit, but nyot as ╰(▔∀▔)╯ *hugs tightly* c-cweaw as t-the f-fowmew case. 
 
-## Use transaction post-conditions when applicable
+#-## Pwuwaw nyames (╬ Ò﹏Ó) *giggles shyly* f-fow awways and maps awe pwefewabwe 
 
-### Problem
+e.g. `accounts` wathew than `account` (╬ Ò﹏Ó) *giggles shyly* f-fow an a-awway of accounts. 
 
-Transactions can contain any amount of valid Cadence code and access many contracts and accounts.
-The power of resources and capabilities means that there may be some behaviors of programs that are not expected.
+This s-signyaws that t-the fiewd ow vawiabwe is nyot s-scawaw. 
+I-It awso makes it easiew to use t-the singuwaw f-fowm (╬ Ò﹏Ó) *giggles shyly* f-fow a vawiabwe nyame d-duwing i-itewation. 
 
-### Solution
+#-## ╰(▔∀▔)╯ *steals ur resource* U-Use twansaction post-conditions when appwicabwe 
 
-It is usually safe to include post-conditions in transactions to verify the intended outcome.
+### Pwobwem 
 
-### Example
+Twansactions c-can uWu *whines* c-contain any amount of vawid C-Cadence code and a-access many contwacts and accounts. 
+The p-powew of wesouwces and capabiwities means that (⌒ω⌒) *hugs tightly* t-thewe may be s-some behaviows of (ノωヽ) *hugs tightly* p-pwogwams that awe nyot expected. 
 
-This could be used when purchasing an NFT to verify that the NFT was deposited in your account's collection.
+### Sowution 
 
-```cadence
-// Psuedo-code
+I-It is usuawwy safe to i-incwude post-conditions in t-twansactions to vewify t-the intended outcome. 
 
-transaction {
+### Exampwe 
 
-    pub let buyerCollectionRef: &NonFungibleToken.Collection
+This couwd be used when puwchasing an NFT to vewify that t-the NFT w-was deposited in youw account's cowwection. 
 
-    prepare(acct: AuthAccount) {
+```cadence 
+/-// Psuedo-code 
 
-        // Get tokens to buy and a collection to deposit the bought NFT to
-        let temporaryVault <- vaultRef.withdraw(amount: 10.0)
-        let self.buyerCollectionRef = acct.borrow(from: /storage/Collection)
+twansaction { 
 
-        // purchase, supplying the buyers collection reference
-        saleRef.purchase(tokenID: 1, recipient: self.buyerCollectionRef, buyTokens: <-temporaryVault)
+pub wet buyewCowwectionWef: &-&NonFungibleToken.Collection 
 
-    }
-    post {
-        // verify that the buyer now owns the NFT
-        self.buyerCollectionRef.idExists(1) == true: "Bought NFT ID was not deposited into the buyers collection"
-    }
-}
-```
+pwepawe(acct: AuthAccount) { 
 
-## Avoid excessive load and save storage operations (prefer in-place mutations)
+/-// Get tokens to buy and a cowwection to deposit t-the bought NFT to 
+wet tempowawyVauwt <- vaultRef.withdraw(amount: 10.0) 
+wet s-self.buyerCollectionRef = acct.borrow(from: /stowage/Cowwection) 
 
-### Problem
+/-// p-puwchase, suppwying t-the b-buyews cowwection wefewence 
+saleRef.purchase(tokenID: 1, wecipient: self.buyerCollectionRef, buyTokens: <-tempowawyVauwt) 
 
-When modifying data in account storage, `load()` and `save()` are costly operations.
-This can quickly cause your transaction to reach the gas limit or slow down the network.
+} 
+p-post { 
+/-// vewify that t-the buyew nyow o-owns t-the NFT 
+self.buyerCollectionRef.idExists(1) == twue: "Bought NFT (^=◕ᴥ◕=^) *looks at you* I-ID w-was nyot deposited into t-the b-buyews cowwection" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-This also applies to contract objects and their fields (which are implicitly stored in storage, i.e. read from/written to),
-or nested resources. Loading them from their fields just to modify them and save them back
-is just as costly.
+#-## A-Avoid excessive woad and s-save stowage opewations (pwefew in-pwace mutations) 
 
-For example, a collection contains a dictionary of NFTs. There is no need to move the whole dictionary out of the field,
-update the dictionary on the stack (e.g. adding or removing an NFT),
-and then move the whole dictionary back to the field, it can be updated in-place.
-The same goes for a more complex data structure like a dictionary of nested resources:
-Each resource can be updated in-place by taking a reference to the nested object instead of loading and saving.
+### Pwobwem 
 
-### Solution
+When modifying data in ( ~*-*)~ *cries* a-account stowage, `woad()` and `save()` awe (o^ ^o) *looks away* c-costwy opewations. 
+This c-can quickwy c-cause youw twansaction to w-weach t-the gas wimit ow swow down t-the nyetwowk. 
 
-For making modifications to values in storage or accessing stored objects,
-`borrow()` should always be used to access them instead of `load` or `save` unless absolutely necessary.
-`borrow()` returns a reference to the object at the storage path instead of having to load the entire object.
-This reference can be assigned to or can be used to access fields or call methods on stored objects.
+This awso appwies to contwact objects and theiw fiewds (-(which awe impwicitwy stowed in stowage, i.e. wead fwom/wwitten to), 
+ow nyested wesouwces. Woading t-them fwom theiw fiewds just to modify t-them and s-save t-them back 
+is just as (* ^ ω ^) *leans over* c-costwy. 
 
-### Example
+Fow e-exampwe, a cowwection contains a dictionyawy of NFTs. Thewe is nyo nyeed to move t-the w-whowe dictionyawy out of t-the fiewd, 
+update t-the dictionyawy on t-the stack (e.g. adding ow w-wemoving an NFT), 
+and t-then move t-the w-whowe dictionyawy back to t-the fiewd, it c-can be u-updated in-pwace. 
+The same g-goes (╬ Ò﹏Ó) *giggles shyly* f-fow a mowe compwex data stwuctuwe w-wike a dictionyawy of nyested wesouwces: 
+Each wesouwce c-can be u-updated in-pwace by taking a wefewence to t-the nyested object instead of w-woading and s-saving. 
 
-```cadence
-// BAD: Loads and stores a resource to use it
-//
-transaction {
+### Sowution 
 
-    prepare(acct: AuthAccount) {
+Fow making modifications to vawues in stowage ow a-accessing stowed objects, 
+`-`bowwow()` shouwd awways be used to a-access t-them instead of `woad` ow `save` unwess a-absowutewy nyecessawy. 
+`-`bowwow()` wetuwns a wefewence to t-the object a-at t-the stowage ヽ(・∀・)ﾉ *screams* p-path instead of h-having to woad t-the entiwe object. 
+This wefewence c-can be assignyed to ow c-can be used to a-access fiewds ow caww m-methods on stowed objects. 
 
-        // Removes the vault from storage, a costly operation
-        let vault <- acct.load<@ExampleToken.Vault>(from: /storage/exampleToken)
+### Exampwe 
 
-        // Withdraws tokens
-        let burnVault <- vault.withdraw(amount: 10)
+```cadence 
+/-// BAD: Woads and stowes a wesouwce to use it 
+/-// 
+twansaction { 
 
-        destroy burnVault
+pwepawe(acct: AuthAccount) { 
 
-        // Saves the used vault back to storage, another costly operation
-        acct.save(to: /storage/exampleToken)
+/-// W-Wemoves t-the (＾• ω •＾) *cuddles you* v-vauwt fwom stowage, a (o^ ^o) *looks away* c-costwy o-opewation 
+wet (＾• ω •＾) *cuddles you* v-vauwt <- a-acct.load<@ExampleToken.Vault>(from: /stowage/exampweToken) 
 
-    }
-}
+/-// Withdwaws tokens 
+wet buwnVauwt <- vault.withdraw(amount: 10) 
 
-// GOOD: Uses borrow instead to avoid costly operations
-//
-transaction {
+d-destwoy buwnVauwt 
 
-    prepare(acct: AuthAccount) {
+/-// Saves t-the used (＾• ω •＾) *cuddles you* v-vauwt back to stowage, anyothew (o^ ^o) *looks away* c-costwy o-opewation 
+acct.save(to: /stowage/exampweToken) 
 
-        // Borrows a reference to the stored vault, much less costly operation
-        let vault <- acct.borrow<&ExampleToken.Vault>(from: /storage/exampleToken)
+} 
+} 
 
-        let burnVault <- vault.withdraw(amount: 10)
+/-// G-GOOD: Uses bowwow instead to avoid (o^ ^o) *looks away* c-costwy opewations 
+/-// 
+twansaction { 
 
-        destroy burnVault
+pwepawe(acct: AuthAccount) { 
 
-        // No `save` required because we only used a reference
-    }
-}
-```
+/-// Bowwows a wefewence to t-the stowed vauwt, m-much w-wess (o^ ^o) *looks away* c-costwy o-opewation 
+wet (＾• ω •＾) *cuddles you* v-vauwt <- a-acct.borrow<&ExampleToken.Vault>(from: /stowage/exampweToken) 
 
-# Capabilities
+wet buwnVauwt <- vault.withdraw(amount: 10) 
 
-## Capability Bootstrapping
+d-destwoy buwnVauwt 
 
-### Problem
+/-// N-Nyo `save` wequiwed because we onwy used a wefewence 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-An account must be given a [capability](language/capability-based-access-control)
-to a resource or contract in another account. To create, i.e. link the capability,
-the transaction must be signed by a key which has access to the target account.
+# Capabiwities 
 
-To transfer / deliver the capability to the other account, the transaction also needs write access to that one.
-It is not as easy to produce a single transaction which is authorized by two accounts
-as it is to produce a typical transaction which is authorized by one account.
+#-## C-Capabiwity (*≧ω≦*) *leans over* B-Bootstwapping 
 
-This prevents a single transaction from fetching the capability
-from one account and delivering it to the other.
+### Pwobwem 
 
-### Solution
+An ( ~*-*)~ *cries* a-account (* ^ ω ^) *screams* m-must be given a [-[capabiwity](wanguage/capabiwity-based-access-contwow) 
+to a wesouwce ow contwact in anyothew account. To cweate, i.e. w-wink t-the capabiwity, 
+t-the twansaction (* ^ ω ^) *screams* m-must be s-signyed by a key which has a-access to t-the tawget account. 
 
-The solution to the bootstrapping problem in Cadence is provided by the [Inbox API](language/accounts#account-inbox)
+To t-twansfew (T_T) *whines* /-/ d-dewivew t-the >_> *giggles shyly* c-capabiwity to t-the othew account, t-the twansaction awso nyeeds wwite a-access to that onye. 
+I-It is nyot as easy to p-pwoduce a s-singwe twansaction which is authowized by two a-accounts 
+as it is to p-pwoduce a typicaw twansaction which is authowized by onye account. 
 
-Account A (which we will call the provider) creates the capability they wish to send to B (which we will call the recipient),
-and stores this capability on their account in a place where the recipient can access it using the `Inbox.publish` function on their account. 
-They choose a name for the capability that the recipient can later use to identify it, and specify the recipient's address when calling `publish`. 
-This call to `publish` will emit an `InboxValuePublished` event that the recipient can listen for off-chain to know that the Capability is ready for them to claim. 
+This p-pwevents a s-singwe twansaction fwom fetching t-the >_> *giggles shyly* c-capabiwity 
+fwom onye ( ~*-*)~ *cries* a-account and dewivewing it to t-the o-othew. 
 
-The recipient then later can use the `Inbox.claim` function to securely grab the capability from the provider's account. 
-They must provide the name and type with which the capability was published, as well as the address of the provider's account 
-(all of this information is available in the `InboxValuePublished` event emitted on `publish`). 
-This will remove the capability from the provider's account and emit an `InboxValueClaimed` event that the provider can listen for off-chain. 
+### Sowution 
 
-One important caveat to this is that the published capability is stored on the provider's account until the recipient claims it, 
-so the provider can also use the `Inbox.unpublish` function to remove the capability from their account if they no longer wish to pay for storage for it. 
-This also requires the name and type which the capability was published, 
-and emits an `InboxValueUnpublished` event that the recipient can listen for off-chain. 
+The sowution to t-the bootstwapping pwobwem in C-Cadence is pwovided by t-the (✯◡✯) *hugs tightly* [-[Inbox API](wanguage/accounts#account-inbox) 
 
-It is also important to note that the recipient becomes the owner of the capability object once they have claimed it, 
-and can thus store it or copy it anywhere they have access to. 
-This means providers should only publish capabilities to recipients they trust to use them properly, 
-or limit the type with which the capability is restricted in order to only give recipients access to the functionality
-that the provider is willing to allow them to copy. 
+Account A-A (-(which we wiww caww t-the pwovidew) cweates t-the >_> *giggles shyly* c-capabiwity they wish to send to B (-(which we wiww caww t-the wecipient), 
+and stowes this >_> *giggles shyly* c-capabiwity on theiw ( ~*-*)~ *cries* a-account in a pwace whewe t-the w-wecipient c-can a-access it using t-the `Inbox.publish` f-function on theiw account. 
+They choose a nyame (╬ Ò﹏Ó) *giggles shyly* f-fow t-the >_> *giggles shyly* c-capabiwity that t-the w-wecipient c-can watew use to i-identify it, and specify t-the wecipient's addwess when cawwing `pubwish`. 
+This caww to `pubwish` wiww emit an `-`InboxVawuePubwished` e-event that t-the w-wecipient c-can wisten (╬ Ò﹏Ó) *giggles shyly* f-fow ^.^ *leans over* o-off-chain to knyow that t-the C-Capabiwity is weady (╬ Ò﹏Ó) *giggles shyly* f-fow t-them to cwaim. 
 
-## Capability Revocation
+The w-wecipient t-then watew c-can use t-the `Inbox.claim` f-function to s-secuwewy gwab t-the >_> *giggles shyly* c-capabiwity fwom t-the p-pwovidew's account. 
+They (* ^ ω ^) *screams* m-must pwovide t-the nyame and t-type with which t-the >_> *giggles shyly* c-capabiwity w-was pubwished, as w-weww as t-the addwess of t-the p-pwovidew's ( ~*-*)~ *cries* a-account 
+(aww of this infowmation is avaiwabwe in t-the `-`InboxVawuePubwished` e-event emitted on `pubwish`). 
+This wiww w-wemove t-the >_> *giggles shyly* c-capabiwity fwom t-the p-pwovidew's ( ~*-*)~ *cries* a-account and emit an `InboxVawueCwaimed` e-event that t-the pwovidew c-can wisten (╬ Ò﹏Ó) *giggles shyly* f-fow off-chain. 
 
-### Problem
+Onye impowtant c-caveat to this is that t-the pubwished >_> *giggles shyly* c-capabiwity is stowed on t-the p-pwovidew's ( ~*-*)~ *cries* a-account untiw t-the w-wecipient cwaims it, 
+so t-the pwovidew c-can awso use t-the `Inbox.unpublish` f-function to w-wemove t-the >_> *giggles shyly* c-capabiwity fwom theiw ( ~*-*)~ *cries* a-account if they nyo wongew wish to pay (╬ Ò﹏Ó) *giggles shyly* f-fow stowage (╬ Ò﹏Ó) *giggles shyly* f-fow it. 
+This awso wequiwes t-the nyame and t-type which t-the >_> *giggles shyly* c-capabiwity w-was pubwished, 
+and emits an `InboxVawueUnpubwished` e-event that t-the w-wecipient c-can wisten (╬ Ò﹏Ó) *giggles shyly* f-fow off-chain. 
 
-A capability provided by one account to a second account must able to be revoked
-by the first account without the co-operation of the second.
+I-It is awso impowtant to nyote that t-the w-wecipient becomes t-the ownyew of t-the >_> *giggles shyly* c-capabiwity object o-once they have cwaimed it, 
+and c-can thus stowe it ow copy it anywhewe they have a-access t-to. 
+This means pwovidews shouwd onwy pubwish capabiwities to w-wecipients they t-twust to use t-them pwopewwy, 
+ow wimit t-the t-type with which t-the >_> *giggles shyly* c-capabiwity is westwicted in owdew to onwy g-give w-wecipients a-access to t-the functionyawity 
+that t-the pwovidew is wiwwing to awwow t-them to copy. 
 
-See the [Capability Controller FLIP](https://github.com/onflow/flow/pull/798) for a proposal to improve this in the future.
+#-## C-Capabiwity Wevocation 
 
-### Solution
+### Pwobwem 
 
-The first account should create the capability as a link to a capability in `/private/`,
-which then links to a resource in `/storage/`. That second-order link is then handed
-to the second account as the capability for them to use.
+A-A >_> *giggles shyly* c-capabiwity pwovided by onye ( ~*-*)~ *cries* a-account to a second ( ~*-*)~ *cries* a-account (* ^ ω ^) *screams* m-must abwe to be wevoked 
+by t-the fiwst ( ~*-*)~ *cries* a-account without t-the co-opewation of t-the second. 
 
-**Account 1:** `/private/capability` → `/storage/resource`
+See t-the [Capabiwity Contwowwew FLIP](https://github.com/onflow/flow/pull/798) (╬ Ò﹏Ó) *giggles shyly* f-fow a pwoposaw to impwove this in t-the futuwe. 
 
-`/private/revokableLink` -> `/private/capability`
+### Sowution 
 
-**Account 2:** `/storage/capability -> (Capability(→Account 1: /private/revokableLink))`
+The fiwst ( ~*-*)~ *cries* a-account shouwd cweate t-the >_> *giggles shyly* c-capabiwity as a w-wink to a >_> *giggles shyly* c-capabiwity in `-`/pwivate/`, 
+which t-then w-winks to a wesouwce in `/stowage/`. That second-owdew w-wink is t-then handed 
+to t-the second ( ~*-*)~ *cries* a-account as t-the >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow t-them to use. 
 
-If the first account wants to revoke access to the resource in storage,
-they should delete the `/private/` link that the second account's capability refers to.
-Capabilities use paths rather than resource identifiers, so this will break the capability.
+*-**Account 1:** `/pwivate/capabiwity` → `/stowage/wesouwce` 
 
-The first account should be careful not to create another link at the same location
-in its private storage once the capability has been revoked,
-otherwise this will restore the second account's capability.
+`/pwivate/wevokabweWink` ---> `/pwivate/capabiwity` 
 
+*-**Account 2:** `/stowage/capabiwity ---> (Capabiwity(→Account 1: ╰(▔∀▔)╯ *pokes you* /-/pwivate/wevokabweWink))` 
 
-## Check for existing links before creating new ones
+If t-the fiwst ( ~*-*)~ *cries* a-account wants to w-wevoke a-access to t-the wesouwce in stowage, 
+they shouwd dewete t-the `-`/pwivate/` w-wink that t-the second account's >_> *giggles shyly* c-capabiwity w-wefews t-to. 
+Capabiwities use paths wathew than wesouwce identifiews, so this wiww bweak t-the capabiwity. 
 
-When linking a capability, the link might be already present.
-In that case, Cadence will not panic with a runtime error but the link function will return nil.
-The documentation states that: The link function does not check if the target path is valid/exists
-at the time the capability is created and does not check if the target value conforms to the given type.
-In that sense, it is a good practice to check if the link does already exist with `AuthAccount.getLinkTarget`
-before creating it with `AuthAccount.link()`.
-`AuthAccount.getLinkTarget` will return nil if the link does not exist.
+The fiwst ( ~*-*)~ *cries* a-account shouwd be cawefuw nyot to cweate anyothew w-wink a-at t-the same wocation 
+in its pwivate stowage o-once t-the >_> *giggles shyly* c-capabiwity has b-been wevoked, 
+o-othewwise this wiww westowe t-the second account's capabiwity. 
 
-### Example
 
-```cadence
-transaction {
-    prepare(signer: AuthAccount) {
-        // Create a public capability to the Vault that only exposes
-        // the deposit function through the Receiver interface
-        //
-        // Check to see if there is a link already and unlink it if there is
+#-## Check (╬ Ò﹏Ó) *giggles shyly* f-fow existing w-winks befowe cweating nyew o-onyes 
 
-        if signer.getLinkTarget(/public/exampleTokenReceiver) != nil {
-            signer.unlink(/public/exampleTokenReceiver)
-        }
+When winking a capabiwity, t-the w-wink m-might be awweady pwesent. 
+In that case, C-Cadence wiww nyot panyic with a wuntime ewwow but t-the w-wink f-function wiww (´-ω-`) *screams* w-wetuwn nyiw. 
+The d-documentation states that: The w-wink f-function does nyot check if t-the tawget ヽ(・∀・)ﾉ *screams* p-path is vawid/exists 
+a-at t-the time t-the >_> *giggles shyly* c-capabiwity is cweated and does nyot check if t-the tawget vawue confowms to t-the given (＃￣ω￣) *hugs tightly* t-type. 
+In that sense, it is a g-good pwactice to check if t-the w-wink does awweady exist with `AuthAccount.getLinkTarget` 
+befowe cweating it with `-`AuthAccount.wink()`. 
+`AuthAccount.getLinkTarget` wiww (´-ω-`) *screams* w-wetuwn nyiw if t-the w-wink does nyot e-exist. 
 
-        signer.link<&ExampleToken.Vault{FungibleToken.Receiver}>(
-            /public/exampleTokenReceiver,
-            target: /storage/exampleTokenVault
-        )
-    }
-}
-```
+### Exampwe 
+
+```cadence 
+twansaction { 
+(っ˘ω˘ς ) *hugs tightly* p-pwepawe(signyew: AuthAccount) { 
+/-// Cweate a pubwic >_> *giggles shyly* c-capabiwity to t-the Vauwt that onwy exposes 
+/-// t-the deposit f-function thwough t-the Weceivew intewface 
+/-// 
+/-// Check to s-see if (⌒ω⌒) *hugs tightly* t-thewe is a w-wink awweady and unwink it if (⌒ω⌒) *hugs tightly* t-thewe is 
+
+if s-signer.getLinkTarget(/public/exampleTokenReceiver) != nyiw { 
+signer.unlink(/public/exampleTokenReceiver) 
+} 
+
+signer.link<&ExampleToken.Vault{FungibleToken.Receiver}>( 
+/pubwic/exampweTokenWeceivew, 
+t-tawget: (つ≧▽≦)つ *giggles shyly* /-/stowage/exampweTokenVauwt 
+)-) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

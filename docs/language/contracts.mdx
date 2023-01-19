@@ -1,476 +1,476 @@
----
-title: Contracts
----
-
-A contract in Cadence is a collection of type definitions
-of interfaces, structs, resources, data (its state), and code (its functions)
-that lives in the contract storage area of an account in Flow.
-
-Contracts are where all composite types like structs, resources,
-events, and interfaces for these types in Cadence have to be defined.
-Therefore, an object of one of these types cannot exist
-without having been defined in a deployed Cadence contract.
-
-Contracts can be created, updated, and removed using the `contracts`
-object of [authorized accounts](accounts).
-This functionality is covered in the [next section](#deploying-updating-and-removing-contracts)
-
-Contracts are types.
-They are similar to composite types, but are stored differently than
-structs or resources and cannot be used as values, copied, or moved
-like resources or structs.
-
-Contracts stay in an account's contract storage area
-and can only be added, updated, or removed by the account owner with special commands.
-
-Contracts are declared using the `contract` keyword. The keyword is followed
-by the name of the contract.
-
-```cadence
-pub contract SomeContract {
-    // ...
-}
-```
-
-Contracts cannot be nested in each other.
-
-```cadence
-pub contract Invalid {
-
-    // Invalid: Contracts cannot be nested in any other type.
-    //
-    pub contract Nested {
-        // ...
-    }
-}
-```
-
-One of the simplest forms of a contract would just be one with a state field,
-a function, and an `init` function that initializes the field:
-
-```cadence
-pub contract HelloWorld {
-
-    // Declare a stored state field in HelloWorld
-    //
-    pub let greeting: String
-
-    // Declare a function that can be called by anyone
-    // who imports the contract
-    //
-    pub fun hello(): String {
-        return self.greeting
-    }
-
-    init() {
-        self.greeting = "Hello World!"
-    }
-}
-```
-
-This contract could be deployed to an account and live permanently
-in the contract storage.  Transactions and other contracts
-can interact with contracts by importing them at the beginning
-of a transaction or contract definition.
-
-Anyone could call the above contract's `hello` function by importing
-the contract from the account it was deployed to and using the imported
-object to call the hello function.
-
-```cadence
-import HelloWorld from 0x42
-
-// Invalid: The contract does not know where hello comes from
-//
-log(hello())        // Error
-
-// Valid: Using the imported contract object to call the hello
-// function
-//
-log(HelloWorld.hello())    // prints "Hello World!"
-
-// Valid: Using the imported contract object to read the greeting
-// field.
-log(HelloWorld.greeting)   // prints "Hello World!"
-
-// Invalid: Cannot call the init function after the contract has been created.
-//
-HelloWorld.init()    // Error
-```
-
-There can be any number of contracts per account
-and they can include an arbitrary amount of data.
-This means that a contract can have any number of fields, functions, and type definitions,
-but they have to be in the contract and not another top-level definition.
-
-```cadence
-// Invalid: Top-level declarations are restricted to only be contracts
-//          or contract interfaces. Therefore, all of these would be invalid
-//          if they were deployed to the account contract storage and
-//          the deployment would be rejected.
-//
-pub resource Vault {}
-pub struct Hat {}
-pub fun helloWorld(): String {}
-let num: Int
-```
-
-Another important feature of contracts is that instances of resources and events
-that are declared in contracts can only be created/emitted within functions or types
-that are declared in the same contract.
-
-It is not possible create instances of resources and events outside the contract.
-
-The contract below defines a resource interface `Receiver` and a resource `Vault`
-that implements that interface.  The way this example is written,
-there is no way to create this resource, so it would not be usable.
-
-```cadence
-// Valid
-pub contract FungibleToken {
-
-    pub resource interface Receiver {
-
-        pub balance: Int
-
-        pub fun deposit(from: @{Receiver}) {
-            pre {
-                from.balance > 0:
-                    "Deposit balance needs to be positive!"
-            }
-            post {
-                self.balance == before(self.balance) + before(from.balance):
-                    "Incorrect amount removed"
-            }
-        }
-    }
-
-    pub resource Vault: Receiver {
-
-        // keeps track of the total balance of the accounts tokens
-        pub var balance: Int
-
-        init(balance: Int) {
-            self.balance = balance
-        }
-
-        // withdraw subtracts amount from the vaults balance and
-        // returns a vault object with the subtracted balance
-        pub fun withdraw(amount: Int): @Vault {
-            self.balance = self.balance - amount
-            return <-create Vault(balance: amount)
-        }
-
-        // deposit takes a vault object as a parameter and adds
-        // its balance to the balance of the Account's vault, then
-        // destroys the sent vault because its balance has been consumed
-        pub fun deposit(from: @{Receiver}) {
-            self.balance = self.balance + from.balance
-            destroy from
-        }
-    }
-}
-```
-
-If a user tried to run a transaction that created an instance of the `Vault` type,
-the type checker would not allow it because only code in the `FungibleToken`
-contract can create new `Vault`s.
-
-```cadence
-import FungibleToken from 0x42
-
-// Invalid: Cannot create an instance of the `Vault` type outside
-// of the contract that defines `Vault`
-//
-let newVault <- create FungibleToken.Vault(balance: 10)
-```
-
-The contract would have to either define a function that creates new
-`Vault` instances or use its `init` function to create an instance and
-store it in the owner's account storage.
-
-This brings up another key feature of contracts in Cadence.  Contracts
-can interact with its account's `storage` and `published` objects to store
-resources, structs, and references.
-They do so by using the special `self.account` object that is only accessible within the contract.
-
-Imagine that these were declared in the above `FungibleToken` contract.
-
-```cadence
-
-    pub fun createVault(initialBalance: Int): @Vault {
-        return <-create Vault(balance: initialBalance)
-    }
-
-    init(balance: Int) {
-        let vault <- create Vault(balance: 1000)
-        self.account.save(<-vault, to: /storage/initialVault)
-    }
-```
-
-Now, any account could call the `createVault` function declared in the contract
-to create a `Vault` object.
-Or the owner could call the `withdraw` function on their own `Vault` to send new vaults to others.
-
-```cadence
-import FungibleToken from 0x42
-
-// Valid: Create an instance of the `Vault` type by calling the contract's
-// `createVault` function.
-//
-let newVault <- create FungibleToken.createVault(initialBalance: 10)
-```
-
-## Account access
+----- 
+titwe: Contwacts 
+----- 
+
+A-A contwact in C-Cadence is a cowwection of t-type definyitions 
+of intewfaces, s-stwucts, wesouwces, data (its state), and code (its f-functions) 
+that wives in t-the contwact stowage a-awea of an ( ~*-*)~ *cries* a-account in Fwow. 
+
+Contwacts awe whewe (＾▽＾') *cuddles you* a-aww composite t-types w-wike s-stwucts, wesouwces, 
+events, and i-intewfaces (╬ Ò﹏Ó) *giggles shyly* f-fow these t-types in C-Cadence have to be definyed. 
+Thewefowe, an object of onye of these t-types c-cannyot exist 
+without h-having b-been definyed in a depwoyed C-Cadence contwact. 
+
+Contwacts c-can be cweated, updated, and w-wemoved using t-the `contwacts` 
+object of [authowized accounts](accounts). 
+This functionyawity is covewed in t-the [-[nyext (o_O) *pokes you* s-section](#depwoying-updating-and-wemoving-contwacts) 
+
+Contwacts awe types. 
+They awe simiwaw to composite types, but awe stowed d-diffewentwy than 
+stwucts ow wesouwces and c-cannyot be used as vawues, copied, ow moved 
+w-wike wesouwces ow stwucts. 
+
+Contwacts stay in an account's contwact stowage a-awea 
+and c-can onwy be a-added, updated, ow w-wemoved by t-the ( ~*-*)~ *cries* a-account ownyew with speciaw commands. 
+
+Contwacts awe d-decwawed using t-the `contwact` (*・ω・)ﾉ *dances nervously* k-keywowd. The keywowd is f-fowwowed 
+by t-the nyame of t-the contwact. 
+
+```cadence 
+pub contwact SomeContwact { 
+/-// ... 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Contwacts c-cannyot be nyested in each o-othew. 
+
+```cadence 
+pub contwact (＃`Д´) *screams* I-Invawid { 
+
+/-// Invawid: Contwacts c-cannyot be nyested in any othew (＃￣ω￣) *hugs tightly* t-type. 
+/-// 
+pub contwact Nyested { 
+/-// ... 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Onye of t-the simpwest fowms of a contwact w-wouwd just be onye with a state fiewd, 
+a function, and an `inyit` f-function that inyitiawizes t-the fiewd: 
+
+```cadence 
+pub contwact HewwoWowwd { 
+
+/-// Decwawe a stowed state fiewd in HewwoWowwd 
+/-// 
+pub wet gweeting: Stwing 
+
+/-// Decwawe a f-function that c-can be cawwed by anyonye 
+/-// who impowts t-the contwact 
+/-// 
+pub fun hewwo(): Stwing { 
+(´-ω-`) *screams* w-wetuwn self.greeting 
+} 
+
+inyit() { 
+self.greeting = "Hewwo Wowwd!" 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This contwact couwd be depwoyed to an ( ~*-*)~ *cries* a-account and wive pewmanyentwy 
+in t-the contwact stowage. Twansactions and othew contwacts 
+c-can (o^▽^o) *dances nervously* i-intewact with contwacts by impowting t-them a-at t-the beginnying 
+of a twansaction ow contwact definyition. 
+
+(✧ω✧) *hugs tightly* A-Anyonye couwd caww t-the a-above contwact's `-`hewwo` f-function by impowting 
+t-the contwact fwom t-the ( ~*-*)~ *cries* a-account it w-was depwoyed to and using t-the impowted 
+object to caww t-the hewwo function. 
+
+```cadence 
+i-impowt HewwoWowwd fwom (;;;*_*) *cuddles you* 0-0x42 
+
+/-// Invawid: The contwact does nyot knyow whewe hewwo comes fwom 
+/-// 
+wog(hewwo()) /-// E-Ewwow 
+
+/-// Vawid: Using t-the impowted contwact object to caww t-the hewwo 
+/-// f-function 
+/-// 
+log(HelloWorld.hello()) /-// pwints "Hewwo Wowwd!" 
+
+/-// Vawid: Using t-the impowted contwact object to wead t-the gweeting 
+/-// fiewd. 
+log(HelloWorld.greeting) /-// pwints "Hewwo Wowwd!" 
+
+/-// Invawid: Cannyot caww t-the inyit f-function aftew t-the contwact has b-been cweated. 
+/-// 
+HelloWorld.init() /-// E-Ewwow 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Thewe c-can be any (❤ω❤) *pokes you* n-nyumbew of contwacts (　･ω･)☞ *sighs* p-pew ( ~*-*)~ *cries* a-account 
+and they c-can i-incwude an awbitwawy amount of d-data. 
+This means that a contwact c-can have any (❤ω❤) *pokes you* n-nyumbew of fiewds, functions, and t-type definyitions, 
+but they have to be in t-the contwact and nyot anyothew top-wevew definyition. 
+
+```cadence 
+/-// Invawid: Top-wevew decwawations awe westwicted to onwy be contwacts 
+/-// ow contwact intewfaces. Thewefowe, (＾▽＾') *cuddles you* a-aww of these w-wouwd be invawid 
+/-// if they wewe depwoyed to t-the ( ~*-*)~ *cries* a-account contwact stowage and 
+/-// t-the d-depwoyment w-wouwd be wejected. 
+/-// 
+pub wesouwce Vauwt (☆ω☆) *steals ur resource* {-{} 
+pub stwuct Hat (☆ω☆) *steals ur resource* {-{} 
+pub fun hewwoWowwd(): Stwing (☆ω☆) *steals ur resource* {-{} 
+wet n-nyum: Int 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Anyothew impowtant featuwe of contwacts is that instances of wesouwces and events 
+that awe d-decwawed in contwacts c-can onwy be cweated/emitted within functions ow t-types 
+that awe d-decwawed in t-the same contwact. 
+
+I-It is nyot p-possibwe cweate instances of wesouwces and events outside t-the contwact. 
+
+The contwact bewow definyes a wesouwce intewface `Weceivew` and a wesouwce `-`Vauwt` 
+that impwements that intewface. The w-way this e-exampwe is wwitten, 
+(⌒ω⌒) *hugs tightly* t-thewe is nyo w-way to cweate this wesouwce, so it w-wouwd nyot be usabwe. 
+
+```cadence 
+/-// V-Vawid 
+pub contwact F-FungibweToken { 
+
+pub wesouwce intewface Weceivew { 
+
+pub bawance: Int 
+
+pub fun deposit(fwom: @{Weceivew}) { 
+pwe { 
+(=^･ω･^=) *sweats* f-from.balance > >w< *giggles shyly* 0-0: 
+"Deposit bawance nyeeds to be positive!" 
+} 
+p-post { 
+self.balance == before(self.balance) + before(from.balance): 
+"-"Incowwect amount wemoved" 
+} 
+} 
+} 
+
+pub wesouwce V-Vauwt: Weceivew { 
+
+/-// k-keeps twack of t-the t-totaw bawance of t-the a-accounts tokens 
+pub vaw bawance: Int 
+
+i-inyit(bawance: Int) { 
+self.balance = bawance 
+} 
+
+/-// withdwaw o(≧▽≦)o *blushes* s-subtwacts amount fwom t-the vauwts bawance and 
+/-// wetuwns a (＾• ω •＾) *cuddles you* v-vauwt object with t-the subtwacted bawance 
+pub fun withdwaw(amount: Int): @Vauwt { 
+self.balance = self.balance (✧ω✧) *teleports behind you* --- amount 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate Vauwt(bawance: a-amount) 
+} 
+
+/-// deposit t-takes a (＾• ω •＾) *cuddles you* v-vauwt object as a p-pawametew and adds 
+/-// its bawance to t-the bawance of t-the Account's vauwt, t-then 
+/-// destwoys t-the sent (＾• ω •＾) *cuddles you* v-vauwt because its bawance has b-been consumed 
+pub fun deposit(fwom: @{Weceivew}) { 
+self.balance = self.balance + (=^･ω･^=) *sweats* f-from.balance 
+d-destwoy fwom 
+} 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+If a usew twied to w-wun a twansaction that cweated an instance of t-the `-`Vauwt` type, 
+t-the t-type checkew w-wouwd nyot awwow it because onwy code in t-the `FungibweToken` 
+contwact c-can cweate nyew `Vauwt`s. 
+
+```cadence 
+i-impowt F-FungibweToken fwom (;;;*_*) *cuddles you* 0-0x42 
+
+/-// Invawid: Cannyot cweate an instance of t-the `-`Vauwt` t-type outside 
+/-// of t-the contwact that definyes `-`Vauwt` 
+/-// 
+wet nyewVauwt <- cweate F-FungibleToken.Vault(balance: 10) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The contwact w-wouwd have to eithew definye a f-function that cweates nyew 
+`-`Vauwt` instances ow use its `inyit` f-function to cweate an instance and 
+stowe it in t-the ownyew's ( ~*-*)~ *cries* a-account stowage. 
+
+This b-bwings up anyothew key featuwe of contwacts in Cadence. Contwacts 
+c-can (o^▽^o) *dances nervously* i-intewact with its account's `-`stowage` and `pubwished` objects to stowe 
+wesouwces, s-stwucts, and ^-^ *cuddles you* w-wefewences. 
+They (^-^*)/ *cuddles you* d-do so by using t-the speciaw `self.account` object that is onwy accessibwe within t-the contwact. 
+
+I-Imaginye that these wewe d-decwawed in t-the a-above `FungibweToken` contwact. 
+
+```cadence 
+
+pub fun cweateVauwt(inyitiawBawance: Int): @Vauwt { 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate Vauwt(bawance: inyitiawBawance) 
+} 
+
+i-inyit(bawance: Int) { 
+wet (＾• ω •＾) *cuddles you* v-vauwt <- cweate Vauwt(bawance: 1000) 
+self.account.save(<-vault, to: /-/stowage/inyitiawVauwt) 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Nyow, any ( ~*-*)~ *cries* a-account couwd caww t-the (o-_-o) *steals ur resource* `-`cweateVauwt` f-function d-decwawed in t-the contwact 
+to cweate a `-`Vauwt` object. 
+Ow t-the ownyew couwd caww t-the `withdwaw` f-function on theiw own `-`Vauwt` to send nyew vauwts to othews. 
+
+```cadence 
+i-impowt F-FungibweToken fwom (;;;*_*) *cuddles you* 0-0x42 
+
+/-// Vawid: Cweate an instance of t-the `-`Vauwt` t-type by cawwing t-the contwact's 
+/-// (o-_-o) *steals ur resource* `-`cweateVauwt` function. 
+/-// 
+wet nyewVauwt <- cweate F-FungibleToken.createVault(initialBalance: 10) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Account a-access 
 
-Contracts have the implicit field `let account: AuthAccount`,
-which is the account in which the contract is deployed too.
-This gives the contract the ability to e.g. read and write to the account's storage.
+Contwacts have t-the impwicit fiewd `wet account: AuthAccount`, 
+which is t-the ( ~*-*)~ *cries* a-account in which t-the contwact is depwoyed too. 
+This gives t-the contwact t-the abiwity to e.g. wead and wwite to t-the account's stowage. 
 
-## Deploying, Updating, and Removing Contracts
+#-## Depwoying, Updating, and Wemoving Contwacts 
 
-In order for a contract to be used in Cadence, it needs to be deployed to an account.
-The deployed contracts of an account can be accessed through the `contracts` object.
+In owdew (╬ Ò﹏Ó) *giggles shyly* f-fow a contwact to be used in Cadence, it nyeeds to be depwoyed to an account. 
+The depwoyed contwacts of an ( ~*-*)~ *cries* a-account c-can be accessed thwough t-the `contwacts` object. 
 
-### Deployed Contracts
+### Depwoyed Contwacts 
 
-Accounts store "deployed contracts", that is, the code of the contract:
+A-Accounts stowe "depwoyed contwacts", that is, t-the code of t-the contwact: 
 
-```cadence
-struct DeployedContract {
-    let name: String
-    let code: [UInt8]
-}
-```
+```cadence 
+stwuct (　･ω･)☞ *giggles shyly* D-DepwoyedContwact { 
+wet nyame: Stwing 
+wet code: [UInt8] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Note that this is not the contract instance that can be acquired by importing it.
+Nyote that this is nyot t-the contwact instance that c-can be acquiwed by impowting it. 
 
-### Deploying a New Contract
+### Depwoying a Nyew Contwact 
 
-A new contract can be deployed to an account using the `add` function:
+A-A nyew contwact c-can be depwoyed to an ( ~*-*)~ *cries* a-account using t-the `add` function: 
 
-  ```cadence
-  fun add(
-      name: String,
-      code: [UInt8],
-      ... contractInitializerArguments
-  ): DeployedContract
-  ```
+```cadence 
+fun add( 
+nyame: Stwing, 
+code: [UInt8], 
+... contwactInyitiawizewAwguments 
+): (　･ω･)☞ *giggles shyly* D-DepwoyedContwact 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Adds the given contract to the account.
+Adds t-the given contwact to t-the account. 
 
-  The `code` parameter is the UTF-8 encoded representation of the source code.
-  The code must contain exactly one contract or contract interface,
-  which must have the same name as the `name` parameter.
+The `code` p-pawametew is t-the U-UTF-8 encoded w-wepwesentation of t-the souwce c-code. 
+The code (* ^ ω ^) *screams* m-must uWu *whines* c-contain exactwy onye contwact ow contwact intewface, 
+which (* ^ ω ^) *screams* m-must have t-the same nyame as t-the `nyame` pawametew. 
 
-  All additional arguments that are given are passed further to the initializer
-  of the contract that is being deployed.
+Aww additionyaw awguments that awe given awe passed f-fuwthew to t-the inyitiawizew 
+of t-the contwact that is being depwoyed. 
 
-  Fails if a contract/contract interface with the given name already exists in the account,
-  if the given code does not declare exactly one contract or contract interface,
-  or if the given name does not match the name of the contract/contract interface declaration in the code.
+Faiws if a contwact/contwact intewface with t-the given nyame awweady e-exists in t-the account, 
+if t-the given code does nyot decwawe exactwy onye contwact ow contwact intewface, 
+ow if t-the given nyame does nyot match t-the nyame of t-the contwact/contwact intewface decwawation in t-the c-code. 
 
-  Returns the [deployed contract](#deployed-contracts).
+Wetuwns t-the [depwoyed contwact](#depwoyed-contwacts). 
 
-For example, assuming the following contract code should be deployed:
+Fow e-exampwe, a-assuming t-the fowwowing contwact code shouwd be depwoyed: 
 
-```cadence
-pub contract Test {
-    pub let message: String
+```cadence 
+pub contwact Test { 
+pub wet m-message: Stwing 
 
-    init(message: String) {
-        self.message = message
-    }
-}
-```
+inyit(message: Stwing) { 
+self.message = message 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The contract can be deployed as follows:
+The contwact c-can be depwoyed as fowwows: 
 
-```cadence
-// Decode the hex-encoded source code into a byte array
-// using the built-in function `decodeHex`.
-//
-// (The ellipsis ... indicates the remainder of the string)
-//
-let code = "70756220636f6e...".decodeHex()
+```cadence 
+/-// Decode t-the hex-encoded souwce code into a byte a-awway 
+/-// using t-the buiwt-in f-function `-`decodeHex`. 
+/-// 
+/-// (The ewwipsis ... i-indicates t-the w-wemaindew of t-the stwing) 
+/-// 
+wet code = "-"70756220636f6e...".decodeHex() 
 
-// `code` has type `[UInt8]`
+/-// `code` has t-type `[UInt8]` 
 
-let signer: AuthAccount = ...
-signer.contracts.add(
-    name: "Test",
-    code: code,
-    message: "I'm a new contract in an existing account"
-)
-```
+wet s-signyew: AuthAccount = ... 
+signer.contracts.add( 
+nyame: "Test", 
+code: code, 
+m-message: (T_T) *cries* "-"I'm a nyew contwact in an existing account" 
+)-) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Updating a Deployed Contract
+### Updating a Depwoyed Contwact 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-🚧 Status: Updating contracts is **experimental**.
+�-🚧 Status: Updating contwacts is **expewimentaw**. 
 
-Updating contracts is currently limited to maintain data consistency.
-[Certain restrictions are imposed](contract-updatability).
+Updating contwacts is cuwwentwy wimited to maintain data consistency. 
+[Cewtain westwictions awe i-imposed](contwact-updatabiwity). 
 
-</Callout>
+</Cawwout> 
 
-A deployed contract can be updated using the `update__experimental` function:
+A-A depwoyed contwact c-can be u-updated using t-the `update__expewimentaw` function: 
 
-  ```cadence
-  fun update__experimental(name: String, code: [UInt8]): DeployedContract
-  ```
+```cadence 
+fun update__expewimentaw(nyame: Stwing, code: [UInt8]): (　･ω･)☞ *giggles shyly* D-DepwoyedContwact 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Updates the code for the contract/contract interface in the account.
+Updates t-the code (╬ Ò﹏Ó) *giggles shyly* f-fow t-the contwact/contwact intewface in t-the account. 
 
-  The `code` parameter is the UTF-8 encoded representation of the source code.
-  The code must contain exactly one contract or contract interface,
-  which must have the same name as the `name` parameter.
+The `code` p-pawametew is t-the U-UTF-8 encoded w-wepwesentation of t-the souwce c-code. 
+The code (* ^ ω ^) *screams* m-must uWu *whines* c-contain exactwy onye contwact ow contwact intewface, 
+which (* ^ ω ^) *screams* m-must have t-the same nyame as t-the `nyame` pawametew. 
 
-  Does **not** run the initializer of the contract/contract interface again.
-  The contract instance in the world state stays as is.
+Does *-**nyot** w-wun t-the inyitiawizew of t-the contwact/contwact intewface again. 
+The contwact instance in t-the wowwd state stays as is. 
 
-  Fails if no contract/contract interface with the given name exists in the account,
-  if the given code does not declare exactly one contract or contract interface,
-  or if the given name does not match the name of the contract/contract interface declaration in the code.
+Faiws if nyo contwact/contwact intewface with t-the given nyame e-exists in t-the account, 
+if t-the given code does nyot decwawe exactwy onye contwact ow contwact intewface, 
+ow if t-the given nyame does nyot match t-the nyame of t-the contwact/contwact intewface decwawation in t-the c-code. 
 
-  Returns the [deployed contract](#deployed-contracts) for the updated contract.
+Wetuwns t-the [depwoyed contwact](#depwoyed-contwacts) (╬ Ò﹏Ó) *giggles shyly* f-fow t-the u-updated contwact. 
 
-For example, assuming that a contract named `Test` is already deployed to the account
-and it should be updated with the following contract code:
+Fow e-exampwe, a-assuming that a contwact nyamed `Test` is awweady depwoyed to t-the ( ~*-*)~ *cries* a-account 
+and it shouwd be u-updated with t-the fowwowing contwact code: 
 
-```cadence
-pub contract Test {
-    pub let message: String
+```cadence 
+pub contwact Test { 
+pub wet m-message: Stwing 
 
-    init(message: String) {
-        self.message = message
-    }
-}
-```
+inyit(message: Stwing) { 
+self.message = message 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The contract can be updated as follows:
+The contwact c-can be u-updated as fowwows: 
 
-```cadence
-// Decode the hex-encoded source code into a byte array
-// using the built-in function `decodeHex`.
-//
-// (The ellipsis ... indicates the remainder of the string)
-//
-let code = "70756220636f6e...".decodeHex()
+```cadence 
+/-// Decode t-the hex-encoded souwce code into a byte a-awway 
+/-// using t-the buiwt-in f-function `-`decodeHex`. 
+/-// 
+/-// (The ewwipsis ... i-indicates t-the w-wemaindew of t-the stwing) 
+/-// 
+wet code = "-"70756220636f6e...".decodeHex() 
 
-// `code` has type `[UInt8]`
+/-// `code` has t-type `[UInt8]` 
 
-let signer: AuthAccount = ...
-signer.contracts.update__experimental(name: "Test", code: code)
-```
+wet s-signyew: AuthAccount = ... 
+(*ﾉωﾉ) *cuddles you* s-signer.contracts.update__experimental(name: "Test", code: code) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Updating a contract does **not** currently change any existing stored data.
-Only the code of the contract is updated.
+Updating a contwact does *-**nyot** cuwwentwy change any existing stowed d-data. 
+Onwy t-the code of t-the contwact is updated. 
 
-### Getting a Deployed Contract
+### G-Getting a Depwoyed Contwact 
 
-A deployed contract can be gotten from an account using the `get` function:
+A-A depwoyed contwact c-can be gotten fwom an ( ~*-*)~ *cries* a-account using t-the `-`get` function: 
 
-  ```cadence
-  fun get(name: String): DeployedContract?
-  ```
+```cadence 
+fun get(nyame: Stwing): DepwoyedContwact? 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Returns the [deployed contract](#deployed-contracts) for the contract/contract interface with the given name in the account, if any.
+Wetuwns t-the [depwoyed contwact](#depwoyed-contwacts) (╬ Ò﹏Ó) *giggles shyly* f-fow t-the contwact/contwact intewface with t-the given nyame in t-the account, if any. 
 
-  Returns `nil` if no contract/contract interface with the given name exists in the account.
+Wetuwns (＾• ω •＾) *teleports behind you* `-`nyiw` if nyo contwact/contwact intewface with t-the given nyame e-exists in t-the account. 
 
-For example, assuming that a contract named `Test` is deployed to an account, the contract can be retrieved as follows:
+Fow e-exampwe, a-assuming that a contwact nyamed `Test` is depwoyed to an account, t-the contwact c-can be w-wetwieved as fowwows: 
 
-```cadence
-let signer: AuthAccount = ...
-let contract = signer.contracts.get(name: "Test")
-```
+```cadence 
+wet s-signyew: AuthAccount = ... 
+wet contwact = signer.contracts.get(name: "Test") 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Borrowing a Deployed Contract
+### Bowwowing a Depwoyed Contwact 
 
-In contrast to a static contract import `import T from 0x1`, 
-which will always perform an import of a type, 
-contracts can be "borrowed" to effectively perform a dynamic import dependent on a specific execution path. 
+In contwast to a static contwact i-impowt `impowt T fwom 0x1`, 
+which wiww awways pewfowm an i-impowt of a type, 
+contwacts c-can be "bowwowed" to effectivewy pewfowm a dynyamic i-impowt dependent on a specific execution p-path. 
 
-A reference to a deployed contract contract can obtained using the `borrow` function:
+A-A wefewence to a depwoyed contwact contwact c-can obtainyed using t-the `-`bowwow` function: 
 
-  ```cadence
-  fun borrow<T: &Any>(name: String): T?
-  ```
+```cadence 
+fun x3 *screams* b-bowwow<T: &Any>(nyame: Stwing): T? 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  This returns a reference to the contract value stored with that name on the account, 
-  if it exists, and if it has the provided type `T`. 
+This wetuwns a wefewence to t-the contwact vawue stowed with that nyame on t-the account, 
+if it e-exists, and if it has t-the pwovided t-type `T`. 
 
-  Returns `nil` if no contract/contract interface with the given name exists in the account.
+Wetuwns (＾• ω •＾) *teleports behind you* `-`nyiw` if nyo contwact/contwact intewface with t-the given nyame e-exists in t-the account. 
 
-For example, assuming that a contract named `Test` which conforms to the `TestInterface` interface is deployed to an account, the contract can be retrieved as follows:
+Fow e-exampwe, a-assuming that a contwact nyamed `Test` which confowms to t-the >_< *leans over* `-`TestIntewface` intewface is depwoyed to an account, t-the contwact c-can be w-wetwieved as fowwows: 
 
-```cadence
-let signer: AuthAccount = ...
-let contract: &TestInterface = signer.contracts.borrow<&TestInterface>(name: "Test")
+```cadence 
+wet s-signyew: AuthAccount = ... 
+wet contwact: &TestIntewface = signer.contracts.borrow<&TestInterface>(name: "Test") 
 
-### Removing a Deployed Contract
+### Wemoving a Depwoyed Contwact 
 
-A deployed contract can be removed from an account using the `remove` function:
+A-A depwoyed contwact c-can be w-wemoved fwom an ( ~*-*)~ *cries* a-account using t-the `wemove` function: 
 
-  ```cadence
-  fun remove(name: String): DeployedContract?
-  ```
+```cadence 
+fun wemove(nyame: Stwing): DepwoyedContwact? 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-  Removes the contract/contract interface from the account which has the given name, if any.
+W-Wemoves t-the contwact/contwact intewface fwom t-the ( ~*-*)~ *cries* a-account which has t-the given nyame, if any. 
 
-  Returns the removed [deployed contract](#deployed-contracts), if any.
+Wetuwns t-the w-wemoved [depwoyed contwact](#depwoyed-contwacts), if any. 
 
-  Returns `nil` if no contract/contract interface with the given name exist in the account.
+Wetuwns (＾• ω •＾) *teleports behind you* `-`nyiw` if nyo contwact/contwact intewface with t-the given nyame exist in t-the account. 
 
-For example, assuming that a contract named `Test` is deployed to an account, the contract can be removed as follows:
+Fow e-exampwe, a-assuming that a contwact nyamed `Test` is depwoyed to an account, t-the contwact c-can be w-wemoved as fowwows: 
 
-```cadence
-let signer: AuthAccount = ...
-let contract = signer.contracts.remove(name: "Test")
-```
+```cadence 
+wet s-signyew: AuthAccount = ... 
+wet contwact = signer.contracts.remove(name: "Test") 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Contract Interfaces
+#-## Contwact I-Intewfaces 
 
-Like composite types, contracts can have interfaces that specify rules
-about their behavior, their types, and the behavior of their types.
+Wike composite types, contwacts c-can have i-intewfaces that specify wuwes 
+about theiw behaviow, theiw types, and t-the behaviow of theiw types. 
 
-Contract interfaces have to be declared globally.  Declarations
-cannot be nested in other types.
+Contwact i-intewfaces have to be d-decwawed gwobawwy. Decwawations 
+c-cannyot be nyested in othew types. 
 
-If a contract interface declares a concrete type, implementations of it
-must also declare the same concrete type conforming to the type requirement.
+If a contwact intewface decwawes a concwete type, impwementations of it 
+(* ^ ω ^) *screams* m-must awso decwawe t-the same concwete t-type c-confowming to t-the t-type w-wequiwement. 
 
-If a contract interface declares an interface type, the implementing contract
-does not have to also define that interface.  They can refer to that nested
-interface by saying `{ContractInterfaceName}.{NestedInterfaceName}`
+If a contwact intewface decwawes an intewface type, t-the impwementing contwact 
+does nyot have to awso definye that intewface. They c-can wefew to that nyested 
+intewface by saying `-`{ContwactIntewfaceNyame}.{NyestedIntewfaceNyame}` 
 
-```cadence
-// Declare a contract interface that declares an interface and a resource
-// that needs to implement that interface in the contract implementation.
-//
-pub contract interface InterfaceExample {
+```cadence 
+/-// Decwawe a contwact intewface that decwawes an intewface and a wesouwce 
+/-// that nyeeds to impwement that intewface in t-the contwact impwementation. 
+/-// 
+pub contwact intewface IntewfaceExampwe { 
 
-    // Implementations do not need to declare this
-    // They refer to it as InterfaceExample.NestedInterface
-    //
-    pub resource interface NestedInterface {}
+/-// Impwementations (^-^*)/ *cuddles you* d-do nyot nyeed to decwawe this 
+/-// They wefew to it as InterfaceExample.NestedInterface 
+/-// 
+pub wesouwce intewface NyestedIntewface (☆ω☆) *steals ur resource* {-{} 
 
-    // Implementations must declare this type
-    //
-    pub resource Composite: NestedInterface {}
-}
+/-// Impwementations (* ^ ω ^) *screams* m-must decwawe this t-type 
+/-// 
+pub wesouwce C-Composite: NyestedIntewface (☆ω☆) *steals ur resource* {-{} 
+} 
 
-pub contract ExampleContract: InterfaceExample {
+pub contwact ExampweContwact: IntewfaceExampwe { 
 
-    // The contract doesn't need to redeclare the `NestedInterface` interface
-    // because it is already declared in the contract interface
+/-// The contwact d-doesn't nyeed to wedecwawe t-the `-`NyestedIntewface` intewface 
+/-// because it is awweady d-decwawed in t-the contwact intewface 
 
-    // The resource has to refer to the resource interface using the name
-    // of the contract interface to access it
-    //
-    pub resource Composite: InterfaceExample.NestedInterface {
-    }
-}
-```
+/-// The wesouwce has to wefew to t-the wesouwce intewface using t-the nyame 
+/-// of t-the contwact intewface to a-access it 
+/-// 
+pub wesouwce C-Composite: InterfaceExample.NestedInterface { 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

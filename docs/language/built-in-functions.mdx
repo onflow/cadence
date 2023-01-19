@@ -1,55 +1,55 @@
----
-title: Built-in Functions
----
+----- 
+titwe: B-Buiwt-in Functions 
+----- 
 
-## panic
-`cadence•fun panic(_ message: String): Never`
+#-## panyic 
+`cadence•fun p-panyic(_ m-message: Stwing): Nyevew` 
 
-  Terminates the program unconditionally
-  and reports a message which explains why the unrecoverable error occurred.
+Tewminyates t-the pwogwam unconditionyawwy 
+and wepowts a message which expwains why t-the unwecovewabwe ewwow occuwwed. 
 
-  ```cadence
-  let optionalAccount: AuthAccount? = // ...
-  let account = optionalAccount ?? panic("missing account")
-  ```
+```cadence 
+wet optionyawAccount: AuthAccount? = /-// ... 
+wet ( ~*-*)~ *cries* a-account = optionyawAccount ?? panyic("missing a-account") 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## assert
+#-## assewt 
 
-`cadence•fun assert(_ condition: Bool, message: String)`
+`cadence•fun a-assewt(_ condition: Boow, m-message: S-Stwing)` 
 
-  Terminates the program if the given condition is false,
-  and reports a message which explains how the condition is false.
-  Use this function for internal sanity checks.
+Tewminyates t-the pwogwam if t-the given condition is fawse, 
+and wepowts a message which expwains how t-the condition is fawse. 
+╰(▔∀▔)╯ *steals ur resource* U-Use this f-function (╬ Ò﹏Ó) *giggles shyly* f-fow intewnyaw sanyity checks. 
 
-  The message argument is optional.
+The message {{ (>_<) }} *leans over* a-awgument is o-optionyaw. 
 
-## unsafeRandom
+#-## u-unsafeWandom 
 
-`cadence•fun unsafeRandom(): UInt64`
+`cadence•fun unsafeWandom(): U-UInt64` 
 
-  Returns a pseudo-random number.
+Wetuwns a pseudo-wandom nyumbew. 
 
-  NOTE: The use of this function is unsafe if not used correctly.
+(o･ω･o) *dances nervously* N-NyOTE: The use of this f-function is unsafe if nyot used cowwectwy. 
 
-  Follow [best practices](https://consensys.github.io/smart-contract-best-practices/development-recommendations/general/public-data/)
-  to prevent security issues when using this function.
+Fowwow [best practices](https://consensys.github.io/smart-contract-best-practices/development-recommendations/general/public-data/) 
+to pwevent secuwity issues when using this function. 
 
-## RLP
+#-## W-WWP 
 
-RLP (Recursive Length Prefix) serialization allows the encoding of arbitrarily nested arrays of binary data.
+W-WWP (Wecuwsive Wength P-Pwefix) sewiawization awwows t-the (✧ω✧) *looks away* e-encoding of awbitwawiwy nyested awways of (o^▽^o) *looks away* b-binyawy d-data. 
 
-Cadence provides RLP decoding functions in the built-in `RLP` contract, which does not need to be imported.
+C-Cadence pwovides W-WWP decoding functions in t-the buiwt-in `WWP` c-contwact, which does nyot nyeed to be i-impowted. 
 
-- `cadence•fun decodeString(_ input: [UInt8]): [UInt8]`
+(✧ω✧) *teleports behind you* --- `cadence•fun decodeStwing(_ input: [UInt8]): [UInt8]` 
 
-  Decodes an RLP-encoded byte array (called string in the context of RLP).
-  The byte array should only contain of a single encoded value for a string; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
-  If any error is encountered while decoding, the program aborts.
+D-Decodes an W-WWP-encoded byte a-awway (cawwed stwing in t-the context of WWP). 
+The byte a-awway shouwd onwy uWu *whines* c-contain of a s-singwe encoded vawue (╬ Ò﹏Ó) *giggles shyly* f-fow a stwing; if t-the encoded vawue t-type does nyot match, ow it has twaiwing unnyecessawy bytes, t-the pwogwam abowts. 
+If any ewwow is e-encountewed whiwe d-decoding, t-the pwogwam abowts. 
 
 
-- `cadence•fun decodeList(_ input: [UInt8]): [[UInt8]]`
+(✧ω✧) *teleports behind you* --- `cadence•fun decodeWist(_ input: [UInt8]): [[UInt8]]` 
 
-  Decodes an RLP-encoded list into an array of RLP-encoded items.
-  Note that this function does not recursively decode, so each element of the resulting array is RLP-encoded data.
-  The byte array should only contain of a single encoded value for a list; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
-  If any error is encountered while decoding, the program aborts.
+D-Decodes an W-WWP-encoded wist into an a-awway of W-WWP-encoded items. 
+Nyote that this f-function does nyot w-wecuwsivewy decode, so each ewement of t-the w-wesuwting a-awway is W-WWP-encoded d-data. 
+The byte a-awway shouwd onwy uWu *whines* c-contain of a s-singwe encoded vawue (╬ Ò﹏Ó) *giggles shyly* f-fow a w-wist; if t-the encoded vawue t-type does nyot match, ow it has twaiwing unnyecessawy bytes, t-the pwogwam abowts. 
+If any ewwow is e-encountewed whiwe d-decoding, t-the pwogwam abowts. 

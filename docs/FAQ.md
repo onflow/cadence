@@ -1,25 +1,25 @@
-# FAQ
+# FAQ 
 
-## Is there a formal grammar (e.g. in BNF) for Cadence?
+#-## Is (⌒ω⌒) *hugs tightly* t-thewe a fowmaw gwammaw (e.g. in (＾▽＾') *hugs tightly* B-BNF) (╬ Ò﹏Ó) *giggles shyly* f-fow Cadence? 
 
-Yes, there is a [EBNF for Cadence](https://github.com/onflow/cadence/blob/master/docs/cadence.ebnf).
+Yes, (⌒ω⌒) *hugs tightly* t-thewe is a {{ (>_<) }} *sighs* [-[EBNF (╬ Ò﹏Ó) *giggles shyly* f-fow Cadence](https://github.com/onflow/cadence/blob/master/docs/cadence.ebnf). 
 
-## How can I inject additional values when executing a transaction or script?
+#-## How c-can I inject additionyaw vawues when executing a twansaction ow (☆▽☆) *teleports behind you* s-scwipt? 
 
-The runtime `Interface` functions `ExecuteTransaction` and `ExecuteScript` require a `Context` argument.
-The context has an `Environment` field, in which `stdlib.StandardLibraryValue`s can be declared.
+The wuntime `Intewface` functions `ExecuteTwansaction` and `ExecuteScwipt` wequiwe a `Context` awgument. 
+The context has an `Enviwonment` fiewd, in which `stdlib.StandardLibraryValue`s c-can be d-decwawed. 
 
-## How is Cadence parsed?
+#-## How is C-Cadence pawsed? 
 
-Cadence's parser is implemented as a hand-written recursive descent parser which uses operator precedence parsing.
-The recursive decent parsing technique allows for greater control, e.g. when implementing whitespace sensitivity, ambiguities, etc.
-The handwritten parser also allows for better / great custom error reporting and recovery.
+Cadence's pawsew is impwemented as a hand-wwitten wecuwsive descent pawsew which uses opewatow pwecedence p-pawsing. 
+The wecuwsive decent pawsing t-technyique awwows (╬ Ò﹏Ó) *giggles shyly* f-fow gweatew c-contwow, e.g. when impwementing whitespace sensitivity, ambiguities, etc. 
+The handwwitten pawsew awso awwows (╬ Ò﹏Ó) *giggles shyly* f-fow bettew (T_T) *whines* /-/ gweat custom ewwow wepowting and wecovewy. 
 
-The operator precedence parsing technique avoids constructing a CST and the associated overhead, where each grammar rule is translated to a CST node.
-For example, a simple integer literal would be "boxed" in several outer grammar rule nodes.
+The opewatow pwecedence pawsing t-technyique avoids constwucting a CST and t-the associated ovewhead, whewe each gwammaw w-wuwe is t-twanswated to a CST nyode. 
+Fow e-exampwe, a simpwe integew witewaw w-wouwd be "boxed" in sevewaw outew gwammaw w-wuwe nyodes. 
 
-## What is the algorithmic efficiency of operations on arrays and dictionaries?
+#-## What is t-the awgowithmic efficiency of opewations on awways and dictionyawies? 
 
-Arrays and dictionaries are implemented [as trees](https://github.com/onflow/atree). 
-This means that lookup operations do not run in constant time. 
-In certain cases, a mutation operation may cause a rebalancing of the tree.
+Awways and dictionyawies awe impwemented [as trees](https://github.com/onflow/atree). 
+This means that w-wookup opewations (^-^*)/ *cuddles you* d-do nyot w-wun in c-constant ^w^ *screams* t-time. 
+In c-cewtain cases, a mutation o-opewation may c-cause a webawancing of t-the t-twee. 

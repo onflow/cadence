@@ -1,531 +1,531 @@
----
-title: Cadence Testing Framework
----
+----- 
+titwe: C-Cadence T-Testing Fwamewowk 
+----- 
 
-The Cadence testing framework provides a convenient way to write tests for Cadence programs in Cadence.
-This functionality is provided by the built-in `Test` contract.
+The C-Cadence testing fwamewowk pwovides a convenyient w-way to wwite t-tests (╬ Ò﹏Ó) *giggles shyly* f-fow C-Cadence (ノωヽ) *hugs tightly* p-pwogwams in Cadence. 
+This functionyawity is pwovided by t-the buiwt-in `Test` contwact. 
 
-<Callout type="info">
-The testing framework can only be used off-chain, e.g. by using the [Flow CLI](https://developers.flow.com/tools/flow-cli).
-</Callout>
+<Cawwout type="info"> 
+The testing fwamewowk c-can onwy be used o-off-chain, e.g. by using t-the [Fwow CLI](https://developers.flow.com/tools/flow-cli). 
+</Cawwout> 
 
-Tests must be written in the form of a Cadence script.
-A test script may contain testing functions that starts with the `test` prefix,
-a `setup` function that will always run before the tests,
-and a `tearDown` function that will always run at the end of all test cases.
-Both `setup` and `tearDown` functions are optional.
+Tests (* ^ ω ^) *screams* m-must be wwitten in t-the f-fowm of a C-Cadence scwipt. 
+A-A test scwipt may uWu *whines* c-contain testing functions that s-stawts with t-the `test` pwefix, 
+a UwU *looks away* `-`setup` f-function that wiww awways w-wun befowe t-the tests, 
+and a `teawDown` f-function that wiww awways w-wun a-at t-the end of (＾▽＾') *cuddles you* a-aww test cases. 
+Both UwU *looks away* `-`setup` and `teawDown` functions awe o-optionyaw. 
 
-```cadence
-// A `setup` function that will always run before the rest of the methods.
-// Can be used to initialize things that would be used across the test cases.
-// e.g: initialling a blockchain backend, initializing a contract, etc.  
-pub fun setup() {
-}
+```cadence 
+/-// A-A UwU *looks away* `-`setup` f-function that wiww awways w-wun befowe t-the w-west of t-the UwU *shuffles closer* m-methods. 
+/-// Can be used to inyitiawize things that w-wouwd be used acwoss t-the test cases. 
+/-// e.g: inyitiawwing a bwockchain backend, i-inyitiawizing a c-contwact, etc. 
+pub fun setup() { 
+} 
 
-// Test functions start with the 'test' prefix.
-pub fun testSomething() {
-}
+/-// Test functions stawt with t-the 'test' pwefix. 
+pub fun testSomething() { 
+} 
 
-pub fun testAnotherThing() {
-}
+pub fun testAnyothewThing() { 
+} 
 
-pub fun testMoreThings() {
-}
+pub fun testMoweThings() { 
+} 
 
-// A `tearDown` function that will always run at the end of all test cases.
-// e.g: Can be used to stop the blockchain back-end used for tests, etc. or any cleanup.
-pub fun tearDown() {
-}
-```
-## Test Standard Library
+/-// A-A `teawDown` f-function that wiww awways w-wun a-at t-the end of (＾▽＾') *cuddles you* a-aww test cases. 
+/-// e.g: Can be used to stop t-the bwockchain back-end used (╬ Ò﹏Ó) *giggles shyly* f-fow tests, etc. ow any cweanyup. 
+pub fun teawDown() { 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+#-## Test Standawd Wibwawy 
 
-The testing framework can be used by importing the built-in `Test` contract:
+The testing fwamewowk c-can be used by impowting t-the buiwt-in `Test` contwact: 
 
-```cadence
-import Test
-```
+```cadence 
+i-impowt Test 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Assertion
+#-## Assewtion 
 
-### assert
+### assewt 
 
-```cadence
-fun assert(_ condition: Bool, message: String)
-```
+```cadence 
+fun a-assewt(_ condition: Boow, m-message: Stwing) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Fails a test-case if the given condition is false, and reports a message which explains how the condition is false.
+Faiws a test-case if t-the given condition is fawse, and wepowts a message which expwains how t-the condition is fawse. 
 
-The message argument is optional.
+The message {{ (>_<) }} *leans over* a-awgument is o-optionyaw. 
 
-### fail
+### faiw 
 
-```cadence
-fun fail(message: String)
-```
-Immediately fails a test-case, with a message explaining the reason to fail the test.
+```cadence 
+fun faiw(message: Stwing) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+Immediatewy faiws a test-case, with a message expwainying t-the w-weason to faiw t-the test. 
 
-The message argument is optional.
+The message {{ (>_<) }} *leans over* a-awgument is o-optionyaw. 
 
-### expect
+### expect 
 
-The `expect` function tests a value against a matcher (see [matchers](#matchers) section), and fails the test if it's not a match.
+The `expect` f-function t-tests a vawue against a matchew (see [matchews](#matchews) section), and faiws t-the test if it's nyot a m-match. 
 
-```cadence
-fun expect(_ value: AnyStruct, _ matcher: Matcher)
-```
+```cadence 
+fun expect(_ vawue: AnyStwuct, _ (✧∀✧)/ *pokes you* m-matchew: M-Matchew) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Matchers
+#-## M-Matchews 
 
-A matcher is an object that consists of a test function and associated utility functionality.
+A-A matchew is an object that consists of a test f-function and associated utiwity functionyawity. 
 
-```cadence
-pub struct Matcher {
+```cadence 
+pub stwuct Matchew { 
 
-    pub let test: ((AnyStruct): Bool)
+pub wet test: (-((AnyStwuct): Boow) 
 
-    pub init(test: ((AnyStruct): Bool)) {
-        self.test = test
-    }
+pub inyit(test: (-((AnyStwuct): (^人^) *whines* B-Boow)) { 
+self.test = test 
+} 
 
-    /// Combine this matcher with the given matcher.
-    /// Returns a new matcher that succeeds if this and the given matcher succeed.
-    ///
-    pub fun and(_ other: Matcher): Matcher {
-        return Matcher(test: fun (value: AnyStruct): Bool {
-            return self.test(value) && other.test(value)
-        })
-    }
+/// Combinye this matchew with t-the given matchew. 
+/// Wetuwns a nyew matchew that succeeds if this and t-the given matchew succeed. 
+/// 
+pub fun and(_ othew: Matchew): Matchew { 
+(´-ω-`) *screams* w-wetuwn Matchew(test: fun (vawue: AnyStwuct): Boow { 
+(´-ω-`) *screams* w-wetuwn s-self.test(value) && o-other.test(value) 
+}) 
+} 
 
-    /// Combine this matcher with the given matcher.
-    /// Returns a new matcher that succeeds if this or the given matcher succeeds.
-    ///
-    pub fun or(_ other: Matcher): Matcher {
-        return Matcher(test: fun (value: AnyStruct): Bool {
-            return self.test(value) || other.test(value)
-        })
-    }
-}
-```
-
-The `test` function defines the evaluation criteria for a value, and returns a boolean indicating whether the value
-conforms to the test criteria defined in the function.
-
-The `and` and `or` functions can be used to combine this matcher with another matcher to produce a new matcher with
-multiple testing criteria.
-The `and` method returns a new matcher that succeeds if both this and the given matcher are succeeded.
-The `or` method returns a new matcher that succeeds if at-least this or the given matcher is succeeded.
-
-A matcher that accepts a generic-typed test function can be constructed using the `newMatcher` function.
-
-```cadence
-fun newMatcher<T: AnyStruct>(_ test: ((T): Bool)): Test.Matcher
-```
-
-The type parameter `T` is bound to `AnyStruct` type. It is also optional.
-
-For example, a matcher that checks whether a given integer value is negative can be defined as follows:
-
-```cadence
-let isNegative = Test.newMatcher(fun (_ value: Int): Bool {
-    return value < 0
-})
-
-// Use `expect` function to test a value against the matcher.
-Test.expect(-15, isNegative)
-```
-
-### Built-in matcher functions
-
-The `Test` contract provides some built-in matcher functions for convenience.
-
-- `fun equal(_ value: AnyStruct): Matcher`
-
-  Returns a matcher that succeeds if the tested value is equal to the given value.
-  Accepts an `AnyStruct` value.
-
-
-## Blockchain
-
-A blockchain is an environment to which transactions can be submitted to, and against which scripts can be run.
-It imitates the behavior of a real network, for testing.
-
-```cadence
-/// Blockchain emulates a real network.
-///
-pub struct Blockchain {
-
-    pub let backend: AnyStruct{BlockchainBackend}
-
-    init(backend: AnyStruct{BlockchainBackend}) {
-        self.backend = backend
-    }
-
-    /// Executes a script and returns the script return value and the status.
-    /// `returnValue` field of the result will be `nil` if the script failed.
-    ///
-    pub fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult {
-        return self.backend.executeScript(script, arguments)
-    }
-
-    /// Creates a signer account by submitting an account creation transaction.
-    /// The transaction is paid by the service account.
-    /// The returned account can be used to sign and authorize transactions.
-    ///
-    pub fun createAccount(): Account {
-        return self.backend.createAccount()
-    }
-
-    /// Add a transaction to the current block.
-    ///
-    pub fun addTransaction(_ tx: Transaction) {
-        self.backend.addTransaction(tx)
-    }
-
-    /// Executes the next transaction in the block, if any.
-    /// Returns the result of the transaction, or nil if no transaction was scheduled.
-    ///
-    pub fun executeNextTransaction(): TransactionResult? {
-        return self.backend.executeNextTransaction()
-    }
-
-    /// Commit the current block.
-    /// Committing will fail if there are un-executed transactions in the block.
-    ///
-    pub fun commitBlock() {
-        self.backend.commitBlock()
-    }
-
-    /// Executes a given transaction and commit the current block.
-    ///
-    pub fun executeTransaction(_ tx: Transaction): TransactionResult {
-        self.addTransaction(tx)
-        let txResult = self.executeNextTransaction()!
-        self.commitBlock()
-        return txResult
-    }
-
-    /// Executes a given set of transactions and commit the current block.
-    ///
-    pub fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
-        for tx in transactions {
-            self.addTransaction(tx)
-        }
-
-        let results: [TransactionResult] = []
-        for tx in transactions {
-            let txResult = self.executeNextTransaction()!
-            results.append(txResult)
-        }
-
-        self.commitBlock()
-        return results
-    }
-
-    /// Deploys a given contract, and initilizes it with the arguments.
-    ///
-    pub fun deployContract(
-        name: String,
-        code: String,
-        account: Account,
-        arguments: [AnyStruct]
-    ): Error? {
-        return self.backend.deployContract(
-            name: name,
-            code: code,
-            account: account,
-            arguments: arguments
-        )
-    }
-}
-```
-
-The `BlockchainBackend` provides the actual functionality of the blockchain.
-
-```cadence
-/// BlockchainBackend is the interface to be implemented by the backend providers.
-///
-pub struct interface BlockchainBackend {
-
-    pub fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult
-
-    pub fun createAccount(): Account
-
-    pub fun addTransaction(_ tx: Transaction)
-
-    pub fun executeNextTransaction(): TransactionResult?
-
-    pub fun commitBlock()
-
-    pub fun deployContract(
-        name: String,
-        code: String,
-        account: Account,
-        arguments: [AnyStruct]
-    ): Error?
-}
-```
-
-### Creating a blockchain
-
-A new blockchain instance can be created using the `newEmulatorBlockchain` method.
-It returns a `Blockchain` which is backed by a new [Flow Emulator](https://developers.flow.com/tools/emulator) instance.
-
-```cadence
-let blockchain = Test.newEmulatorBlockchain()
-```
-
-### Creating accounts
-
-It may be necessary to create accounts during tests for various reasons, such as for deploying contracts, signing transactions, etc.
-An account can be created using the `createAccount` function.
-
-```cadence
-let acct = blockchain.createAccount()
-```
-
-The returned account consist of the `address` of the account, and a `publicKey` associated with it.
-
-```cadence
-/// Account represents info about the account created on the blockchain.
-///
-pub struct Account {
-    pub let address: Address
-    pub let publicKey: PublicKey
-
-    init(address: Address, publicKey: PublicKey) {
-        self.address = address
-        self.publicKey = publicKey
-    }
-}
-```
-
-### Executing scripts
-
-Scripts can be run with the `executeScript` function, which returns a `ScriptResult`.
-The function takes script-code as the first argument, and the script-arguments as an array as the second argument.
-
-```cadence
-let result = blockchain.executeScript("pub fun main(a: String) {}", ["hello"])
-```
-
-The script result consists of the `status` of the script execution, and a `returnValue` if the script execution was
-successful, or an `error` otherwise (see [errors](#errors) section for more details on errors).
-
-```cadence
-/// The result of a script execution.
-///
-pub struct ScriptResult {
-    pub let status: ResultStatus
-    pub let returnValue: AnyStruct?
-    pub let error: Error?
-
-    init(status: ResultStatus, returnValue: AnyStruct?, error: Error?) {
-        self.status = status
-        self.returnValue = returnValue
-        self.error = error
-    }
-}
-```
-
-### Executing transactions
-
-A transaction must be created with the transaction code, a list of authorizes,
-a list of signers that would sign the transaction, and the transaction arguments.
-
-```cadence
-/// Transaction that can be submitted and executed on the blockchain.
-///
-pub struct Transaction {
-    pub let code: String
-    pub let authorizers: [Address]
-    pub let signers: [Account]
-    pub let arguments: [AnyStruct]
-
-    init(code: String, authorizers: [Address], signers: [Account], arguments: [AnyStruct]) {
-        self.code = code
-        self.authorizers = authorizers
-        self.signers = signers
-        self.arguments = arguments
-    }
-}
-```
-
-The number of authorizers must match the number of `AuthAccount` arguments in the `prepare` block of the transaction.
-
-```cadence
-let tx = Test.Transaction(
-    code: "transaction { prepare(acct: AuthAccount) {} execute{} }",
-    authorizers: [account.address],
-    signers: [account],
-    arguments: [],
-)
-```
-
-There are two ways to execute the created transaction.
-- Executing the transaction immediately
-  ```cadence
-  let result = blockchain.executeTransaction(tx)
-  ```
-  This may fail if the current block contains transactions that have not being executed yet.
-
-
-- Adding the transaction to the current block, and executing it later.
-  ```cadence
-  // Add to the current block
-  blockchain.addTransaction(tx)
-
-  // Execute the next transaction in the block
-  let result = blockchain.executeNextTransaction()
-  ```
-
-The result of a transaction consists of the status of the execution, and an `Error` if the transaction failed.
-
-```cadence
-/// The result of a transaction execution.
-///
-pub struct TransactionResult {
-    pub let status: ResultStatus
-    pub let error: Error?
-
-    init(status: ResultStatus, error: Error) {
-        self.status = status
-        self.error = error
-    }
- }
-```
-
-### Commit block
-
-`commitBlock` block will commit the current block, and will fail if there are any un-executed transactions in the block.
-
-```cadence
-blockchain.commitBlock()
-```
-
-### Deploying contracts
-
-A contract can be deployed using the `deployContract` function of the `Blockchain`.
-
-```cadence
-let contractCode = "pub contract Foo{ pub let msg: String;   init(_ msg: String){ self.msg = msg }   pub fun sayHello(): String { return self.msg } }"
-
-let err = blockchain.deployContract(
-    name: "Foo",
-    code: contractCode,
-    account: account,
-    arguments: ["hello from args"],
-)
-```
-
-An `Error` is returned if the contract deployment fails. Otherwise, a `nil` is returned.
-
-### Configuring import addresses
-
-A common pattern in Cadence projects is to define the imports as file locations and specify the addresses
-corresponding to each network in the [Flow CLI configuration file](https://developers.flow.com/tools/flow-cli/configuration#contracts).
-When writing tests for a such project, it may also require to specify the addresses to be used during the tests as well.
-However, during tests, since accounts are created dynamically and the addresses are also generated dynamically,
-specifying the addresses statically in a configuration file is not an option.
-
-Hence, the test framework provides a way to specify the addresses using the
-`useConfiguration(_ configuration: Test.Configuration)` function in `Blockchain`.
-
-The `Configuration` struct consists of a mapping of import locations to their addresses.
-
-```cadence
-/// Configuration to be used by the blockchain.
-/// Can be used to set the address mapping.
-///
-pub struct Configuration {
-    pub let addresses: {String: Address}
-
-    init(addresses: {String: Address}) {
-        self.addresses = addresses
-    }
-}
-```
-
-<Callout type="info">
-The `Blockchain.useConfiguration` is a run-time alternative for
-[statically defining contract addresses in the flow.json config file](https://developers.flow.com/tools/flow-cli/configuration#advanced-format).
-</Callout>
-
-The configurations can be specified during the test setup as a best-practice.
-
-e.g: Assume running a script that imports `FooContract` and `BarContract`.
-The import locations for the two contracts can be specified using the two placeholders `"FooContract"` and
-`"BarContract"`. These placeholders can be any unique strings.
-
-```cadence
-import FooContract from "FooContract"
-import BarContract from "BarContract"
-
-pub fun main() {
-    // do something
-}
-```
-Then, before executing the script, the address mapping can be specified as follows:
-```cadence
-pub var blockchain = Test.newEmulatorBlockchain()
-pub var accounts: [Test.Account] = []
-
-pub fun setup() {
-    // Create accounts in the blockchain.
-
-    let acct1 = blockchain.createAccount()
-    accounts.append(acct1)
-
-    let acct2 = blockchain.createAccount()
-    accounts.append(acct2)
-
-    // Set the configuration with the addresses.
-    // They keys of the mapping should be the placeholders used in the imports.
-
-    blockchain.useConfiguration(Test.Configuration({
-        "FooContract": acct1.address,
-        "BarContract": acct2.address
-    }))
-}
-```
-
-The subsequent operations on the blockchain (e.g: contract deployment, script/transaction execution) will resolve the
-import locations to the provided addresses.
-
-### Errors
-
-An `Error` maybe returned when an operation (such as executing a script, executing a transaction, etc.) is failed.
-Contains a message indicating why the operation failed.
-
-```cadence
-// Error is returned if something has gone wrong.
-//
-pub struct Error {
-    pub let message: String
-
-    init(_ message: String) {
-        self.message = message
-    }
-}
-```
-
-An `Error` may typically be handled by failing the test case or by panicking (which will result in failing the test).
-
-```cadence
-let err: Error? = ...
-
-if let err = err {
-    panic(err.message)
-}
-```
-
-## Reading from files
-
-Writing tests often require constructing source-code of contracts/transactions/scripts in the test script.
-Testing framework provides a convenient way to load programs from a local file, without having to manually construct
-them within the test script.
-
-```cadence
-let contractCode = Test.readFile("./sample/contracts/FooContract.cdc")
-```
-
-`readFile` returns the content of the file as a string.
+/// Combinye this matchew with t-the given matchew. 
+/// Wetuwns a nyew matchew that succeeds if this ow t-the given matchew s-succeeds. 
+/// 
+pub fun ow(_ othew: Matchew): Matchew { 
+(´-ω-`) *screams* w-wetuwn Matchew(test: fun (vawue: AnyStwuct): Boow { 
+(´-ω-`) *screams* w-wetuwn s-self.test(value) || o-other.test(value) 
+}) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The `test` f-function definyes t-the evawuation cwitewia (╬ Ò﹏Ó) *giggles shyly* f-fow a vawue, and wetuwns a boowean indicating whethew t-the vawue 
+confowms to t-the test cwitewia definyed in t-the function. 
+
+The `and` and `ow` functions c-can be used to combinye this matchew with anyothew matchew to p-pwoduce a nyew matchew with 
+muwtipwe testing c-cwitewia. 
+The `and` method wetuwns a nyew matchew that succeeds if both this and t-the given matchew awe succeeded. 
+The `ow` method wetuwns a nyew matchew that succeeds if at-weast this ow t-the given matchew is succeeded. 
+
+A-A matchew that a-accepts a genyewic-typed test f-function c-can be constwucted using t-the `-`nyewMatchew` function. 
+
+```cadence 
+fun nyewMatchew<T: A-AnyStwuct>(_ test: (-((T): Boow)): Test.Matcher 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The t-type p-pawametew `T` is b-bound to `AnyStwuct` (＃￣ω￣) *hugs tightly* t-type. I-It is awso o-optionyaw. 
+
+Fow e-exampwe, a matchew that checks whethew a given integew vawue is nyegative c-can be definyed as fowwows: 
+
+```cadence 
+wet (￣ω￣) *steals ur resource* i-isNyegative = T-Test.newMatcher(fun (_ vawue: Int): Boow { 
+(´-ω-`) *screams* w-wetuwn vawue < 0 
+}) 
+
+/-// ╰(▔∀▔)╯ *steals ur resource* U-Use `expect` f-function to test a vawue against t-the matchew. 
+Test.expect(-15, isNyegative) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### B-Buiwt-in matchew functions 
+
+The `Test` contwact pwovides s-some buiwt-in matchew functions (╬ Ò﹏Ó) *giggles shyly* f-fow convenyience. 
+
+(✧ω✧) *teleports behind you* --- `fun equaw(_ vawue: AnyStwuct): Matchew` 
+
+Wetuwns a matchew that succeeds if t-the tested vawue is (*´▽`*) *pokes you* e-equaw to t-the given vawue. 
+Accepts an `AnyStwuct` vawue. 
+
+
+#-## B-Bwockchain 
+
+A-A bwockchain is an e-enviwonment to which t-twansactions c-can be s-submitted t-to, and against which scwipts c-can be wun. 
+I-It imitates t-the behaviow of a weaw n-nyetwowk, (╬ Ò﹏Ó) *giggles shyly* f-fow testing. 
+
+```cadence 
+/// B-Bwockchain e-emuwates a weaw nyetwowk. 
+/// 
+pub stwuct B-Bwockchain { 
+
+pub wet backend: AnyStwuct{BwockchainBackend} 
+
+i-inyit(backend: AnyStwuct{BwockchainBackend}) { 
+self.backend = backend 
+} 
+
+/// Executes a scwipt and wetuwns t-the scwipt (´-ω-`) *screams* w-wetuwn vawue and t-the status. 
+/// `wetuwnVawue` fiewd of t-the wesuwt wiww be (＾• ω •＾) *teleports behind you* `-`nyiw` if t-the scwipt f-faiwed. 
+/// 
+pub fun executeScwipt(_ s-scwipt: Stwing, _ awguments: [AnyStwuct]): ScwiptWesuwt { 
+(´-ω-`) *screams* w-wetuwn self.backend.executeScript(script, awguments) 
+} 
+
+/// Cweates a signyew ( ~*-*)~ *cries* a-account by submitting an ( ~*-*)~ *cries* a-account cweation twansaction. 
+/// The twansaction is paid by t-the sewvice account. 
+/// The wetuwnyed ( ~*-*)~ *cries* a-account c-can be used to (*´▽`*) *pokes you* s-sign and authowize twansactions. 
+/// 
+pub fun cweateAccount(): Account { 
+(´-ω-`) *screams* w-wetuwn self.backend.createAccount() 
+} 
+
+/// Add a twansaction to t-the cuwwent bwock. 
+/// 
+pub fun addTwansaction(_ tx: Twansaction) { 
+(❤ω❤) *shuffles closer* s-self.backend.addTransaction(tx) 
+} 
+
+/// Executes t-the nyext twansaction in t-the bwock, if any. 
+/// Wetuwns t-the wesuwt of t-the twansaction, ow nyiw if nyo twansaction w-was scheduwed. 
+/// 
+pub fun executeNyextTwansaction(): TwansactionWesuwt? { 
+(´-ω-`) *screams* w-wetuwn self.backend.executeNextTransaction() 
+} 
+
+/// Commit t-the cuwwent bwock. 
+/// Committing wiww faiw if (⌒ω⌒) *hugs tightly* t-thewe awe un-executed t-twansactions in t-the bwock. 
+/// 
+pub fun commitBwock() { 
+(x_x)V *sighs* s-self.backend.commitBlock() 
+} 
+
+/// Executes a given twansaction and commit t-the cuwwent bwock. 
+/// 
+pub fun executeTwansaction(_ tx: Twansaction): TwansactionWesuwt { 
+self.addTransaction(tx) 
+wet txWesuwt = self.executeNextTransaction()! 
+self.commitBlock() 
+(´-ω-`) *screams* w-wetuwn txWesuwt 
+} 
+
+/// Executes a given s-set of t-twansactions and commit t-the cuwwent bwock. 
+/// 
+pub fun executeTwansactions(_ twansactions: [Twansaction]): [TwansactionWesuwt] { 
+(╬ Ò﹏Ó) *giggles shyly* f-fow tx in t-twansactions { 
+self.addTransaction(tx) 
+} 
+
+wet wesuwts: [TwansactionWesuwt] = [] 
+(╬ Ò﹏Ó) *giggles shyly* f-fow tx in t-twansactions { 
+wet txWesuwt = self.executeNextTransaction()! 
+results.append(txResult) 
+} 
+
+self.commitBlock() 
+(´-ω-`) *screams* w-wetuwn w-wesuwts 
+} 
+
+/// Depwoys a given c-contwact, and i-inyitiwizes it with t-the awguments. 
+/// 
+pub fun depwoyContwact( 
+nyame: Stwing, 
+code: Stwing, 
+account: (>_<) *pokes you* A-Account, 
+awguments: [AnyStwuct] 
+): E-Ewwow? { 
+(´-ω-`) *screams* w-wetuwn s-self.backend.deployContract( 
+nyame: nyame, 
+code: code, 
+account: account, 
+awguments: awguments 
+)-) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The `BwockchainBackend` pwovides t-the actuaw functionyawity of t-the bwockchain. 
+
+```cadence 
+/// B-BwockchainBackend is t-the intewface to be impwemented by t-the backend pwovidews. 
+/// 
+pub stwuct intewface B-BwockchainBackend { 
+
+pub fun executeScwipt(_ s-scwipt: Stwing, _ awguments: [AnyStwuct]): ScwiptWesuwt 
+
+pub fun cweateAccount(): Account 
+
+pub fun addTwansaction(_ tx: Twansaction) 
+
+pub fun executeNyextTwansaction(): TwansactionWesuwt? 
+
+pub fun commitBwock() 
+
+pub fun depwoyContwact( 
+nyame: Stwing, 
+code: Stwing, 
+account: (>_<) *pokes you* A-Account, 
+awguments: [AnyStwuct] 
+): E-Ewwow? 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Cweating a bwockchain 
+
+A-A nyew bwockchain instance c-can be cweated using t-the `nyewEmuwatowBwockchain` method. 
+I-It wetuwns a (´-ω-`) *looks away* `-`Bwockchain` which is backed by a nyew [Fwow Emulator](https://developers.flow.com/tools/emulator) instance. 
+
+```cadence 
+wet bwockchain = Test.newEmulatorBlockchain() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Cweating a-accounts 
+
+I-It may be nyecessawy to cweate a-accounts d-duwing t-tests (╬ Ò﹏Ó) *giggles shyly* f-fow vawious weasons, such as (╬ Ò﹏Ó) *giggles shyly* f-fow d-depwoying contwacts, signying twansactions, etc. 
+An ( ~*-*)~ *cries* a-account c-can be cweated using t-the `cweateAccount` function. 
+
+```cadence 
+wet a-acct = blockchain.createAccount() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The wetuwnyed ( ~*-*)~ *cries* a-account consist of t-the `-`addwess` of t-the account, and a `pubwicKey` associated with it. 
+
+```cadence 
+/// Account wepwesents info about t-the ( ~*-*)~ *cries* a-account cweated on t-the bwockchain. 
+/// 
+pub stwuct Account { 
+pub wet addwess: Addwess 
+pub wet pubwicKey: PubwicKey 
+
+inyit(addwess: A-Addwess, pubwicKey: P-PubwicKey) { 
+self.address = addwess 
+(^ω~) *screams* s-self.publicKey = p-pubwicKey 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Executing scwipts 
+
+Scwipts c-can be w-wun with t-the `-`executeScwipt` function, which wetuwns a `ScwiptWesuwt`. 
+The f-function t-takes scwipt-code as t-the fiwst awgument, and t-the scwipt-awguments as an a-awway as t-the second awgument. 
+
+```cadence 
+wet wesuwt = b-blockchain.executeScript("pub fun main(a: Stwing) {}", ["hewwo"]) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The scwipt wesuwt consists of t-the `-`status` of t-the scwipt e-execution, and a `wetuwnVawue` if t-the scwipt execution w-was 
+successfuw, ow an `ewwow` o-othewwise (see [ewwows](#ewwows) section (╬ Ò﹏Ó) *giggles shyly* f-fow mowe detaiws on ewwows). 
+
+```cadence 
+/// The wesuwt of a scwipt execution. 
+/// 
+pub stwuct ScwiptWesuwt { 
+pub wet status: WesuwtStatus 
+pub wet wetuwnVawue: AnyStwuct? 
+pub wet ewwow: E-Ewwow? 
+
+inyit(status: WesuwtStatus, wetuwnVawue: AnyStwuct?, ewwow: (T_T) *looks at you* E-Ewwow?) { 
+self.status = >_< *blushes* s-status 
+self.returnValue = wetuwnVawue 
+self.error = ewwow 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Executing t-twansactions 
+
+A-A twansaction (* ^ ω ^) *screams* m-must be cweated with t-the twansaction code, a wist of authowizes, 
+a wist of signyews that w-wouwd (*´▽`*) *pokes you* s-sign t-the twansaction, and t-the twansaction awguments. 
+
+```cadence 
+/// Twansaction that c-can be s-submitted and executed on t-the bwockchain. 
+/// 
+pub stwuct Twansaction { 
+pub wet code: Stwing 
+pub wet authowizews: [Addwess] 
+pub wet signyews: [Account] 
+pub wet awguments: [AnyStwuct] 
+
+i-inyit(code: Stwing, authowizews: [Addwess], signyews: [Account], awguments: [-[AnyStwuct]) { 
+self.code = code 
+self.authorizers = authowizews 
+s-self.signers = signyews 
+s-self.arguments = awguments 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The (❤ω❤) *pokes you* n-nyumbew of authowizews (* ^ ω ^) *screams* m-must match t-the (❤ω❤) *pokes you* n-nyumbew of `AuthAccount` awguments in t-the `pwepawe` ^w^ *whines* b-bwock of t-the twansaction. 
+
+```cadence 
+wet tx = Test.Transaction( 
+code: "twansaction { pwepawe(acct: AuthAccount) (☆ω☆) *steals ur resource* {-{} execute{} }", 
+authowizews: [account.address], 
+signyews: [account], 
+awguments: [], 
+)-) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Thewe awe two ways to execute t-the cweated twansaction. 
+(✧ω✧) *teleports behind you* --- Executing t-the twansaction immediatewy 
+```cadence 
+wet wesuwt = blockchain.executeTransaction(tx) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+This may faiw if t-the cuwwent ^w^ *whines* b-bwock contains t-twansactions that have nyot being executed yet. 
+
+
+(✧ω✧) *teleports behind you* --- A-Adding t-the twansaction to t-the cuwwent bwock, and executing it watew. 
+```cadence 
+/-// Add to t-the cuwwent ^w^ *whines* b-bwock 
+blockchain.addTransaction(tx) 
+
+/-// Execute t-the nyext twansaction in t-the ^w^ *whines* b-bwock 
+wet wesuwt = blockchain.executeNextTransaction() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The wesuwt of a twansaction consists of t-the >_< *blushes* s-status of t-the e-execution, and an `Ewwow` if t-the twansaction f-faiwed. 
+
+```cadence 
+/// The wesuwt of a twansaction execution. 
+/// 
+pub stwuct TwansactionWesuwt { 
+pub wet status: WesuwtStatus 
+pub wet ewwow: E-Ewwow? 
+
+inyit(status: WesuwtStatus, ewwow: Ewwow) { 
+self.status = >_< *blushes* s-status 
+self.error = ewwow 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Commit ^w^ *whines* b-bwock 
+
+`commitBwock` ^w^ *whines* b-bwock wiww commit t-the cuwwent bwock, and wiww faiw if (⌒ω⌒) *hugs tightly* t-thewe awe any un-executed t-twansactions in t-the bwock. 
+
+```cadence 
+blockchain.commitBlock() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+### Depwoying contwacts 
+
+A-A contwact c-can be depwoyed using t-the `depwoyContwact` f-function of t-the `Bwockchain`. 
+
+```cadence 
+wet c-contwactCode = "pub contwact (・_・ヾ) *hugs tightly* F-Foo{ pub wet msg: S-Stwing; inyit(_ msg: Stwing){ (っ˘ω˘ς ) *looks away* s-self.msg = msg } pub fun sayHewwo(): Stwing { (´-ω-`) *screams* w-wetuwn (っ˘ω˘ς ) *looks away* s-self.msg } }" 
+
+wet eww = blockchain.deployContract( 
+nyame: (´-ω-`) *pokes you* "-"Foo", 
+code: c-contwactCode, 
+account: account, 
+awguments: ["hewwo fwom awgs"], 
+)-) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+An `Ewwow` is wetuwnyed if t-the contwact d-depwoyment faiws. O-Othewwise, a (＾• ω •＾) *teleports behind you* `-`nyiw` is wetuwnyed. 
+
+### Configuwing i-impowt addwesses 
+
+A-A common pattewn in C-Cadence pwojects is to definye t-the impowts as fiwe wocations and specify t-the addwesses 
+cowwesponding to each (＃￣ω￣) *looks at you* n-nyetwowk in t-the [Fwow (╬ Ò﹏Ó) *looks at you* C-CWI configuwation file](https://developers.flow.com/tools/flow-cli/configuration#contracts). 
+When w-wwiting t-tests (╬ Ò﹏Ó) *giggles shyly* f-fow a such p-pwoject, it may awso wequiwe to specify t-the addwesses to be used d-duwing t-the t-tests as weww. 
+Howevew, d-duwing tests, since a-accounts awe cweated dynyamicawwy and t-the addwesses awe awso genyewated dynyamicawwy, 
+specifying t-the addwesses s-staticawwy in a configuwation fiwe is nyot an option. 
+
+Hence, t-the test fwamewowk pwovides a w-way to specify t-the addwesses using t-the 
+`useConfiguwation(_ configuwation: Test.Configuration)` f-function in `Bwockchain`. 
+
+The `Configuwation` stwuct consists of a mapping of i-impowt wocations to theiw addwesses. 
+
+```cadence 
+/// C-Configuwation to be used by t-the bwockchain. 
+/// Can be used to s-set t-the addwess mapping. 
+/// 
+pub stwuct C-Configuwation { 
+pub wet addwesses: {Stwing: OwO *dances nervously* A-Addwess} 
+
+inyit(addwesses: {Stwing: A-Addwess}) { 
+self.addresses = addwesses 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+<Cawwout type="info"> 
+The `Blockchain.useConfiguration` is a wun-time awtewnyative (╬ Ò﹏Ó) *giggles shyly* f-fow 
+[staticawwy d-definying contwact addwesses in t-the flow.json c-config file](https://developers.flow.com/tools/flow-cli/configuration#advanced-format). 
+</Cawwout> 
+
+The c-configuwations c-can be s-specified d-duwing t-the test setup as a best-pwactice. 
+
+e.g: Assume wunnying a scwipt that impowts `FooContwact` and `BawContwact`. 
+The i-impowt wocations (╬ Ò﹏Ó) *giggles shyly* f-fow t-the two contwacts c-can be s-specified using t-the two pwacehowdews `"FooContwact"` and 
+`"BawContwact"`. These pwacehowdews c-can be any unyique stwings. 
+
+```cadence 
+i-impowt FooContwact fwom "FooContwact" 
+i-impowt B-BawContwact fwom "-"BawContwact" 
+
+pub fun m-main() { 
+/-// (^-^*)/ *cuddles you* d-do something 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+Then, befowe executing t-the scwipt, t-the addwess mapping c-can be s-specified as fowwows: 
+```cadence 
+pub vaw bwockchain = Test.newEmulatorBlockchain() 
+pub vaw accounts: [Test.Account] = [] 
+
+pub fun setup() { 
+/-// Cweate a-accounts in t-the bwockchain. 
+
+wet acct1 = blockchain.createAccount() 
+accounts.append(acct1) 
+
+wet acct2 = blockchain.createAccount() 
+a-accounts.append(acct2) 
+
+/-// Set t-the configuwation with t-the addwesses. 
+/-// They keys of t-the mapping shouwd be t-the pwacehowdews used in t-the i-impowts. 
+
+blockchain.useConfiguration(Test.Configuration({ 
+"FooContwact": acct1.address, 
+"BawContwact": a-acct2.address 
+})) 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The subsequent opewations on t-the bwockchain (e.g: contwact depwoyment, s-scwipt/twansaction execution) wiww wesowve t-the 
+i-impowt wocations to t-the pwovided addwesses. 
+
+### Ewwows 
+
+An `Ewwow` m-maybe wetuwnyed when an o-opewation (such as executing a scwipt, executing a twansaction, etc.) is f-faiwed. 
+Contains a message indicating why t-the o-opewation f-faiwed. 
+
+```cadence 
+/-// E-Ewwow is wetuwnyed if something has gonye wwong. 
+/-// 
+pub stwuct E-Ewwow { 
+pub wet m-message: Stwing 
+
+inyit(_ m-message: Stwing) { 
+self.message = message 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+An `Ewwow` may typicawwy be handwed by f-faiwing t-the test case ow by panyicking (-(which wiww wesuwt in f-faiwing t-the (*ﾉωﾉ) *giggles shyly* t-test). 
+
+```cadence 
+wet ଲ(ⓛ ω ⓛ)ଲ *looks at you* e-eww: E-Ewwow? = ... 
+
+if wet eww = eww { 
+panic(err.message) 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Weading fwom fiwes 
+
+Wwiting t-tests often wequiwe constwucting s-souwce-code of contwacts/twansactions/scwipts in t-the test scwipt. 
+T-Testing fwamewowk pwovides a convenyient w-way to woad (ノωヽ) *hugs tightly* p-pwogwams fwom a w-wocaw f-fiwe, without h-having to manyuawwy :3 *looks away* c-constwuct 
+t-them within t-the test scwipt. 
+
+```cadence 
+wet c-contwactCode = Test.weadFiwe("./sampwe/contwacts/FooContwact.cdc") 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+`weadFiwe` wetuwns t-the content of t-the fiwe as a stwing. 

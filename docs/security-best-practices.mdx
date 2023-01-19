@@ -1,63 +1,63 @@
----
-title: Security Best Practices
----
+----- 
+titwe: Secuwity Best Pwactices 
+----- 
 
-This is an opinionated list of best practices Cadence developers should follow to write more secure Cadence code.
+This is an opinyionyated wist of best p-pwactices C-Cadence devewopews shouwd fowwow to wwite mowe s-secuwe C-Cadence c-code. 
 
-Some practices listed below might overlap with advice in the [Cadence Anti-Patterns](design-patterns) section, which is a recommended read as well.
+Some p-pwactices wisted bewow m-might ovewwap with advice in t-the [Cadence Anti-Pattewns](design-pattewns) section, which is a wecommended wead as weww. 
 
-## References
+#-## Wefewences 
 
-[References](language/references) are ephemeral values and cannot be stored. If persistence is required, store a capability and borrow it when needed.
+[Wefewences](wanguage/wefewences) awe ephemewaw vawues and c-cannyot be stowed. If pewsistence is w-wequiwed, stowe a >_> *giggles shyly* c-capabiwity and bowwow it when nyeeded. 
 
-Authorized references (references with the `auth` keyword) allow downcasting, e.g. a restricted type to its unrestricted type and should only be used in some specific cases.
+Authowized wefewences (wefewences with t-the `auth` keywowd) awwow downcasting, e.g. a westwicted t-type to its u-unwestwicted t-type and shouwd onwy be used in s-some specific cases. 
 
-When exposing functionality, provide the least access necessary. Do not use authorized references, as they can be downcasted, potentially allowing a user to gain access to supposedly restricted functionality. For example, the fungible token standard provides an interface to get the balance of a vault, without exposing the withdrawal functionality.
+When (o_O) *blushes* e-exposing functionyawity, pwovide t-the weast a-access nyecessawy. Do nyot use authowized (O_O;) *sighs* w-wefewences, as they c-can be downcasted, potentiawwy a-awwowing a usew to gain a-access to supposedwy westwicted functionyawity. Fow e-exampwe, t-the fungibwe token standawd pwovides an intewface to get t-the bawance of a vauwt, without (o_O) *blushes* e-exposing t-the withdwawaw functionyawity. 
 
-Be aware that the subtype or unrestricted type could expose functionality that was not intended to be exposed. Do not use authorized references when exposing functionality. For example, the fungible token standard provides an interface to get the balance of a vault, without exposing the withdrawal functionality.
+(☆▽☆) *teleports behind you* B-Be awawe that t-the subtype ow u-unwestwicted t-type couwd expose functionyawity that w-was nyot intended to be exposed. Do nyot use authowized wefewences when (o_O) *blushes* e-exposing functionyawity. Fow e-exampwe, t-the fungibwe token standawd pwovides an intewface to get t-the bawance of a vauwt, without (o_O) *blushes* e-exposing t-the withdwawaw functionyawity. 
 
-## Account Storage
+#-## Account Stowage 
 
-Don't trust a users’ [account storage](language/accounts#account-storage). Users have full control over their data and may reorganize it as they see fit. Users may store values in any path, so paths may store values of “unexpected” types. These values may be instances of types in contracts that the user deployed.
+Don't t-twust a (＃￣ω￣) *steals ur resource* u-usews’ [account s-stowage](wanguage/accounts#account-stowage). Usews have f-fuww contwow o-ovew theiw data and may weowganyize it as they s-see fit. Usews may stowe vawues in any path, so paths may stowe vawues of “unyexpected” types. These vawues may be instances of t-types in contwacts that t-the usew depwoyed. 
 
-Always [borrow](language/capability-based-access-control) with the specific type that is expected. Or, check if the value is an instance of the expected type.
+Awways [-[bowwow](wanguage/capabiwity-based-access-contwow) with t-the specific t-type that is expected. Ow, check if t-the vawue is an instance of t-the e-expected (＃￣ω￣) *hugs tightly* t-type. 
 
-## Auth Accounts
+#-## Auth A-Accounts 
 
-Access to an `AuthAccount` gives full access to the account's storage, keys, and contracts. Therefore, [avoid using AuthAccount](anti-patterns#avoid-using-authaccount-as-a-function-parameter) as a function parameter unless absolutely necessary.
+A-Access to an `AuthAccount` gives f-fuww a-access to t-the account's stowage, keys, and ~(>_<~) *screams* c-contwacts. Thewefowe, [-[avoid using A-AuthAccount](anti-pattewns#avoid-using-authaccount-as-a-function-pawametew) as a f-function p-pawametew unwess a-absowutewy nyecessawy. 
 
-It is preferable to use capabilities over direct `AuthAccount` storage when exposing account data. Using capabilities allows the revocation of access by unlinking and limits the access to a single value with a certain set of functionality – access to an `AuthAccount` gives full access to the whole storage, as well as key and contract management.
+I-It is pwefewabwe to use capabiwities o-ovew (♡°▽°♡) *giggles shyly* d-diwect `AuthAccount` stowage when (o_O) *blushes* e-exposing ( ~*-*)~ *cries* a-account d-data. Using capabiwities awwows t-the w-wevocation of a-access by unwinking and wimits t-the a-access to a s-singwe vawue with a c-cewtain s-set of functionyawity – a-access to an `AuthAccount` gives f-fuww a-access to t-the w-whowe stowage, as w-weww as key and contwact manyagement. 
 
-## Capabilities
+#-## Capabiwities 
 
-Don’t store anything under the [public capability storage](language/capability-based-access-control) unless strictly required. Anyone can access your public capability using `AuthAccount.getCapability`. If something needs to be stored under `/public/`, make sure only read functionality is provided by restricting its type using either a resource interface or struct interface.
+Don’t stowe anything undew t-the [pubwic >_> *giggles shyly* c-capabiwity (≧◡≦) *whines* s-stowage](wanguage/capabiwity-based-access-contwow) unwess stwictwy wequiwed. (✧ω✧) *hugs tightly* A-Anyonye c-can a-access youw pubwic >_> *giggles shyly* c-capabiwity using `AuthAccount.getCapabiwity`. If something nyeeds to be stowed undew `/pubwic/`, make suwe onwy wead functionyawity is pwovided by westwicting its t-type using eithew a wesouwce intewface ow stwuct intewface. 
 
-When linking a capability, the link might already be present. In that case, Cadence will not panic with a runtime error but the link function will return `nil`.
+When winking a capabiwity, t-the w-wink m-might awweady be pwesent. In that case, C-Cadence wiww nyot panyic with a wuntime ewwow but t-the w-wink f-function wiww (´-ω-`) *screams* w-wetuwn `-`nyiw`. 
 
-It is a good practice to check if the link already exists with `getLinkTarget` before creating it. This function will return `nil` if the link does not exist.
+I-It is a g-good pwactice to check if t-the w-wink awweady e-exists with `getWinkTawget` befowe cweating it. This f-function wiww (´-ω-`) *screams* w-wetuwn (＾• ω •＾) *teleports behind you* `-`nyiw` if t-the w-wink does nyot e-exist. 
 
-If it is necessary to handle the case where borrowing a capability might fail, the `account.check` function can be used to verify that the target exists and has a valid type.
+If it is nyecessawy to handwe t-the case whewe bowwowing a >_> *giggles shyly* c-capabiwity m-might faiw, t-the `account.check` f-function c-can be used to vewify that t-the tawget e-exists and has a vawid (＃￣ω￣) *hugs tightly* t-type. 
 
-Ensure capabilities cannot be accessed by unauthorized parties. For example, capabilities should not be accessible through a public field, including public dictionaries or arrays. Exposing a capability in such a way allows anyone to borrow it and perform all actions that the capability allows.
+E-Ensuwe capabiwities c-cannyot be accessed by unyauthowized pawties. Fow e-exampwe, capabiwities shouwd nyot be accessibwe thwough a pubwic fiewd, incwuding pubwic dictionyawies ow awways. Exposing a >_> *giggles shyly* c-capabiwity in such a w-way awwows anyonye to bowwow it and pewfowm (＾▽＾') *cuddles you* a-aww actions that t-the >_> *giggles shyly* c-capabiwity awwows. 
 
-## Transactions
+#-## Twansactions 
 
-Audits of Cadence code should also include [transactions](language/transactions), as they may contain arbitrary code, just, like in contracts. In addition, they are given full access to the accounts of the transaction’s signers, i.e. the transaction is allowed to manipulate the signers’ account storage, contracts, and keys.
+Audits of C-Cadence code shouwd awso i-incwude [twansactions](wanguage/twansactions), as they may uWu *whines* c-contain awbitwawy code, just, w-wike in ~(>_<~) *screams* c-contwacts. In addition, they awe given f-fuww a-access to t-the a-accounts of t-the twansaction’s signyews, i.e. t-the twansaction is awwowed to ( =ω=)..nyaa *sweats* m-manyipuwate t-the s-signyews’ ( ~*-*)~ *cries* a-account stowage, contwacts, and keys. 
 
-Signing a transaction gives access to the `AuthAccount`, i.e. full access to the account’s storage, keys, and contracts.
+Signying a twansaction gives a-access to t-the `AuthAccount`, i.e. f-fuww a-access to t-the a-account’s stowage, keys, and ~(>_<~) *screams* c-contwacts. 
 
-Do not blindly sign a transaction. The transaction could for example change deployed contracts by upgrading them with malicious statements, revoking or adding keys, transferring resources from storage, etc.
+Do nyot bwindwy (*´▽`*) *pokes you* s-sign a twansaction. The twansaction couwd (╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe change depwoyed contwacts by upgwading t-them with mawicious statements, wevoking ow adding keys, twansfewwing wesouwces fwom stowage, etc. 
 
-## Types
+#-## T-Types 
 
-Use [restricted types and interfaces](language/restricted-types). Always use the most specific type possible, following the principle of least privilege. Types should always be as restrictive as possible, especially for resource types.
+╰(▔∀▔)╯ *steals ur resource* U-Use [-[westwicted t-types and intewfaces](wanguage/westwicted-types). Awways use t-the most specific t-type possibwe, fowwowing t-the pwincipwe of weast pwiviwege. T-Types shouwd awways be as westwictive as possibwe, especiawwy (╬ Ò﹏Ó) *giggles shyly* f-fow wesouwce types. 
 
-If given a less-specific type, cast to the more specific type that is expected. For example, when implementing the fungible token standard, a user may deposit any fungible token, so the implementation should cast to the expected concrete fungible token type.
+If given a wess-specific type, cast to t-the mowe specific t-type that is expected. Fow e-exampwe, when impwementing t-the fungibwe token s-standawd, a usew may deposit any fungibwe token, so t-the impwementation shouwd cast to t-the e-expected concwete fungibwe token (＃￣ω￣) *hugs tightly* t-type. 
 
-## Access Control
+#-## A-Access Contwow 
 
-Declaring a field as [`pub/access(all)`](language/access-control) only protects from replacing the field’s value, but the value itself can still be mutated if it is mutable. Remember that containers, like dictionaries, and arrays, are mutable.
+:33 *screams* D-Decwawing a fiewd as [-[`pub/access(aww)`](wanguage/access-contwow) onwy p-pwotects fwom wepwacing t-the fiewd’s vawue, but t-the vawue itsewf c-can stiww be mutated if it is mutabwe. Wemembew that (o-_-o) *leans over* c-containyews, w-wike dictionyawies, and awways, awe mutabwe. 
 
-Prefer non-public access to a mutable state. That state may also be nested. For example, a child may still be mutated even if its parent exposes it through a field with non-settable access.
+Pwefew nyon-pubwic a-access to a mutabwe state. That state may awso be nyested. Fow e-exampwe, a c-chiwd may stiww be mutated even if its pawent exposes it thwough a fiewd with n-nyon-settabwe |･ω･) *steals ur resource* a-access. 
 
-Do not use the `pub/access(all)` modifier on fields and functions unless necessary. Prefer `priv/access(self)`, or `access(contract)` and `access(account)` when other types in the contract or account need to have access.
+Do nyot use t-the `pub/access(aww)` modifiew on fiewds and functions unwess nyecessawy. Pwefew (*ﾉωﾉ) *steals ur resource* `-`pwiv/access(sewf)`, ow `access(contwact)` and `access(account)` when othew t-types in t-the contwact ow ( ~*-*)~ *cries* a-account nyeed to have |･ω･) *steals ur resource* a-access. 

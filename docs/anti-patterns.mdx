@@ -1,380 +1,380 @@
----
-title: Cadence Anti-Patterns
----
+----- 
+titwe: C-Cadence A-Anti-Pattewns 
+----- 
 
-This is an opinionated list of issues that can be improved if they are found in Cadence code intended for production.
+This is an opinyionyated wist of issues that c-can be impwoved if they awe f-found in C-Cadence code intended (╬ Ò﹏Ó) *giggles shyly* f-fow pwoduction. 
 
-# Security and Robustness
+# Secuwity and W-Wobustnyess 
 
-## Avoid using `AuthAccount` as a function parameter
+#-## A-Avoid using `AuthAccount` as a f-function p-pawametew 
 
-### Problem
+### Pwobwem 
 
-Some may choose to authenticate or perform operations for their users by using the users' account addresses.
-In order to do this, a commonly seen case would be to pass the user's `AuthAccount` object
-as a parameter to a contract function to use for querying the account or storing objects directly.
-This is problematic, as the `AuthAccount` object allows access to ALL private areas of the account,
-for example, all of the user's storage, authorized keys, etc.,
-which provides the opportunity for bad actors to take advantage of.
+Some may choose to authenticate ow pewfowm opewations (╬ Ò﹏Ó) *giggles shyly* f-fow theiw usews by using t-the usews' ( ~*-*)~ *cries* a-account addwesses. 
+In owdew to (^-^*)/ *cuddles you* d-do this, a commonwy s-seen case w-wouwd be to pass t-the usew's `AuthAccount` object 
+as a p-pawametew to a contwact f-function to use (╬ Ò﹏Ó) *giggles shyly* f-fow quewying t-the ( ~*-*)~ *cries* a-account ow stowing objects d-diwectwy. 
+This is p-pwobwematic, as t-the `AuthAccount` object awwows a-access to AWW pwivate aweas of t-the account, 
+(╬ Ò﹏Ó) *giggles shyly* f-fow e-exampwe, (＾▽＾') *cuddles you* a-aww of t-the usew's stowage, authowized keys, etc., 
+which pwovides t-the oppowtunyity (╬ Ò﹏Ó) *giggles shyly* f-fow (＃￣ω￣) *hugs tightly* b-bad actows to o(>ω<)o *sweats* t-take advantage of. 
 
-### Example:
+### Exampwe: 
 
-```cadence
-...
-// BAD CODE
-// DO NOT COPY
-
-// Imagine this code is in a contract that uses AuthAccount to authenticate users
-// To transfer NFTs
+```cadence 
+... 
+/-// BAD CODE 
+/-// DO N-NyOT C-COPY 
+
+/-// I-Imaginye this code is in a contwact that uses AuthAccount to authenticate usews 
+/-// To t-twansfew N-NFTs 
 
-// They could deploy the contract with an Ethereum-style access control list functionality
+/-// They couwd depwoy t-the contwact with an Etheweum-stywe a-access contwow wist functionyawity 
 
-pub fun transferNFT(id: UInt64, owner: AuthAccount) {
-    assert(owner(id) == owner.address)
-
-    transfer(id)
-}
+pub fun twansfewNFT(id: UInt64, ownyew: AuthAccount) { 
+a-assewt(ownyew(id) == (^人^) *shuffles closer* o-owner.address) 
+
+twansfew(id) 
+} 
 
-// But they could upgrade the function to have the same signature
-// so it looks like it is doing the same thing, but they could also drain a little bit
-// of FLOW from the user's vault, a totally separate piece of the account that
-// should not be accessible in this function
-// BAD
+/-// But they couwd upgwade t-the f-function to have t-the same signyatuwe 
+/-// so it wooks w-wike it is doing t-the same thing, but they couwd awso dwain a ฅ(• ɪ •)ฅ *leans over* w-wittwe bit 
+/-// of F-FWOW fwom t-the usew's vauwt, a t-totawwy sepawate piece of t-the ( ~*-*)~ *cries* a-account that 
+/-// shouwd nyot be accessibwe in this f-function 
+/-// BAD 
 
-pub fun transferNFT(id: UInt64, owner: AuthAccount) {
-    assert(owner(id) == owner.address)
-
-    transfer(id)
+pub fun twansfewNFT(id: UInt64, ownyew: AuthAccount) { 
+a-assewt(ownyew(id) == (^人^) *shuffles closer* o-owner.address) 
+
+twansfew(id) 
 
-    // Sneakily borrow a reference to the user's Flow Token Vault
-    // and withdraw a bit of FLOW
-    // BAD
-    let vaultRef = owner.borrow<&FlowToken.Vault>(/storage/flowTokenVault)!
-    let stolenTokens <- vaultRef.withdraw(amount: 0.1)
+/-// Snyeakiwy bowwow a wefewence to t-the usew's Fwow T-Token Vauwt 
+/-// and withdwaw a bit of F-FWOW 
+/-// BAD 
+wet vauwtWef = owner.borrow<&FlowToken.Vault>(/storage/flowTokenVault)! 
+wet stowenTokens <- vaultRef.withdraw(amount: >_> *hugs tightly* 0-0.1) 
 
-    // deposit the stolen funds in the contract owners vault
-    // BAD
-    contractVault.deposit(from: <-stolenTokens)
-}
-...
-```
+/-// deposit t-the stowen f-funds in t-the contwact ownyews (＾• ω •＾) *cuddles you* v-vauwt 
+/-// BAD 
+contractVault.deposit(from: <-stowenTokens) 
+} 
+... 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Solution
+### Sowution 
 
-Projects should find other ways to authenticate users, such as using resources and capabilities as authentication objects.
-They should also expect to perform most storage and linking operations within transaction bodies
-rather than inside contract utility functions.
+Pwojects shouwd f-find othew ways to authenticate u-usews, such as using wesouwces and capabiwities as authentication objects. 
+They shouwd awso expect to pewfowm most stowage and winking opewations within twansaction bodies 
+wathew than inside contwact utiwity functions. 
 
-There are some scenarios where using an `AuthAccount` object is necessary, such as a cold storage multi-sig,
-but those cases are extremely rare and `AuthAccount` usage should still be avoided unless absolutely necessary.
+Thewe awe s-some scenyawios whewe using an `AuthAccount` object is nyecessawy, such as a cowd stowage muwti-sig, 
+but those cases awe extwemewy wawe and `AuthAccount` u-usage shouwd stiww be avoided unwess a-absowutewy nyecessawy. 
 
-## Auth references and capabilities should be avoided
+#-## Auth wefewences and capabiwities shouwd be avoided 
 
-### Problem
+### Pwobwem 
 
-[Authorized references](language/references) allow downcasting restricted
-types to their unrestricted type and should be avoided unless necessary.
-The type that is being restricted could expose functionality that was not intended to be exposed.
-If the `auth` keyword is used on local variables they will be references.
-References are ephemeral and cannot be stored.
-This prevents any reference casting to be stored under account storage.
-Additionally, if the `auth` keyword is used to store a public capability, serious harm
-could happen since the value could be downcasted to a type
-that has functionality and values altered.
+[Authowized wefewences](wanguage/wefewences) awwow downcasting westwicted 
+t-types to theiw u-unwestwicted t-type and shouwd be avoided unwess nyecessawy. 
+The t-type that is being westwicted couwd expose functionyawity that w-was nyot intended to be exposed. 
+If t-the `auth` keywowd is used on w-wocaw vawiabwes they wiww be ^-^ *cuddles you* w-wefewences. 
+Wefewences awe ephemewaw and c-cannyot be stowed. 
+This p-pwevents any wefewence c-casting to be stowed undew ( ~*-*)~ *cries* a-account stowage. 
+(^=◕ᴥ◕=^) *looks at you* A-Additionyawwy, if t-the `auth` keywowd is used to stowe a pubwic capabiwity, sewious hawm 
+couwd happen since t-the vawue couwd be downcasted to a t-type 
+that has functionyawity and vawues awtewed. 
 
-### Example
+### Exampwe 
 
-A commonly seen pattern in NFT smart contracts is including a public borrow function
-that borrows an auth reference to an NFT (eg. [NBA Top Shot](https://github.com/dapperlabs/nba-smart-contracts/blob/95fe72b7e94f43c9eff28412ce3642b69dcd8cd5/contracts/TopShot.cdc#L889-L906)).
-This allows anyone to access the stored metadata or extra fields that weren't part
-of the NFT standard. While generally safe in most scenarios, not all NFTs are built the same.
-Some NFTs may have privileged functions that shouldn't be exposed by this method,
-so please be cautious and mindful when imitating NFT projects that use this pattern.
+A-A commonwy s-seen pattewn in NFT smawt contwacts is incwuding a pubwic bowwow f-function 
+that bowwows an auth wefewence to an NFT (eg. [NBA T-Top Shot](https://github.com/dapperlabs/nba-smart-contracts/blob/95fe72b7e94f43c9eff28412ce3642b69dcd8cd5/contracts/TopShot.cdc#L889-L906)). 
+This awwows anyonye to a-access t-the stowed metadata ow extwa fiewds that wewen't pawt 
+of t-the NFT standawd. Whiwe genyewawwy safe in most s-scenyawios, nyot (＾▽＾') *cuddles you* a-aww N-NFTs awe b-buiwt t-the same. 
+Some N-NFTs may have pwiviweged functions that s-shouwdn't be ( =ω=)..nyaa *teleports behind you* e-exposed by this method, 
+so pwease be cautious and mindfuw when imitating NFT pwojects that use this ⊂(･ω･*⊂) *cuddles you* p-pattewn. 
 
-### Another Example
+### Anyothew Exampwe 
 
-When we create a public capability for our `FungibleToken.Vault` we do not use an auth capability:
+When we cweate a pubwic >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow ouw `FungibleToken.Vault` we (^-^*)/ *cuddles you* d-do nyot use an auth capabiwity: 
 
-```cadence
-// GOOD: Create a public capability to the Vault that only exposes
-// the balance field through the Balance interface
-signer.link<&FlowToken.Vault{FungibleToken.Balance}>(
-    /public/flowTokenBalance,
-    target: /storage/flowTokenVault
-)
-```
+```cadence 
+/-// G-GOOD: Cweate a pubwic >_> *giggles shyly* c-capabiwity to t-the Vauwt that onwy exposes 
+/-// t-the bawance fiewd thwough t-the Bawance intewface 
+signer.link<&FlowToken.Vault{FungibleToken.Balance}>( 
+/-/pubwic/fwowTokenBawance, 
+t-tawget: /stowage/fwowTokenVauwt 
+)-) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-If we were to use an authorized type for the capability, like so:
+If we wewe to use an authowized t-type (╬ Ò﹏Ó) *giggles shyly* f-fow t-the capabiwity, w-wike so: 
 
-```cadence
-// BAD: Create an Authorized public capability to the Vault that only exposes
-// the balance field through the Balance interface
-// Authorized referenced can be downcasted to their unrestricted types, which is dangerous
-signer.link<auth &FlowToken.Vault{FungibleToken.Balance}>(
-    /public/flowTokenBalance,
-    target: /storage/flowTokenVault
-)
-```
+```cadence 
+/-// BAD: Cweate an Authowized pubwic >_> *giggles shyly* c-capabiwity to t-the Vauwt that onwy exposes 
+/-// t-the bawance fiewd thwough t-the Bawance intewface 
+/-// Authowized (-_-) *looks at you* w-wefewenced c-can be downcasted to theiw u-unwestwicted types, which is dangewous 
+signer.link<auth &FlowToken.Vault{FungibleToken.Balance}>( 
+/-/pubwic/fwowTokenBawance, 
+t-tawget: /stowage/fwowTokenVauwt 
+)-) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Then anyone in the network could take that restricted reference
-that is only supposed to expose the balance field and downcast it to expose the withdraw field
-and steal all our money!
+T-Then anyonye in t-the (＃￣ω￣) *looks at you* n-nyetwowk couwd o(>ω<)o *sweats* t-take that westwicted wefewence 
+that is onwy supposed to expose t-the bawance fiewd and d-downcast it to expose t-the withdwaw fiewd 
+and steaw (＾▽＾') *cuddles you* a-aww ouw monyey! 
 
-```cadence
-// Exploit of the auth capability to expose withdraw
-let balanceRef = getAccount(account)
-    .getCapability<auth &FlowToken.Vault{FungibleToken.Balance}>(/public/flowTokenBalance)
-    .borrow()!
+```cadence 
+/-// Expwoit of t-the auth >_> *giggles shyly* c-capabiwity to expose withdwaw 
+wet bawanceWef = getAccount(account) 
+.getCapabiwity<auth &-&FlowToken.Vault{FungibleToken.Balance}>(/public/flowTokenBalance) 
+.bowwow()! 
 
-let fullVaultRef = balanceRef as! &FlowToken.Vault
+wet fuwwVauwtWef = bawanceWef as! &FlowToken.Vault 
 
-// Withdraw the newly exposed funds
-let stolenFunds <- fullVaultRef.withdraw(amount: 1000000)
-```
+/-// Withdwaw t-the nyewwy ( =ω=)..nyaa *teleports behind you* e-exposed f-funds 
+wet stowenFunds <- OwO *cuddles you* f-fullVaultRef.withdraw(amount: 1-1000000) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Events from resources may not be unique
+#-## Events fwom wesouwces may nyot be unyique 
 
-### Problem
+### Pwobwem 
 
-Public functions in a contract can be called by anyone, e.g. any other contract or any transaction.
-If that function creates a resource, and that resource has functions that emit events,
-that means any account can create an instance of that resource and emit those events.
-If those events are meant to indicate actions taken using a single instance of that resource
-(eg. admin object, registry), or instances created through a particular workflow,
-it's possible that events from other instances may be mixed in with the ones you're querying for -
-making the event log search and management more cumbersome.
+P-Pubwic functions in a contwact c-can be cawwed by anyonye, e.g. any othew contwact ow any twansaction. 
+If that f-function cweates a wesouwce, and that wesouwce has functions that emit events, 
+that means any ( ~*-*)~ *cries* a-account c-can cweate an instance of that wesouwce and emit those events. 
+If those events awe meant to indicate actions taken using a s-singwe instance of that wesouwce 
+(eg. admin object, w-wegistwy), ow instances cweated thwough a pawticuwaw wowkfwow, 
+it's p-possibwe that events fwom othew instances may be mixed in with t-the o-onyes you'we quewying (╬ Ò﹏Ó) *giggles shyly* f-fow (✧ω✧) *teleports behind you* --- 
+making t-the e-event wog s-seawch and manyagement mowe cumbewsome. 
 
-### Solution
+### Sowution 
 
-To fix this, if there should be only a single instance of the resource,
-it should be created and `link()`ed to a public path in an admin account's storage
-during the contracts's initializer.
+To fix this, if (⌒ω⌒) *hugs tightly* t-thewe shouwd be onwy a s-singwe instance of t-the wesouwce, 
+it shouwd be cweated and `wink()`ed to a pubwic ヽ(・∀・)ﾉ *screams* p-path in an admin account's stowage 
+d-duwing t-the contwacts's inyitiawizew. 
 
-# Access Control
+# A-Access Contwow 
 
-## Public functions and fields should be avoided
+#-## P-Pubwic functions and fiewds shouwd be avoided 
 
-### Problem
+### Pwobwem 
 
-Be sure to keep track of access modifiers when structuring your code, and make public only what should be public.
-Accidentally exposed fields can be a security hole.
+(☆▽☆) *teleports behind you* B-Be suwe to keep twack of a-access modifiews when stwuctuwing youw code, and make pubwic onwy what shouwd be pubwic. 
+Accidentawwy ( =ω=)..nyaa *teleports behind you* e-exposed fiewds c-can be a secuwity howe. 
 
-### Solution
+### Sowution 
 
-When writing your smart contract, look at every field and function and make sure
-that they are all `access(self)`, `access(contract)`, or `access(account)`, unless otherwise needed.
+When w-wwiting youw smawt c-contwact, wook a-at {{ (>_<) }} *steals ur resource* e-evewy fiewd and f-function and make suwe 
+that they awe (＾▽＾') *cuddles you* a-aww `access(sewf)`, `access(contwact)`, ow `access(account)`, unwess o-othewwise nyeeded. 
 
-## Capability-Typed public fields are a security hole
+#-## Capabiwity-Typed pubwic fiewds awe a secuwity h-howe 
 
-This is a specific case of "Public Functions And Fields Should Be Avoided", above.
+This is a specific case of "Pubwic Functions And F-Fiewds Shouwd (☆▽☆) *teleports behind you* B-Be A-Avoided", above. 
 
-### Problem
+### Pwobwem 
 
-The values of public fields can be copied. Capabilities are value types,
-so if they are used as a public field, anyone can copy it from the field
-and call the functions that it exposes.
-This almost certainly is not what you want if a capability
-has been stored as a field on a contract or resource in this way.
+The vawues of pubwic fiewds c-can be copied. Capabiwities awe vawue types, 
+so if they awe used as a pubwic fiewd, anyonye c-can copy it fwom t-the fiewd 
+and caww t-the functions that it exposes. 
+This a-awmost cewtainwy is nyot what you want if a >_> *giggles shyly* c-capabiwity 
+has b-been stowed as a fiewd on a contwact ow wesouwce in this way. 
 
-### Solution
+### Sowution 
 
-For public access to a capability, place it in an accounts public area so this expectation is explicit.
+Fow pubwic a-access to a capabiwity, pwace it in an a-accounts pubwic a-awea so this expectation is (*≧ω≦*) *looks away* e-expwicit. 
 
-## Array or dictionary fields should be private
+#-## Awway ow dictionyawy fiewds shouwd be pwivate 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-This anti-pattern has been addressed with [FLIP #703](https://github.com/onflow/flips/blob/main/flips/20211129-cadence-mutability-restrictions.md)
+This a-anti-pattewn has b-been addwessed with [-[FWIP #703](https://github.com/onflow/flips/blob/main/flips/20211129-cadence-mutability-restrictions.md) 
 
-</Callout>
+</Cawwout> 
 
-### Problem
+### Pwobwem 
 
-This is a specific case of "Public Functions And Fields Should Be Avoided", above.
-Public array or dictionary fields are not directly over-writable,
-but their members can be accessed and overwritten if the field is public.
-This could potentially result in security vulnerabilities for the contract
-if these fields are mistakenly made public.
+This is a specific case of "Pubwic Functions And F-Fiewds Shouwd (☆▽☆) *teleports behind you* B-Be A-Avoided", above. 
+P-Pubwic a-awway ow dictionyawy fiewds awe nyot diwectwy xDD *looks at you* o-ovew-wwitabwe, 
+but theiw membews c-can be accessed and ovewwwitten if t-the fiewd is pubwic. 
+This couwd potentiawwy wesuwt in secuwity vuwnyewabiwities (╬ Ò﹏Ó) *giggles shyly* f-fow t-the contwact 
+if these fiewds awe mistakenwy m-made pubwic. 
 
-Ex:
+Ex: 
 
-```cadence
-pub contract Array {
-    // array is intended to be initialized to something constant
-    pub let shouldBeConstantArray: [Int]
-}
-```
+```cadence 
+pub contwact Awway { 
+/-// a-awway is intended to be inyitiawized to something c-constant 
+pub wet shouwdBeConstantAwway: [-[Int] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Anyone could use a transaction like this to modify it:
+(✧ω✧) *hugs tightly* A-Anyonye couwd use a twansaction w-wike this to modify i-it: 
 
-```cadence
-import Array from 0x01
+```cadence 
+i-impowt Awway fwom 0x01 
 
-transaction {
-    execute {
-        Array.shouldbeConstantArray[0] = 1000
-    }
-}
-```
+twansaction { 
+execute { 
+A-Array.shouldbeConstantArray[0] = 1000 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-### Solution
+### Sowution 
 
-Make sure that any array or dictionary fields in contracts, structs, or resources
-are `access(contract)` or `access(self)` unless they need to be intentionally made public.
+Make suwe that any a-awway ow dictionyawy fiewds in contwacts, s-stwucts, ow wesouwces 
+awe `access(contwact)` ow `access(sewf)` unwess they nyeed to be intentionyawwy m-made pubwic. 
 
-```cadence
-pub contract Array {
-    // array is inteded to be initialized to something constant
-    access(self) let shouldBeConstantArray: [Int]
-}
-```
+```cadence 
+pub contwact Awway { 
+/-// a-awway is i-inteded to be inyitiawized to something c-constant 
+a-access(sewf) wet shouwdBeConstantAwway: [-[Int] 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Public admin resource creation functions are unsafe
+#-## P-Pubwic admin wesouwce cweation functions awe unsafe 
 
-This is a specific case of "Public Functions And Fields Should Be Avoided", above.
+This is a specific case of "Pubwic Functions And F-Fiewds Shouwd (☆▽☆) *teleports behind you* B-Be A-Avoided", above. 
 
-### Problem
+### Pwobwem 
 
-A public function on a contract that creates a resource can be called by any account.
-If that resource provides access to admin functions then the creation function should not be public.
+A-A pubwic f-function on a contwact that cweates a wesouwce c-can be cawwed by any account. 
+If that wesouwce pwovides a-access to admin functions t-then t-the cweation f-function shouwd nyot be pubwic. 
 
-### Solution
+### Sowution 
 
-To fix this, a single instance of that resource should be created in the contract's `init()` method,
-and then a new creation function can be potentially included within the admin resource, if necessary.
-The admin resource can then be `link()`ed to a private path in an admin's account storage during the contract's initializer.
+To fix this, a s-singwe instance of that wesouwce shouwd be cweated in t-the contwact's `inyit()` method, 
+and t-then a nyew cweation f-function c-can be potentiawwy i-incwuded within t-the admin wesouwce, if nyecessawy. 
+The admin wesouwce c-can t-then be `wink()`ed to a pwivate ヽ(・∀・)ﾉ *screams* p-path in an a-admin's ( ~*-*)~ *cries* a-account stowage d-duwing t-the contwact's inyitiawizew. 
 
-### Example
+### Exampwe 
 
-```cadence
-// Pseudo-code
+```cadence 
+/-// Pseudo-code 
 
-// BAD
-pub contract Currency {
-    pub resource Admin {
-        pub fun mintTokens()
-    }
+/-// BAD 
+pub contwact Cuwwency { 
+pub wesouwce Admin { 
+pub fun mintTokens() 
+} 
 
-    // Anyone in the network can call this function
-    // And use the Admin resource to mint tokens
-    pub fun createAdmin(): @Admin {
-        return <-create Admin()
-    }
-}
+/-// (✧ω✧) *hugs tightly* A-Anyonye in t-the (＃￣ω￣) *looks at you* n-nyetwowk c-can caww this f-function 
+/-// And use t-the Admin wesouwce to mint tokens 
+pub fun cweateAdmin(): @-@Admin { 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate Admin() 
+} 
+} 
 
-// This contract makes the admin creation private and in the initializer
-// so that only the one who controls the account can mint tokens
-// GOOD
-pub contract Currency {
-    pub resource Admin {
-        pub fun mintTokens()
+/-// This contwact makes t-the admin cweation pwivate and in t-the inyitiawizew 
+/-// so that onwy t-the onye who contwows t-the ( ~*-*)~ *cries* a-account c-can mint tokens 
+/-// GOOD 
+pub contwact Cuwwency { 
+pub wesouwce Admin { 
+pub fun mintTokens() 
 
-        // Only an admin can create new Admins
-        pub fun createAdmin(): @Admin {
-            return <-create Admin()
-        }
-    }
+/-// Onwy an admin c-can cweate nyew Admins 
+pub fun cweateAdmin(): @-@Admin { 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate Admin() 
+} 
+} 
 
-    init() {
-        // Create a single admin resource
-        let firstAdmin <- create Admin()
+inyit() { 
+/-// Cweate a s-singwe admin wesouwce 
+wet fiwstAdmin <- cweate Admin() 
 
-        // Store it in private account storage in `init` so only the admin can use it
-        self.account.save(<-firstAdmin, to: /storage/currencyAdmin)
-    }
-}
-```
+/-// S-Stowe it in pwivate ( ~*-*)~ *cries* a-account stowage in `inyit` so onwy t-the admin c-can use it 
+self.account.save(<-firstAdmin, to: (つ≧▽≦)つ *teleports behind you* /-/stowage/cuwwencyAdmin) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Do not modify smart contract state or emit events in public struct initializers
+#-## Do nyot modify smawt contwact state ow emit events in pubwic stwuct inyitiawizews 
 
-This is another example of the risks of having publicly accessible parts to your smart contract.
+This is anyothew e-exampwe of t-the w-wisks of h-having pubwicwy accessibwe pawts to youw smawt contwact. 
 
-### Problem
+### Pwobwem 
 
-Data structure definitions in Cadence currently must be declared as public so that they can be used by anyone.
-Structs do not have the same restrictions that resources have on them,
-which means that anyone can create a new instance of a struct without going through any authorization.
+D-Data stwuctuwe definyitions in C-Cadence cuwwentwy (* ^ ω ^) *screams* m-must be d-decwawed as pubwic so that they c-can be used by anyonye. 
+Stwucts (^-^*)/ *cuddles you* d-do nyot have t-the same westwictions that wesouwces have on t-them, 
+which means that anyonye c-can cweate a nyew instance of a stwuct without g-going thwough any authowization. 
 
-### Solution
+### Sowution 
 
-Any contract state-modifying operations related to the creation of structs
-should be contained in restricted resources instead of the initializers of structs.
+Any contwact s-state-modifying opewations (*^‿^*) *leans over* w-wewated to t-the cweation of stwucts 
+shouwd be c-containyed in westwicted wesouwces instead of t-the inyitiawizews of stwucts. 
 
-### Example
+### Exampwe 
 
-This used to be a bug in the NBA Top Shot smart contract, so we'll use that as an example.
-Before, when it created a new play,
-[it would initialize the play record with a struct,](https://github.com/dapperlabs/nba-smart-contracts/blob/55645478594858a6830e4ab095034068ef9753e9/contracts/TopShot.cdc#L155-L158)
-which increments the number that tracks the play IDs and emits an event:
+This used to be a bug in t-the NBA T-Top Shot smawt c-contwact, so we'ww use that as an exampwe. 
+Befowe, when it cweated a nyew pway, 
+[it w-wouwd inyitiawize t-the pway wecowd with a struct,](https://github.com/dapperlabs/nba-smart-contracts/blob/55645478594858a6830e4ab095034068ef9753e9/contracts/TopShot.cdc#L155-L158) 
+which incwements t-the (❤ω❤) *pokes you* n-nyumbew that twacks t-the pway IDs and emits an event: 
 
-```cadence
-// Simplified Code
-// BAD
-//
-pub contract TopShot {
+```cadence 
+/-// Simpwified Code 
+/-// BAD 
+/-// 
+pub contwact TopShot { 
 
-    // The Record that is used to track every unique play ID
-    pub var nextPlayID: UInt32
+/-// The ^w^ *cries* W-Wecowd that is used to twack {{ (>_<) }} *steals ur resource* e-evewy unyique pway (^=◕ᴥ◕=^) *looks at you* I-ID 
+pub vaw nyextPwayID: U-UInt32 
 
-    pub struct Play {
+pub stwuct Pway { 
 
-        pub let playID: UInt32
+pub wet pwayID: U-UInt32 
 
-        init() {
+inyit() { 
 
-            self.playID = TopShot.nextPlayID
+self.playID = TopShot.nextPlayID 
 
-            // Increment the ID so that it isn't used again
-            TopShot.nextPlayID = TopShot.nextPlayID + 1
+/-// (^=◕ᴥ◕=^) *screams* I-Incwement t-the (^=◕ᴥ◕=^) *looks at you* I-ID so that it isn't used again 
+TopShot.nextPlayID = TopShot.nextPlayID + 1 
 
-            emit PlayCreated(id: self.playID, metadata: metadata)
-        }
-    }
-}
-```
+emit P-PwayCweated(id: s-self.playID, metadata: metadata) 
+} 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-This is a risk because anyone can create the `Play` struct as many times as they want,
-which could increment the `nextPlayID` field to the max `UInt32` value,
-effectively preventing new plays from being created. It also would emit bogus events.
+This is a wisk because anyonye c-can cweate t-the `Pway` stwuct as many times as they want, 
+which couwd incwement t-the :33 *cries* `-`nyextPwayID` fiewd to t-the max `UInt32` vawue, 
+effectivewy p-pweventing nyew pways fwom being cweated. I-It awso w-wouwd emit bogus events. 
 
-This bug was fixed by
-[instead updating the contract state in the admin function](https://github.com/dapperlabs/nba-smart-contracts/blob/master/contracts/TopShot.cdc#L682-L685)
-that creates the plays.
+This bug w-was fixed by 
+[instead u-updating t-the contwact state in t-the admin function](https://github.com/dapperlabs/nba-smart-contracts/blob/master/contracts/TopShot.cdc#L682-L685) 
+that cweates t-the p-pways. 
 
 
-```cadence
-// Update contract state in admin resource functions
-// GOOD
-//
-pub contract TopShot {
+```cadence 
+/-// Update contwact state in admin wesouwce functions 
+/-// GOOD 
+/-// 
+pub contwact TopShot { 
 
-    // The Record that is used to track every unique play ID
-    pub var nextPlayID: UInt32
+/-// The ^w^ *cries* W-Wecowd that is used to twack {{ (>_<) }} *steals ur resource* e-evewy unyique pway (^=◕ᴥ◕=^) *looks at you* I-ID 
+pub vaw nyextPwayID: U-UInt32 
 
-    pub struct Play {
+pub stwuct Pway { 
 
-        pub let playID: UInt32
+pub wet pwayID: U-UInt32 
 
-        init() {
-            self.playID = TopShot.nextPlayID
-        }
-    }
+inyit() { 
+self.playID = TopShot.nextPlayID 
+} 
+} 
 
-    pub resource Admin {
+pub wesouwce Admin { 
 
-        // Protected within the private admin resource
-        pub fun createPlay() {
-            // Create the new Play
-            var newPlay = Play()
+/-// Pwotected within t-the pwivate admin wesouwce 
+pub fun c-cweatePway() { 
+/-// Cweate t-the nyew Pway 
+vaw nyewPway = Pway() 
 
-            // Increment the ID so that it isn't used again
-            TopShot.nextPlayID = TopShot.nextPlayID + UInt32(1)
+/-// (^=◕ᴥ◕=^) *screams* I-Incwement t-the (^=◕ᴥ◕=^) *looks at you* I-ID so that it isn't used again 
+TopShot.nextPlayID = TopShot.nextPlayID + UInt32(1) 
 
-            emit PlayCreated(id: newPlay.playID, metadata: metadata)
+emit P-PwayCweated(id: newPlay.playID, metadata: metadata) 
 
-            // Store it in the contract storage
-            TopShot.playDatas[newPlay.playID] = newPlay
-        }
-    }
-}
-```
+/-// S-Stowe it in t-the contwact stowage 
+T-TopShot.playDatas[newPlay.playID] = nyewPway 
+} 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 

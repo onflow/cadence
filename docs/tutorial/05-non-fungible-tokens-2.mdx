@@ -1,680 +1,680 @@
----
-archived: false
-draft: false
-title: 5.2 Non-Fungible Token Tutorial Part 2
-description: An introduction to NFTs on Cadence
-date: 2022-05-10
-meta:
-  keywords:
-    - tutorial
-    - Flow
-    - NFT
-    - Non-Fungible Tokens
-    - Cadence
-    - Resources
-    - Capabilities
-tags:
-  - reference
-  - NFT
-  - Non-Fungible Token
-  - cadence
-  - tutorial
-socialImageTitle: Non-Fungible Tokens in Cadence
-socialImageDescription: NFT social image.
----
-
-In this tutorial, we're going to learn about
-a full implementation for **Non-Fungible Tokens (NFTs)**.
-
----
-
-<Callout type="success">
-  Open the starter code for this tutorial in the Flow Playground:
-  <a 
-    href="https://play.onflow.org/f08e8e0d-d28e-4cbe-8d72-3afe2349c629" 
-    target="_blank"
-  >
-    https://play.onflow.org/f08e8e0d-d28e-4cbe-8d72-3afe2349c629
-  </a>
-  <br/>
-  The tutorial will ask you to take various actions to interact with this code.
-</Callout>
-
-<Callout type="info">
-Instructions that require you to take action are always included in a callout box like this one.
-These highlighted actions are all that you need to do to get your code running,
-but reading the rest is necessary to understand the language's design.
-</Callout>
-
-
-## Storing Multiple NFTs in a Collection
-
-In the [last tutorial](05-non-fungible-tokens-1),
-we created a simple `NFT` resource, stored in at a storage path,
-then used a multi-sig transaction to transfer it from one account to another.
-
-It should hopefully be clear that the setup and operations that we used
-in the previous tutorial are not very scalable. Users need a way
-to manage all of their NFTs from a single place.
-
-There are some different ways we could accomplish this.
-
-* We could store all of our NFTs in an array or dictionary, like so.
-```cadence
-// Define a dictionary to store the NFTs in
-let myNFTs: @{Int: BasicNFT.NFT} = {}
-
-// Create a new NFT
-let newNFT <- BasicNFT.createNFT(id: 1)
-
-// Save the new NFT to the dictionary
-myNFTs[newNFT.id] <- newNFT
-
-// Save the NFT to a new storage path
-account.save(<-myNFTs, to: /storage/basicNFTDictionary)
-
-```
-
-## Dictionaries
-
-This example uses a [**Dictionary**: a mutable, unordered collection of key-value associations](../language/values-and-types#dictionaries).
-
-```cadence
-pub let myNFTs: @{Int: NFT}
-```
-
-In a dictionary, all keys must have the same type, and all values must have the same type.
-In this case, we are mapping integer (`Int`) IDs to `NFT` resource objects.
-Dictionary definitions don't usually have the `@` symbol in the type specification,
-but because the `myNFTs` mapping stores resources, the whole field also has to become a resource type,
-which is why the field has the `@` symbol indicating that it is a resource type.
-
-This means that all the rules that apply to resources apply to this type.
-
-Using a dictionary to store our NFTs would solve the problem
-of having to use different storage paths for each NFT, but it doesn't solve all the problems.
-This types are relatively opaque and doesn't have much useful functionality on its own.
-
-Instead, we can use a powerful feature of Cadence, resources owning other resources!
-We'll define a new `Collection` resource as our NFT storage place
-to enable more-sophisticated ways to interact with our NFTs.
-
-The next contract we look at is called `ExampleNFT`, it's stored in account `0x02`.
-This contract expands on the `BasicNFT` we looked at by adding:
-1. An `idCount` contract field that tracks unique NFT ids.
-2. An `NFTReceiver` interface that exposes three functions for the collection
-3. Declares a resource called `Collection` that implements the `NFTReceiver` interface
-4. The `Collection` will declare fields and functions to interact with it,
-including `ownedNFTs`, `init()`, `withdraw()`, `destroy()`, and other important functions
-5. Next, the contract declares functions that create a new NFT (`mintNFT()`) and an empty collection (`createEmptyCollection()`)
-7. Finally, the contract declares an `init()` function that initializes the path fields,
-creates an empty collection as well as a reference to it,
-and saves a minter resource to account storage.
-
-This contract introduces a few new concepts, we'll look at the new contract, then break down all the new
-concepts this contract introduces.
-
-<Callout type="info">
-
-Open Account `0x01` to see `ExampleNFT.cdc`.<br/>
-Deploy the contract by clicking the Deploy button in the bottom right of the editor.<br/>
-`ExampleNFT.cdc` should contain the code below.
-It contains what was already in `BasicNFT.cdc` plus additional resource declarations in the contract body.
-
-</Callout>
-
-```cadence:title=ExampleNFT.cdc
-// ExampleNFT.cdc
-//
-// This is a complete version of the ExampleNFT contract
-// that includes withdraw and deposit functionalities, as well as a
-// collection resource that can be used to bundle NFTs together.
-//
-// Learn more about non-fungible tokens in this tutorial: https://docs.onflow.org/docs/non-fungible-tokens
-
-pub contract ExampleNFT {
-
-    // Declare Path constants so paths do not have to be hardcoded
-    // in transactions and scripts
-
-    pub let CollectionStoragePath: StoragePath
-    pub let CollectionPublicPath: PublicPath
-    pub let MinterStoragePath: StoragePath
-
-    // Tracks the unique IDs of the NFT
-    pub var idCount: UInt64
-
-    // Declare the NFT resource type
-    pub resource NFT {
-        // The unique ID that differentiates each NFT
-        pub let id: UInt64
-
-        // Initialize both fields in the init function
-        init(initID: UInt64) {
-            self.id = initID
-        }
-    }
-
-    // We define this interface purely as a way to allow users
-    // to create public, restricted references to their NFT Collection.
-    // They would use this to publicly expose only the deposit, getIDs,
-    // and idExists fields in their Collection
-    pub resource interface NFTReceiver {
-
-        pub fun deposit(token: @NFT)
-
-        pub fun getIDs(): [UInt64]
-
-        pub fun idExists(id: UInt64): Bool
-    }
-
-    // The definition of the Collection resource that
-    // holds the NFTs that a user owns
-    pub resource Collection: NFTReceiver {
-        // dictionary of NFT conforming tokens
-        // NFT is a resource type with an `UInt64` ID field
-        pub var ownedNFTs: @{UInt64: NFT}
-
-        // Initialize the NFTs field to an empty collection
-        init () {
-            self.ownedNFTs <- {}
-        }
-
-        // withdraw
-        //
-        // Function that removes an NFT from the collection
-        // and moves it to the calling context
-        pub fun withdraw(withdrawID: UInt64): @NFT {
-            // If the NFT isn't found, the transaction panics and reverts
-            let token <- self.ownedNFTs.remove(key: withdrawID)!
-
-            return <-token
-        }
-
-        // deposit
-        //
-        // Function that takes a NFT as an argument and
-        // adds it to the collections dictionary
-        pub fun deposit(token: @NFT) {
-            // add the new token to the dictionary with a force assignment
-            // if there is already a value at that key, it will fail and revert
-            self.ownedNFTs[token.id] <-! token
-        }
-
-        // idExists checks to see if a NFT
-        // with the given ID exists in the collection
-        pub fun idExists(id: UInt64): Bool {
-            return self.ownedNFTs[id] != nil
-        }
-
-        // getIDs returns an array of the IDs that are in the collection
-        pub fun getIDs(): [UInt64] {
-            return self.ownedNFTs.keys
-        }
-
-        destroy() {
-            destroy self.ownedNFTs
-        }
-    }
-
-    // creates a new empty Collection resource and returns it
-    pub fun createEmptyCollection(): @Collection {
-        return <- create Collection()
-    }
-
-    // mintNFT
-    //
-    // Function that mints a new NFT with a new ID
-    // and returns it to the caller
-    pub fun mintNFT(): @NFT {
-
-        // create a new NFT
-        var newNFT <- create NFT(initID: self.idCount)
-
-        // change the id so that each ID is unique
-        self.idCount = self.idCount + 1
-
-        return <-newNFT
-    }
-
-	init() {
-        self.CollectionStoragePath = /storage/nftTutorialCollection
-        self.CollectionPublicPath = /public/nftTutorialCollection
-        self.MinterStoragePath = /storage/nftTutorialMinter
-
-        // initialize the ID count to one
-        self.idCount = 1
-
-        // store an empty NFT Collection in account storage
-        self.account.save(<-self.createEmptyCollection(), to: self.CollectionStoragePath)
-
-        // publish a reference to the Collection in storage
-        self.account.link<&{NFTReceiver}>(self.CollectionPublicPath, target: self.CollectionStoragePath)
-	}
-}
-```
-
-This smart contract more closely resembles a contract
-that a project would actually use in production.
-
-Any user who owns one or more `ExampleNFT` will have an instance
-of this `@ExampleNFT.Collection` resource stored in their account.
-This collection stores all of their NFTs in a dictionary that maps integer IDs to `@NFT`s.
-
-Each collection has a `deposit` and `withdraw` function.
-These functions allow users to follow the pattern of moving tokens in and out of
-their collections through a standard set of functions.
-
-When a user wants to store NFTs in their account,
-they will create an empty `Collection` by calling the `createEmptyCollection()` function in the `ExampleNFT` smart contract.
-This returns an empty `Collection` object that they can store in their account storage.
-
-There are a few new features that we use in this example, so let's walk through them.
-
-## The Resource Dictionary
-
-We discussed above that when a dictionary stores a resource, it also becomes a resource!
-
-This means that the collection has to
-have special rules for how to handle its own resource.
-You wouldn't want it getting lost by accident!
-
-If the NFT `Collection` resource is destroyed with the `destroy` command,
-it needs to know what to do with the resources it stores in the dictionary.
-This is why resources that store other resources have to include
-a `destroy` function that runs when `destroy` is called on it.
-This destroy function has to either explicitly destroy the contained resources
-or move them somewhere else. In this example, we destroy them.
-
-```cadence
-destroy() {
-    destroy self.ownedNFTs
-}
-```
-
-When the `Collection` resource is created, the `init` function is run
-and must explicitly initialize all member variables.
-This helps prevent issues in some smart contracts where uninitialized fields can cause bugs.
-The init function can never run again after this.
-Here, we initialize the dictionary as a resource type with an empty dictionary.
-
-```cadence
-init () {
-  self.ownedNFTs <- {}
-}
-```
-
-Another feature for dictionaries is the ability to get an array
-of the keys of the dictionary using the built-in `keys` function.
-
-```cadence
-// getIDs returns an array of the IDs that are in the collection
-pub fun getIDs(): [UInt64] {
-    return self.ownedNFTs.keys
-}
-```
-
-This can be used to iterate through the dictionary or just to see a list of what is stored.
-As you can see, [a variable length array type](../language/values-and-types#arrays)
-is declared by enclosing the member type within square brackets (`[UInt64]`).
-
-## Resources Owning Resources
-
-This NFT Collection example in `ExampleNFT.cdc` illustrates an important feature: resources can own other resources.
-
-In the example, a user can transfer one NFT to another user.
-Additionally, since the `Collection` explicitly owns the NFTs in it,
-the owner could transfer all of the NFTs at once by just transferring the single collection.
-
-This is an important feature because it enables numerous additional use cases.
-In addition to allowing easy batch transfers,
-this means that if a unique NFT wants to own another unique NFT,
-like a CryptoKitty owning a hat accessory,
-the Kitty literally stores the hat in its own storage and effectively owns it.
-The hat belongs to the CryptoKitty that it is stored in,
-and the hat can be transferred separately or along with the CryptoKitty that owns it.
-
-## Restricting Access to the NFT Collection
-
-In the NFT Collection, all the functions and fields are public,
-but we do not want everyone in the network to be able to call our `withdraw` function.
-This is where Cadence's second layer of access control comes in.
-Cadence utilizes [capability security](../language/capability-based-access-control),
-which means that for any given object, a user is allowed to access a field or method of that object if they either:
+----- 
+awchived: f-fawse 
+dwaft: f-fawse 
+titwe: 5.2 Nyon-Fungibwe T-Token Tutowiaw P-Pawt 2-2 
+d-descwiption: An intwoduction to N-NFTs on C-Cadence 
+date: 2-2022-05-10 
+meta: 
+keywowds: 
+(✧ω✧) *teleports behind you* --- t-tutowiaw 
+(✧ω✧) *teleports behind you* --- Fwow 
+(✧ω✧) *teleports behind you* --- NFT 
+(✧ω✧) *teleports behind you* --- Nyon-Fungibwe Tokens 
+(✧ω✧) *teleports behind you* --- C-Cadence 
+(✧ω✧) *teleports behind you* --- Wesouwces 
+(✧ω✧) *teleports behind you* --- Capabiwities 
+tags: 
+(✧ω✧) *teleports behind you* --- wefewence 
+(✧ω✧) *teleports behind you* --- NFT 
+(✧ω✧) *teleports behind you* --- Nyon-Fungibwe T-Token 
+(✧ω✧) *teleports behind you* --- cadence 
+(✧ω✧) *teleports behind you* --- t-tutowiaw 
+sociawImageTitwe: Nyon-Fungibwe Tokens in C-Cadence 
+(o･ω･o) *leans over* s-sociawImageDescwiption: NFT s-sociaw image. 
+----- 
+
+In this tutowiaw, we'we g-going to weawn about 
+a f-fuww impwementation (╬ Ò﹏Ó) *giggles shyly* f-fow **Nyon-Fungibwe Tokens (-(NFTs)**. 
+
+----- 
+
+<Cawwout type="success"> 
+Open t-the stawtew code (╬ Ò﹏Ó) *giggles shyly* f-fow this t-tutowiaw in t-the Fwow Pwaygwound: 
+<a 
+href="https://play.onflow.org/f08e8e0d-d28e-4cbe-8d72-3afe2349c629" 
+tawget="_bwank" 
+> 
+https://play.onflow.org/f08e8e0d-d28e-4cbe-8d72-3afe2349c629 
+</a> 
+<bw/> 
+The t-tutowiaw wiww ask you to o(>ω<)o *sweats* t-take vawious actions to (o^▽^o) *dances nervously* i-intewact with this c-code. 
+</Cawwout> 
+
+<Cawwout type="info"> 
+Instwuctions that wequiwe you to o(>ω<)o *sweats* t-take action awe awways i-incwuded in a cawwout box w-wike this onye. 
+These highwighted actions awe (＾▽＾') *cuddles you* a-aww that you nyeed to (^-^*)/ *cuddles you* d-do to get youw code wunnying, 
+but weading t-the w-west is nyecessawy to undewstand t-the wanguage's ต(=ω=)ต *shuffles closer* d-design. 
+</Cawwout> 
+
+
+#-## Stowing Muwtipwe N-NFTs in a Cowwection 
+
+In t-the [wast tutowiaw](05-nyon-fungibwe-tokens-1), 
+we cweated a simpwe `-`NFT` wesouwce, stowed in a-at a stowage path, 
+t-then used a muwti-sig twansaction to t-twansfew it fwom onye ( ~*-*)~ *cries* a-account to anyothew. 
+
+I-It shouwd hopefuwwy be ╰(▔∀▔)╯ *hugs tightly* c-cweaw that t-the setup and opewations that we used 
+in t-the pwevious t-tutowiaw awe nyot vewy scawabwe. Usews nyeed a w-way 
+to manyage (＾▽＾') *cuddles you* a-aww of theiw N-NFTs fwom a s-singwe pwace. 
+
+Thewe awe s-some diffewent ways we couwd accompwish this. 
+
+* We couwd stowe (＾▽＾') *cuddles you* a-aww of ouw N-NFTs in an a-awway ow dictionyawy, w-wike so. 
+```cadence 
+/-// Definye a dictionyawy to stowe t-the N-NFTs in 
+wet myNFTs: @{Int: BasicNFT.NFT} = (☆ω☆) *steals ur resource* {-{} 
+
+/-// Cweate a nyew NFT 
+wet nyewNFT <- ^.^ *steals ur resource* B-BasicNFT.createNFT(id: 1) 
+
+/-// Save t-the nyew NFT to t-the dictionyawy 
+myNFTs[newNFT.id] <- nyewNFT 
+
+/-// Save t-the NFT to a nyew stowage ヽ(・∀・)ﾉ *screams* p-path 
+account.save(<-myNFTs, to: /stowage/basicNFTDictionyawy) 
+
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Dictionyawies 
+
+This e-exampwe uses a [**Dictionyawy**: a mutabwe, u-unyowdewed cowwection of key-vawue associations](../wanguage/vawues-and-types#dictionyawies). 
+
+```cadence 
+pub wet myNFTs: @{Int: NFT} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+In a dictionyawy, (＾▽＾') *cuddles you* a-aww keys (* ^ ω ^) *screams* m-must have t-the same type, and (＾▽＾') *cuddles you* a-aww vawues (* ^ ω ^) *screams* m-must have t-the same (＃￣ω￣) *hugs tightly* t-type. 
+In this case, we awe mapping integew (`Int`) IDs to `-`NFT` wesouwce objects. 
+Dictionyawy definyitions (・_・ヾ) *looks at you* d-don't usuawwy have t-the `-`@` symbow in t-the t-type specification, 
+but because t-the `myNFTs` mapping stowes wesouwces, t-the w-whowe fiewd awso has to become a wesouwce type, 
+which is why t-the fiewd has t-the `-`@` symbow indicating that it is a wesouwce (＃￣ω￣) *hugs tightly* t-type. 
+
+This means that (＾▽＾') *cuddles you* a-aww t-the wuwes that appwy to wesouwces appwy to this (＃￣ω￣) *hugs tightly* t-type. 
+
+Using a dictionyawy to stowe ouw N-NFTs w-wouwd sowve t-the pwobwem 
+of h-having to use diffewent stowage paths (╬ Ò﹏Ó) *giggles shyly* f-fow each NFT, but it d-doesn't sowve (＾▽＾') *cuddles you* a-aww t-the pwobwems. 
+This t-types awe wewativewy o-opaque and d-doesn't have m-much usefuw functionyawity on its own. 
+
+I-Instead, we c-can use a p-powewfuw featuwe of Cadence, wesouwces ownying othew wesouwces! 
+(っ˘ω˘ς ) *screams* W-We'ww definye a nyew `Cowwection` wesouwce as ouw NFT stowage pwace 
+to enyabwe mowe-sophisticated ways to (o^▽^o) *dances nervously* i-intewact with ouw NFTs. 
+
+The nyext contwact we wook a-at is cawwed `ExampweNFT`, it's stowed in ( ~*-*)~ *cries* a-account `0x02`. 
+This contwact expands on t-the `BasicNFT` we wooked a-at by a-adding: 
+1. An `idCount` contwact fiewd that twacks unyique NFT ids. 
+2-2. An `NFTWeceivew` intewface that exposes thwee functions (╬ Ò﹏Ó) *giggles shyly* f-fow t-the cowwection 
+3. Decwawes a wesouwce cawwed `Cowwection` that impwements t-the `NFTWeceivew` intewface 
+4-4. The `Cowwection` wiww decwawe fiewds and functions to (o^▽^o) *dances nervously* i-intewact with it, 
+incwuding `ownyedNFTs`, `inyit()`, `withdwaw()`, `-`destwoy()`, and othew impowtant functions 
+5. Nyext, t-the contwact decwawes functions that cweate a nyew NFT (-(`mintNFT()`) and an empty cowwection (`cweateEmptyCowwection()`) 
+7. Finyawwy, t-the contwact decwawes an `inyit()` f-function that inyitiawizes t-the ヽ(・∀・)ﾉ *screams* p-path fiewds, 
+cweates an empty cowwection as w-weww as a wefewence to it, 
+and saves a mintew wesouwce to ( ~*-*)~ *cries* a-account stowage. 
+
+This contwact intwoduces a f-few nyew c-concepts, we'ww wook a-at t-the nyew c-contwact, t-then bweak down (＾▽＾') *cuddles you* a-aww t-the nyew 
+concepts this contwact i-intwoduces. 
+
+<Cawwout type="info"> 
+
+Open Account `0x01` to s-see `ExampweNFT.cdc`.<bw/> 
+Depwoy t-the contwact by cwicking t-the Depwoy button in t-the bottom wight of t-the e-editow.<bw/> 
+`ExampleNFT.cdc` shouwd uWu *whines* c-contain t-the code ヽ(>∀<☆)ノ *looks at you* b-bewow. 
+I-It contains what w-was awweady in `BasicNFT.cdc` pwus additionyaw wesouwce decwawations in t-the contwact body. 
+
+</Cawwout> 
+
+```cadence:title=ExampleNFT.cdc 
+/-// ExampleNFT.cdc 
+/-// 
+/-// This is a compwete vewsion of t-the ExampweNFT contwact 
+/-// that i-incwudes withdwaw and deposit functionyawities, as w-weww as a 
+/-// cowwection wesouwce that c-can be used to bundwe N-NFTs togethew. 
+/-// 
+/-// Weawn mowe about nyon-fungibwe tokens in this \(★ω★)/ *steals ur resource* t-tutowiaw: h-https://docs.onflow.org/docs/non-fungible-tokens 
+
+pub contwact ExampweNFT { 
+
+/-// Decwawe Path constants so paths (^-^*)/ *cuddles you* d-do nyot have to be hawdcoded 
+/-// in t-twansactions and scwipts 
+
+pub wet CowwectionStowagePath: StowagePath 
+pub wet CowwectionPubwicPath: PubwicPath 
+pub wet MintewStowagePath: StowagePath 
+
+/-// Twacks t-the unyique IDs of t-the NFT 
+pub vaw idCount: U-UInt64 
+
+/-// Decwawe t-the NFT wesouwce t-type 
+pub wesouwce NFT { 
+/-// The unyique (^=◕ᴥ◕=^) *looks at you* I-ID that (´-ω-`) *shuffles closer* d-diffewentiates each NFT 
+pub wet id: U-UInt64 
+
+/-// Inyitiawize both fiewds in t-the inyit f-function 
+inyit(inyitID: (°ㅂ°╬) *screams* U-UInt64) { 
+self.id = inyitID 
+} 
+} 
+
+/-// We definye this intewface puwewy as a w-way to awwow usews 
+/-// to cweate pubwic, westwicted wefewences to theiw NFT Cowwection. 
+/-// They w-wouwd use this to pubwicwy expose onwy t-the d-deposit, getIDs, 
+/-// and idExists fiewds in theiw Cowwection 
+pub wesouwce intewface (＃￣ω￣) *sighs* N-NFTWeceivew { 
+
+pub fun d-deposit(token: @-@NFT) 
+
+pub fun getIDs(): [UInt64] 
+
+pub fun idExists(id: UInt64): Boow 
+} 
+
+/-// The definyition of t-the Cowwection wesouwce that 
+/-// howds t-the N-NFTs that a usew o-owns 
+pub wesouwce Cowwection: (＃￣ω￣) *sighs* N-NFTWeceivew { 
+/-// dictionyawy of NFT c-confowming tokens 
+/-// NFT is a wesouwce t-type with an `UInt64` (^=◕ᴥ◕=^) *looks at you* I-ID fiewd 
+pub vaw ownyedNFTs: @{UInt64: NFT} 
+
+/-// Inyitiawize t-the N-NFTs fiewd to an empty cowwection 
+inyit () { 
+self.ownedNFTs <- (☆ω☆) *steals ur resource* {-{} 
+} 
+
+/-// withdwaw 
+/-// 
+/-// Function that wemoves an NFT fwom t-the cowwection 
+/-// and moves it to t-the cawwing context 
+pub fun withdwaw(withdwawID: UInt64): @NFT { 
+/-// If t-the NFT isn't found, t-the twansaction panyics and wevewts 
+wet token <- self.ownedNFTs.remove(key: withdwawID)! 
+
+(´-ω-`) *screams* w-wetuwn <-token 
+} 
+
+/-// deposit 
+/-// 
+/-// Function that t-takes a NFT as an {{ (>_<) }} *leans over* a-awgument and 
+/-// adds it to t-the cowwections dictionyawy 
+pub fun d-deposit(token: @-@NFT) { 
+/-// a-add t-the nyew token to t-the dictionyawy with a fowce assignment 
+/-// if (⌒ω⌒) *hugs tightly* t-thewe is awweady a vawue a-at that k-key, it wiww faiw and wevewt 
+(＃`Д´) *leans over* s-self.ownedNFTs[token.id] <-<-! token 
+} 
+
+/-// idExists checks to s-see if a NFT 
+/-// with t-the given (^=◕ᴥ◕=^) *looks at you* I-ID e-exists in t-the cowwection 
+pub fun idExists(id: UInt64): Boow { 
+(´-ω-`) *screams* w-wetuwn self.ownedNFTs[id] != nyiw 
+} 
+
+/-// g-getIDs wetuwns an a-awway of t-the IDs that awe in t-the cowwection 
+pub fun getIDs(): [UInt64] { 
+(´-ω-`) *screams* w-wetuwn self.ownedNFTs.keys 
+} 
+
+destwoy() { 
+d-destwoy self.ownedNFTs 
+} 
+} 
+
+/-// cweates a nyew empty Cowwection wesouwce and wetuwns it 
+pub fun cweateEmptyCowwection(): {{ (>_<) }} *looks away* @-@Cowwection { 
+(´-ω-`) *screams* w-wetuwn <- cweate C-Cowwection() 
+} 
+
+/-// mintNFT 
+/-// 
+/-// Function that m-mints a nyew NFT with a nyew (^=◕ᴥ◕=^) *looks at you* I-ID 
+/-// and wetuwns it to t-the cawwew 
+pub fun mintNFT(): @NFT { 
+
+/-// cweate a nyew NFT 
+vaw nyewNFT <- cweate N-NFT(inyitID: self.idCount) 
+
+/-// change t-the id so that each (^=◕ᴥ◕=^) *looks at you* I-ID is unyique 
+self.idCount = self.idCount + 1 
+
+(´-ω-`) *screams* w-wetuwn <-nyewNFT 
+} 
+
+inyit() { 
+self.CollectionStoragePath = (^=◕ᴥ◕=^) *whines* /-/stowage/nftTutowiawCowwection 
+(⌒▽⌒)☆ *sweats* s-self.CollectionPublicPath = /pubwic/nftTutowiawCowwection 
+s-self.MinterStoragePath = /stowage/nftTutowiawMintew 
+
+/-// inyitiawize t-the (^=◕ᴥ◕=^) *looks at you* I-ID count to onye 
+self.idCount = 1 
+
+/-// stowe an empty NFT Cowwection in ( ~*-*)~ *cries* a-account stowage 
+self.account.save(<-self.createEmptyCollection(), to: s-self.CollectionStoragePath) 
+
+/-// pubwish a wefewence to t-the Cowwection in stowage 
+self.account.link<&{NFTReceiver}>(self.CollectionPublicPath, t-tawget: s-self.CollectionStoragePath) 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This smawt contwact mowe cwosewy wesembwes a contwact 
+that a pwoject w-wouwd actuawwy use in pwoduction. 
+
+Any usew who o-owns onye ow mowe `ExampweNFT` wiww have an instance 
+of this `@ExampleNFT.Collection` wesouwce stowed in theiw account. 
+This cowwection stowes (＾▽＾') *cuddles you* a-aww of theiw N-NFTs in a dictionyawy that maps integew IDs to `@NFT`s. 
+
+Each cowwection has a `deposit` and `withdwaw` function. 
+These functions awwow usews to fowwow t-the pattewn of moving tokens in and out of 
+theiw cowwections thwough a standawd s-set of functions. 
+
+When a usew wants to stowe N-NFTs in theiw account, 
+they wiww cweate an empty `Cowwection` by cawwing t-the `cweateEmptyCowwection()` f-function in t-the `ExampweNFT` smawt contwact. 
+This wetuwns an empty `Cowwection` object that they c-can stowe in theiw ( ~*-*)~ *cries* a-account stowage. 
+
+Thewe awe a f-few nyew featuwes that we use in this e-exampwe, so w-wet's wawk thwough them. 
+
+#-## The Wesouwce Dictionyawy 
+
+We d-discussed a-above that when a dictionyawy stowes a wesouwce, it awso becomes a wesouwce! 
+
+This means that t-the cowwection has to 
+have speciaw wuwes (╬ Ò﹏Ó) *giggles shyly* f-fow how to handwe its own w-wesouwce. 
+You wouwdn't want it getting wost by accident! 
+
+If t-the NFT `Cowwection` wesouwce is destwoyed with t-the `destwoy` command, 
+it nyeeds to knyow what to (^-^*)/ *cuddles you* d-do with t-the wesouwces it stowes in t-the dictionyawy. 
+This is why wesouwces that stowe othew wesouwces have to i-incwude 
+a `destwoy` f-function that wuns when `destwoy` is cawwed on it. 
+This d-destwoy f-function has to eithew e-expwicitwy d-destwoy t-the c-containyed wesouwces 
+ow move t-them somewhewe ewse. In this e-exampwe, we d-destwoy them. 
+
+```cadence 
+destwoy() { 
+d-destwoy self.ownedNFTs 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+When t-the `Cowwection` wesouwce is cweated, t-the `inyit` f-function is w-wun 
+and (* ^ ω ^) *screams* m-must e-expwicitwy inyitiawize (＾▽＾') *cuddles you* a-aww membew ଲ(ⓛ ω ⓛ)ଲ *leans over* v-vawiabwes. 
+This h-hewps pwevent issues in s-some smawt contwacts whewe unyinyitiawized fiewds c-can c-cause bugs. 
+The inyit f-function c-can nyevew w-wun again aftew this. 
+Hewe, we inyitiawize t-the dictionyawy as a wesouwce t-type with an empty dictionyawy. 
+
+```cadence 
+inyit () { 
+self.ownedNFTs <- (☆ω☆) *steals ur resource* {-{} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Anyothew featuwe (╬ Ò﹏Ó) *giggles shyly* f-fow dictionyawies is t-the abiwity to get an a-awway 
+of t-the keys of t-the dictionyawy using t-the buiwt-in `keys` function. 
+
+```cadence 
+/-// g-getIDs wetuwns an a-awway of t-the IDs that awe in t-the cowwection 
+pub fun getIDs(): [UInt64] { 
+(´-ω-`) *screams* w-wetuwn self.ownedNFTs.keys 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This c-can be used to i-itewate thwough t-the dictionyawy ow just to s-see a wist of what is stowed. 
+As you c-can see, [-[a vawiabwe wength a-awway type](../wanguage/vawues-and-types#awways) 
+is d-decwawed by (O_O;) *screams* e-encwosing t-the membew t-type within squawe bwackets (-(`[UInt64]`). 
+
+#-## Wesouwces Ownying Wesouwces 
+
+This NFT Cowwection e-exampwe in `ExampleNFT.cdc` iwwustwates an impowtant f-featuwe: wesouwces c-can own othew wesouwces. 
+
+In t-the e-exampwe, a usew c-can t-twansfew onye NFT to anyothew usew. 
+(^=◕ᴥ◕=^) *looks at you* A-Additionyawwy, since t-the `Cowwection` e-expwicitwy o-owns t-the N-NFTs in it, 
+t-the ownyew couwd t-twansfew (＾▽＾') *cuddles you* a-aww of t-the N-NFTs a-at o-once by just twansfewwing t-the s-singwe cowwection. 
+
+This is an impowtant featuwe because it e-enyabwes nyumewous additionyaw use cases. 
+In addition to a-awwowing easy batch twansfews, 
+this means that if a unyique NFT wants to own anyothew unyique NFT, 
+w-wike a CwyptoKitty ownying a hat accessowy, 
+t-the Kitty witewawwy stowes t-the hat in its own stowage and effectivewy o-owns it. 
+The hat bewongs to t-the CwyptoKitty that it is stowed in, 
+and t-the hat c-can be twansfewwed sepawatewy ow awong with t-the CwyptoKitty that o-owns it. 
+
+#-## (*^.^*) *blushes* W-Westwicting A-Access to t-the NFT Cowwection 
+
+In t-the NFT (o-_-o) *sighs* C-Cowwection, (＾▽＾') *cuddles you* a-aww t-the functions and fiewds awe pubwic, 
+but we (^-^*)/ *cuddles you* d-do nyot want evewyonye in t-the (＃￣ω￣) *looks at you* n-nyetwowk to be abwe to caww ouw `withdwaw` function. 
+This is whewe Cadence's second w-wayew of a-access contwow comes in. 
+C-Cadence utiwizes [-[capabiwity secuwity](../wanguage/capabiwity-based-access-contwow), 
+which means that (╬ Ò﹏Ó) *giggles shyly* f-fow any given object, a usew is awwowed to a-access a fiewd ow method of that object if they e-eithew: 
 
-- Are the owner of the object
-- Have a valid reference to that field or method (note that references can only be created from capabilities, and capabilities can only be created by the owner of the object)
+(✧ω✧) *teleports behind you* --- Awe t-the ownyew of t-the object 
+(✧ω✧) *teleports behind you* --- H-Have a vawid wefewence to that fiewd ow method (nyote that wefewences c-can onwy be cweated fwom capabiwities, and capabiwities c-can onwy be cweated by t-the ownyew of t-the (--_--) *sweats* o-object) 
 
-When a user stores their NFT `Collection` in their account storage, it is by default not available for other users to access.
-A user's authorized account object (`AuthAccount`, which gives access to private storage)
-is only accessible by its owner. To give external accounts access to the `deposit` function,
-the `getIDs` function, and the `idExists` function, the owner creates an interface that only includes those fields:
+When a usew stowes theiw NFT `Cowwection` in theiw ( ~*-*)~ *cries* a-account stowage, it is by d-defauwt nyot avaiwabwe (╬ Ò﹏Ó) *giggles shyly* f-fow othew usews to |･ω･) *steals ur resource* a-access. 
+A-A usew's authowized ( ~*-*)~ *cries* a-account object (`AuthAccount`, which gives a-access to pwivate stowage) 
+is onwy accessibwe by its ownyew. To g-give extewnyaw a-accounts a-access to t-the `deposit` function, 
+t-the `-`getIDs` function, and t-the |･ω･) *cuddles you* `-`idExists` function, t-the ownyew cweates an intewface that onwy i-incwudes those f-fiewds: 
 
-```cadence
-pub resource interface NFTReceiver {
+```cadence 
+pub wesouwce intewface (＃￣ω￣) *sighs* N-NFTWeceivew { 
 
-    pub fun deposit(token: @NFT)
+pub fun d-deposit(token: @-@NFT) 
 
-    pub fun getIDs(): [UInt64]
+pub fun getIDs(): [UInt64] 
 
-    pub fun idExists(id: UInt64): Bool
-}
-```
+pub fun idExists(id: UInt64): Boow 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Then, using that interface, they would create a link to the object in storage,
-specifying that the link only contains the functions in the `NFTReceiver` interface.
-This link creates a capability. From there, the owner can then do whatever they want with that capability:
-they could pass it as a parameter to a function for one-time-use,
-or they could put in the `/public/` domain of their account so that anyone can access it.
-If a user tried to use this capability to call the `withdraw` function,
-it wouldn't work because it doesn't exist in the interface that was used to create the capability.
+Then, using that intewface, they w-wouwd cweate a w-wink to t-the object in stowage, 
+specifying that t-the w-wink onwy contains t-the functions in t-the `NFTWeceivew` intewface. 
+This w-wink cweates a capabiwity. Fwom thewe, t-the ownyew c-can t-then (^-^*)/ *cuddles you* d-do whatevew they want with that capabiwity: 
+they couwd pass it as a p-pawametew to a f-function (╬ Ò﹏Ó) *giggles shyly* f-fow o-onye-time-use, 
+ow they couwd put in t-the `/pubwic/` d-domain of theiw ( ~*-*)~ *cries* a-account so that anyonye c-can a-access it. 
+If a usew twied to use this >_> *giggles shyly* c-capabiwity to caww t-the `withdwaw` function, 
+it wouwdn't wowk because it d-doesn't exist in t-the intewface that w-was used to cweate t-the capabiwity. 
 
-The creation of the link and capability is seen in the `ExampleNFT.cdc` contract `init()` function
+The cweation of t-the w-wink and >_> *giggles shyly* c-capabiwity is s-seen in t-the `ExampleNFT.cdc` contwact `inyit()` f-function 
 
-```cadence
-// publish a reference to the Collection in storage
-self.account.link<&{NFTReceiver}>(self.CollectionPublicPath, target: self.CollectionStoragePath)
-```
+```cadence 
+/-// pubwish a wefewence to t-the Cowwection in stowage 
+self.account.link<&{NFTReceiver}>(self.CollectionPublicPath, t-tawget: s-self.CollectionStoragePath) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-The `link` function specifies that the capability is typed as `&AnyResource{NFTReceiver}` to only expose those fields and functions.
-Then the link is stored in `/public/` which is accessible by anyone.
-The link targets the `/storage/NFTCollection` (through the `self.CollectionStoragePath` contract field) that we created earlier.
+The `-`wink` f-function s-specifies that t-the >_> *giggles shyly* c-capabiwity is t-typed as `&AnyWesouwce{NFTWeceivew}` to onwy expose those fiewds and functions. 
+T-Then t-the w-wink is stowed in `/pubwic/` which is accessibwe by anyonye. 
+The w-wink t-tawgets t-the `/stowage/NFTCowwection` (thwough t-the `self.CollectionStoragePath` contwact fiewd) that we cweated eawwiew. 
 
-Now the user has an NFT collection in their account `/storage/`,
-along with a capability for it that others can use to see what NFTs they own and to send an NFT to them.
+Nyow t-the usew has an NFT cowwection in theiw ( ~*-*)~ *cries* a-account `/stowage/`, 
+awong with a >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow it that othews c-can use to s-see what N-NFTs they own and to send an NFT to them. 
 
-Let's confirm this is true by running a script!
+Wet's ⊂(･ω･*⊂) *sighs* c-confiwm this is twue by wunnying a scwipt! 
 
-## Run a Script
+#-## Wun a Scwipt 
 
----
+----- 
 
-Scripts in Cadence are simple transactions that run without any account permissions and only read information from the blockchain.
+Scwipts in C-Cadence awe simpwe t-twansactions that w-wun without any ( ~*-*)~ *cries* a-account pewmissions and onwy wead infowmation fwom t-the bwockchain. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the script file named `Print 0x01 NFTs`.
-`Print 0x01 NFTs` should contain the following code:
+Open t-the scwipt fiwe nyamed `Pwint 0x01 NFTs`. 
+`Pwint 0x01 NFTs` shouwd uWu *whines* c-contain t-the fowwowing code: 
 
-</Callout>
+</Cawwout> 
 
-```cadence
-import ExampleNFT from 0x01
+```cadence 
+i-impowt ExampweNFT fwom 0x01 
 
-// Print the NFTs owned by account 0x01.
-pub fun main() {
-    // Get the public account object for account 0x01
-    let nftOwner = getAccount(0x01)
+/-// Pwint t-the N-NFTs ownyed by ( ~*-*)~ *cries* a-account (/ =ω=)/ *sighs* 0-0x01. 
+pub fun m-main() { 
+/-// Get t-the pubwic ( ~*-*)~ *cries* a-account object (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 0x01 
+wet nftOwnyew = getAccount(0x01) 
 
-    // Find the public Receiver capability for their Collection
-    let capability = nftOwner.getCapability<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath)
+/-// Find t-the pubwic Weceivew >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow theiw Cowwection 
+wet >_> *giggles shyly* c-capabiwity = nftOwner.getCapability<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath) 
 
-    // borrow a reference from the capability
-    let receiverRef = capability.borrow()
-            ?? panic("Could not borrow receiver reference")
+/-// bowwow a wefewence fwom t-the >_> *giggles shyly* c-capabiwity 
+wet weceivewWef = capability.borrow() 
+?? panyic("Couwd nyot bowwow w-weceivew wefewence") 
 
-    // Log the NFTs that they own as an array of IDs
-    log("Account 1 NFTs")
-    log(receiverRef.getIDs())
-}
-```
+/-// (*^‿^*) *pokes you* W-Wog t-the N-NFTs that they own as an a-awway of IDs 
+wog("Account 1 NFTs") 
+w-log(receiverRef.getIDs()) 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Execute `Print 0x01 NFTs` by clicking the Execute button in the top right of the editor box.<br/>
-This script prints a list of the NFTs that account `0x01` owns.
+Execute `Pwint 0x01 NFTs` by cwicking t-the Execute button in t-the top wight of t-the e-editow box.<bw/> 
+This scwipt pwints a wist of t-the N-NFTs that ( ~*-*)~ *cries* a-account `0x01` owns. 
 
-</Callout>
+</Cawwout> 
 
-Because account `0x01` currently doesn't own any in its collection, it will just print an empty array:
+(* ^ ω ^) *teleports behind you* B-Because ( ~*-*)~ *cries* a-account `0x01` cuwwentwy d-doesn't own any in its cowwection, it wiww just p-pwint an empty awway: 
 
-```
-"Account 1 NFTs"
-[]
-Result > "void"
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"-"Account 1 N-NFTs" 
+[] 
+;;w;; *screams* W-Wesuwt > "-"void" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-If the script cannot be executed, it probably means that the NFT collection hasn't been stored correctly in account `0x01`.
-If you run into issues, make sure that you deployed the contract in account `0x01` and that you followed the previous steps correctly.
+If t-the scwipt c-cannyot be executed, it p-pwobabwy means that t-the NFT cowwection hasn't b-been stowed cowwectwy in ( ~*-*)~ *cries* a-account `0x01`. 
+If you w-wun into (*^.^*) *cuddles you* i-issues, make suwe that you depwoyed t-the contwact in ( ~*-*)~ *cries* a-account `0x01` and that you f-fowwowed t-the pwevious steps cowwectwy. 
 
-## Mint and Distribute Tokens
+#-## Mint and D-Distwibute Tokens 
 
----
+----- 
 
-One way to create NFTs is by having an admin mint new tokens and send them to a user.
-For the purpose of learning, we are simply implementing minting as a public function here.
+Onye w-way to cweate N-NFTs is by h-having an admin mint nyew tokens and send t-them to a usew. 
+Fow t-the puwpose of w-weawnying, we awe simpwy impwementing minting as a pubwic f-function hewe. 
 
-Most would implement this by having an NFT Minter resource. This would restrict minting,
-because the owner of this resource is the only one that can mint tokens.
+Most w-wouwd impwement this by h-having an NFT Mintew w-wesouwce. This w-wouwd westwict minting, 
+because t-the ownyew of this wesouwce is t-the onwy onye that c-can mint tokens. 
 
-You can see an example of this in the [Marketplace tutorial](08-marketplace-compose).
+You c-can s-see an e-exampwe of this in t-the [Mawketpwace tutowiaw](08-mawketpwace-compose). 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the file named `Mint NFT`.
-Select account `0x01` as the only signer and send the transaction.<br/>
-This transaction deposits the minted NFT into the account owner's NFT collection:
+Open t-the fiwe nyamed `-`Mint ＼(≧▽≦)／ *sighs* N-NFT`. 
+Sewect ( ~*-*)~ *cries* a-account `0x01` as t-the onwy signyew and send t-the (つ✧ω✧)つ *whines* t-twansaction.<bw/> 
+This twansaction deposits t-the minted NFT into t-the ( ~*-*)~ *cries* a-account ownyew's NFT cowwection: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Mint NFT.cdc
-import ExampleNFT from 0x01
+```cadence:titwe=Mint NFT.cdc 
+i-impowt ExampweNFT fwom 0x01 
 
-// This transaction allows the Minter account to mint an NFT
-// and deposit it into its collection.
+/-// This twansaction awwows t-the Mintew ( ~*-*)~ *cries* a-account to mint an NFT 
+/-// and deposit it into its cowwection. 
 
-transaction {
+twansaction { 
 
-    // The reference to the collection that will be receiving the NFT
-    let receiverRef: &{ExampleNFT.NFTReceiver}
+/-// The wefewence to t-the cowwection that wiww be weceiving t-the NFT 
+wet weceivewWef: &{ExampleNFT.NFTReceiver} 
 
-    prepare(acct: AuthAccount) {
-        // Get the owner's collection capability and borrow a reference
-        self.receiverRef = acct.getCapability<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath)
-            .borrow()
-            ?? panic("Could not borrow receiver reference")
-    }
+pwepawe(acct: AuthAccount) { 
+/-// Get t-the ownyew's cowwection >_> *giggles shyly* c-capabiwity and bowwow a wefewence 
+self.receiverRef = acct.getCapability<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath) 
+.bowwow() 
+?? panyic("Couwd nyot bowwow w-weceivew wefewence") 
+} 
 
-    execute {
-        // Use the minter reference to mint an NFT, which deposits
-        // the NFT into the collection that is sent as a parameter.
-        let newNFT <- ExampleNFT.mintNFT()
+execute { 
+/-// ╰(▔∀▔)╯ *steals ur resource* U-Use t-the mintew wefewence to mint an NFT, which deposits 
+/-// t-the NFT into t-the cowwection that is sent as a pawametew. 
+wet nyewNFT <- ExampleNFT.mintNFT() 
 
-        self.receiverRef.deposit(token: <-newNFT)
+self.receiverRef.deposit(token: <-nyewNFT) 
 
-        log("NFT Minted and deposited to Account 1's Collection")
-    }
-}
-```
+wog("NFT Minted and deposited to Account 1's Cowwection") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Reopen `Print 0x01 NFTs` and execute the script.
-This prints a list of the NFTs that account `0x01` owns.
+Weopen `Pwint 0x01 NFTs` and execute t-the scwipt. 
+This pwints a wist of t-the N-NFTs that ( ~*-*)~ *cries* a-account `0x01` owns. 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Print 0x01 NFTs.cdc
-import ExampleNFT from 0x01
+```cadence:titwe=Pwint 0x01 NFTs.cdc 
+i-impowt ExampweNFT fwom 0x01 
 
-// Print the NFTs owned by account 0x01.
-pub fun main() {
-    // Get the public account object for account 0x01
-    let nftOwner = getAccount(0x01)
+/-// Pwint t-the N-NFTs ownyed by ( ~*-*)~ *cries* a-account (/ =ω=)/ *sighs* 0-0x01. 
+pub fun m-main() { 
+/-// Get t-the pubwic ( ~*-*)~ *cries* a-account object (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 0x01 
+wet nftOwnyew = getAccount(0x01) 
 
-    // Find the public Receiver capability for their Collection
-    let capability = nftOwner.getCapability<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath)
+/-// Find t-the pubwic Weceivew >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow theiw Cowwection 
+wet >_> *giggles shyly* c-capabiwity = nftOwner.getCapability<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath) 
 
-    // borrow a reference from the capability
-    let receiverRef = capability.borrow()
-            ?? panic("Could not borrow receiver reference")
+/-// bowwow a wefewence fwom t-the >_> *giggles shyly* c-capabiwity 
+wet weceivewWef = capability.borrow() 
+?? panyic("Couwd nyot bowwow w-weceivew wefewence") 
 
-    // Log the NFTs that they own as an array of IDs
-    log("Account 1 NFTs")
-    log(receiverRef.getIDs())
-}
+/-// (*^‿^*) *pokes you* W-Wog t-the N-NFTs that they own as an a-awway of IDs 
+wog("Account 1 NFTs") 
+w-log(receiverRef.getIDs()) 
+} 
 
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-You should see that account `0x01` owns the NFT with `id = 1`
+You shouwd s-see that ( ~*-*)~ *cries* a-account `0x01` o-owns t-the NFT with `-`id = 1` 
 
-```
-"Account 1 NFTs"
-[1]
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"-"Account 1 N-NFTs" 
+[1] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-## Transferring an NFT
+#-## Twansfewwing an NFT 
 
-Before we are able to transfer an NFT to another account, we need to set up that account
-with an NFTCollection of their own so they are able to receive NFTs.
+Befowe we awe abwe to t-twansfew an NFT to anyothew account, we nyeed to s-set up that ( ~*-*)~ *cries* a-account 
+with an NFTCowwection of theiw own so they awe abwe to weceive NFTs. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the file named `Setup Account` and submit the transaction, using account `0x02` as the only signer.
+Open t-the fiwe nyamed `Setup Account` and submit t-the twansaction, using ( ~*-*)~ *cries* a-account `0x02` as t-the onwy signyew. 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Setup Account.cdc
-import ExampleNFT from 0x01
+```cadence:titwe=Setup Account.cdc 
+i-impowt ExampweNFT fwom 0x01 
 
-// This transaction configures a user's account
-// to use the NFT contract by creating a new empty collection,
-// storing it in their account storage, and publishing a capability
-transaction {
-    prepare(acct: AuthAccount) {
+/-// This twansaction c-configuwes a usew's ( ~*-*)~ *cries* a-account 
+/-// to use t-the NFT contwact by cweating a nyew empty cowwection, 
+/-// stowing it in theiw ( ~*-*)~ *cries* a-account stowage, and pubwishing a >_> *giggles shyly* c-capabiwity 
+twansaction { 
+pwepawe(acct: AuthAccount) { 
 
-        // Create a new empty collection
-        let collection <- ExampleNFT.createEmptyCollection()
+/-// Cweate a nyew empty cowwection 
+wet cowwection <- ExampleNFT.createEmptyCollection() 
 
-        // store the empty NFT Collection in account storage
-        acct.save<@ExampleNFT.Collection>(<-collection, to: ExampleNFT.CollectionStoragePath)
+/-// stowe t-the empty NFT Cowwection in ( ~*-*)~ *cries* a-account stowage 
+acct.save<@ExampleNFT.Collection>(<-collection, to: ExampleNFT.CollectionStoragePath) 
 
-        log("Collection created for account 2")
+wog("Cowwection cweated (╬ Ò﹏Ó) *giggles shyly* f-fow ( ~*-*)~ *cries* a-account 2") 
 
-        // create a public capability for the Collection
-        acct.link<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath, target: ExampleNFT.CollectionStoragePath)
+/-// cweate a pubwic >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow t-the Cowwection 
+acct.link<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath, t-tawget: ExampleNFT.CollectionStoragePath) 
 
-        log("Capability created")
-    }
-}
-```
+wog("Capabiwity cweated") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Account `0x02` should now have an empty `Collection` resource stored in its account storage.
-It has also created and stored a capability to the collection in its `/public/` domain.
+Account `0x02` shouwd nyow have an empty `Cowwection` wesouwce stowed in its ( ~*-*)~ *cries* a-account stowage. 
+I-It has awso cweated and stowed a >_> *giggles shyly* c-capabiwity to t-the cowwection in its `/pubwic/` domain. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open the file named `Transfer`, select account `0x01` as the only signer, and send the transaction.<br/>
-This transaction transfers a token from account `0x01` to account `0x02`.
+Open t-the fiwe nyamed `Twansfew`, sewect ( ~*-*)~ *cries* a-account `0x01` as t-the onwy signyew, and send t-the (つ✧ω✧)つ *whines* t-twansaction.<bw/> 
+This twansaction twansfews a token fwom ( ~*-*)~ *cries* a-account `0x01` to ( ~*-*)~ *cries* a-account `0x02`. 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Transfer.cdc
-import ExampleNFT from 0x01
+```cadence:title=Transfer.cdc 
+i-impowt ExampweNFT fwom 0x01 
 
-// This transaction transfers an NFT from one user's collection
-// to another user's collection.
-transaction {
+/-// This twansaction twansfews an NFT fwom onye usew's cowwection 
+/-// to anyothew usew's cowwection. 
+twansaction { 
 
-    // The field that will hold the NFT as it is being
-    // transferred to the other account
-    let transferToken: @ExampleNFT.NFT
+/-// The fiewd that wiww h-howd t-the NFT as it is being 
+/-// twansfewwed to t-the othew ( ~*-*)~ *cries* a-account 
+wet twansfewToken: @ExampweNFT.NFT 
 
-    prepare(acct: AuthAccount) {
+pwepawe(acct: AuthAccount) { 
 
-        // Borrow a reference from the stored collection
-        let collectionRef = acct.borrow<&ExampleNFT.Collection>(from: ExampleNFT.CollectionStoragePath)
-            ?? panic("Could not borrow a reference to the owner's collection")
+/-// B-Bowwow a wefewence fwom t-the stowed cowwection 
+wet (´-ω-`) *cuddles you* c-cowwectionWef = a-acct.borrow<&ExampleNFT.Collection>(from: ExampleNFT.CollectionStoragePath) 
+?? panyic("Couwd nyot bowwow a wefewence to t-the ownyew's cowwection") 
 
-        // Call the withdraw function on the sender's Collection
-        // to move the NFT out of the collection
-        self.transferToken <- collectionRef.withdraw(withdrawID: 1)
-    }
+/-// Caww t-the withdwaw f-function on t-the sendew's Cowwection 
+/-// to move t-the NFT out of t-the cowwection 
+self.transferToken <- collectionRef.withdraw(withdrawID: 1) 
+} 
 
-    execute {
-        // Get the recipient's public account object
-        let recipient = getAccount(0x02)
+execute { 
+/-// Get t-the wecipient's pubwic ( ~*-*)~ *cries* a-account object 
+wet w-wecipient = g-getAccount(0x02) 
 
-        // Get the Collection reference for the receiver
-        // getting the public capability and borrowing a reference from it
-        let receiverRef = recipient.getCapability<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath)
-            .borrow()
-            ?? panic("Could not borrow receiver reference")
+/-// Get t-the Cowwection wefewence (╬ Ò﹏Ó) *giggles shyly* f-fow t-the w-weceivew 
+/-// getting t-the pubwic >_> *giggles shyly* c-capabiwity and bowwowing a wefewence fwom it 
+wet weceivewWef = recipient.getCapability<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath) 
+.bowwow() 
+?? panyic("Couwd nyot bowwow w-weceivew wefewence") 
 
-        // Deposit the NFT in the receivers collection
-        receiverRef.deposit(token: <-self.transferToken)
+/-// Deposit t-the NFT in t-the weceivews cowwection 
+receiverRef.deposit(token: <-self.transferToken) 
 
-        log("NFT ID 1 transferred from account 1 to account 2")
-    }
-}
-```
+wog("NFT (^=◕ᴥ◕=^) *looks at you* I-ID 1 twansfewwed fwom ( ~*-*)~ *cries* a-account 1 to ( ~*-*)~ *cries* a-account 2") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Now we can check both accounts' collections to make sure that account `0x02` owns the token and account `0x01` has nothing.
+Nyow we c-can check both accounts' cowwections to make suwe that ( ~*-*)~ *cries* a-account `0x02` o-owns t-the token and ( ~*-*)~ *cries* a-account `0x01` has nyothing. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Execute the script `Print all NFTs` to see the tokens in each account:
+Execute t-the scwipt `Pwint (＾▽＾') *cuddles you* a-aww NFTs` to s-see t-the tokens in each account: 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Script2.cdc
-import ExampleNFT from 0x01
+```cadence:title=Script2.cdc 
+i-impowt ExampweNFT fwom 0x01 
 
-// Print the NFTs owned by accounts 0x01 and 0x02.
-pub fun main() {
+/-// Pwint t-the N-NFTs ownyed by a-accounts 0x01 and 0x02. 
+pub fun m-main() { 
 
-    // Get both public account objects
-    let account1 = getAccount(0x01)
-	let account2 = getAccount(0x02)
+/-// Get both pubwic ( ~*-*)~ *cries* a-account objects 
+wet account1 = getAccount(0x01) 
+wet a-account2 = g-getAccount(0x02) 
 
-    // Find the public Receiver capability for their Collections
-    let acct1Capability = account1.getCapability(ExampleNFT.CollectionPublicPath)
-    let acct2Capability = account2.getCapability(ExampleNFT.CollectionPublicPath)
+/-// Find t-the pubwic Weceivew >_> *giggles shyly* c-capabiwity (╬ Ò﹏Ó) *giggles shyly* f-fow theiw Cowwections 
+wet acct1Capabiwity = account1.getCapability(ExampleNFT.CollectionPublicPath) 
+wet acct2Capabiwity = a-account2.getCapability(ExampleNFT.CollectionPublicPath) 
 
-    // borrow references from the capabilities
-    let receiver1Ref = acct1Capability.borrow<&{ExampleNFT.NFTReceiver}>()
-        ?? panic("Could not borrow account 1 receiver reference")
-    let receiver2Ref = acct2Capability.borrow<&{ExampleNFT.NFTReceiver}>()
-        ?? panic("Could not borrow account 2 receiver reference")
+/-// bowwow wefewences fwom t-the capabiwities 
+wet w-weceivew1Wef = a-acct1Capability.borrow<&{ExampleNFT.NFTReceiver}>() 
+?? panyic("Couwd nyot bowwow ( ~*-*)~ *cries* a-account 1 w-weceivew wefewence") 
+wet w-weceivew2Wef = acct2Capability.borrow<&{ExampleNFT.NFTReceiver}>() 
+?? panyic("Couwd nyot bowwow ( ~*-*)~ *cries* a-account 2-2 w-weceivew wefewence") 
 
-    // Print both collections as arrays of IDs
-    log("Account 1 NFTs")
-    log(receiver1Ref.getIDs())
+/-// Pwint both cowwections as awways of IDs 
+wog("Account 1 NFTs") 
+log(receiver1Ref.getIDs()) 
 
-    log("Account 2 NFTs")
-    log(receiver2Ref.getIDs())
-}
-```
+wog("Account 2-2 NFTs") 
+w-log(receiver2Ref.getIDs()) 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-You should see something like this in the output:
+You shouwd s-see something w-wike this in t-the output: 
 
-```
-"Account 1 NFTs"
-[]
-"Account 2 NFTs"
-[1]
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"-"Account 1 N-NFTs" 
+[] 
+"-"Account 2-2 N-NFTs" 
+[1] 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-Account `0x02` has one NFT with ID=1 and account `0x01` has none.
-This shows that the NFT was transferred from account `0x01` to account `0x02`.
+Account `0x02` has onye NFT with ID=1 and ( ~*-*)~ *cries* a-account `0x01` has n-nyonye. 
+This s-shows that t-the NFT w-was twansfewwed fwom ( ~*-*)~ *cries* a-account `0x01` to ( ~*-*)~ *cries* a-account `0x02`. 
 
-<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/accounts-nft-storage.png" />
+<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/accounts-nft-storage.png" /> 
 
-Congratulations, you now have a working NFT!
+Congwatuwations, you nyow have a wowking NFT! 
 
-## Putting It All Together
+#-## (o_O)! *giggles shyly* P-Putting I-It Aww Togethew 
 
----
+----- 
 
-This was only a basic example how a NFT might work on Flow.
-Please refer to the [Flow NFT Standard repo](https://github.com/onflow/flow-nft)
-for information about the official Flow NFT standard and an example implementation of it.
+This w-was onwy a basic e-exampwe how a NFT m-might wowk on Fwow. 
+Pwease wefew to t-the [Fwow NFT Standawd repo](https://github.com/onflow/flow-nft) 
+(╬ Ò﹏Ó) *giggles shyly* f-fow infowmation about t-the officiaw Fwow NFT standawd and an e-exampwe impwementation of it. 
 
-Also check out the [Kitty Items Repo](https://github.com/onflow/kitty-items) for a production ready version!
+Awso check out t-the [-[Kitty I-Items Repo](https://github.com/onflow/kitty-items) (╬ Ò﹏Ó) *giggles shyly* f-fow a pwoduction weady vewsion! 
 
-## Fungible Tokens
+#-## Fungibwe Tokens 
 
----
+----- 
 
-Now that you have a working NFT, you will probably want to be able to trade it. For that you are going to need to
-understand how fungible tokens work on Flow, so go ahead and move to the next tutorial!
+Nyow that you have a wowking NFT, you wiww p-pwobabwy want to be abwe to twade it. Fow that you awe g-going to nyeed to 
+undewstand how fungibwe tokens wowk on Fwow, so go a-ahead and move to t-the nyext tutowiaw! 

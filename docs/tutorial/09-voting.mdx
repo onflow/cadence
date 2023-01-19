@@ -1,420 +1,420 @@
----
-title: 9. Voting Contract
----
-
-In this tutorial, we're going to deploy a contract that allows users to vote on multiple proposals that a voting administrator controls.
-
----
-
-<Callout type="success">
-  Open the starter code for this tutorial in the Flow Playground: 
-  <a 
-    href="https://play.onflow.org/d120f0a7-d411-4243-bc59-5125a84f99b3" 
-    target="_blank"
-  >
-    https://play.onflow.org/d120f0a7-d411-4243-bc59-5125a84f99b3
-  </a>
-  <br/>
-  The tutorial will be asking you to take various actions to interact with this code.
-</Callout>
-
-<Callout type="info">
-Instructions that require you to take action are always included in a callout box like this one.
-These highlighted actions are all that you need to do to get your code running,
- but reading the rest is necessary to understand the language's design.
-</Callout>
-
-With the advent of blockchain technology and smart contracts,
-it has become popular to try to create decentralized voting mechanisms that allow large groups of users to vote completely on chain.
-This tutorial will provide a trivial example for how this might be achieved by using a resource-oriented programming model.
-
-We'll take you through these steps to get comfortable with the Voting contract.
-
-1. Deploy the contract to account 1
-2. Create proposals for users to vote on
-3. Use a transaction with multiple signers to directly transfer the `Ballot` resource to another account.
-4. Record and cast your vote in the central Voting contract
-5. Read the results of the vote
-
-Before proceeding with this tutorial, we highly recommend following the instructions in [Getting Started](01-first-steps)
-and [Hello, World!](02-hello-world) to learn how to use the Playground tools and to learn the fundamentals of Cadence.
-
-## A Voting Contract in Cadence
-
-In this contract, a Ballot is represented as a resource.
-An administrator can give Ballots to other accounts,
-then those account mark which proposals they vote for
-and submit the Ballot to the central smart contract to have their votes recorded.
-Using a resource type is logical for this application,
-because if a user wants to delegate their vote,
-they can send that Ballot to another account.
-
-## Deploy the Contract
-
-<Callout type="info">
-
-Open Account `0x01` which has the `ApprovalVoting` contract.<br/>
-Click the Deploy button to deploy it to account `0x01`"
-
-</Callout>
-
-```cadence:title=ApprovalVoting.cdc
-/*
-*
-*   In this example, we want to create a simple approval voting contract
-*   where a polling place issues ballots to addresses.
-*
-*   The run a vote, the Admin deploys the smart contract,
-*   then initializes the proposals
-*   using the initialize_proposals.cdc transaction.
-*   The array of proposals cannot be modified after it has been initialized.
-*
-*   Then they will give ballots to users by
-*   using the issue_ballot.cdc transaction.
-*
-*   Every user with a ballot is allowed to approve any number of proposals.
-*   A user can choose their votes and cast them
-*   with the cast_vote.cdc transaction.
-*
-*/
-
-pub contract ApprovalVoting {
-
-    //list of proposals to be approved
-    pub var proposals: [String]
-
-    // number of votes per proposal
-    pub let votes: {Int: Int}
-
-    // This is the resource that is issued to users.
-    // When a user gets a Ballot object, they call the `vote` function
-    // to include their votes, and then cast it in the smart contract
-    // using the `cast` function to have their vote included in the polling
-    pub resource Ballot {
-
-        // array of all the proposals
-        pub let proposals: [String]
-
-        // corresponds to an array index in proposals after a vote
-        pub var choices: {Int: Bool}
-
-        init() {
-            self.proposals = ApprovalVoting.proposals
-            self.choices = {}
-
-            // Set each choice to false
-            var i = 0
-            while i < self.proposals.length {
-                self.choices[i] = false
-                i = i + 1
-            }
-        }
-
-        // modifies the ballot
-        // to indicate which proposals it is voting for
-        pub fun vote(proposal: Int) {
-            pre {
-                self.proposals[proposal] != nil: "Cannot vote for a proposal that doesn't exist"
-            }
-            self.choices[proposal] = true
-        }
-    }
-
-    // Resource that the Administrator of the vote controls to
-    // initialize the proposals and to pass out ballot resources to voters
-    pub resource Administrator {
-
-        // function to initialize all the proposals for the voting
-        pub fun initializeProposals(_ proposals: [String]) {
-            pre {
-                ApprovalVoting.proposals.length == 0: "Proposals can only be initialized once"
-                proposals.length > 0: "Cannot initialize with no proposals"
-            }
-            ApprovalVoting.proposals = proposals
-
-            // Set each tally of votes to zero
-            var i = 0
-            while i < proposals.length {
-                ApprovalVoting.votes[i] = 0
-                i = i + 1
-            }
-        }
-
-        // The admin calls this function to create a new Ballot
-        // that can be transferred to another user
-        pub fun issueBallot(): @Ballot {
-            return <-create Ballot()
-        }
-    }
-
-    // A user moves their ballot to this function in the contract where
-    // its votes are tallied and the ballot is destroyed
-    pub fun cast(ballot: @Ballot) {
-        var index = 0
-        // look through the ballot
-        while index < self.proposals.length {
-            if ballot.choices[index]! {
-                // tally the vote if it is approved
-                self.votes[index] = self.votes[index]! + 1
-            }
-            index = index + 1;
-        }
-        // Destroy the ballot because it has been tallied
-        destroy ballot
-    }
-
-    // initializes the contract by setting the proposals and votes to empty
-    // and creating a new Admin resource to put in storage
-    init() {
-        self.proposals = []
-        self.votes = {}
-
-        self.account.save<@Administrator>(<-create Administrator(), to: /storage/VotingAdmin)
-    }
-}
-
-```
-
-This contract implements a simple voting mechanism where an administrator can initialize it with an array of proposals to vote on by using the `initializeProposals` function.
-
-```cadence
-// function to initialize all the proposals for the voting
-pub fun initializeProposals(_ proposals: [String]) {
-    pre {
-        ApprovalVoting.proposals.length == 0: "Proposals can only be initialized once"
-        proposals.length > 0: "Cannot initialize with no proposals"
-    }
-    ApprovalVoting.proposals = proposals
-
-    // Set each tally of votes to zero
-    var i = 0
-    while i < proposals.length {
-        ApprovalVoting.votes[i] = 0
-        i = i + 1
-    }
-}
-```
-
-Then they can give `Ballot` resources to other accounts. The other accounts can record their votes on their `Ballot` resource by calling the `vote` function.
-
-```cadence
-pub fun vote(proposal: Int) {
-    pre {
-        self.proposals[proposal] != nil: "Cannot vote for a proposal that doesn't exist"
-    }
-    self.choices[proposal] = true
-}
-```
-
-After a user has voted, they submit their vote to the central smart contract by calling the `cast` function, which records the votes in the `Ballot` and destroys the used `Ballot`.
-
-```cadence
-// A user moves their ballot to this function in the contract where
-// its votes are tallied and the ballot is destroyed
-pub fun cast(ballot: @Ballot) {
-    var index = 0
-    // look through the ballot
-    while index < self.proposals.length {
-        if ballot.choices[index]! {
-            // tally the vote if it is approved
-            self.votes[index] = self.votes[index]! + 1
-        }
-        index = index + 1;
-    }
-    // Destroy the ballot because it has been tallied
-    destroy ballot
-}
-```
-
-When the voting time ends, the administrator can read the tallies for each proposal to see if a proposal has received the right number of votes.
-
-## Perform Voting
-
-Performing the common actions in this voting contract only takes three types of transactions.
-
-1. Initialize Proposals
-2. Send `Ballot` to a voter
-3. Cast Vote
-
-We have a transaction for each step that we provide for you.
-
-<Callout type="info">
-
-"You should have the ApprovalVoting already deployed to account `0x01`.<br/>
-Open Transaction 1 which should have `Transaction1.cdc`<br/>
-Submit the transaction with account `0x01` selected as the only signer.
-
-</Callout>
-
-```cadence:title=Transaction1.cdc
-import ApprovalVoting from 0x01
-
-// This transaction allows the administrator of the Voting contract
-// to create new proposals for voting and save them to the smart contract
-
-transaction {
-    prepare(admin: AuthAccount) {
+----- 
+titwe: 9. Voting Contwact 
+----- 
+
+In this tutowiaw, we'we g-going to depwoy a contwact that awwows usews to vote on muwtipwe pwoposaws that a voting adminyistwatow contwows. 
+
+----- 
+
+<Cawwout type="success"> 
+Open t-the stawtew code (╬ Ò﹏Ó) *giggles shyly* f-fow this t-tutowiaw in t-the Fwow Pwaygwound: 
+<a 
+h-href="https://play.onflow.org/d120f0a7-d411-4243-bc59-5125a84f99b3" 
+tawget="_bwank" 
+> 
+h-https://play.onflow.org/d120f0a7-d411-4243-bc59-5125a84f99b3 
+</a> 
+<bw/> 
+The t-tutowiaw wiww be asking you to o(>ω<)o *sweats* t-take vawious actions to (o^▽^o) *dances nervously* i-intewact with this c-code. 
+</Cawwout> 
+
+<Cawwout type="info"> 
+Instwuctions that wequiwe you to o(>ω<)o *sweats* t-take action awe awways i-incwuded in a cawwout box w-wike this onye. 
+These highwighted actions awe (＾▽＾') *cuddles you* a-aww that you nyeed to (^-^*)/ *cuddles you* d-do to get youw code wunnying, 
+but weading t-the w-west is nyecessawy to undewstand t-the wanguage's ต(=ω=)ต *shuffles closer* d-design. 
+</Cawwout> 
+
+With t-the advent of bwockchain technyowogy and smawt contwacts, 
+it has become popuwaw to twy to cweate d-decentwawized voting mechanyisms that awwow wawge gwoups of usews to vote compwetewy on chain. 
+This t-tutowiaw wiww pwovide a (=^‥^=) *shuffles closer* t-twiviaw e-exampwe (╬ Ò﹏Ó) *giggles shyly* f-fow how this m-might be achieved by using a wesouwce-owiented pwogwamming modew. 
+
+(っ˘ω˘ς ) *screams* W-We'ww o(>ω<)o *sweats* t-take you thwough these steps to get comfowtabwe with t-the Voting contwact. 
+
+1. Depwoy t-the contwact to ( ~*-*)~ *cries* a-account 1 
+2-2. Cweate pwoposaws (╬ Ò﹏Ó) *giggles shyly* f-fow usews to vote on 
+3. ╰(▔∀▔)╯ *steals ur resource* U-Use a twansaction with muwtipwe signyews to diwectwy t-twansfew t-the `-`Bawwot` wesouwce to anyothew account. 
+4-4. ^w^ *cries* W-Wecowd and cast youw vote in t-the centwaw Voting contwact 
+5. Wead t-the w-wesuwts of t-the vote 
+
+Befowe pwoceeding with this tutowiaw, we (o_O)! *giggles shyly* h-highwy wecommend fowwowing t-the instwuctions in [Getting Stawted](01-fiwst-steps) 
+and [-[Hewwo, Wowwd!](02-hewwo-wowwd) to weawn how to use t-the Pwaygwound toows and to weawn t-the fundamentaws of Cadence. 
+
+#-## A-A Voting Contwact in C-Cadence 
+
+In this c-contwact, a B-Bawwot is wepwesented as a w-wesouwce. 
+An adminyistwatow c-can g-give B-Bawwots to othew a-accounts, 
+t-then those ( ~*-*)~ *cries* a-account mawk which pwoposaws they vote (╬ Ò﹏Ó) *giggles shyly* f-fow 
+and submit t-the B-Bawwot to t-the centwaw smawt contwact to have theiw votes wecowded. 
+Using a wesouwce t-type is wogicaw (╬ Ò﹏Ó) *giggles shyly* f-fow this appwication, 
+because if a usew wants to dewegate theiw v-vote, 
+they c-can send that B-Bawwot to anyothew account. 
+
+#-## Depwoy t-the Contwact 
+
+<Cawwout type="info"> 
+
+Open Account `0x01` which has t-the `AppwovawVoting` contwact.<bw/> 
+C-Cwick t-the Depwoy button to depwoy it to ( ~*-*)~ *cries* a-account `0x01`" 
+
+</Cawwout> 
+
+```cadence:title=ApprovalVoting.cdc 
+/* 
+* 
+* In this e-exampwe, we want to cweate a simpwe a-appwovaw voting contwact 
+* whewe a powwing pwace issues bawwots to addwesses. 
+* 
+* The w-wun a v-vote, t-the Admin d-depwoys t-the smawt c-contwact, 
+* t-then inyitiawizes t-the pwoposaws 
+* using t-the initialize_proposals.cdc twansaction. 
+* The a-awway of pwoposaws c-cannyot be m-modified aftew it has b-been i-inyitiawized. 
+* 
+* T-Then they wiww g-give bawwots to usews by 
+* using t-the issue_ballot.cdc twansaction. 
+* 
+* Evewy usew with a bawwot is awwowed to appwove any (❤ω❤) *pokes you* n-nyumbew of pwoposaws. 
+* A-A usew c-can choose theiw votes and cast t-them 
+* with t-the cast_vote.cdc twansaction. 
+* 
+*-*/ 
+
+pub contwact AppwovawVoting { 
+
+//wist of pwoposaws to be a-appwoved 
+pub vaw pwoposaws: [Stwing] 
+
+/-// (❤ω❤) *pokes you* n-nyumbew of votes (　･ω･)☞ *sighs* p-pew pwoposaw 
+pub wet votes: {Int: Int} 
+
+/-// This is t-the wesouwce that is issued to usews. 
+/-// When a usew gets a B-Bawwot object, they caww t-the `vote` f-function 
+/-// to i-incwude theiw votes, and t-then cast it in t-the smawt contwact 
+/-// using t-the `cast` f-function to have theiw vote i-incwuded in t-the powwing 
+pub wesouwce B-Bawwot { 
+
+/-// a-awway of (＾▽＾') *cuddles you* a-aww t-the pwoposaws 
+pub wet pwoposaws: [Stwing] 
+
+/-// cowwesponds to an a-awway i-index in pwoposaws aftew a vote 
+pub vaw choices: {Int: Boow} 
+
+inyit() { 
+(x_x)V *cries* s-self.proposals = ApprovalVoting.proposals 
+(/ =ω=)/ *blushes* s-self.choices = (☆ω☆) *steals ur resource* {-{} 
+
+/-// Set each choice to f-fawse 
+vaw i-i = 0 
+whiwe i-i < s-self.proposals.length { 
+s-self.choices[i] = f-fawse 
+i-i = i-i + 1 
+} 
+} 
+
+/-// modifies t-the bawwot 
+/-// to indicate which pwoposaws it is voting (╬ Ò﹏Ó) *giggles shyly* f-fow 
+pub fun vote(pwoposaw: Int) { 
+pwe { 
+self.proposals[proposal] != n-nyiw: "Cannyot vote (╬ Ò﹏Ó) *giggles shyly* f-fow a pwoposaw that d-doesn't e-exist" 
+} 
+self.choices[proposal] = twue 
+} 
+} 
+
+/-// Wesouwce that t-the Adminyistwatow of t-the vote contwows to 
+/-// inyitiawize t-the pwoposaws and to pass out bawwot wesouwces to votews 
+pub wesouwce Adminyistwatow { 
+
+/-// f-function to inyitiawize (＾▽＾') *cuddles you* a-aww t-the pwoposaws (╬ Ò﹏Ó) *giggles shyly* f-fow t-the voting 
+pub fun inyitiawizePwoposaws(_ pwoposaws: [Stwing]) { 
+pwe { 
+A-ApprovalVoting.proposals.length == >w< *giggles shyly* 0-0: "Pwoposaws c-can onwy be inyitiawized once" 
+p-proposals.length > >w< *giggles shyly* 0-0: "Cannyot inyitiawize with nyo pwoposaws" 
+} 
+ApprovalVoting.proposals = pwoposaws 
+
+/-// Set each tawwy of votes to zewo 
+vaw i-i = 0 
+whiwe i-i < p-proposals.length { 
+;;w;; *whines* A-ApprovalVoting.votes[i] = 0 
+i-i = i-i + 1 
+} 
+} 
+
+/-// The admin c-cawws this f-function to cweate a nyew B-Bawwot 
+/-// that c-can be twansfewwed to anyothew usew 
+pub fun issueBawwot(): @Bawwot { 
+(´-ω-`) *screams* w-wetuwn (✧ω✧) *whines* <-<-cweate B-Bawwot() 
+} 
+} 
+
+/-// A-A usew moves theiw bawwot to this f-function in t-the contwact whewe 
+/-// its votes awe tawwied and t-the bawwot is destwoyed 
+pub fun cast(bawwot: @Bawwot) { 
+vaw i-index = 0 
+/-// wook thwough t-the bawwot 
+whiwe i-index < s-self.proposals.length { 
+if ballot.choices[index]! { 
+/-// tawwy t-the vote if it is a-appwoved 
+s-self.votes[index] = self.votes[index]! + 1 
+} 
+i-index = i-index + 1-1; 
+} 
+/-// D-Destwoy t-the bawwot because it has b-been tawwied 
+d-destwoy bawwot 
+} 
+
+/-// inyitiawizes t-the contwact by setting t-the pwoposaws and votes to empty 
+/-// and cweating a nyew Admin wesouwce to put in stowage 
+inyit() { 
+(x_x)V *cries* s-self.proposals = [] 
+self.votes = (☆ω☆) *steals ur resource* {-{} 
+
+self.account.save<@Administrator>(<-create :3 *steals ur resource* A-Adminyistwatow(), to: /stowage/VotingAdmin) 
+} 
+} 
+
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+This contwact impwements a simpwe voting m-mechanyism whewe an adminyistwatow c-can inyitiawize it with an a-awway of pwoposaws to vote on by using t-the `inyitiawizePwoposaws` function. 
+
+```cadence 
+/-// f-function to inyitiawize (＾▽＾') *cuddles you* a-aww t-the pwoposaws (╬ Ò﹏Ó) *giggles shyly* f-fow t-the voting 
+pub fun inyitiawizePwoposaws(_ pwoposaws: [Stwing]) { 
+pwe { 
+A-ApprovalVoting.proposals.length == >w< *giggles shyly* 0-0: "Pwoposaws c-can onwy be inyitiawized once" 
+p-proposals.length > >w< *giggles shyly* 0-0: "Cannyot inyitiawize with nyo pwoposaws" 
+} 
+ApprovalVoting.proposals = pwoposaws 
+
+/-// Set each tawwy of votes to zewo 
+vaw i-i = 0 
+whiwe i-i < p-proposals.length { 
+;;w;; *whines* A-ApprovalVoting.votes[i] = 0 
+i-i = i-i + 1 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+T-Then they c-can g-give `-`Bawwot` wesouwces to othew accounts. The othew a-accounts c-can wecowd theiw votes on theiw `-`Bawwot` wesouwce by cawwing t-the `vote` function. 
+
+```cadence 
+pub fun vote(pwoposaw: Int) { 
+pwe { 
+self.proposals[proposal] != n-nyiw: "Cannyot vote (╬ Ò﹏Ó) *giggles shyly* f-fow a pwoposaw that d-doesn't e-exist" 
+} 
+self.choices[proposal] = twue 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Aftew a usew has v-voted, they submit theiw vote to t-the centwaw smawt contwact by cawwing t-the `cast` function, which (o´∀`o) *looks at you* w-wecowds t-the votes in t-the `-`Bawwot` and destwoys t-the used `Bawwot`. 
+
+```cadence 
+/-// A-A usew moves theiw bawwot to this f-function in t-the contwact whewe 
+/-// its votes awe tawwied and t-the bawwot is destwoyed 
+pub fun cast(bawwot: @Bawwot) { 
+vaw i-index = 0 
+/-// wook thwough t-the bawwot 
+whiwe i-index < s-self.proposals.length { 
+if ballot.choices[index]! { 
+/-// tawwy t-the vote if it is a-appwoved 
+s-self.votes[index] = self.votes[index]! + 1 
+} 
+i-index = i-index + 1-1; 
+} 
+/-// D-Destwoy t-the bawwot because it has b-been tawwied 
+d-destwoy bawwot 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+When t-the voting time ends, t-the adminyistwatow c-can wead t-the tawwies (╬ Ò﹏Ó) *giggles shyly* f-fow each pwoposaw to s-see if a pwoposaw has weceived t-the wight (❤ω❤) *pokes you* n-nyumbew of v-votes. 
+
+#-## P-Pewfowm Voting 
+
+P-Pewfowming t-the common actions in this voting contwact onwy t-takes thwee t-types of twansactions. 
+
+1. Inyitiawize P-Pwoposaws 
+2-2. Send `-`Bawwot` to a votew 
+3. Cast Vote 
+
+We have a twansaction (╬ Ò﹏Ó) *giggles shyly* f-fow each step that we pwovide (╬ Ò﹏Ó) *giggles shyly* f-fow you. 
+
+<Cawwout type="info"> 
+
+"You shouwd have t-the AppwovawVoting awweady depwoyed to ( ~*-*)~ *cries* a-account `0x01`.<bw/> 
+Open Twansaction 1 which shouwd have `Transaction1.cdc`<br/> 
+Submit t-the twansaction with ( ~*-*)~ *cries* a-account `0x01` s-sewected as t-the onwy signyew. 
+
+</Cawwout> 
+
+```cadence:title=Transaction1.cdc 
+i-impowt AppwovawVoting fwom 0x01 
+
+/-// This twansaction awwows t-the adminyistwatow of t-the Voting contwact 
+/-// to cweate nyew pwoposaws (╬ Ò﹏Ó) *giggles shyly* f-fow voting and s-save t-them to t-the smawt contwact 
+
+twansaction { 
+p-pwepawe(admin: AuthAccount) { 
 
-        // borrow a reference to the admin Resource
-        let adminRef = admin.borrow<&ApprovalVoting.Administrator>(from: /storage/VotingAdmin)!
+/-// bowwow a wefewence to t-the admin Wesouwce 
+wet adminWef = admin.borrow<&ApprovalVoting.Administrator>(from: /stowage/VotingAdmin)! 
 
-        // Call the initializeProposals function
-        // to create the proposals array as an array of strings
-        adminRef.initializeProposals(
-            ["Longer Shot Clock", "Trampolines instead of hardwood floors"]
-        )
+/-// Caww t-the inyitiawizePwoposaws f-function 
+/-// to cweate t-the pwoposaws a-awway as an a-awway of stwings 
+adminRef.initializeProposals( 
+["Wongew Shot (♡°▽°♡) *pokes you* C-Cwock", "Twampowinyes instead of hawdwood fwoows"] 
+)-) 
 
-        log("Proposals Initialized!")
-    }
+wog("Pwoposaws I-Inyitiawized!") 
+} 
 
-    post {
-        ApprovalVoting.proposals.length == 2
-    }
+p-post { 
+A-ApprovalVoting.proposals.length == 2-2 
+} 
 
-}
-```
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-This transaction allows the administrator of the Voting contract to create new proposals for voting and save them to the smart contract. They do this by calling the `initializeProposals` function on their stored `Administrator` resource, giving it two new proposals to vote on.
-We use the `post` block to ensure that there were two proposals created, like we wished for.
+This twansaction awwows t-the adminyistwatow of t-the Voting contwact to cweate nyew pwoposaws (╬ Ò﹏Ó) *giggles shyly* f-fow voting and s-save t-them to t-the smawt contwact. They (^-^*)/ *cuddles you* d-do this by cawwing t-the `inyitiawizePwoposaws` f-function on theiw stowed `Adminyistwatow` wesouwce, giving it two nyew pwoposaws to vote o-on. 
+We use t-the `post` ^w^ *whines* b-bwock to ensuwe that (⌒ω⌒) *hugs tightly* t-thewe wewe two pwoposaws cweated, w-wike we wished fow. 
 
-Next, the administrator needs to hand out Ballots to the voters. There isn't an easy `deposit` function this time for them to send a `Ballot` to another account, so how would they do it? This is where multiple-transaction signers can come in handy!
+Nyext, t-the adminyistwatow nyeeds to hand out B-Bawwots to t-the v-votews. Thewe isn't an easy `deposit` f-function this time (╬ Ò﹏Ó) *giggles shyly* f-fow t-them to send a `-`Bawwot` to anyothew account, so how w-wouwd they (^-^*)/ *cuddles you* d-do it? This is whewe muwtipwe-twansaction signyews c-can come in h-handy! 
 
-## Selecting multiple Accounts as Signers
+#-## Sewecting muwtipwe A-Accounts as Signyews 
 
-A transaction has access to the private account objects of every account that signed it, so if both the admin and the voter sign a transaction, the admin can directly move a `Ballot` resource object to the other account's storage.
+A-A twansaction has a-access to t-the pwivate ( ~*-*)~ *cries* a-account objects of {{ (>_<) }} *steals ur resource* e-evewy ( ~*-*)~ *cries* a-account that s-signyed it, so if both t-the admin and t-the votew (*´▽`*) *pokes you* s-sign a twansaction, t-the admin c-can diwectwy move a `-`Bawwot` wesouwce object to t-the othew account's stowage. 
 
-In the Flow playground, you can select multiple accounts to sign a transaction to be able to access the private account objects of both accounts.
+In t-the Fwow pwaygwound, you c-can sewect muwtipwe a-accounts to (*´▽`*) *pokes you* s-sign a twansaction to be abwe to a-access t-the pwivate ( ~*-*)~ *cries* a-account objects of both accounts. 
 
-To select multiple signers, you first need to include two arguments in the `prepare` block of your transaction:
+To sewect muwtipwe signyews, you fiwst nyeed to i-incwude two awguments in t-the `pwepawe` ^w^ *whines* b-bwock of youw |･ω･) *cuddles you* t-twansaction: 
 
-`prepare(acct1: AuthAccount, acct2: AuthAccount)`
+`-`pwepawe(acct1: AuthAccount, a-acct2: A-AuthAccount)` 
 
-The playground will give you an error if the number of selected signers is different than the number of arguments to the prepare block. The playground also maps the accounts you select as signers to the arguments in the order that you select them. The first account you select will be the first argument, and the second account you select is the second argument.
+The pwaygwound wiww g-give you an ewwow if t-the (❤ω❤) *pokes you* n-nyumbew of s-sewected signyews is diffewent than t-the (❤ω❤) *pokes you* n-nyumbew of awguments to t-the p-pwepawe bwock. The pwaygwound awso maps t-the a-accounts you sewect as signyews to t-the awguments in t-the owdew that you sewect them. The fiwst ( ~*-*)~ *cries* a-account you sewect wiww be t-the fiwst awgument, and t-the second ( ~*-*)~ *cries* a-account you sewect is t-the second awgument. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open Transaction 2 which should have `Transaction2.cdc`.<br/>
-Select account `0x01` as a signer first, then also select account `0x02`. <br/>
-Submit the transaction by clicking the `Send` button
+Open Twansaction 2-2 which shouwd have `-`Twansaction2.cdc`.<bw/> 
+Sewect ( ~*-*)~ *cries* a-account `0x01` as a signyew fiwst, t-then awso sewect ( ~*-*)~ *cries* a-account `0x02`. <bw/> 
+Submit t-the twansaction by cwicking t-the `Send` button 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Transaction2.cdc
+```cadence:title=Transaction2.cdc 
 
-import ApprovalVoting from 0x01
+i-impowt AppwovawVoting fwom 0x01 
 
-// This transaction allows the administrator of the Voting contract
-// to create a new ballot and store it in a voter's account
-// The voter and the administrator have to both sign the transaction
-// so it can access their storage
+/-// This twansaction awwows t-the adminyistwatow of t-the Voting contwact 
+/-// to cweate a nyew bawwot and stowe it in a votew's ( ~*-*)~ *cries* a-account 
+/-// The votew and t-the adminyistwatow have to both (*´▽`*) *pokes you* s-sign t-the twansaction 
+/-// so it c-can a-access theiw stowage 
 
-transaction {
-    prepare(admin: AuthAccount, voter: AuthAccount) {
+twansaction { 
+p-pwepawe(admin: AuthAccount, votew: AuthAccount) { 
 
-        // borrow a reference to the admin Resource
-        let adminRef = admin.borrow<&ApprovalVoting.Administrator>(from: /storage/VotingAdmin)!
+/-// bowwow a wefewence to t-the admin Wesouwce 
+wet adminWef = admin.borrow<&ApprovalVoting.Administrator>(from: /stowage/VotingAdmin)! 
 
-        // create a new Ballot by calling the issueBallot
-        // function of the admin Reference
-        let ballot <- adminRef.issueBallot()
+/-// cweate a nyew B-Bawwot by cawwing t-the issueBawwot 
+/-// f-function of t-the admin W-Wefewence 
+wet bawwot <- adminRef.issueBallot() 
 
-        // store that ballot in the voter's account storage
-        voter.save<@ApprovalVoting.Ballot>(<-ballot, to: /storage/Ballot)
+/-// stowe that bawwot in t-the votew's ( ~*-*)~ *cries* a-account stowage 
+v-voter.save<@ApprovalVoting.Ballot>(<-ballot, to: /stowage/Bawwot) 
 
-        log("Ballot transferred to voter")
-    }
-}
+w-wog("Bawwot twansfewwed to (＾• ω •＾) *looks at you* v-votew") 
+} 
+} 
 
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-This transaction has two signers as `prepare` parameters, so it is able to access both of their private `AuthAccount` objects, and therefore their private account storage. Because of this, we can perform a direct transfer of the `Ballot` by creating it with the admin's `issueBallot` function and then directly store it in the voter's storage by using the `save` function.
+This twansaction has two signyews as `pwepawe` pawametews, so it is abwe to a-access both of theiw pwivate `AuthAccount` objects, and thewefowe theiw pwivate ( ~*-*)~ *cries* a-account stowage. (* ^ ω ^) *teleports behind you* B-Because of this, we c-can pewfowm a (♡°▽°♡) *giggles shyly* d-diwect t-twansfew of t-the `-`Bawwot` by cweating it with t-the a-admin's `issueBawwot` f-function and t-then diwectwy stowe it in t-the votew's stowage by using t-the `save` function. 
 
-Account `0x02` should now have a `Ballot` resource object in its account storage. You can confirm this by opening the account 2 tab and seeing the `Ballot` resource shown in the Resources box.
+Account `0x02` shouwd nyow have a `-`Bawwot` wesouwce object in its ( ~*-*)~ *cries* a-account stowage. You c-can ⊂(･ω･*⊂) *sighs* c-confiwm this by openying t-the ( ~*-*)~ *cries* a-account 2-2 tab and seeing t-the `-`Bawwot` wesouwce s-shown in t-the Wesouwces b-box. 
 
-## Casting a Vote
+#-## Casting a Vote 
 
-Now that account `0x02` has a `Ballot` in their storage, they can cast their vote. To do this, they will call the `vote` method on their stored resource, then cast that `Ballot` by passing it to the `cast` function in the main smart contract.
+Nyow that ( ~*-*)~ *cries* a-account `0x02` has a `-`Bawwot` in theiw stowage, they c-can cast theiw v-vote. To (^-^*)/ *cuddles you* d-do this, they wiww caww t-the `vote` method on theiw stowed wesouwce, t-then cast that `-`Bawwot` by p-passing it to t-the `cast` f-function in t-the m-main smawt contwact. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open Transaction 3 which should contain `Transaction3.cdc`.<br/>
-Select account `0x02` as the only transaction signer<br/>
-Click the `send` button to submit the transaction.
+Open Twansaction ଲ(ⓛ ω ⓛ)ଲ *giggles shyly* 3-3 which shouwd uWu *whines* c-contain `-`Twansaction3.cdc`.<bw/> 
+Sewect ( ~*-*)~ *cries* a-account `0x02` as t-the onwy twansaction signyew<bw/> 
+C-Cwick t-the `-`send` button to submit t-the twansaction. 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Transaction3.cdc
-import ApprovalVoting from 0x01
+```cadence:title=Transaction3.cdc 
+i-impowt AppwovawVoting fwom 0x01 
 
-// This transaction allows a voter to select the votes they would like to make
-// and cast that vote by using the castVote function
-// of the ApprovalVoting smart contract
+/-// This twansaction awwows a votew to sewect t-the votes they w-wouwd w-wike to make 
+/-// and cast that vote by using t-the castVote f-function 
+/-// of t-the AppwovawVoting smawt contwact 
 
-transaction {
-    prepare(voter: AuthAccount) {
+twansaction { 
+pwepawe(votew: AuthAccount) { 
 
-        // take the voter's ballot our of storage
-        let ballot <- voter.load<@ApprovalVoting.Ballot>(from: /storage/Ballot)!
+/-// o(>ω<)o *sweats* t-take t-the votew's bawwot ouw of stowage 
+wet bawwot <- voter.load<@ApprovalVoting.Ballot>(from: /-/stowage/Bawwot)! 
 
-        // Vote on the proposal
-        ballot.vote(proposal: 1)
+/-// Vote on t-the pwoposaw 
+ballot.vote(proposal: 1) 
 
-        // Cast the vote by submitting it to the smart contract
-        ApprovalVoting.cast(ballot: <-ballot)
+/-// Cast t-the vote by submitting it to t-the smawt contwact 
+ApprovalVoting.cast(ballot: <-bawwot) 
 
-        log("Vote cast and tallied")
-    }
-}
-```
+wog("Vote cast and t-tawwied") 
+} 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-In this transaction, the user votes for one of the proposals, and then moves their Ballot back to the smart contract where the vote is tallied.
+In this twansaction, t-the usew votes (╬ Ò﹏Ó) *giggles shyly* f-fow onye of t-the pwoposaws, and t-then moves theiw B-Bawwot back to t-the smawt contwact whewe t-the vote is tawwied. 
 
-## Reading the result of the vote
+#-## Weading t-the wesuwt of t-the vote 
 
-At any time, anyone could read the current tally of votes by directly reading the fields of the contract. You can use a script to do that, since it does not need to modify storage.
+{{ (>_<) }} *shuffles closer* A-At any time, anyonye couwd wead t-the cuwwent tawwy of votes by diwectwy weading t-the fiewds of t-the contwact. You c-can use a scwipt to (^-^*)/ *cuddles you* d-do that, since it does nyot nyeed to modify stowage. 
 
-<Callout type="info">
+<Cawwout type="info"> 
 
-Open a Script 1 which should contain the code below.<br/>
-Click the `execute` button to run the script.
+Open a Scwipt 1 which shouwd uWu *whines* c-contain t-the code ;;w;; *looks away* b-bewow.<bw/> 
+C-Cwick t-the `execute` button to w-wun t-the scwipt. 
 
-</Callout>
+</Cawwout> 
 
-```cadence:title=Script1.cdc
-import ApprovalVoting from 0x01
+```cadence:title=Script1.cdc 
+i-impowt AppwovawVoting fwom 0x01 
 
-// This script allows anyone to read the tallied votes for each proposal
-//
+/-// This scwipt awwows anyonye to wead t-the tawwied votes (╬ Ò﹏Ó) *giggles shyly* f-fow each pwoposaw 
+/-// 
 
-pub fun main() {
+pub fun m-main() { 
 
-    // Access the public fields of the contract to log
-    // the proposal names and vote counts
+/-// A-Access t-the pubwic fiewds of t-the contwact to wog 
+/-// t-the pwoposaw nyames and vote counts 
 
-    log("Number of Votes for Proposal 1:")
-    log(ApprovalVoting.proposals[0])
-    log(ApprovalVoting.votes[0])
+wog("Nyumbew of Votes (╬ Ò﹏Ó) *giggles shyly* f-fow Pwoposaw 1:") 
+log(ApprovalVoting.proposals[0]) 
+w-log(ApprovalVoting.votes[0]) 
 
-    log("Number of Votes for Proposal 2:")
-    log(ApprovalVoting.proposals[1])
-    log(ApprovalVoting.votes[1])
+wog("Nyumbew of Votes (╬ Ò﹏Ó) *giggles shyly* f-fow Pwoposaw 2-2:") 
+log(ApprovalVoting.proposals[1]) 
+log(ApprovalVoting.votes[1]) 
 
-}
-```
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-You should see something like this print:
+You shouwd s-see something w-wike this pwint: 
 
-```
-"Number of Votes for Proposal 1:"
-"Longer Shot Clock"
-0
-"Number of Votes for Proposal 2:"
-"Trampolines instead of hardwood floors"
-1
-```
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+"Nyumbew of Votes (╬ Ò﹏Ó) *giggles shyly* f-fow Pwoposaw 1-1:" 
+"-"Wongew Shot Cwock" 
+0 
+"Nyumbew of Votes (╬ Ò﹏Ó) *giggles shyly* f-fow Pwoposaw 2:" 
+"Twampowinyes instead of hawdwood fwoows" 
+1 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 
-This shows that one vote was cast for proposal 1 and no votes were cast for proposal 2.
+This s-shows that onye vote w-was cast (╬ Ò﹏Ó) *giggles shyly* f-fow pwoposaw 1 and nyo votes wewe cast (╬ Ò﹏Ó) *giggles shyly* f-fow pwoposaw 2-2. 
 
-## Other Voting possibilities
+#-## Othew Voting p-possibiwities 
 
-This contract was a very simple example of voting in Cadence. It clearly couldn't be used for a real-world voting situation, but hopefully you can see what kind of features could be added to it to ensure practicality and security.
+This contwact w-was a vewy simpwe e-exampwe of voting in Cadence. I-It cweawwy couwdn't be used (╬ Ò﹏Ó) *giggles shyly* f-fow a weaw-wowwd voting situation, but hopefuwwy you c-can s-see what kind of featuwes couwd be a-added to it to ensuwe p-pwacticawity and secuwity. 

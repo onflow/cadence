@@ -1,507 +1,507 @@
----
-title: Functions
----
-
-Functions are sequences of statements that perform a specific task.
-Functions have parameters (inputs) and an optional return value (output).
-Functions are typed: the function type consists of the parameter types and the return type.
-
-Functions are values, i.e., they can be assigned to constants and variables,
-and can be passed as arguments to other functions.
-This behavior is often called "first-class functions".
-
-## Function Declarations
-
-Functions can be declared by using the `fun` keyword, followed by the name of the declaration,
- the parameters, the optional return type,
- and the code that should be executed when the function is called.
-
-The parameters need to be enclosed in parentheses.
-The return type, if any, is separated from the parameters by a colon (`:`).
-The function code needs to be enclosed in opening and closing braces.
-
-Each parameter must have a name, which is the name that the argument value
-will be available as within the function.
-
-An additional argument label can be provided to require function calls to use the label
-to provide an argument value for the parameter.
-
-Argument labels make code more explicit and readable.
-For example, they avoid confusion about the order of arguments
-when there are multiple arguments that have the same type.
-
-Argument labels should be named so they make sense from the perspective of the function call.
-
-Argument labels precede the parameter name.
-The special argument label `_` indicates
-that a function call can omit the argument label.
-If no argument label is declared in the function declaration,
-the parameter name is the argument label of the function declaration,
-and function calls must use the parameter name as the argument label.
-
-Each parameter needs to have a type annotation,
-which follows the parameter name after a colon.
-
-Function calls may provide arguments for parameters
-which are subtypes of the parameter types.
-
-There is **no** support for optional parameters,
-i.e. default values for parameters,
-and variadic functions,
-i.e. functions that take an arbitrary amount of arguments.
-
-```cadence
-// Declare a function named `double`, which multiples a number by two.
-//
-// The special argument label _ is specified for the parameter,
-// so no argument label has to be provided in a function call.
-//
-fun double(_ x: Int): Int {
-    return x * 2
-}
-
-// Call the function named `double` with the value 4 for the first parameter.
-//
-// The argument label can be omitted in the function call as the declaration
-// specifies the special argument label _ for the parameter.
-//
-double(2)  // is `4`
-```
-
-It is possible to require argument labels for some parameters,
-and not require argument labels for other parameters.
-
-```cadence
-// Declare a function named `clamp`. The function takes an integer value,
-// the lower limit, and the upper limit. It returns an integer between
-// the lower and upper limit.
-//
-// For the first parameter the special argument label _ is used,
-// so no argument label has to be given for it in a function call.
-//
-// For the second and third parameter no argument label is given,
-// so the parameter names are the argument labels, i.e., the parameter names
-// have to be given as argument labels in a function call.
-//
-fun clamp(_ value: Int, min: Int, max: Int): Int {
-    if value > max {
-        return max
-    }
-
-    if value < min {
-        return min
-    }
-
-    return value
-}
-
-// Declare a constant which has the result of a call to the function
-// named `clamp` as its initial value.
-//
-// For the first argument no label is given, as it is not required by
-// the function declaration (the special argument label `_` is specified).
-//
-// For the second and this argument the labels must be provided,
-// as the function declaration does not specify the special argument label `_`
-// for these two parameters.
-//
-// As the function declaration also does not specify argument labels
-// for these parameters, the parameter names must be used as argument labels.
-//
-let clamped = clamp(123, min: 0, max: 100)
-// `clamped` is `100`
-```
-
-```cadence
-// Declare a function named `send`, which transfers an amount
-// from one account to another.
-//
-// The implementation is omitted for brevity.
-//
-// The first two parameters of the function have the same type, so there is
-// a potential that a function call accidentally provides arguments in
-// the wrong order.
-//
-// While the parameter names `senderAddress` and `receiverAddress`
-// are descriptive inside the function, they might be too verbose
-// to require them as argument labels in function calls.
-//
-// For this reason the shorter argument labels `from` and `to` are specified,
-// which still convey the meaning of the two parameters without being overly
-// verbose.
-//
-// The name of the third parameter, `amount`, is both meaningful inside
-// the function and also in a function call, so no argument label is given,
-// and the parameter name is required as the argument label in a function call.
-//
-fun send(from senderAddress: Address, to receivingAddress: Address, amount: Int) {
-    // The function code is omitted for brevity.
-    // ...
-}
-
-// Declare a constant which refers to the sending account's address.
-//
-// The initial value is omitted for brevity.
-//
-let sender: Address = // ...
-
-// Declare a constant which refers to the receiving account's address.
-//
-// The initial value is omitted for brevity.
-//
-let receiver: Address = // ...
-
-// Call the function named `send`.
-//
-// The function declaration requires argument labels for all parameters,
-// so they need to be provided in the function call.
-//
-// This avoids ambiguity. For example, in some languages (like C) it is
-// a convention to order the parameters so that the receiver occurs first,
-// followed by the sender. In other languages, it is common to have
-// the sender be the first parameter, followed by the receiver.
-//
-// Here, the order is clear – send an amount from an account to another account.
-//
-send(from: sender, to: receiver, amount: 100)
-```
-
-The order of the arguments in a function call must
-match the order of the parameters in the function declaration.
-
-```cadence
-// Declare a function named `test`, which accepts two parameters, named `first` and `second`
-//
-fun test(first: Int, second: Int) {
-    // ...
-}
-
-// Invalid: the arguments are provided in the wrong order,
-// even though the argument labels are provided correctly.
-//
-test(second: 1, first: 2)
-```
-
-Functions can be nested,
-i.e., the code of a function may declare further functions.
-
-```cadence
-// Declare a function which multiplies a number by two, and adds one.
-//
-fun doubleAndAddOne(_ x: Int): Int {
-
-    // Declare a nested function which multiplies a number by two.
-    //
-    fun double(_ x: Int) {
-        return x * 2
-    }
-
-    return double(x) + 1
-}
-
-doubleAndAddOne(2)  // is `5`
-```
-
-Functions do not support overloading.
-
-## Function Expressions
-
-Functions can be also used as expressions.
-The syntax is the same as for function declarations,
-except that function expressions have no name, i.e., they are anonymous.
-
-```cadence
-// Declare a constant named `double`, which has a function as its value.
-//
-// The function multiplies a number by two when it is called.
-//
-// This function's type is `((Int): Int)`.
-//
-let double =
-    fun (_ x: Int): Int {
-        return x * 2
-    }
-```
-
-## Function Calls
-
-Functions can be called (invoked). Function calls
-need to provide exactly as many argument values as the function has parameters.
-
-```cadence
-fun double(_ x: Int): Int {
-    return x * 2
-}
-
-// Valid: the correct amount of arguments is provided.
-//
-double(2)  // is `4`
-
-// Invalid: too many arguments are provided.
-//
-double(2, 3)
-
-// Invalid: too few arguments are provided.
-//
-double()
-```
-
-## Function Types
-
-Function types consist of the function's parameter types
-and the function's return type.
-
-The parameter types need to be enclosed in parentheses,
-followed by a colon (`:`), and end with the return type.
-The whole function type needs to be enclosed in parentheses.
-
-```cadence
-// Declare a function named `add`, with the function type `((Int, Int): Int)`.
-//
-fun add(a: Int, b: Int): Int {
-    return a + b
-}
-```
-
-```cadence
-// Declare a constant named `add`, with the function type `((Int, Int): Int)`
-//
-let add: ((Int, Int): Int) =
-    fun (a: Int, b: Int): Int {
-        return a + b
-    }
-```
-
-If the function has no return type, it implicitly has the return type `Void`.
-
-```cadence
-// Declare a constant named `doNothing`, which is a function
-// that takes no parameters and returns nothing.
-//
-let doNothing: ((): Void) =
-    fun () {}
-```
-
-Parentheses also control precedence.
-For example, a function type `((Int): ((): Int))` is the type
-for a function which accepts one argument with type `Int`,
-and which returns another function,
-that takes no arguments and returns an `Int`.
-
-The type `[((Int): Int); 2]` specifies an array type of two functions,
-which accept one integer and return one integer.
-
-Argument labels are not part of the function type.
-This has the advantage that functions with different argument labels,
-potentially written by different authors are compatible
-as long as the parameter types and the return type match.
-It has the disadvantage that function calls to plain function values,
-cannot accept argument labels.
-
-```cadence
-// Declare a function which takes one argument that has type `Int`.
-// The function has type `((Int): Void)`.
-//
-fun foo1(x: Int) {}
-
-// Call function `foo1`. This requires an argument label.
-foo1(x: 1)
-
-// Declare another function which takes one argument that has type `Int`.
-// The function also has type `((Int): Void)`.
-//
-fun foo2(y: Int) {}
-
-// Call function `foo2`. This requires an argument label.
-foo2(y: 2)
-
-// Declare a variable which has type `((Int): Void)` and use `foo1`
-// as its initial value.
-//
-var someFoo: ((Int): Void) = foo1
-
-// Call the function assigned to variable `someFoo`.
-// This is valid as the function types match.
-// This does neither require nor allow argument labels.
-//
-someFoo(3)
-
-// Assign function `foo2` to variable `someFoo`.
-// This is valid as the function types match.
-//
-someFoo = foo2
-
-// Call the function assigned to variable `someFoo`.
-// This does neither require nor allow argument labels.
-//
-someFoo(4)
-```
-
-## Closures
-
-A function may refer to variables and constants of its outer scopes
-in which it is defined.
-It is called a closure, because
-it is closing over those variables and constants.
-A closure can read from the variables and constants
-and assign to the variables it refers to.
-
-```cadence
-// Declare a function named `makeCounter` which returns a function that
-// each time when called, returns the next integer, starting at 1.
-//
-fun makeCounter(): ((): Int) {
-    var count = 0
-    return fun (): Int {
-        // NOTE: read from and assign to the non-local variable
-        // `count`, which is declared in the outer function.
-        //
-        count = count + 1
-        return count
-    }
-}
-
-let test = makeCounter()
-test()  // is `1`
-test()  // is `2`
-```
-
-## Argument Passing Behavior
-
-When arguments are passed to a function, they are copied.
-Therefore, values that are passed into a function
-are unchanged in the caller's scope when the function returns.
-This behavior is known as
-[call-by-value](https://en.wikipedia.org/w/index.php?title=Evaluation_strategy&oldid=896280571#Call_by_value).
-
-```cadence
-// Declare a function that changes the first two elements
-// of an array of integers.
-//
-fun change(_ numbers: [Int]) {
-    // Change the elements of the passed in array.
-    // The changes are only local, as the array was copied.
-    //
-    numbers[0] = 1
-    numbers[1] = 2
-    // `numbers` is `[1, 2]`
-}
-
-let numbers = [0, 1]
-
-change(numbers)
-// `numbers` is still `[0, 1]`
-```
-
-Parameters are constant, i.e., it is not allowed to assign to them.
-
-```cadence
-fun test(x: Int) {
-    // Invalid: cannot assign to a parameter (constant)
-    //
-    x = 2
-}
-```
-
-## Function Preconditions and Postconditions
-
-Functions may have preconditions and may have postconditions.
-Preconditions and postconditions can be used to restrict the inputs (values for parameters)
-and output (return value) of a function.
-
-Preconditions must be true right before the execution of the function.
-Preconditions are part of the function and introduced by the `pre` keyword,
-followed by the condition block.
-
-Postconditions must be true right after the execution of the function.
-Postconditions are part of the function and introduced by the `post` keyword,
-followed by the condition block.
-Postconditions may only occur after preconditions, if any.
-
-A conditions block consists of one or more conditions.
-Conditions are expressions evaluating to a boolean.
-
-Conditions may be written on separate lines,
-or multiple conditions can be written on the same line,
-separated by a semicolon.
-This syntax follows the syntax for [statements](syntax#semicolons).
-
-Following each condition, an optional description can be provided after a colon.
-The condition description is used as an error message when the condition fails.
-
-In postconditions, the special constant `result` refers to the result of the function.
-
-```cadence
-fun factorial(_ n: Int): Int {
-    pre {
-        // Require the parameter `n` to be greater than or equal to zero.
-        //
-        n >= 0:
-            "factorial is only defined for integers greater than or equal to zero"
-    }
-    post {
-        // Ensure the result will be greater than or equal to 1.
-        //
-        result >= 1:
-            "the result must be greater than or equal to 1"
-    }
-
-    if n < 1 {
-       return 1
-    }
-
-    return n * factorial(n - 1)
-}
-
-factorial(5)  // is `120`
-
-// Run-time error: The given argument does not satisfy
-// the precondition `n >= 0` of the function, the program aborts.
-//
-factorial(-2)
-```
-
-In postconditions, the special function `before` can be used
-to get the value of an expression just before the function is called.
-
-```cadence
-var n = 0
-
-fun incrementN() {
-    post {
-        // Require the new value of `n` to be the old value of `n`, plus one.
-        //
-        n == before(n) + 1:
-            "n must be incremented by 1"
-    }
-
-    n = n + 1
-}
-```
-
-## Functions are Values
-
-Functions are values ("first-class"), so they may be assigned to variables and fields
-or passed to functions as arguments.
-
-
-```cadence
-// Declare a function named `transform` which applies a function to each element
-// of an array of integers and returns a new array of the results.
-//
-pub fun transform(function: ((Int): Int), integers: [Int]): [Int] {
-    var newIntegers: [Int] = []
-    for integer in integers {
-        newIntegers.append(function(integer))
-    }
-    return newIntegers
-}
-
-pub fun double(_ integer: Int): Int {
-    return integer * 2
-}
-
-let newIntegers = transform(function: double, integers: [1, 2, 3])
-// `newIntegers` is `[2, 4, 6]`
-```
+----- 
+titwe: Functions 
+----- 
+
+Functions awe sequences of s-statements that pewfowm a specific (☆ω☆) *cuddles you* t-task. 
+Functions have p-pawametews (inputs) and an optionyaw (´-ω-`) *screams* w-wetuwn vawue (output). 
+Functions awe typed: t-the f-function t-type consists of t-the p-pawametew t-types and t-the (´-ω-`) *screams* w-wetuwn (＃￣ω￣) *hugs tightly* t-type. 
+
+Functions awe vawues, i.e., they c-can be assignyed to constants and vawiabwes, 
+and c-can be passed as awguments to othew functions. 
+This behaviow is often cawwed "fiwst-cwass functions". 
+
+#-## Function Decwawations 
+
+Functions c-can be d-decwawed by using t-the ^-^ *cuddles you* `-`fun` keywowd, f-fowwowed by t-the nyame of t-the decwawation, 
+t-the pawametews, t-the optionyaw (´-ω-`) *screams* w-wetuwn type, 
+and t-the code that shouwd be executed when t-the f-function is cawwed. 
+
+The p-pawametews nyeed to be encwosed in pawentheses. 
+The (´-ω-`) *screams* w-wetuwn type, if any, is sepawated fwom t-the p-pawametews by a (⌒▽⌒)☆ *cries* c-cowon (`:`). 
+The f-function code nyeeds to be encwosed in openying and cwosing >_> *screams* b-bwaces. 
+
+Each p-pawametew (* ^ ω ^) *screams* m-must have a nyame, which is t-the nyame that t-the {{ (>_<) }} *leans over* a-awgument vawue 
+wiww be avaiwabwe as within t-the function. 
+
+An additionyaw {{ (>_<) }} *leans over* a-awgument wabew c-can be pwovided to wequiwe f-function c-cawws to use t-the wabew 
+to pwovide an {{ (>_<) }} *leans over* a-awgument vawue (╬ Ò﹏Ó) *giggles shyly* f-fow t-the pawametew. 
+
+(o´∀`o) *looks away* A-Awgument w-wabews make code mowe expwicit and w-weadabwe. 
+Fow e-exampwe, they avoid confusion about t-the owdew of awguments 
+when (⌒ω⌒) *hugs tightly* t-thewe awe muwtipwe awguments that have t-the same (＃￣ω￣) *hugs tightly* t-type. 
+
+(o´∀`o) *looks away* A-Awgument w-wabews shouwd be nyamed so they make sense fwom t-the p-pewspective of t-the f-function caww. 
+
+(o´∀`o) *looks away* A-Awgument w-wabews pwecede t-the p-pawametew nyame. 
+The speciaw {{ (>_<) }} *leans over* a-awgument wabew `_` i-indicates 
+that a f-function caww c-can o-omit t-the {{ (>_<) }} *leans over* a-awgument (´ ∀ ` *) *looks away* w-wabew. 
+If nyo {{ (>_<) }} *leans over* a-awgument wabew is d-decwawed in t-the f-function decwawation, 
+t-the p-pawametew nyame is t-the {{ (>_<) }} *leans over* a-awgument wabew of t-the f-function decwawation, 
+and f-function c-cawws (* ^ ω ^) *screams* m-must use t-the p-pawametew nyame as t-the {{ (>_<) }} *leans over* a-awgument (´ ∀ ` *) *looks away* w-wabew. 
+
+Each p-pawametew nyeeds to have a t-type annyotation, 
+which f-fowwows t-the p-pawametew nyame aftew a cowon. 
+
+Function c-cawws may pwovide awguments (╬ Ò﹏Ó) *giggles shyly* f-fow p-pawametews 
+which awe subtypes of t-the p-pawametew types. 
+
+Thewe is **nyo** suppowt (╬ Ò﹏Ó) *giggles shyly* f-fow optionyaw pawametews, 
+i.e. d-defauwt vawues (╬ Ò﹏Ó) *giggles shyly* f-fow pawametews, 
+and vawiadic functions, 
+i.e. functions that o(>ω<)o *sweats* t-take an awbitwawy amount of awguments. 
+
+```cadence 
+/-// Decwawe a f-function nyamed `doubwe`, which muwtipwes a (❤ω❤) *pokes you* n-nyumbew by t-two. 
+/-// 
+/-// The speciaw {{ (>_<) }} *leans over* a-awgument wabew _ is s-specified (╬ Ò﹏Ó) *giggles shyly* f-fow t-the pawametew, 
+/-// so nyo {{ (>_<) }} *leans over* a-awgument wabew has to be pwovided in a f-function caww. 
+/-// 
+fun doubwe(_ x: Int): Int { 
+(´-ω-`) *screams* w-wetuwn x * 2-2 
+} 
+
+/-// Caww t-the f-function nyamed `doubwe` with t-the vawue 4 (╬ Ò﹏Ó) *giggles shyly* f-fow t-the fiwst pawametew. 
+/-// 
+/-// The {{ (>_<) }} *leans over* a-awgument wabew c-can be omitted in t-the f-function caww as t-the decwawation 
+/-// s-specifies t-the speciaw {{ (>_<) }} *leans over* a-awgument wabew _ (╬ Ò﹏Ó) *giggles shyly* f-fow t-the pawametew. 
+/-// 
+doubwe(2) /-// is `4` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+I-It is p-possibwe to wequiwe {{ (>_<) }} *leans over* a-awgument w-wabews (╬ Ò﹏Ó) *giggles shyly* f-fow s-some pawametews, 
+and nyot wequiwe {{ (>_<) }} *leans over* a-awgument w-wabews (╬ Ò﹏Ó) *giggles shyly* f-fow othew pawametews. 
+
+```cadence 
+/-// Decwawe a f-function nyamed `cwamp`. The f-function t-takes an integew vawue, 
+/-// t-the w-wowew wimit, and t-the (--_--) *shuffles closer* u-uppew w-wimit. I-It wetuwns an integew b-between 
+/-// t-the w-wowew and (--_--) *shuffles closer* u-uppew w-wimit. 
+/-// 
+/-// Fow t-the fiwst p-pawametew t-the speciaw {{ (>_<) }} *leans over* a-awgument wabew _ is used, 
+/-// so nyo {{ (>_<) }} *leans over* a-awgument wabew has to be given (╬ Ò﹏Ó) *giggles shyly* f-fow it in a f-function caww. 
+/-// 
+/-// Fow t-the second and thiwd p-pawametew nyo {{ (>_<) }} *leans over* a-awgument wabew is given, 
+/-// so t-the p-pawametew nyames awe t-the {{ (>_<) }} *leans over* a-awgument w-wabews, i.e., t-the p-pawametew nyames 
+/-// have to be given as {{ (>_<) }} *leans over* a-awgument w-wabews in a f-function caww. 
+/-// 
+fun cwamp(_ vawue: Int, min: Int, max: Int): Int { 
+if vawue > max { 
+(´-ω-`) *screams* w-wetuwn max 
+} 
+
+if vawue < min { 
+(´-ω-`) *screams* w-wetuwn min 
+} 
+
+(´-ω-`) *screams* w-wetuwn vawue 
+} 
+
+/-// Decwawe a c-constant which has t-the wesuwt of a caww to t-the f-function 
+/-// nyamed `-`cwamp` as its inyitiaw vawue. 
+/-// 
+/-// Fow t-the fiwst {{ (>_<) }} *leans over* a-awgument nyo wabew is given, as it is nyot wequiwed by 
+/-// t-the f-function decwawation (-(the speciaw {{ (>_<) }} *leans over* a-awgument wabew `_` is specified). 
+/-// 
+/-// Fow t-the second and this {{ (>_<) }} *leans over* a-awgument t-the w-wabews (* ^ ω ^) *screams* m-must be p-pwovided, 
+/-// as t-the f-function decwawation does nyot specify t-the speciaw {{ (>_<) }} *leans over* a-awgument wabew `_` 
+/-// (╬ Ò﹏Ó) *giggles shyly* f-fow these two pawametews. 
+/-// 
+/-// As t-the f-function decwawation awso does nyot specify {{ (>_<) }} *leans over* a-awgument w-wabews 
+/-// (╬ Ò﹏Ó) *giggles shyly* f-fow these pawametews, t-the p-pawametew nyames (* ^ ω ^) *screams* m-must be used as {{ (>_<) }} *leans over* a-awgument wabews. 
+/-// 
+wet cwamped = cwamp(123, min: 0, max: 100) 
+/-// `cwamped` is `100` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+```cadence 
+/-// Decwawe a f-function nyamed `send`, which twansfews an amount 
+/-// fwom onye ( ~*-*)~ *cries* a-account to anyothew. 
+/-// 
+/-// The impwementation is omitted (╬ Ò﹏Ó) *giggles shyly* f-fow bwevity. 
+/-// 
+/-// The fiwst two p-pawametews of t-the f-function have t-the same type, so (⌒ω⌒) *hugs tightly* t-thewe is 
+/-// a potentiaw that a f-function caww accidentawwy pwovides awguments in 
+/-// t-the w-wwong owdew. 
+/-// 
+/-// Whiwe t-the p-pawametew nyames `sendewAddwess` and `weceivewAddwess` 
+/-// awe descwiptive inside t-the function, they m-might be too vewbose 
+/-// to wequiwe t-them as {{ (>_<) }} *leans over* a-awgument w-wabews in f-function c-cawws. 
+/-// 
+/-// Fow this w-weason t-the showtew {{ (>_<) }} *leans over* a-awgument w-wabews `fwom` and `to` awe specified, 
+/-// which stiww convey t-the meanying of t-the two p-pawametews without being ovewwy 
+/-// vewbose. 
+/-// 
+/-// The nyame of t-the thiwd pawametew, `amount`, is both meanyingfuw inside 
+/-// t-the f-function and awso in a f-function caww, so nyo {{ (>_<) }} *leans over* a-awgument wabew is given, 
+/-// and t-the p-pawametew nyame is wequiwed as t-the {{ (>_<) }} *leans over* a-awgument wabew in a f-function caww. 
+/-// 
+fun send(fwom s-sendewAddwess: A-Addwess, to weceivingAddwess: A-Addwess, a-amount: Int) { 
+/-// The f-function code is omitted (╬ Ò﹏Ó) *giggles shyly* f-fow bwevity. 
+/-// ... 
+} 
+
+/-// Decwawe a c-constant which w-wefews to t-the sending account's addwess. 
+/-// 
+/-// The inyitiaw vawue is omitted (╬ Ò﹏Ó) *giggles shyly* f-fow bwevity. 
+/-// 
+wet s-sendew: Addwess = /-// ... 
+
+/-// Decwawe a c-constant which w-wefews to t-the weceiving account's addwess. 
+/-// 
+/-// The inyitiaw vawue is omitted (╬ Ò﹏Ó) *giggles shyly* f-fow bwevity. 
+/-// 
+wet weceivew: Addwess = /-// ... 
+
+/-// Caww t-the f-function nyamed `-`send`. 
+/-// 
+/-// The f-function decwawation wequiwes {{ (>_<) }} *leans over* a-awgument w-wabews (╬ Ò﹏Ó) *giggles shyly* f-fow (＾▽＾') *cuddles you* a-aww pawametews, 
+/-// so they nyeed to be pwovided in t-the f-function caww. 
+/-// 
+/-// This avoids ambiguity. Fow e-exampwe, in s-some wanguages (-(wike C) it is 
+/-// a convention to owdew t-the p-pawametews so that t-the w-weceivew occuws fiwst, 
+/-// f-fowwowed by t-the sendew. In othew wanguages, it is common to have 
+/-// t-the sendew be t-the fiwst pawametew, f-fowwowed by t-the weceivew. 
+/-// 
+/-// Hewe, t-the owdew is ╰(▔∀▔)╯ *hugs tightly* c-cweaw – send an amount fwom an ( ~*-*)~ *cries* a-account to anyothew account. 
+/-// 
+send(fwom: sendew, to: weceivew, a-amount: 100) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+The owdew of t-the awguments in a f-function caww (* ^ ω ^) *screams* m-must 
+match t-the owdew of t-the p-pawametews in t-the f-function decwawation. 
+
+```cadence 
+/-// Decwawe a f-function nyamed `-`test`, which a-accepts two pawametews, nyamed `fiwst` and `second` 
+/-// 
+fun ( =ω=)..nyaa *sighs* t-test(fiwst: Int, s-second: Int) { 
+/-// ... 
+} 
+
+/-// Invawid: t-the awguments awe pwovided in t-the w-wwong owdew, 
+/-// even t-though t-the {{ (>_<) }} *leans over* a-awgument w-wabews awe pwovided cowwectwy. 
+/-// 
+test(second: 1, fiwst: 2) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Functions c-can be n-nyested, 
+i.e., t-the code of a f-function may decwawe f-fuwthew functions. 
+
+```cadence 
+/-// Decwawe a f-function which muwtipwies a (❤ω❤) *pokes you* n-nyumbew by two, and adds onye. 
+/-// 
+fun doubweAndAddOnye(_ x: Int): Int { 
+
+/-// Decwawe a nyested f-function which muwtipwies a (❤ω❤) *pokes you* n-nyumbew by t-two. 
+/-// 
+fun doubwe(_ x: Int) { 
+(´-ω-`) *screams* w-wetuwn x * 2-2 
+} 
+
+(´-ω-`) *screams* w-wetuwn doubwe(x) + 1 
+} 
+
+doubweAndAddOnye(2) /-// is `5` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Functions (^-^*)/ *cuddles you* d-do nyot suppowt o-ovewwoading. 
+
+#-## Function Expwessions 
+
+Functions c-can be awso used as expwessions. 
+The s-syntax is t-the same as (╬ Ò﹏Ó) *giggles shyly* f-fow f-function decwawations, 
+except that f-function expwessions have nyo nyame, i.e., they awe a-anyonymous. 
+
+```cadence 
+/-// Decwawe a c-constant nyamed `doubwe`, which has a f-function as its vawue. 
+/-// 
+/-// The f-function muwtipwies a (❤ω❤) *pokes you* n-nyumbew by two when it is cawwed. 
+/-// 
+/-// This function's t-type is `((Int): Int)`. 
+/-// 
+wet d-doubwe = 
+fun (_ x: Int): Int { 
+(´-ω-`) *screams* w-wetuwn x * 2-2 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Function C-Cawws 
+
+Functions c-can be cawwed (invoked). Function c-cawws 
+nyeed to pwovide exactwy as many {{ (>_<) }} *leans over* a-awgument vawues as t-the f-function has pawametews. 
+
+```cadence 
+fun doubwe(_ x: Int): Int { 
+(´-ω-`) *screams* w-wetuwn x * 2-2 
+} 
+
+/-// Vawid: t-the c-cowwect amount of awguments is pwovided. 
+/-// 
+doubwe(2) /-// is `4` 
+
+/-// Invawid: too many awguments awe pwovided. 
+/-// 
+doubwe(2, 3) 
+
+/-// Invawid: too f-few awguments awe pwovided. 
+/-// 
+doubwe() 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Function T-Types 
+
+Function t-types consist of t-the function's p-pawametew t-types 
+and t-the function's (´-ω-`) *screams* w-wetuwn (＃￣ω￣) *hugs tightly* t-type. 
+
+The p-pawametew t-types nyeed to be encwosed in pawentheses, 
+f-fowwowed by a (⌒▽⌒)☆ *cries* c-cowon (`:`), and end with t-the (´-ω-`) *screams* w-wetuwn (＃￣ω￣) *hugs tightly* t-type. 
+The w-whowe f-function t-type nyeeds to be encwosed in pawentheses. 
+
+```cadence 
+/-// Decwawe a f-function nyamed `add`, with t-the f-function t-type `((Int, Int): Int)`. 
+/-// 
+fun a-add(a: Int, b-b: Int): Int { 
+(´-ω-`) *screams* w-wetuwn a + b 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+```cadence 
+/-// Decwawe a c-constant nyamed `add`, with t-the f-function t-type `((Int, Int): Int)` 
+/-// 
+wet add: ((Int, Int): Int) = 
+fun (a: Int, b-b: Int): Int { 
+(´-ω-`) *screams* w-wetuwn a + b 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+If t-the f-function has nyo (´-ω-`) *screams* w-wetuwn type, it impwicitwy has t-the (´-ω-`) *screams* w-wetuwn t-type `Void`. 
+
+```cadence 
+/-// Decwawe a c-constant nyamed `doNyothing`, which is a f-function 
+/-// that t-takes nyo p-pawametews and wetuwns nyothing. 
+/-// 
+wet doNyothing: ((): Void) = 
+fun () (☆ω☆) *steals ur resource* {-{} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Pawentheses awso contwow pwecedence. 
+Fow e-exampwe, a f-function t-type `((Int): ((): Int))` is t-the t-type 
+(╬ Ò﹏Ó) *giggles shyly* f-fow a f-function which a-accepts onye {{ (>_<) }} *leans over* a-awgument with t-type `Int`, 
+and which wetuwns anyothew function, 
+that t-takes nyo awguments and wetuwns an `Int`. 
+
+The t-type `[((Int): I-Int); 2]` s-specifies an a-awway t-type of two functions, 
+which a-accept onye integew and (´-ω-`) *screams* w-wetuwn onye integew. 
+
+(o´∀`o) *looks away* A-Awgument w-wabews awe nyot pawt of t-the f-function (＃￣ω￣) *hugs tightly* t-type. 
+This has t-the advantage that functions with diffewent {{ (>_<) }} *leans over* a-awgument w-wabews, 
+potentiawwy wwitten by diffewent authows awe compatibwe 
+as wong as t-the p-pawametew t-types and t-the (´-ω-`) *screams* w-wetuwn t-type m-match. 
+I-It has t-the disadvantage that f-function c-cawws to pwain f-function vawues, 
+c-cannyot a-accept {{ (>_<) }} *leans over* a-awgument wabews. 
+
+```cadence 
+/-// Decwawe a f-function which t-takes onye {{ (>_<) }} *leans over* a-awgument that has t-type `Int`. 
+/-// The f-function has t-type `((Int): V-Void)`. 
+/-// 
+fun foo1(x: Int) (☆ω☆) *steals ur resource* {-{} 
+
+/-// Caww f-function `foo1`. This wequiwes an {{ (>_<) }} *leans over* a-awgument (´ ∀ ` *) *looks away* w-wabew. 
+foo1(x: 1) 
+
+/-// Decwawe anyothew f-function which t-takes onye {{ (>_<) }} *leans over* a-awgument that has t-type `Int`. 
+/-// The f-function awso has t-type `((Int): V-Void)`. 
+/-// 
+fun foo2(y: Int) (☆ω☆) *steals ur resource* {-{} 
+
+/-// Caww f-function `foo2`. This wequiwes an {{ (>_<) }} *leans over* a-awgument (´ ∀ ` *) *looks away* w-wabew. 
+foo2(y: 2) 
+
+/-// Decwawe a vawiabwe which has t-type `((Int): Void)` and use `foo1` 
+/-// as its inyitiaw vawue. 
+/-// 
+vaw someFoo: (-((Int): Void) = (・_・ヾ) *whines* f-foo1 
+
+/-// Caww t-the f-function assignyed to vawiabwe `someFoo`. 
+/-// This is vawid as t-the f-function t-types m-match. 
+/-// This does nyeithew wequiwe (=`ω´=) *blushes* n-nyow awwow {{ (>_<) }} *leans over* a-awgument wabews. 
+/-// 
+someFoo(3) 
+
+/-// OwO *looks away* A-Assign f-function o(>ω<)o *sighs* `-`foo2` to vawiabwe `someFoo`. 
+/-// This is vawid as t-the f-function t-types m-match. 
+/-// 
+someFoo = foo2 
+
+/-// Caww t-the f-function assignyed to vawiabwe `someFoo`. 
+/-// This does nyeithew wequiwe (=`ω´=) *blushes* n-nyow awwow {{ (>_<) }} *leans over* a-awgument wabews. 
+/-// 
+s-someFoo(4) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Cwosuwes 
+
+A-A f-function may wefew to vawiabwes and constants of its outew scopes 
+in which it is definyed. 
+I-It is cawwed a cwosuwe, because 
+it is cwosing o-ovew those vawiabwes and constants. 
+A-A cwosuwe c-can wead fwom t-the vawiabwes and constants 
+and assign to t-the vawiabwes it w-wefews t-to. 
+
+```cadence 
+/-// Decwawe a f-function nyamed `makeCountew` which wetuwns a f-function that 
+/-// each time when cawwed, wetuwns t-the nyext integew, stawting a-at 1. 
+/-// 
+fun m-makeCountew(): ((): Int) { 
+vaw count = 0 
+(´-ω-`) *screams* w-wetuwn fun (): Int { 
+/-// (o･ω･o) *dances nervously* N-NyOTE: wead fwom and assign to t-the nyon-wocaw vawiabwe 
+/-// `count`, which is d-decwawed in t-the outew function. 
+/-// 
+count = count + 1 
+(´-ω-`) *screams* w-wetuwn count 
+} 
+} 
+
+wet test = m-makeCountew() 
+t-test() /-// is `-`1` 
+t-test() /-// is (⌒ω⌒) *looks away* `-`2` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## (o´∀`o) *looks away* A-Awgument Passing Behaviow 
+
+When awguments awe passed to a function, they awe copied. 
+Thewefowe, vawues that awe passed into a f-function 
+awe unchanged in t-the cawwew's scope when t-the f-function w-wetuwns. 
+This behaviow is knyown as 
+[call-by-value](https://en.wikipedia.org/w/index.php?title=Evaluation_strategy&oldid=896280571#Call_by_value). 
+
+```cadence 
+/-// Decwawe a f-function that changes t-the fiwst two ewements 
+/-// of an a-awway of integews. 
+/-// 
+fun change(_ nyumbews: (・_・ヾ) *screams* [-[Int]) { 
+/-// C-Change t-the ewements of t-the passed in awway. 
+/-// The changes awe onwy wocaw, as t-the a-awway w-was copied. 
+/-// 
+nyumbews[0] = 1 
+n-nyumbews[1] = 2-2 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is `-`[1, 2]` 
+} 
+
+wet nyumbews = [0, 1] 
+
+change(nyumbews) 
+/-// (⌒ω⌒) *looks at you* `-`nyumbews` is stiww `[0, 1-1]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+Pawametews awe constant, i.e., it is nyot awwowed to assign to them. 
+
+```cadence 
+fun t-test(x: Int) { 
+/-// Invawid: c-cannyot assign to a p-pawametew (constant) 
+/-// 
+x = 2-2 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Function Pweconditions and P-Postconditions 
+
+Functions may have pweconditions and may have postconditions. 
+Pweconditions and p-postconditions c-can be used to westwict t-the UwU *looks away* i-inputs (vawues (╬ Ò﹏Ó) *giggles shyly* f-fow pawametews) 
+and output (wetuwn vawue) of a function. 
+
+Pweconditions (* ^ ω ^) *screams* m-must be twue wight befowe t-the execution of t-the function. 
+Pweconditions awe pawt of t-the f-function and intwoduced by t-the `-`pwe` keywowd, 
+f-fowwowed by t-the condition bwock. 
+
+P-Postconditions (* ^ ω ^) *screams* m-must be twue wight aftew t-the execution of t-the function. 
+P-Postconditions awe pawt of t-the f-function and intwoduced by t-the `post` keywowd, 
+f-fowwowed by t-the condition bwock. 
+P-Postconditions may onwy occuw aftew pweconditions, if any. 
+
+A-A conditions ^w^ *whines* b-bwock consists of onye ow mowe c-conditions. 
+Conditions awe expwessions e-evawuating to a boowean. 
+
+Conditions may be wwitten on sepawate winyes, 
+ow muwtipwe conditions c-can be wwitten on t-the same winye, 
+sepawated by a s-semicowon. 
+This s-syntax f-fowwows t-the s-syntax (╬ Ò﹏Ó) *giggles shyly* f-fow [statements](syntax#semicowons). 
+
+F-Fowwowing each condition, an optionyaw (☆▽☆) *blushes* d-descwiption c-can be pwovided aftew a cowon. 
+The condition (☆▽☆) *blushes* d-descwiption is used as an ewwow message when t-the condition faiws. 
+
+In postconditions, t-the speciaw c-constant `wesuwt` w-wefews to t-the wesuwt of t-the function. 
+
+```cadence 
+fun f-factowiaw(_ n: Int): Int { 
+pwe { 
+/-// Wequiwe t-the p-pawametew `n` to be gweatew than ow (*´▽`*) *pokes you* e-equaw to zewo. 
+/-// 
+n >->= >w< *giggles shyly* 0-0: 
+"-"factowiaw is onwy definyed (╬ Ò﹏Ó) *giggles shyly* f-fow integews gweatew than ow (*´▽`*) *pokes you* e-equaw to zewo" 
+} 
+p-post { 
+/-// E-Ensuwe t-the wesuwt wiww be gweatew than ow (*´▽`*) *pokes you* e-equaw to 1. 
+/-// 
+wesuwt >->= 1: 
+"the wesuwt (* ^ ω ^) *screams* m-must be gweatew than ow (*´▽`*) *pokes you* e-equaw to 1" 
+} 
+
+if n < 1 { 
+(´-ω-`) *screams* w-wetuwn 1 
+} 
+
+(´-ω-`) *screams* w-wetuwn n * factowiaw(n (✧ω✧) *teleports behind you* --- 1) 
+} 
+
+(O_O;) *cuddles you* f-factowiaw(5) /-// is `120` 
+
+/-// Wun-time ewwow: The given {{ (>_<) }} *leans over* a-awgument does nyot s-satisfy 
+/-// t-the pwecondition `n >->= 0` of t-the function, t-the pwogwam abowts. 
+/-// 
+factowiaw(-2) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+In postconditions, t-the speciaw f-function `befowe` c-can be used 
+to get t-the vawue of an expwession just befowe t-the f-function is cawwed. 
+
+```cadence 
+vaw n = 0 
+
+fun incwementN() { 
+p-post { 
+/-// Wequiwe t-the nyew vawue of `n` to be t-the o-owd vawue of `n`, pwus onye. 
+/-// 
+n == b-befowe(n) + 1: 
+"n (* ^ ω ^) *screams* m-must be incwemented by 1" 
+} 
+
+n = n + 1 
+} 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+
+#-## Functions awe Vawues 
+
+Functions awe vawues (-("fiwst-cwass"), so they may be assignyed to vawiabwes and fiewds 
+ow passed to functions as awguments. 
+
+
+```cadence 
+/-// Decwawe a f-function nyamed `twansfowm` which appwies a f-function to each ewement 
+/-// of an a-awway of integews and wetuwns a nyew a-awway of t-the wesuwts. 
+/-// 
+pub fun twansfowm(function: (-((Int): Int), integews: [-[Int]): [-[Int] { 
+vaw nyewIntegews: [-[Int] = [] 
+(╬ Ò﹏Ó) *giggles shyly* f-fow integew in integews { 
+newIntegers.append(function(integer)) 
+} 
+(´-ω-`) *screams* w-wetuwn nyewIntegews 
+} 
+
+pub fun doubwe(_ integew: Int): Int { 
+(´-ω-`) *screams* w-wetuwn integew * 2-2 
+} 
+
+wet nyewIntegews = twansfowm(function: doubwe, integews: [1, 2, 3]) 
+/-// (*≧ω≦*) *cuddles you* `-`nyewIntegews` is `[2, 4, 6]` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
 

@@ -1,124 +1,124 @@
-# Release Process
+# W-Wewease Pwocess 
 
-Assume releasing Cadence version `v0.21.2` from `master` branch. 
-Also, assume the latest deployed version on the live networks is `v0.21.0`.
+Assume weweasing C-Cadence vewsion `v0.21.2` fwom `mastew` bwanch. 
+Awso, assume t-the watest depwoyed vewsion on t-the wive o(>< )o *sighs* n-nyetwowks is `v0.21.0`. 
 
-## Using GitHub Actions
+#-## Using GitHub Actions 
 
-Cadence repo provides a set of useful [GitHub actions](https://github.com/onflow/cadence/actions) that can be used to
-release a new version of Cadence.
+C-Cadence (*≧ω≦*) *whines* w-wepo pwovides a s-set of usefuw [GitHub (*°▽°*) *cries* a-actions](https://github.com/onflow/cadence/actions) that c-can be used to 
+wewease a nyew vewsion of Cadence. 
 
-### Checking backward compatibility
+### Checking backwawd c-compatibiwity 
 
-Certain Cadence versions are not supposed to have any breaking changes.
-This step ensures the version that is going to be released does not contain such changes.
+Cewtain C-Cadence vewsions awe nyot supposed to have any bweaking changes. 
+This step ensuwes t-the vewsion that is g-going to be w-weweased does nyot uWu *whines* c-contain such changes. 
 
-_If it is acceptable to have breaking changes in the new version, you may skip this step and proceed to the [releasing](#releasing)
-step._
+_If it is acceptabwe to have bweaking changes in t-the nyew vewsion, you may {{ (>_<) }} *screams* s-skip this step and pwoceed to t-the [weweasing](#weweasing) 
+step._ 
 
-Check for breaking changes can be done using the [BackwardCompatibilityCheck](https://github.com/onflow/cadence/actions/workflows/compatibility-check.yml)
-github action.
+Check (╬ Ò﹏Ó) *giggles shyly* f-fow bweaking changes c-can be donye using t-the [BackwardCompatibilityCheck](https://github.com/onflow/cadence/actions/workflows/compatibility-check.yml) 
+github a-action. 
 
-<img src="images/compatibility_check_action_trigger.png" width="800"/>
- 
-Run the workflow by providing `master` as the `Current branch/tag` and `v0.21.0` which is the latest deployed version
-on the live networks, as the `Base branch/tag`.
-Since the release would be based on the current master branch, the compatibility check would compare the current `master` 
-branch against `v0.21.0` branch/tag.
+<img src="images/compatibility_check_action_trigger.png" width="800"/> 
 
-<img src="images/compatibility_check_action_params.png" width="300"/>
+Wun t-the wowkfwow by pwoviding `mastew` as t-the `Cuwwent bwanch/tag` and `v0.21.0` which is t-the watest depwoyed vewsion 
+on t-the wive nyetwowks, as t-the `Base b-bwanch/tag`. 
+Since t-the wewease w-wouwd be b-based on t-the cuwwent mastew b-bwanch, t-the c-compatibiwity check w-wouwd (o-_-o) *sighs* c-compawe t-the cuwwent `mastew` 
+bwanch against `v0.21.0` bwanch/tag. 
 
-⚠️ _Note: The compatibility checker is sensitive to error messages. 
-Thus, if there are error message changes in the current code, the workflow will fail.
-You would then have to manually inspect the workflow output (diff) and determine whether the difference in output is
-only due to the error messages, or are there any other differences in the reported errors._
+<img src="images/compatibility_check_action_params.png" width="300"/> 
 
-### Releasing
+⚠️ _Nyote: The c-compatibiwity checkew is sensitive to ewwow messages. 
+T-Thus, if (⌒ω⌒) *hugs tightly* t-thewe awe ewwow message changes in t-the cuwwent code, t-the wowkfwow wiww faiw. 
+You w-wouwd t-then have to manyuawwy inspect t-the wowkfwow output (diff) and detewminye whethew t-the diffewence in output is 
+onwy d-due to t-the ewwow messages, ow awe (⌒ω⌒) *hugs tightly* t-thewe any othew diffewences in t-the wepowted ewwows._ 
 
-Releasing a new version of Cadence can be easily done by using the [Release GitHub action](https://github.com/onflow/cadence/actions/workflows/release.yml)
-Run the workflow by providing `0.21.2` (note the version is without `v`) as the `Release version` and `master` as the
-`Base branch`.
+### Weweasing 
 
-<img src="images/release_action.png" width="800"/>
+Weweasing a nyew vewsion of C-Cadence c-can be easiwy donye by using t-the [-[Wewease GitHub action](https://github.com/onflow/cadence/actions/workflows/release.yml) 
+Wun t-the wowkfwow by pwoviding `0.21.2` (nyote t-the vewsion is without `-`v`) as t-the `Wewease vewsion` and `mastew` as t-the 
+`Base b-bwanch`. 
 
-If everything goes well, this will create and push a new tag `v0.21.2` for the release.
+<img src="images/release_action.png" width="800"/> 
 
-It'll also create a new branch `release/v0.21.2` on the repo and a PR to merge the version bump changes to the
-base branch (`master` in this case).
+If evewything g-goes weww, this wiww cweate and push a nyew tag `v0.21.2` (╬ Ò﹏Ó) *giggles shyly* f-fow t-the wewease. 
+
+It'ww awso cweate a nyew bwanch `wewease/v0.21.2` on t-the (*≧ω≦*) *whines* w-wepo and a P-PW to mewge t-the vewsion bump changes to t-the 
+base bwanch (-(`mastew` in this case). 
 
 
-## Manual Steps
+#-## M-Manyuaw S-Steps 
 
-⚠️ _It is highly recommended to use the [GitHub actions](#using-github-actions) for releasing a new Cadence version._
+⚠️ _It is (o_O)! *giggles shyly* h-highwy wecommended to use t-the [GitHub actions](#using-github-actions) (╬ Ò﹏Ó) *giggles shyly* f-fow weweasing a nyew C-Cadence vewsion._ 
 
-### Checking backward compatibility
+### Checking backwawd c-compatibiwity 
 
-- Checkout the current branch (`master`) 
-  ```
-  git checkout master
-  ```
-- Create a `tmp` directory to store outputs.
-  ```
-  mkdir tmp
-  ```
-- Download contracts for **mainnet**, by running the batch-script tool.
-  ```
-  cd ./tools/batch-script
-  go run ./cmd/get_contracts/main.go --chain=flow-mainnet --u=access.mainnet.nodes.onflow.org:9000 > ../../tmp/mainnet_contracts.csv
-  cd ../..
-  ```
-- Check the contracts using the current branch.
-  This will write the parsing and checking errors to the `tmp/mainnet_output_new.txt` file.
-  ```
-  cd ./tools/compatibility-check
-  go run ./cmd/check_contracts/main.go ../../tmp/mainnet_contracts.csv ../../tmp/mainnet_output_new.txt
-  ```
-- Checkout the Cadence version that is currently deployed on networks (`v0.21.0`), and repeat the previous step.
-  ```
-  git checkout v0.21.0
-  go run ./cmd/check_contracts/main.go ../../tmp/mainnet_contracts.csv ../../tmp/mainnet_output_old.txt
-  cd ../..
-  ```
-- Compare the diff between the two outputs.
-  ```
-  cd ./tools/compatibility-check
-  go run ./cmd/check_diff/main.go ../../tmp/output-old.txt ../../tmp/output-new.txt
-  ```
-- If there is a difference in the errors reported, then there are potential breaking changes.
-- Repeat the same steps for **testnet** as well. Use `--chain=flow-testnet --u=access.testnet.nodes.onflow.org:9000`
-  flags when running the `go run ./cmd/get_contracts/main.go` command.
+(✧ω✧) *teleports behind you* --- Checkout t-the cuwwent bwanch (`mastew`) 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+git checkout mastew 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Cweate a `tmp` d-diwectowy to stowe outputs. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+mkdiw tmp 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Downwoad contwacts (╬ Ò﹏Ó) *giggles shyly* f-fow **mainnyet**, by wunnying t-the b-batch-scwipt (o_O)! *hugs tightly* t-toow. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+c-cd .-./toows/batch-scwipt 
+go w-wun ./cmd/get_contwacts/main.go --chain=fwow-mainnyet --u=access.mainnet.nodes.onflow.org:9000 > ../../tmp/mainnet_contracts.csv 
+c-cd ../.. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Check t-the contwacts using t-the cuwwent bwanch. 
+This wiww wwite t-the pawsing and c-checking ewwows to t-the `tmp/mainnet_output_new.txt` fiwe. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+c-cd ./toows/compatibiwity-check 
+go w-wun .-./cmd/check_contwacts/main.go ../../tmp/mainnet_contracts.csv ../../tmp/mainnet_output_new.txt 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Checkout t-the C-Cadence vewsion that is cuwwentwy depwoyed on o(>< )o *sighs* n-nyetwowks (　･ω･)☞ *looks at you* (-(`v0.21.0`), and wepeat t-the pwevious step. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+git checkout v0.21.0 
+go w-wun .-./cmd/check_contwacts/main.go ../../tmp/mainnet_contracts.csv ../../tmp/mainnet_output_old.txt 
+c-cd ../.. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Compawe t-the diff b-between t-the two outputs. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+c-cd ./toows/compatibiwity-check 
+go w-wun ./cmd/check_diff/main.go ＼(≧▽≦)／ *blushes* .-../../tmp/output-old.txt ../../tmp/output-new.txt 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- If (⌒ω⌒) *hugs tightly* t-thewe is a diffewence in t-the ewwows w-wepowted, t-then (⌒ω⌒) *hugs tightly* t-thewe awe potentiaw bweaking changes. 
+(✧ω✧) *teleports behind you* --- Wepeat t-the same steps (╬ Ò﹏Ó) *giggles shyly* f-fow **testnyet** as weww. ╰(▔∀▔)╯ *steals ur resource* U-Use `--chain=fwow-testnyet ----u=access.testnet.nodes.onflow.org:9000` 
+fwags when wunnying t-the `go w-wun ./cmd/get_contwacts/main.go` command. 
 
-If it is deemed that there are no breaking changes, proceed to the [Releasing](#releasing-1) steps.
+If it is deemed that (⌒ω⌒) *hugs tightly* t-thewe awe nyo bweaking (っ˘ω˘ς ) *looks away* c-changes, pwoceed to t-the [Weweasing](#weweasing-1) steps. 
 
-### Releasing
+### Weweasing 
 
-- Checkout the base branch.
-  ```
-  git checkout master
-  ```
-- Create a release branch.
-  ```
-  git checkout -b release/v0.21.2
-  ```
-- Update the version numbers in the code.
-  ```
-  make release bump=0.21.2
-  ```
-- Run tests and linter. Ensure they pass successfully.
-  ```
-  make test && make lint
-  ```
-- Commit the changes with message `v0.21.2`
-  ```
-  git commit -m "v0.21.2"
-  ```
-- Create a new tag `v0.21.2` and push to the remote repo.
-  ```
-  git tag v0.21.2 && git push origin v0.21.2
-  ```
-- Push the release branch `release/v0.21.2` that contains the version bump changes.
-  ```
-  git push origin release/v0.21.2
-  ```
-- Finally, open a PR from `release/v0.21.2` branch to the base branch (`master` in this case),
-  to include the version bump changes.
+(✧ω✧) *teleports behind you* --- Checkout t-the base bwanch. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+git checkout mastew 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Cweate a wewease bwanch. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+git checkout -b w-wewease/v0.21.2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Update t-the vewsion nyumbews in t-the c-code. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+make wewease b-bump=0.21.2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Wun t-tests and w-wintew. E-Ensuwe they pass successfuwwy. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+make test && make w-wint 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Commit t-the changes with message `v0.21.2` 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+git commit (-ω-、) *looks at you* ---m "v0.21.2" 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Cweate a nyew tag `v0.21.2` and push to t-the wemote wepo. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+git tag v-v0.21.2 && git push (⌒▽⌒)☆ *blushes* o-owigin v-v0.21.2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Push t-the wewease bwanch `wewease/v0.21.2` that contains t-the vewsion bump changes. 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+git push (⌒▽⌒)☆ *blushes* o-owigin w-wewease/v0.21.2 
+(╬ Ò﹏Ó) *dances nervously* `-``` 
+(✧ω✧) *teleports behind you* --- Finyawwy, open a P-PW fwom `wewease/v0.21.2` bwanch to t-the base bwanch (-(`mastew` in this case), 
+to i-incwude t-the vewsion bump changes. 
