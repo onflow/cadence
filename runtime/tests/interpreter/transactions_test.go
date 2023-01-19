@@ -371,19 +371,20 @@ func TestInterpretTransactionRoles(t *testing.T) {
 
                       prepare(signer: AuthAccount) {
                           log("a 2")
-                          log(a)
-                          log("b 2")
-                          log(b)
-                          log("self.bar")
+                          //log(a)
+                          //log("b 2")
+                          //log(b)
                           self.bar = signer.address.toString()
+                          log("self.bar")
+                          log(self.bar)
                       }
                   }
 
                   execute {
                       log("self.foo 2")
                       log(self.foo)
-                      //log("self.buyer.bar")
-                      //log(self.buyer.bar)
+                      log("self.buyer.bar")
+                      log(self.buyer.bar)
                   }
               }
             `,
@@ -409,7 +410,7 @@ func TestInterpretTransactionRoles(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("B"),
 			signer,
 		)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		assert.Equal(t,
 			[]string{
@@ -420,15 +421,17 @@ func TestInterpretTransactionRoles(t *testing.T) {
 				"B",
 				"self.foo 1",
 				"0x0000000000000001",
-				//// role prepare
-				//"a 2",
+				// role prepare
+				"a 2",
 				//"A",
 				//"b 2",
 				//"B",
-				//"self.bar",
-				//"0x0000000000000001",
+				"self.bar",
+				"0x0000000000000001",
 				// execute
 				"self.foo 2",
+				"0x0000000000000001",
+				"self.buyer.bar",
 				"0x0000000000000001",
 			},
 			logs,

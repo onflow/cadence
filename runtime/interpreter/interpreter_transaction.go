@@ -19,7 +19,11 @@
 package interpreter
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -53,7 +57,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 	staticType := NewCompositeStaticTypeComputeTypeID(interpreter, interpreter.Location, "")
 
-	self := NewSimpleCompositeValue(
+	transactionValue := NewSimpleCompositeValue(
 		interpreter,
 		staticType.TypeID,
 		staticType,
@@ -64,6 +68,20 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		nil,
 	)
 
+	var rolePrepareFunctions []*HostFunctionValue
+	for _, role := range declaration.Roles {
+		roleName := role.Identifier.Identifier
+
+		roleValue, rolePrepareFunctionValue := interpreter.declareTransactionRole(role)
+
+		rolePrepareFunctions = append(
+			rolePrepareFunctions,
+			rolePrepareFunctionValue,
+		)
+
+		transactionValue.Fields[roleName] = roleValue
+	}
+
 	// Construct a raw HostFunctionValue without a type,
 	// instead of using NewHostFunctionValue, which requires a type.
 	//
@@ -71,11 +89,14 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	// and can never be passed around as a value.
 	// Hence, the type is not required.
 
+	common.UseMemory(interpreter, common.HostFunctionValueMemoryUsage)
+
 	transactionFunction := &HostFunctionValue{
 		Function: func(invocation Invocation) Value {
 			interpreter.activations.PushNewWithParent(lexicalScope)
+			defer interpreter.activations.Pop()
 
-			self := MemberAccessibleValue(self)
+			self := MemberAccessibleValue(transactionValue)
 			invocation.Self = &self
 			interpreter.declareVariable(sema.SelfIdentifier, self)
 
@@ -105,6 +126,10 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				)
 
 				prepare.invoke(invocation)
+			}
+
+			for _, rolePrepareFunction := range rolePrepareFunctions {
+				rolePrepareFunction.invoke(invocation)
 			}
 
 			var body func() StatementResult
@@ -148,6 +173,78 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 }
 
 func (interpreter *Interpreter) VisitTransactionRoleDeclaration(_ *ast.TransactionRoleDeclaration) StatementResult {
-	// TODO:
-	panic("TODO")
+	panic(errors.NewUnreachableError())
+}
+
+func (interpreter *Interpreter) declareTransactionRole(
+	declaration *ast.TransactionRoleDeclaration,
+) (
+	roleValue *SimpleCompositeValue,
+	prepareFunctionValue *HostFunctionValue,
+) {
+	transactionRoleType := interpreter.Program.Elaboration.TransactionRoleDeclarationType(declaration)
+
+	lexicalScope := interpreter.activations.CurrentOrNew()
+
+	var prepareFunction *ast.FunctionDeclaration
+	var prepareFunctionType *sema.FunctionType
+	if declaration.Prepare != nil {
+		prepareFunction = declaration.Prepare.FunctionDeclaration
+		prepareFunctionType = transactionRoleType.PrepareFunctionType()
+	}
+
+	staticType := NewCompositeStaticTypeComputeTypeID(
+		interpreter,
+		interpreter.Location,
+		fmt.Sprintf(".%s", declaration.Identifier.Identifier),
+	)
+
+	roleValue = NewSimpleCompositeValue(
+		interpreter,
+		staticType.TypeID,
+		staticType,
+		nil,
+		map[string]Value{},
+		nil,
+		nil,
+		nil,
+	)
+
+	// Construct a raw HostFunctionValue without a type,
+	// instead of using NewHostFunctionValue, which requires a type.
+	//
+	// This host function value is an internally created and used function,
+	// and can never be passed around as a value.
+	// Hence, the type is not required.
+
+	common.UseMemory(interpreter, common.HostFunctionValueMemoryUsage)
+
+	prepareFunctionValue = &HostFunctionValue{
+		Function: func(invocation Invocation) Value {
+			interpreter.activations.PushNewWithParent(lexicalScope)
+			defer interpreter.activations.Pop()
+
+			self := MemberAccessibleValue(roleValue)
+			invocation.Self = &self
+			interpreter.declareVariable(sema.SelfIdentifier, self)
+
+			// NOTE: get current scope instead of using `lexicalScope`,
+			// because current scope has `self` declared
+			transactionScope := interpreter.activations.CurrentOrNew()
+
+			if prepareFunction != nil {
+				prepare := interpreter.functionDeclarationValue(
+					prepareFunction,
+					prepareFunctionType,
+					transactionScope,
+				)
+
+				prepare.invoke(invocation)
+			}
+
+			return Void
+		},
+	}
+
+	return
 }
