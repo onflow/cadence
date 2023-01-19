@@ -53,7 +53,7 @@ class Updater {
             }
 
             console.log(`\nChecking repo ${repo.repo} ...`)
-            const updated = await runWithInConsoleGroup(async () => {
+            const updated = await runWithConsoleGroup(async () => {
                 return await this.updateRepo(repo)
             })
             if (!updated)
@@ -262,7 +262,7 @@ class Updater {
             }
         )) {
             for (const pull of page.data) {
-                const isVersionUpdatePR = await runWithInConsoleGroup(async () => {
+                const isVersionUpdatePR = await runWithConsoleGroup(async () => {
                     return this.prIsUpdate(pull, repo)
                 })
                 if (isVersionUpdatePR)
@@ -566,7 +566,7 @@ class Releaser {
         .parse()
 })()
 
-async function runWithInConsoleGroup(func: () => Promise<boolean>): Promise<boolean> {
+async function runWithConsoleGroup(func: () => Promise<boolean>): Promise<boolean> {
     console.group()
     const result = func()
     result.finally(console.groupEnd)
