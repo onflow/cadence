@@ -37,7 +37,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("NoPrepareFunction", func(t *testing.T) {
+	t.Run("no prepare function", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -53,7 +53,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("SetTransactionField", func(t *testing.T) {
+	t.Run("field and prepare", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -76,7 +76,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("PreConditions", func(t *testing.T) {
+	t.Run("succeeding pre-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -99,7 +99,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("FailingPreConditions", func(t *testing.T) {
+	t.Run("failing pre-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -130,7 +130,7 @@ func TestInterpretTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("PostConditions", func(t *testing.T) {
+	t.Run("succeeding post-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -157,7 +157,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("FailingPostConditions", func(t *testing.T) {
+	t.Run("failing post-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -192,7 +192,7 @@ func TestInterpretTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("MultipleTransactions", func(t *testing.T) {
+	t.Run("multiple transactions", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -223,7 +223,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.TransactionNotDeclaredError{}, err)
 	})
 
-	t.Run("TooFewArguments", func(t *testing.T) {
+	t.Run("invocation with too few arguments", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -237,7 +237,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
-	t.Run("TooManyArguments", func(t *testing.T) {
+	t.Run("invocation with too many arguments", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -271,7 +271,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
-	t.Run("Parameters", func(t *testing.T) {
+	t.Run("transaction parameters", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -326,7 +326,7 @@ func TestInterpretTransactionRoles(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("NoPrepareFunction", func(t *testing.T) {
+	t.Run("single role with field", func(t *testing.T) {
 
 		t.Parallel()
 
