@@ -643,6 +643,22 @@ func TestCheckTransactionRoles(t *testing.T) {
 		)
 	})
 
+	t.Run("prepare, but no transaction prepare ", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+                  role buyer {
+                      prepare(signer: AuthAccount) {}
+                  }
+              }
+            `,
+			[]error{
+				&sema.PrepareParameterCountMismatchError{},
+			},
+		)
+	})
+
 	t.Run("transaction parameter usage", func(t *testing.T) {
 		test(
 			t,
