@@ -438,7 +438,7 @@ func TestInterpretTransactionRoles(t *testing.T) {
 		)
 	})
 
-	t.Run("single role with field", func(t *testing.T) {
+	t.Run("multiple roles, each with a field", func(t *testing.T) {
 
 		t.Parallel()
 
