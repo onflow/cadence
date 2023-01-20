@@ -14,6 +14,11 @@ const prompts = require('prompts')
 
 type Pull = octokitTypes.components["schemas"]['pull-request-simple']
 
+enum Protocol {
+    HTTPS,
+    SSH,
+}
+
 function isValidSemVer(version: string): boolean {
     return !!asValidSemVer(version)
 }
@@ -37,7 +42,8 @@ class Updater {
     constructor(
         public versions: Map<string, string>,
         public config: CadenceUpdateToolConfigSchema,
-        public octokit: Octokit
+        public octokit: Octokit,
+        public protocol: Protocol
     ) {}
 
     async update(repoName: string | undefined): Promise<void> {
@@ -155,7 +161,7 @@ class Updater {
 
                 const version = versionAnswer.version.trim()
 
-                await new Releaser(fullRepoName, mod.path, version, this.octokit).release()
+                await new Releaser(fullRepoName, mod.path, version, this.octokit, this.protocol).release()
             }
         }
     }
@@ -336,7 +342,7 @@ class Updater {
         const dir = await mkdtemp(path.join(os.tmpdir(), `${owner}-${repoName}`))
 
         console.log(`Cloning ${fullRepoName} ...`)
-        await exec(`git clone https://github.com/${fullRepoName} ${dir}`)
+        await gitClone(this.protocol, fullRepoName, dir)
         process.chdir(dir)
 
         const rootFullRepoName = this.config.repo
@@ -410,7 +416,6 @@ ${updateList}
         console.log(`Cleaning up clone of ${fullRepoName} ...`)
         await rm(dir, { recursive: true, force: true })
     }
-
 }
 
 async function authenticate(): Promise<Octokit> {
@@ -442,7 +447,8 @@ class Releaser {
         public repo: string,
         public modPath: string,
         public version: string,
-        public octokit: Octokit
+        public octokit: Octokit,
+        public protocol: Protocol
     ) {}
 
     // release tags a release of the given repo.
@@ -468,7 +474,7 @@ class Releaser {
         const dir = await mkdtemp(path.join(os.tmpdir(), `${owner}-${repoName}`))
 
         console.log(`Cloning ${this.repo} ...`)
-        await exec(`git clone https://github.com/${this.repo} ${dir}`)
+        await gitClone(this.protocol, this.repo, dir)
         process.chdir(dir)
 
         console.log(`Tagging ${this.repo} version ${this.version} ...`)
@@ -518,6 +524,11 @@ class Releaser {
                     type: 'string',
                     describe: 'Comma separated list of repo@version',
                     default: ''
+                },
+                useSSH: {
+                    type: 'boolean',
+                    describe: 'Whether to use SSH to connect to GitHub. Defaults to HTTPS',
+                    default: false
                 }
             },
             async (args) => {
@@ -533,7 +544,9 @@ class Releaser {
                     versions.set(repo, version)
                 }
 
-                await new Updater(versions, config, octokit)
+                const protocol = args.useSSH ? Protocol.SSH : Protocol.HTTPS
+
+                await new Updater(versions, config, octokit, protocol)
                     .update(args.repo)
             }
         )
@@ -558,13 +571,36 @@ class Releaser {
                     type: 'string',
                     describe: 'The mod path'
                 },
+                useSSH: {
+                    type: 'boolean',
+                    describe: 'Whether to use SSH to connect to GitHub. Defaults to HTTPS',
+                    default: false
+                }
             },
             async (args) => {
-                await new Releaser(args.repo, args.mod || '', args.version, octokit).release()
+                const protocol = args.useSSH ? Protocol.SSH : Protocol.HTTPS
+                await new Releaser(args.repo, args.mod || '', args.version, octokit, protocol).release()
             }
         )
         .parse()
 })()
+
+
+async function gitClone(protocol: Protocol, fullRepoName: string, dir: string) {
+    let command: string
+    switch (protocol) {
+        case Protocol.HTTPS:
+            command = `git clone https://github.com/${fullRepoName} ${dir}`
+            break
+        case Protocol.SSH:
+            command = `git clone git@github.com:${fullRepoName} ${dir}`
+            break
+        default:
+            console.error(`unsupported protocol: ${protocol}`)
+            return
+    }
+    await exec(command)
+}
 
 async function runWithConsoleGroup(func: () => Promise<boolean>): Promise<boolean> {
     console.group()

@@ -26,6 +26,9 @@ instead of manually providing.
 GH_TOKEN=`gh auth token` ts-node main.ts update --version <version>
 ```
 
+The `update` command use HTTPS to connect to github by default. To use SSH instead, use `--useSSH true` as arguments in
+the command.
+
 By default, the tool does not release certain dependencies. e.g. flow-go.
 These repos have to be manually released/tagged.
 
