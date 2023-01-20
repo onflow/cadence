@@ -24,18 +24,21 @@ balances from multiple token types into a convenient view for the user.
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/ethereum-ownership.png" />
 
 Cadence introduces new primitives and distinct functionalities, namely Resources and Capabilities, that are designed
-around Flow's account model. Capabilities are special types that enable builders to secure protected resources without
-the need for address-based approvals or authorizations. The object-oriented nature of the language makes working with
-these straightforward and intuitive.
+around Flow's account model. Resources are first-class language types which are unique, non-copyable, and which cannot
+be destroyed. Resources are always stored in account storage and contracts control access to them using Capabilities.
+Capabilities are another special type that secure protected resources without the need for address-based approvals
+or authorizations. Cadence makes working with these straightforward and intuitive to those familiar with
+object-oriented programming languages.
 
 Newcomers to Cadence should ensure they understand the following major concepts before development.
 
 ## Flow account model
 
-The [Flow account model](learn#concepts#accounts-and-keys) in Cadence combines storage for the keys and code (”smart contracts”) associated
-with an account with storage for the assets owned by that account. That’s right: In Cadence, your tokens are stored in
-your account, and not in a smart contract. Of course, smart contracts still define these assets and how they behave,
-but those assets can be securely stored in a user’s account through the magic of Resources.
+The [Flow account model](learn#concepts#accounts-and-keys) in Cadence combines storage for the keys and code
+(”smart contracts”) associated with an account with storage for the assets owned by that account. That’s right:
+In Cadence, your tokens are stored in your account, and not in a smart contract. Of course, smart contracts still
+define these assets and how they behave, but those assets can be securely stored in a user’s account through the
+magic of Resources.
 
 There is only one account type in Cadence also with an account address, similar to an Externally-Owned-Account
 (EOA) address in Ethereum. However, unlike Ethereum contract-accounts, accounts in Cadence also store contract code.
@@ -316,7 +319,7 @@ is executed. The main drawback with this approach is that does not support execu
 See [BLS Signature scheme](https://docs.onflow.org/cadence/language/crypto/#bls-multi-signature) for a detailed
 overview of the inherent support of BLS signatures.
 
-# Non-functional differences
+# Other platform differences
 
 The following differences unrelated to implementing Cadence contracts are useful to understand in comparison
 with Ethereum.
