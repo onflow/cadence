@@ -575,4 +575,91 @@ func TestInterpretTransactionRoles(t *testing.T) {
 		)
 	})
 
+	t.Run("single role, multiple signers", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				firstArgument := invocation.Arguments[0]
+				message := firstArgument.(*interpreter.StringValue).Str
+				logs = append(logs, message)
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              transaction {
+
+                  prepare(signer1: AuthAccount, signer2: AuthAccount) {}
+
+                  role role1 {
+                      let signer1Address: String
+                      let signer2Address: String
+
+                      prepare(signer1: AuthAccount, signer2: AuthAccount) {
+                          self.signer1Address = signer1.address.toString()
+                          self.signer2Address = signer2.address.toString()
+                      }
+                  }
+
+                  execute {
+                      log("self.role1.signer1Address")
+                      log(self.role1.signer1Address)
+                      log("self.role1.signer2Address")
+                      log(self.role1.signer2Address)
+                  }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		signer1 := newTestAuthAccountValue(
+			nil,
+			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
+		)
+
+		signer2 := newTestAuthAccountValue(
+			nil,
+			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
+		)
+
+		err = inter.InvokeTransaction(
+			0,
+			signer1,
+			signer2,
+		)
+		assert.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				"self.role1.signer1Address",
+				"0x0000000000000001",
+				"self.role1.signer2Address",
+				"0x0000000000000002",
+			},
+			logs,
+		)
+	})
+
 }
