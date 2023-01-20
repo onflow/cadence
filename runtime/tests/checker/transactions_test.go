@@ -714,6 +714,37 @@ func TestCheckTransactionRoles(t *testing.T) {
 		)
 	})
 
+	t.Run("resource field use after invalidation", func(t *testing.T) {
+		test(t,
+			`
+              resource R {}
+
+              fun absorb(_ r: @R) {
+                  destroy r
+              }
+
+              transaction {
+
+                  role role1 {
+                      var r: @R
+
+                      prepare() {
+                          self.r <- create R()
+                      }
+                  }
+
+                  execute {
+                      absorb(<-self.role1.r)
+                      absorb(<-self.role1.r)
+                  }
+              }
+            `,
+			[]error{
+				&sema.ResourceUseAfterInvalidationError{},
+			},
+		)
+	})
+
 }
 
 func TestCheckTransactionExecuteScope(t *testing.T) {

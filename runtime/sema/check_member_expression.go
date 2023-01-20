@@ -110,6 +110,24 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 				IsOptional:   isOptional,
 			},
 		)
+
+		// If the access is to a member which may be invalidated,
+		// its use must be recorded/checked, so that it isn't used after it was invalidated
+
+		resourceFieldInvalidationAllowed := checker.resourceFieldInvalidationAllowed
+		if resourceFieldInvalidationAllowed != nil {
+			member := resourceFieldInvalidationAllowed(expression)
+			if member != nil && member.TypeAnnotation.Type.IsResourceType() {
+
+				// NOTE: Preventing the capturing of the resource field is already implicitly handled:
+				// By definition, the resource field can only be nested in a resource,
+				// so `self` is a resource, and the capture of it is checked separately
+
+				res := Resource{Member: member}
+
+				checker.checkResourceUseAfterInvalidation(res, expression.Identifier)
+			}
+		}
 	}()
 
 	accessedExpression := expression.Expression
@@ -131,22 +149,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 	if expression.Identifier.Identifier == "" {
 		return accessedType, member, isOptional
-	}
-
-	// If the access is to a member of `self` and a resource,
-	// its use must be recorded/checked, so that it isn't used after it was invalidated
-
-	accessedSelfMember := checker.accessedSelfMember(expression)
-	if accessedSelfMember != nil &&
-		accessedSelfMember.TypeAnnotation.Type.IsResourceType() {
-
-		// NOTE: Preventing the capturing of the resource field is already implicitly handled:
-		// By definition, the resource field can only be nested in a resource,
-		// so `self` is a resource, and the capture of it is checked separately
-
-		res := Resource{Member: accessedSelfMember}
-
-		checker.checkResourceUseAfterInvalidation(res, expression.Identifier)
 	}
 
 	identifier := expression.Identifier.Identifier

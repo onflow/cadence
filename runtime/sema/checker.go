@@ -1407,8 +1407,9 @@ func (checker *Checker) recordResourceInvalidation(
 		})
 
 	case *ast.MemberExpression:
-		if checker.resourceFieldInvalidationAllowed != nil {
-			member := checker.resourceFieldInvalidationAllowed(expression)
+		resourceFieldInvalidationAllowed := checker.resourceFieldInvalidationAllowed
+		if resourceFieldInvalidationAllowed != nil {
+			member := resourceFieldInvalidationAllowed(expression)
 			if member != nil {
 				return getRecordedResourceInvalidation(Resource{
 					Member: member,
