@@ -261,14 +261,14 @@ func TestCheckTransactions(t *testing.T) {
 
               transaction {
 
-                var x: @R
+                var r: @R
 
                 prepare() {
-                    self.x <- create R()
+                    self.r <- create R()
                 }
 
                 execute {
-                    destroy self.x
+                    destroy self.r
                 }
               }
             `,
@@ -283,10 +283,10 @@ func TestCheckTransactions(t *testing.T) {
 
               transaction {
 
-                  var x: @R
+                  var r: @R
 
                   prepare() {
-                      self.x <- create R()
+                      self.r <- create R()
                   }
 
                   execute {}
@@ -555,7 +555,7 @@ func TestCheckTransactionRoles(t *testing.T) {
 
                   prepare(signer: AuthAccount) {}
 
-                  role buyer {
+                  role role1 {
                       let foo: Int
 
                       prepare(foo: Int) {
@@ -579,7 +579,7 @@ func TestCheckTransactionRoles(t *testing.T) {
 
                   prepare(signer: AuthAccount) {}
 
-                  role buyer {
+                  role role1 {
                       prepare(signer: AuthAccount) {}
                   }
               }
@@ -596,7 +596,7 @@ func TestCheckTransactionRoles(t *testing.T) {
 
                   prepare(signer: AuthAccount) {}
 
-                  role buyer {}
+                  role role1 {}
               }
             `,
 			[]error{
@@ -613,7 +613,7 @@ func TestCheckTransactionRoles(t *testing.T) {
 
                   prepare(signer: AuthAccount) {}
 
-                  role buyer {
+                  role role1 {
                       prepare() {}
                   }
               }
@@ -632,7 +632,7 @@ func TestCheckTransactionRoles(t *testing.T) {
 
                   prepare(signer: AuthAccount) {}
 
-                  role buyer {
+                  role role1 {
                       prepare(firstSigner: AuthAccount, secondSigner: AuthAccount) {}
                   }
               }
@@ -649,7 +649,7 @@ func TestCheckTransactionRoles(t *testing.T) {
 			`
               transaction(foo: Int) {
 
-                  role buyer {
+                  role role1 {
                       let foo: Int
 
                       prepare() {
@@ -673,16 +673,16 @@ func TestCheckTransactionRoles(t *testing.T) {
 
               transaction {
 
-                  role buyer {
-                      var x: @R
+                  role role1 {
+                      var r: @R
 
                       prepare() {
-                          self.x <- create R()
+                          self.r <- create R()
                       }
                   }
 
                   execute {
-                      absorb(<-self.buyer.x)
+                      absorb(<-self.role1.r)
                   }
               }
             `,
@@ -697,11 +697,11 @@ func TestCheckTransactionRoles(t *testing.T) {
 
               transaction {
 
-                  role buyer {
-                      var x: @R
+                  role role1 {
+                      var r: @R
 
                       prepare() {
-                          self.x <- create R()
+                          self.r <- create R()
                       }
                   }
 
@@ -857,7 +857,7 @@ func TestCheckInvalidTransactionRoleSelfMove(t *testing.T) {
 
           transaction {
 
-              role buyer {
+              role role1 {
                   prepare() {
                       let x = self
                   }
@@ -878,7 +878,7 @@ func TestCheckInvalidTransactionRoleSelfMove(t *testing.T) {
 
           transaction {
 
-              role buyer {
+              role role1 {
                   prepare() {
                       let txs = [self]
                   }
@@ -899,7 +899,7 @@ func TestCheckInvalidTransactionRoleSelfMove(t *testing.T) {
 
           transaction {
 
-              role buyer {
+              role role1 {
                   prepare() {
                       let txs = {"self": self}
                   }
