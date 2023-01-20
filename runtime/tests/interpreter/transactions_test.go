@@ -366,7 +366,7 @@ func TestInterpretTransactionRoles(t *testing.T) {
                       log(self.foo)
                   }
 
-                  role buyer {
+                  role role1 {
                       let bar: String
 
                       prepare(signer: AuthAccount) {
@@ -383,8 +383,8 @@ func TestInterpretTransactionRoles(t *testing.T) {
                   execute {
                       log("self.foo 2")
                       log(self.foo)
-                      log("self.buyer.bar")
-                      log(self.buyer.bar)
+                      log("self.role1.bar")
+                      log(self.role1.bar)
                   }
               }
             `,
@@ -431,7 +431,144 @@ func TestInterpretTransactionRoles(t *testing.T) {
 				// execute
 				"self.foo 2",
 				"0x0000000000000001",
-				"self.buyer.bar",
+				"self.role1.bar",
+				"0x0000000000000001",
+			},
+			logs,
+		)
+	})
+
+	t.Run("single role with field", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				firstArgument := invocation.Arguments[0]
+				message := firstArgument.(*interpreter.StringValue).Str
+				logs = append(logs, message)
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              transaction(a: String, b: String) {
+
+                  let foo: String
+
+                  prepare(signer: AuthAccount) {
+                      log("a 1")
+                      log(a)
+                      log("b 1")
+                      log(b)
+                      self.foo = signer.address.toString()
+                      log("self.foo 1")
+                      log(self.foo)
+                  }
+
+                  role role1 {
+                      let bar: String
+
+                      prepare(signer: AuthAccount) {
+                          log("a 2")
+                          log(a)
+                          log("b 2")
+                          log(b)
+                          self.bar = signer.address.toString()
+                          log("self.bar")
+                          log(self.bar)
+                      }
+                  }
+
+                  role role2 {
+                      let baz: String
+
+                      prepare(signer: AuthAccount) {
+                          log("a 3")
+                          log(a)
+                          log("b 3")
+                          log(b)
+                          self.baz = signer.address.toString()
+                          log("self.baz")
+                          log(self.baz)
+                      }
+                  }
+
+                  execute {
+                      log("self.foo 2")
+                      log(self.foo)
+                      log("self.role1.bar")
+                      log(self.role1.bar)
+                      log("self.role2.baz")
+                      log(self.role2.baz)
+                  }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		signer := newTestAuthAccountValue(
+			nil,
+			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
+		)
+
+		err = inter.InvokeTransaction(
+			0,
+			interpreter.NewUnmeteredStringValue("A"),
+			interpreter.NewUnmeteredStringValue("B"),
+			signer,
+		)
+		assert.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				// transaction prepare
+				"a 1",
+				"A",
+				"b 1",
+				"B",
+				"self.foo 1",
+				"0x0000000000000001",
+				// role1 prepare
+				"a 2",
+				"A",
+				"b 2",
+				"B",
+				"self.bar",
+				"0x0000000000000001",
+				// role2 prepare
+				"a 3",
+				"A",
+				"b 3",
+				"B",
+				"self.baz",
+				"0x0000000000000001",
+				// execute
+				"self.foo 2",
+				"0x0000000000000001",
+				"self.role1.bar",
+				"0x0000000000000001",
+				"self.role2.baz",
 				"0x0000000000000001",
 			},
 			logs,
