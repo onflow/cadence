@@ -4,9 +4,10 @@ title: Guide for Solidity developers
 Cadence introduces a different way to approach smart contract development which may feel unfamiliar to
 Solidity developers. There are fundamental mindset and platform differences, and also several new language
 features that have no real equivalent in Solidity. This guide outlines high level design and conceptual
-aspects of Flow and Cadence that are essential to understand, as well as detailed guidance on how to
-perform certain common Solidity development tasks using Cadence idioms. We also provide details on how best to
-leverage Cadence's unique features and how to avoid common pitfalls that may come up while transitioning.
+aspects of Flow and Cadence that are essential to understand, platform and integration differences, as well
+as detailed guidance on how to perform certain common Solidity development tasks using Cadence idioms. We also
+provide details on how best to leverage Cadence's unique features and how to avoid common pitfalls that may come
+up while transitioning.
 
 # Conceptual foundations for Cadence
 
@@ -25,10 +26,11 @@ balances from multiple token types into a convenient view for the user.
 
 Cadence introduces new primitives and distinct functionalities, namely Resources and Capabilities, that are designed
 around Flow's account model. Resources are first-class language types which are unique, non-copyable, and which cannot
-be destroyed. Resources are always stored in account storage and contracts control access to them using Capabilities.
-Capabilities are another special type that secure protected resources without the need for address-based approvals
-or authorizations. Cadence makes working with these straightforward and intuitive to those familiar with
-object-oriented programming languages.
+be discarded. These properties make Resources ideal for representing tokens that may be available in limited numbers.
+Resources are always stored in account storage and contracts control access to them using Capabilities. Capabilities
+are another special type that secure protected resources without the need for address-based approvals or
+authorizations. Cadence makes working with these straightforward and intuitive to those familiar with object-oriented
+programming languages.
 
 Newcomers to Cadence should ensure they understand the following major concepts before development.
 
@@ -68,11 +70,14 @@ controls minting through an “administrator Capability” that grants specific 
 
 ## Contract standards
 
-There are numerous contract standards established to benefit the ecosystem, for example Fungible Token and Non-Fungible
-Token. Cadence's object-oriented nature means standards apply through sub-types such as Resources, Resource interfaces,
-or other types declared in the contract standard. Standards can define and limit behaviour and/or set conditions
-which implementations of the standard cannot violate. Detailed information about available standards can be found
-in [Core contracts](flow#core-contracts).
+There are numerous contract standards established to benefit the ecosystem, for example
+[Fungible Token](https://github.com/onflow/flow-ft/blob/master/contracts/FungibleToken.cdc) and
+[Non-Fungible Token](https://github.com/onflow/flow-nft/blob/master/contracts/NonFungibleToken.cdc) are conceptually
+equivalent to Ethereum's ERC-20 and ERC-721 standards. Cadence's object-oriented design means standards apply through
+contract sub-types such as Resources, Resource interfaces, or other types declared in the contract standard.
+Standards can define and limit behaviour and/or set conditions which implementations of the standard cannot violate.
+
+Detailed information about available standards and other core contracts can be found in [Core contracts](flow#core-contracts).
 
 # Common coding conventions and patterns
 
@@ -106,22 +111,21 @@ the opposite direction than the [access-based security](https://en.wikipedia.org
 
 Detailed information can be found in [Capabilities](language#capability-based-access-control).
 
-## Admin role and access
+## Admin roles
 
+Compared to Solidity, creating an admin role in Cadence requires a little more code, all of which is encapsulated
+within a Resource. The use of a Resource in this context is key - the instance can't be copied, and it will always be
+stored in an account. This approach to admin roles also makes possible fine-grained control such as limiting
+access to individual functions, on a per-account basis if required. Implementors can decide whether admin roles are
+simple or complex, for example, larger organizations or groups may require a role-based-access scheme. If needed the
+admin Resource can also be implemented to create additional admin Resource instances, which can be granted to
+selected user accounts via a Capability. Conveniently, because the admin role is only accessible via its Capability,
+it's easy to revoke access with [Capability Revocation](design-patterns#capability-revocation).
 
-Admin facilities should be contained in Admin resources.
-This can be a single resource with capabilities to it provided through different interfaces
-to expose different functionality for different roles, or it can be different resources for each role.
+The admin role originates from the [init singletone pattern](design-patterns#init-singleton) and uses
+[Capability Bootstrapping](design-patterns#capability-bootstrapping) pattern for granting the Capability.
 
-This is described in the [Design Patterns document](design-patterns#init-singleton).
-
-A good example of this is [minting tokens](https://github.com/onflow/kitty-items/blob/438988b6e7e100f46687cbe379bd7b0b88fd8ef4/cadence/contracts/KittyItems.cdc#L194).
-
-Where access to admin functionality must be given to several different accounts and/or be revocable,
-the Capability Bootstrapping pattern supports this.
-
-The Design Patterns document describes both [Capability Bootstrapping](design-patterns#capability-bootstrapping)
-and [Capability Revocation](design-patterns#capability-revocation).
+An example admin role implementation is available in [Caadence cookbook](https://cookbook.onflow.org/?preview=13).
 
 ## Allow/Block Listing
 
