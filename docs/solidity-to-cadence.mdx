@@ -48,6 +48,16 @@ Accounts realize ownership on Flow in being the container where keys, Resources,
 
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/account-structure.png" />
 
+### PublicAccount and AuthAccount
+
+Fields, functions, Resources and/or Capabilities in a contract use [access modifiers](language@access-control)
+protecting privileged functionality or making it public. `PublicAccount` is the publicly available part of an account
+through which public functions or objects can be accessed by any account using the `getAccount` function.
+
+`AuthAccount` is available only to the signer of the transaction. An `AuthAccount` reference provides full access
+to that account's storage, public keys and contract code. Capabilities ensure that resources held in an account can be
+safely shared/accessed; access to `AuthAccount` is never given to other accounts.
+
 ## Resources
 
 Resources are unique, [linear-types](https://en.wikipedia.org/wiki/Substructural_type_system#Linear_type_systems) which
@@ -109,44 +119,35 @@ the opposite direction than the [access-based security](https://en.wikipedia.org
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/access-based-security.png" />
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/capability-based-security.png" />
 
+## Access control using Capabilities
+
+Solidity lacks specific types or other primitives to aid with permission management. Developers have to inline
+guards to `require` at every function entry-point, thus validating the `msg.sender` of the transaction.
+
+Capabilities are either public (any user can get access) or private (access to/from the authorized user is necessary).
+Capability privacy scopes correspond to [PublicAccount](language#accounts#publicaccount)/[AuthAccount](language#accounts#authaccount)
+account privacy scopes mentioned earlier.
+
+Public capabilities are created using public paths, i.e. they have the domain `public`. After creation, they can
+be obtained from both authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`).
+
 Detailed information can be found in [Capabilities](language#capability-based-access-control).
 
-## Admin roles
+Private capabilities are created using private paths, i.e. they have the domain `private`. After creation, they
+can be obtained from authorised accounts (`AuthAccount`) but not public accounts (`PublicAccount`). To share a private
+Capability with another account, the owning account must `publish` it to another account which places in the
+[account inbox](language#accounts#account-inbox). The recipient can later claim the Capability from the account inbox
+using then `claim` function.
 
-Compared to Solidity, creating an admin role in Cadence requires a little more code, all of which is encapsulated
-within a Resource. The use of a Resource in this context is key - the instance can't be copied, and it will always be
-stored in an account. This approach to admin roles also makes possible fine-grained control such as limiting
-access to individual functions, on a per-account basis if required. Implementors can decide whether admin roles are
-simple or complex, for example, larger organizations or groups may require a role-based-access scheme. If needed the
-admin Resource can also be implemented to create additional admin Resource instances, which can be granted to
-selected user accounts via a Capability. Conveniently, because the admin role is only accessible via its Capability,
-it's easy to revoke access with [Capability Revocation](design-patterns#capability-revocation).
+Capabilities can be `unpublished` and private capabilities can be revoked by the creating account.
 
-The admin role originates from the [init singletone pattern](design-patterns#init-singleton) and uses
-[Capability Bootstrapping](design-patterns#capability-bootstrapping) pattern for granting the Capability.
+To aid automation events are emitted for `publish`, `claim` and `unpublish` actions used with a Capability.
 
-An example admin role implementation is available in [Caadence cookbook](https://cookbook.onflow.org/?preview=13).
+## Delegation controls
 
-## Allow/Block Listing
+Consider the following use cases:
 
-Limiting a user's control of resources that they own except in exceptional circumstances
-is considered un-Flow-like. If you must implement allow/block listing of accounts
-for regulatory compliance, route calls from functions in your resources
-through `access(contract)` code on their contract that checks an admin-controlled dictionary
-containing the information required to check for allowed or blocked accounts.
-
-This code could check the resource owner, but doing so is an antipattern (see below)
-and should not be used as it cannot be relied on.
-It is better to use a [resource's `uuid` field](language/resources#resource-identifier).
-
-It is important to note that the uuid does not identify the owner,
-and that resources can be transferred to different owners,
-and moved to a different path within the same user's storage
-or replaced by a different resource at the same path.
-
-## Operator/Allowance
-
-Giving another user temporary partial control of resources should be implemented via private capabilities.
+* Alice wants to place an offer on a NFT in the ecosystem
 
 ### Direct Capabilities
 
@@ -157,34 +158,12 @@ or creating a new Collection containing only the NFTs that the other user is the
 Limiting access to the correct functionality can be achieved
 by providing the other user with a capability constrained to the desired interface.
 
-The capability can be revoked to remove the ability when required.
-
-For more details on capability revocation see [Design Patterns](design-patterns#capability-revocation).
 
 ### Wrapped Capabilities
 
 Alternatively, a capability on the original resource (Vault, Collection, etc.)
 can be wrapped in a resource that enforces all of these limits,
 and then this (or, preferably, a capability to it) passed to the other user.
-
-For example, [see KittyItemsMarket's carefully constrained use](https://github.com/onflow/kitty-items/blob/438988b6e7e100f46687cbe379bd7b0b88fd8ef4/cadence/contracts/KittyItemsMarket.cdc#L84)
-of a NonFungibleToken.Provider:
-
-## Ownership
-
-If an account's storage contains a resource (such as an NFT, and NFT Collection, or an FT Vault),
-that account owns it. There is no need to record this anywhere else.
-It can be checked through public capabilities.
-If the user removes the public capabilities, that is their choice.
-
-For example the Collection resource in the NFT standard, its interfaces,
-and the Capabilities to it placed in a user's storage:
-
-[https://github.com/onflow/flow-nft/contracts/ExampleNFT.cdc](https://github.com/onflow/flow-nft/blob/cda8ccde7db52a0e125650b87bb552788ad15373/contracts/ExampleNFT.cdc#L26)
-
-Custodial NFT marketplaces have temporary ownership of a resource.
-They should provide the ability to identify the token's original owner
-and to return it to them if it is not sold.
 
 ## User Profiles
 
@@ -194,6 +173,25 @@ with read access via a public capability.
 Admin control of user profiles, where appropriate, can be implemented using private capabilities,
 `access(contract)` code, or using types within the contract that can only be created
 by the admin as function arguments.
+
+
+## Admin roles
+
+Compared to Solidity, creating an admin role in Cadence requires a little more code, all of which is encapsulated
+within a Resource. The admin object design can be highly customized and employ Capabilities for fine-grained control
+such as limiting access to individual functions, on a per-account basis if required. The complexity needed for admin
+roles may vary, for example, larger organizations may require more complex role-based-access schemes. The use of a
+Resource in this context is key - the instance can't be copied and the account with the first edition mint of the admin
+serves as the root-admin. The admin can be implemented to mint additional admin Resource instances, which only the
+root-admin can grant to selected user accounts via a Capability. Conveniently, because the admin role is only
+accessible via a Capability it's easy to manage with [Capability Revocation](design-patterns#capability-revocation).
+
+The admin role originates from the [init singleton pattern](design-patterns#init-singleton) and uses the
+[Capability Bootstrapping](design-patterns#capability-bootstrapping) pattern for making the Capability available to
+other accounts.
+
+An example admin role implementation is available in [Caadence cookbook](https://cookbook.onflow.org/?preview=13).
+
 
 # Coding anti-patterns
 
