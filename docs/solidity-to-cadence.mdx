@@ -80,12 +80,13 @@ controls minting through an “administrator Capability” that grants specific 
 
 ## Contract standards
 
-There are numerous contract standards established to benefit the ecosystem, for example
-[Fungible Token](https://github.com/onflow/flow-ft/blob/master/contracts/FungibleToken.cdc) and
-[Non-Fungible Token](https://github.com/onflow/flow-nft/blob/master/contracts/NonFungibleToken.cdc) are conceptually
-equivalent to Ethereum's ERC-20 and ERC-721 standards. Cadence's object-oriented design means standards apply through
-contract sub-types such as Resources, Resource interfaces, or other types declared in the contract standard.
-Standards can define and limit behaviour and/or set conditions which implementations of the standard cannot violate.
+There are numerous widely-used contract standards established to benefit the ecosystem, for example
+[Fungible Token](https://github.com/onflow/flow-ft/blob/master/contracts/FungibleToken.cdc)(FT) and
+[Non-Fungible Token](https://github.com/onflow/flow-nft/blob/master/contracts/NonFungibleToken.cdc)(NFT) standards
+which are conceptually equivalent to Ethereum's ERC-20 and ERC-721 standards. Cadence's object-oriented design means
+standards apply through contract sub-types such as Resources, Resource interfaces, or other types declared in the
+contract standard. Standards can define and limit behaviour and/or set conditions which implementations of the
+standard cannot violate.
 
 Detailed information about available standards and other core contracts can be found in [Core contracts](flow#core-contracts).
 
@@ -113,7 +114,7 @@ obtained by the authorizing account (called provider or signer in Cadence) from 
 which then enables the requesting account to access the protected function or Resource. This means the contract never
 needs to know who the signer is before proceeding because the capability **IS** the authorization.
 
-The [capability-based security](https://en.wikipedia.org/wiki/Capability-based_security) model defines access in
+The [capability-based security](https://en.wikipedia.org/wiki/Capability-based_security) model frames access in
 the opposite direction than the [access-based security](https://en.wikipedia.org/wiki/Access-control_list) model.
 
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/access-based-security.png" />
@@ -124,56 +125,56 @@ the opposite direction than the [access-based security](https://en.wikipedia.org
 Solidity lacks specific types or other primitives to aid with permission management. Developers have to inline
 guards to `require` at every function entry-point, thus validating the `msg.sender` of the transaction.
 
-Capabilities are either public (any user can get access) or private (access to/from the authorized user is necessary).
-Capability privacy scopes correspond to [PublicAccount](language#accounts#publicaccount)/[AuthAccount](language#accounts#authaccount)
-account privacy scopes mentioned earlier.
+[Capabilities](language#capability-based-access-control) are defined by linking storage paths (namespaces for contract
+storage) to protected objects and then making that linked capability available to other accounts. Public and private
+scopes defined for storage paths and Capabilities themselves align precisely with
+[PublicAccount](language#accounts#publicaccount)/[AuthAccount](language#accounts#authaccount) account scopes.
 
-Public capabilities are created using public paths, i.e. they have the domain `public`. After creation, they can
-be obtained from both authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`).
+Any account can get access to an account's public Capabilities. Public capabilities are created using public paths,
+i.e. they have the domain `public`. For example, all accounts have a default public capability linked to the
+`FLOWToken.Vault` Resource. This vault is exposed as a public capability, scoped to the `receiver` resource interface,
+to allow any account to `borrow()` the Vault to make a `deposit()`. Public capabilities can be obtained from both
+authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`).
 
-Detailed information can be found in [Capabilities](language#capability-based-access-control).
-
-Private capabilities are created using private paths, i.e. they have the domain `private`. After creation, they
-can be obtained from authorised accounts (`AuthAccount`) but not public accounts (`PublicAccount`). To share a private
-Capability with another account, the owning account must `publish` it to another account which places in the
-[account inbox](language#accounts#account-inbox). The recipient can later claim the Capability from the account inbox
-using then `claim` function.
+Private capabilities are specifically granted to accounts. They are created using private paths, i.e. they have the
+domain `private`. After creation, they can be obtained from authorised accounts (`AuthAccount`) but not public
+accounts (`PublicAccount`). To share a private Capability with another account, the owning account must `publish` it
+to another account which places in the [account inbox](language#accounts#account-inbox). The recipient can later
+claim the Capability from the account inbox using then `claim` function.
 
 Capabilities can be `unpublished` and private capabilities can be revoked by the creating account.
 
-To aid automation events are emitted for `publish`, `claim` and `unpublish` actions used with a Capability.
+To aid automation, events are emitted for `publish`, `claim` and `unpublish` actions completed for a Capability.
 
-## Delegation controls
+Detailed information can be found in [Capabilities](language#capability-based-access-control).
 
-Consider the following use cases:
+## Hygiene factors for protecting value
 
-* Alice wants to place an offer on a NFT in the ecosystem
+While capabilities grant account access control to a protected resource, it's still necessary to limit how much
+value to make available through them. For example, if your use-case requires providing another account access
+to a `FLOWToken.Vault` to `withdraw()` funds, it's important to limit the amount withdrawn. Tokens implementing FT/NFT
+standards are the primary type of value being exchanged by accounts on Flow and also provide the primitives needed
+for good capability best-practices.
 
-### Direct Capabilities
+### Token isolation
 
-Limiting access to the correct resources can be achieved by (e.g.)
-creating a new Vault containing only the allowance amount,
-or creating a new Collection containing only the NFTs that the other user is the operator for.
+All FTs reside in a `Vault` Resource and each different FT will exist as a new `Vault` in an account. Similarly,
+all NFTs implement a `Collection` Resource, in which those NFTs held by an account for that collection are stored.
 
-Limiting access to the correct functionality can be achieved
-by providing the other user with a capability constrained to the desired interface.
+Whenever access to the `withdraw()` function has to be delegated to another account, the simplest way to limit how
+many FTs of a given type can be withdrawn is to create a new `Vault` Resource for that token type and move a smaller
+amount of the tokens in the main token `Vault`. A capability is then linked to that `Vault` instance before being
+made available to another account.
 
+A similar pattern can be used for NFTs, where a new `Collection` Resource can be created into which only those NFTs
+which should be exposed are moved. A capability is then linked to that `Collection` instance before being made
+available to another account.
 
 ### Wrapped Capabilities
 
 Alternatively, a capability on the original resource (Vault, Collection, etc.)
 can be wrapped in a resource that enforces all of these limits,
 and then this (or, preferably, a capability to it) passed to the other user.
-
-## User Profiles
-
-User profiles can be implemented as resources placed in the storage of the user's account,
-with read access via a public capability.
-
-Admin control of user profiles, where appropriate, can be implemented using private capabilities,
-`access(contract)` code, or using types within the contract that can only be created
-by the admin as function arguments.
-
 
 ## Admin roles
 
@@ -192,6 +193,14 @@ other accounts.
 
 An example admin role implementation is available in [Caadence cookbook](https://cookbook.onflow.org/?preview=13).
 
+## User Profiles
+
+User profiles can be implemented as resources placed in the storage of the user's account,
+with read access via a public capability.
+
+Admin control of user profiles, where appropriate, can be implemented using private capabilities,
+`access(contract)` code, or using types within the contract that can only be created
+by the admin as function arguments.
 
 # Coding anti-patterns
 
