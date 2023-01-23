@@ -40,14 +40,12 @@ The [Flow account model](../learn#concepts#accounts-and-keys) in Cadence combine
 In Cadence, your tokens are stored in your account, and not in a smart contract. Of course, smart contracts still
 define these assets and how they behave, but those assets can be securely stored in a user’s account through the
 magic of Resources.
-
 <img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/account-structure.png"
      width="300" align="right"/>
 
 There is only one account type in Cadence also with an account address, similar to an Externally-Owned-Account
 (EOA) address in Ethereum. However, unlike Ethereum contract-accounts, accounts in Cadence also store contract code.
 Accounts realize ownership on Flow in being the container where keys, Resources, and contracts are stored on-chain.
-
 
 ### PublicAccount and AuthAccount
 
@@ -146,7 +144,6 @@ needs to know who the signer is before proceeding because the capability **IS** 
 The [capability-based security](https://en.wikipedia.org/wiki/Capability-based_security) model frames access in
 the opposite direction than the [access-based security](https://en.wikipedia.org/wiki/Access-control_list) model.
 
-
 ## Access control using Capabilities
 
 Solidity lacks specific types or other primitives to aid with permission management. Developers have to inline
@@ -161,9 +158,9 @@ Any account can get access to an account's public Capabilities. Public capabilit
 i.e. they have the domain `public`. For example, all accounts have a default public capability linked to the
 `FlowToken.Vault` Resource. This vault is exposed as a public capability, scoped to the `FungibleToken.Receiver` resource
 interface, to allow any account to `borrow()` a reference to the Vault to make a `deposit()`. Since only the functions
-defined under the `[FungibleToken.Receiver](https://github.com/onflow/flow-ft/blob/master/contracts/FungibleToken.cdc#L105)`
-interface are exposed, the borrower of the vault reference cannot call `withdraw()` since it is scoped in the `provider`
-interface. Public capabilities can be obtained from both authorized accounts (`AuthAccount`) and public accounts
+defined under the `FungibleToken.Receiver` interface are exposed, the borrower of the vault reference cannot call
+`withdraw()` since it is scoped in the `provider` interface. Public capabilities can be obtained from both authorized
+accounts (`AuthAccount`) and public accounts
 (`PublicAccount`).
 
 Private capabilities are specifically granted to accounts. They are created using private paths, i.e. they have the
@@ -481,7 +478,8 @@ provides:
 ## Argument labelling
 
 Argument labels in Cadence help to disambiguate input values. They makes code more readable and explicit. They
-also eliminate confusion around the order of arguments when working with the same type. They must be included in the function call. This restriction can be skipped if the label is preceded by `_ ` on its declaration.
+also eliminate confusion around the order of arguments when working with the same type. They must be included in the
+function call. This restriction can be skipped if the label is preceded by `_ ` on its declaration.
 
 Eg:
 `fun foo(balance: UFix64)`
