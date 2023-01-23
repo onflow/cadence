@@ -41,11 +41,12 @@ In Cadence, your tokens are stored in your account, and not in a smart contract.
 define these assets and how they behave, but those assets can be securely stored in a user’s account through the
 magic of Resources.
 
+<img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/account-structure.png"  width="300" align="right" />
+
 There is only one account type in Cadence also with an account address, similar to an Externally-Owned-Account
 (EOA) address in Ethereum. However, unlike Ethereum contract-accounts, accounts in Cadence also store contract code.
 Accounts realize ownership on Flow in being the container where keys, Resources, and contracts are stored on-chain.
 
-<img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/account-structure.png"  width="300" />
 
 ### PublicAccount and AuthAccount
 
@@ -134,11 +135,12 @@ obtained by the authorizing account (called provider or signer in Cadence) from 
 which then enables the requesting account to access the protected function or Resource. This means the contract never
 needs to know who the signer is before proceeding because the capability **IS** the authorization.
 
+<img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/access-based-security.png" width="225" align="right"/>
+
 The [capability-based security](https://en.wikipedia.org/wiki/Capability-based_security) model frames access in
 the opposite direction than the [access-based security](https://en.wikipedia.org/wiki/Access-control_list) model.
 
-<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/access-based-security.png" />
-<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/capability-based-security.png" />
+<img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/capability-based-security.png" width="225" align="left"/>
 
 ## Access control using Capabilities
 
