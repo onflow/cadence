@@ -127,7 +127,7 @@ The first question that every Solidity developer asks when they start programmin
 In Ethereum this account is referred to as `msg.sender` and informs the program flow in a function depending on who
 authorized it. Doing so is key to access and security, and is the basis of identity and ownership on Ethereum.
 
-Cadence does not have `msg.sender` and there is no transaction-level way for Cadence contract to uniquely identify the
+Cadence does not have `msg.sender` and there is no transaction-level way for Cadence code to uniquely identify the
 calling account. Even if there was a way to access it, Cadence supports [multi-sig](#multi-key-multi-signature-support)
 transactions, meaning that a list of all the signers' accounts would be returned.
 
