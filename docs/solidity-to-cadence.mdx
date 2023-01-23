@@ -68,6 +68,10 @@ handle Resources in scope before exiting will abort, reverting them to the origi
 Resources make them perfect for representing tokens, both fungible and non-fungible. Ownership is tracked by where
 they are stored, and the assets can’t be duplicated or accidentally lost since the language itself enforces correctness.
 
+Flow encourages storing of data and compute on-chain and Resource-types makes this easier than even. Since Resources
+are always stored in accounts, any data that exists in Resource instances is seamlessly being managed on-chain
+without any explicit handling needed.
+
 ## Capability-based access
 
 Remote access to stored objects can be delegated via [Capabilities](language#capability-based-access-control). This
@@ -81,19 +85,19 @@ controls minting through an “administrator Capability” that grants specific 
 ## Contract standards
 
 There are numerous widely-used contract standards established to benefit the ecosystem, for example
-[Fungible Token](https://github.com/onflow/flow-ft/blob/master/contracts/FungibleToken.cdc)(FT) and
-[Non-Fungible Token](https://github.com/onflow/flow-nft/blob/master/contracts/NonFungibleToken.cdc)(NFT) standards
-which are conceptually equivalent to Ethereum's ERC-20 and ERC-721 standards. Cadence's object-oriented design means
-standards apply through contract sub-types such as Resources, Resource interfaces, or other types declared in the
-contract standard. Standards can define and limit behaviour and/or set conditions which implementations of the
-standard cannot violate.
+[Fungible Token](flow#core-contracts#fungible-token)(FT) and [Non-Fungible Token](flow#core-contracts#non-fungible-token)(NFT)
+standards which are conceptually equivalent to Ethereum's ERC-20 and ERC-721 standards. Cadence's object-oriented
+design means standards apply through contract sub-types such as Resources, Resource interfaces, or other types
+declared in the contract standard. Standards can define and limit behaviour and/or set conditions which
+implementations of the standard cannot violate.
 
 Detailed information about available standards and other core contracts can be found in [Core contracts](flow#core-contracts).
 
-# Common coding conventions and patterns
+# Security and access control
 
-The following coding conventions and patterns will be familiar to Solidity developers with guidance on how to adapt
-to a Cadence-centric solution.
+Decentralized application development places significant focus on security and access and can fairly be described
+as security engineering. Understanding how Resources, Capabilities and the account model solve this may not
+be obvious when viewed from a Solidity perspective.
 
 ## msg.sender considered harmful
 
@@ -150,19 +154,19 @@ Detailed information can be found in [Capabilities](language#capability-based-ac
 
 ## Hygiene factors for protecting value
 
-While capabilities grant account access control to a protected resource, it's still necessary to limit how much
-value to make available through them. For example, if your use-case requires providing another account access
-to a `FLOWToken.Vault` to `withdraw()` funds, it's important to limit the amount withdrawn. Tokens implementing FT/NFT
-standards are the primary type of value being exchanged by accounts on Flow and also provide the primitives needed
-for good capability best-practices.
+While capabilities grant account access to a protected resource, it's still necessary to limit how much value to make
+available through them. For example, if your use-case requires providing another account access to a
+`FLOWToken.Vault` to `withdraw()` funds via it's `provider` interface, it's important to limit the amount that might
+be withdrawn. Tokens implementing FT/NFT standards are the primary type of value being exchanged by accounts on Flow.
+The standard provides the primitives needed to implement capability limiting best-practices.
 
 ### Token isolation
 
-All FTs reside in a `Vault` Resource and each different FT will exist as a new `Vault` in an account. Similarly,
+All FTs reside in a `Vault` Resource and each different FT will exist as a separate `Vault` in an account. Similarly,
 all NFTs implement a `Collection` Resource, in which those NFTs held by an account for that collection are stored.
 
 Whenever access to the `withdraw()` function has to be delegated to another account, the simplest way to limit how
-many FTs of a given type can be withdrawn is to create a new `Vault` Resource for that token type and move a smaller
+many tokens of a given type can be withdrawn is to create a new `Vault` Resource for that token type and move a smaller
 amount of the tokens in the main token `Vault`. A capability is then linked to that `Vault` instance before being
 made available to another account.
 
@@ -170,11 +174,11 @@ A similar pattern can be used for NFTs, where a new `Collection` Resource can be
 which should be exposed are moved. A capability is then linked to that `Collection` instance before being made
 available to another account.
 
-### Wrapped Capabilities
+### Bespoke control strategies
 
-Alternatively, a capability on the original resource (Vault, Collection, etc.)
-can be wrapped in a resource that enforces all of these limits,
-and then this (or, preferably, a capability to it) passed to the other user.
+For more complex use-cases one might create new Resource that implements the relevant interfaces to match those of
+the underlying protected Resource(s). The code for the new Resource can then enforce limits as required and control
+how and when delegation to the underlying resource occurs.
 
 ## Admin roles
 
@@ -193,37 +197,52 @@ other accounts.
 
 An example admin role implementation is available in [Caadence cookbook](https://cookbook.onflow.org/?preview=13).
 
-## User Profiles
+### Role-based access
 
-User profiles can be implemented as resources placed in the storage of the user's account,
-with read access via a public capability.
+Implementing role-based-access can be achieved by defining roles implemented as Resources managed by the
+root-admin account. Roles can provide limited access to functions which guard other protected resources, with access
+levels and/or what is exposed varying from role to role. The root-admin can grant accounts access to individual
+roles through a private capability. Functions that the roles are permitted to invoke may be scoped as
+`access(contract)` to enforce that they can only be called by code paths in the root-admin contract.
 
-Admin control of user profiles, where appropriate, can be implemented using private capabilities,
-`access(contract)` code, or using types within the contract that can only be created
-by the admin as function arguments.
+# Other best practices and conventions
 
-# Coding anti-patterns
+Certain well established best practices for Solidity may not apply or are handled differently.
 
-## Checking Contract.account
+## Check effects interactions
 
-Contracts [have the member variable `let account: Account`](language/contracts#account-access),
-which is the account in which the contract is deployed:
+Solidity contracts must use the [check effect interaction](https://fravoll.github.io/solidity-patterns/checks_effects_interactions.html)
+because functions are public by default, and address-based access means that guards must exist when program flow
+concedes control to an external contract. There are two reasons why this is significantly less of a problem in
+Cadence. Functions are private by default and the language provides a range of [access scopes](language#access-control).
+More importantly, risks associated with ceding control to an external contract are in fact only an Ethereum concern;
+the risk no longer applies because controls are handled with Capabilities.
 
-This is of limited use in replacing `msg.sender`, as it is essentially a tautology on Flow
-because contracts are deployed to the account to which you deploy them.
+## Guard Check
 
-## Checking Resource.owner
+Solidity uses `revert`, `require` & `assert` to validate inputs. `require` is a product of the address-based nature
+of Solidity which Capabilities replace. `revert` is similar to Cadence's `panic` in that a transaction is aborted.
+Cadence provides an `assert` operator which mirrors `assert` in Solidity.
 
-Resources that are in storage (but not those that are located in-memory,
-e.g. when a resource has just been created) [have the implicit field `let owner: PublicAccount?`](language/resources#resource-owner)
+## Modifiers
 
-This can be defeated by using a newly created resource, as the owner will then be nil.
+Modifiers are extensively used in Solidity when enforcing pre-checks within a function. This is a powerful language
+feature. However, modifiers can also mutate state, which introduces risks to program control flow.
+
+Cadence uses `pre` and `post` blocks to validate input values or the function execution outputs. Notably, `pre` and
+`post` block prohibit changing of state and may only enforce conditions.
+
+Another difference is that modifiers in Solidity can be re-used within the contract multiple times. Cadence
+`pre` & `post` blocks are associated to individual functions only, reducing the likelihood of errors but which
+results in a small amount of code duplication.
+
+## Error handling
+
+Solidity offers try/catch block to handle errors, however, there is no equivalent in Cadence. This is because
+language primitives such as Resources and Capabilities codify the complexity of access and security in first-class
+types.
 
 # Integration differences
-
-## On-chain metadata
-
-
 
 ## Scripts and transactions
 
@@ -316,36 +335,34 @@ Cadence offers a wide range of options to implement various multi-signature sche
 - Resource transfer scheme.
 - Inherent support of BLS signature scheme.
 
-On Flow, an account keys have a weight assigned to it. 1000 units is the cumulative weight needed from signing
+Flow account keys have assigned weights, where a 1000 unit weight is the cumulative weight needed from signing
 keys to execute a transaction successfully. One can divide weights across multiple keys and distribute those partial
-weighted keys to authorized signers. When signing the transaction, all signers must sign the transaction at the
-same time in order for the cumulative weight to reach 1000 units. This type of multi-sig transaction using a
-single party or account, while multiple parties and multiple signatures are also possible similarly.
-
-The resource transfer scheme is very similar to the Solidity multi-signature smart contract. A resource is created
-that has the functionality to proxy the execution of a fund transfer. Resource ownership is handed from one
-participant to the next as signatures are needed. Once the threshold of required signatures is met the transaction
-is executed. The main drawback with this approach is that does not support execution of arbitrary functionality.
+weighted keys to authorized signers. When signing the transaction, all signers must sign the transaction together
+in a short period of time in order for the cumulative weight to reach 1000 units.
 
 See [BLS Signature scheme](https://docs.onflow.org/cadence/language/crypto/#bls-multi-signature) for a detailed
 overview of the inherent support of BLS signatures.
 
+### Resource transfer scheme
+
+The main limitation of multi-sig transactions is that signatures must all be made for the transaction within a
+relatively short time window. If this window is missed, the transaction will abort. The resource transfer scheme is
+very similar to the Solidity multi-signature smart contract. A Resource is created that has the functionality to
+proxy the execution of a fund transfer. This Resource is handed from one signer to the next to collect signatures.
+Once the threshold of required signatures is met the transaction is executed. The elapsed time The main drawback
+with this approach is that does not support execution of arbitrary functionality.
+
 # Other platform differences
 
-The following differences unrelated to implementing Cadence contracts are useful to understand in comparison
-with Ethereum.
+The following differences unrelated to implementing Cadence contracts are useful to understand in the context
+of application design.
 
-## Flow blockchain is multi-node
+## Events
 
-Ethereum uses a homogeneous node type (although that is slowly changing) compared to Flow which has 4 node types that
-participate in the staked network. These are the Collection, Consensus, Execution and Verification nodes. A fifth,
-non-participatory node type, the Access node, handles data ingress/egress
-
-For more details on Flow's multi-node architecture see [Flow primer](https://flow.com/primer).
-
-## Gas costs
-
-
+Flow uses [events](language#events) extensively to provide real-time signals to off-chain systems about particular
+actions that occurred during a transaction. The main difference on Flow is that events remain part of the history
+and are not purged from storage. Events can be populated with arbitrary data that will assist consumers of the
+event. Builders are encouraged to leverage events for seamless UX as users perform transactions.
 
 ## Contract upgradeability
 
@@ -378,9 +395,7 @@ Solidity developers will be well aware of the [EIP-170](https://eips.ethereum.or
 bytecode size limit of 24KB. This can burden builders who need to optimize contract bytecode size, sometimes even
 requiring a re-design of contracts to break it into smaller contract parts.
 
-In contrast, Cadence has no inherent or defined smart contract size limit. However, it is restricted by the transaction
+By contrast, Cadence has no inherent or defined smart contract size limit. However, it is restricted by the transaction
 size limit which is 1.5MB. With very rare exceptions, it’s unlikely that this limit would pose a problem to those
 developing Cadence contracts. Should it be needed, there is a known way to deploy a contract exceeding 1.5 MB which we
 will document at a later time.
-
-
