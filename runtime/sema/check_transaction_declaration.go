@@ -319,54 +319,48 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.PrepareParameters = checker.parameters(parameterList)
 	}
 
-	roles := map[string]struct{}{}
 	for _, roleDeclaration := range declaration.Roles {
 		transactionRoleType := checker.transactionRoleType(roleDeclaration)
 		checker.Elaboration.SetTransactionRoleDeclarationType(roleDeclaration, transactionRoleType)
 
-		// Ensure roles are not duplicated
-		roleName := roleDeclaration.Identifier.Identifier
-		if _, ok := roles[roleName]; ok {
-			checker.report(
-				&DuplicateTransactionRoleError{
-					Name: roleName,
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						roleDeclaration.Identifier,
-					),
-				},
-			)
-			continue
-		} else {
-			roles[roleName] = struct{}{}
-		}
-
 		// Ensure roles and fields do not clash
+		roleName := roleDeclaration.Identifier.Identifier
 		if member, ok := members.Get(roleName); ok {
-			if member != nil {
+
+			identifierRange := ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				roleDeclaration.Identifier,
+			)
+
+			if _, ok := member.TypeAnnotation.Type.(*TransactionRoleType); ok {
+				checker.report(
+					&DuplicateTransactionRoleError{
+						Name:  roleName,
+						Range: identifierRange,
+					},
+				)
+			} else {
 				checker.report(
 					&TransactionRoleWithFieldNameError{
 						FieldIdentifier: member.Identifier,
-						Range: ast.NewRangeFromPositioned(
-							checker.memoryGauge,
-							roleDeclaration.Identifier,
-						),
+						Range:           identifierRange,
 					},
 				)
 			}
-		} else {
-			members.Set(
-				roleName,
-				&Member{
-					ContainerType:   transactionType,
-					Identifier:      roleDeclaration.Identifier,
-					DeclarationKind: common.DeclarationKindTransactionRole,
-					VariableKind:    ast.VariableKindConstant,
-					TypeAnnotation:  NewTypeAnnotation(transactionRoleType),
-					DocString:       roleDeclaration.DocString,
-				},
-			)
+			continue
 		}
+
+		members.Set(
+			roleName,
+			&Member{
+				ContainerType:   transactionType,
+				Identifier:      roleDeclaration.Identifier,
+				DeclarationKind: common.DeclarationKindTransactionRole,
+				VariableKind:    ast.VariableKindConstant,
+				TypeAnnotation:  NewTypeAnnotation(transactionRoleType),
+				DocString:       roleDeclaration.DocString,
+			},
+		)
 	}
 
 	checker.Elaboration.SetTransactionDeclarationType(declaration, transactionType)
