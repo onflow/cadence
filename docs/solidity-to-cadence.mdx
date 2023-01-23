@@ -129,18 +129,18 @@ Cadence does not have `msg.sender` and there is no transaction-level way for Cad
 calling account. Even if there was a way to access it, Cadence supports [multi-sig](#multi-key-multi-signature-support)
 transactions, meaning that a list of all the signers' accounts would be returned.
 
+<img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/access-based-security.png" width="225" align="right"/>
+
 The reason `msg.sender` is both unsupported and strongly advised against is because Cadence uses Capabilities for
 access rather than addresses. The mindset change that developers need to adjust to is that a capability must first be
 obtained by the authorizing account (called provider or signer in Cadence) from the contract that will require it,
 which then enables the requesting account to access the protected function or Resource. This means the contract never
 needs to know who the signer is before proceeding because the capability **IS** the authorization.
 
-<img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/access-based-security.png" width="225" align="right"/>
+<img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/capability-based-security.png" width="245" align="left"/>
 
 The [capability-based security](https://en.wikipedia.org/wiki/Capability-based_security) model frames access in
 the opposite direction than the [access-based security](https://en.wikipedia.org/wiki/Access-control_list) model.
-
-<img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/capability-based-security.png" width="225" align="left"/>
 
 ## Access control using Capabilities
 
