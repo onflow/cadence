@@ -140,7 +140,7 @@ to allow any account to `borrow()` a reference to the Vault to make a `deposit()
 authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`).
 
 Private capabilities are specifically granted to accounts. They are created using private paths, i.e. they have the
-domain `private`. After creation, they can be obtained from authorised accounts (`AuthAccount`) but not public
+domain `private`. After creation, they can be obtained from authorised account objects (`AuthAccount`) but not public
 accounts (`PublicAccount`). To share a private Capability with another account, the owning account must `publish` it
 to another account which places in the [account inbox](language#accounts#account-inbox). The recipient can later
 claim the Capability from the account inbox using then `claim` function.
