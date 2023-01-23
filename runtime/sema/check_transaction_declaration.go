@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -331,14 +330,14 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		return fieldDeclarationsByIdentifier[identifier]
 	}
 
-	roles := &orderedmap.OrderedMap[string, *TransactionRoleType]{}
+	roles := map[string]struct{}{}
 	for _, roleDeclaration := range declaration.Roles {
 		transactionRoleType := checker.transactionRoleType(roleDeclaration)
 		checker.Elaboration.SetTransactionRoleDeclarationType(roleDeclaration, transactionRoleType)
 
 		// Ensure roles are not duplicated
 		roleName := roleDeclaration.Identifier.Identifier
-		if _, ok := roles.Get(roleName); ok {
+		if _, ok := roles[roleName]; ok {
 			checker.report(
 				&DuplicateTransactionRoleError{
 					Name: roleName,
@@ -349,7 +348,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 				},
 			)
 		} else {
-			roles.Set(roleName, transactionRoleType)
+			roles[roleName] = struct{}{}
 		}
 
 		// Ensure roles and fields do not clash
@@ -380,7 +379,6 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 			)
 		}
 	}
-	transactionType.Roles = roles
 
 	checker.Elaboration.SetTransactionDeclarationType(declaration, transactionType)
 	checker.Elaboration.TransactionTypes = append(checker.Elaboration.TransactionTypes, transactionType)

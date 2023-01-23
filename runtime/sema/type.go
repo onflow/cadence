@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -5652,7 +5651,6 @@ type TransactionType struct {
 	Fields            []string
 	PrepareParameters []Parameter
 	Parameters        []Parameter
-	Roles             *orderedmap.OrderedMap[string, *TransactionRoleType]
 }
 
 var _ Type = &TransactionType{}
