@@ -51,9 +51,8 @@ Accounts realize ownership on Flow in being the container where keys, Resources,
 
 ### PublicAccount and AuthAccount
 
-Fields, functions, Resources and/or Capabilities in a contract use [access modifiers](language#access-control)
-protecting privileged functionality or making it public. `PublicAccount` is the publicly available part of an account
-through which public functions or objects can be accessed by any account using the `getAccount` function.
+`PublicAccount` is the publicly available part of an account through which public functions or objects can be
+accessed by any account using the `getAccount` function.
 
 `AuthAccount` is available only to the signer of the transaction. An `AuthAccount` reference provides full access
 to that account's storage, keys configuration, and contract code. Capabilities ensure that resources held in an account can be
@@ -132,7 +131,8 @@ calling account. Even if there was a way to access it, Cadence supports [multi-s
 transactions, meaning that a list of all the signers' accounts would be returned, making it impossible to identify a single authorizer.
 
 <img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/access-based-security.png"
-     width="225" align="right" alt="Solidity access applies to the subject by and assessed by the protected resource"/>
+     width="225" align="right" alt="Solidity access applies to the subject and possessed and validated by the protected
+     resource"/>
 
 The reason `msg.sender` is both unsupported and strongly advised against is because Cadence uses Capabilities for
 access rather than addresses. The mindset change that developers need to adjust to is that a capability must first be
@@ -141,7 +141,7 @@ which then enables the requesting account to access the protected function or Re
 needs to know who the signer is before proceeding because the capability **IS** the authorization.
 
 <img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/capability-based-security.png"
-     width="245" align="left" alt="In Cadence, subject must possess the Capability to access the protected resource"/>
+     width="245" align="left" alt="In Cadence, the subject must possess the Capability to access the protected resource"/>
 
 The [capability-based security](https://en.wikipedia.org/wiki/Capability-based_security) model frames access in
 the opposite direction than the [access-based security](https://en.wikipedia.org/wiki/Access-control_list) model.
@@ -159,11 +159,12 @@ scopes defined for storage paths and Capabilities themselves align precisely wit
 
 Any account can get access to an account's public Capabilities. Public capabilities are created using public paths,
 i.e. they have the domain `public`. For example, all accounts have a default public capability linked to the
-`FlowToken.Vault` Resource. This vault is exposed as a public capability, scoped to the `FungibleToken.Receiver` resource interface,
-to allow any account to `borrow()` a reference to the Vault to make a `deposit()`. Since only the functions defined
-under the `FungibleToken.Receiver` interface are exposed, the borrower of the vault reference cannot call `withdraw()`
-since it is scoped in the `provider` interface. Public capabilities can be obtained from both
-authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`).
+`FlowToken.Vault` Resource. This vault is exposed as a public capability, scoped to the `FungibleToken.Receiver` resource
+interface, to allow any account to `borrow()` a reference to the Vault to make a `deposit()`. Since only the functions
+defined under the `[FungibleToken.Receiver](https://github.com/onflow/flow-ft/blob/master/contracts/FungibleToken.cdc#L105)`
+interface are exposed, the borrower of the vault reference cannot call `withdraw()` since it is scoped in the `provider`
+interface. Public capabilities can be obtained from both authorized accounts (`AuthAccount`) and public accounts
+(`PublicAccount`).
 
 Private capabilities are specifically granted to accounts. They are created using private paths, i.e. they have the
 domain `private`. After creation, they can be obtained from authorised account objects (`AuthAccount`) but not public
