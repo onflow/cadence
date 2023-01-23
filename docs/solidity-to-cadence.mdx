@@ -56,7 +56,7 @@ protecting privileged functionality or making it public. `PublicAccount` is the 
 through which public functions or objects can be accessed by any account using the `getAccount` function.
 
 `AuthAccount` is available only to the signer of the transaction. An `AuthAccount` reference provides full access
-to that account's storage, public keys and contract code. Capabilities ensure that resources held in an account can be
+to that account's storage, keys configuration, and contract code. Capabilities ensure that resources held in an account can be
 safely shared/accessed; access to `AuthAccount` should never be given to other accounts.
 
 ## Resources
