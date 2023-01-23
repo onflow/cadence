@@ -11,7 +11,7 @@ up while transitioning.
 
 # Conceptual foundations for Cadence
 
-A fundamental difference to get used to when coming to Cadence from Solidity is of mindset. Security and
+A fundamental difference to get used to when adjusting to Cadence from Solidity is of mindset. Security and
 interoperability on Ethereum are designed around addresses (or more specifically the account associated with an
 address), resulting in all contracts having to carefully track and evaluate access and authorizations.
 
@@ -228,7 +228,7 @@ Cadence provides an `assert` operator which mirrors `assert` in Solidity.
 ## Modifiers
 
 Modifiers are extensively used in Solidity when enforcing pre-checks within a function. This is a powerful language
-feature. However, modifiers can also mutate state, which introduces risks to program control flow.
+feature. However, modifiers can also mutate state which introduces risks to program control flow.
 
 Cadence uses `pre` and `post` blocks to validate input values or the function execution outputs. Notably, `pre` and
 `post` block prohibit changing of state and may only enforce conditions.
@@ -240,8 +240,7 @@ results in a small amount of code duplication.
 ## Error handling
 
 Solidity offers try/catch block to handle errors, however, there is no equivalent in Cadence. This is because
-language primitives such as Resources and Capabilities codify the complexity of access and security in first-class
-types.
+Resources and Capabilities codify the complexity of access and security in first-class types and
 
 # Integration differences
 
@@ -413,9 +412,8 @@ overflow/underflow.
 
 ## Optional support
 
-Optionals in Cadence are values which can represent the absence of a value. Optionals have two cases: either there is
-a value, or there is nothing. Cadence offers optional bindings which help avoid faulty assumptions in code. They also
-provide developers with a way to manage non-existent values rather than null.
+[Optional bindings](language#control-flow) provide in-built conditional handling of nil values. Optionals have two
+cases: either there is a value, or there is nothing; they fork program flow based on whether a value is nil or not.
 
 ## Iterable Dictionaries
 
@@ -423,7 +421,8 @@ Solidity offers the mapping type, however, it is not iterable. Because of that d
 services to know all the keys to the mapping. This also pushes builders to create custom datatypes like EnumerableMap
 which adds to gas costs.
 
-Cadence offers the `Dictionary` type, an unordered collection of key-value associations which is iterable.
+Cadence offers the [Dictionary](language#control-flow) type, an unordered collection of key-value associations
+which is iterable.
 
 ## Rich support for type utility functions
 
