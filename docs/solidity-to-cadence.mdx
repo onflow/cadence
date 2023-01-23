@@ -439,7 +439,7 @@ provides:
 ## Argument labelling
 
 Argument labels in Cadence help to disambiguate input values. They makes code more readable and explicit. They
-also eliminate confusion around the order of arguments when working with the same type.
+also eliminate confusion around the order of arguments when working with the same type. They must be included in the function call. This restriction can be skipped if the label is preceded by `_ ` on its declaration.
 
 Eg:
 `fun foo(balance: UFix64)`
