@@ -212,11 +212,12 @@ Certain well established best practices for Solidity may not apply or are handle
 ## Check effects interactions
 
 Solidity contracts must use the [check effect interaction](https://fravoll.github.io/solidity-patterns/checks_effects_interactions.html)
-because functions are public by default, and address-based access means that guards must exist when program flow
+because functions are public by default and address-based access means that guards must exist when program flow
 concedes control to an external contract. There are two reasons why this is significantly less of a problem in
 Cadence. Functions are private by default and the language provides a range of [access scopes](language#access-control).
-More importantly, risks associated with ceding control to an external contract are in fact only an Ethereum concern;
-the risk no longer applies because controls are handled with Capabilities.
+More importantly, 'risks associated with ceding control to an external contract' is an Ethereum phenomenon;
+the risk no longer applies because access control is handled with Capabilities while assets remain stored safely
+in accounts.
 
 ## Guard Check
 
@@ -399,3 +400,49 @@ By contrast, Cadence has no inherent or defined smart contract size limit. Howev
 size limit which is 1.5MB. With very rare exceptions, it’s unlikely that this limit would pose a problem to those
 developing Cadence contracts. Should it be needed, there is a known way to deploy a contract exceeding 1.5 MB which we
 will document at a later time.
+
+# Low level language differences
+
+## Arithmetic
+
+Historically, Solidity, smart contracts lost millions of dollars because of improper handling of arithmetic
+under/overflows. Contemporary Solidity versions offer inbuilt handling of under/overflow for arithmetic operations.
+
+Cadence implements [saturating math](https://en.wikipedia.org/wiki/Saturation_arithmetic) that avoids
+overflow/underflow.
+
+## Optional support
+
+Optionals in Cadence are values which can represent the absence of a value. Optionals have two cases: either there is
+a value, or there is nothing. Cadence offers optional bindings which help avoid faulty assumptions in code. They also
+provide developers with a way to manage non-existent values rather than null.
+
+## Iterable Dictionaries
+
+Solidity offers the mapping type, however, it is not iterable. Because of that dApp developers have to run off-chain
+services to know all the keys to the mapping. This also pushes builders to create custom datatypes like EnumerableMap
+which adds to gas costs.
+
+Cadence offers the `Dictionary` type, an unordered collection of key-value associations which is iterable.
+
+## Rich support for type utility functions
+
+Cadence offers numerous native-type utility functions to simplify development. For example, the String type
+provides:
+- utf8
+- concat()
+- slice()
+- decodeHex()
+- encodeHex()
+- toLower()
+- length
+
+## Argument labelling
+
+Argument labels in Cadence help to disambiguate input values. They makes code more readable and explicit. They
+also eliminate confusion around the order of arguments when working with the same type.
+
+Eg:
+`fun foo(balance: UFix64)`
+called as
+`self.foo(balance: 30.0)`
