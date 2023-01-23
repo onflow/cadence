@@ -99,16 +99,17 @@ Solidity must manage NFT metadata off-chain and NFTs typically link to IPFS JSON
 
 The Cadence NFT standard provides in-built support for metadata with specific types called [views](../flow#flow-nft#overview#nft-metadata).
 Views can be added to NFTs when minted and will always be available as part of the NFT. While metadata is stored
-on-chain, graphics and video content is still stored off-chain. Cadence provides [utility views](../flow#flow-nft#overview#list-of-common-views)
+on-chain, graphics and video content are stored off-chain. Cadence provides [utility views](../flow#flow-nft#overview#list-of-common-views)
 for both HTTP and IPFS based media storage which remain linked to your NFT.
 
 Using NFT metadata views is a requirement to get listed in the [Flow NFT Catalog](https://www.flow-nft-catalog.com/).
 Projects are encouraged leverage the NFT catalog since wallets and other ecosystem partners can seamlessly integrate
 new collections added there with no input from project creators.
 
-NFT metadata on Flow opens the door to exciting new possibilities that other chains can't achieve. Check out a
-recent [case study](https://flow.com/post/flovatar-nft-flow-blockchain-case-study) where one of our community
-partners leveraged SVG on-chain NFT metadata to enable 2D + 3D versions without any off-chain data!
+NFT metadata on Flow opens the door to exciting new possibilities that help builder to innovate. Check out this
+recent [case study](https://flow.com/post/flovatar-nft-flow-blockchain-case-study) where a community partner
+leveraged SVG on-chain NFT metadata to make combined 2D + 3D versions of their PFPs, all on-chain inside the NFT
+metadata!
 
 # Security and access control
 
@@ -217,15 +218,15 @@ The admin role originates from the [init singleton pattern](design-patterns#init
 [Capability Bootstrapping](design-patterns#capability-bootstrapping) pattern for making the Capability available to
 other accounts.
 
-An example admin role implementation is available in [Caadence cookbook](https://cookbook.onflow.org/?preview=13).
+An example admin role implementation is available in [Cadence cookbook](https://cookbook.onflow.org/?preview=13).
 
 ### Role-based access
 
-Implementing role-based-access can be achieved by defining roles implemented as Resources managed by the
-root-admin account. Roles can provide limited access to functions which guard other protected resources, with access
-levels and/or what is exposed varying from role to role. The root-admin can grant accounts access to individual
-roles through a private capability. Functions that the roles are permitted to invoke may be scoped as
-`access(contract)` to enforce that they can only be called by code paths in the root-admin contract.
+Implementing role-based-access can be achieved by defining roles as Resources managed by the root-admin account.
+Roles can provide limited access to functions which guard other protected resources, with access levels and/or
+what is exposed varying from role to role. The root-admin can grant accounts access to individual roles through a
+private capability. Functions that the roles are permitted to invoke may be scoped as `access(contract)` to
+enforce that they can only be called by code paths in the root-admin contract.
 
 # Other best practices and conventions
 
