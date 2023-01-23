@@ -35,7 +35,7 @@ Newcomers to Cadence should ensure they understand the following major concepts 
 
 ## Flow account model
 
-The [Flow account model](learn#concepts#accounts-and-keys) in Cadence combines storage for the keys and code
+The [Flow account model](../learn#concepts#accounts-and-keys) in Cadence combines storage for the keys and code
 (”smart contracts”) associated with an account with storage for the assets owned by that account. That’s right:
 In Cadence, your tokens are stored in your account, and not in a smart contract. Of course, smart contracts still
 define these assets and how they behave, but those assets can be securely stored in a user’s account through the
@@ -49,7 +49,7 @@ Accounts realize ownership on Flow in being the container where keys, Resources,
 
 ### PublicAccount and AuthAccount
 
-Fields, functions, Resources and/or Capabilities in a contract use [access modifiers](language/access-control)
+Fields, functions, Resources and/or Capabilities in a contract use [access modifiers](access-control)
 protecting privileged functionality or making it public. `PublicAccount` is the publicly available part of an account
 through which public functions or objects can be accessed by any account using the `getAccount` function.
 
@@ -73,7 +73,7 @@ without any explicit handling needed.
 
 ## Capability-based access
 
-Remote access to stored objects can be managed via [Capabilities](language#capability-based-access-control). This
+Remote access to stored objects can be managed via [Capabilities](capability-based-access-control). This
 means that if an account wants to be able to access another account's stored objects, it must have been provided
 with a valid Capability to that object. Capabilities can be either public or private. An account can share a public
 Capability if it wants to give all other accounts access. (For example, it’s common for an account to accept fungible
@@ -84,13 +84,30 @@ controls minting through an “administrator Capability” that grants specific 
 ## Contract standards
 
 There are numerous widely-used contract standards established to benefit the ecosystem, for example
-[Fungible Token](flow#core-contracts#fungible-token)(FT) and [Non-Fungible Token](flow#core-contracts#non-fungible-token)(NFT)
+[Fungible Token](../flow#flow-token)(FT) and [Non-Fungible Token](../flow#flow-nft#overview)(NFT)
 standards which are conceptually equivalent to Ethereum's ERC-20 and ERC-721 standards. Cadence's object-oriented
 design means standards apply through contract sub-types such as Resources, Resource interfaces, or other types
 declared in the contract standard. Standards can define and limit behaviour and/or set conditions which
 implementations of the standard cannot violate.
 
-Detailed information about available standards and other core contracts can be found in [Core contracts](flow#core-contracts).
+Detailed information about available standards and other core contracts can be found in [Introduction to Flow](../flow).
+
+### NFT standard and metadata
+
+Solidity must manage NFT metadata off-chain and NFTs typically link to IPFS JSON from on-chain.
+
+The Cadence NFT standard provides in-built support for metadata with specific types called [views](../flow#flow-nft#overview#nft-metadata).
+Views can be added to NFTs when minted and will always be available as part of the NFT. While metadata is stored
+on-chain, graphics and video content is still stored off-chain. Cadence provides [utility views](../flow#flow-nft#overview#list-of-common-views)
+for both HTTP and IPFS based media storage which remain linked to your NFT.
+
+Using NFT metadata views is a requirement to get listed in the [Flow NFT Catalog](https://www.flow-nft-catalog.com/).
+Projects are encouraged leverage the NFT catalog since wallets and other ecosystem partners can seamlessly integrate
+new collections added there with no input from project creators.
+
+NFT metadata on Flow opens the door to exciting new possibilities that other chains can't achieve. Check out a
+recent [case study](https://flow.com/post/flovatar-nft-flow-blockchain-case-study) where one of our community
+partners leveraged SVG on-chain NFT metadata to enable 2D + 3D versions without any off-chain data!
 
 # Security and access control
 
@@ -108,7 +125,7 @@ In Ethereum this account is referred to as `msg.sender` and informs the program 
 authorized it. Doing so is key to access and security, and is the basis of identity and ownership on Ethereum.
 
 Cadence does not have `msg.sender` and there is no transaction-level way for Cadence contract to uniquely identify the
-calling account. Even if there was a way to access it, Cadence supports [multi-sig](solidity-to-cadence#multi-key-multi-signature-support)
+calling account. Even if there was a way to access it, Cadence supports [multi-sig](#multi-key-multi-signature-support)
 transactions, meaning that a list of all the signers' accounts would be returned.
 
 The reason `msg.sender` is both unsupported and strongly advised against is because Cadence uses Capabilities for
@@ -128,21 +145,23 @@ the opposite direction than the [access-based security](https://en.wikipedia.org
 Solidity lacks specific types or other primitives to aid with permission management. Developers have to inline
 guards to `require` at every function entry-point, thus validating the `msg.sender` of the transaction.
 
-[Capabilities](language#capability-based-access-control) are defined by linking storage paths (namespaces for contract
+[Capabilities](capability-based-access-control) are defined by linking storage paths (namespaces for contract
 storage) to protected objects and then making that linked capability available to other accounts. Public and private
 scopes defined for storage paths and Capabilities themselves align precisely with
-[PublicAccount](language#accounts#publicaccount)/[AuthAccount](language#accounts#authaccount) account scopes.
+[PublicAccount](accounts#publicaccount)/[AuthAccount](accounts#authaccount) account scopes.
 
 Any account can get access to an account's public Capabilities. Public capabilities are created using public paths,
 i.e. they have the domain `public`. For example, all accounts have a default public capability linked to the
 `FlowToken.Vault` Resource. This vault is exposed as a public capability, scoped to the `receiver` resource interface,
-to allow any account to `borrow()` a reference to the Vault to make a `deposit()`. Since only the functions defined under the `FungibleToken.Receiver` interface are exposed, the borrower of the vault reference cannot call `withdraw()` since it is scoped in the `provider` interface. Public capabilities can be obtained from both
+to allow any account to `borrow()` a reference to the Vault to make a `deposit()`. Since only the functions defined
+under the `FungibleToken.Receiver` interface are exposed, the borrower of the vault reference cannot call `withdraw()`
+since it is scoped in the `provider` interface. Public capabilities can be obtained from both
 authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`).
 
 Private capabilities are specifically granted to accounts. They are created using private paths, i.e. they have the
 domain `private`. After creation, they can be obtained from authorised account objects (`AuthAccount`) but not public
 accounts (`PublicAccount`). To share a private Capability with another account, the owning account must `publish` it
-to another account which places in the [account inbox](language#accounts#account-inbox). The recipient can later
+to another account which places in the [account inbox](accounts#account-inbox). The recipient can later
 claim the Capability from the account inbox using then `claim` function.
 
 Capabilities can be `unpublished` and can also be [revoked](design-patterns#capability-revocation) by the creating
@@ -150,7 +169,7 @@ account.
 
 To aid automation, events are emitted for `publish`, `claim` and `unpublish` actions completed for a Capability.
 
-Detailed information can be found in [Capabilities](language#capability-based-access-control).
+Detailed information can be found in [Capabilities](capability-based-access-control).
 
 ## Hygiene factors for protecting value
 
@@ -214,7 +233,7 @@ Certain well established best practices for Solidity may not apply or are handle
 Solidity contracts must use the [check effect interaction](https://fravoll.github.io/solidity-patterns/checks_effects_interactions.html)
 because functions are public by default and address-based access means that guards must exist when program flow
 concedes control to an external contract. There are two reasons why this is significantly less of a problem in
-Cadence. Functions are private by default and the language provides a range of [access scopes](language#access-control).
+Cadence. Functions are private by default and the language provides a range of [access scopes](access-control).
 More importantly, 'risks associated with ceding control to an external contract' is an Ethereum phenomenon;
 the risk no longer applies because access control is handled with Capabilities while assets remain stored safely
 in accounts.
@@ -239,8 +258,7 @@ results in a small amount of code duplication.
 
 ## Error handling
 
-Solidity offers try/catch block to handle errors, however, there is no equivalent in Cadence. This is because
-Resources and Capabilities codify the complexity of access and security in first-class types and
+Solidity offers try/catch block to handle errors, however, there is presently no equivalent in Cadence.
 
 # Integration differences
 
@@ -322,6 +340,20 @@ Transactions can encompass an arbitrary number withdrawals/deposits, across mult
 addresses, or other more complex variations, all of which will succeed or fail in their entirety given their
 ACID properties.
 
+## Contract imports and dynamic contract borrowing
+
+Contracts in Ethereum are similar to static singletons in that interactions happen directly between users and the
+functions declared on the contract instance itself. The object-oriented nature of Cadence means that contracts are
+more accurately viewed as imported dependencies. The imported contract makes its object graph available for the
+code at runtime. Rather than interacting with a contract singleton instance, account interactions to access
+capabilities are the primary integration entry point, allowing the user to interact with the returned objects.
+
+Dynamic borrowing of a contract inlines the loading of a contract based on its contract address. The loaded
+contract can be cast to the contract standards it conforms to, eg: NFT standard, and then interacted with in the
+same way were it imported.
+
+Detailed information about deploying, updating, removing or borrowing contracts can be found in [Contracts](contracts)
+
 ## Multi-key, multi-signature support
 
 Solidity supports only one kind of multi-signature scheme where n out of m (assuming m > n) approvals need to be
@@ -359,7 +391,7 @@ of application design.
 
 ## Events
 
-Flow uses [events](language#events) extensively to provide real-time signals to off-chain systems about particular
+Flow uses [events](events) extensively to provide real-time signals to off-chain systems about particular
 actions that occurred during a transaction. The main difference on Flow is that events remain part of the history
 and are not purged from storage. Events can be populated with arbitrary data that will assist consumers of the
 event. Builders are encouraged to leverage events for seamless UX as users perform transactions.
@@ -412,8 +444,10 @@ overflow/underflow.
 
 ## Optional support
 
-[Optional bindings](language#control-flow) provide in-built conditional handling of nil values. Optionals have two
-cases: either there is a value, or there is nothing; they fork program flow based on whether a value is nil or not.
+[Optional bindings](control-flow) provide in-built conditional handling of nil values. Regular data types in
+Cadence must always have a value and cannot be nil. Optionals enable variables / constants that might contain a
+certain type or a nil value Optionals have two cases: either there is a value, or there is nothing; they fork
+program flow similar to `if nil; else; end;`.
 
 ## Iterable Dictionaries
 
@@ -421,7 +455,7 @@ Solidity offers the mapping type, however, it is not iterable. Because of that d
 services to know all the keys to the mapping. This also pushes builders to create custom datatypes like EnumerableMap
 which adds to gas costs.
 
-Cadence offers the [Dictionary](language#control-flow) type, an unordered collection of key-value associations
+Cadence offers the [Dictionary](control-flow) type, an unordered collection of key-value associations
 which is iterable.
 
 ## Rich support for type utility functions
