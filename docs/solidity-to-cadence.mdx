@@ -15,16 +15,13 @@ A fundamental difference to get used to when adjusting to Cadence from Solidity 
 interoperability on Ethereum are designed around addresses (or more specifically the account associated with an
 address), resulting in all contracts having to carefully track and evaluate access and authorizations.
 
-
-<div style="float: right">
-    <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/ethereum-ownership.png" width="300"/>
-</div> Transactions are based on who authorized them, which is provided as `msg.sender` in the transaction context.
+Transactions are based on who authorized them, which is provided as `msg.sender` in the transaction context.
 User to contract, or contract to contract interactions must be explicitly coded to ensure the appropriate approvals
 have been made before interacting with a contract. The contract based nature of storage means that user ownership
 in Ethereum is represented in a mapping, for example from owner to balance, or token ID to owner. Put another
 way, ownership is tracked in ledger records similar to a person's bank balance. Crypto wallets help combine
-balances from multiple token types into a convenient view for the user.
-
+balances from multiple token types into a convenient view for the user. <img
+src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/ethereum-ownership.png" width="450" align-"right"/>
 
 Cadence introduces new primitives and distinct functionalities, namely Resources and Capabilities, that are designed
 around Flow's account model. Resources are first-class language types which are unique, non-copyable, and which cannot
@@ -47,7 +44,7 @@ There is only one account type in Cadence also with an account address, similar 
 (EOA) address in Ethereum. However, unlike Ethereum contract-accounts, accounts in Cadence also store contract code.
 Accounts realize ownership on Flow in being the container where keys, Resources, and contracts are stored on-chain.
 
-<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/account-structure.png" />
+<img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/account-structure.png"  width="300" />
 
 ### PublicAccount and AuthAccount
 
