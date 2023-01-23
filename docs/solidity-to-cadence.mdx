@@ -129,7 +129,7 @@ authorized it. Doing so is key to access and security, and is the basis of ident
 
 Cadence does not have `msg.sender` and there is no transaction-level way for Cadence code to uniquely identify the
 calling account. Even if there was a way to access it, Cadence supports [multi-sig](#multi-key-multi-signature-support)
-transactions, meaning that a list of all the signers' accounts would be returned.
+transactions, meaning that a list of all the signers' accounts would be returned, making it impossible to identify a single authorizer.
 
 <img src="https://storage.googleapis.com/flow-resources/documentation-assets/solidity-to-cadence/access-based-security.png"
      width="225" align="right" alt="Solidity access applies to the subject by and assessed by the protected resource"/>
