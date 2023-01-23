@@ -26,11 +26,10 @@ balances from multiple token types into a convenient view for the user.
 
 Cadence introduces new primitives and distinct functionalities, namely Resources and Capabilities, that are designed
 around Flow's account model. Resources are first-class language types which are unique, non-copyable, and which cannot
-be discarded. These properties make Resources ideal for representing tokens that may be available in limited numbers.
+be discarded. These properties make Resources ideal for representing tokens that are always limited in numbers.
 Resources are always stored in account storage and contracts control access to them using Capabilities. Capabilities
-are another special type that secure protected resources without the need for address-based approvals or
-authorizations. Cadence makes working with these straightforward and intuitive to those familiar with object-oriented
-programming languages.
+are another special type that secure protected resources without the need for tracking addresses. Cadence makes
+working with these straightforward and intuitive to those familiar with object-oriented programming languages.
 
 Newcomers to Cadence should ensure they understand the following major concepts before development.
 
@@ -146,7 +145,8 @@ accounts (`PublicAccount`). To share a private Capability with another account, 
 to another account which places in the [account inbox](language#accounts#account-inbox). The recipient can later
 claim the Capability from the account inbox using then `claim` function.
 
-Capabilities can be `unpublished` and private capabilities can be revoked by the creating account.
+Capabilities can be `unpublished` and can also be [revoked](design-patterns#capability-revocation) by the creating
+account.
 
 To aid automation, events are emitted for `publish`, `claim` and `unpublish` actions completed for a Capability.
 
@@ -154,11 +154,11 @@ Detailed information can be found in [Capabilities](language#capability-based-ac
 
 ## Hygiene factors for protecting value
 
-While capabilities grant account access to a protected resource, it's still necessary to limit how much value to make
-available through them. For example, if your use-case requires providing another account access to a
-`FLOWToken.Vault` to `withdraw()` funds via it's `provider` interface, it's important to limit the amount that might
-be withdrawn. Tokens implementing FT/NFT standards are the primary type of value being exchanged by accounts on Flow.
-The standard provides the primitives needed to implement capability limiting best-practices.
+While capabilities grant account access to a protected resource, it's still necessary to impose controls on value
+accessed through them. For example, if your use-case requires delegating access to a `FLOWToken.Vault` to
+`withdraw()` funds, it's important to limit the amount. Tokens implementing FT/NFT standards are the primary type of
+value being exchanged by accounts on Flow. The standard provides the primitives needed to implement capability
+limiting best-practices.
 
 ### Token isolation
 
