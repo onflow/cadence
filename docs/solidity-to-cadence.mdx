@@ -203,8 +203,8 @@ available to another account.
 
 ### Bespoke control strategies
 
-For more complex use-cases one might create new Resource that implements the relevant interfaces to match those of
-the underlying protected Resource(s). The code for the new Resource can then enforce limits as required and control
+For more complex use-cases one might create a new Resource that implements the relevant interfaces to match those of
+the protected Resource(s) which it wraps. The code for the new Resource can then enforce limits as required and control
 how and when delegation to the underlying resource occurs.
 
 ## Admin roles
@@ -243,8 +243,8 @@ because functions are public by default and address-based access means that guar
 concedes control to an external contract. There are two reasons why this is significantly less of a problem in
 Cadence. Functions are private by default and the language provides a range of [access scopes](language#access-control).
 More importantly, 'risks associated with ceding control to an external contract' is an Ethereum phenomenon;
-the risk no longer applies because access control is handled with Capabilities while assets remain stored safely
-in accounts.
+the risk no longer applies. This is primarily because Cadence contracts are not static singletons, so control is
+never lost to another contract during the scope of a transaction.
 
 ## Guard Check
 
@@ -358,7 +358,7 @@ capabilities are the primary integration entry point, allowing the user to inter
 
 Dynamic borrowing of a contract inlines the loading of a contract based on its contract address. The loaded
 contract can be cast to the contract standards it conforms to, eg: NFT standard, and then interacted with in the
-same way were it imported.
+same way were it imported. Consider the implications of this for composability of contracts..
 
 Detailed information about deploying, updating, removing or borrowing contracts can be found in [Contracts](language#contracts)
 
@@ -406,9 +406,9 @@ event. Builders are encouraged to leverage events for seamless UX as users perfo
 
 ## Contract upgradeability
 
-Flow supports limited upgradability of Cadence contracts which is most helpful during development. The following function
-shows how the account owner can update a contract. Upgrades are analyzed for prohibited changes once uploaded for
-upgrade. Upgradeability is still an early phase feature, which will continue to improve over time.
+Flow supports limited upgradability of Cadence contracts which is most helpful during development. The following
+function shows how an account owner can update a contract. Upgrades are analyzed for prohibited changes once
+uploaded for upgrade. Upgradeability is still an early phase feature, which will continue to improve over time.
 
 ```solidity
 fun update__experimental(name: String, code: [UInt8]): DeployedContract
@@ -459,8 +459,8 @@ program flow similar to `if nil; else; end;`.
 
 ## Iterable Dictionaries
 
-Solidity offers the mapping type, however, it is not iterable. Because of that dApp developers have to run off-chain
-services to know all the keys to the mapping. This also pushes builders to create custom datatypes like EnumerableMap
+Solidity offers the mapping type, however, it is not iterable. Because of that dApp developers have to maintain
+off-chain tracking to be have access to keys. This also pushes builders to create custom datatypes like `EnumerableMap`
 which adds to gas costs.
 
 Cadence offers the [Dictionary](language#control-flow) type, an unordered collection of key-value associations
