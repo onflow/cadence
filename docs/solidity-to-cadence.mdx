@@ -136,7 +136,7 @@ scopes defined for storage paths and Capabilities themselves align precisely wit
 Any account can get access to an account's public Capabilities. Public capabilities are created using public paths,
 i.e. they have the domain `public`. For example, all accounts have a default public capability linked to the
 `FlowToken.Vault` Resource. This vault is exposed as a public capability, scoped to the `receiver` resource interface,
-to allow any account to `borrow()` the Vault to make a `deposit()`. Public capabilities can be obtained from both
+to allow any account to `borrow()` a reference to the Vault to make a `deposit()`. Since only the functions defined under the `FungibleToken.Receiver` interface are exposed, the borrower of the vault reference cannot call `withdraw()` since it is scoped in the `provider` interface. Public capabilities can be obtained from both
 authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`).
 
 Private capabilities are specifically granted to accounts. They are created using private paths, i.e. they have the
