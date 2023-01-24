@@ -180,7 +180,7 @@ func (interpreter *Interpreter) declareTransactionRole(
 	declaration *ast.TransactionRoleDeclaration,
 ) (
 	roleValue *SimpleCompositeValue,
-	prepareFunctionValue *HostFunctionValue,
+	roleFunction *HostFunctionValue,
 ) {
 	transactionRoleType := interpreter.Program.Elaboration.TransactionRoleDeclarationType(declaration)
 
@@ -217,7 +217,7 @@ func (interpreter *Interpreter) declareTransactionRole(
 
 	common.UseMemory(interpreter, common.HostFunctionValueMemoryUsage)
 
-	prepareFunctionValue = &HostFunctionValue{
+	roleFunction = &HostFunctionValue{
 		Function: func(invocation Invocation) Value {
 			interpreter.activations.PushNewWithCurrent()
 			defer interpreter.activations.Pop()
