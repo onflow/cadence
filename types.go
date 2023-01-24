@@ -1769,10 +1769,10 @@ func (t ReferenceType) Equal(other Type) bool {
 type restrictionSet = map[Type]struct{}
 
 type RestrictedType struct {
-	typeID             string
 	Type               Type
-	Restrictions       []Type
 	restrictionSet     restrictionSet
+	typeID             string
+	Restrictions       []Type
 	restrictionSetOnce sync.Once
 }
 

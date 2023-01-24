@@ -91,24 +91,24 @@ type ContractValueHandlerFunc func(
 
 type Checker struct {
 	// memoryGauge is used for metering memory usage
-	memoryGauge             common.MemoryGauge
-	Location                common.Location
-	expectedType            Type
-	resources               *Resources
-	valueActivations        *VariableActivations
-	currentMemberExpression *ast.MemberExpression
-	typeActivations         *VariableActivations
-	containerTypes          map[Type]struct{}
-	Program                 *ast.Program
-	PositionInfo            *PositionInfo
-	Config                  *Config
-	Elaboration             *Elaboration
+	memoryGauge  common.MemoryGauge
+	Location     common.Location
+	expectedType Type
+	Config       *Config
 	// initialized lazily. use beforeExtractor()
 	_beforeExtractor                 *BeforeExtractor
-	errors                           []error
-	functionActivations              *FunctionActivations
-	inCondition                      bool
+	currentMemberExpression          *ast.MemberExpression
+	typeActivations                  *VariableActivations
+	containerTypes                   map[Type]struct{}
+	Program                          *ast.Program
+	PositionInfo                     *PositionInfo
+	resources                        *Resources
+	Elaboration                      *Elaboration
+	valueActivations                 *VariableActivations
 	resourceFieldInvalidationAllowed func(*ast.MemberExpression) *Member
+	functionActivations              *FunctionActivations
+	errors                           []error
+	inCondition                      bool
 	inAssignment                     bool
 	inInvocation                     bool
 	inCreate                         bool

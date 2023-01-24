@@ -5649,10 +5649,10 @@ func IsNilType(ty Type) bool {
 
 type TransactionType struct {
 	Members           *StringMemberOrderedMap
+	Roles             *orderedmap.OrderedMap[string, *TransactionRoleType]
 	Fields            []string
 	PrepareParameters []Parameter
 	Parameters        []Parameter
-	Roles             *orderedmap.OrderedMap[string, *TransactionRoleType]
 }
 
 var _ Type = &TransactionType{}
