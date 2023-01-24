@@ -124,6 +124,8 @@ func (k DeclarationKind) Name() string {
 		return "self"
 	case DeclarationKindTransaction:
 		return "transaction"
+	case DeclarationKindTransactionRole:
+		return "role"
 	case DeclarationKindPrepare:
 		return "prepare"
 	case DeclarationKindExecute:
@@ -175,6 +177,8 @@ func (k DeclarationKind) Keywords() string {
 		return "self"
 	case DeclarationKindTransaction:
 		return "transaction"
+	case DeclarationKindTransactionRole:
+		return "role"
 	case DeclarationKindPrepare:
 		return "prepare"
 	case DeclarationKindExecute:

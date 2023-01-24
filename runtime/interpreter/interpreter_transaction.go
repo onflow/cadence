@@ -146,3 +146,8 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		transactionFunction,
 	)
 }
+
+func (interpreter *Interpreter) VisitTransactionRoleDeclaration(_ *ast.TransactionRoleDeclaration) StatementResult {
+	// TODO:
+	panic("TODO")
+}

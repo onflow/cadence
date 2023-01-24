@@ -110,6 +110,7 @@ type Elaboration struct {
 	compositeTypeDeclarations           map[*CompositeType]*ast.CompositeDeclaration
 	interfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
 	transactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
+	transactionRoleDeclarationTypes     map[*ast.TransactionRoleDeclaration]*TransactionRoleType
 	constructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*FunctionType
 	functionExpressionFunctionTypes     map[*ast.FunctionExpression]*FunctionType
 	invocationExpressionTypes           map[*ast.InvocationExpression]InvocationExpressionTypes
@@ -613,6 +614,23 @@ func (e *Elaboration) SetTransactionDeclarationType(declaration *ast.Transaction
 		e.transactionDeclarationTypes = map[*ast.TransactionDeclaration]*TransactionType{}
 	}
 	e.transactionDeclarationTypes[declaration] = ty
+}
+
+func (e *Elaboration) TransactionRoleDeclarationType(declaration *ast.TransactionRoleDeclaration) *TransactionRoleType {
+	if e.transactionRoleDeclarationTypes == nil {
+		return nil
+	}
+	return e.transactionRoleDeclarationTypes[declaration]
+}
+
+func (e *Elaboration) SetTransactionRoleDeclarationType(
+	declaration *ast.TransactionRoleDeclaration,
+	ty *TransactionRoleType,
+) {
+	if e.transactionRoleDeclarationTypes == nil {
+		e.transactionRoleDeclarationTypes = map[*ast.TransactionRoleDeclaration]*TransactionRoleType{}
+	}
+	e.transactionRoleDeclarationTypes[declaration] = ty
 }
 
 func (e *Elaboration) SetSwapStatementTypes(statement *ast.SwapStatement, types SwapStatementTypes) {

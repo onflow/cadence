@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/common/persistent"
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -97,7 +98,7 @@ type Checker struct {
 	valueActivations        *VariableActivations
 	currentMemberExpression *ast.MemberExpression
 	typeActivations         *VariableActivations
-	containerTypes          map[Type]bool
+	containerTypes          map[Type]struct{}
 	Program                 *ast.Program
 	PositionInfo            *PositionInfo
 	Config                  *Config
@@ -153,7 +154,7 @@ func NewChecker(
 		Elaboration:         elaboration,
 		resources:           NewResources(),
 		functionActivations: functionActivations,
-		containerTypes:      map[Type]bool{},
+		containerTypes:      map[Type]struct{}{},
 		memoryGauge:         memoryGauge,
 	}
 
@@ -1923,31 +1924,55 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	return predeclaredMembers
 }
 
-func (checker *Checker) checkVariableMove(expression ast.Expression) {
+func (checker *Checker) checkValueMove(expression ast.Expression) {
 
-	identifierExpression, ok := expression.(*ast.IdentifierExpression)
-	if !ok {
-		return
-	}
+	var ty Type
+	var pos ast.HasPosition
 
-	variable := checker.valueActivations.Find(identifierExpression.Identifier.Identifier)
-	if variable == nil {
+	switch expression := expression.(type) {
+	case *ast.IdentifierExpression:
+		variable := checker.valueActivations.Find(expression.Identifier.Identifier)
+		if variable == nil {
+			return
+		}
+
+		ty = variable.Type
+		pos = expression.Identifier
+
+	case *ast.MemberExpression:
+		memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if memberInfo.AccessedType == InvalidType ||
+			memberInfo.Member == nil {
+
+			return
+		}
+
+		ty = memberInfo.Member.TypeAnnotation.Type
+		pos = expression.Identifier
+
+	default:
 		return
 	}
 
 	reportInvalidMove := func(declarationKind common.DeclarationKind) {
 		checker.report(
 			&InvalidMoveError{
-				Name:            variable.Identifier,
 				DeclarationKind: declarationKind,
-				Pos:             identifierExpression.StartPosition(),
+				Range:           ast.NewUnmeteredRangeFromPositioned(pos),
 			},
 		)
 	}
 
-	switch ty := variable.Type.(type) {
+	switch ty := ty.(type) {
 	case *TransactionType:
 		reportInvalidMove(common.DeclarationKindTransaction)
+
+	case *TransactionRoleType:
+		reportInvalidMove(common.DeclarationKindTransactionRole)
 
 	case CompositeKindedType:
 		kind := ty.GetCompositeKind()
@@ -2394,4 +2419,25 @@ func (checker *Checker) isAvailableMember(expressionType Type, identifier string
 	}
 
 	return true
+}
+
+func getFieldMembers(
+	members *StringMemberOrderedMap,
+	fields []*ast.FieldDeclaration,
+) (
+	fieldMembers *MemberFieldDeclarationOrderedMap,
+) {
+	fieldMembers = orderedmap.New[MemberFieldDeclarationOrderedMap](len(fields))
+
+	for _, field := range fields {
+		fieldName := field.Identifier.Identifier
+		member, ok := members.Get(fieldName)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		fieldMembers.Set(member, field)
+	}
+
+	return
 }

@@ -35,6 +35,7 @@ type StatementDeclarationVisitor[T any] interface {
 	VisitCompositeDeclaration(*CompositeDeclaration) T
 	VisitInterfaceDeclaration(*InterfaceDeclaration) T
 	VisitTransactionDeclaration(*TransactionDeclaration) T
+	VisitTransactionRoleDeclaration(*TransactionRoleDeclaration) T
 }
 
 type DeclarationVisitor[T any] interface {
@@ -78,6 +79,9 @@ func AcceptDeclaration[T any](declaration Declaration, visitor DeclarationVisito
 
 	case ElementTypeTransactionDeclaration:
 		return visitor.VisitTransactionDeclaration(declaration.(*TransactionDeclaration))
+
+	case ElementTypeTransactionRoleDeclaration:
+		return visitor.VisitTransactionRoleDeclaration(declaration.(*TransactionRoleDeclaration))
 	}
 
 	panic(errors.NewUnreachableError())

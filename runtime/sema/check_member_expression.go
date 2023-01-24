@@ -301,9 +301,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 // isReadableMember returns true if the given member can be read from
 // in the current location of the checker
 func (checker *Checker) isReadableMember(member *Member) bool {
-	if checker.isReadableAccess(member.Access) ||
-		checker.containerTypes[member.ContainerType] {
+	if checker.isReadableAccess(member.Access) {
+		return true
+	}
 
+	_, ok := checker.containerTypes[member.ContainerType]
+	if ok {
 		return true
 	}
 
@@ -313,7 +316,7 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 		// check if the current location is contained in the member's contract
 
 		contractType := containingContractKindedType(member.ContainerType)
-		if checker.containerTypes[contractType] {
+		if _, ok := checker.containerTypes[contractType]; ok {
 			return true
 		}
 
@@ -338,8 +341,12 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 // isWriteableMember returns true if the given member can be written to
 // in the current location of the checker
 func (checker *Checker) isWriteableMember(member *Member) bool {
-	return checker.isWriteableAccess(member.Access) ||
-		checker.containerTypes[member.ContainerType]
+	if checker.isWriteableAccess(member.Access) {
+		return true
+	}
+
+	_, ok := checker.containerTypes[member.ContainerType]
+	return ok
 }
 
 // isMutatableMember returns true if the given member can be mutated

@@ -2902,67 +2902,31 @@ func (e *ReadOnlyTargetAssignmentError) Error() string {
 	return "cannot assign to read-only target"
 }
 
-// InvalidTransactionBlockError
-
-type InvalidTransactionBlockError struct {
-	Name string
-	Pos  ast.Position
-}
-
-var _ SemanticError = &InvalidTransactionBlockError{}
-var _ errors.UserError = &InvalidTransactionBlockError{}
-var _ errors.SecondaryError = &InvalidTransactionBlockError{}
-
-func (*InvalidTransactionBlockError) isSemanticError() {}
-
-func (*InvalidTransactionBlockError) IsUserError() {}
-
-func (e *InvalidTransactionBlockError) Error() string {
-	return "invalid transaction block"
-}
-
-func (e *InvalidTransactionBlockError) SecondaryError() string {
-	return fmt.Sprintf(
-		"expected `prepare` or `execute`, got `%s`",
-		e.Name,
-	)
-}
-
-func (e *InvalidTransactionBlockError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *InvalidTransactionBlockError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	length := len(e.Name)
-	return e.Pos.Shifted(memoryGauge, length-1)
-}
-
-// TransactionMissingPrepareError
-
-type TransactionMissingPrepareError struct {
+// MissingPrepareForFieldError
+type MissingPrepareForFieldError struct {
 	FirstFieldName string
 	FirstFieldPos  ast.Position
 }
 
-var _ SemanticError = &TransactionMissingPrepareError{}
-var _ errors.UserError = &TransactionMissingPrepareError{}
+var _ SemanticError = &MissingPrepareForFieldError{}
+var _ errors.UserError = &MissingPrepareForFieldError{}
 
-func (*TransactionMissingPrepareError) isSemanticError() {}
+func (*MissingPrepareForFieldError) isSemanticError() {}
 
-func (*TransactionMissingPrepareError) IsUserError() {}
+func (*MissingPrepareForFieldError) IsUserError() {}
 
-func (e *TransactionMissingPrepareError) Error() string {
+func (e *MissingPrepareForFieldError) Error() string {
 	return fmt.Sprintf(
-		"transaction missing prepare function for field `%s`",
+		"missing prepare block for field `%s`",
 		e.FirstFieldName,
 	)
 }
 
-func (e *TransactionMissingPrepareError) StartPosition() ast.Position {
+func (e *MissingPrepareForFieldError) StartPosition() ast.Position {
 	return e.FirstFieldPos
 }
 
-func (e *TransactionMissingPrepareError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+func (e *MissingPrepareForFieldError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.FirstFieldName)
 	return e.FirstFieldPos.Shifted(memoryGauge, length-1)
 }
@@ -3009,38 +2973,6 @@ func (e *InvalidNonImportableTransactionParameterTypeError) Error() string {
 	)
 }
 
-// InvalidTransactionFieldAccessModifierError
-
-type InvalidTransactionFieldAccessModifierError struct {
-	Name   string
-	Access ast.Access
-	Pos    ast.Position
-}
-
-var _ SemanticError = &InvalidTransactionFieldAccessModifierError{}
-var _ errors.UserError = &InvalidTransactionFieldAccessModifierError{}
-
-func (*InvalidTransactionFieldAccessModifierError) isSemanticError() {}
-
-func (*InvalidTransactionFieldAccessModifierError) IsUserError() {}
-
-func (e *InvalidTransactionFieldAccessModifierError) Error() string {
-	return fmt.Sprintf(
-		"access modifier not allowed for transaction field `%s`: `%s`",
-		e.Name,
-		e.Access.Keyword(),
-	)
-}
-
-func (e *InvalidTransactionFieldAccessModifierError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *InvalidTransactionFieldAccessModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	length := len(e.Access.Keyword())
-	return e.Pos.Shifted(memoryGauge, length-1)
-}
-
 // InvalidTransactionPrepareParameterTypeError
 
 type InvalidTransactionPrepareParameterTypeError struct {
@@ -3061,6 +2993,94 @@ func (e *InvalidTransactionPrepareParameterTypeError) Error() string {
 		AuthAccountType,
 		e.Type.QualifiedString(),
 	)
+}
+
+// DuplicateTransactionRoleError
+
+type DuplicateTransactionRoleError struct {
+	Name string
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateTransactionRoleError{}
+var _ errors.UserError = &DuplicateTransactionRoleError{}
+
+func (*DuplicateTransactionRoleError) isSemanticError() {}
+
+func (*DuplicateTransactionRoleError) IsUserError() {}
+
+func (e *DuplicateTransactionRoleError) Error() string {
+	return fmt.Sprintf(
+		"duplicate role declaration `%s`",
+		e.Name,
+	)
+}
+
+// TransactionRoleWithFieldNameError
+
+type TransactionRoleWithFieldNameError struct {
+	FieldIdentifier ast.Identifier
+	ast.Range
+}
+
+var _ SemanticError = &TransactionRoleWithFieldNameError{}
+var _ errors.UserError = &TransactionRoleWithFieldNameError{}
+
+func (*TransactionRoleWithFieldNameError) isSemanticError() {}
+
+func (*TransactionRoleWithFieldNameError) IsUserError() {}
+
+func (e *TransactionRoleWithFieldNameError) Error() string {
+	return fmt.Sprintf(
+		"role conflicts with field `%s`",
+		e.FieldIdentifier.Identifier,
+	)
+}
+
+func (e *TransactionRoleWithFieldNameError) ErrorNotes() []errors.ErrorNote {
+	return []errors.ErrorNote{
+		&RedeclarationNote{
+			Range: ast.NewUnmeteredRangeFromPositioned(e.FieldIdentifier),
+		},
+	}
+}
+
+// PrepareParameterCountMismatchError
+type PrepareParameterCountMismatchError struct {
+	ActualCount   int
+	ExpectedCount int
+	ast.Range
+}
+
+var _ SemanticError = &PrepareParameterCountMismatchError{}
+var _ errors.UserError = &PrepareParameterCountMismatchError{}
+
+func (*PrepareParameterCountMismatchError) isSemanticError() {}
+
+func (*PrepareParameterCountMismatchError) IsUserError() {}
+
+func (e *PrepareParameterCountMismatchError) Error() string {
+	return fmt.Sprintf(
+		"role's prepare parameter count must match transaction's: expected %d, got %d",
+		e.ExpectedCount,
+		e.ActualCount,
+	)
+}
+
+// MissingRolePrepareError
+type MissingRolePrepareError struct {
+	ast.Range
+}
+
+var _ SemanticError = &MissingRolePrepareError{}
+var _ errors.UserError = &MissingRolePrepareError{}
+
+func (*MissingRolePrepareError) isSemanticError() {}
+
+func (*MissingRolePrepareError) IsUserError() {}
+
+func (e *MissingRolePrepareError) Error() string {
+	return "role is missing prepare block that matches transaction's"
 }
 
 // InvalidNestedDeclarationError
@@ -3242,9 +3262,8 @@ func (e *InvalidSelfInvalidationError) Error() string {
 // InvalidMoveError
 
 type InvalidMoveError struct {
-	Name            string
 	DeclarationKind common.DeclarationKind
-	Pos             ast.Position
+	ast.Range
 }
 
 var _ SemanticError = &InvalidMoveError{}
@@ -3256,19 +3275,9 @@ func (*InvalidMoveError) IsUserError() {}
 
 func (e *InvalidMoveError) Error() string {
 	return fmt.Sprintf(
-		"cannot move %s: `%s`",
+		"cannot move %s",
 		e.DeclarationKind.Name(),
-		e.Name,
 	)
-}
-
-func (e *InvalidMoveError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *InvalidMoveError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	length := len(e.Name)
-	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // ConstantSizedArrayLiteralSizeError

@@ -109,7 +109,7 @@ func TestCheckTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("InvalidFieldUninitialized", func(t *testing.T) {
+	t.Run("field, missing prepare", func(t *testing.T) {
 		test(
 			t,
 			`
@@ -123,12 +123,29 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			[]error{
-				&sema.TransactionMissingPrepareError{},
+				&sema.MissingPrepareForFieldError{},
 			},
 		)
 	})
 
-	t.Run("FieldInitialized", func(t *testing.T) {
+	t.Run("field, missing prepare", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                var x: Int
+
+                prepare() {}
+              }
+            `,
+			[]error{
+				&sema.FieldUninitializedError{},
+			},
+		)
+	})
+
+	t.Run("field, prepare, execute", func(t *testing.T) {
 		test(t,
 			`
               transaction {
@@ -222,19 +239,19 @@ func TestCheckTransactions(t *testing.T) {
 
 	// TODO: prevent self from being used in function
 	// {
-	// 	"IllegalSelfUsage",
-	// 	`
-	//  	  fun foo(x: AnyStruct) {}
+	//     "IllegalSelfUsage",
+	//     `
+	//        fun foo(x: AnyStruct) {}
 	//
-	// 	  transaction {
-	// 	    execute {
-	// 		  foo(x: self)
-	// 		}
-	// 	  }
-	// 	`,
-	// 	[]error{
-	// 		&sema.CheckerError{},
-	// 	},
+	//       transaction {
+	//         execute {
+	//           foo(x: self)
+	//         }
+	//       }
+	//     `,
+	//     []error{
+	//         &sema.CheckerError{},
+	//     },
 	// },
 
 	t.Run("ResourceField", func(t *testing.T) {
@@ -310,10 +327,10 @@ func TestCheckTransactions(t *testing.T) {
 	t.Run("InvalidParameterUseAfterDeclaration", func(t *testing.T) {
 		test(t,
 			`
-		      transaction(x: Bool) {}
+              transaction(x: Bool) {}
 
-		      let y = x
-		    `,
+              let y = x
+            `,
 			[]error{
 				&sema.NotDeclaredError{},
 			},
@@ -323,10 +340,10 @@ func TestCheckTransactions(t *testing.T) {
 	t.Run("InvalidResourceParameter", func(t *testing.T) {
 		test(t,
 			`
-		      resource R {}
+              resource R {}
 
-		      transaction(rs: @[R]) {}
-		    `,
+              transaction(rs: @[R]) {}
+            `,
 			[]error{
 				&sema.InvalidNonImportableTransactionParameterTypeError{},
 				&sema.ResourceLossError{},
@@ -337,15 +354,327 @@ func TestCheckTransactions(t *testing.T) {
 	t.Run("InvalidNonStorableParameter", func(t *testing.T) {
 		test(t,
 			`
-		      transaction(x: ((Int): Int)) {
-				execute {
-				  x(0)
-				}
-			  }
-		    `,
+              transaction(x: ((Int): Int)) {
+                execute {
+                  x(0)
+                }
+              }
+            `,
 			[]error{
 				&sema.InvalidNonImportableTransactionParameterTypeError{},
 			},
+		)
+	})
+
+	t.Run("invalid access modifier for field", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                priv var x: Int
+
+                prepare() {
+                    self.x = 1
+                }
+              }
+            `,
+			[]error{
+				&sema.InvalidAccessModifierError{},
+			},
+		)
+	})
+}
+
+func TestCheckTransactionRoles(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, code string, expectedErrors []error) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, code)
+
+		errs := RequireCheckerErrors(t, err, len(expectedErrors))
+
+		for i, err := range errs {
+			if !assert.IsType(t, expectedErrors[i], err) {
+				t.Log(err)
+			}
+		}
+	}
+
+	t.Run("empty", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  role foo {}
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("field, prepare", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  role foo {
+
+                      let bar: Int
+
+                      prepare() {
+                          self.bar = 1
+                      }
+                  }
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("field, missing prepare", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  role foo {
+
+                      let bar: Int
+                  }
+              }
+            `,
+			[]error{
+				&sema.MissingPrepareForFieldError{},
+			},
+		)
+	})
+
+	t.Run("field, prepare, missing initialization", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  role foo {
+
+                      let bar: Int
+
+                      prepare() {}
+                  }
+              }
+            `,
+			[]error{
+				&sema.FieldUninitializedError{},
+			},
+		)
+	})
+
+	t.Run("duplicate", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  role foo {}
+
+                  role foo {}
+              }
+            `,
+			[]error{
+				&sema.DuplicateTransactionRoleError{},
+			},
+		)
+	})
+
+	t.Run("field name conflict", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  let foo: Int
+
+                  prepare() {
+                      self.foo = 1
+                  }
+
+                  role foo {}
+              }
+            `,
+			[]error{
+				&sema.TransactionRoleWithFieldNameError{},
+			},
+		)
+	})
+
+	t.Run("multiple roles, one field each, execute", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  role foo {
+
+                      let bar: Int
+
+                      prepare() {
+                          self.bar = 1
+                      }
+                  }
+
+                  role baz {
+
+                      let blub: String
+
+                      prepare() {
+                          self.blub = "2"
+                      }
+                  }
+
+                  execute {
+                      let bar: Int = self.foo.bar
+                      let blub: String = self.baz.blub
+                  }
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("invalid prepare parameter type", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {}
+
+                  role buyer {
+                      let foo: Int
+
+                      prepare(foo: Int) {
+                          self.foo = foo
+                      }
+                  }
+              }
+            `,
+			[]error{
+				&sema.InvalidTransactionPrepareParameterTypeError{},
+				&sema.TypeMismatchError{},
+			},
+		)
+	})
+
+	t.Run("matching prepare", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {}
+
+                  role buyer {
+                      prepare(signer: AuthAccount) {}
+                  }
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("missing prepare", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {}
+
+                  role buyer {}
+              }
+            `,
+			[]error{
+				&sema.MissingRolePrepareError{},
+			},
+		)
+	})
+
+	t.Run("fewer prepare parameters", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {}
+
+                  role buyer {
+                      prepare() {}
+                  }
+              }
+            `,
+			[]error{
+				&sema.PrepareParameterCountMismatchError{},
+			},
+		)
+	})
+
+	t.Run("more prepare parameters", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {}
+
+                  role buyer {
+                      prepare(firstSigner: AuthAccount, secondSigner: AuthAccount) {}
+                  }
+              }
+            `,
+			[]error{
+				&sema.PrepareParameterCountMismatchError{},
+			},
+		)
+	})
+
+	t.Run("prepare, but no transaction prepare ", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction {
+                  role buyer {
+                      prepare(signer: AuthAccount) {}
+                  }
+              }
+            `,
+			[]error{
+				&sema.PrepareParameterCountMismatchError{},
+			},
+		)
+	})
+
+	t.Run("transaction parameter usage", func(t *testing.T) {
+		test(
+			t,
+			`
+              transaction(foo: Int) {
+
+                  role buyer {
+                      let foo: Int
+
+                      prepare() {
+                          self.foo = foo
+                      }
+                  }
+              }
+            `,
+			nil,
 		)
 	})
 }
@@ -398,82 +727,292 @@ func TestCheckInvalidTransactionSelfMoveToFunction(t *testing.T) {
 	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 }
 
-func TestCheckInvalidTransactionSelfMoveInVariableDeclaration(t *testing.T) {
+func TestCheckInvalidTransactionSelfMove(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	t.Run("variable declaration", func(t *testing.T) {
 
-     transaction {
+		_, err := ParseAndCheck(t, `
 
-         execute {
-             let x = self
-         }
-     }
-   `)
+          transaction {
 
-	errs := RequireCheckerErrors(t, err, 1)
+              execute {
+                  let x = self
+              }
+          }
+        `)
 
-	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
+
+	t.Run("return from function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          transaction {
+
+              execute {
+                  return self
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+
+		assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
+		assert.IsType(t, &sema.TransactionType{}, typeMismatchErr.ActualType)
+	})
+
+	t.Run("into array literal", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          transaction {
+
+              execute {
+                  let txs = [self]
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
+
+	t.Run("into dictionary literal", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          transaction {
+
+              execute {
+                  let txs = {"self": self}
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
+
+	t.Run("into function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+              fun test(_ x: AnyStruct) {}
+
+              transaction {
+
+                  execute {
+                      test(self)
+                  }
+              }
+            `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+	})
 }
 
-func TestCheckInvalidTransactionSelfMoveReturnFromFunction(t *testing.T) {
+func TestCheckInvalidTransactionRoleSelfMove(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	t.Run("direct", func(t *testing.T) {
+		t.Parallel()
 
-     transaction {
+		t.Run("variable declaration", func(t *testing.T) {
 
-         execute {
-             return self
-         }
-     }
-   `)
+			t.Parallel()
 
-	errs := RequireCheckerErrors(t, err, 1)
+			_, err := ParseAndCheck(t, `
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+              transaction {
 
-	assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
-	assert.IsType(t, &sema.TransactionType{}, typeMismatchErr.ActualType)
-}
+                  role buyer {
+                      prepare() {
+                          let x = self
+                      }
+                  }
+              }
+            `)
 
-func TestCheckInvalidTransactionSelfMoveIntoArrayLiteral(t *testing.T) {
+			errs := RequireCheckerErrors(t, err, 1)
 
-	t.Parallel()
+			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		})
 
-	_, err := ParseAndCheck(t, `
+		t.Run("into array literal", func(t *testing.T) {
 
-     transaction {
+			t.Parallel()
 
-         execute {
-             let txs = [self]
-         }
-     }
-   `)
+			_, err := ParseAndCheck(t, `
 
-	errs := RequireCheckerErrors(t, err, 1)
+              transaction {
 
-	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
-}
+                  role buyer {
+                      prepare() {
+                          let txs = [self]
+                      }
+                  }
+              }
+            `)
 
-func TestCheckInvalidTransactionSelfMoveIntoDictionaryLiteral(t *testing.T) {
+			errs := RequireCheckerErrors(t, err, 1)
 
-	t.Parallel()
+			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		})
 
-	_, err := ParseAndCheck(t, `
+		t.Run("into dictionary literal", func(t *testing.T) {
 
-     transaction {
+			t.Parallel()
 
-         execute {
-             let txs = {"self": self}
-         }
-     }
-   `)
+			_, err := ParseAndCheck(t, `
 
-	errs := RequireCheckerErrors(t, err, 1)
+              transaction {
 
-	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+                  role buyer {
+                      prepare() {
+                          let txs = {"self": self}
+                      }
+                  }
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		})
+
+		t.Run("into function", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+
+              fun test(_ x: AnyStruct) {}
+
+              transaction {
+
+                  role buyer {
+                      prepare() {
+                          test(self)
+                      }
+                  }
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		})
+	})
+
+	t.Run("indirect", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("variable declaration", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+
+              transaction {
+
+                  role buyer {}
+
+                  execute {
+                      let x = self.buyer
+                  }
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		})
+
+		t.Run("into array literal", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+
+              transaction {
+
+                  role buyer {}
+
+                  execute {
+                      let roles = [self.buyer]
+                  }
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		})
+
+		t.Run("into dictionary literal", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+
+              transaction {
+
+                  role buyer {}
+
+                  execute {
+                      let roles = {"buyer": self.buyer}
+                  }
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		})
+
+		t.Run("into function", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+
+              fun test(_ x: AnyStruct) {}
+
+              transaction {
+
+                  role buyer {}
+
+                  execute {
+                      test(self.buyer)
+                  }
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+		})
+
+	})
 }

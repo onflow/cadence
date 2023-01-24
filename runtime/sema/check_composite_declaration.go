@@ -46,10 +46,8 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		panic(errors.NewUnreachableError())
 	}
 
-	checker.containerTypes[compositeType] = true
-	defer func() {
-		checker.containerTypes[compositeType] = false
-	}()
+	checker.containerTypes[compositeType] = struct{}{}
+	defer delete(checker.containerTypes, compositeType)
 
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,
@@ -77,22 +75,14 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 	var initializationInfo *InitializationInfo
 
-	if kind == ContainerKindComposite {
+	if kind == ContainerKindComposite &&
+		declaration.CompositeKind != common.CompositeKindEnum {
+
 		// The initializer must initialize all members that are fields,
 		// e.g. not composite functions (which are by definition constant and "initialized")
 
 		fields := declaration.Members.Fields()
-		fieldMembers := orderedmap.New[MemberFieldDeclarationOrderedMap](len(fields))
-
-		for _, field := range fields {
-			fieldName := field.Identifier.Identifier
-			member, ok := compositeType.Members.Get(fieldName)
-			if !ok {
-				continue
-			}
-
-			fieldMembers.Set(member, field)
-		}
+		fieldMembers := getFieldMembers(compositeType.Members, fields)
 
 		initializationInfo = NewInitializationInfo(compositeType, fieldMembers)
 	}

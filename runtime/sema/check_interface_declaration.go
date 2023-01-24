@@ -39,10 +39,8 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		panic(errors.NewUnreachableError())
 	}
 
-	checker.containerTypes[interfaceType] = true
-	defer func() {
-		checker.containerTypes[interfaceType] = false
-	}()
+	checker.containerTypes[interfaceType] = struct{}{}
+	defer delete(checker.containerTypes, interfaceType)
 
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,

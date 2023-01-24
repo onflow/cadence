@@ -3258,6 +3258,153 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("field with access, prepare", func(t *testing.T) {
+		const code = `
+		  transaction {
+
+		    priv var x: Int
+            var y: String
+
+		    prepare(signer: AuthAccount) {
+	          x = 0
+			}
+		  }
+		`
+		result, errs := testParseProgram(code)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.TransactionDeclaration{
+					Fields: []*ast.FieldDeclaration{
+						{
+							Access:       ast.AccessPrivate,
+							VariableKind: ast.VariableKindVariable,
+							Identifier: ast.Identifier{
+								Identifier: "x",
+								Pos:        ast.Position{Offset: 35, Line: 4, Column: 15},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 38, Line: 4, Column: 18},
+									},
+								},
+								StartPos: ast.Position{Offset: 38, Line: 4, Column: 18},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 26, Line: 4, Column: 6},
+								EndPos:   ast.Position{Offset: 40, Line: 4, Column: 20},
+							},
+						},
+						{
+							Access:       ast.AccessNotSpecified,
+							VariableKind: ast.VariableKindVariable,
+							Identifier: ast.Identifier{
+								Identifier: "y",
+								Pos:        ast.Position{Offset: 58, Line: 5, Column: 16},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "String",
+										Pos:        ast.Position{Offset: 61, Line: 5, Column: 19},
+									},
+								},
+								StartPos: ast.Position{Offset: 61, Line: 5, Column: 19},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 54, Line: 5, Column: 12},
+								EndPos:   ast.Position{Offset: 66, Line: 5, Column: 24},
+							},
+						},
+					},
+					Prepare: &ast.SpecialFunctionDeclaration{
+						Kind: common.DeclarationKindPrepare,
+						FunctionDeclaration: &ast.FunctionDeclaration{
+							Access: ast.AccessNotSpecified,
+							Identifier: ast.Identifier{
+								Identifier: "prepare",
+								Pos:        ast.Position{Offset: 75, Line: 7, Column: 6},
+							},
+							ParameterList: &ast.ParameterList{
+								Parameters: []*ast.Parameter{
+									{
+										Label: "",
+										Identifier: ast.Identifier{
+											Identifier: "signer",
+											Pos:        ast.Position{Offset: 83, Line: 7, Column: 14},
+										},
+										TypeAnnotation: &ast.TypeAnnotation{
+											IsResource: false,
+											Type: &ast.NominalType{
+												Identifier: ast.Identifier{
+													Identifier: "AuthAccount",
+													Pos:        ast.Position{Offset: 91, Line: 7, Column: 22},
+												},
+											},
+											StartPos: ast.Position{Offset: 91, Line: 7, Column: 22},
+										},
+										StartPos: ast.Position{Offset: 83, Line: 7, Column: 14},
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 82, Line: 7, Column: 13},
+									EndPos:   ast.Position{Offset: 102, Line: 7, Column: 33},
+								},
+							},
+							ReturnTypeAnnotation: nil,
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Statements: []ast.Statement{
+										&ast.AssignmentStatement{
+											Target: &ast.IdentifierExpression{
+												Identifier: ast.Identifier{
+													Identifier: "x",
+													Pos:        ast.Position{Offset: 117, Line: 8, Column: 11},
+												},
+											},
+											Transfer: &ast.Transfer{
+												Operation: ast.TransferOperationCopy,
+												Pos:       ast.Position{Offset: 119, Line: 8, Column: 13},
+											},
+											Value: &ast.IntegerExpression{
+												PositiveLiteral: []byte("0"),
+												Value:           new(big.Int),
+												Base:            10,
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 121, Line: 8, Column: 15},
+													EndPos:   ast.Position{Offset: 121, Line: 8, Column: 15},
+												},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 104, Line: 7, Column: 35},
+										EndPos:   ast.Position{Offset: 126, Line: 9, Column: 3},
+									},
+								},
+								PreConditions:  nil,
+								PostConditions: nil,
+							},
+							StartPos: ast.Position{Offset: 75, Line: 7, Column: 6},
+						},
+					},
+					PreConditions:  nil,
+					PostConditions: nil,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 5, Line: 2, Column: 4},
+						EndPos:   ast.Position{Offset: 132, Line: 10, Column: 4},
+					},
+				},
+			},
+			result.Declarations(),
+		)
+	})
+
 	t.Run("field, prepare, pre, execute, post", func(t *testing.T) {
 		const code = `
 		  transaction {

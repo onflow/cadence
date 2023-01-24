@@ -101,7 +101,7 @@ func (checker *Checker) checkAssignment(
 		}
 	}
 
-	checker.checkVariableMove(value)
+	checker.checkValueMove(value)
 
 	checker.recordResourceInvalidation(
 		value,
@@ -131,12 +131,15 @@ func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 	}
 
 	var members *StringMemberOrderedMap
+	// TODO: refactor
 	switch containerType := variable.Type.(type) {
 	case *CompositeType:
 		members = containerType.Members
 	case *InterfaceType:
 		members = containerType.Members
 	case *TransactionType:
+		members = containerType.Members
+	case *TransactionRoleType:
 		members = containerType.Members
 	default:
 		panic(errors.NewUnreachableError())

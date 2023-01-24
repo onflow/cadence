@@ -689,7 +689,7 @@ func (checker *Checker) checkInvocationArgumentParameterTypeCompatibility(
 
 func (checker *Checker) checkInvocationArgumentMove(argument ast.Expression, argumentType Type) Type {
 
-	checker.checkVariableMove(argument)
+	checker.checkValueMove(argument)
 	checker.checkResourceMoveOperation(argument, argumentType)
 
 	return argumentType

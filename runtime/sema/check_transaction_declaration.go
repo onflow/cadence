@@ -21,37 +21,29 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
 func (checker *Checker) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) (_ struct{}) {
 	transactionType := checker.Elaboration.TransactionDeclarationType(declaration)
+	// Type should have been declared in declareTransactionDeclaration
 	if transactionType == nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	checker.containerTypes[transactionType] = true
-	defer func() {
-		checker.containerTypes[transactionType] = false
-	}()
+	checker.containerTypes[transactionType] = struct{}{}
+	defer delete(checker.containerTypes, transactionType)
 
 	fields := declaration.Fields
-	fieldMembers := orderedmap.New[MemberFieldDeclarationOrderedMap](len(fields))
 
-	for _, field := range fields {
-		fieldName := field.Identifier.Identifier
-		member, ok := transactionType.Members.Get(fieldName)
+	// Members were previously declared in declareTransactionDeclaration
+	members := transactionType.Members
+	fieldMembers := getFieldMembers(members, fields)
 
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+	checker.checkTransactionFields(fields)
 
-		fieldMembers.Set(member, field)
-	}
-
-	checker.checkTransactionFields(declaration)
-	checker.checkTransactionBlocks(declaration)
+	prepareFunctionDeclaration := declaration.Prepare
+	checker.checkPrepareExists(prepareFunctionDeclaration, fields)
 
 	// enter a new scope for this transaction
 	checker.enterValueScope()
@@ -63,7 +55,24 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		checker.checkTransactionParameters(declaration, transactionType.Parameters)
 	}
 
-	checker.visitTransactionPrepareFunction(declaration.Prepare, transactionType, fieldMembers)
+	if prepareFunctionDeclaration != nil {
+		prepareFunctionType := transactionType.PrepareFunctionType()
+
+		checker.visitPrepareFunction(
+			prepareFunctionDeclaration,
+			transactionType,
+			prepareFunctionType,
+			fieldMembers,
+		)
+	}
+
+	// Check roles
+	for _, roleDeclaration := range declaration.Roles {
+		ast.AcceptDeclaration[struct{}](roleDeclaration, checker)
+
+		// Each role's prepare parameter list must match the transaction's prepare parameter list
+		checker.checkRolePrepareParameterList(roleDeclaration, transactionType)
+	}
 
 	if declaration.PreConditions != nil {
 		checker.visitConditions(*declaration.PreConditions)
@@ -82,6 +91,73 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	checker.checkResourceFieldsInvalidated(transactionType, transactionType.Members)
 
 	return
+}
+
+// checkRolePrepareParameterList checks that the role's prepare block parameter list
+// matches the transaction's prepare parameter list:
+// They must have the same length and the parameter types must match.
+func (checker *Checker) checkRolePrepareParameterList(
+	roleDeclaration *ast.TransactionRoleDeclaration,
+	transactionType *TransactionType,
+) {
+	transactionRoleType := checker.Elaboration.TransactionRoleDeclarationType(roleDeclaration)
+	// Type should have been declared in declareTransactionDeclaration
+	if transactionRoleType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	transactionPrepareParameterCount := len(transactionType.PrepareParameters)
+	transactionRolePrepareParameterCount := len(transactionRoleType.PrepareParameters)
+	if transactionPrepareParameterCount != transactionRolePrepareParameterCount {
+		if roleDeclaration.Prepare == nil {
+			checker.report(
+				&MissingRolePrepareError{
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						roleDeclaration.Identifier,
+					),
+				},
+			)
+		} else {
+			checker.report(
+				&PrepareParameterCountMismatchError{
+					ActualCount:   transactionRolePrepareParameterCount,
+					ExpectedCount: transactionPrepareParameterCount,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						roleDeclaration.Prepare,
+					),
+				},
+			)
+		}
+	}
+
+	minPrepareParameterCount := transactionPrepareParameterCount
+	if transactionRolePrepareParameterCount < minPrepareParameterCount {
+		minPrepareParameterCount = transactionRolePrepareParameterCount
+	}
+
+	for prepareParameterIndex := 0; prepareParameterIndex < minPrepareParameterCount; prepareParameterIndex++ {
+		transactionPrepareParameter := transactionType.PrepareParameters[prepareParameterIndex]
+		transactionRolePrepareParameter := transactionRoleType.PrepareParameters[prepareParameterIndex]
+
+		if !transactionRolePrepareParameter.TypeAnnotation.
+			Equal(transactionPrepareParameter.TypeAnnotation) {
+
+			parameter := roleDeclaration.Prepare.FunctionDeclaration.ParameterList.Parameters[prepareParameterIndex]
+
+			checker.report(
+				&TypeMismatchError{
+					ExpectedType: transactionPrepareParameter.TypeAnnotation.Type,
+					ActualType:   transactionRolePrepareParameter.TypeAnnotation.Type,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						parameter.TypeAnnotation,
+					),
+				},
+			)
+		}
+	}
 }
 
 func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionDeclaration, parameters []Parameter) {
@@ -112,74 +188,52 @@ func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionD
 	}
 }
 
-// checkTransactionFields validates the field declarations for a transaction.
-func (checker *Checker) checkTransactionFields(declaration *ast.TransactionDeclaration) {
-	for _, field := range declaration.Fields {
+// checkTransactionFields validates the field declarations in a transaction,
+// i.e. a transaction declaration or a transaction role declaration.
+func (checker *Checker) checkTransactionFields(fields []*ast.FieldDeclaration) {
+	for _, field := range fields {
 		if field.Access != ast.AccessNotSpecified {
 			checker.report(
-				&InvalidTransactionFieldAccessModifierError{
-					Name:   field.Identifier.Identifier,
-					Access: field.Access,
-					Pos:    field.StartPosition(),
+				&InvalidAccessModifierError{
+					Access:          field.Access,
+					Explanation:     "fields in transactions may not have an access modifier",
+					DeclarationKind: common.DeclarationKindField,
+					Pos:             field.StartPos,
 				},
 			)
 		}
 	}
 }
 
-// checkTransactionBlocks checks that a transaction contains the required prepare and execute blocks.
-//
-// An execute block is always required, but a prepare block is only required if fields are present.
-func (checker *Checker) checkTransactionBlocks(declaration *ast.TransactionDeclaration) {
-	if declaration.Prepare != nil {
-		// parser allows any identifier so it must be checked here
-		prepareIdentifier := declaration.Prepare.FunctionDeclaration.Identifier
-		if prepareIdentifier.Identifier != common.DeclarationKindPrepare.Keywords() {
-			checker.report(&InvalidTransactionBlockError{
-				Name: prepareIdentifier.Identifier,
-				Pos:  prepareIdentifier.Pos,
-			})
-		}
-	} else if len(declaration.Fields) != 0 {
-		// report an error if fields are defined but no prepare statement exists
-		// note: field initialization is checked later
-
-		// report error for first field
-		firstField := declaration.Fields[0]
-
-		checker.report(
-			&TransactionMissingPrepareError{
-				FirstFieldName: firstField.Identifier.Identifier,
-				FirstFieldPos:  firstField.Identifier.Pos,
-			},
-		)
-	}
-
-	if declaration.Execute != nil {
-		// parser allows any identifier so it must be checked here
-		executeIdentifier := declaration.Execute.FunctionDeclaration.Identifier
-		if executeIdentifier.Identifier != common.DeclarationKindExecute.Keywords() {
-			checker.report(&InvalidTransactionBlockError{
-				Name: executeIdentifier.Identifier,
-				Pos:  executeIdentifier.Pos,
-			})
-		}
-	}
-}
-
-// visitTransactionPrepareFunction visits and checks the prepare function of a transaction.
-func (checker *Checker) visitTransactionPrepareFunction(
-	prepareFunction *ast.SpecialFunctionDeclaration,
-	transactionType *TransactionType,
-	fieldMembers *MemberFieldDeclarationOrderedMap,
+// checkPrepareExists ensures that if fields exists, a prepare block is necessary,
+// for example, in a transaction or transaction role.
+func (checker *Checker) checkPrepareExists(
+	prepare *ast.SpecialFunctionDeclaration,
+	fields []*ast.FieldDeclaration,
 ) {
-	if prepareFunction == nil {
+	if len(fields) == 0 || prepare != nil {
 		return
 	}
 
-	initializationInfo := NewInitializationInfo(transactionType, fieldMembers)
+	// Report and error for the first field
+	firstField := fields[0]
 
-	prepareFunctionType := transactionType.PrepareFunctionType()
+	checker.report(
+		&MissingPrepareForFieldError{
+			FirstFieldName: firstField.Identifier.Identifier,
+			FirstFieldPos:  firstField.Identifier.Pos,
+		},
+	)
+}
+
+// visitPrepareFunction visits and checks the prepare function of a transaction.
+func (checker *Checker) visitPrepareFunction(
+	prepareFunction *ast.SpecialFunctionDeclaration,
+	containerType Type,
+	prepareFunctionType *FunctionType,
+	fieldMembers *MemberFieldDeclarationOrderedMap,
+) {
+	initializationInfo := NewInitializationInfo(containerType, fieldMembers)
 
 	checker.checkFunction(
 		prepareFunction.FunctionDeclaration.ParameterList,
@@ -248,23 +302,10 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.Parameters = checker.parameters(declaration.ParameterList)
 	}
 
-	var fieldDeclarations []ast.Declaration
-
-	fieldCount := len(declaration.Fields)
-	if fieldCount > 0 {
-		fieldDeclarations = make([]ast.Declaration, fieldCount)
-		for i, field := range declaration.Fields {
-			fieldDeclarations[i] = field
-		}
-	}
-
-	allMembers := ast.NewMembers(checker.memoryGauge, fieldDeclarations)
-
-	members, fields, origins := checker.defaultMembersAndOrigins(
-		allMembers,
+	members, fields, origins := checker.compositeFieldMembersAndOrigins(
 		transactionType,
-		ContainerKindComposite,
 		declaration.DeclarationKind(),
+		declaration.Fields,
 	)
 
 	transactionType.Members = members
@@ -278,6 +319,140 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.PrepareParameters = checker.parameters(parameterList)
 	}
 
+	for _, roleDeclaration := range declaration.Roles {
+		transactionRoleType := checker.transactionRoleType(roleDeclaration)
+		checker.Elaboration.SetTransactionRoleDeclarationType(roleDeclaration, transactionRoleType)
+
+		// Ensure roles and fields do not clash
+		roleName := roleDeclaration.Identifier.Identifier
+		if member, ok := members.Get(roleName); ok {
+
+			identifierRange := ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				roleDeclaration.Identifier,
+			)
+
+			if member.DeclarationKind == common.DeclarationKindTransactionRole {
+				checker.report(
+					&DuplicateTransactionRoleError{
+						Name:  roleName,
+						Range: identifierRange,
+					},
+				)
+			} else {
+				checker.report(
+					&TransactionRoleWithFieldNameError{
+						FieldIdentifier: member.Identifier,
+						Range:           identifierRange,
+					},
+				)
+			}
+			continue
+		}
+
+		members.Set(
+			roleName,
+			&Member{
+				ContainerType:   transactionType,
+				Identifier:      roleDeclaration.Identifier,
+				DeclarationKind: common.DeclarationKindTransactionRole,
+				VariableKind:    ast.VariableKindConstant,
+				TypeAnnotation:  NewTypeAnnotation(transactionRoleType),
+				DocString:       roleDeclaration.DocString,
+			},
+		)
+	}
+
 	checker.Elaboration.SetTransactionDeclarationType(declaration, transactionType)
 	checker.Elaboration.TransactionTypes = append(checker.Elaboration.TransactionTypes, transactionType)
+}
+
+func (checker *Checker) transactionRoleType(declaration *ast.TransactionRoleDeclaration) *TransactionRoleType {
+	transactionRoleType := &TransactionRoleType{}
+
+	members, fields, origins := checker.compositeFieldMembersAndOrigins(
+		transactionRoleType,
+		declaration.DeclarationKind(),
+		declaration.Fields,
+	)
+
+	transactionRoleType.Members = members
+	transactionRoleType.Fields = fields
+	if checker.PositionInfo != nil {
+		checker.PositionInfo.recordMemberOrigins(transactionRoleType, origins)
+	}
+
+	if declaration.Prepare != nil {
+		parameterList := declaration.Prepare.FunctionDeclaration.ParameterList
+		transactionRoleType.PrepareParameters = checker.parameters(parameterList)
+	}
+
+	return transactionRoleType
+}
+
+func (checker *Checker) compositeFieldMembersAndOrigins(
+	containerType Type,
+	declarationKind common.DeclarationKind,
+	declarations []*ast.FieldDeclaration,
+) (
+	members *StringMemberOrderedMap,
+	fields []string,
+	origins map[string]*Origin,
+) {
+	var fieldDeclarations []ast.Declaration
+
+	fieldCount := len(declarations)
+	if fieldCount > 0 {
+		fieldDeclarations = make([]ast.Declaration, fieldCount)
+		for i, field := range declarations {
+			fieldDeclarations[i] = field
+		}
+	}
+
+	allMembers := ast.NewMembers(checker.memoryGauge, fieldDeclarations)
+
+	return checker.defaultMembersAndOrigins(
+		allMembers,
+		containerType,
+		ContainerKindComposite,
+		declarationKind,
+	)
+}
+
+func (checker *Checker) VisitTransactionRoleDeclaration(declaration *ast.TransactionRoleDeclaration) (_ struct{}) {
+	transactionRoleType := checker.Elaboration.TransactionRoleDeclarationType(declaration)
+	// Type should have been declared in declareTransactionDeclaration
+	if transactionRoleType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	checker.containerTypes[transactionRoleType] = struct{}{}
+	defer delete(checker.containerTypes, transactionRoleType)
+
+	fields := declaration.Fields
+
+	// Members were previously declared in declareTransactionDeclaration
+	members := transactionRoleType.Members
+	fieldMembers := getFieldMembers(members, fields)
+
+	checker.checkTransactionFields(fields)
+	checker.checkPrepareExists(declaration.Prepare, fields)
+
+	// enter a new scope for this transaction role
+	checker.enterValueScope()
+	defer checker.leaveValueScope(declaration.EndPosition, true)
+
+	checker.declareSelfValue(transactionRoleType, "")
+
+	if declaration.Prepare != nil {
+		prepareFunctionType := transactionRoleType.PrepareFunctionType()
+		checker.visitPrepareFunction(
+			declaration.Prepare,
+			transactionRoleType,
+			prepareFunctionType,
+			fieldMembers,
+		)
+	}
+
+	return
 }
