@@ -332,7 +332,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 				roleDeclaration.Identifier,
 			)
 
-			if _, ok := member.TypeAnnotation.Type.(*TransactionRoleType); ok {
+			if member.DeclarationKind == common.DeclarationKindTransactionRole {
 				checker.report(
 					&DuplicateTransactionRoleError{
 						Name:  roleName,
