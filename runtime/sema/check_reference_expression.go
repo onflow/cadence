@@ -71,7 +71,16 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	referencedExpression := referenceExpression.Expression
 
-	_, _ = checker.visitExpression(referencedExpression, targetType)
+	referencedType, _ := checker.visitExpression(referencedExpression, targetType)
+
+	if !IsValidReferencedType(referencedType) {
+		checker.report(
+			&InvalidReferenceTargetTypeError{
+				TargetType: targetType,
+				Range:      ast.NewRangeFromPositioned(checker.memoryGauge, referenceExpression.Expression),
+			},
+		)
+	}
 
 	if referenceType == nil {
 		return InvalidType
@@ -80,4 +89,14 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 	checker.Elaboration.SetReferenceExpressionBorrowType(referenceExpression, returnType)
 
 	return returnType
+}
+
+func IsValidReferencedType(referencedType Type) bool {
+	switch referencedType.(type) {
+	case *TransactionRoleType:
+		return false
+		// TODO: in Stable Cadence we may also want to disallow transactions
+	}
+
+	return true
 }
