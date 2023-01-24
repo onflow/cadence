@@ -93,7 +93,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 	transactionFunction := &HostFunctionValue{
 		Function: func(invocation Invocation) Value {
-			interpreter.activations.PushNewWithParent(lexicalScope)
+			transactionScope := interpreter.activations.PushNewWithParent(lexicalScope)
 			defer interpreter.activations.Pop()
 
 			self := MemberAccessibleValue(transactionValue)
@@ -113,10 +113,6 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				interpreter.bindParameterArguments(declaration.ParameterList, transactionArguments)
 				invocation.Arguments = prepareArguments
 			}
-
-			// NOTE: get current scope instead of using `lexicalScope`,
-			// because current scope has `self` declared
-			transactionScope := interpreter.activations.CurrentOrNew()
 
 			if prepareFunction != nil {
 				prepare := interpreter.functionDeclarationValue(
@@ -219,14 +215,12 @@ func (interpreter *Interpreter) declareTransactionRole(
 
 	roleFunction = &HostFunctionValue{
 		Function: func(invocation Invocation) Value {
-			interpreter.activations.PushNewWithCurrent()
+			transactionRoleScope := interpreter.activations.PushNewWithCurrent()
 			defer interpreter.activations.Pop()
 
 			self := MemberAccessibleValue(roleValue)
 			invocation.Self = &self
 			interpreter.declareVariable(sema.SelfIdentifier, self)
-
-			transactionRoleScope := interpreter.activations.CurrentOrNew()
 
 			if prepareFunction != nil {
 				prepare := interpreter.functionDeclarationValue(
