@@ -772,8 +772,8 @@ func TestCheckArrayIndexOfNonEquatableValueArray(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       fun test(): Int? {
-          let x = [[1, 2], [3]]
-          return x.firstIndex(of: [3])
+          let x = [[fun(){}, fun(){}], [fun(){}]]
+          return x.firstIndex(of: [fun(){}])
       }
     `)
 
@@ -851,8 +851,8 @@ func TestCheckInvalidArrayContainsNotEquatable(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       fun test(): Bool {
-          let z = [[1], [2], [3]]
-          return z.contains([1, 2])
+          let z = [[fun(){}], [fun(){}], [fun(){}]]
+          return z.contains([fun(){}])
       }
     `)
 
