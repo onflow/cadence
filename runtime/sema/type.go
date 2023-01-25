@@ -2153,9 +2153,9 @@ func (t *VariableSizedType) IsImportable(results map[*Member]bool) bool {
 	return t.Type.IsImportable(results)
 }
 
-func (*VariableSizedType) IsEquatable() bool {
+func (v *VariableSizedType) IsEquatable() bool {
 	// TODO:
-	return false
+	return v.Type.IsEquatable()
 }
 
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -2296,9 +2296,9 @@ func (t *ConstantSizedType) IsImportable(results map[*Member]bool) bool {
 	return t.Type.IsImportable(results)
 }
 
-func (*ConstantSizedType) IsEquatable() bool {
+func (t *ConstantSizedType) IsEquatable() bool {
 	// TODO:
-	return false
+	return t.Type.IsEquatable()
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
