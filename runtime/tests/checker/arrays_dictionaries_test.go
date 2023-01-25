@@ -474,7 +474,7 @@ func TestCheckArrayConcat(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckArrayEqual(t *testing.T) {
+func TestCheckVariableSizedArrayEqual(t *testing.T) {
 	t.Parallel()
 
 	for i := 0; i < 4; i++ {
@@ -503,18 +503,56 @@ func TestCheckArrayEqual(t *testing.T) {
 	}
 }
 
+func TestCheckFixedSizedArrayEqual(t *testing.T) {
+	t.Parallel()
+
+	testValid := func(name, code string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+			require.NoError(t, err)
+		})
+	}
+
+	testValid("[Int; 3]", `
+		fun test(): Bool {
+			let xs: [Int; 3] = [1, 2, 3]
+			return xs == xs
+		}
+	`)
+
+	testValid("[[Int; 3]; 2]", `
+		fun test(): Bool {
+			let xs: [Int; 3] = [1, 2, 3]
+			let ys: [[Int; 3]; 2] = [xs, xs]
+			return ys == ys
+		}
+	`)
+}
+
 func TestCheckInvalidArrayEqual(t *testing.T) {
 	t.Parallel()
 
-	code := `fun test(): Bool {
+	assertInvalid := func(name, code string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+		})
+	}
+
+	assertInvalid("variable size array", `fun test(): Bool {
 		let xs = [fun(){}]
 		return xs == xs
-	}`
+	}`)
 
-	_, err := ParseAndCheck(t, code)
-	errs := RequireCheckerErrors(t, err, 1)
-	fmt.Println(err.Error())
-	assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+	assertInvalid("fixed size array", `fun test(): Bool {
+		let xs: [((): Void); 1] = [fun(){}]
+		return xs == xs
+	}`)
 }
 
 func TestCheckInvalidArrayConcat(t *testing.T) {

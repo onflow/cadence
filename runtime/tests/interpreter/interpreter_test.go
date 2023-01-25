@@ -600,44 +600,13 @@ func TestInterpretParameters(t *testing.T) {
 func TestInterpretArrayEquality(t *testing.T) {
 	t.Parallel()
 
-	type Testcase struct {
-		code        string
-		name        string
-		expectEqual bool
-	}
-
-	nestingLimit := 4
-	testcases := make([]Testcase, 0, nestingLimit*2)
-
-	for i := 0; i < 4; i++ {
-		nestingLevel := i
-		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
-
-		for _, opStr := range []string{"==", "!="} {
-			op := opStr
-			testname := fmt.Sprintf("test array %s at nesting level %d", op, nestingLevel)
-			code := fmt.Sprintf(`
-				fun test(): Bool {
-					let xs = %s
-					return xs %s xs
-				}`,
-				array,
-				op,
-			)
-
-			testcase := Testcase{
-				code: code, name: testname, expectEqual: op == "==",
-			}
-
-			testcases = append(testcases, testcase)
-		}
-	}
-
-	for _, tc := range testcases {
-		testcase := tc
-		t.Run(testcase.name, func(t *testing.T) {
+	testBooleanFunction := func(t *testing.T, name string, expected bool, innerCode string) {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			inter := parseCheckAndInterpret(t, testcase.code)
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
+
+			inter := parseCheckAndInterpret(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -645,10 +614,51 @@ func TestInterpretArrayEquality(t *testing.T) {
 			boolVal, ok := res.(interpreter.BoolValue)
 			require.True(t, ok)
 
-			require.Equal(t, bool(boolVal), testcase.expectEqual)
+			require.Equal(t, bool(boolVal), expected)
 		})
+
 	}
+
+	// variable sized arrays
+	nestingLimit := 4
+
+	for i := 0; i < nestingLimit; i++ {
+		nestingLevel := i
+		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
+
+		for _, opStr := range []string{"==", "!="} {
+			op := opStr
+			testname := fmt.Sprintf("test variable size array %s at nesting level %d", op, nestingLevel)
+			code := fmt.Sprintf(` 
+					let xs = %s
+					return xs %s xs
+				`,
+				array,
+				op,
+			)
+
+			testBooleanFunction(t, testname, op == "==", code)
+		}
+	}
+
+	// fixed size arrays
+
+	testBooleanFunction(t, "fixed array [Int; 3] should equal itself", true, `
+		let xs: [Int; 3] = [1, 2, 3]
+		return xs == xs
+	`)
+
+	testBooleanFunction(t, "fixed array [Int; 3] should not be unequal to itself", false, `
+		let xs: [Int; 3] = [1, 2, 3]
+		return xs != xs
+	`)
+
+	testBooleanFunction(t, "fixed array [[Int; 2]; 1] should equal itself", true, `
+		let xs: [[Int; 2]; 1] = [[42, 1337]]
+		return xs == xs
+	`)
 }
+
 func TestInterpretArrayIndexing(t *testing.T) {
 
 	t.Parallel()
