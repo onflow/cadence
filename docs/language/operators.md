@@ -288,9 +288,9 @@ Logical operators work with the boolean values `true` and `false`.
 
 ## Comparison Operators
 
-Comparison operators work with boolean and integer values.
+Comparison operators work with boolean and integer values. Array types can be tested for equality if their inner types support it.
 
-- Equality: `==`, for booleans and integers
+- Equality: `==`, for booleans, integers, and arrays containing equatable values.
 
   Both sides of the equality operator may be optional, even of different levels,
   so it is for example possible to compare a non-optional with a double-optional (`??`).
@@ -329,6 +329,17 @@ Comparison operators work with boolean and integer values.
   let x: Int? = 2
   let y: Int?? = 2
   x == y  // is `true`
+  ```
+
+  ```cadence
+  // Equality tests of arrays are possible if their inner types are equatable.
+  let xs: [Int] = [1, 2, 3]
+  let ys: [Int] = [1, 2, 3]
+  xs == ys // is `true`
+
+  let xss: [[Int]] = [xs, xs, xs]
+  let yss: [[Int]] = [ys, ys, ys]
+  xss == yss // is `true`
   ```
 
 - Inequality: `!=`, for booleans and integers (possibly optional)
@@ -370,6 +381,13 @@ Comparison operators work with boolean and integer values.
   let x: Int? = 2
   let y: Int?? = 2
   x != y  // is `false`
+  ```
+
+  ```cadence
+  // Equality tests of arrays are possible if their inner types are equatable.
+  let xs: [Int] = [1, 2, 3]
+  let ys: [Int] = [4, 5, 6]
+  xs != ys // is `true`
   ```
 
 - Less than: `<`, for integers
