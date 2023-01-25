@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -473,6 +474,34 @@ func TestCheckArrayConcat(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckArrayEqual(t *testing.T) {
+	t.Parallel()
+
+	for i := 0; i < 4; i++ {
+		nestingLevel := i
+		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
+
+		for _, opStr := range []string{"==", "!="} {
+			op := opStr
+			testName := fmt.Sprintf("test array %s at nesting level %d", op, nestingLevel)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+				code := fmt.Sprintf(`
+					fun test(): Bool {
+						let xs = %s
+						return xs %s xs
+					}`,
+					array,
+					op,
+				)
+
+				_, err := ParseAndCheck(t, code)
+				require.NoError(t, err)
+			})
+		}
+	}
+}
 func TestCheckInvalidArrayConcat(t *testing.T) {
 
 	t.Parallel()

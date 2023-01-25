@@ -597,6 +597,58 @@ func TestInterpretParameters(t *testing.T) {
 		inter, b, value)
 }
 
+func TestInterpretArrayEquality(t *testing.T) {
+	t.Parallel()
+
+	type Testcase struct {
+		code        string
+		name        string
+		expectEqual bool
+	}
+
+	nestingLimit := 4
+	testcases := make([]Testcase, 0, nestingLimit*2)
+
+	for i := 0; i < 4; i++ {
+		nestingLevel := i
+		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
+
+		for _, opStr := range []string{"==", "!="} {
+			op := opStr
+			testname := fmt.Sprintf("test array %s at nesting level %d", op, nestingLevel)
+			code := fmt.Sprintf(`
+				fun test(): Bool {
+					let xs = %s
+					return xs %s xs
+				}`,
+				array,
+				op,
+			)
+
+			testcase := Testcase{
+				code: code, name: testname, expectEqual: op == "==",
+			}
+
+			testcases = append(testcases, testcase)
+		}
+	}
+
+	for _, tc := range testcases {
+		testcase := tc
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			inter := parseCheckAndInterpret(t, testcase.code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.Equal(t, bool(boolVal), testcase.expectEqual)
+		})
+	}
+}
 func TestInterpretArrayIndexing(t *testing.T) {
 
 	t.Parallel()
