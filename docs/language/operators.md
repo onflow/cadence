@@ -288,9 +288,9 @@ Logical operators work with the boolean values `true` and `false`.
 
 ## Comparison Operators
 
-Comparison operators work with boolean and integer values. Array types can be tested for equality if their inner types support it.
+Comparison operators work with boolean and integer values.
 
-- Equality: `==`, for booleans, integers, and arrays containing equatable values.
+- Equality: `==`, for booleans and integers. Optionals and arrays are equatable if their inner types support it.
 
   Both sides of the equality operator may be optional, even of different levels,
   so it is for example possible to compare a non-optional with a double-optional (`??`).
@@ -342,7 +342,14 @@ Comparison operators work with boolean and integer values. Array types can be te
   xss == yss // is `true`
   ```
 
-- Inequality: `!=`, for booleans and integers (possibly optional)
+  ```cadence
+  // Equality also applies to fixed-size arrays. If their lengths differ, the result is a type error.
+  let xs: [Int; 2] = [1, 2]
+  let ys: [Int; 2] = [0 + 1, 1 + 1]
+  xs == ys // is `true`
+  ```
+
+- Inequality: `!=`, for booleans and integers. Optionals and arrays can be tested for inequality if their inner types support it.
 
   Both sides of the inequality operator may be optional, even of different levels,
   so it is for example possible to compare a non-optional with a double-optional (`??`).
@@ -384,10 +391,17 @@ Comparison operators work with boolean and integer values. Array types can be te
   ```
 
   ```cadence
-  // Equality tests of arrays are possible if their inner types are equatable.
+  // Inequality tests of arrays are possible if their inner types are equatable.
   let xs: [Int] = [1, 2, 3]
   let ys: [Int] = [4, 5, 6]
   xs != ys // is `true`
+  ```
+
+  ```cadence
+  // Inequality also applies to fixed-size arrays. If their lengths differ, the result is a type error.
+  let xs: [Int; 2] = [1, 2]
+  let ys: [Int; 2] = [1, 2]
+  xs != ys // is `false`
   ```
 
 - Less than: `<`, for integers
