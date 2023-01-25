@@ -643,13 +643,15 @@ func TestInterpretArrayEquality(t *testing.T) {
 
 	// fixed size arrays
 
-	testBooleanFunction(t, "fixed array [Int; 3] should equal itself", true, `
+	testBooleanFunction(t, "fixed array [Int; 3] should not equal a different array", false, `
 		let xs: [Int; 3] = [1, 2, 3]
-		return xs == xs
+		let ys: [Int; 3] = [4, 5, 6]
+		return xs == ys
 	`)
 
-	testBooleanFunction(t, "fixed array [Int; 3] should not be unequal to itself", false, `
+	testBooleanFunction(t, "fixed array [Int; 3] should be unequal to a different array", true, `
 		let xs: [Int; 3] = [1, 2, 3]
+		let ys: [Int; 3] = [4, 5, 6]
 		return xs != xs
 	`)
 

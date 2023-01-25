@@ -534,9 +534,11 @@ func TestCheckFixedSizedArrayEqual(t *testing.T) {
 func TestCheckInvalidArrayEqual(t *testing.T) {
 	t.Parallel()
 
-	assertInvalid := func(name, code string) {
+	assertInvalid := func(name, innerCode string) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n}", innerCode)
 
 			_, err := ParseAndCheck(t, code)
 			errs := RequireCheckerErrors(t, err, 1)
@@ -544,15 +546,33 @@ func TestCheckInvalidArrayEqual(t *testing.T) {
 		})
 	}
 
-	assertInvalid("variable size array", `fun test(): Bool {
+	assertInvalid("variable size array", `
 		let xs = [fun(){}]
 		return xs == xs
-	}`)
+	`)
 
-	assertInvalid("fixed size array", `fun test(): Bool {
+	assertInvalid("fixed size array", `
 		let xs: [((): Void); 1] = [fun(){}]
 		return xs == xs
-	}`)
+	`)
+
+	assertInvalid("fixed size equaling variable-size", `
+		let xs: [Int; 3] = [1, 2, 3]
+		let ys: [Int] = [1, 2, 3]
+		return xs == ys
+	`)
+
+	assertInvalid("fixed size arrays of different lengths", `
+		let xs: [Int; 2] = [42, 1337]
+		let ys: [Int; 3] = [1, 2, 3]
+		return xs == ys
+	`)
+
+	assertInvalid("fixed size arrays of different types", `
+		let xs: [Int; 2] = [42, 1337]
+		let ys: [String; 3] = ["O", "w", "O"]
+		return xs != ys
+	`)
 }
 
 func TestCheckInvalidArrayConcat(t *testing.T) {
