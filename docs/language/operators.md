@@ -290,7 +290,7 @@ Logical operators work with the boolean values `true` and `false`.
 
 Comparison operators work with boolean and integer values.
 
-- Equality: `==`, for booleans and integers. Optionals and arrays are equatable if their inner types support it.
+- Equality: `==`, is supported for booleans, numbers, addresses, strings, characters, enums, paths, `Type` values, references, and `Void` values (`()`). Variable-sized arrays, fixed-size arrays, and optionals also support equality tests if their inner types do.
 
   Both sides of the equality operator may be optional, even of different levels,
   so it is for example possible to compare a non-optional with a double-optional (`??`).
@@ -349,7 +349,7 @@ Comparison operators work with boolean and integer values.
   xs == ys // is `true`
   ```
 
-- Inequality: `!=`, for booleans and integers. Optionals and arrays can be tested for inequality if their inner types support it.
+- Inequality: `!=`, is supported for booleans, numbers, addresses, strings, characters, enums, paths, `Type` values, references, and `Void` values (`()`). Variable-sized arrays, fixed-size arrays, and optionals also support inequality tests if their inner types do.
 
   Both sides of the inequality operator may be optional, even of different levels,
   so it is for example possible to compare a non-optional with a double-optional (`??`).
