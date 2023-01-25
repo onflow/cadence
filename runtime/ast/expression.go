@@ -1402,31 +1402,35 @@ func FunctionDocument(
 ) prettier.Doc {
 
 	var signatureDoc prettier.Concat
+
+	if typeParameterList != nil {
+		typeParameterListDoc := typeParameterList.Doc()
+		if typeParameterListDoc != nil {
+			signatureDoc = append(
+				signatureDoc,
+				typeParameterListDoc,
+			)
+		}
+	}
+
 	// NOTE: not all functions have a parameter list,
 	// e.g. the `destroy` special function
 	if parameterList != nil {
-
-		if typeParameterList != nil {
-			signatureDoc = append(
-				signatureDoc,
-				typeParameterList.Doc(),
-			)
-		}
 
 		signatureDoc = append(
 			signatureDoc,
 			parameterList.Doc(),
 		)
+	}
 
-		if returnTypeAnnotation != nil &&
-			!IsEmptyType(returnTypeAnnotation.Type) {
+	if returnTypeAnnotation != nil &&
+		!IsEmptyType(returnTypeAnnotation.Type) {
 
-			signatureDoc = append(
-				signatureDoc,
-				typeSeparatorSpaceDoc,
-				returnTypeAnnotation.Doc(),
-			)
-		}
+		signatureDoc = append(
+			signatureDoc,
+			typeSeparatorSpaceDoc,
+			returnTypeAnnotation.Doc(),
+		)
 	}
 
 	var doc prettier.Concat
