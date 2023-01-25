@@ -62,11 +62,6 @@ func (l *TypeParameterList) IsEmpty() bool {
 	return l == nil || len(l.TypeParameters) == 0
 }
 
-var typeParameterSeparatorDoc prettier.Doc = prettier.Concat{
-	prettier.Text(","),
-	prettier.Line{},
-}
-
 func (l *TypeParameterList) Doc() prettier.Doc {
 
 	if len(l.TypeParameters) == 0 {
