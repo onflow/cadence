@@ -502,6 +502,21 @@ func TestCheckArrayEqual(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckInvalidArrayEqual(t *testing.T) {
+	t.Parallel()
+
+	code := `fun test(): Bool {
+		let xs = [fun(){}]
+		return xs == xs
+	}`
+
+	_, err := ParseAndCheck(t, code)
+	errs := RequireCheckerErrors(t, err, 1)
+	fmt.Println(err.Error())
+	assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+}
+
 func TestCheckInvalidArrayConcat(t *testing.T) {
 
 	t.Parallel()
