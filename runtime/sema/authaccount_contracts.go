@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,8 @@ import (
 
 const AuthAccountContractsTypeName = "Contracts"
 const AuthAccountContractsTypeAddFunctionName = "add"
-const AuthAccountContractsTypeGetFunctionName = "get"
-const AuthAccountContractsTypeRemoveFunctionName = "remove"
 const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experimental"
-const AuthAccountContractsTypeNamesField = "names"
+const AuthAccountContractsTypeRemoveFunctionName = "remove"
 
 // AuthAccountContractsType represents the type `AuthAccount.Contracts`
 var AuthAccountContractsType = func() *CompositeType {
@@ -53,9 +51,15 @@ var AuthAccountContractsType = func() *CompositeType {
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
-			AuthAccountContractsTypeGetFunctionName,
-			AuthAccountContractsTypeGetFunctionType,
-			authAccountContractsTypeGetFunctionDocString,
+			AccountContractsTypeGetFunctionName,
+			AccountContractsTypeGetFunctionType,
+			accountContractsTypeGetFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountContractsType,
+			AccountContractsTypeBorrowFunctionName,
+			AccountContractsTypeBorrowFunctionType,
+			accountContractsTypeBorrowFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
@@ -65,11 +69,9 @@ var AuthAccountContractsType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountContractsType,
-			AuthAccountContractsTypeNamesField,
-			&VariableSizedType{
-				Type: StringType,
-			},
-			authAccountContractsTypeGetNamesDocString,
+			AccountContractsTypeNamesFieldName,
+			accountContractsTypeNamesFieldType,
+			accountContractsTypeNamesFieldDocString,
 		),
 	}
 
@@ -101,7 +103,7 @@ Returns the deployed contract.
 `
 
 var AuthAccountContractsTypeAddFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier: "name",
 			TypeAnnotation: NewTypeAnnotation(
@@ -142,7 +144,7 @@ Returns the deployed contract for the updated contract.
 `
 
 var AuthAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier: "name",
 			TypeAnnotation: NewTypeAnnotation(
@@ -161,28 +163,6 @@ var AuthAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 	),
 }
 
-const authAccountContractsTypeGetFunctionDocString = `
-Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
-
-Returns nil if no contract/contract interface with the given name exists in the account.
-`
-
-var AuthAccountContractsTypeGetFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: DeployedContractType,
-		},
-	),
-}
-
 const authAccountContractsTypeRemoveFunctionDocString = `
 Removes the contract/contract interface from the account which has the given name, if any.
 
@@ -192,7 +172,7 @@ Returns nil if no contract/contract interface with the given name exists in the 
 `
 
 var AuthAccountContractsTypeRemoveFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     "name",
 			TypeAnnotation: NewTypeAnnotation(StringType),
@@ -204,7 +184,3 @@ var AuthAccountContractsTypeRemoveFunctionType = &FunctionType{
 		},
 	),
 }
-
-const authAccountContractsTypeGetNamesDocString = `
-Names of all contracts deployed in the account.
-`

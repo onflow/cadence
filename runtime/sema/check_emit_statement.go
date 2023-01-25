@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) (_ stru
 		return
 	}
 
-	checker.Elaboration.EmitStatementEventTypes[statement] = compositeType
+	checker.Elaboration.SetEmitStatementEventType(statement, compositeType)
 
 	// Check that the emitted event is declared in the same location
 

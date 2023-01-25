@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,9 +45,9 @@ func TestRLPDecodeString(t *testing.T) {
 
 	type testCase struct {
 		name           string
+		expectedErrMsg string
 		input          []cadence.Value
 		output         []cadence.Value
-		expectedErrMsg string
 	}
 
 	tests := []testCase{
@@ -147,7 +147,7 @@ func TestRLPDecodeString(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  TestLocation,
+					Location:  common.ScriptLocation{},
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
@@ -188,9 +188,9 @@ func TestRLPDecodeList(t *testing.T) {
 
 	type testCase struct {
 		name           string
+		expectedErrMsg string
 		input          []cadence.Value
 		output         [][]cadence.Value
-		expectedErrMsg string
 	}
 
 	tests := []testCase{
@@ -306,7 +306,7 @@ func TestRLPDecodeList(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  TestLocation,
+					Location:  common.ScriptLocation{},
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {

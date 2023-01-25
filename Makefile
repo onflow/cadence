@@ -1,7 +1,7 @@
 #
 # Cadence - The resource-oriented smart contract programming language
 #
-# Copyright 2019-2020 Dapper Labs, Inc.
+# Copyright Dapper Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -70,10 +70,13 @@ fix-lint: build-linter
 	tools/golangci-lint/golangci-lint run -v --fix --timeout=5m  $(LINTERS) ./...
 
 .PHONY: build-linter
-build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangecheck.so tools/constructorcheck/constructorcheck.so
+build-linter: tools/golangci-lint/golangci-lint tools/maprange/maprange.so tools/unkeyed/unkeyed.so tools/constructorcheck/constructorcheck.so
 
-tools/maprangecheck/maprangecheck.so:
-	(cd tools/maprangecheck && $(MAKE) plugin)
+tools/maprange/maprange.so:
+	(cd tools/maprange && $(MAKE) plugin)
+
+tools/unkeyed/unkeyed.so:
+	(cd tools/unkeyed && $(MAKE) plugin)
 
 tools/constructorcheck/constructorcheck.so:
 	(cd tools/constructorcheck && $(MAKE) plugin)

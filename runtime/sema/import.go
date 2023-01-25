@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,10 +33,10 @@ type Import interface {
 
 // ImportElement
 type ImportElement struct {
-	DeclarationKind common.DeclarationKind
-	Access          ast.Access
 	Type            Type
 	ArgumentLabels  []string
+	DeclarationKind common.DeclarationKind
+	Access          ast.Access
 }
 
 // ElaborationImport
@@ -44,13 +44,11 @@ type ElaborationImport struct {
 	Elaboration *Elaboration
 }
 
-func variablesToImportElements(
-	variables *StringVariableOrderedMap,
-) *StringImportElementOrderedMap {
+func variablesToImportElements(f func(func(name string, variable *Variable))) *StringImportElementOrderedMap {
 
 	elements := &StringImportElementOrderedMap{}
 
-	variables.Foreach(func(name string, variable *Variable) {
+	f(func(name string, variable *Variable) {
 
 		elements.Set(name, ImportElement{
 			DeclarationKind: variable.DeclarationKind,
@@ -64,11 +62,11 @@ func variablesToImportElements(
 }
 
 func (i ElaborationImport) AllValueElements() *StringImportElementOrderedMap {
-	return variablesToImportElements(i.Elaboration.GlobalValues)
+	return variablesToImportElements(i.Elaboration.ForEachGlobalValue)
 }
 
 func (i ElaborationImport) AllTypeElements() *StringImportElementOrderedMap {
-	return variablesToImportElements(i.Elaboration.GlobalTypes)
+	return variablesToImportElements(i.Elaboration.ForEachGlobalType)
 }
 
 func (i ElaborationImport) IsChecking() bool {

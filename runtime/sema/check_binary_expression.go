@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,12 +28,14 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 	var leftType, rightType, resultType Type
 	defer func() {
-		elaboration := checker.Elaboration
-		elaboration.BinaryExpressionTypes[expression] = BinaryExpressionTypes{
-			LeftType:   leftType,
-			RightType:  rightType,
-			ResultType: resultType,
-		}
+		checker.Elaboration.SetBinaryExpressionTypes(
+			expression,
+			BinaryExpressionTypes{
+				LeftType:   leftType,
+				RightType:  rightType,
+				ResultType: resultType,
+			},
+		)
 	}()
 
 	// The left-hand side is always evaluated.

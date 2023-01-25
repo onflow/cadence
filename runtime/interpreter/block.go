@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ var blockFieldNames = []string{
 var blockFieldFormatters = func(inter *Interpreter) map[string]func(common.MemoryGauge, Value, SeenReferences) string {
 	return map[string]func(common.MemoryGauge, Value, SeenReferences) string{
 		sema.BlockTypeIDFieldName: func(memoryGauge common.MemoryGauge, value Value, references SeenReferences) string {
-			bytes, err := ByteArrayValueToByteSlice(inter, value)
+			bytes, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
 			if err != nil {
 				panic(err)
 			}

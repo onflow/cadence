@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,32 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/texttheater/golang-levenshtein/levenshtein"
+	"golang.org/x/exp/maps"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/pretty"
 )
+
+func ErrorMessageExpectedActualTypes(
+	expectedType Type,
+	actualType Type,
+) (
+	expected string,
+	actual string,
+) {
+	expected = expectedType.QualifiedString()
+	actual = actualType.QualifiedString()
+
+	if expected == actual {
+		expected = string(expectedType.ID())
+		actual = string(actualType.ID())
+	}
+
+	return
+}
 
 // astTypeConversionError
 
@@ -120,10 +141,10 @@ type SemanticError interface {
 // RedeclarationError
 
 type RedeclarationError struct {
-	Kind        common.DeclarationKind
+	PreviousPos *ast.Position
 	Name        string
 	Pos         ast.Position
-	PreviousPos *ast.Position
+	Kind        common.DeclarationKind
 }
 
 var _ SemanticError = &RedeclarationError{}
@@ -182,10 +203,10 @@ func (n RedeclarationNote) Message() string {
 // NotDeclaredError
 
 type NotDeclaredError struct {
-	ExpectedKind common.DeclarationKind
-	Name         string
 	Expression   *ast.IdentifierExpression
+	Name         string
 	Pos          ast.Position
+	ExpectedKind common.DeclarationKind
 }
 
 var _ SemanticError = &NotDeclaredError{}
@@ -235,6 +256,10 @@ func (e *AssignmentToConstantError) Error() string {
 	return fmt.Sprintf("cannot assign to constant: `%s`", e.Name)
 }
 
+func (e *AssignmentToConstantError) SecondaryError() string {
+	return fmt.Sprintf("consider changing the declaration of `%s` to be `var`", e.Name)
+}
+
 // TypeMismatchError
 
 type TypeMismatchError struct {
@@ -257,18 +282,23 @@ func (e *TypeMismatchError) Error() string {
 }
 
 func (e *TypeMismatchError) SecondaryError() string {
+	expected, actual := ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"expected `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
 // TypeMismatchWithDescriptionError
 
 type TypeMismatchWithDescriptionError struct {
-	ExpectedTypeDescription string
 	ActualType              Type
+	ExpectedTypeDescription string
 	ast.Range
 }
 
@@ -447,7 +477,7 @@ func (e *IncorrectArgumentLabelError) Error() string {
 }
 
 func (e *IncorrectArgumentLabelError) SecondaryError() string {
-	expected := "none"
+	expected := "no label"
 	if e.ExpectedArgumentLabel != "" {
 		expected = fmt.Sprintf("`%s`", e.ExpectedArgumentLabel)
 	}
@@ -461,10 +491,10 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 // InvalidUnaryOperandError
 
 type InvalidUnaryOperandError struct {
-	Operation    ast.Operation
 	ExpectedType Type
 	ActualType   Type
 	ast.Range
+	Operation ast.Operation
 }
 
 var _ SemanticError = &InvalidUnaryOperandError{}
@@ -483,21 +513,26 @@ func (e *InvalidUnaryOperandError) Error() string {
 }
 
 func (e *InvalidUnaryOperandError) SecondaryError() string {
+	expected, actual := ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"expected `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
 // InvalidBinaryOperandError
 
 type InvalidBinaryOperandError struct {
-	Operation    ast.Operation
-	Side         common.OperandSide
 	ExpectedType Type
 	ActualType   Type
 	ast.Range
+	Operation ast.Operation
+	Side      common.OperandSide
 }
 
 var _ SemanticError = &InvalidBinaryOperandError{}
@@ -517,20 +552,25 @@ func (e *InvalidBinaryOperandError) Error() string {
 }
 
 func (e *InvalidBinaryOperandError) SecondaryError() string {
+	expected, actual := ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"expected `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
 // InvalidBinaryOperandsError
 
 type InvalidBinaryOperandsError struct {
-	Operation ast.Operation
 	LeftType  Type
 	RightType Type
 	ast.Range
+	Operation ast.Operation
 }
 
 var _ SemanticError = &InvalidBinaryOperandsError{}
@@ -590,13 +630,25 @@ func (e *ControlStatementError) Error() string {
 	)
 }
 
+func (e *ControlStatementError) SecondaryError() string {
+	validLocation := "a loop "
+	if e.ControlStatement == common.ControlStatementBreak {
+		validLocation += " or switch statement"
+	}
+	return fmt.Sprintf(
+		"`%s` can only be used within %s body",
+		e.ControlStatement.Symbol(),
+		validLocation,
+	)
+}
+
 // InvalidAccessModifierError
 
 type InvalidAccessModifierError struct {
-	DeclarationKind common.DeclarationKind
 	Explanation     string
-	Access          ast.Access
 	Pos             ast.Position
+	DeclarationKind common.DeclarationKind
+	Access          ast.Access
 }
 
 var _ SemanticError = &InvalidAccessModifierError{}
@@ -644,9 +696,9 @@ func (e *InvalidAccessModifierError) EndPosition(memoryGauge common.MemoryGauge)
 // MissingAccessModifierError
 
 type MissingAccessModifierError struct {
-	DeclarationKind common.DeclarationKind
 	Explanation     string
 	Pos             ast.Position
+	DeclarationKind common.DeclarationKind
 }
 
 var _ errors.UserError = &MissingAccessModifierError{}
@@ -752,7 +804,7 @@ func (*UnknownSpecialFunctionError) isSemanticError() {}
 func (*UnknownSpecialFunctionError) IsUserError() {}
 
 func (e *UnknownSpecialFunctionError) Error() string {
-	return "unknown special function. did you mean `init`, `destroy`, or forgot the `fun` keyword?"
+	return "unknown special function. did you mean `init`, `destroy`, or forget the `fun` keyword?"
 }
 
 func (e *UnknownSpecialFunctionError) StartPosition() ast.Position {
@@ -846,10 +898,11 @@ func (e *MissingInitializerError) EndPosition(memoryGauge common.MemoryGauge) as
 // NotDeclaredMemberError
 
 type NotDeclaredMemberError struct {
-	Name       string
 	Type       Type
 	Expression *ast.MemberExpression
+	Name       string
 	ast.Range
+	suggestMember bool
 }
 
 var _ SemanticError = &NotDeclaredMemberError{}
@@ -876,7 +929,32 @@ func (e *NotDeclaredMemberError) SecondaryError() string {
 			return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", name)
 		}
 	}
+	if closestMember := e.findClosestMember(); closestMember != "" {
+		return fmt.Sprintf("did you mean `%s`?", closestMember)
+	}
 	return "unknown member"
+}
+
+// findClosestMember searches the names of the members on the accessed type,
+// and finds the name with the smallest edit distance from the member the user
+// tried to access. In cases of typos, this should provide a helpful hint.
+func (e *NotDeclaredMemberError) findClosestMember() (closestMember string) {
+	if !e.suggestMember {
+		return
+	}
+
+	closestDistance := len(e.Name)
+	for _, member := range maps.Keys(e.Type.GetMembers()) {
+		distance := levenshtein.DistanceForStrings([]rune(e.Name), []rune(member), levenshtein.DefaultOptions)
+		// don't update the closest member if the distance is greater than one already found, or if the edits
+		// required would involve a complete replacement of the member's text
+		if distance < closestDistance && distance < len(member) {
+			closestMember = member
+			closestDistance = distance
+		}
+	}
+
+	return
 }
 
 // AssignmentToConstantMemberError
@@ -920,8 +998,8 @@ func (e *FieldReinitializationError) Error() string {
 
 // FieldUninitializedError
 type FieldUninitializedError struct {
-	Name          string
 	ContainerType Type
+	Name          string
 	Pos           ast.Position
 }
 
@@ -965,12 +1043,9 @@ func (e *FieldUninitializedError) EndPosition(memoryGauge common.MemoryGauge) as
 // whereas a function type is not.
 
 type FieldTypeNotStorableError struct {
-	// Field's name
-	Name string
-	// Field's type
 	Type Type
-	// Start position of the error
-	Pos ast.Position
+	Name string
+	Pos  ast.Position
 }
 
 var _ SemanticError = &FieldTypeNotStorableError{}
@@ -986,6 +1061,10 @@ func (e *FieldTypeNotStorableError) Error() string {
 		e.Name,
 		e.Type,
 	)
+}
+
+func (e *FieldTypeNotStorableError) SecondaryError() string {
+	return "all contract fields must be storable"
 }
 
 func (e *FieldTypeNotStorableError) StartPosition() ast.Position {
@@ -1115,6 +1194,10 @@ func (e *InvalidEnumRawTypeError) Error() string {
 	)
 }
 
+func (e *InvalidEnumRawTypeError) SecondaryError() string {
+	return "only integer types are currently supported for enums"
+}
+
 // MissingEnumRawTypeError
 
 type MissingEnumRawTypeError struct {
@@ -1167,13 +1250,9 @@ type MemberMismatch struct {
 }
 
 type InitializerMismatch struct {
-	CompositeParameters []*Parameter
-	InterfaceParameters []*Parameter
+	CompositeParameters []Parameter
+	InterfaceParameters []Parameter
 }
-
-// TODO: improve error message:
-//  use `InitializerMismatch`, `MissingMembers`, `MemberMismatches`, etc
-
 type ConformanceError struct {
 	CompositeDeclaration           *ast.CompositeDeclaration
 	CompositeType                  *CompositeType
@@ -1211,6 +1290,38 @@ func (e *ConformanceError) Error() string {
 	)
 }
 
+func (e *ConformanceError) SecondaryError() string {
+	var builder strings.Builder
+	if len(e.MissingMembers) > 0 {
+		builder.WriteString(fmt.Sprintf("`%s` is missing definitions for members: ", e.CompositeType.QualifiedString()))
+		for i, member := range e.MissingMembers {
+			builder.WriteString(fmt.Sprintf("`%s`", member.Identifier.Identifier))
+			if i != len(e.MissingMembers)-1 {
+				builder.WriteString(", ")
+			}
+		}
+		if len(e.MissingNestedCompositeTypes) > 0 {
+			builder.WriteString(". ")
+		}
+	}
+
+	if len(e.MissingNestedCompositeTypes) > 0 {
+		builder.WriteString(fmt.Sprintf("`%s` is", e.CompositeType.QualifiedString()))
+		if len(e.MissingMembers) > 0 {
+			builder.WriteString(" also")
+		}
+		builder.WriteString(" missing definitions for types: ")
+		for i, ty := range e.MissingNestedCompositeTypes {
+			builder.WriteString(fmt.Sprintf("`%s`", ty.QualifiedString()))
+			if i != len(e.MissingNestedCompositeTypes)-1 {
+				builder.WriteString(", ")
+			}
+		}
+	}
+
+	return builder.String()
+}
+
 func (e *ConformanceError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -1224,6 +1335,16 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 	for _, memberMismatch := range e.MemberMismatches {
 		compositeMemberIdentifierRange :=
 			ast.NewUnmeteredRangeFromPositioned(memberMismatch.CompositeMember.Identifier)
+
+		notes = append(notes, &MemberMismatchNote{
+			Range: compositeMemberIdentifierRange,
+		})
+	}
+
+	if e.InitializerMismatch != nil && len(e.CompositeDeclaration.Members.Initializers()) > 0 {
+		compositeMemberIdentifierRange :=
+			//	right now we only support a single initializer
+			ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.Members.Initializers()[0].FunctionDeclaration.Identifier)
 
 		notes = append(notes, &MemberMismatchNote{
 			Range: compositeMemberIdentifierRange,
@@ -2084,28 +2205,6 @@ func (e *InvalidResourceFieldError) EndPosition(memoryGauge common.MemoryGauge) 
 	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
-// InvalidIndexingError
-
-type InvalidIndexingError struct {
-	ast.Range
-}
-
-var _ SemanticError = &InvalidIndexingError{}
-var _ errors.UserError = &InvalidIndexingError{}
-var _ errors.SecondaryError = &InvalidIndexingError{}
-
-func (*InvalidIndexingError) isSemanticError() {}
-
-func (*InvalidIndexingError) IsUserError() {}
-
-func (e *InvalidIndexingError) Error() string {
-	return "invalid index"
-}
-
-func (e *InvalidIndexingError) SecondaryError() string {
-	return "expected expression"
-}
-
 // InvalidSwapExpressionError
 
 type InvalidSwapExpressionError struct {
@@ -2306,8 +2405,8 @@ func (e *InvalidDestructorParametersError) SecondaryError() string {
 // ResourceFieldNotInvalidatedError
 
 type ResourceFieldNotInvalidatedError struct {
-	FieldName string
 	Type      Type
+	FieldName string
 	Pos       ast.Position
 }
 
@@ -2385,6 +2484,10 @@ func (*UnreachableStatementError) IsUserError() {}
 
 func (e *UnreachableStatementError) Error() string {
 	return "unreachable statement"
+}
+
+func (e *UnreachableStatementError) SecondaryError() string {
+	return "consider removing this code"
 }
 
 // UninitializedUseError
@@ -3324,9 +3427,9 @@ func (e *InvalidRestrictedTypeMemberAccessError) Error() string {
 // RestrictionMemberClashError
 
 type RestrictionMemberClashError struct {
-	Name                  string
 	RedeclaringType       *InterfaceType
 	OriginalDeclaringType *InterfaceType
+	Name                  string
 	ast.Range
 }
 
@@ -3552,15 +3655,20 @@ func (e *TypeParameterTypeMismatchError) Error() string {
 }
 
 func (e *TypeParameterTypeMismatchError) SecondaryError() string {
+	expected, actual := ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"type parameter %s is bound to `%s`, but got `%s` here",
 		e.TypeParameter.Name,
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
-// TypeMismatchWithDescriptionError
+// UnparameterizedTypeInstantiationError
 
 type UnparameterizedTypeInstantiationError struct {
 	ActualTypeArgumentCount int
@@ -3712,10 +3820,10 @@ func (e *InvalidEntryPointTypeError) Error() string {
 // ImportedProgramError
 
 type ExternalMutationError struct {
-	Name            string
-	ContainerType   Type
-	DeclarationKind common.DeclarationKind
+	ContainerType Type
+	Name          string
 	ast.Range
+	DeclarationKind common.DeclarationKind
 }
 
 var _ SemanticError = &ExternalMutationError{}

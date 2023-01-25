@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,13 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 	leftType := checker.VisitExpression(swap.Left, nil)
 	rightType := checker.VisitExpression(swap.Right, nil)
 
-	checker.Elaboration.SwapStatementTypes[swap] =
+	checker.Elaboration.SetSwapStatementTypes(
+		swap,
 		SwapStatementTypes{
 			LeftType:  leftType,
 			RightType: rightType,
-		}
+		},
+	)
 
 	lhsValid := checker.checkSwapStatementExpression(swap.Left, leftType, common.OperandSideLeft)
 	rhsValid := checker.checkSwapStatementExpression(swap.Right, rightType, common.OperandSideRight)

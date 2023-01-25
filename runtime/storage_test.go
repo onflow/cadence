@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1400,7 +1400,7 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeStorageSaveCapability(t *testing.T) {
+func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -1476,7 +1476,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Equal(t,
-					cadence.Capability{
+					cadence.StorageCapability{
 						Path: cadence.Path{
 							Domain:     domain.Identifier(),
 							Identifier: "test",
@@ -1810,8 +1810,8 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
     `))
 
 	type resourceOwnerChange struct {
-		typeID     common.TypeID
 		uuid       *interpreter.UInt64Value
+		typeID     common.TypeID
 		oldAddress common.Address
 		newAddress common.Address
 	}
@@ -3380,4 +3380,410 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	_, err = ExportValue(rValue, inter, interpreter.EmptyLocationRange)
 	require.NoError(t, err)
+}
+
+func TestRuntimeStorageIteration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non existing type", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+		address := common.MustBytesToAddress([]byte{0x1})
+		accountCodes := map[common.Location][]byte{}
+		ledger := newTestLedger(nil, nil)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		contractIsBroken := false
+
+		deployTx := DeploymentTransaction("Test", []byte(`
+            pub contract Test {
+                pub struct Foo {}
+            }
+        `))
+
+		newRuntimeInterface := func() Interface {
+			return &testRuntimeInterface{
+				storage: ledger,
+				getSigningAccounts: func() ([]Address, error) {
+					return []Address{address}, nil
+				},
+				resolveLocation: singleIdentifierLocationResolver(t),
+				updateAccountContractCode: func(address Address, name string, code []byte) error {
+					location := common.AddressLocation{
+						Address: address,
+						Name:    name,
+					}
+					accountCodes[location] = code
+					return nil
+				},
+				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+					location := common.AddressLocation{
+						Address: address,
+						Name:    name,
+					}
+
+					if contractIsBroken {
+						// Contract no longer has the type
+						return []byte(`pub contract Test {}`), nil
+					}
+
+					code = accountCodes[location]
+					return code, nil
+				},
+				emitEvent: func(event cadence.Event) error {
+					return nil
+				},
+			}
+		}
+
+		// Deploy contract
+
+		runtimeInterface := newRuntimeInterface()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Store value
+
+		runtimeInterface = newRuntimeInterface()
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    import Test from 0x1
+
+                    transaction {
+                        prepare(signer: AuthAccount) {
+                            signer.save("Hello, World!", to: /storage/first)
+                            signer.save(["one", "two", "three"], to: /storage/second)
+                            signer.save(Test.Foo(), to: /storage/third)
+                            signer.save(1, to: /storage/fourth)
+                            signer.save(Test.Foo(), to: /storage/fifth)
+                            signer.save("two", to: /storage/sixth)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
+		contractIsBroken = true
+
+		runtimeInterface = newRuntimeInterface()
+
+		// Read value
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    transaction {
+                        prepare(account: AuthAccount) {
+                            var total = 0
+                            account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                                account.borrow<&AnyStruct>(from: path)!
+                                total = total + 1
+                                return true
+                            })
+
+                            // Total values iterated should be 4.
+                            // The two broken values must be skipped.
+                            assert(total == 4)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("broken contract, parsing problem", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+		address := common.MustBytesToAddress([]byte{0x1})
+		accountCodes := map[common.Location][]byte{}
+		ledger := newTestLedger(nil, nil)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		contractIsBroken := false
+
+		deployTx := DeploymentTransaction("Test", []byte(`
+            pub contract Test {
+                pub struct Foo {}
+            }
+        `))
+
+		newRuntimeInterface := func() Interface {
+			return &testRuntimeInterface{
+				storage: ledger,
+				getSigningAccounts: func() ([]Address, error) {
+					return []Address{address}, nil
+				},
+				resolveLocation: singleIdentifierLocationResolver(t),
+				updateAccountContractCode: func(address Address, name string, code []byte) error {
+					location := common.AddressLocation{
+						Address: address,
+						Name:    name,
+					}
+					accountCodes[location] = code
+					return nil
+				},
+				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+					location := common.AddressLocation{
+						Address: address,
+						Name:    name,
+					}
+
+					if contractIsBroken {
+						// Contract has a syntax problem
+						return []byte(`BROKEN`), nil
+					}
+
+					code = accountCodes[location]
+					return code, nil
+				},
+				emitEvent: func(event cadence.Event) error {
+					return nil
+				},
+			}
+
+		}
+
+		// Deploy contract
+
+		runtimeInterface := newRuntimeInterface()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Store values
+
+		runtimeInterface = newRuntimeInterface()
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    import Test from 0x1
+
+                    transaction {
+                        prepare(signer: AuthAccount) {
+                            signer.save("Hello, World!", to: /storage/first)
+                            signer.save(["one", "two", "three"], to: /storage/second)
+                            signer.save(Test.Foo(), to: /storage/third)
+                            signer.save(1, to: /storage/fourth)
+                            signer.save(Test.Foo(), to: /storage/fifth)
+                            signer.save("two", to: /storage/sixth)
+
+                            signer.link<&String>(/private/a, target:/storage/first)
+                            signer.link<&[String]>(/private/b, target:/storage/second)
+                            signer.link<&Test.Foo>(/private/c, target:/storage/third)
+                            signer.link<&Int>(/private/d, target:/storage/fourth)
+                            signer.link<&Test.Foo>(/private/e, target:/storage/fifth)
+                            signer.link<&String>(/private/f, target:/storage/sixth)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
+		contractIsBroken = true
+
+		runtimeInterface = newRuntimeInterface()
+
+		// Read value
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    transaction {
+                        prepare(account: AuthAccount) {
+                            var total = 0
+                            account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+                                account.getCapability<&AnyStruct>(path).borrow()!
+                                total = total + 1
+                                return true
+                            })
+
+                            // Total values iterated should be 4.
+                            // The two broken values must be skipped.
+                            assert(total == 4)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("broken contract, type checking problem", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+		address := common.MustBytesToAddress([]byte{0x1})
+		accountCodes := map[common.Location][]byte{}
+		ledger := newTestLedger(nil, nil)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		contractIsBroken := false
+
+		deployTx := DeploymentTransaction("Test", []byte(`
+            pub contract Test {
+                pub struct Foo {}
+            }
+        `))
+
+		newRuntimeInterface := func() Interface {
+			return &testRuntimeInterface{
+				storage: ledger,
+				getSigningAccounts: func() ([]Address, error) {
+					return []Address{address}, nil
+				},
+				resolveLocation: singleIdentifierLocationResolver(t),
+				updateAccountContractCode: func(address Address, name string, code []byte) error {
+					location := common.AddressLocation{
+						Address: address,
+						Name:    name,
+					}
+					accountCodes[location] = code
+					return nil
+				},
+				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+					location := common.AddressLocation{
+						Address: address,
+						Name:    name,
+					}
+
+					if contractIsBroken {
+						// Contract has a semantic error. i.e: cannot find `Bar`
+						return []byte(`pub contract Test {
+                            pub struct Foo: Bar {}
+                        }`), nil
+					}
+
+					code = accountCodes[location]
+					return code, nil
+				},
+				emitEvent: func(event cadence.Event) error {
+					return nil
+				},
+			}
+		}
+
+		// Deploy contract
+
+		runtimeInterface := newRuntimeInterface()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Store values
+
+		runtimeInterface = newRuntimeInterface()
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    import Test from 0x1
+
+                    transaction {
+                        prepare(signer: AuthAccount) {
+                            signer.save("Hello, World!", to: /storage/first)
+                            signer.save(["one", "two", "three"], to: /storage/second)
+                            signer.save(Test.Foo(), to: /storage/third)
+                            signer.save(1, to: /storage/fourth)
+                            signer.save(Test.Foo(), to: /storage/fifth)
+                            signer.save("two", to: /storage/sixth)
+
+                            signer.link<&String>(/private/a, target:/storage/first)
+                            signer.link<&[String]>(/private/b, target:/storage/second)
+                            signer.link<&Test.Foo>(/private/c, target:/storage/third)
+                            signer.link<&Int>(/private/d, target:/storage/fourth)
+                            signer.link<&Test.Foo>(/private/e, target:/storage/fifth)
+                            signer.link<&String>(/private/f, target:/storage/sixth)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
+		contractIsBroken = true
+
+		runtimeInterface = newRuntimeInterface()
+
+		// Read value
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    transaction {
+                        prepare(account: AuthAccount) {
+                            var total = 0
+                            account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+                                account.getCapability<&AnyStruct>(path).borrow()!
+                                total = total + 1
+                                return true
+                            })
+
+                            // Total values iterated should be 4.
+                            // The two broken values must be skipped.
+                            assert(total == 4)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
 }

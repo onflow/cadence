@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,8 +103,8 @@ func (e *Encoder) Encode(value cadence.Value) (err error) {
 type jsonValue any
 
 type jsonValueObject struct {
-	Type  string    `json:"type"`
 	Value jsonValue `json:"value"`
+	Type  string    `json:"type"`
 }
 
 type jsonEmptyValueObject struct {
@@ -122,13 +122,8 @@ type jsonCompositeValue struct {
 }
 
 type jsonCompositeField struct {
-	Name  string    `json:"name"`
 	Value jsonValue `json:"value"`
-}
-
-type jsonLinkValue struct {
-	TargetPath jsonValue `json:"targetPath"`
-	BorrowType string    `json:"borrowType"`
+	Name  string    `json:"name"`
 }
 
 type jsonPathValue struct {
@@ -137,16 +132,16 @@ type jsonPathValue struct {
 }
 
 type jsonFieldType struct {
-	Id   string    `json:"id"`
 	Type jsonValue `json:"type"`
+	Id   string    `json:"id"`
 }
 
 type jsonNominalType struct {
+	Type         jsonValue             `json:"type"`
 	Kind         string                `json:"kind"`
 	TypeID       string                `json:"typeID"`
 	Fields       []jsonFieldType       `json:"fields"`
 	Initializers [][]jsonParameterType `json:"initializers"`
-	Type         jsonValue             `json:"type"`
 }
 
 type jsonSimpleType struct {
@@ -154,25 +149,25 @@ type jsonSimpleType struct {
 }
 
 type jsonUnaryType struct {
-	Kind string    `json:"kind"`
 	Type jsonValue `json:"type"`
+	Kind string    `json:"kind"`
 }
 
 type jsonConstantSizedArrayType struct {
-	Kind string    `json:"kind"`
 	Type jsonValue `json:"type"`
+	Kind string    `json:"kind"`
 	Size uint      `json:"size"`
 }
 
 type jsonDictionaryType struct {
-	Kind      string    `json:"kind"`
 	KeyType   jsonValue `json:"key"`
 	ValueType jsonValue `json:"value"`
+	Kind      string    `json:"kind"`
 }
 
 type jsonReferenceType struct {
-	Kind       string    `json:"kind"`
 	Type       jsonValue `json:"type"`
+	Kind       string    `json:"kind"`
 	Authorized bool      `json:"authorized"`
 }
 
@@ -184,26 +179,26 @@ type jsonRestrictedType struct {
 }
 
 type jsonParameterType struct {
+	Type  jsonValue `json:"type"`
 	Label string    `json:"label"`
 	Id    string    `json:"id"`
-	Type  jsonValue `json:"type"`
 }
 
 type jsonFunctionType struct {
+	Return     jsonValue           `json:"return"`
 	Kind       string              `json:"kind"`
 	TypeID     string              `json:"typeID"`
 	Parameters []jsonParameterType `json:"parameters"`
-	Return     jsonValue           `json:"return"`
 }
 
 type jsonTypeValue struct {
 	StaticType jsonValue `json:"staticType"`
 }
 
-type jsonCapabilityValue struct {
+type jsonStorageCapabilityValue struct {
 	Path       jsonValue `json:"path"`
-	Address    string    `json:"address"`
 	BorrowType jsonValue `json:"borrowType"`
+	Address    string    `json:"address"`
 }
 
 type jsonFunctionValue struct {
@@ -243,7 +238,6 @@ const (
 	resourceTypeStr   = "Resource"
 	eventTypeStr      = "Event"
 	contractTypeStr   = "Contract"
-	linkTypeStr       = "Link"
 	pathTypeStr       = "Path"
 	typeTypeStr       = "Type"
 	capabilityTypeStr = "Capability"
@@ -319,13 +313,11 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareEvent(x)
 	case cadence.Contract:
 		return prepareContract(x)
-	case cadence.Link:
-		return prepareLink(x)
 	case cadence.Path:
 		return preparePath(x)
 	case cadence.TypeValue:
 		return prepareTypeValue(x)
-	case cadence.Capability:
+	case cadence.StorageCapability:
 		return prepareCapability(x)
 	case cadence.Enum:
 		return prepareEnum(x)
@@ -600,16 +592,6 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	}
 }
 
-func prepareLink(x cadence.Link) jsonValue {
-	return jsonValueObject{
-		Type: linkTypeStr,
-		Value: jsonLinkValue{
-			TargetPath: preparePath(x.TargetPath),
-			BorrowType: x.BorrowType,
-		},
-	}
-}
-
 func preparePath(x cadence.Path) jsonValue {
 	return jsonValueObject{
 		Type: pathTypeStr,
@@ -867,10 +849,10 @@ func prepareTypeValue(typeValue cadence.TypeValue) jsonValue {
 	}
 }
 
-func prepareCapability(capability cadence.Capability) jsonValue {
+func prepareCapability(capability cadence.StorageCapability) jsonValue {
 	return jsonValueObject{
 		Type: capabilityTypeStr,
-		Value: jsonCapabilityValue{
+		Value: jsonStorageCapabilityValue{
 			Path:       preparePath(capability.Path),
 			Address:    encodeBytes(capability.Address.Bytes()),
 			BorrowType: prepareType(capability.BorrowType, typePreparationResults{}),

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -27,6 +28,7 @@ import (
 type Type interface {
 	isType()
 	ID() string
+	Equal(other Type) bool
 }
 
 // TypeID is a type which is only known by its type ID.
@@ -39,6 +41,10 @@ func (TypeID) isType() {}
 
 func (t TypeID) ID() string {
 	return string(t)
+}
+
+func (t TypeID) Equal(other Type) bool {
+	return t == other
 }
 
 // AnyType
@@ -60,6 +66,10 @@ func (AnyType) ID() string {
 	return "Any"
 }
 
+func (t AnyType) Equal(other Type) bool {
+	return t == other
+}
+
 // AnyStructType
 
 type AnyStructType struct{}
@@ -79,6 +89,10 @@ func (AnyStructType) ID() string {
 	return "AnyStruct"
 }
 
+func (t AnyStructType) Equal(other Type) bool {
+	return t == other
+}
+
 // AnyResourceType
 
 type AnyResourceType struct{}
@@ -96,6 +110,10 @@ func (AnyResourceType) isType() {}
 
 func (AnyResourceType) ID() string {
 	return "AnyResource"
+}
+
+func (t AnyResourceType) Equal(other Type) bool {
+	return t == other
 }
 
 // OptionalType
@@ -119,6 +137,15 @@ func (t OptionalType) ID() string {
 	return fmt.Sprintf("%s?", t.Type.ID())
 }
 
+func (t OptionalType) Equal(other Type) bool {
+	otherOptional, ok := other.(OptionalType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Equal(otherOptional.Type)
+}
+
 // MetaType
 
 type MetaType struct{}
@@ -136,6 +163,10 @@ func (MetaType) isType() {}
 
 func (MetaType) ID() string {
 	return "Type"
+}
+
+func (t MetaType) Equal(other Type) bool {
+	return t == other
 }
 
 // VoidType
@@ -157,6 +188,10 @@ func (VoidType) ID() string {
 	return "Void"
 }
 
+func (t VoidType) Equal(other Type) bool {
+	return t == other
+}
+
 // NeverType
 
 type NeverType struct{}
@@ -174,6 +209,10 @@ func (NeverType) isType() {}
 
 func (NeverType) ID() string {
 	return "Never"
+}
+
+func (t NeverType) Equal(other Type) bool {
+	return t == other
 }
 
 // BoolType
@@ -195,6 +234,10 @@ func (BoolType) ID() string {
 	return "Bool"
 }
 
+func (t BoolType) Equal(other Type) bool {
+	return t == other
+}
+
 // StringType
 
 type StringType struct{}
@@ -212,6 +255,10 @@ func (StringType) isType() {}
 
 func (StringType) ID() string {
 	return "String"
+}
+
+func (t StringType) Equal(other Type) bool {
+	return t == other
 }
 
 // CharacterType
@@ -233,6 +280,10 @@ func (CharacterType) ID() string {
 	return "Character"
 }
 
+func (t CharacterType) Equal(other Type) bool {
+	return t == other
+}
+
 // BytesType
 
 type BytesType struct{}
@@ -250,6 +301,10 @@ func (BytesType) isType() {}
 
 func (BytesType) ID() string {
 	return "Bytes"
+}
+
+func (t BytesType) Equal(other Type) bool {
+	return t == other
 }
 
 // AddressType
@@ -271,6 +326,10 @@ func (AddressType) ID() string {
 	return "Address"
 }
 
+func (t AddressType) Equal(other Type) bool {
+	return t == other
+}
+
 // NumberType
 
 type NumberType struct{}
@@ -288,6 +347,10 @@ func (NumberType) isType() {}
 
 func (NumberType) ID() string {
 	return "Number"
+}
+
+func (t NumberType) Equal(other Type) bool {
+	return t == other
 }
 
 // SignedNumberType
@@ -309,6 +372,10 @@ func (SignedNumberType) ID() string {
 	return "SignedNumber"
 }
 
+func (t SignedNumberType) Equal(other Type) bool {
+	return t == other
+}
+
 // IntegerType
 
 type IntegerType struct{}
@@ -326,6 +393,10 @@ func (IntegerType) isType() {}
 
 func (IntegerType) ID() string {
 	return "Integer"
+}
+
+func (t IntegerType) Equal(other Type) bool {
+	return t == other
 }
 
 // SignedIntegerType
@@ -347,6 +418,10 @@ func (SignedIntegerType) ID() string {
 	return "SignedInteger"
 }
 
+func (t SignedIntegerType) Equal(other Type) bool {
+	return t == other
+}
+
 // FixedPointType
 
 type FixedPointType struct{}
@@ -364,6 +439,10 @@ func (FixedPointType) isType() {}
 
 func (FixedPointType) ID() string {
 	return "FixedPoint"
+}
+
+func (t FixedPointType) Equal(other Type) bool {
+	return t == other
 }
 
 // SignedFixedPointType
@@ -385,6 +464,10 @@ func (SignedFixedPointType) ID() string {
 	return "SignedFixedPoint"
 }
 
+func (t SignedFixedPointType) Equal(other Type) bool {
+	return t == other
+}
+
 // IntType
 
 type IntType struct{}
@@ -404,12 +487,20 @@ func (IntType) ID() string {
 	return "Int"
 }
 
+func (t IntType) Equal(other Type) bool {
+	return t == other
+}
+
 // Int8Type
 
 type Int8Type struct{}
 
 func NewInt8Type() Int8Type {
 	return Int8Type{}
+}
+
+func (t Int8Type) Equal(other Type) bool {
+	return t == other
 }
 
 func NewMeteredInt8Type(gauge common.MemoryGauge) Int8Type {
@@ -442,6 +533,10 @@ func (Int16Type) ID() string {
 	return "Int16"
 }
 
+func (t Int16Type) Equal(other Type) bool {
+	return t == other
+}
+
 // Int32Type
 
 type Int32Type struct{}
@@ -459,6 +554,10 @@ func (Int32Type) isType() {}
 
 func (Int32Type) ID() string {
 	return "Int32"
+}
+
+func (t Int32Type) Equal(other Type) bool {
+	return t == other
 }
 
 // Int64Type
@@ -480,6 +579,10 @@ func (Int64Type) ID() string {
 	return "Int64"
 }
 
+func (t Int64Type) Equal(other Type) bool {
+	return t == other
+}
+
 // Int128Type
 
 type Int128Type struct{}
@@ -497,6 +600,10 @@ func (Int128Type) isType() {}
 
 func (Int128Type) ID() string {
 	return "Int128"
+}
+
+func (t Int128Type) Equal(other Type) bool {
+	return t == other
 }
 
 // Int256Type
@@ -518,6 +625,10 @@ func (Int256Type) ID() string {
 	return "Int256"
 }
 
+func (t Int256Type) Equal(other Type) bool {
+	return t == other
+}
+
 // UIntType
 
 type UIntType struct{}
@@ -535,6 +646,10 @@ func (UIntType) isType() {}
 
 func (UIntType) ID() string {
 	return "UInt"
+}
+
+func (t UIntType) Equal(other Type) bool {
+	return t == other
 }
 
 // UInt8Type
@@ -556,6 +671,10 @@ func (UInt8Type) ID() string {
 	return "UInt8"
 }
 
+func (t UInt8Type) Equal(other Type) bool {
+	return t == other
+}
+
 // UInt16Type
 
 type UInt16Type struct{}
@@ -573,6 +692,10 @@ func (UInt16Type) isType() {}
 
 func (UInt16Type) ID() string {
 	return "UInt16"
+}
+
+func (t UInt16Type) Equal(other Type) bool {
+	return t == other
 }
 
 // UInt32Type
@@ -594,6 +717,10 @@ func (UInt32Type) ID() string {
 	return "UInt32"
 }
 
+func (t UInt32Type) Equal(other Type) bool {
+	return t == other
+}
+
 // UInt64Type
 
 type UInt64Type struct{}
@@ -611,6 +738,10 @@ func (UInt64Type) isType() {}
 
 func (UInt64Type) ID() string {
 	return "UInt64"
+}
+
+func (t UInt64Type) Equal(other Type) bool {
+	return t == other
 }
 
 // UInt128Type
@@ -632,6 +763,10 @@ func (UInt128Type) ID() string {
 	return "UInt128"
 }
 
+func (t UInt128Type) Equal(other Type) bool {
+	return t == other
+}
+
 // UInt256Type
 
 type UInt256Type struct{}
@@ -649,6 +784,10 @@ func (UInt256Type) isType() {}
 
 func (UInt256Type) ID() string {
 	return "UInt256"
+}
+
+func (t UInt256Type) Equal(other Type) bool {
+	return t == other
 }
 
 // Word8Type
@@ -670,6 +809,10 @@ func (Word8Type) ID() string {
 	return "Word8"
 }
 
+func (t Word8Type) Equal(other Type) bool {
+	return t == other
+}
+
 // Word16Type
 
 type Word16Type struct{}
@@ -687,6 +830,10 @@ func (Word16Type) isType() {}
 
 func (Word16Type) ID() string {
 	return "Word16"
+}
+
+func (t Word16Type) Equal(other Type) bool {
+	return t == other
 }
 
 // Word32Type
@@ -708,6 +855,10 @@ func (Word32Type) ID() string {
 	return "Word32"
 }
 
+func (t Word32Type) Equal(other Type) bool {
+	return t == other
+}
+
 // Word64Type
 
 type Word64Type struct{}
@@ -725,6 +876,10 @@ func (Word64Type) isType() {}
 
 func (Word64Type) ID() string {
 	return "Word64"
+}
+
+func (t Word64Type) Equal(other Type) bool {
+	return t == other
 }
 
 // Fix64Type
@@ -746,6 +901,10 @@ func (Fix64Type) ID() string {
 	return "Fix64"
 }
 
+func (t Fix64Type) Equal(other Type) bool {
+	return t == other
+}
+
 // UFix64Type
 
 type UFix64Type struct{}
@@ -763,6 +922,10 @@ func (UFix64Type) isType() {}
 
 func (UFix64Type) ID() string {
 	return "UFix64"
+}
+
+func (t UFix64Type) Equal(other Type) bool {
+	return t == other
 }
 
 type ArrayType interface {
@@ -800,11 +963,20 @@ func (t VariableSizedArrayType) Element() Type {
 	return t.ElementType
 }
 
+func (t VariableSizedArrayType) Equal(other Type) bool {
+	otherType, ok := other.(VariableSizedArrayType)
+	if !ok {
+		return false
+	}
+
+	return t.ElementType.Equal(otherType.ElementType)
+}
+
 // ConstantSizedArrayType
 
 type ConstantSizedArrayType struct {
-	Size        uint
 	ElementType Type
+	Size        uint
 }
 
 func NewConstantSizedArrayType(
@@ -834,6 +1006,16 @@ func (t ConstantSizedArrayType) ID() string {
 
 func (t ConstantSizedArrayType) Element() Type {
 	return t.ElementType
+}
+
+func (t ConstantSizedArrayType) Equal(other Type) bool {
+	otherType, ok := other.(ConstantSizedArrayType)
+	if !ok {
+		return false
+	}
+
+	return t.ElementType.Equal(otherType.ElementType) &&
+		t.Size == otherType.Size
 }
 
 // DictionaryType
@@ -872,11 +1054,21 @@ func (t DictionaryType) ID() string {
 	)
 }
 
+func (t DictionaryType) Equal(other Type) bool {
+	otherType, ok := other.(DictionaryType)
+	if !ok {
+		return false
+	}
+
+	return t.KeyType.Equal(otherType.KeyType) &&
+		t.ElementType.Equal(otherType.ElementType)
+}
+
 // Field
 
 type Field struct {
-	Identifier string
 	Type       Type
+	Identifier string
 }
 
 // Fields are always created in an array, which must be metered ahead of time.
@@ -891,9 +1083,9 @@ func NewField(identifier string, typ Type) Field {
 // Parameter
 
 type Parameter struct {
+	Type       Type
 	Label      string
 	Identifier string
-	Type       Type
 }
 
 func NewParameter(
@@ -986,6 +1178,16 @@ func (t *StructType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
 
+func (t *StructType) Equal(other Type) bool {
+	otherType, ok := other.(*StructType)
+	if !ok {
+		return false
+	}
+
+	return t.Location == otherType.Location &&
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
+}
+
 // ResourceType
 
 type ResourceType struct {
@@ -1050,6 +1252,16 @@ func (t *ResourceType) SetCompositeFields(fields []Field) {
 
 func (t *ResourceType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
+}
+
+func (t *ResourceType) Equal(other Type) bool {
+	otherType, ok := other.(*ResourceType)
+	if !ok {
+		return false
+	}
+
+	return t.Location == otherType.Location &&
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
 // EventType
@@ -1118,6 +1330,16 @@ func (t *EventType) CompositeInitializers() [][]Parameter {
 	return [][]Parameter{t.Initializer}
 }
 
+func (t *EventType) Equal(other Type) bool {
+	otherType, ok := other.(*EventType)
+	if !ok {
+		return false
+	}
+
+	return t.Location == otherType.Location &&
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
+}
+
 // ContractType
 
 type ContractType struct {
@@ -1182,6 +1404,16 @@ func (t *ContractType) SetCompositeFields(fields []Field) {
 
 func (t *ContractType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
+}
+
+func (t *ContractType) Equal(other Type) bool {
+	otherType, ok := other.(*ContractType)
+	if !ok {
+		return false
+	}
+
+	return t.Location == otherType.Location &&
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
 // InterfaceType
@@ -1262,6 +1494,16 @@ func (t *StructInterfaceType) InterfaceInitializers() [][]Parameter {
 	return t.Initializers
 }
 
+func (t *StructInterfaceType) Equal(other Type) bool {
+	otherType, ok := other.(*StructInterfaceType)
+	if !ok {
+		return false
+	}
+
+	return t.Location == otherType.Location &&
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
+}
+
 // ResourceInterfaceType
 
 type ResourceInterfaceType struct {
@@ -1326,6 +1568,16 @@ func (t *ResourceInterfaceType) SetInterfaceFields(fields []Field) {
 
 func (t *ResourceInterfaceType) InterfaceInitializers() [][]Parameter {
 	return t.Initializers
+}
+
+func (t *ResourceInterfaceType) Equal(other Type) bool {
+	otherType, ok := other.(*ResourceInterfaceType)
+	if !ok {
+		return false
+	}
+
+	return t.Location == otherType.Location &&
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
 // ContractInterfaceType
@@ -1394,13 +1646,23 @@ func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
 	return t.Initializers
 }
 
+func (t *ContractInterfaceType) Equal(other Type) bool {
+	otherType, ok := other.(*ContractInterfaceType)
+	if !ok {
+		return false
+	}
+
+	return t.Location == otherType.Location &&
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
+}
+
 // Function
 
 // TODO: type parameters
 type FunctionType struct {
+	ReturnType Type
 	typeID     string
 	Parameters []Parameter
-	ReturnType Type
 }
 
 func NewFunctionType(
@@ -1436,11 +1698,31 @@ func (t *FunctionType) WithID(id string) *FunctionType {
 	return t
 }
 
+func (t *FunctionType) Equal(other Type) bool {
+	otherType, ok := other.(*FunctionType)
+	if !ok {
+		return false
+	}
+
+	if len(t.Parameters) != len(otherType.Parameters) {
+		return false
+	}
+
+	for i, parameter := range t.Parameters {
+		otherParameter := otherType.Parameters[i]
+		if !parameter.Type.Equal(otherParameter.Type) {
+			return false
+		}
+	}
+
+	return t.ReturnType.Equal(otherType.ReturnType)
+}
+
 // ReferenceType
 
 type ReferenceType struct {
-	Authorized bool
 	Type       Type
+	Authorized bool
 }
 
 func NewReferenceType(
@@ -1472,12 +1754,26 @@ func (t ReferenceType) ID() string {
 	return id
 }
 
+func (t ReferenceType) Equal(other Type) bool {
+	otherType, ok := other.(*ReferenceType)
+	if !ok {
+		return false
+	}
+
+	return t.Authorized == otherType.Authorized &&
+		t.Type.Equal(otherType.Type)
+}
+
 // RestrictedType
 
+type restrictionSet = map[Type]struct{}
+
 type RestrictedType struct {
-	typeID       string
-	Type         Type
-	Restrictions []Type
+	typeID             string
+	Type               Type
+	Restrictions       []Type
+	restrictionSet     restrictionSet
+	restrictionSetOnce sync.Once
 }
 
 func NewRestrictedType(
@@ -1513,6 +1809,42 @@ func (t *RestrictedType) WithID(id string) *RestrictedType {
 	return t
 }
 
+func (t *RestrictedType) Equal(other Type) bool {
+	otherType, ok := other.(*RestrictedType)
+	if !ok {
+		return false
+	}
+
+	if !t.Type.Equal(otherType.Type) {
+		return false
+	}
+
+	t.initializeRestrictionSet()
+	otherType.initializeRestrictionSet()
+
+	if len(t.restrictionSet) != len(otherType.restrictionSet) {
+		return false
+	}
+
+	for restriction := range t.restrictionSet { //nolint:maprange
+		_, ok := otherType.restrictionSet[restriction]
+		if !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t *RestrictedType) initializeRestrictionSet() {
+	t.restrictionSetOnce.Do(func() {
+		t.restrictionSet = restrictionSet{}
+		for _, restriction := range t.Restrictions {
+			t.restrictionSet[restriction] = struct{}{}
+		}
+	})
+}
+
 // BlockType
 
 type BlockType struct{}
@@ -1532,6 +1864,10 @@ func (BlockType) isType() {}
 
 func (BlockType) ID() string {
 	return "Block"
+}
+
+func (t BlockType) Equal(other Type) bool {
+	return t == other
 }
 
 // PathType
@@ -1555,6 +1891,10 @@ func (PathType) ID() string {
 	return "Path"
 }
 
+func (t PathType) Equal(other Type) bool {
+	return t == other
+}
+
 // CapabilityPathType
 
 type CapabilityPathType struct{}
@@ -1574,6 +1914,10 @@ func (CapabilityPathType) isType() {}
 
 func (CapabilityPathType) ID() string {
 	return "CapabilityPath"
+}
+
+func (t CapabilityPathType) Equal(other Type) bool {
+	return t == other
 }
 
 // StoragePathType
@@ -1597,6 +1941,10 @@ func (StoragePathType) ID() string {
 	return "StoragePath"
 }
 
+func (t StoragePathType) Equal(other Type) bool {
+	return t == other
+}
+
 // PublicPathType
 
 type PublicPathType struct{}
@@ -1618,6 +1966,10 @@ func (PublicPathType) ID() string {
 	return "PublicPath"
 }
 
+func (t PublicPathType) Equal(other Type) bool {
+	return t == other
+}
+
 // PrivatePathType
 
 type PrivatePathType struct{}
@@ -1637,6 +1989,10 @@ func (PrivatePathType) isType() {}
 
 func (PrivatePathType) ID() string {
 	return "PrivatePath"
+}
+
+func (t PrivatePathType) Equal(other Type) bool {
+	return t == other
 }
 
 // CapabilityType
@@ -1664,6 +2020,19 @@ func (t CapabilityType) ID() string {
 		return fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
 	}
 	return "Capability"
+}
+
+func (t CapabilityType) Equal(other Type) bool {
+	otherType, ok := other.(CapabilityType)
+	if !ok {
+		return false
+	}
+
+	if t.BorrowType == nil {
+		return otherType.BorrowType == nil
+	}
+
+	return t.BorrowType.Equal(otherType.BorrowType)
 }
 
 // EnumType
@@ -1735,6 +2104,17 @@ func (t *EnumType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
 
+func (t *EnumType) Equal(other Type) bool {
+	otherType, ok := other.(*EnumType)
+	if !ok {
+		return false
+	}
+
+	return t.Location == otherType.Location &&
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier &&
+		t.RawType.Equal(otherType.RawType)
+}
+
 // AuthAccountType
 type AuthAccountType struct{}
 
@@ -1753,6 +2133,10 @@ func (AuthAccountType) isType() {}
 
 func (AuthAccountType) ID() string {
 	return "AuthAccount"
+}
+
+func (t AuthAccountType) Equal(other Type) bool {
+	return t == other
 }
 
 // PublicAccountType
@@ -1775,6 +2159,10 @@ func (PublicAccountType) ID() string {
 	return "PublicAccount"
 }
 
+func (t PublicAccountType) Equal(other Type) bool {
+	return t == other
+}
+
 // DeployedContractType
 type DeployedContractType struct{}
 
@@ -1793,6 +2181,10 @@ func (DeployedContractType) isType() {}
 
 func (DeployedContractType) ID() string {
 	return "DeployedContract"
+}
+
+func (t DeployedContractType) Equal(other Type) bool {
+	return t == other
 }
 
 // AuthAccountContractsType
@@ -1815,6 +2207,10 @@ func (AuthAccountContractsType) ID() string {
 	return "AuthAccount.Contracts"
 }
 
+func (t AuthAccountContractsType) Equal(other Type) bool {
+	return t == other
+}
+
 // PublicAccountContractsType
 type PublicAccountContractsType struct{}
 
@@ -1833,6 +2229,10 @@ func (PublicAccountContractsType) isType() {}
 
 func (PublicAccountContractsType) ID() string {
 	return "PublicAccount.Contracts"
+}
+
+func (t PublicAccountContractsType) Equal(other Type) bool {
+	return t == other
 }
 
 // AuthAccountKeysType
@@ -1855,7 +2255,11 @@ func (AuthAccountKeysType) ID() string {
 	return "AuthAccount.Keys"
 }
 
-// PublicAccountContractsType
+func (t AuthAccountKeysType) Equal(other Type) bool {
+	return t == other
+}
+
+// PublicAccountKeysType
 type PublicAccountKeysType struct{}
 
 func NewPublicAccountKeysType() PublicAccountKeysType {
@@ -1873,6 +2277,10 @@ func (PublicAccountKeysType) isType() {}
 
 func (PublicAccountKeysType) ID() string {
 	return "PublicAccount.Keys"
+}
+
+func (t PublicAccountKeysType) Equal(other Type) bool {
+	return t == other
 }
 
 // AccountKeyType
@@ -1893,4 +2301,8 @@ func (AccountKeyType) isType() {}
 
 func (AccountKeyType) ID() string {
 	return "AccountKey"
+}
+
+func (t AccountKeyType) Equal(other Type) bool {
+	return t == other
 }

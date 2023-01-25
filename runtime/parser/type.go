@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,20 +95,20 @@ type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) a
 type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) ast.Type
 
 type literalType struct {
-	tokenType      lexer.TokenType
 	nullDenotation typeNullDenotationFunc
+	tokenType      lexer.TokenType
 }
 
 type prefixType struct {
-	tokenType      lexer.TokenType
-	bindingPower   int
 	nullDenotation prefixTypeFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
 }
 
 type postfixType struct {
-	tokenType      lexer.TokenType
-	bindingPower   int
 	leftDenotation postfixTypeFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
 }
 
 func defineType(def any) {

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,9 @@ var AnyStructType = &SimpleType{
 	tag:           AnyStructTypeTag,
 	IsResource:    false,
 	// The actual storability of a value is checked at run-time
-	Storable:             true,
-	Equatable:            false,
-	ExternallyReturnable: true,
+	Storable:   true,
+	Equatable:  false,
+	Exportable: true,
 	// The actual importability is checked at runtime
 	Importable: true,
 }

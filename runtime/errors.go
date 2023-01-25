@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -139,8 +139,8 @@ func (e InvalidTransactionAuthorizerCountError) Error() string {
 
 // InvalidEntryPointArgumentError
 type InvalidEntryPointArgumentError struct {
-	Index int
 	Err   error
+	Index int
 }
 
 var _ errors.UserError = &InvalidEntryPointArgumentError{}
@@ -172,7 +172,7 @@ func (*MalformedValueError) IsUserError() {}
 func (e *MalformedValueError) Error() string {
 	return fmt.Sprintf(
 		"value does not conform to expected type `%s`",
-		e.ExpectedType.QualifiedString(),
+		e.ExpectedType.ID(),
 	)
 }
 
@@ -195,9 +195,7 @@ func (e *InvalidValueTypeError) Error() string {
 // InvalidScriptReturnTypeError is an error that is reported for
 // invalid script return types.
 //
-// For example, the type `Int` is valid,
-// whereas a function type is not,
-// because it cannot be exported/serialized.
+// A type is invalid if it cannot be exported / returned externally.
 type InvalidScriptReturnTypeError struct {
 	Type sema.Type
 }
@@ -210,6 +208,23 @@ func (e *InvalidScriptReturnTypeError) Error() string {
 	return fmt.Sprintf(
 		"invalid script return type: `%s`",
 		e.Type.QualifiedString(),
+	)
+}
+
+// ValueNotExportableError is an error that is reported for
+// values that cannot be exported.
+type ValueNotExportableError struct {
+	Type interpreter.StaticType
+}
+
+var _ errors.UserError = &ValueNotExportableError{}
+
+func (*ValueNotExportableError) IsUserError() {}
+
+func (e *ValueNotExportableError) Error() string {
+	return fmt.Sprintf(
+		"value of type `%s` cannot be exported",
+		e.Type.String(),
 	)
 }
 

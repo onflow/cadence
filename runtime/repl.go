@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -154,10 +154,8 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
 				panic(panicResult)
 			case error:
 				err = panicResult
-				break
 			default:
 				err = fmt.Errorf("%s", panicResult)
-				break
 			}
 
 			r.onError(err, r.checker.Location, r.codes)
@@ -258,7 +256,7 @@ type REPLSuggestion struct {
 func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	names := map[string]string{}
 
-	r.checker.Elaboration.GlobalValues.Foreach(func(name string, variable *sema.Variable) {
+	r.checker.Elaboration.ForEachGlobalValue(func(name string, variable *sema.Variable) {
 		if names[name] != "" {
 			return
 		}
@@ -268,7 +266,7 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	// Iterating over the dictionary of names is safe,
 	// as the suggested entries are sorted afterwards
 
-	for name, description := range names { //nolint:maprangecheck
+	for name, description := range names { //nolint:maprange
 		result = append(result, REPLSuggestion{
 			Name:        name,
 			Description: description,

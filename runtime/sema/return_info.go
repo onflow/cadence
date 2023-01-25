@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,15 +26,15 @@ import (
 
 // ReturnInfo tracks control-flow information
 type ReturnInfo struct {
-	// MaybeReturned indicates that (the branch of) the function
-	// contains a potentially taken return statement
-	MaybeReturned bool
 	// JumpOffsets contains the offsets of all jumps
 	// (break or continue statements), potential or definite.
 	//
 	// If non-empty, indicates that (the branch of) the function
 	// contains a potential break or continue statement
 	JumpOffsets *persistent.OrderedSet[int]
+	// MaybeReturned indicates that (the branch of) the function
+	// contains a potentially taken return statement
+	MaybeReturned bool
 	// DefinitelyReturned indicates that (the branch of) the function
 	// contains a definite return statement
 	DefinitelyReturned bool

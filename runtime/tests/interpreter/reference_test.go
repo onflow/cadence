@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ func TestInterpretResourceReferenceInstanceOf(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 }
@@ -86,7 +86,7 @@ func TestInterpretResourceReferenceFieldComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,7 +138,7 @@ func hash(
 	tagValue *interpreter.StringValue,
 	hashAlgorithmValue interpreter.MemberAccessibleValue,
 ) interpreter.Value {
-	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
+	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue, locationRange)
 	if err != nil {
 		panic(errors.NewUnexpectedError("failed to get data. %w", err))
 	}

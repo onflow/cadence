@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 		return nil
 	}
 
-	checker.Elaboration.ImportDeclarationsResolvedLocations[declaration] = resolvedLocations
+	checker.Elaboration.SetImportDeclarationsResolvedLocations(declaration, resolvedLocations)
 
 	for _, resolvedLocation := range resolvedLocations {
 		checker.importResolvedLocation(resolvedLocation, locationRange)

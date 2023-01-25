@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,14 @@
 package intervalst
 
 type node[T any] struct {
-	interval    Interval
-	value       T
-	left, right *node[T]
+	interval Interval
+	value    T
+	// max endpoint in subtree rooted at this node
+	max   Position
+	left  *node[T]
+	right *node[T]
 	// size of subtree rooted at this node
 	n int
-	// max endpoint in subtree rooted at this node
-	max Position
 }
 
 func newNode[T any](interval Interval, value T) *node[T] {

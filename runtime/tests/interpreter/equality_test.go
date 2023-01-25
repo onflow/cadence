@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ func TestInterpretEquality(t *testing.T) {
 		capabilityValueDeclaration := stdlib.StandardLibraryValue{
 			Name: "cap",
 			Type: &sema.CapabilityType{},
-			Value: &interpreter.CapabilityValue{
+			Value: &interpreter.StorageCapabilityValue{
 				Address: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				Path: interpreter.PathValue{
 					Domain:     common.PathDomainStorage,
@@ -84,14 +84,14 @@ func TestInterpretEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("res1").GetValue(),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("res2").GetValue(),
 		)
 	})
@@ -112,14 +112,14 @@ func TestInterpretEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("res1").GetValue(),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("res2").GetValue(),
 		)
 	})
@@ -136,7 +136,7 @@ func TestInterpretEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("res").GetValue(),
 		)
 	})
@@ -202,10 +202,10 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 					switch op {
 					case ast.OperationEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(false), result)
+						assert.Equal(t, interpreter.FalseValue, result)
 					case ast.OperationNotEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(true), result)
+						assert.Equal(t, interpreter.TrueValue, result)
 					default:
 						RequireError(t, err)
 
@@ -252,10 +252,10 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 					switch op {
 					case ast.OperationEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(false), result)
+						assert.Equal(t, interpreter.FalseValue, result)
 					case ast.OperationNotEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(true), result)
+						assert.Equal(t, interpreter.TrueValue, result)
 					default:
 						RequireError(t, err)
 
@@ -302,10 +302,10 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 					switch op {
 					case ast.OperationEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(false), result)
+						assert.Equal(t, interpreter.FalseValue, result)
 					case ast.OperationNotEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(true), result)
+						assert.Equal(t, interpreter.TrueValue, result)
 					default:
 						RequireError(t, err)
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,7 +110,7 @@ func (compiler *Compiler) VisitVariableDeclaration(declaration *ast.VariableDecl
 	// TODO: second value
 
 	identifier := declaration.Identifier.Identifier
-	targetType := compiler.Checker.Elaboration.VariableDeclarationTypes[declaration].TargetType
+	targetType := compiler.Checker.Elaboration.VariableDeclarationTypes(declaration).TargetType
 	valType := compileValueType(targetType)
 	local := compiler.declareLocal(identifier, valType)
 	exp := ast.AcceptExpression[ir.Expr](declaration.Value, compiler)
@@ -294,7 +294,7 @@ func (compiler *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDecl
 
 	// Declare a local for each parameter
 
-	functionType := compiler.Checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
+	functionType := compiler.Checker.Elaboration.FunctionDeclarationFunctionType(declaration)
 
 	parameters := declaration.ParameterList.Parameters
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,10 +86,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 						},
 						StartPos: Position{Offset: 7, Line: 8, Column: 9},
 					},
-					Range: Range{
-						StartPos: Position{Offset: 10, Line: 11, Column: 12},
-						EndPos:   Position{Offset: 13, Line: 14, Column: 15},
-					},
+					StartPos: Position{Offset: 10, Line: 11, Column: 12},
 				},
 			},
 			Range: Range{
@@ -245,7 +242,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
                             "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                         },
                         "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
-                        "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
+                        "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                     }
                 ],
                 "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
@@ -552,10 +549,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 							},
 							StartPos: Position{Offset: 7, Line: 8, Column: 9},
 						},
-						Range: Range{
-							StartPos: Position{Offset: 10, Line: 11, Column: 12},
-							EndPos:   Position{Offset: 13, Line: 14, Column: 15},
-						},
+						StartPos: Position{Offset: 10, Line: 11, Column: 12},
 					},
 				},
 				Range: Range{
@@ -715,7 +709,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
                                 "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                             },
                             "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
-                            "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
+                            "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                         }
                     ],
                     "StartPos": {"Offset": 16, "Line": 17, "Column": 18},

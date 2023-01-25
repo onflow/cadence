@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ const (
 
 	// Values
 
-	MemoryKindBoolValue
 	MemoryKindAddressValue
 	MemoryKindStringValue
 	MemoryKindCharacterValue
@@ -38,13 +37,13 @@ const (
 	MemoryKindCompositeValueBase
 	MemoryKindSimpleCompositeValueBase
 	MemoryKindOptionalValue
-	MemoryKindNilValue
-	MemoryKindVoidValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
-	MemoryKindCapabilityValue
-	MemoryKindLinkValue
+	MemoryKindStorageCapabilityValue
+	MemoryKindPathLinkValue
+	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue
+	MemoryKindAccountReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue
 	MemoryKindHostFunctionValue
@@ -99,10 +98,10 @@ const (
 	MemoryKindCadenceContractValueSize
 	MemoryKindCadenceEnumValueBase
 	MemoryKindCadenceEnumValueSize
-	MemoryKindCadenceLinkValue
+	MemoryKindCadencePathLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
-	MemoryKindCadenceCapabilityValue
+	MemoryKindCadenceStorageCapabilityValue
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
@@ -184,6 +183,7 @@ const (
 	MemoryKindWhileStatement
 
 	MemoryKindBooleanExpression
+	MemoryKindVoidExpression
 	MemoryKindNilExpression
 	MemoryKindStringExpression
 	MemoryKindIntegerExpression

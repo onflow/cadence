@@ -44,6 +44,8 @@ which represents the publicly available portion of an account.
           let names: [String]
 
           fun get(name: String): DeployedContract?
+
+          fun borrow<T: &Any>(name: String): T?
       }
 
       struct Keys {
@@ -160,6 +162,8 @@ to the `prepare` phase of the transaction.
           fun get(name: String): DeployedContract?
 
           fun remove(name: String): DeployedContract?
+
+          fun borrow<T: &Any>(name: String): T?
       }
 
       struct Keys {
@@ -207,6 +211,19 @@ to the `prepare` phase of the transaction.
   struct DeployedContract {
       let name: String
       let code: [UInt8]
+
+      // Returns an array of `Type` objects representing all the public type declarations in this contract (e.g. structs, resources, enums)
+      // 
+      // For example, given a contract
+      // ```
+      // contract Foo {
+      //       pub struct Bar {...}
+      //       pub resource Qux {...}
+      // }
+      // ```
+      // then `.publicTypes()` will return an array equivalent to the expression `[Type<Bar>(), Type<Qux>()]`
+    
+      fun publicTypes(): [Type]
   }
   ```
 
@@ -359,11 +376,6 @@ However, this method is deprecated and is available only for the backward compat
 </Callout>
 
 ## Account Inbox
-
-<Callout type="warning">
-⚠️  This section describes a feature that is not yet released on Mainnet. 
-It will be available following the next Mainnet Spork. 
-</Callout>
 
 Accounts also possess an `Inbox` that can be used to make [Capabilities](capability-based-access-control) available to specific accounts. 
 The functions in this `Inbox` provide a convenient means to "bootstrap" Capabilities, 
@@ -769,6 +781,12 @@ account.forEachStored(fun (path: StoragePath, type: Type): Bool {
     return true
 })
 ```
+</Callout>
+
+<Callout type="info">
+    The iteration will skip any broken elements in the storage.
+    An element could be broken due to invalid types associated with the stored value.
+    e.g: A value belongs to type `T` of a contract with syntax/semantic errors.
 </Callout>
 
 ## Storage limit

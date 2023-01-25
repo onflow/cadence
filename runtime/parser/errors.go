@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,8 +61,8 @@ type ParseError interface {
 // SyntaxError
 
 type SyntaxError struct {
-	Pos     ast.Position
 	Message string
+	Pos     ast.Position
 }
 
 func NewSyntaxError(pos ast.Position, message string, params ...any) *SyntaxError {
@@ -126,7 +126,7 @@ func (e *JuxtaposedUnaryOperatorsError) Error() string {
 
 type InvalidIntegerLiteralError struct {
 	Literal                   string
-	IntegerLiteralKind        IntegerLiteralKind
+	IntegerLiteralKind        common.IntegerLiteralKind
 	InvalidIntegerLiteralKind InvalidNumberLiteralKind
 	ast.Range
 }
@@ -139,7 +139,7 @@ func (*InvalidIntegerLiteralError) isParseError() {}
 func (*InvalidIntegerLiteralError) IsUserError() {}
 
 func (e *InvalidIntegerLiteralError) Error() string {
-	if e.IntegerLiteralKind == IntegerLiteralKindUnknown {
+	if e.IntegerLiteralKind == common.IntegerLiteralKindUnknown {
 		return fmt.Sprintf(
 			"invalid integer literal `%s`: %s",
 			e.Literal,

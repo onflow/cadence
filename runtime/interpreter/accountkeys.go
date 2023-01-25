@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,15 +42,15 @@ func NewAuthAccountKeysValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysAddFunctionName:         addFunction,
-		sema.AccountKeysGetFunctionName:         getFunction,
-		sema.AccountKeysRevokeFunctionName:      revokeFunction,
+		sema.AccountKeysTypeAddFunctionName:     addFunction,
+		sema.AccountKeysTypeGetFunctionName:     getFunction,
+		sema.AccountKeysTypeRevokeFunctionName:  revokeFunction,
 		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
 	}
 
 	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
-		case sema.AccountKeysCountFieldName:
+		case sema.AccountKeysTypeCountFieldName:
 			return getKeysCount()
 		}
 		return nil
@@ -93,13 +93,13 @@ func NewPublicAccountKeysValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysGetFunctionName:         getFunction,
+		sema.AccountKeysTypeGetFunctionName:     getFunction,
 		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
 	}
 
 	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
-		case sema.AccountKeysCountFieldName:
+		case sema.AccountKeysTypeCountFieldName:
 			return getKeysCount()
 		}
 		return nil

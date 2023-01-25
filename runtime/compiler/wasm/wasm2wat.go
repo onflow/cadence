@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,12 @@ package wasm
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 )
 
 func WASM2WAT(binary []byte) string {
-	f, err := ioutil.TempFile("", "wasm")
+	f, err := os.CreateTemp("", "wasm")
 	if err != nil {
 		panic(err)
 	}

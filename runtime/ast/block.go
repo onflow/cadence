@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,8 +94,8 @@ func (b *Block) String() string {
 func (b *Block) MarshalJSON() ([]byte, error) {
 	type Alias Block
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "Block",
 		Alias: (*Alias)(b),
@@ -146,9 +146,9 @@ func (b *FunctionBlock) Walk(walkChild func(Element)) {
 func (b *FunctionBlock) MarshalJSON() ([]byte, error) {
 	type Alias FunctionBlock
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "FunctionBlock",
 		Range: b.Block.Range,
@@ -226,9 +226,9 @@ func (b *FunctionBlock) HasStatements() bool {
 // Condition
 
 type Condition struct {
-	Kind    ConditionKind
 	Test    Expression
 	Message Expression
+	Kind    ConditionKind
 }
 
 func (c Condition) Doc() prettier.Doc {

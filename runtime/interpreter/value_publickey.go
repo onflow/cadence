@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ func NewPublicKeyValue(
 
 	fields := []CompositeField{
 		{
-			Name:  sema.PublicKeySignAlgoField,
+			Name:  sema.PublicKeyTypeSignAlgoFieldName,
 			Value: signAlgo,
 		},
 	}
@@ -64,13 +64,13 @@ func NewPublicKeyValue(
 	)
 
 	publicKeyValue.ComputedFields = map[string]ComputedField{
-		sema.PublicKeyPublicKeyField: func(interpreter *Interpreter, locationRange LocationRange) Value {
+		sema.PublicKeyTypePublicKeyFieldName: func(interpreter *Interpreter, locationRange LocationRange) Value {
 			return publicKey.Transfer(interpreter, locationRange, atree.Address{}, false, nil)
 		},
 	}
 	publicKeyValue.Functions = map[string]FunctionValue{
-		sema.PublicKeyVerifyFunction:    publicKeyVerifySignatureFunction,
-		sema.PublicKeyVerifyPoPFunction: publicKeyVerifyPoPFunction,
+		sema.PublicKeyTypeVerifyFunctionName:    publicKeyVerifySignatureFunction,
+		sema.PublicKeyTypeVerifyPoPFunctionName: publicKeyVerifyPoPFunction,
 	}
 
 	err := validatePublicKey(interpreter, locationRange, publicKeyValue)
@@ -91,13 +91,13 @@ func NewPublicKeyValue(
 
 		stringerFields := []CompositeField{
 			{
-				Name:  sema.PublicKeyPublicKeyField,
+				Name:  sema.PublicKeyTypePublicKeyFieldName,
 				Value: publicKey,
 			},
 			{
-				Name: sema.PublicKeySignAlgoField,
+				Name: sema.PublicKeyTypeSignAlgoFieldName,
 				// TODO: provide proper location range
-				Value: publicKeyValue.GetField(interpreter, EmptyLocationRange, sema.PublicKeySignAlgoField),
+				Value: publicKeyValue.GetField(interpreter, EmptyLocationRange, sema.PublicKeyTypeSignAlgoFieldName),
 			},
 		}
 

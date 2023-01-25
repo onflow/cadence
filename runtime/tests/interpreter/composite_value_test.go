@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -149,7 +149,10 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 				BaseTypeActivation:  baseTypeActivation,
 				CheckHandler: func(checker *sema.Checker, check func()) {
 					if checker.Location == TestLocation {
-						checker.Elaboration.CompositeTypes[fruitType.ID()] = fruitType
+						checker.Elaboration.SetCompositeType(
+							fruitType.ID(),
+							fruitType,
+						)
 					}
 					check()
 				},
@@ -185,7 +188,13 @@ func TestInterpretContractTransfer(t *testing.T) {
 		    `,
 			value,
 		)
-		inter, _ := testAccount(t, address, true, code)
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			code,
+			sema.Config{},
+		)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ If any error is encountered while decoding, the program aborts.
 const rlpDecodeStringFunctionName = "decodeString"
 
 var rlpDecodeStringFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "input",
@@ -84,8 +84,8 @@ var rlpDecodeStringFunctionType = &sema.FunctionType{
 }
 
 type RLPDecodeStringError struct {
-	Msg string
 	interpreter.LocationRange
+	Msg string
 }
 
 var _ errors.UserError = RLPDecodeStringError{}
@@ -107,7 +107,7 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		locationRange := invocation.LocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input, locationRange)
 		if err != nil {
 			panic(RLPDecodeStringError{
 				Msg:           err.Error(),
@@ -143,7 +143,7 @@ If any error is encountered while decoding, the program aborts.
 const rlpDecodeListFunctionName = "decodeList"
 
 var rlpDecodeListFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "input",
@@ -158,8 +158,8 @@ var rlpDecodeListFunctionType = &sema.FunctionType{
 }
 
 type RLPDecodeListError struct {
-	Msg string
 	interpreter.LocationRange
+	Msg string
 }
 
 var _ errors.UserError = RLPDecodeListError{}
@@ -181,7 +181,7 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		locationRange := invocation.LocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input, locationRange)
 		if err != nil {
 			panic(RLPDecodeListError{
 				Msg:           err.Error(),

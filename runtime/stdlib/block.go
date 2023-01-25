@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ Returns the block at the given height. If the given block does not exist the fun
 `
 
 var getBlockFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      "at",
 			Identifier: "height",
@@ -156,6 +156,7 @@ func NewBlockValue(
 		func() uint64 {
 			return uint64(time.Unix(0, block.Timestamp).Unix())
 		},
+		locationRange,
 	)
 
 	return interpreter.NewBlockValue(

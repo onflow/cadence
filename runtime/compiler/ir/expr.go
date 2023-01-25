@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,8 +54,8 @@ func (e *MoveLocal) Accept(v Visitor) Repr {
 }
 
 type UnOpExpr struct {
-	Op   UnOp
 	Expr Expr
+	Op   UnOp
 }
 
 func (*UnOpExpr) isExpr() {}
@@ -65,9 +65,9 @@ func (e *UnOpExpr) Accept(v Visitor) Repr {
 }
 
 type BinOpExpr struct {
-	Op    BinOp
 	Left  Expr
 	Right Expr
+	Op    BinOp
 }
 
 func (*BinOpExpr) isExpr() {}
@@ -77,8 +77,8 @@ func (e *BinOpExpr) Accept(v Visitor) Repr {
 }
 
 type Call struct {
-	FunctionIndex uint32
 	Arguments     []Expr
+	FunctionIndex uint32
 }
 
 func (*Call) isExpr() {}

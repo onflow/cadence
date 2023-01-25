@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,13 +36,13 @@ func stringFunctionEncodeHex(invocation Invocation) Value {
 
 	inter := invocation.Interpreter
 	memoryUsage := common.NewStringMemoryUsage(
-		safeMul(argument.Count(), 2),
+		safeMul(argument.Count(), 2, invocation.LocationRange),
 	)
 	return NewStringValue(
 		inter,
 		memoryUsage,
 		func() string {
-			bytes, _ := ByteArrayValueToByteSlice(inter, argument)
+			bytes, _ := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
 			return hex.EncodeToString(bytes)
 		},
 	)
@@ -56,7 +56,7 @@ func stringFunctionFromUtf8(invocation Invocation) Value {
 
 	inter := invocation.Interpreter
 	// naively read the entire byte array before validating
-	buf, err := ByteArrayValueToByteSlice(inter, argument)
+	buf, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
 
 	if err != nil {
 		panic(errors.NewExternalError(err))

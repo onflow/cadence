@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,12 +43,12 @@ func TestExportValue(t *testing.T) {
 	t.Parallel()
 
 	type exportTest struct {
-		label string
-		value interpreter.Value
+		value    interpreter.Value
+		expected cadence.Value
 		// Some values need an interpreter to be created (e.g. stored values like arrays, dictionaries, and composites),
 		// so provide an optional helper function to construct the value
 		valueFactory func(*interpreter.Interpreter) interpreter.Value
-		expected     cadence.Value
+		label        string
 		invalid      bool
 	}
 
@@ -73,11 +73,7 @@ func TestExportValue(t *testing.T) {
 
 			if tt.invalid {
 				RequireError(t, err)
-				if tt.expected == nil {
-					assertInternalError(t, err)
-				} else {
-					assertUserError(t, err)
-				}
+				assertUserError(t, err)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expected, actual)
@@ -153,13 +149,13 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Bool true",
-			value:    interpreter.BoolValue(true),
+			value:    interpreter.TrueValue,
 			expected: cadence.NewBool(true),
 		},
 
 		{
 			label:    "Bool false",
-			value:    interpreter.BoolValue(false),
+			value:    interpreter.FalseValue,
 			expected: cadence.NewBool(false),
 		},
 
@@ -425,7 +421,7 @@ func TestExportValue(t *testing.T) {
 						nil,
 					),
 					hashAlgorithm,
-					interpreter.NewUnmeteredUFix64ValueWithInteger(10),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(10, interpreter.EmptyLocationRange),
 					false,
 				)
 			},
@@ -494,11 +490,32 @@ func TestExportValue(t *testing.T) {
 					interpreter.AddressValue{},
 					interpreter.NewUnmeteredStringValue("C"),
 					interpreter.NewArrayValue(
-						newTestInterpreter(t),
+						inter,
 						interpreter.EmptyLocationRange,
 						interpreter.ByteArrayStaticType,
 						common.Address{},
 					),
+				)
+			},
+			invalid: true,
+		},
+		{
+			label: "Block (invalid)",
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				blockIDStaticType :=
+					interpreter.ConvertSemaToStaticType(nil, sema.BlockTypeIDFieldType).(interpreter.ArrayStaticType)
+
+				return interpreter.NewBlockValue(
+					inter,
+					interpreter.NewUnmeteredUInt64Value(1),
+					interpreter.NewUnmeteredUInt64Value(2),
+					interpreter.NewArrayValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						blockIDStaticType,
+						common.Address{},
+					),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(1, interpreter.EmptyLocationRange),
 				)
 			},
 			invalid: true,
@@ -514,10 +531,10 @@ func TestImportValue(t *testing.T) {
 	t.Parallel()
 
 	type importTest struct {
-		label        string
 		expected     interpreter.Value
 		value        cadence.Value
 		expectedType sema.Type
+		label        string
 	}
 
 	test := func(tt importTest) {
@@ -538,11 +555,7 @@ func TestImportValue(t *testing.T) {
 
 			if tt.expected == nil {
 				RequireError(t, err)
-				if _, ok := tt.value.(cadence.Link); ok {
-					assertInternalError(t, err)
-				} else {
-					assertUserError(t, err)
-				}
+				assertUserError(t, err)
 			} else {
 				require.NoError(t, err)
 				AssertValuesEqual(t, inter, tt.expected, actual)
@@ -573,11 +586,11 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Bool true",
 			value:    cadence.NewBool(true),
-			expected: interpreter.BoolValue(true),
+			expected: interpreter.TrueValue,
 		},
 		{
 			label:    "Bool false",
-			expected: interpreter.BoolValue(false),
+			expected: interpreter.FalseValue,
 			value:    cadence.NewBool(false),
 		},
 		{
@@ -792,25 +805,19 @@ func TestImportValue(t *testing.T) {
 			},
 		},
 		{
-			label: "Link (invalid)",
-			value: cadence.Link{
-				TargetPath: cadence.Path{
-					Domain:     "storage",
-					Identifier: "test",
-				},
-				BorrowType: "Int",
-			},
-			expected: nil,
-		},
-		{
 			label: "Capability (invalid)",
-			value: cadence.Capability{
+			value: cadence.StorageCapability{
 				Path: cadence.Path{
 					Domain:     "public",
 					Identifier: "test",
 				},
 				BorrowType: cadence.IntType{},
 			},
+			expected: nil,
+		},
+		{
+			label:    "Function (invalid)",
+			value:    cadence.Function{},
 			expected: nil,
 		},
 		{
@@ -831,21 +838,13 @@ func assertUserError(t *testing.T, err error) {
 	)
 }
 
-func assertInternalError(t *testing.T, err error) {
-	require.True(t,
-		errors.IsInternalError(err),
-		"Expected `InternalError`, found `%T`",
-		err,
-	)
-}
-
 func TestImportRuntimeType(t *testing.T) {
 	t.Parallel()
 
 	type importTest struct {
-		label    string
 		expected interpreter.StaticType
 		actual   cadence.Type
+		label    string
 	}
 
 	test := func(tt importTest) {
@@ -1451,7 +1450,7 @@ func TestExportResourceArrayValue(t *testing.T) {
 		}).WithType(fooResourceType),
 	}).WithType(cadence.VariableSizedArrayType{
 		ElementType: &cadence.ResourceType{
-			Location:            common.StringLocation("test"),
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -1509,7 +1508,7 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 	}).WithType(cadence.DictionaryType{
 		KeyType: cadence.StringType{},
 		ElementType: &cadence.ResourceType{
-			Location:            common.StringLocation("test"),
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -1532,7 +1531,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	t.Parallel()
 
 	barResourceType := &cadence.ResourceType{
-		Location:            TestLocation,
+		Location:            common.ScriptLocation{},
 		QualifiedIdentifier: "Bar",
 		Fields: []cadence.Field{
 			{
@@ -1547,7 +1546,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	}
 
 	fooResourceType := &cadence.ResourceType{
-		Location:            TestLocation,
+		Location:            common.ScriptLocation{},
 		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -1635,7 +1634,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 		},
 		Context{
 			Interface: inter,
-			Location:  TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 
@@ -1656,7 +1655,7 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 		},
 		Context{
 			Interface: &testRuntimeInterface{},
-			Location:  TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 
@@ -1821,7 +1820,7 @@ func TestExportTypeValue(t *testing.T) {
 		expected := cadence.TypeValue{
 			StaticType: &cadence.StructType{
 				QualifiedIdentifier: "S",
-				Location:            TestLocation,
+				Location:            common.ScriptLocation{},
 				Fields:              []cadence.Field{},
 			},
 		}
@@ -1934,13 +1933,13 @@ func TestExportTypeValue(t *testing.T) {
 
 }
 
-func TestExportCapabilityValue(t *testing.T) {
+func TestExportStorageCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("Int", func(t *testing.T) {
 
-		capability := &interpreter.CapabilityValue{
+		capability := &interpreter.StorageCapabilityValue{
 			Address: interpreter.AddressValue{0x1},
 			Path: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -1957,7 +1956,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Capability{
+		expected := cadence.StorageCapability{
 			Path: cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -1994,7 +1993,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		inter := newTestInterpreter(t)
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
-		capability := &interpreter.CapabilityValue{
+		capability := &interpreter.StorageCapabilityValue{
 			Address: interpreter.AddressValue{0x1},
 			Path: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -2011,7 +2010,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Capability{
+		expected := cadence.StorageCapability{
 			Path: cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -2029,7 +2028,7 @@ func TestExportCapabilityValue(t *testing.T) {
 
 	t.Run("no borrow type", func(t *testing.T) {
 
-		capability := &interpreter.CapabilityValue{
+		capability := &interpreter.StorageCapabilityValue{
 			Address: interpreter.AddressValue{0x1},
 			Path: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -2045,97 +2044,12 @@ func TestExportCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Capability{
+		expected := cadence.StorageCapability{
 			Path: cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
 			},
 			Address: cadence.Address{0x1},
-		}
-
-		assert.Equal(t, expected, actual)
-	})
-}
-
-func TestExportLinkValue(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("Int", func(t *testing.T) {
-
-		link := interpreter.LinkValue{
-			TargetPath: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			Type: interpreter.PrimitiveStaticTypeInt,
-		}
-
-		actual, err := exportValueWithInterpreter(
-			link,
-			newTestInterpreter(t),
-			interpreter.EmptyLocationRange,
-			seenReferences{},
-		)
-		require.NoError(t, err)
-
-		expected := cadence.Link{
-			TargetPath: cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
-			},
-			BorrowType: "Int",
-		}
-
-		assert.Equal(t, expected, actual)
-	})
-
-	t.Run("Struct", func(t *testing.T) {
-
-		const code = `
-          struct S {}
-        `
-		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
-		require.NoError(t, err)
-
-		checker, err := sema.NewChecker(
-			program,
-			TestLocation,
-			nil,
-			&sema.Config{
-				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
-			},
-		)
-		require.NoError(t, err)
-
-		err = checker.Check()
-		require.NoError(t, err)
-
-		inter := newTestInterpreter(t)
-		inter.Program = interpreter.ProgramFromChecker(checker)
-
-		capability := interpreter.LinkValue{
-			TargetPath: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
-		}
-
-		actual, err := exportValueWithInterpreter(
-			capability,
-			inter,
-			interpreter.EmptyLocationRange,
-			seenReferences{},
-		)
-		require.NoError(t, err)
-
-		expected := cadence.Link{
-			TargetPath: cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
-			},
-			BorrowType: "S.test.S",
 		}
 
 		assert.Equal(t, expected, actual)
@@ -2163,7 +2077,7 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
     `
 
 	fooStructType := &cadence.StructType{
-		Location:            TestLocation,
+		Location:            common.ScriptLocation{},
 		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -2265,19 +2179,19 @@ var fooResourceFields = []cadence.Field{
 }
 
 var fooStructType = &cadence.StructType{
-	Location:            TestLocation,
+	Location:            common.ScriptLocation{},
 	QualifiedIdentifier: "Foo",
 	Fields:              fooFields,
 }
 
 var fooResourceType = &cadence.ResourceType{
-	Location:            TestLocation,
+	Location:            common.ScriptLocation{},
 	QualifiedIdentifier: "Foo",
 	Fields:              fooResourceFields,
 }
 
 var fooEventType = &cadence.EventType{
-	Location:            TestLocation,
+	Location:            common.ScriptLocation{},
 	QualifiedIdentifier: "Foo",
 	Fields:              fooFields,
 }
@@ -2288,7 +2202,7 @@ func TestRuntimeEnumValue(t *testing.T) {
 
 	enumValue := cadence.Enum{
 		EnumType: &cadence.EnumType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Direction",
 			Fields: []cadence.Field{
 				{
@@ -2372,7 +2286,7 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 		scriptParam,
 		Context{
 			Interface: runtimeInterface,
-			Location:  TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 }
@@ -2382,9 +2296,9 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 	t.Parallel()
 
 	type argumentPassingTest struct {
+		exportedValue cadence.Value
 		label         string
 		typeSignature string
-		exportedValue cadence.Value
 		skipExport    bool
 	}
 
@@ -2628,7 +2542,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 	// Complex struct value
 	complexStructValue := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -2781,7 +2695,7 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 	// Complex struct value
 	complexStructValue := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -2890,7 +2804,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with wrong field type
 
 	malformedStructType1 := &cadence.StructType{
-		Location:            TestLocation,
+		Location:            common.ScriptLocation{},
 		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -2911,7 +2825,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 
 	malformedStruct2 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -2928,7 +2842,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with nested malformed array value
 	malformedStruct3 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Bar",
 			Fields: []cadence.Field{
 				{
@@ -2949,7 +2863,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with nested malformed dictionary value
 	malformedStruct4 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Baz",
 			Fields: []cadence.Field{
 				{
@@ -2974,7 +2888,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with nested array with mismatching element type
 	malformedStruct5 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Bar",
 			Fields: []cadence.Field{
 				{
@@ -2993,10 +2907,10 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	}
 
 	type argumentPassingTest struct {
-		label                                    string
-		typeSignature                            string
 		exportedValue                            cadence.Value
 		expectedInvalidEntryPointArgumentErrType error
+		label                                    string
+		typeSignature                            string
 		expectedContainerMutationError           bool
 	}
 
@@ -3642,7 +3556,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		// Struct with nested malformed dictionary value
 		malformedStruct := cadence.Struct{
 			StructType: &cadence.StructType{
-				Location:            TestLocation,
+				Location:            common.ScriptLocation{},
 				QualifiedIdentifier: "Foo",
 				Fields: []cadence.Field{
 					{
@@ -3755,7 +3669,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3808,7 +3722,7 @@ func TestTypeValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3853,7 +3767,7 @@ func TestTypeValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3863,7 +3777,7 @@ func TestTypeValueImport(t *testing.T) {
 	})
 }
 
-func TestCapabilityValueImport(t *testing.T) {
+func TestStorageCapabilityValueImport(t *testing.T) {
 
 	t.Parallel()
 
@@ -3871,7 +3785,7 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.Capability{
+		capabilityValue := cadence.StorageCapability{
 			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
@@ -3913,7 +3827,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3925,7 +3839,7 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.Capability{
+		capabilityValue := cadence.StorageCapability{
 			BorrowType: cadence.IntType{},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
@@ -3960,7 +3874,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3972,7 +3886,7 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.Capability{
+		capabilityValue := cadence.StorageCapability{
 			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
@@ -4007,7 +3921,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4019,7 +3933,7 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.Capability{
+		capabilityValue := cadence.StorageCapability{
 			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
@@ -4056,7 +3970,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4075,7 +3989,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			Initializers:        [][]cadence.Parameter{},
 		}
 
-		capabilityValue := cadence.Capability{
+		capabilityValue := cadence.StorageCapability{
 			BorrowType: borrowType,
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
@@ -4112,7 +4026,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4144,7 +4058,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 	}
@@ -4523,7 +4437,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		RequireError(t, err)
@@ -4592,7 +4506,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4665,7 +4579,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4738,7 +4652,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4755,7 +4669,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	t.Parallel()
 
 	program := interpreter.Program{
-		Elaboration: sema.NewElaboration(nil, false),
+		Elaboration: sema.NewElaboration(nil),
 	}
 
 	inter := newTestInterpreter(t)
@@ -4837,7 +4751,10 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Fields:     []string{"dictionary"},
 	}
 
-	program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+	program.Elaboration.SetCompositeType(
+		semaCompositeType.ID(),
+		semaCompositeType,
+	)
 
 	semaCompositeType.Members.Set(
 		"dictionary",
@@ -4907,13 +4824,16 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		t.Parallel()
 
 		program := interpreter.Program{
-			Elaboration: sema.NewElaboration(nil, false),
+			Elaboration: sema.NewElaboration(nil),
 		}
 
 		inter := newTestInterpreter(t)
 		inter.Program = &program
 
-		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+		program.Elaboration.SetCompositeType(
+			semaCompositeType.ID(),
+			semaCompositeType,
+		)
 
 		actual, err := ImportValue(
 			inter,
@@ -4953,7 +4873,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 		structValue := cadence.Struct{
 			StructType: &cadence.StructType{
-				Location:            TestLocation,
+				Location:            common.ScriptLocation{},
 				QualifiedIdentifier: "Foo",
 				Fields: []cadence.Field{
 					{
@@ -4991,7 +4911,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 		structValue := cadence.Struct{
 			StructType: &cadence.StructType{
-				Location:            TestLocation,
+				Location:            common.ScriptLocation{},
 				QualifiedIdentifier: "Foo",
 				Fields: []cadence.Field{
 					{
@@ -5061,7 +4981,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 		jsonCdc := `
           {
             "value": {
-              "id": "S.test.Foo",
+              "id": "s.0000000000000000000000000000000000000000000000000000000000000000.Foo",
               "fields": [
                 {
                   "name": "bytes",
@@ -5104,7 +5024,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -5127,7 +5047,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 		jsonCdc := `
           {
             "value": {
-              "id": "S.test.Foo",
+              "id": "s.0000000000000000000000000000000000000000000000000000000000000000.Foo",
               "fields": [
                 {
                   "name": "bytes",
@@ -5169,7 +5089,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 

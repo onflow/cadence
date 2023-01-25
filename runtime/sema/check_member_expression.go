@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,18 +96,20 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 }
 
 func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, member *Member, isOptional bool) {
-	memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfos[expression]
+	memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
 	if ok {
 		return memberInfo.AccessedType, memberInfo.Member, memberInfo.IsOptional
 	}
 
 	defer func() {
-		checker.Elaboration.MemberExpressionMemberInfos[expression] =
+		checker.Elaboration.SetMemberExpressionMemberInfo(
+			expression,
 			MemberInfo{
 				AccessedType: accessedType,
 				Member:       member,
 				IsOptional:   isOptional,
-			}
+			},
+		)
 	}()
 
 	accessedExpression := expression.Expression
@@ -161,6 +163,11 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		if !ok {
 			return
 		}
+
+		if !checker.isAvailableMember(expressionType, identifier) {
+			return
+		}
+
 		targetRange := ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression)
 		member = resolver.Resolve(checker.memoryGauge, identifier, targetRange, checker.report)
 		if resolver.Mutating {
@@ -225,13 +232,19 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	if member == nil {
 		if !accessedType.IsInvalidType() {
 
-			checker.Elaboration.MemberExpressionExpectedTypes[expression] = checker.expectedType
+			if checker.Config.ExtendedElaborationEnabled {
+				checker.Elaboration.SetMemberExpressionExpectedType(
+					expression,
+					checker.expectedType,
+				)
+			}
 
 			checker.report(
 				&NotDeclaredMemberError{
-					Type:       accessedType,
-					Name:       identifier,
-					Expression: expression,
+					Type:          accessedType,
+					Name:          identifier,
+					suggestMember: checker.Config.SuggestionsEnabled,
+					Expression:    expression,
 					Range: ast.NewRange(
 						checker.memoryGauge,
 						identifierStartPosition,

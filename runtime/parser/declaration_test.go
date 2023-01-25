@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -413,10 +413,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
-						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					},
 				},
 				Range: ast.Range{
@@ -454,10 +451,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
-						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					},
 				},
 				Range: ast.Range{
@@ -495,10 +489,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
-						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					},
 					{
 						Label: "",
@@ -516,10 +507,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
-							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
-						},
+						StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
 					},
 				},
 				Range: ast.Range{
@@ -2107,10 +2095,7 @@ func TestParseEvent(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 21, Line: 1, Column: 21},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
-													EndPos:   ast.Position{Offset: 23, Line: 1, Column: 23},
-												},
+												StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
 											},
 											{
 												Label: "",
@@ -2128,10 +2113,7 @@ func TestParseEvent(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 31, Line: 1, Column: 31},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 27, Line: 1, Column: 27},
-													EndPos:   ast.Position{Offset: 36, Line: 1, Column: 36},
-												},
+												StartPos: ast.Position{Offset: 27, Line: 1, Column: 27},
 											},
 										},
 										Range: ast.Range{
@@ -2308,15 +2290,10 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("native let foo: Int", Config{})
 
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
-				},
-			},
-			errs,
-		)
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		require.Empty(t, errs)
 	})
 
 	t.Run("static", func(t *testing.T) {
@@ -2366,15 +2343,10 @@ func TestParseField(t *testing.T) {
 			Config{},
 		)
 
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
-				},
-			},
-			errs,
-		)
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		require.Empty(t, errs)
 	})
 
 	t.Run("static native, enabled", func(t *testing.T) {
@@ -2422,11 +2394,14 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("static native let foo: Int", Config{})
 
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -2502,11 +2477,14 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("pub static native let foo: Int", Config{})
 
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
 				},
 			},
 			errs,
@@ -2658,10 +2636,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 86, Line: 5, Column: 24},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 81, Line: 5, Column: 19},
-													EndPos:   ast.Position{Offset: 88, Line: 5, Column: 26},
-												},
+												StartPos: ast.Position{Offset: 81, Line: 5, Column: 19},
 											},
 										},
 										Range: ast.Range{
@@ -2904,10 +2879,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 96, Line: 5, Column: 24},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 91, Line: 5, Column: 19},
-													EndPos:   ast.Position{Offset: 98, Line: 5, Column: 26},
-												},
+												StartPos: ast.Position{Offset: 91, Line: 5, Column: 19},
 											},
 										},
 										Range: ast.Range{
@@ -3088,15 +3060,11 @@ func TestParseEnumDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" enum E { static case e }")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
-				},
-			},
-			errs,
-		)
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		require.Empty(t, errs)
 	})
 
 	t.Run("enum case with native modifier, enabled", func(t *testing.T) {
@@ -3126,15 +3094,11 @@ func TestParseEnumDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" enum E { native case e }")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
-				},
-			},
-			errs,
-		)
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		require.Empty(t, errs)
 	})
 }
 
@@ -3278,10 +3242,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
-											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
-										},
+										StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
 									},
 								},
 								Range: ast.Range{
@@ -3474,10 +3435,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
-											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
-										},
+										StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
 									},
 								},
 								Range: ast.Range{
@@ -3714,10 +3672,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
-											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
-										},
+										StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
 									},
 								},
 								Range: ast.Range{
@@ -3966,10 +3921,7 @@ func TestParseFunctionParameterWithoutLabel(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-								EndPos:   ast.Position{Offset: 20, Line: 2, Column: 19},
-							},
+							StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 						},
 					},
 					Range: ast.Range{
@@ -4036,10 +3988,7 @@ func TestParseFunctionParameterWithLabel(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-								EndPos:   ast.Position{Offset: 22, Line: 2, Column: 21},
-							},
+							StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 						},
 					},
 					Range: ast.Range{
@@ -4148,10 +4097,7 @@ func TestParseStructure(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 80, Line: 5, Column: 22},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 75, Line: 5, Column: 17},
-												EndPos:   ast.Position{Offset: 82, Line: 5, Column: 24},
-											},
+											StartPos: ast.Position{Offset: 75, Line: 5, Column: 17},
 										},
 									},
 									Range: ast.Range{
@@ -4307,6 +4253,9 @@ func TestParseStructureWithConformances(t *testing.T) {
 
 func TestParseInvalidMember(t *testing.T) {
 
+	// For now, leading unknown identifiers are valid.
+	// This will be rejected in Stable Cadence.
+
 	t.Parallel()
 
 	const code = `
@@ -4317,16 +4266,7 @@ func TestParseInvalidMember(t *testing.T) {
 
 	_, errs := testParseDeclarations(code)
 
-	utils.AssertEqualWithDiff(t,
-		[]error{
-			&SyntaxError{
-				Message: "unexpected token: identifier",
-				Pos:     ast.Position{Offset: 35, Line: 3, Column: 12},
-			},
-		},
-		errs,
-	)
-
+	require.Empty(t, errs)
 }
 
 func TestParsePreAndPostConditions(t *testing.T) {
@@ -4374,10 +4314,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-								EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
-							},
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 						},
 					},
 					Range: ast.Range{
@@ -4534,10 +4471,7 @@ func TestParseConditionMessage(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-								EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
-							},
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 						},
 					},
 					Range: ast.Range{
@@ -4694,10 +4628,7 @@ func TestParseInterface(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 89, Line: 5, Column: 26},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 84, Line: 5, Column: 21},
-											EndPos:   ast.Position{Offset: 91, Line: 5, Column: 28},
-										},
+										StartPos: ast.Position{Offset: 84, Line: 5, Column: 21},
 									},
 								},
 								Range: ast.Range{
@@ -5172,10 +5103,7 @@ func TestParseEventDeclaration(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 28, Line: 2, Column: 27},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
-												EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
-											},
+											StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 										},
 										{
 											Label: "",
@@ -5193,10 +5121,7 @@ func TestParseEventDeclaration(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
-												EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
-											},
+											StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
 										},
 									},
 									Range: ast.Range{
@@ -5445,10 +5370,7 @@ func TestParseResourceParameterType(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-								EndPos:   ast.Position{Offset: 22, Line: 2, Column: 21},
-							},
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 						},
 					},
 					Range: ast.Range{
@@ -5691,10 +5613,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 47, Line: 2, Column: 46},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
-												EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
-											},
+											StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
 										},
 									},
 									Range: ast.Range{
@@ -6184,7 +6103,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier for composite",
+					Message: "invalid static modifier for structure",
 					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
@@ -6228,7 +6147,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for composite",
+					Message: "invalid native modifier for structure",
 					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
@@ -6347,4 +6266,228 @@ func TestParseTransactionWithModifier(t *testing.T) {
 			errs,
 		)
 	})
+}
+
+func TestParseNestedPragma(t *testing.T) {
+
+	t.Parallel()
+
+	parse := func(input string, config Config) (any, []error) {
+		return Parse(
+			nil,
+			[]byte(input),
+			func(p *parser) (any, error) {
+				return parseMemberOrNestedDeclaration(
+					p,
+					"",
+				)
+			},
+			config,
+		)
+	}
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"native #foo",
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("native #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static #pragma",
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static #pragma",
+			Config{},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static native #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("static native #pragma", Config{})
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"native static #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier after native modifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("pub #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"pub static native #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("pub static native #pragma", Config{})
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
 }

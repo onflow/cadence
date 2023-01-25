@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,12 @@ import (
 // InterfaceDeclaration
 
 type InterfaceDeclaration struct {
+	Members    *Members
+	DocString  string
+	Identifier Identifier
+	Range
 	Access        Access
 	CompositeKind common.CompositeKind
-	Identifier    Identifier
-	Members       *Members
-	DocString     string
-	Range
 }
 
 var _ Element = &InterfaceDeclaration{}
@@ -99,8 +99,8 @@ func (d *InterfaceDeclaration) DeclarationDocString() string {
 func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias InterfaceDeclaration
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "InterfaceDeclaration",
 		Alias: (*Alias)(d),

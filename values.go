@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -357,11 +357,15 @@ type Int struct {
 var _ Value = Int{}
 
 func NewInt(i int) Int {
-	return Int{big.NewInt(int64(i))}
+	return Int{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 func NewIntFromBig(i *big.Int) Int {
-	return Int{i}
+	return Int{
+		Value: i,
+	}
 }
 
 func NewMeteredIntFromBig(
@@ -577,7 +581,9 @@ var _ Value = Int128{}
 var Int128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewInt128(i int) Int128 {
-	return Int128{big.NewInt(int64(i))}
+	return Int128{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 var int128MinExceededError = errors.NewDefaultUserError("value exceeds min of Int128")
@@ -590,7 +596,7 @@ func NewInt128FromBig(i *big.Int) (Int128, error) {
 	if i.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		return Int128{}, int128MaxExceededError
 	}
-	return Int128{i}, nil
+	return Int128{Value: i}, nil
 }
 
 func NewMeteredInt128FromBig(
@@ -643,7 +649,9 @@ var _ Value = Int256{}
 var Int256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewInt256(i int) Int256 {
-	return Int256{big.NewInt(int64(i))}
+	return Int256{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 var int256MinExceededError = errors.NewDefaultUserError("value exceeds min of Int256")
@@ -656,7 +664,7 @@ func NewInt256FromBig(i *big.Int) (Int256, error) {
 	if i.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		return Int256{}, int256MaxExceededError
 	}
-	return Int256{i}, nil
+	return Int256{Value: i}, nil
 }
 
 func NewMeteredInt256FromBig(
@@ -707,7 +715,9 @@ type UInt struct {
 var _ Value = UInt{}
 
 func NewUInt(i uint) UInt {
-	return UInt{big.NewInt(int64(i))}
+	return UInt{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 var uintNegativeError = errors.NewDefaultUserError("invalid negative value for UInt")
@@ -716,7 +726,7 @@ func NewUIntFromBig(i *big.Int) (UInt, error) {
 	if i.Sign() < 0 {
 		return UInt{}, uintNegativeError
 	}
-	return UInt{i}, nil
+	return UInt{Value: i}, nil
 }
 
 func NewMeteredUIntFromBig(
@@ -932,7 +942,9 @@ var _ Value = UInt128{}
 var UInt128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewUInt128(i uint) UInt128 {
-	return UInt128{big.NewInt(int64(i))}
+	return UInt128{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 var uint128NegativeError = errors.NewDefaultUserError("invalid negative value for UInt128")
@@ -945,7 +957,7 @@ func NewUInt128FromBig(i *big.Int) (UInt128, error) {
 	if i.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		return UInt128{}, uint128MaxExceededError
 	}
-	return UInt128{i}, nil
+	return UInt128{Value: i}, nil
 }
 
 func NewMeteredUInt128FromBig(
@@ -998,7 +1010,9 @@ var _ Value = UInt256{}
 var UInt256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewUInt256(i uint) UInt256 {
-	return UInt256{big.NewInt(int64(i))}
+	return UInt256{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 var uint256NegativeError = errors.NewDefaultUserError("invalid negative value for UInt256")
@@ -1011,7 +1025,7 @@ func NewUInt256FromBig(i *big.Int) (UInt256, error) {
 	if i.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		return UInt256{}, uint256MaxExceededError
 	}
-	return UInt256{i}, nil
+	return UInt256{Value: i}, nil
 }
 
 func NewMeteredUInt256FromBig(
@@ -1744,49 +1758,6 @@ func (v Contract) String() string {
 	return formatComposite(v.ContractType.ID(), v.ContractType.Fields, v.Fields)
 }
 
-// Link
-
-type Link struct {
-	TargetPath Path
-	// TODO: a future version might want to export the whole type
-	BorrowType string
-}
-
-var _ Value = Link{}
-
-func NewLink(targetPath Path, borrowType string) Link {
-	return Link{
-		TargetPath: targetPath,
-		BorrowType: borrowType,
-	}
-}
-
-func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) Link {
-	common.UseMemory(gauge, common.CadenceLinkValueMemoryUsage)
-	return NewLink(targetPath, borrowType)
-}
-
-func (Link) isValue() {}
-
-func (v Link) Type() Type {
-	return nil
-}
-
-func (v Link) MeteredType(_ common.MemoryGauge) Type {
-	return v.Type()
-}
-
-func (v Link) ToGoValue() any {
-	return nil
-}
-
-func (v Link) String() string {
-	return format.Link(
-		v.BorrowType,
-		v.TargetPath.String(),
-	)
-}
-
 // Path
 
 type Path struct {
@@ -1866,45 +1837,45 @@ func (v TypeValue) String() string {
 	return format.TypeValue(v.StaticType.ID())
 }
 
-// Capability
+// StorageCapability
 
-type Capability struct {
+type StorageCapability struct {
+	BorrowType Type
 	Path       Path
 	Address    Address
-	BorrowType Type
 }
 
-var _ Value = Capability{}
+var _ Value = StorageCapability{}
 
-func NewCapability(path Path, address Address, borrowType Type) Capability {
-	return Capability{
+func NewStorageCapability(path Path, address Address, borrowType Type) StorageCapability {
+	return StorageCapability{
 		Path:       path,
 		Address:    address,
 		BorrowType: borrowType,
 	}
 }
 
-func NewMeteredCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) Capability {
-	common.UseMemory(gauge, common.CadenceCapabilityValueMemoryUsage)
-	return NewCapability(path, address, borrowType)
+func NewMeteredStorageCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) StorageCapability {
+	common.UseMemory(gauge, common.CadenceStorageCapabilityValueMemoryUsage)
+	return NewStorageCapability(path, address, borrowType)
 }
 
-func (Capability) isValue() {}
+func (StorageCapability) isValue() {}
 
-func (v Capability) Type() Type {
+func (v StorageCapability) Type() Type {
 	return NewCapabilityType(v.BorrowType)
 }
 
-func (v Capability) MeteredType(gauge common.MemoryGauge) Type {
+func (v StorageCapability) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredCapabilityType(gauge, v.BorrowType)
 }
 
-func (Capability) ToGoValue() any {
+func (StorageCapability) ToGoValue() any {
 	return nil
 }
 
-func (v Capability) String() string {
-	return format.Capability(
+func (v StorageCapability) String() string {
+	return format.StorageCapability(
 		v.BorrowType.ID(),
 		v.Address.String(),
 		v.Path.String(),

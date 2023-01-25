@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ func (m MapNodeSet) Contains(node *Node) bool {
 }
 
 func (m MapNodeSet) ForEach(f func(*Node) error) error {
-	for node := range m { // nolint:maprangecheck
+	for node := range m { // nolint:maprange
 		err := f(node)
 		if err != nil {
 			return err

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,10 +27,10 @@ import (
 )
 
 type ParameterList struct {
-	once                    sync.Once
-	Parameters              []*Parameter
 	_parametersByIdentifier map[string]*Parameter
+	Parameters              []*Parameter
 	Range
+	once sync.Once
 }
 
 func NewParameterList(

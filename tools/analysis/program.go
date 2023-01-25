@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,17 +28,17 @@ import (
 
 type Program struct {
 	Location    common.Location
-	Code        []byte
 	Program     *ast.Program
 	Elaboration *sema.Elaboration
+	Code        []byte
 }
 
 // Run runs the given DAG of analyzers in parallel
 func (program *Program) Run(analyzers []*Analyzer, report func(Diagnostic)) {
 
 	type action struct {
-		once   sync.Once
 		result interface{}
+		once   sync.Once
 	}
 
 	actions := make(map[*Analyzer]*action)

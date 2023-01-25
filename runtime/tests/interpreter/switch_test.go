@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,8 +62,8 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		require.NoError(t, err)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
-			interpreter.BoolValue(true):  interpreter.NewUnmeteredIntValueFromInt64(1),
-			interpreter.BoolValue(false): interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.TrueValue:  interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.FalseValue: interpreter.NewUnmeteredIntValueFromInt64(2),
 		} {
 
 			actual, err := inter.Invoke("test", argument)
@@ -189,7 +189,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			require.IsType(t, actual, &interpreter.ArrayValue{})
+			require.IsType(t, &interpreter.ArrayValue{}, actual)
 			arrayValue := actual.(*interpreter.ArrayValue)
 
 			AssertValueSlicesEqual(

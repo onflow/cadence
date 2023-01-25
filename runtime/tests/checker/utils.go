@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,9 +45,9 @@ func ParseAndCheck(t testing.TB, code string) (*sema.Checker, error) {
 
 type ParseAndCheckOptions struct {
 	Location         common.Location
-	IgnoreParseError bool
 	Config           *sema.Config
 	ParseOptions     parser.Config
+	IgnoreParseError bool
 }
 
 var checkConcurrently = flag.Int(
@@ -192,13 +192,13 @@ func RequireCheckerErrors(t *testing.T, err error, count int) []error {
 }
 
 func RequireGlobalType(t *testing.T, elaboration *sema.Elaboration, name string) sema.Type {
-	variable, ok := elaboration.GlobalTypes.Get(name)
+	variable, ok := elaboration.GetGlobalType(name)
 	require.True(t, ok, "global type '%s' missing", name)
 	return variable.Type
 }
 
 func RequireGlobalValue(t *testing.T, elaboration *sema.Elaboration, name string) sema.Type {
-	variable, ok := elaboration.GlobalValues.Get(name)
+	variable, ok := elaboration.GetGlobalValue(name)
 	require.True(t, ok, "global value '%s' missing", name)
 	return variable.Type
 }

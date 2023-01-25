@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -164,9 +164,9 @@ func (p *Program) SoleTransactionDeclaration() *TransactionDeclaration {
 func (p *Program) MarshalJSON() ([]byte, error) {
 	type Alias Program
 	return json.Marshal(&struct {
+		*Alias
 		Type         string
 		Declarations []Declaration
-		*Alias
 	}{
 		Type:         "Program",
 		Declarations: p.declarations,

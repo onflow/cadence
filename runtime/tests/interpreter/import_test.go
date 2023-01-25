@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,14 +104,14 @@ func TestInterpretVirtualImport(t *testing.T) {
 						),
 					}
 
-					elaboration := sema.NewElaboration(nil, false)
-					elaboration.CompositeTypes[fooType.ID()] = fooType
+					elaboration := sema.NewElaboration(nil)
+					elaboration.SetCompositeType(
+						fooType.ID(),
+						fooType,
+					)
 
 					return interpreter.VirtualImport{
-						Globals: []struct {
-							Name  string
-							Value interpreter.Value
-						}{
+						Globals: []interpreter.VirtualImportGlobal{
 							{
 								Name:  "Foo",
 								Value: value,

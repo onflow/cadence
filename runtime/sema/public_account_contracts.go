@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,6 @@ import (
 )
 
 const PublicAccountContractsTypeName = "Contracts"
-const PublicAccountContractsTypeGetFunctionName = "get"
-const PublicAccountContractsTypeNamesField = "names"
 
 // PublicAccountContractsType represents the type `PublicAccount.Contracts`
 var PublicAccountContractsType = func() *CompositeType {
@@ -38,17 +36,21 @@ var PublicAccountContractsType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicFunctionMember(
 			publicAccountContractsType,
-			PublicAccountContractsTypeGetFunctionName,
-			publicAccountContractsTypeGetFunctionType,
-			publicAccountContractsTypeGetFunctionDocString,
+			AccountContractsTypeGetFunctionName,
+			AccountContractsTypeGetFunctionType,
+			accountContractsTypeGetFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			publicAccountContractsType,
+			AccountContractsTypeBorrowFunctionName,
+			AccountContractsTypeBorrowFunctionType,
+			accountContractsTypeBorrowFunctionDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountContractsType,
-			PublicAccountContractsTypeNamesField,
-			&VariableSizedType{
-				Type: StringType,
-			},
-			publicAccountContractsTypeNamesDocString,
+			AccountContractsTypeNamesFieldName,
+			accountContractsTypeNamesFieldType,
+			accountContractsTypeNamesFieldDocString,
 		),
 	}
 
@@ -61,29 +63,3 @@ func init() {
 	// Set the container type after initializing the `PublicAccountContractsType`, to avoid initializing loop.
 	PublicAccountContractsType.SetContainerType(PublicAccountType)
 }
-
-const publicAccountContractsTypeGetFunctionDocString = `
-Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
-
-Returns nil if no contract/contract interface with the given name exists in the account.
-`
-
-var publicAccountContractsTypeGetFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: DeployedContractType,
-		},
-	),
-}
-
-const publicAccountContractsTypeNamesDocString = `
-Names of all contracts deployed in the account.
-`

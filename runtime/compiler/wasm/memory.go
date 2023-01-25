@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,10 @@ const MemoryPageSize = 64 * 1024
 
 // Memory represents a memory
 type Memory struct {
-	// minimum number of pages (each one is 64KiB in size)
-	Min uint32
 	// maximum number of pages (each one is 64KiB in size). optional, unlimited if nil
 	Max *uint32
+	// minimum number of pages (each one is 64KiB in size)
+	Min uint32
 }
 
 // limitIndicator is the byte used to indicate the kind of limit in the WASM binary

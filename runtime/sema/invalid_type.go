@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,13 @@ package sema
 // It is the result of type checking failing and
 // can't be expressed in programs.
 var InvalidType = &SimpleType{
-	Name:                 "<<invalid>>",
-	QualifiedName:        "<<invalid>>",
-	TypeID:               "<<invalid>>",
-	tag:                  InvalidTypeTag,
-	IsResource:           false,
-	Storable:             false,
-	Equatable:            false,
-	ExternallyReturnable: false,
-	Importable:           false,
+	Name:          "<<invalid>>",
+	QualifiedName: "<<invalid>>",
+	TypeID:        "<<invalid>>",
+	tag:           InvalidTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Exportable:    false,
+	Importable:    false,
 }

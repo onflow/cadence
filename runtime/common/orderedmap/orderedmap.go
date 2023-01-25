@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ func (om *OrderedMap[K, V]) Clear() {
 
 	om.list.Init()
 	// NOTE: Range over map is safe, as it is only used to delete entries
-	for key := range om.pairs { //nolint:maprangecheck
+	for key := range om.pairs { //nolint:maprange
 		delete(om.pairs, key)
 	}
 }

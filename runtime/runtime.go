@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -263,6 +263,10 @@ func (r *interpreterRuntime) NewScriptExecutor(
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+	location := context.Location
+	if _, ok := location.(common.ScriptLocation); !ok {
+		return nil, errors.NewUnexpectedError("invalid non-script location: %s", location)
+	}
 	return r.NewScriptExecutor(script, context).Result()
 }
 
@@ -305,6 +309,10 @@ func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Conte
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
 	_, err = r.NewTransactionExecutor(script, context).Result()
+	location := context.Location
+	if _, ok := location.(common.TransactionLocation); !ok {
+		return errors.NewUnexpectedError("invalid non-transaction location: %s", location)
+	}
 	return err
 }
 
@@ -320,7 +328,6 @@ func wrapPanic(f func()) {
 					Recovered: r,
 				})
 			}
-
 		}
 	}()
 	f()
@@ -364,7 +371,7 @@ func validateArgumentParams(
 	decoder ArgumentDecoder,
 	locationRange interpreter.LocationRange,
 	arguments [][]byte,
-	parameters []*sema.Parameter,
+	parameters []sema.Parameter,
 ) (
 	[]interpreter.Value,
 	error,
@@ -645,7 +652,7 @@ func (r *interpreterRuntime) ReadLinked(
 
 	pathValue := valueImporter{inter: inter}.importPathValue(path)
 
-	targetPath, _, err := inter.GetCapabilityFinalTargetPath(
+	target, _, err := inter.GetStorageCapabilityFinalTarget(
 		address,
 		pathValue,
 		&sema.ReferenceType{
@@ -657,25 +664,41 @@ func (r *interpreterRuntime) ReadLinked(
 		return nil, err
 	}
 
-	if targetPath == interpreter.EmptyPathValue {
+	if target == nil {
 		return nil, nil
 	}
 
-	value := inter.ReadStored(
-		address,
-		targetPath.Domain.Identifier(),
-		targetPath.Identifier,
-	)
+	switch target := target.(type) {
+	case interpreter.AccountCapabilityTarget:
+		return nil, nil
 
-	var exportedValue cadence.Value
-	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
-		if err != nil {
-			return nil, newError(err, location, codesAndPrograms)
+	case interpreter.PathCapabilityTarget:
+
+		targetPath := interpreter.PathValue(target)
+
+		if targetPath == interpreter.EmptyPathValue {
+			return nil, nil
 		}
-	}
 
-	return exportedValue, nil
+		value := inter.ReadStored(
+			address,
+			targetPath.Domain.Identifier(),
+			targetPath.Identifier,
+		)
+
+		var exportedValue cadence.Value
+		if value != nil {
+			exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
+			if err != nil {
+				return nil, newError(err, location, codesAndPrograms)
+			}
+		}
+
+		return exportedValue, nil
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {

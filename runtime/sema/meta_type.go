@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,19 +35,19 @@ const MetaTypeName = "Type"
 
 // MetaType represents the type of a type.
 var MetaType = &SimpleType{
-	Name:                 MetaTypeName,
-	QualifiedName:        MetaTypeName,
-	TypeID:               MetaTypeName,
-	tag:                  MetaTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          MetaTypeName,
+	QualifiedName: MetaTypeName,
+	TypeID:        MetaTypeName,
+	tag:           MetaTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 }
 
 var MetaTypeIsSubtypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          "of",
 			Identifier:     "otherType",

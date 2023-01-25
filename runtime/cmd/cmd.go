@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,9 +99,10 @@ func DefaultCheckerConfig(
 			importedLocation common.Location,
 			_ ast.Range,
 		) (sema.Import, error) {
-			if importedLocation == stdlib.CryptoChecker.Location {
+			if importedLocation == stdlib.CryptoCheckerLocation {
+				cryptoChecker := stdlib.CryptoChecker()
 				return sema.ElaborationImport{
-					Elaboration: stdlib.CryptoChecker.Elaboration,
+					Elaboration: cryptoChecker.Elaboration,
 				}, nil
 			}
 

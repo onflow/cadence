@@ -26,10 +26,10 @@
           "href": "/cadence/language"
         },
         {
-          "title": "From Solidity to Cadence",
+          "title": "Guide for Solidity developers",
           "tags": ["guide", "patterns"],
-          "description": "Learn the key differences in the account models between Solidity and Cadence.",
-          "href": "/cadence/msg-sender"
+          "description": "Understand the key differences between Solidity and Cadence with guidance to help transition.",
+          "href": "/cadence/solidity-to-cadence"
         },
         {
           "title": "Flow Playground",
@@ -65,16 +65,12 @@
             "href": "anti-patterns"
           },
           {
-            "title": "msg․sender Considered Harmful",
-            "href": "msg-sender"
+            "title": "Guide for Solidity developers",
+            "href": "solidity-to-cadence"
           },
           {
             "title": "Measuring Time in Cadence",
             "href": "measuring-time"
-          },
-          {
-            "title": "Migration Guide",
-            "href": "migration-guide"
           },
           {
             "title": "JSON-Cadence Data Interchange Format",
@@ -90,6 +86,15 @@
           }
         ]
       },
+        {
+          "title": "Project and Style Guides",
+          "items": [
+            {
+              "title": "Project Management Guide",
+              "href": "style-guide"
+            }
+          ]
+        },      
       {
         "title": "Cadence",
         "items": [

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ func TestAssert(t *testing.T) {
 
 	_, err := inter.Invoke(
 		"test",
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		interpreter.NewUnmeteredStringValue("oops"),
 	)
 	assert.Equal(t,
@@ -110,7 +110,7 @@ func TestAssert(t *testing.T) {
 		err,
 	)
 
-	_, err = inter.Invoke("test", interpreter.BoolValue(false))
+	_, err = inter.Invoke("test", interpreter.FalseValue)
 	assert.Equal(t,
 		interpreter.Error{
 			Err: AssertionError{
@@ -122,12 +122,12 @@ func TestAssert(t *testing.T) {
 
 	_, err = inter.Invoke(
 		"test",
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		interpreter.NewUnmeteredStringValue("oops"),
 	)
 	assert.NoError(t, err)
 
-	_, err = inter.Invoke("test", interpreter.BoolValue(true))
+	_, err = inter.Invoke("test", interpreter.TrueValue)
 	assert.NoError(t, err)
 }
 

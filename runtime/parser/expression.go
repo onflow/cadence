@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,28 +64,28 @@ type exprMetaLeftDenotationFunc func(
 )
 
 type literalExpr struct {
-	tokenType      lexer.TokenType
 	nullDenotation exprNullDenotationFunc
+	tokenType      lexer.TokenType
 }
 
 type infixExpr struct {
-	tokenType        lexer.TokenType
-	leftBindingPower int
-	rightAssociative bool
 	leftDenotation   infixExprFunc
+	leftBindingPower int
+	tokenType        lexer.TokenType
+	rightAssociative bool
 }
 
 type binaryExpr struct {
-	tokenType        lexer.TokenType
 	leftBindingPower int
-	rightAssociative bool
 	operation        ast.Operation
+	tokenType        lexer.TokenType
+	rightAssociative bool
 }
 
 type prefixExpr struct {
-	tokenType      lexer.TokenType
-	bindingPower   int
 	nullDenotation prefixExprFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
 }
 
 type unaryExpr struct {
@@ -95,9 +95,9 @@ type unaryExpr struct {
 }
 
 type postfixExpr struct {
-	tokenType      lexer.TokenType
-	bindingPower   int
 	leftDenotation postfixExprFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
 }
 
 var exprNullDenotations = [lexer.TokenMax]exprNullDenotationFunc{}
@@ -358,7 +358,7 @@ func init() {
 				p,
 				literal,
 				literal[2:],
-				IntegerLiteralKindBinary,
+				common.IntegerLiteralKindBinary,
 				token.Range,
 			), nil
 		},
@@ -372,7 +372,7 @@ func init() {
 				p,
 				literal,
 				literal[2:],
-				IntegerLiteralKindOctal,
+				common.IntegerLiteralKindOctal,
 				token.Range,
 			), nil
 		},
@@ -386,7 +386,7 @@ func init() {
 				p,
 				literal,
 				literal,
-				IntegerLiteralKindDecimal,
+				common.IntegerLiteralKindDecimal,
 				token.Range,
 			), nil
 		},
@@ -400,7 +400,7 @@ func init() {
 				p,
 				literal,
 				literal[2:],
-				IntegerLiteralKindHexadecimal,
+				common.IntegerLiteralKindHexadecimal,
 				token.Range,
 			), nil
 		},
@@ -414,7 +414,7 @@ func init() {
 				p,
 				literal,
 				literal[2:],
-				IntegerLiteralKindUnknown,
+				common.IntegerLiteralKindUnknown,
 				token.Range,
 			), nil
 		},
@@ -1683,7 +1683,7 @@ func parseHex(r rune) rune {
 	return -1
 }
 
-func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
+func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
 
 	report := func(invalidKind InvalidNumberLiteralKind) {
 		p.report(
@@ -1715,7 +1715,7 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKin
 	var value *big.Int
 	var base int
 
-	if kind == IntegerLiteralKindUnknown {
+	if kind == common.IntegerLiteralKindUnknown {
 		base = 1
 
 		report(InvalidNumberLiteralKindUnknownPrefix)
@@ -1725,6 +1725,9 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKin
 		if withoutUnderscores == "" {
 			report(InvalidNumberLiteralKindMissingDigits)
 		} else {
+			estimatedSize := common.OverEstimateBigIntFromString(withoutUnderscores, kind)
+			common.UseMemory(p.memoryGauge, common.NewBigIntMemoryUsage(estimatedSize))
+
 			var ok bool
 			value, ok = new(big.Int).SetString(withoutUnderscores, base)
 			if !ok {
@@ -1734,6 +1737,8 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKin
 	}
 
 	if value == nil {
+		common.UseMemory(p.memoryGauge, common.NewBigIntMemoryUsage(1))
+
 		value = new(big.Int)
 	}
 
@@ -1743,14 +1748,19 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKin
 func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.Int, scale uint) {
 	withoutUnderscores := strings.ReplaceAll(part, "_", "")
 
+	base := common.IntegerLiteralKindDecimal
+
 	common.UseMemory(
 		gauge,
 		common.NewBigIntMemoryUsage(
-			common.OverEstimateBigIntFromString(withoutUnderscores),
+			common.OverEstimateBigIntFromString(withoutUnderscores, base),
 		),
 	)
 
-	integer, _ = new(big.Int).SetString(withoutUnderscores, 10)
+	estimatedSize := common.OverEstimateBigIntFromString(withoutUnderscores, base)
+	common.UseMemory(gauge, common.NewBigIntMemoryUsage(estimatedSize))
+
+	integer, _ = new(big.Int).SetString(withoutUnderscores, base.Base())
 	if integer == nil {
 		integer = new(big.Int)
 	}

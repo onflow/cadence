@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -506,43 +506,43 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 			add: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 				underflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(-2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(-2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
 				},
 			},
 			subtract: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(-2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(-2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 				underflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 				underflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
 				},
 			},
 			divide: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(-1),
+					interpreter.NewUnmeteredFix64ValueWithInteger(-1, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 			},
@@ -698,21 +698,21 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 			add: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
-					interpreter.NewUnmeteredUFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
 				},
 			},
 			subtract: testCalls{
 				underflow: testCall{
 					interpreter.NewUnmeteredUFix64Value(0),
-					interpreter.NewUnmeteredUFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredUFix64Value(0),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
-					interpreter.NewUnmeteredUFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
 				},
 			},

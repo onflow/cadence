@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,8 +112,9 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 				return true
 			}
 
-			leftHandType := program.Elaboration.CastingStaticValueTypes[castingExpression]
-			rightHandType := program.Elaboration.CastingTargetTypes[castingExpression]
+			types := program.Elaboration.CastingExpressionTypes(castingExpression)
+			leftHandType := types.StaticValueType
+			rightHandType := types.TargetType
 
 			if !sema.IsSubType(leftHandType, rightHandType) {
 				return true

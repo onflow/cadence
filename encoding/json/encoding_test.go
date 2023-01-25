@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1635,35 +1635,6 @@ func TestEncodeContract(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
 }
 
-func TestEncodeLink(t *testing.T) {
-
-	t.Parallel()
-
-	testEncodeAndDecode(
-		t,
-		cadence.NewLink(
-			cadence.NewPath("storage", "foo"),
-			"Bar",
-		),
-		// language=json
-		`
-          {
-            "type": "Link",
-            "value": {
-              "targetPath": {
-                "type": "Path",
-                "value": {
-                  "domain": "storage",
-                  "identifier": "foo"
-                }
-              },
-              "borrowType": "Bar"
-            }
-          }
-        `,
-	)
-}
-
 func TestEncodeSimpleTypes(t *testing.T) {
 
 	t.Parallel()
@@ -2488,7 +2459,7 @@ func TestEncodeCapability(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.Capability{
+		cadence.StorageCapability{
 			Path:       cadence.NewPath("storage", "foo"),
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
@@ -2543,9 +2514,9 @@ func TestDecodeFixedPoints(t *testing.T) {
 	}
 
 	type test struct {
+		check    func(t *testing.T, actual cadence.Value, err error)
 		input    string
 		expected int
-		check    func(t *testing.T, actual cadence.Value, err error)
 	}
 
 	for ty, params := range allFixedPointTypes {

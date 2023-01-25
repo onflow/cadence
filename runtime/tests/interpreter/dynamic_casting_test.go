@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -403,7 +403,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.BoolValue(true),
+							interpreter.TrueValue,
 							inter.Globals.Get("x").GetValue(),
 						)
 
@@ -411,7 +411,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							t,
 							inter,
 							interpreter.NewUnmeteredSomeValueNonCopying(
-								interpreter.BoolValue(true),
+								interpreter.TrueValue,
 							),
 							inter.Globals.Get("y").GetValue(),
 						)
@@ -469,7 +469,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 
 	types := []sema.Type{
 		sema.AnyStructType,
-		&sema.AddressType{},
+		sema.TheAddressType,
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -3507,7 +3507,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		sema.AnyStructType,
 	}
 
-	capabilityValue := &interpreter.CapabilityValue{
+	capabilityValue := &interpreter.StorageCapabilityValue{
 		Address: interpreter.AddressValue{},
 		Path:    interpreter.EmptyPathValue,
 		BorrowType: interpreter.ConvertSemaToStaticType(

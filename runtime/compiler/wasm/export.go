@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ package wasm
 
 // Exports represents an export
 type Export struct {
-	Name       string
 	Descriptor ExportDescriptor
+	Name       string
 }
 
 // exportIndicator is the byte used to indicate the kind of export in the WASM binary

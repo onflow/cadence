@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,15 +41,15 @@ Returns a string from the given array of characters
 
 // StringType represents the string type
 var StringType = &SimpleType{
-	Name:                 "String",
-	QualifiedName:        "String",
-	TypeID:               "String",
-	tag:                  StringTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "String",
+	QualifiedName: "String",
+	TypeID:        "String",
+	tag:           StringTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 	ValueIndexingInfo: ValueIndexingInfo{
 		IsValueIndexableType:          true,
 		AllowsValueIndexingAssignment: false,
@@ -140,7 +140,7 @@ func init() {
 }
 
 var StringTypeConcatFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "other",
@@ -157,7 +157,7 @@ Returns a new string which contains the given string concatenated to the end of 
 `
 
 var StringTypeSliceFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     "from",
 			TypeAnnotation: NewTypeAnnotation(IntType),
@@ -280,7 +280,7 @@ var StringFunctionType = func() *FunctionType {
 }()
 
 var StringTypeEncodeHexFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "data",
@@ -295,7 +295,7 @@ var StringTypeEncodeHexFunctionType = &FunctionType{
 }
 
 var StringTypeFromUtf8FunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "bytes",
@@ -310,7 +310,7 @@ var StringTypeFromUtf8FunctionType = &FunctionType{
 }
 
 var StringTypeFromCharactersFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "characters",

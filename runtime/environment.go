@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ type Environment interface {
 	ParseAndCheckProgram(
 		code []byte,
 		location common.Location,
-		storeProgram bool,
+		getAndSetProgram bool,
 	) (
 		*interpreter.Program,
 		error,
@@ -67,24 +67,25 @@ type Environment interface {
 	NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value
 }
 
-type interpreterEnvironment struct {
-	config Config
-
-	baseActivation      *interpreter.VariableActivation
-	baseValueActivation *sema.VariableActivation
-
-	InterpreterConfig *interpreter.Config
-	CheckerConfig     *sema.Config
-
-	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-	stackDepthLimiter                     *stackDepthLimiter
-	checkedImports                        importResolutionResults
-
-	// the following fields are re-configurable, see Configure
+// interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
+// that gets reconfigured by interpreterEnvironment.Configure
+type interpreterEnvironmentReconfigured struct {
 	runtimeInterface Interface
 	storage          *Storage
 	coverageReport   *CoverageReport
 	codesAndPrograms codesAndPrograms
+}
+
+type interpreterEnvironment struct {
+	interpreterEnvironmentReconfigured
+	baseActivation                        *interpreter.VariableActivation
+	baseValueActivation                   *sema.VariableActivation
+	InterpreterConfig                     *interpreter.Config
+	CheckerConfig                         *sema.Config
+	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
+	stackDepthLimiter                     *stackDepthLimiter
+	checkedImports                        importResolutionResults
+	config                                Config
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -131,6 +132,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		ContractValueHandler:                 e.newContractValueHandler(),
 		ImportLocationHandler:                e.newImportLocationHandler(),
 		PublicAccountHandler:                 e.newPublicAccountHandler(),
+		AuthAccountHandler:                   e.newAuthAccountHandler(),
 		OnRecordTrace:                        e.newOnRecordTraceHandler(),
 		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
 		TracingEnabled:                       e.config.TracingEnabled,
@@ -156,6 +158,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		LocationHandler:                  e.newLocationHandler(),
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
+		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
 	}
 }
 
@@ -332,45 +335,44 @@ func (e *interpreterEnvironment) TemporarilyRecordCode(location common.AddressLo
 func (e *interpreterEnvironment) ParseAndCheckProgram(
 	code []byte,
 	location common.Location,
-	storeProgram bool,
+	getAndSetProgram bool,
 ) (
 	*interpreter.Program,
 	error,
 ) {
-	return e.parseAndCheckProgram(
-		code,
+	return e.getProgram(
 		location,
-		storeProgram,
+		func() ([]byte, error) {
+			return code, nil
+		},
+		getAndSetProgram,
 		importResolutionResults{},
 	)
 }
 
+// parseAndCheckProgram parses and checks the given program.
+// If storeProgram is true, it calls Interface.SetProgram.
 func (e *interpreterEnvironment) parseAndCheckProgram(
 	code []byte,
 	location common.Location,
-	storeProgram bool,
 	checkedImports importResolutionResults,
 ) (
-	program *interpreter.Program,
+	program *ast.Program,
+	elaboration *sema.Elaboration,
 	err error,
 ) {
-	wrapError := func(err error) error {
+	wrapParsingCheckingError := func(err error) error {
 		return &ParsingCheckingError{
 			Err:      err,
 			Location: location,
 		}
 	}
 
-	if storeProgram {
-		e.codesAndPrograms.setCode(location, code)
-	}
-
 	// Parse
 
-	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser.ParseProgram(e, code, parser.Config{})
+			program, err = parser.ParseProgram(e, code, parser.Config{})
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -378,37 +380,17 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 		},
 	)
 	if err != nil {
-		return nil, wrapError(err)
-	}
-
-	if storeProgram {
-		e.codesAndPrograms.setProgram(location, parse)
+		return nil, nil, wrapParsingCheckingError(err)
 	}
 
 	// Check
 
-	elaboration, err := e.check(location, parse, checkedImports)
+	elaboration, err = e.check(location, program, checkedImports)
 	if err != nil {
-		return nil, wrapError(err)
+		return program, nil, wrapParsingCheckingError(err)
 	}
 
-	// Return
-
-	program = &interpreter.Program{
-		Program:     parse,
-		Elaboration: elaboration,
-	}
-
-	if storeProgram {
-		wrapPanic(func() {
-			err = e.runtimeInterface.SetProgram(location, program)
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return program, nil
+	return program, elaboration, nil
 }
 
 func (e *interpreterEnvironment) check(
@@ -470,8 +452,9 @@ func (e *interpreterEnvironment) resolveImport(
 
 	var elaboration *sema.Elaboration
 	switch importedLocation {
-	case stdlib.CryptoChecker.Location:
-		elaboration = stdlib.CryptoChecker.Elaboration
+	case stdlib.CryptoCheckerLocation:
+		cryptoChecker := stdlib.CryptoChecker()
+		elaboration = cryptoChecker.Elaboration
 
 	default:
 
@@ -486,7 +469,12 @@ func (e *interpreterEnvironment) resolveImport(
 			defer delete(e.checkedImports, importedLocation)
 		}
 
-		program, err := e.getProgram(importedLocation, e.checkedImports)
+		const getAndSetProgram = true
+		program, err := e.GetProgram(
+			importedLocation,
+			getAndSetProgram,
+			e.checkedImports,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -499,47 +487,81 @@ func (e *interpreterEnvironment) resolveImport(
 	}, nil
 }
 
-func (e *interpreterEnvironment) GetProgram(location Location) (*interpreter.Program, error) {
-	return e.getProgram(location, importResolutionResults{})
+func (e *interpreterEnvironment) GetProgram(
+	location Location,
+	storeProgram bool,
+	checkedImports importResolutionResults,
+) (
+	*interpreter.Program,
+	error,
+) {
+	return e.getProgram(
+		location,
+		func() ([]byte, error) {
+			return e.getCode(location)
+		},
+		storeProgram,
+		checkedImports,
+	)
 }
 
 // getProgram returns the existing program at the given location, if available.
 // If it is not available, it loads the code, and then parses and checks it.
 func (e *interpreterEnvironment) getProgram(
 	location Location,
+	getCode func() ([]byte, error),
+	getAndSetProgram bool,
 	checkedImports importResolutionResults,
 ) (
 	program *interpreter.Program,
 	err error,
 ) {
-	wrapPanic(func() {
-		program, err = e.runtimeInterface.GetProgram(location)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if program == nil {
-		var code []byte
-		code, err = e.getCode(location)
+	load := func() (*interpreter.Program, error) {
+		code, err := getCode()
 		if err != nil {
 			return nil, err
 		}
 
-		program, err = e.parseAndCheckProgram(
+		e.codesAndPrograms.setCode(location, code)
+
+		parsedProgram, elaboration, err := e.parseAndCheckProgram(
 			code,
 			location,
-			true,
 			checkedImports,
 		)
+		if parsedProgram != nil {
+			e.codesAndPrograms.setProgram(location, parsedProgram)
+		}
 		if err != nil {
 			return nil, err
 		}
+
+		return &interpreter.Program{
+			Program:     parsedProgram,
+			Elaboration: elaboration,
+		}, nil
 	}
 
-	e.codesAndPrograms.setProgram(location, program.Program)
+	if !getAndSetProgram {
+		return load()
+	}
 
-	return program, nil
+	wrapPanic(func() {
+		program, err = e.runtimeInterface.GetAndSetProgram(location, func() (program *interpreter.Program, err error) {
+			// Loading is done by Cadence.
+			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
+			// then do not treat it as an external error (the load callback is called by the embedder)
+			panicErr := userPanicToError(func() {
+				program, err = load()
+			})
+			if panicErr != nil {
+				return nil, panicErr
+			}
+			return
+		})
+	})
+
+	return
 }
 
 func (e *interpreterEnvironment) getCode(location common.Location) (code []byte, err error) {
@@ -619,6 +641,12 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAccountHandlerFunc {
 	return func(address interpreter.AddressValue) interpreter.Value {
 		return stdlib.NewPublicAccountValue(e, e, address)
+	}
+}
+
+func (e *interpreterEnvironment) newAuthAccountHandler() interpreter.AuthAccountHandlerFunc {
+	return func(address interpreter.AddressValue) interpreter.Value {
+		return stdlib.NewAuthAccountValue(e, e, address)
 	}
 }
 
@@ -744,7 +772,7 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 	) map[string]interpreter.Value {
 
 		switch location {
-		case stdlib.CryptoChecker.Location:
+		case stdlib.CryptoCheckerLocation:
 			return nil
 
 		default:
@@ -765,7 +793,7 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 				)
 
 				return map[string]interpreter.Value{
-					"account": stdlib.NewAuthAccountValue(
+					sema.ContractAccountFieldName: stdlib.NewAuthAccountValue(
 						inter,
 						e,
 						addressValue,
@@ -780,9 +808,11 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 
 func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLocationHandlerFunc {
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+
 		switch location {
-		case stdlib.CryptoChecker.Location:
-			program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
+		case stdlib.CryptoCheckerLocation:
+			cryptoChecker := stdlib.CryptoChecker()
+			program := interpreter.ProgramFromChecker(cryptoChecker)
 			subInterpreter, err := inter.NewSubInterpreter(program, location)
 			if err != nil {
 				panic(err)
@@ -792,7 +822,12 @@ func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLo
 			}
 
 		default:
-			program, err := e.GetProgram(location)
+			const getAndSetProgram = true
+			program, err := e.GetProgram(
+				location,
+				getAndSetProgram,
+				importResolutionResults{},
+			)
 			if err != nil {
 				panic(err)
 			}
@@ -816,7 +851,7 @@ func (e *interpreterEnvironment) loadContract(
 ) *interpreter.CompositeValue {
 
 	switch compositeType.Location {
-	case stdlib.CryptoChecker.Location:
+	case stdlib.CryptoCheckerLocation:
 		contract, err := stdlib.NewCryptoContract(
 			inter,
 			constructorGenerator(common.Address{}),

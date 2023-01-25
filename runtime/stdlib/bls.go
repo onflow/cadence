@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ The function returns nil if the array is empty or if decoding one of the signatu
 const blsAggregateSignaturesFunctionName = "aggregateSignatures"
 
 var blsAggregateSignaturesFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "signatures",
@@ -95,7 +95,7 @@ The function returns nil if the array is empty or any of the input keys is not a
 const blsAggregatePublicKeysFunctionName = "aggregatePublicKeys"
 
 var blsAggregatePublicKeysFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "keys",
@@ -218,7 +218,7 @@ func newBLSAggregateSignaturesFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature)
+				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature, invocation.LocationRange)
 				if err != nil {
 					panic(err)
 				}

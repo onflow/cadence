@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,15 +27,15 @@ import (
 
 // CharacterType represents the character type
 var CharacterType = &SimpleType{
-	Name:                 "Character",
-	QualifiedName:        "Character",
-	TypeID:               "Character",
-	tag:                  CharacterTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "Character",
+	QualifiedName: "Character",
+	TypeID:        "Character",
+	tag:           CharacterTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 }
 
 func IsValidCharacter(s string) bool {

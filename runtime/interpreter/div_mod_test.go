@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,10 +86,10 @@ func TestDivModUInt8(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt8Value){
 			func(a, b UInt8Value) {
-				a.Div(inter, b)
+				a.Div(inter, b, EmptyLocationRange)
 			},
 			func(a, b UInt8Value) {
-				a.Mod(inter, b)
+				a.Mod(inter, b, EmptyLocationRange)
 			},
 		} {
 			f := func() {
@@ -161,10 +161,10 @@ func TestDivModUInt16(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt16Value){
 			func(a, b UInt16Value) {
-				a.Div(inter, b)
+				a.Div(inter, b, EmptyLocationRange)
 			},
 			func(a, b UInt16Value) {
-				a.Mod(inter, b)
+				a.Mod(inter, b, EmptyLocationRange)
 			},
 		} {
 			f := func() {
@@ -236,10 +236,10 @@ func TestDivModUInt32(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt32Value){
 			func(a, b UInt32Value) {
-				a.Div(inter, b)
+				a.Div(inter, b, EmptyLocationRange)
 			},
 			func(a, b UInt32Value) {
-				a.Mod(inter, b)
+				a.Mod(inter, b, EmptyLocationRange)
 			},
 		} {
 			f := func() {
@@ -401,10 +401,10 @@ func TestDivModUInt64(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt64Value){
 			func(a, b UInt64Value) {
-				a.Div(inter, b)
+				a.Div(inter, b, EmptyLocationRange)
 			},
 			func(a, b UInt64Value) {
-				a.Mod(inter, b)
+				a.Mod(inter, b, EmptyLocationRange)
 			},
 		} {
 			f := func() {
@@ -568,10 +568,10 @@ func TestDivModUInt128(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt128Value){
 			func(a, b UInt128Value) {
-				a.Div(inter, b)
+				a.Div(inter, b, EmptyLocationRange)
 			},
 			func(a, b UInt128Value) {
-				a.Mod(inter, b)
+				a.Mod(inter, b, EmptyLocationRange)
 			},
 		} {
 			f := func() {
@@ -1241,10 +1241,10 @@ func TestDivModUInt256(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt256Value){
 			func(a, b UInt256Value) {
-				a.Div(inter, b)
+				a.Div(inter, b, EmptyLocationRange)
 			},
 			func(a, b UInt256Value) {
-				a.Mod(inter, b)
+				a.Mod(inter, b, EmptyLocationRange)
 			},
 		} {
 			f := func() {
@@ -1316,7 +1316,7 @@ func TestDivInt8(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(inter, test.b)
+			test.a.Div(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1382,7 +1382,7 @@ func TestModInt8(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(inter, test.b)
+			test.a.Mod(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1449,7 +1449,7 @@ func TestDivInt16(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(inter, test.b)
+			test.a.Div(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1515,7 +1515,7 @@ func TestModInt16(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(inter, test.b)
+			test.a.Mod(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1582,7 +1582,7 @@ func TestDivInt32(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(inter, test.b)
+			test.a.Div(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1648,7 +1648,7 @@ func TestModInt32(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(inter, test.b)
+			test.a.Mod(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1805,7 +1805,7 @@ func TestDivInt64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(inter, test.b)
+			test.a.Div(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1961,7 +1961,7 @@ func TestModInt64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(inter, test.b)
+			test.a.Mod(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1980,10 +1980,10 @@ func TestDivModInt(t *testing.T) {
 
 	for _, f := range []func(a, b IntValue){
 		func(a, b IntValue) {
-			a.Div(inter, b)
+			a.Div(inter, b, EmptyLocationRange)
 		},
 		func(a, b IntValue) {
-			a.Mod(inter, b)
+			a.Mod(inter, b, EmptyLocationRange)
 		},
 	} {
 		assert.Panics(t, func() {
@@ -2097,7 +2097,7 @@ func TestDivInt128(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(inter, test.b)
+			test.a.Div(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2211,7 +2211,7 @@ func TestModInt128(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(inter, test.b)
+			test.a.Mod(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2668,7 +2668,7 @@ func TestDivInt256(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(inter, test.b)
+			test.a.Div(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -3124,7 +3124,7 @@ func TestModInt256(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(inter, test.b)
+			test.a.Mod(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -3179,9 +3179,9 @@ func TestDivFix64(t *testing.T) {
 	for _, test := range tests {
 
 		f := func() {
-			a := NewUnmeteredFix64ValueWithInteger(test.a)
-			b := NewUnmeteredFix64ValueWithInteger(test.b)
-			a.Div(inter, b)
+			a := NewUnmeteredFix64ValueWithInteger(test.a, EmptyLocationRange)
+			b := NewUnmeteredFix64ValueWithInteger(test.b, EmptyLocationRange)
+			a.Div(inter, b, EmptyLocationRange)
 		}
 
 		if test.valid {
@@ -3193,26 +3193,26 @@ func TestDivFix64(t *testing.T) {
 
 	assert.Equal(t,
 		NewUnmeteredFix64Value(1),
-		NewUnmeteredFix64ValueWithInteger(1).
-			Div(inter, NewUnmeteredFix64ValueWithInteger(sema.Fix64Factor)),
+		NewUnmeteredFix64ValueWithInteger(1, EmptyLocationRange).
+			Div(inter, NewUnmeteredFix64ValueWithInteger(sema.Fix64Factor, EmptyLocationRange), EmptyLocationRange),
 	)
 
 	assert.Equal(t,
 		NewUnmeteredFix64Value(0),
-		NewUnmeteredFix64ValueWithInteger(1).
-			Div(inter, NewUnmeteredFix64Value(Fix64MaxValue)),
+		NewUnmeteredFix64ValueWithInteger(1, EmptyLocationRange).
+			Div(inter, NewUnmeteredFix64Value(Fix64MaxValue), EmptyLocationRange),
 	)
 
 	assert.Equal(t,
 		NewUnmeteredFix64Value(0),
 		NewUnmeteredFix64Value(1).
-			Div(inter, NewUnmeteredFix64ValueWithInteger(2)),
+			Div(inter, NewUnmeteredFix64ValueWithInteger(2, EmptyLocationRange), EmptyLocationRange),
 	)
 
 	assert.Equal(t,
 		NewUnmeteredFix64Value(1535399),
-		NewUnmeteredFix64ValueWithInteger(1543219).
-			Div(inter, NewUnmeteredFix64ValueWithInteger(100509284)),
+		NewUnmeteredFix64ValueWithInteger(1543219, EmptyLocationRange).
+			Div(inter, NewUnmeteredFix64ValueWithInteger(100509284, EmptyLocationRange), EmptyLocationRange),
 	)
 }
 
@@ -3250,7 +3250,7 @@ func TestModFix64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(inter, test.b)
+			test.a.Mod(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -3296,16 +3296,16 @@ func TestDivModUFix64(t *testing.T) {
 
 		for _, f := range []func(a, b UFix64Value){
 			func(a, b UFix64Value) {
-				a.Div(inter, b)
+				a.Div(inter, b, EmptyLocationRange)
 			},
 			func(a, b UFix64Value) {
-				a.Mod(inter, b)
+				a.Mod(inter, b, EmptyLocationRange)
 			},
 		} {
 
 			f := func() {
-				a := NewUnmeteredUFix64ValueWithInteger(test.a)
-				b := NewUnmeteredUFix64ValueWithInteger(test.b)
+				a := NewUnmeteredUFix64ValueWithInteger(test.a, EmptyLocationRange)
+				b := NewUnmeteredUFix64ValueWithInteger(test.b, EmptyLocationRange)
 				f(a, b)
 			}
 
@@ -3319,26 +3319,26 @@ func TestDivModUFix64(t *testing.T) {
 
 	assert.Equal(t,
 		NewUnmeteredUFix64Value(1),
-		NewUnmeteredUFix64ValueWithInteger(1).
-			Div(inter, NewUnmeteredUFix64ValueWithInteger(sema.Fix64Factor)),
+		NewUnmeteredUFix64ValueWithInteger(1, EmptyLocationRange).
+			Div(inter, NewUnmeteredUFix64ValueWithInteger(sema.Fix64Factor, EmptyLocationRange), EmptyLocationRange),
 	)
 
 	assert.Equal(t,
 		NewUnmeteredUFix64Value(0),
-		NewUnmeteredUFix64ValueWithInteger(1).
-			Div(inter, NewUnmeteredUFix64Value(UFix64MaxValue)),
+		NewUnmeteredUFix64ValueWithInteger(1, EmptyLocationRange).
+			Div(inter, NewUnmeteredUFix64Value(UFix64MaxValue), EmptyLocationRange),
 	)
 
 	assert.Equal(t,
 		NewUnmeteredUFix64Value(0),
 		NewUnmeteredUFix64Value(1).
-			Div(inter, NewUnmeteredUFix64ValueWithInteger(2)),
+			Div(inter, NewUnmeteredUFix64ValueWithInteger(2, EmptyLocationRange), EmptyLocationRange),
 	)
 
 	assert.Equal(t,
 		NewUnmeteredUFix64Value(1535399),
-		NewUnmeteredUFix64ValueWithInteger(1543219).
-			Div(inter, NewUnmeteredUFix64ValueWithInteger(100509284)),
+		NewUnmeteredUFix64ValueWithInteger(1543219, EmptyLocationRange).
+			Div(inter, NewUnmeteredUFix64ValueWithInteger(100509284, EmptyLocationRange), EmptyLocationRange),
 	)
 }
 
@@ -3399,7 +3399,7 @@ func TestNegativeMod(t *testing.T) {
 		for _, test := range tests {
 			assert.Equal(t,
 				test.expected,
-				test.a.Mod(inter, test.b),
+				test.a.Mod(inter, test.b, EmptyLocationRange),
 			)
 		}
 	})
@@ -3408,9 +3408,9 @@ func TestNegativeMod(t *testing.T) {
 
 		tests := map[string]struct{ a, b, expected NumberValue }{
 			"Fix64": {
-				NewUnmeteredFix64ValueWithInteger(-1),
-				NewUnmeteredFix64ValueWithInteger(5),
-				NewUnmeteredFix64ValueWithInteger(-1),
+				NewUnmeteredFix64ValueWithInteger(-1, EmptyLocationRange),
+				NewUnmeteredFix64ValueWithInteger(5, EmptyLocationRange),
+				NewUnmeteredFix64ValueWithInteger(-1, EmptyLocationRange),
 			},
 		}
 
@@ -3426,7 +3426,7 @@ func TestNegativeMod(t *testing.T) {
 		for _, test := range tests {
 			assert.Equal(t,
 				test.expected,
-				test.a.Mod(inter, test.b),
+				test.a.Mod(inter, test.b, EmptyLocationRange),
 			)
 		}
 	})

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -233,16 +233,6 @@ func TestStringer(t *testing.T) {
 			}),
 			expected: "S.test.FooContract(y: \"bar\")",
 		},
-		"Link": {
-			value: NewLink(
-				Path{
-					Domain:     "storage",
-					Identifier: "foo",
-				},
-				"Int",
-			),
-			expected: "Link<Int>(/storage/foo)",
-		},
 		"Path": {
 			value: Path{
 				Domain:     "storage",
@@ -255,7 +245,7 @@ func TestStringer(t *testing.T) {
 			expected: "Type<Int>()",
 		},
 		"Capability": {
-			value: Capability{
+			value: StorageCapability{
 				Path:       Path{Domain: "storage", Identifier: "foo"},
 				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				BorrowType: IntType{},

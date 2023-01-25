@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,15 +34,15 @@ const (
 )
 
 type FunctionDeclaration struct {
-	Access               Access
-	Flags                FunctionDeclarationFlags
-	Identifier           Identifier
 	TypeParameterList    *TypeParameterList `json:",omitempty"`
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
 	DocString            string
+	Identifier           Identifier
 	StartPos             Position `json:"-"`
+	Access               Access
+	Flags                FunctionDeclarationFlags
 }
 
 var _ Element = &FunctionDeclaration{}
@@ -162,12 +162,12 @@ func (d *FunctionDeclaration) Doc() prettier.Doc {
 func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FunctionDeclaration
 	return json.Marshal(&struct {
-		Type     string
+		*Alias
+		Type string
+		Range
 		IsStatic bool
 		IsNative bool
 		Flags    FunctionDeclarationFlags `json:",omitempty"`
-		Range
-		*Alias
 	}{
 		Type:     "FunctionDeclaration",
 		Range:    NewUnmeteredRangeFromPositioned(d),
@@ -193,8 +193,8 @@ func (d *FunctionDeclaration) IsNative() bool {
 // SpecialFunctionDeclaration
 
 type SpecialFunctionDeclaration struct {
-	Kind                common.DeclarationKind
 	FunctionDeclaration *FunctionDeclaration
+	Kind                common.DeclarationKind
 }
 
 var _ Element = &SpecialFunctionDeclaration{}
@@ -271,9 +271,9 @@ func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
 func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias SpecialFunctionDeclaration
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "SpecialFunctionDeclaration",
 		Range: NewUnmeteredRangeFromPositioned(d),

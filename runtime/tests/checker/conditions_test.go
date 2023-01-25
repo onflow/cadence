@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,7 +110,7 @@ func TestCheckFunctionPostConditionWithBefore(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Len(t, checker.Elaboration.VariableDeclarationTypes, 1)
+	assert.Equal(t, 1, checker.Elaboration.VariableDeclarationTypesCount())
 }
 
 func TestCheckFunctionPostConditionWithBeforeNotDeclaredUse(t *testing.T) {

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1113,6 +1113,62 @@ func TestCheckAccount_link(t *testing.T) {
 	}
 }
 
+func TestCheckAccount_linkAccount(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(domain common.PathDomain, enabled bool) {
+
+		testName := fmt.Sprintf("%s, %v", domain.Identifier(), enabled)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  resource R {}
+
+                  fun test(authAccount: AuthAccount): Capability<&AuthAccount>? {
+                      return authAccount.linkAccount(/%s/r)
+                  }
+                `,
+				domain.Identifier(),
+			)
+
+			_, err := ParseAndCheckWithOptions(t,
+				code,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						AccountLinkingEnabled: enabled,
+					},
+				},
+			)
+
+			if enabled {
+				switch domain {
+				case common.PathDomainPrivate, common.PathDomainPublic:
+					require.NoError(t, err)
+
+				default:
+					errs := RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
+			} else {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+			}
+		})
+	}
+
+	for _, enabled := range []bool{true, false} {
+		for _, domain := range common.AllPathDomainsByIdentifier {
+			test(domain, enabled)
+		}
+	}
+}
+
 func TestCheckAccount_unlink(t *testing.T) {
 
 	t.Parallel()
@@ -1398,6 +1454,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	t.Parallel()
 
 	t.Run("contracts type", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
           let contracts: AuthAccount.Contracts = authAccount.contracts
 	    `)
@@ -1406,6 +1463,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	})
 
 	t.Run("contracts names", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
           let names: [String] = authAccount.contracts.names
 	    `)
@@ -1414,6 +1472,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	})
 
 	t.Run("update contracts names", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test() {
                 authAccount.contracts.names = ["foo"]
@@ -1425,6 +1484,79 @@ func TestAuthAccountContracts(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
 	})
+
+	t.Run("get contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+            fun test(): DeployedContract? {
+                return authAccount.contracts.get(name: "foo")
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("borrow contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+            contract C {}
+
+            fun test(): &C? {
+                return authAccount.contracts.borrow<&C>(name: "foo")
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid borrow contract: missing type argument", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+            contract C {}
+
+            fun test(): &AnyStruct? {
+                return authAccount.contracts.borrow(name: "foo")
+            }
+	    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
+	})
+
+	t.Run("add contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+            fun test(): DeployedContract {
+                return authAccount.contracts.add(name: "foo", code: "012".decodeHex())
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("update contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+            fun test(): DeployedContract {
+                return authAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("remove contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+            fun test(): DeployedContract? {
+                return authAccount.contracts.remove(name: "foo")
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
 }
 
 func TestPublicAccountContracts(t *testing.T) {
@@ -1432,6 +1564,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	t.Parallel()
 
 	t.Run("contracts type", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             let contracts: PublicAccount.Contracts = publicAccount.contracts
 	    `)
@@ -1440,6 +1573,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("contracts names", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             let names: [String] = publicAccount.contracts.names
 	    `)
@@ -1448,6 +1582,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("update contracts names", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test() {
                 publicAccount.contracts.names = ["foo"]
@@ -1460,10 +1595,50 @@ func TestPublicAccountContracts(t *testing.T) {
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
 	})
 
-	t.Run("add contract", func(t *testing.T) {
+	t.Run("get contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                publicAccount.contracts.add(name: "foo", code: "012".decodeHex())
+            fun test(): DeployedContract? {
+                return publicAccount.contracts.get(name: "foo")
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("borrow contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+            contract C {}
+
+            fun test(): &C? {
+                return publicAccount.contracts.borrow<&C>(name: "foo")
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid borrow contract: missing type argument", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+            contract C {}
+
+            fun test(): &AnyStruct? {
+                return publicAccount.contracts.borrow(name: "foo")
+            }
+	    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
+	})
+
+	t.Run("add contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+            fun test(): DeployedContract {
+                return publicAccount.contracts.add(name: "foo", code: "012".decodeHex())
             }
 	    `)
 
@@ -1475,9 +1650,10 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("update contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                publicAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
+            fun test(): DeployedContract {
+                return publicAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
             }
 	    `)
 
@@ -1489,9 +1665,10 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("remove contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                publicAccount.contracts.remove(name: "foo")
+            fun test(): DeployedContract {
+                return publicAccount.contracts.remove(name: "foo")
             }
 	    `)
 

@@ -62,7 +62,7 @@ pub contract NamedFields {
 
 ```
 
-[Example Code](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L583)
+[Example Code](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L718)
 
 ## Script-Accessible public field/function
 
@@ -207,7 +207,7 @@ and in the transaction that is used to deploy it:
 
 Smart contracts often are vitally important pieces of a project and often have many other
 smart contracts and applications that rely on them.
-Therefore, they need to be clearly writted and easy to understand.
+Therefore, they need to be clearly written and easy to understand.
 
 ### Solution
 
@@ -391,7 +391,7 @@ transaction {
 
 ### Problem
 
-An account must be given a [capability](/cadence/language/capability-based-access-control)
+An account must be given a [capability](language/capability-based-access-control)
 to a resource or contract in another account. To create, i.e. link the capability,
 the transaction must be signed by a key which has access to the target account.
 
@@ -404,7 +404,7 @@ from one account and delivering it to the other.
 
 ### Solution
 
-The solution to the bootstrapping problem in Cadence is provided by the [Inbox API](/cadence/language/accounts#account-inbox)
+The solution to the bootstrapping problem in Cadence is provided by the [Inbox API](language/accounts#account-inbox)
 
 Account A (which we will call the provider) creates the capability they wish to send to B (which we will call the recipient),
 and stores this capability on their account in a place where the recipient can access it using the `Inbox.publish` function on their account. 

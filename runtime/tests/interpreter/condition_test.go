@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1090,7 +1090,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	// and not a resource (composite value)
 
 	checkFunctionType := &sema.FunctionType{
-		Parameters: []*sema.Parameter{
+		Parameters: []sema.Parameter{
 			{
 				Label:      sema.ArgumentLabelNotRequired,
 				Identifier: "value",

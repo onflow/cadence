@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,15 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 	var elementType Type
 	var resultType ArrayType
 
+	elementCount := len(expression.Values)
+
 	switch typ := expectedType.(type) {
 
 	case *ConstantSizedType:
 		elementType = typ.ElementType(false)
 		resultType = typ
 
-		literalCount := int64(len(expression.Values))
+		literalCount := int64(elementCount)
 		if typ.Size != literalCount {
 			checker.report(
 				&ConstantSizedArrayLiteralSizeError{
@@ -54,7 +56,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 		// If the expected type is AnyStruct or AnyResource, and the array is empty,
 		// then expect the elements to also be of the same type.
 		// Otherwise, infer the type from the expression.
-		if len(expression.Values) == 0 {
+		if elementCount == 0 {
 			elementType = expectedType
 			resultType = &VariableSizedType{
 				Type: elementType,
@@ -62,15 +64,18 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 		}
 	}
 
-	argumentTypes := make([]Type, len(expression.Values))
+	var argumentTypes []Type
+	if elementCount > 0 {
+		argumentTypes = make([]Type, elementCount)
 
-	for i, value := range expression.Values {
-		valueType := checker.VisitExpression(value, elementType)
+		for i, value := range expression.Values {
+			valueType := checker.VisitExpression(value, elementType)
 
-		argumentTypes[i] = valueType
+			argumentTypes[i] = valueType
 
-		checker.checkVariableMove(value)
-		checker.checkResourceMoveOperation(value, valueType)
+			checker.checkVariableMove(value)
+			checker.checkResourceMoveOperation(value, valueType)
+		}
 	}
 
 	if elementType == nil {
@@ -94,11 +99,13 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 		}
 	}
 
-	checker.Elaboration.ArrayExpressionTypes[expression] =
+	checker.Elaboration.SetArrayExpressionTypes(
+		expression,
 		ArrayExpressionTypes{
 			ArgumentTypes: argumentTypes,
 			ArrayType:     resultType,
-		}
+		},
+	)
 
 	return resultType
 }
