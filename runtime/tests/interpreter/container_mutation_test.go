@@ -322,7 +322,7 @@ func TestArrayMutation(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
@@ -463,7 +463,7 @@ func TestArrayMutation(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
@@ -712,7 +712,7 @@ func TestDictionaryMutation(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
@@ -853,7 +853,7 @@ func TestDictionaryMutation(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
