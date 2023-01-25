@@ -340,13 +340,11 @@ func TestParseParameterList(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (any, []error) {
+	parse := func(input string) (*ast.ParameterList, []error) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (any, error) {
-				return parseParameterList(p)
-			},
+			parseParameterList,
 			Config{},
 		)
 	}
@@ -1350,13 +1348,11 @@ func TestParseAccess(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (any, []error) {
+	parse := func(input string) (ast.Access, []error) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (any, error) {
-				return parseAccess(p)
-			},
+			parseAccess,
 			Config{},
 		)
 	}
@@ -1403,7 +1399,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1424,7 +1420,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1445,7 +1441,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1531,7 +1527,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1552,7 +1548,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1573,7 +1569,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -2043,11 +2039,11 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (any, []error) {
+	parse := func(input string) (*ast.FieldDeclaration, []error) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (any, error) {
+			func(p *parser) (*ast.FieldDeclaration, error) {
 				return parseFieldWithVariableKind(
 					p,
 					ast.AccessNotSpecified,
@@ -2134,11 +2130,11 @@ func TestParseField(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string, config Config) (any, []error) {
+	parse := func(input string, config Config) (ast.Declaration, []error) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (any, error) {
+			func(p *parser) (ast.Declaration, error) {
 				return parseMemberOrNestedDeclaration(
 					p,
 					"",
@@ -6174,11 +6170,11 @@ func TestParseNestedPragma(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string, config Config) (any, []error) {
+	parse := func(input string, config Config) (ast.Declaration, []error) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (any, error) {
+			func(p *parser) (ast.Declaration, error) {
 				return parseMemberOrNestedDeclaration(
 					p,
 					"",

@@ -526,24 +526,14 @@ func (p *parser) endAmbiguity() {
 }
 
 func ParseExpression(memoryGauge common.MemoryGauge, input []byte, config Config) (expression ast.Expression, errs []error) {
-	var res any
-	res, errs = Parse(
+	return Parse(
 		memoryGauge,
 		input,
-		func(p *parser) (any, error) {
+		func(p *parser) (ast.Expression, error) {
 			return parseExpression(p, lowestBindingPower)
 		},
 		config,
 	)
-	if res == nil {
-		expression = nil
-		return
-	}
-	expression, ok := res.(ast.Expression)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return
 }
 
 func ParseStatements(
@@ -554,47 +544,25 @@ func ParseStatements(
 	statements []ast.Statement,
 	errs []error,
 ) {
-	var res any
-	res, errs = Parse(
+	return Parse(
 		memoryGauge,
 		input,
-		func(p *parser) (any, error) {
+		func(p *parser) ([]ast.Statement, error) {
 			return parseStatements(p, nil)
 		},
 		config,
 	)
-	if res == nil {
-		statements = nil
-		return
-	}
-
-	statements, ok := res.([]ast.Statement)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return
 }
 
 func ParseType(memoryGauge common.MemoryGauge, input []byte, config Config) (ty ast.Type, errs []error) {
-	var res any
-	res, errs = Parse(
+	return Parse(
 		memoryGauge,
 		input,
-		func(p *parser) (any, error) {
+		func(p *parser) (ast.Type, error) {
 			return parseType(p, lowestBindingPower)
 		},
 		config,
 	)
-	if res == nil {
-		ty = nil
-		return
-	}
-
-	ty, ok := res.(ast.Type)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return
 }
 
 func ParseDeclarations(
@@ -605,25 +573,14 @@ func ParseDeclarations(
 	declarations []ast.Declaration,
 	errs []error,
 ) {
-	var res any
-	res, errs = Parse(
+	return Parse(
 		memoryGauge,
 		input,
-		func(p *parser) (any, error) {
+		func(p *parser) ([]ast.Declaration, error) {
 			return parseDeclarations(p, lexer.TokenEOF)
 		},
 		config,
 	)
-	if res == nil {
-		declarations = nil
-		return
-	}
-
-	declarations, ok := res.([]ast.Declaration)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return
 }
 
 func ParseArgumentList(
@@ -634,11 +591,10 @@ func ParseArgumentList(
 	arguments ast.Arguments,
 	errs []error,
 ) {
-	var res any
-	res, errs = Parse(
+	return Parse(
 		memoryGauge,
 		input,
-		func(p *parser) (any, error) {
+		func(p *parser) (ast.Arguments, error) {
 			p.skipSpaceAndComments()
 
 			_, err := p.mustOne(lexer.TokenParenOpen)
@@ -651,17 +607,6 @@ func ParseArgumentList(
 		},
 		config,
 	)
-	if res == nil {
-		arguments = nil
-		return
-	}
-
-	arguments, ok := res.([]*ast.Argument)
-
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return
 }
 
 func ParseProgram(memoryGauge common.MemoryGauge, code []byte, config Config) (program *ast.Program, err error) {
@@ -678,12 +623,10 @@ func ParseProgramFromTokenStream(
 	program *ast.Program,
 	err error,
 ) {
-	var res any
-	var errs []error
-	res, errs = ParseTokenStream(
+	declarations, errs := ParseTokenStream(
 		memoryGauge,
 		input,
-		func(p *parser) (any, error) {
+		func(p *parser) ([]ast.Declaration, error) {
 			return parseDeclarations(p, lexer.TokenEOF)
 		},
 		config,
@@ -693,15 +636,6 @@ func ParseProgramFromTokenStream(
 			Code:   input.Input(),
 			Errors: errs,
 		}
-	}
-	if res == nil {
-		program = nil
-		return
-	}
-
-	declarations, ok := res.([]ast.Declaration)
-	if !ok {
-		panic(errors.NewUnreachableError())
 	}
 
 	program = ast.NewProgram(memoryGauge, declarations)
