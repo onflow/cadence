@@ -34,7 +34,7 @@ const (
 )
 
 type FunctionDeclaration struct {
-	TypeParameterList    *TypeParameterList `json:",omitempty"`
+	TypeParameterList    *TypeParameterList
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
