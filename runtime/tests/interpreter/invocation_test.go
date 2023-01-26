@@ -78,7 +78,7 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(checkFunction)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, checkFunction)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
