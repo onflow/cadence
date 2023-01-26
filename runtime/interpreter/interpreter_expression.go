@@ -703,7 +703,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		interpreter,
 		locationRange,
 		arrayStaticType,
-		common.Address{},
+		common.ZeroAddress,
 		copies...,
 	)
 }

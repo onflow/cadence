@@ -1300,7 +1300,7 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter, locationRange Location
 	return NewArrayValueWithIterator(
 		interpreter,
 		ByteArrayStaticType,
-		common.Address{},
+		common.ZeroAddress,
 		uint64(len(bs)),
 		func() Value {
 			if i >= len(bs) {
@@ -1661,7 +1661,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 	return NewArrayValueWithIterator(
 		interpreter,
 		v.Type,
-		common.Address{},
+		common.ZeroAddress,
 		v.array.Count()+other.array.Count(),
 		func() Value {
 
@@ -2644,7 +2644,7 @@ func (v *ArrayValue) Slice(
 	return NewArrayValueWithIterator(
 		interpreter,
 		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
-		common.Address{},
+		common.ZeroAddress,
 		uint64(toIndex-fromIndex),
 		func() Value {
 
@@ -15032,7 +15032,7 @@ func NewEnumCaseValue(
 		enumType.QualifiedIdentifier(),
 		enumType.Kind,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 
 	v.Functions = functions
@@ -15061,7 +15061,7 @@ func NewDictionaryValue(
 		interpreter,
 		locationRange,
 		dictionaryType,
-		common.Address{},
+		common.ZeroAddress,
 		keysAndValues...,
 	)
 }
@@ -15542,7 +15542,7 @@ func (v *DictionaryValue) GetMember(
 		return NewArrayValueWithIterator(
 			interpreter,
 			NewVariableSizedStaticType(interpreter, v.Type.KeyType),
-			common.Address{},
+			common.ZeroAddress,
 			v.dictionary.Count(),
 			func() Value {
 
@@ -15569,7 +15569,7 @@ func (v *DictionaryValue) GetMember(
 		return NewArrayValueWithIterator(
 			interpreter,
 			NewVariableSizedStaticType(interpreter, v.Type.ValueType),
-			common.Address{},
+			common.ZeroAddress,
 			v.dictionary.Count(),
 			func() Value {
 

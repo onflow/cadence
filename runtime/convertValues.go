@@ -1143,7 +1143,7 @@ func (i valueImporter) importArrayValue(
 		inter,
 		locationRange,
 		staticArrayType,
-		common.Address{},
+		common.ZeroAddress,
 		values...,
 	), nil
 }
@@ -1311,7 +1311,7 @@ func (i valueImporter) importCompositeValue(
 		qualifiedIdentifier,
 		kind,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	), nil
 }
 

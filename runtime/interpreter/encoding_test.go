@@ -276,7 +276,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
 			},
-			common.Address{},
+			common.ZeroAddress,
 		)
 
 		testEncodeDecode(t,
@@ -307,7 +307,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			expectedString,
 			TrueValue,
 		)
