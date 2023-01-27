@@ -657,16 +657,7 @@ func parseCadenceFile(path string) *ast.Program {
 	return program
 }
 
-func main() {
-	if len(os.Args) < 2 {
-		panic("Missing path to input Cadence file")
-	}
-	if len(os.Args) < 3 {
-		panic("Missing path to output Go file")
-	}
-	inPath := os.Args[1]
-	outPath := os.Args[2]
-
+func gen(inPath string, outFile *os.File) {
 	program := parseCadenceFile(inPath)
 
 	var gen generator
@@ -681,7 +672,7 @@ func main() {
 		_ = ast.AcceptDeclaration[struct{}](declaration, &gen)
 	}
 
-	writeGoFile(inPath, outPath, gen.decls)
+	writeGoFile(inPath, outFile, gen.decls)
 }
 
 func goImportDeclaration(paths ...string) *dst.GenDecl {
@@ -706,14 +697,8 @@ func goImportDeclaration(paths ...string) *dst.GenDecl {
 	}
 }
 
-func writeGoFile(inPath, outPath string, decls []dst.Decl) {
-	outFile, err := os.Create(outPath)
-	if err != nil {
-		panic(err)
-	}
-	defer outFile.Close()
-
-	err = parsedHeaderTemplate.Execute(outFile, inPath)
+func writeGoFile(inPath string, outFile *os.File, decls []dst.Decl) {
+	err := parsedHeaderTemplate.Execute(outFile, inPath)
 	if err != nil {
 		panic(err)
 	}
@@ -728,4 +713,23 @@ func writeGoFile(inPath, outPath string, decls []dst.Decl) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		panic("Missing path to input Cadence file")
+	}
+	if len(os.Args) < 3 {
+		panic("Missing path to output Go file")
+	}
+	inPath := os.Args[1]
+	outPath := os.Args[2]
+
+	outFile, err := os.Create(outPath)
+	if err != nil {
+		panic(err)
+	}
+	defer outFile.Close()
+
+	gen(inPath, outFile)
 }
