@@ -734,6 +734,93 @@ func TestCheckTransactionRoles(t *testing.T) {
 
 		require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
+
+	t.Run("resource field with nested resource", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R1 {
+              var r2: @R2
+
+              init() {
+                  self.r2 <- create R2()
+              }
+
+              destroy() {
+                  destroy self.r2
+              }
+          }
+
+          resource R2 {}
+
+          fun absorb(_ r: @AnyResource) {
+              destroy r
+          }
+
+          transaction {
+
+              role role1 {
+                  var r1: @R1
+
+                  prepare() {
+                      self.r1 <- create R1()
+                  }
+              }
+
+              execute {
+                  absorb(<-self.role1.r1)
+              }
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("nested resource field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R1 {
+              var r2: @R2
+
+              init() {
+                  self.r2 <- create R2()
+              }
+
+              destroy() {
+                  destroy self.r2
+              }
+          }
+
+          resource R2 {}
+
+          fun absorb(_ r: @AnyResource) {
+              destroy r
+          }
+
+          transaction {
+
+              role role1 {
+                  var r1: @R1
+
+                  prepare() {
+                      self.r1 <- create R1()
+                  }
+              }
+
+              execute {
+                  absorb(<-self.role1.r1.r2)
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var invalidNestedResourceErr *sema.InvalidNestedResourceMoveError
+		require.ErrorAs(t, errs[0], &invalidNestedResourceErr)
+		assert.ErrorContains(t, invalidNestedResourceErr, "field `r2`")
+
+		require.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
 }
 
 func TestCheckTransactionExecuteScope(t *testing.T) {
