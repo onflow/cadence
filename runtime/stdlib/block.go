@@ -136,7 +136,7 @@ func NewBlockValue(
 
 	// ID
 	common.UseMemory(inter, blockIDMemoryUsage)
-	var values = make([]interpreter.Value, sema.BlockIDSize)
+	var values = make([]interpreter.Value, sema.BlockTypeIdFieldType.Size)
 	for i, b := range block.Hash {
 		values[i] = interpreter.NewUnmeteredUInt8Value(b)
 	}
