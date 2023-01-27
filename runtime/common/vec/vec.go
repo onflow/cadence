@@ -4,8 +4,12 @@ import "golang.org/x/exp/constraints"
 
 type Vec[T any] []T
 
-func New[T any]() Vec[T] {
-	return Vec[T](nil)
+func (v Vec[T]) AsSlice() []T {
+	return []T(v)
+}
+
+func New[T any](items ...T) Vec[T] {
+	return Vec[T](items)
 }
 
 func WithCapacity[T any](capacity int) Vec[T] {
@@ -98,7 +102,7 @@ func Unfold[A, B any](seed B, next func(B) (A, B, bool)) Vec[A] {
 	return res
 }
 
-func FoldWithBreak[A, B any](vec Vec[A], acc B, combine func(B, A) (B, bool)) B {
+func FoldlWithBreak[A, B any](vec Vec[A], acc B, combine func(B, A) (B, bool)) B {
 	for _, val := range vec {
 		res, ok := combine(acc, val)
 		if !ok {
