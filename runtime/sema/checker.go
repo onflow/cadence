@@ -1355,9 +1355,10 @@ func (checker *Checker) recordResourceInvalidation(
 		return nil
 	}
 
-	reportInvalidNestedMove := func() {
+	reportInvalidNestedMove := func(identifier *ast.Identifier) {
 		checker.report(
 			&InvalidNestedResourceMoveError{
+				Identifier: identifier,
 				Range: ast.NewRangeFromPositioned(
 					checker.memoryGauge,
 					expression,
@@ -1417,11 +1418,11 @@ func (checker *Checker) recordResourceInvalidation(
 			}
 		}
 
-		reportInvalidNestedMove()
+		reportInvalidNestedMove(&expression.Identifier)
 		return nil
 
 	case *ast.IndexExpression:
-		reportInvalidNestedMove()
+		reportInvalidNestedMove(nil)
 		return nil
 
 	default:
