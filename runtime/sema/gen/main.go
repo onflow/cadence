@@ -209,6 +209,40 @@ func typeExpr(t ast.Type) dst.Expr {
 	switch t := t.(type) {
 	case *ast.NominalType:
 		return typeVarIdent(t.Identifier.Identifier)
+
+	case *ast.OptionalType:
+		return &dst.UnaryExpr{
+			Op: token.AND,
+			X: &dst.CompositeLit{
+				Type: dst.NewIdent("OptionalType"),
+				Elts: []dst.Expr{
+					goKeyValue("Type", typeExpr(t.Type)),
+				},
+			},
+		}
+
+	case *ast.ReferenceType:
+		return &dst.UnaryExpr{
+			Op: token.AND,
+			X: &dst.CompositeLit{
+				Type: dst.NewIdent("ReferenceType"),
+				Elts: []dst.Expr{
+					goKeyValue("Type", typeExpr(t.Type)),
+				},
+			},
+		}
+
+	case *ast.VariableSizedType:
+		return &dst.UnaryExpr{
+			Op: token.AND,
+			X: &dst.CompositeLit{
+				Type: dst.NewIdent("VariableSizedType"),
+				Elts: []dst.Expr{
+					goKeyValue("Type", typeExpr(t.Type)),
+				},
+			},
+		}
+
 	case *ast.ConstantSizedType:
 		return &dst.UnaryExpr{
 			Op: token.AND,
