@@ -55,6 +55,7 @@ const headerTemplate = `// Code generated from {{ . }}. DO NOT EDIT.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 `
 
 var parsedHeaderTemplate = template.Must(template.New("header").Parse(headerTemplate))
@@ -143,6 +144,26 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		}
 	}
 
+	var (
+		equatable,
+		storable,
+		exportable,
+		importable bool
+	)
+
+	for _, conformance := range decl.Conformances {
+		switch conformance.Identifier.Identifier {
+		case "Storable":
+			storable = true
+		case "Equatable":
+			equatable = true
+		case "Exportable":
+			exportable = true
+		case "Importable":
+			importable = true
+		}
+	}
+
 	g.addDecls(
 		goConstDecl(
 			typeNameVarName(typeName),
@@ -150,12 +171,16 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		),
 		goVarDecl(
 			fmt.Sprintf("%sType", typeName),
-			simpleTypeLiteral(
-				g.fullTypeName(),
-				typeName,
-				isResource,
-				memberDeclarations,
-			),
+			simpleTypeLiteral(simpleType{
+				typeName:           typeName,
+				fullTypeName:       g.fullTypeName(),
+				isResource:         isResource,
+				Storable:           storable,
+				Equatable:          equatable,
+				Exportable:         exportable,
+				Importable:         importable,
+				memberDeclarations: memberDeclarations,
+			}),
 		),
 	)
 
@@ -410,25 +435,32 @@ func fieldDocStringVarName(fullTypeName string, fieldName string) string {
 	)
 }
 
-func simpleTypeLiteral(typeName, fullTypeName string, isResource bool, memberDeclarations []ast.Declaration) dst.Expr {
+type simpleType struct {
+	typeName           string
+	fullTypeName       string
+	isResource         bool
+	Storable           bool
+	Equatable          bool
+	Exportable         bool
+	Importable         bool
+	memberDeclarations []ast.Declaration
+}
+
+func simpleTypeLiteral(ty simpleType) dst.Expr {
 	elements := []dst.Expr{
-		goKeyValue("Name", typeNameVarIdent(typeName)),
-		goKeyValue("QualifiedName", typeNameVarIdent(typeName)),
-		goKeyValue("TypeID", typeNameVarIdent(typeName)),
-		goKeyValue("tag", typeTagVarIdent(typeName)),
-		goKeyValue("IsResource", goBoolLit(isResource)),
-		// TODO: allow composite declarations to indicate if they are storable
-		goKeyValue("Storable", goBoolLit(false)),
-		// TODO: allow composite declarations to indicate if they are equatable
-		goKeyValue("Equatable", goBoolLit(false)),
-		// TODO: allow composite declarations to indicate if they are exportable
-		goKeyValue("Exportable", goBoolLit(false)),
-		// TODO: allow composite declarations to indicate if they are importable
-		goKeyValue("Importable", goBoolLit(false)),
+		goKeyValue("Name", typeNameVarIdent(ty.typeName)),
+		goKeyValue("QualifiedName", typeNameVarIdent(ty.typeName)),
+		goKeyValue("TypeID", typeNameVarIdent(ty.typeName)),
+		goKeyValue("tag", typeTagVarIdent(ty.typeName)),
+		goKeyValue("IsResource", goBoolLit(ty.isResource)),
+		goKeyValue("Storable", goBoolLit(ty.Storable)),
+		goKeyValue("Equatable", goBoolLit(ty.Equatable)),
+		goKeyValue("Exportable", goBoolLit(ty.Exportable)),
+		goKeyValue("Importable", goBoolLit(ty.Importable)),
 	}
 
-	if len(memberDeclarations) > 0 {
-		members := simpleTypeMembers(fullTypeName, memberDeclarations)
+	if len(ty.memberDeclarations) > 0 {
+		members := simpleTypeMembers(ty.fullTypeName, ty.memberDeclarations)
 
 		elements = append(
 			elements,
