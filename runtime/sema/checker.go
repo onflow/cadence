@@ -2106,7 +2106,7 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	ty := checker.ConvertType(t.Type)
 
 	// Always convert (check) the type arguments,
-	// even if the instantiated type
+	// even if the instantiated type is invalid
 
 	var typeArgumentAnnotations []TypeAnnotation
 	typeArgumentCount := len(t.TypeArguments)

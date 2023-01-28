@@ -404,6 +404,32 @@ func typeExpr(t ast.Type) dst.Expr {
 			},
 		}
 
+	case *ast.InstantiationType:
+		typeArguments := t.TypeArguments
+		typeArgumentExprs := make([]dst.Expr, 0, len(typeArguments))
+		for _, argument := range typeArguments {
+			typeArgumentExprs = append(
+				typeArgumentExprs,
+				typeExpr(argument.Type),
+			)
+		}
+
+		return &dst.CallExpr{
+			Fun: &dst.SelectorExpr{
+				X:   typeExpr(t.Type),
+				Sel: dst.NewIdent("Instantiate"),
+			},
+			Args: []dst.Expr{
+				&dst.CompositeLit{
+					Type: &dst.ArrayType{
+						Elt: dst.NewIdent("Type"),
+					},
+					Elts: typeArgumentExprs,
+				},
+				dst.NewIdent("panicUnexpected"),
+			},
+		}
+
 	default:
 		panic(fmt.Errorf("%T types are not supported", t))
 	}

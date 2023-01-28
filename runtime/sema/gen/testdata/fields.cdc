@@ -13,4 +13,7 @@ pub struct Test {
 
     /// This is a test constant-sized integer array.
     let testConstInts: [UInt64; 2]
+
+    /// This is a test parameterized-type field.
+    let testParam: Foo<Bar>
 }

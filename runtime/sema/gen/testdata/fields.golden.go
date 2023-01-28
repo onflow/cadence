@@ -68,6 +68,13 @@ var TestTypeTestConstIntsFieldType = &ConstantSizedType{
 const TestTypeTestConstIntsFieldDocString = `This is a test constant-sized integer array.
 `
 
+const TestTypeTestParamFieldName = "testParam"
+
+var TestTypeTestParamFieldType = FooType.Instantiate([]Type{BarType}, panicUnexpected)
+
+const TestTypeTestParamFieldDocString = `This is a test parameterized-type field.
+`
+
 const TestTypeName = "Test"
 
 var TestType = &SimpleType{
@@ -159,6 +166,22 @@ var TestType = &SimpleType{
 						identifier,
 						TestTypeTestConstIntsFieldType,
 						TestTypeTestConstIntsFieldDocString,
+					)
+				},
+			},
+			TestTypeTestParamFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeTestParamFieldType,
+						TestTypeTestParamFieldDocString,
 					)
 				},
 			},
