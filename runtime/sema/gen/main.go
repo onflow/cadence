@@ -127,7 +127,7 @@ func (g *generator) VisitFunctionDeclaration(decl *ast.FunctionDeclaration) (_ s
 
 	g.addDecls(
 		goConstDecl(
-			fieldNameVarName(fullTypeName, functionName),
+			functionNameVarName(fullTypeName, functionName),
 			goStringLit(functionName),
 		),
 		goVarDecl(
@@ -515,37 +515,38 @@ func typeTagVarIdent(typeName string) *dst.Ident {
 	return dst.NewIdent(fmt.Sprintf("%sTypeTag", typeName))
 }
 
-func memberVarName(fullTypeName, kind, fieldName, part string) string {
+func memberVarName(fullTypeName, fieldName, kind, part string) string {
 	return fmt.Sprintf(
 		"%sType%s%s%s",
 		fullTypeName,
-		kind,
 		initialUpper(fieldName),
+		kind,
 		part,
 	)
 }
 
 func fieldNameVarName(fullTypeName, fieldName string) string {
-	return memberVarName(fullTypeName, "Field", initialUpper(fieldName), "Name")
+	return memberVarName(fullTypeName, fieldName, "Field", "Name")
 }
 
-func functionNameVarName(fullTypeName, fieldName string) string {
-	return memberVarName(fullTypeName, "Function", initialUpper(fieldName), "Name")
+func functionNameVarName(fullTypeName, functionName string) string {
+	return memberVarName(fullTypeName, functionName, "Function", "Name")
 }
+
 func fieldTypeVarName(fullTypeName, fieldName string) string {
-	return memberVarName(fullTypeName, "Field", initialUpper(fieldName), "Type")
+	return memberVarName(fullTypeName, fieldName, "Field", "Type")
 }
 
-func functionTypeVarName(fullTypeName, fieldName string) string {
-	return memberVarName(fullTypeName, "Function", initialUpper(fieldName), "Type")
+func functionTypeVarName(fullTypeName, functionName string) string {
+	return memberVarName(fullTypeName, functionName, "Function", "Type")
 }
 
 func fieldDocStringVarName(fullTypeName, fieldName string) string {
-	return memberVarName(fullTypeName, "Field", initialUpper(fieldName), "DocString")
+	return memberVarName(fullTypeName, fieldName, "Field", "DocString")
 }
 
-func functionDocStringVarName(fullTypeName, fieldName string) string {
-	return memberVarName(fullTypeName, "Function", initialUpper(fieldName), "DocString")
+func functionDocStringVarName(fullTypeName, functionName string) string {
+	return memberVarName(fullTypeName, functionName, "Function", "DocString")
 }
 
 type simpleType struct {

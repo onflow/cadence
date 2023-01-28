@@ -24,9 +24,9 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-const TestTypeFieldTestName = "test"
+const TestTypeTestFunctionName = "test"
 
-var TestTypeFunctionTestType = &FunctionType{
+var TestTypeTestFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
 			TypeAnnotation: NewTypeAnnotation(IntType),
@@ -40,7 +40,7 @@ var TestTypeFunctionTestType = &FunctionType{
 	),
 }
 
-const TestTypeFunctionTestDocString = `This is a test function.
+const TestTypeTestFunctionDocString = `This is a test function.
 `
 
 const TestTypeName = "Test"
@@ -57,7 +57,7 @@ var TestType = &SimpleType{
 	Importable:    false,
 	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
-			TestTypeFunctionTestName: {
+			TestTypeTestFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge,
 					identifier string,
@@ -68,8 +68,8 @@ var TestType = &SimpleType{
 						memoryGauge,
 						t,
 						identifier,
-						TestTypeFunctionTestType,
-						TestTypeFunctionTestDocString,
+						TestTypeTestFunctionType,
+						TestTypeTestFunctionDocString,
 					)
 				},
 			},
