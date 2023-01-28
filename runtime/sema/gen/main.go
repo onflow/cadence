@@ -103,10 +103,6 @@ func (g *generator) VisitFunctionDeclaration(decl *ast.FunctionDeclaration) (_ s
 		panic("global function declarations are not supported")
 	}
 
-	if !decl.IsNative() {
-		panic("non-native function declarations are not supported")
-	}
-
 	if decl.IsStatic() {
 		panic("static function declarations are not supported")
 	}
@@ -341,52 +337,70 @@ func typeExpr(t ast.Type) dst.Expr {
 	case *ast.FunctionType:
 		// TODO: type parameters
 
-		parameterExprs := make([]dst.Expr, 0, len(t.ParameterTypeAnnotations))
+		parameterTypeAnnotations := t.ParameterTypeAnnotations
+		parameterCount := len(parameterTypeAnnotations)
 
-		for _, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
+		var parametersExpr dst.Expr
 
-			parameterExpr := &dst.CompositeLit{
-				Elts: []dst.Expr{
-					goKeyValue(
-						"TypeAnnotation",
-						typeAnnotationCallExpr(typeExpr(parameterTypeAnnotation.Type)),
-					),
-				},
+		if parameterCount > 0 {
+			parameterExprs := make([]dst.Expr, 0, parameterCount)
+
+			for _, parameterTypeAnnotation := range parameterTypeAnnotations {
+
+				parameterExpr := &dst.CompositeLit{
+					Elts: []dst.Expr{
+						goKeyValue(
+							"TypeAnnotation",
+							typeAnnotationCallExpr(typeExpr(parameterTypeAnnotation.Type)),
+						),
+					},
+				}
+				parameterExpr.Decorations().Before = dst.NewLine
+				parameterExpr.Decorations().After = dst.NewLine
+
+				parameterExprs = append(
+					parameterExprs,
+					parameterExpr,
+				)
 			}
-			parameterExpr.Decorations().Before = dst.NewLine
-			parameterExpr.Decorations().After = dst.NewLine
 
-			parameterExprs = append(
-				parameterExprs,
-				parameterExpr,
-			)
-		}
-
-		parametersExpr := &dst.CompositeLit{
-			Type: &dst.ArrayType{
-				Elt: dst.NewIdent("Parameter"),
-			},
-			Elts: parameterExprs,
+			parametersExpr = &dst.CompositeLit{
+				Type: &dst.ArrayType{
+					Elt: dst.NewIdent("Parameter"),
+				},
+				Elts: parameterExprs,
+			}
 		}
 
 		returnTypeExpr := typeExpr(t.ReturnTypeAnnotation.Type)
 		returnTypeExpr.Decorations().Before = dst.NewLine
 		returnTypeExpr.Decorations().After = dst.NewLine
 
+		var compositeElements []dst.Expr
+
+		if parametersExpr != nil {
+			compositeElements = append(
+				compositeElements,
+				goKeyValue(
+					"Parameters",
+					parametersExpr,
+				),
+			)
+		}
+
+		compositeElements = append(
+			compositeElements,
+			goKeyValue(
+				"ReturnTypeAnnotation",
+				typeAnnotationCallExpr(returnTypeExpr),
+			),
+		)
+
 		return &dst.UnaryExpr{
 			Op: token.AND,
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("FunctionType"),
-				Elts: []dst.Expr{
-					goKeyValue(
-						"Parameters",
-						parametersExpr,
-					),
-					goKeyValue(
-						"ReturnTypeAnnotation",
-						typeAnnotationCallExpr(returnTypeExpr),
-					),
-				},
+				Elts: compositeElements,
 			},
 		}
 

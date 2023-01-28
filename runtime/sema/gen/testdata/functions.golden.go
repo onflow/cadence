@@ -24,9 +24,50 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-const TestTypeTestFunctionName = "test"
+const TestTypeNothingFunctionName = "nothing"
 
-var TestTypeTestFunctionType = &FunctionType{
+var TestTypeNothingFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		Type,
+	),
+}
+
+const TestTypeNothingFunctionDocString = `This is a test function.
+`
+
+const TestTypeParamsFunctionName = "params"
+
+var TestTypeParamsFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			TypeAnnotation: NewTypeAnnotation(IntType),
+		},
+		{
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		Type,
+	),
+}
+
+const TestTypeParamsFunctionDocString = `This is a test function with parameters.
+`
+
+const TestTypeReturnFunctionName = "return"
+
+var TestTypeReturnFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		BoolType,
+	),
+}
+
+const TestTypeReturnFunctionDocString = `This is a test function with a return type.
+`
+
+const TestTypeParamsAndReturnFunctionName = "paramsAndReturn"
+
+var TestTypeParamsAndReturnFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
 			TypeAnnotation: NewTypeAnnotation(IntType),
@@ -40,7 +81,7 @@ var TestTypeTestFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeTestFunctionDocString = `This is a test function.
+const TestTypeParamsAndReturnFunctionDocString = `This is a test function with parameters and a return type.
 `
 
 const TestTypeName = "Test"
@@ -57,7 +98,7 @@ var TestType = &SimpleType{
 	Importable:    false,
 	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
-			TestTypeTestFunctionName: {
+			TestTypeNothingFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge,
 					identifier string,
@@ -68,8 +109,56 @@ var TestType = &SimpleType{
 						memoryGauge,
 						t,
 						identifier,
-						TestTypeTestFunctionType,
-						TestTypeTestFunctionDocString,
+						TestTypeNothingFunctionType,
+						TestTypeNothingFunctionDocString,
+					)
+				},
+			},
+			TestTypeParamsFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeParamsFunctionType,
+						TestTypeParamsFunctionDocString,
+					)
+				},
+			},
+			TestTypeReturnFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeReturnFunctionType,
+						TestTypeReturnFunctionDocString,
+					)
+				},
+			},
+			TestTypeParamsAndReturnFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeParamsAndReturnFunctionType,
+						TestTypeParamsAndReturnFunctionDocString,
 					)
 				},
 			},
