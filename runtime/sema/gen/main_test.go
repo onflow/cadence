@@ -38,7 +38,9 @@ func TestFiles(t *testing.T) {
 			want, err := os.ReadFile(goldenPath)
 			require.NoError(t, err)
 
-			outFile.Seek(0, io.SeekStart)
+			_, err = outFile.Seek(0, io.SeekStart)
+			require.NoError(t, err)
+
 			got, err := io.ReadAll(outFile)
 			require.NoError(t, err)
 
