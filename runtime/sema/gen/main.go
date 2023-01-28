@@ -98,8 +98,71 @@ func (*generator) VisitVariableDeclaration(_ *ast.VariableDeclaration) struct{} 
 	panic("variable declarations are not supported")
 }
 
-func (*generator) VisitFunctionDeclaration(_ *ast.FunctionDeclaration) struct{} {
-	panic("function declarations are not supported")
+func (g *generator) VisitFunctionDeclaration(decl *ast.FunctionDeclaration) (_ struct{}) {
+	if len(g.containerTypeNames) == 0 {
+		panic("global function declarations are not supported")
+	}
+
+	if !decl.IsNative() {
+		panic("non-native function declarations are not supported")
+	}
+
+	if decl.IsStatic() {
+		panic("static function declarations are not supported")
+	}
+
+	functionName := decl.Identifier.Identifier
+	fullTypeName := g.fullTypeName()
+	docString := g.declarationDocString(decl)
+
+	parameters := decl.ParameterList.Parameters
+
+	parameterTypeAnnotations := make([]*ast.TypeAnnotation, 0, len(parameters))
+	for _, parameter := range parameters {
+		parameterTypeAnnotations = append(
+			parameterTypeAnnotations,
+			parameter.TypeAnnotation,
+		)
+	}
+
+	g.addDecls(
+		goConstDecl(
+			fieldNameVarName(fullTypeName, functionName),
+			goStringLit(functionName),
+		),
+		goVarDecl(
+			functionTypeVarName(fullTypeName, functionName),
+			typeExpr(&ast.FunctionType{
+				ReturnTypeAnnotation:     decl.ReturnTypeAnnotation,
+				ParameterTypeAnnotations: parameterTypeAnnotations,
+			}),
+		),
+		goConstDecl(
+			functionDocStringVarName(fullTypeName, functionName),
+			goRawLit(docString),
+		),
+	)
+
+	return
+}
+
+func (g *generator) declarationDocString(decl ast.Declaration) string {
+	identifier := decl.DeclarationIdentifier().Identifier
+	docString := strings.TrimSpace(decl.DeclarationDocString())
+
+	if len(docString) == 0 {
+		panic(fmt.Errorf(
+			"missing doc string for %s",
+			g.memberID(identifier),
+		))
+	}
+
+	// TODO: allow by splitting and wrapping in double quotes
+	if strings.ContainsRune(docString, '`') {
+		panic(fmt.Errorf("invalid ` in doc string for field %s", g.memberID(identifier)))
+	}
+
+	return trimLineSpaces(docString)
 }
 
 func (*generator) VisitSpecialFunctionDeclaration(_ *ast.SpecialFunctionDeclaration) struct{} {
@@ -133,7 +196,9 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 
 		memberDeclarationKind := memberDeclaration.DeclarationKind()
 		switch memberDeclarationKind {
-		case common.DeclarationKindField:
+		case common.DeclarationKindField,
+			common.DeclarationKindFunction:
+
 			memberDeclarations = append(memberDeclarations, memberDeclaration)
 
 		default:
@@ -198,19 +263,7 @@ func (*generator) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) str
 func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{}) {
 	fieldName := decl.Identifier.Identifier
 	fullTypeName := g.fullTypeName()
-	docString := strings.TrimSpace(decl.DocString)
-
-	if len(docString) == 0 {
-		panic(fmt.Errorf(
-			"missing doc string for field %s",
-			g.fieldID(fieldName),
-		))
-	}
-
-	// TODO: allow by splitting and wrapping in double quotes
-	if strings.ContainsRune(docString, '`') {
-		panic(fmt.Errorf("invalid ` in doc string for field %s", g.fieldID(fieldName)))
-	}
+	docString := g.declarationDocString(decl)
 
 	g.addDecls(
 		goConstDecl(
@@ -223,7 +276,7 @@ func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{
 		),
 		goConstDecl(
 			fieldDocStringVarName(fullTypeName, fieldName),
-			goRawLit(trimLineSpaces(docString)),
+			goRawLit(docString),
 		),
 	)
 
@@ -285,6 +338,57 @@ func typeExpr(t ast.Type) dst.Expr {
 				},
 			},
 		}
+	case *ast.FunctionType:
+		// TODO: type parameters
+
+		parameterExprs := make([]dst.Expr, 0, len(t.ParameterTypeAnnotations))
+
+		for _, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
+
+			parameterExpr := &dst.CompositeLit{
+				Elts: []dst.Expr{
+					goKeyValue(
+						"TypeAnnotation",
+						typeAnnotationCallExpr(typeExpr(parameterTypeAnnotation.Type)),
+					),
+				},
+			}
+			parameterExpr.Decorations().Before = dst.NewLine
+			parameterExpr.Decorations().After = dst.NewLine
+
+			parameterExprs = append(
+				parameterExprs,
+				parameterExpr,
+			)
+		}
+
+		parametersExpr := &dst.CompositeLit{
+			Type: &dst.ArrayType{
+				Elt: dst.NewIdent("Parameter"),
+			},
+			Elts: parameterExprs,
+		}
+
+		returnTypeExpr := typeExpr(t.ReturnTypeAnnotation.Type)
+		returnTypeExpr.Decorations().Before = dst.NewLine
+		returnTypeExpr.Decorations().After = dst.NewLine
+
+		return &dst.UnaryExpr{
+			Op: token.AND,
+			X: &dst.CompositeLit{
+				Type: dst.NewIdent("FunctionType"),
+				Elts: []dst.Expr{
+					goKeyValue(
+						"Parameters",
+						parametersExpr,
+					),
+					goKeyValue(
+						"ReturnTypeAnnotation",
+						typeAnnotationCallExpr(returnTypeExpr),
+					),
+				},
+			},
+		}
 
 	default:
 		panic(fmt.Errorf("%T types are not supported", t))
@@ -307,7 +411,7 @@ func (g *generator) fullTypeName() string {
 	return strings.Join(g.containerTypeNames, "")
 }
 
-func (g *generator) fieldID(fieldName string) string {
+func (g *generator) memberID(fieldName string) string {
 	return fmt.Sprintf("%s.%s",
 		strings.Join(g.containerTypeNames, "."),
 		fieldName,
@@ -411,28 +515,37 @@ func typeTagVarIdent(typeName string) *dst.Ident {
 	return dst.NewIdent(fmt.Sprintf("%sTypeTag", typeName))
 }
 
-func fieldNameVarName(fullTypeName string, fieldName string) string {
+func memberVarName(fullTypeName, kind, fieldName, part string) string {
 	return fmt.Sprintf(
-		"%sType%sFieldName",
+		"%sType%s%s%s",
 		fullTypeName,
+		kind,
 		initialUpper(fieldName),
+		part,
 	)
 }
 
-func fieldTypeVarName(fullTypeName string, fieldName string) string {
-	return fmt.Sprintf(
-		"%sType%sFieldType",
-		fullTypeName,
-		initialUpper(fieldName),
-	)
+func fieldNameVarName(fullTypeName, fieldName string) string {
+	return memberVarName(fullTypeName, "Field", initialUpper(fieldName), "Name")
 }
 
-func fieldDocStringVarName(fullTypeName string, fieldName string) string {
-	return fmt.Sprintf(
-		"%sType%sFieldDocString",
-		fullTypeName,
-		initialUpper(fieldName),
-	)
+func functionNameVarName(fullTypeName, fieldName string) string {
+	return memberVarName(fullTypeName, "Function", initialUpper(fieldName), "Name")
+}
+func fieldTypeVarName(fullTypeName, fieldName string) string {
+	return memberVarName(fullTypeName, "Field", initialUpper(fieldName), "Type")
+}
+
+func functionTypeVarName(fullTypeName, fieldName string) string {
+	return memberVarName(fullTypeName, "Function", initialUpper(fieldName), "Type")
+}
+
+func fieldDocStringVarName(fullTypeName, fieldName string) string {
+	return memberVarName(fullTypeName, "Field", initialUpper(fieldName), "DocString")
+}
+
+func functionDocStringVarName(fullTypeName, fieldName string) string {
+	return memberVarName(fullTypeName, "Function", initialUpper(fieldName), "DocString")
 }
 
 type simpleType struct {
@@ -484,13 +597,27 @@ func simpleTypeMembers(fullTypeName string, declarations []ast.Declaration) dst.
 	for _, declaration := range declarations {
 		resolve := simpleTypeMemberResolver(fullTypeName, declaration)
 
+		var memberName string
 		var kind dst.Expr
 
 		declarationKind := declaration.DeclarationKind()
 
+		memberName = declaration.DeclarationIdentifier().Identifier
+
 		switch declarationKind {
 		case common.DeclarationKindField:
+			memberName = fieldNameVarName(
+				fullTypeName,
+				memberName,
+			)
 			kind = declarationKindExpr("Field")
+
+		case common.DeclarationKindFunction:
+			memberName = functionNameVarName(
+				fullTypeName,
+				memberName,
+			)
+			kind = declarationKindExpr("Function")
 
 		default:
 			panic(fmt.Errorf(
@@ -502,10 +629,7 @@ func simpleTypeMembers(fullTypeName string, declarations []ast.Declaration) dst.
 		elements = append(
 			elements,
 			goKeyValue(
-				fieldNameVarName(
-					fullTypeName,
-					declaration.DeclarationIdentifier().Identifier,
-				),
+				memberName,
 				&dst.CompositeLit{
 					Elts: []dst.Expr{
 						goKeyValue("Kind", kind),
@@ -644,6 +768,25 @@ func simpleTypeMemberResolver(fullTypeName string, declaration ast.Declaration) 
 			Args: args,
 		}
 
+	case common.DeclarationKindFunction:
+		args := []dst.Expr{
+			dst.NewIdent("memoryGauge"),
+			dst.NewIdent("t"),
+			dst.NewIdent("identifier"),
+			dst.NewIdent(functionTypeVarName(fullTypeName, declarationName)),
+			dst.NewIdent(functionDocStringVarName(fullTypeName, declarationName)),
+		}
+
+		for _, arg := range args {
+			arg.Decorations().Before = dst.NewLine
+			arg.Decorations().After = dst.NewLine
+		}
+
+		result = &dst.CallExpr{
+			Fun:  dst.NewIdent("NewPublicFunctionMember"),
+			Args: args,
+		}
+
 	default:
 		panic(fmt.Errorf(
 			"%s members are not supported",
@@ -672,6 +815,15 @@ func stringMemberResolverMapType() *dst.MapType {
 	return &dst.MapType{
 		Key:   dst.NewIdent("string"),
 		Value: dst.NewIdent("MemberResolver"),
+	}
+}
+
+func typeAnnotationCallExpr(returnTypeExpr dst.Expr) *dst.CallExpr {
+	return &dst.CallExpr{
+		Fun: dst.NewIdent("NewTypeAnnotation"),
+		Args: []dst.Expr{
+			returnTypeExpr,
+		},
 	}
 }
 
