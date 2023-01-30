@@ -171,8 +171,8 @@ func (a *Activations[T]) PushNewWithParent(parent *Activation[T]) *Activation[T]
 // PushNewWithCurrent pushes a new empty activation
 // to the top of the activation stack.
 // The new activation has the current activation as its parent.
-func (a *Activations[T]) PushNewWithCurrent() {
-	a.PushNewWithParent(a.Current())
+func (a *Activations[T]) PushNewWithCurrent() *Activation[T] {
+	return a.PushNewWithParent(a.Current())
 }
 
 // Push pushes the given activation
