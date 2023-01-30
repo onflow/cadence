@@ -24,6 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -34,7 +37,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("NoPrepareFunction", func(t *testing.T) {
+	t.Run("no prepare function", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -50,7 +53,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("SetTransactionField", func(t *testing.T) {
+	t.Run("field and prepare", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -73,7 +76,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("PreConditions", func(t *testing.T) {
+	t.Run("succeeding pre-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -96,7 +99,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("FailingPreConditions", func(t *testing.T) {
+	t.Run("failing pre-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -127,7 +130,7 @@ func TestInterpretTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("PostConditions", func(t *testing.T) {
+	t.Run("succeeding post-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -154,7 +157,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("FailingPostConditions", func(t *testing.T) {
+	t.Run("failing post-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -189,7 +192,7 @@ func TestInterpretTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("MultipleTransactions", func(t *testing.T) {
+	t.Run("multiple transactions", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -220,7 +223,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.TransactionNotDeclaredError{}, err)
 	})
 
-	t.Run("TooFewArguments", func(t *testing.T) {
+	t.Run("invocation with too few arguments", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -234,7 +237,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
-	t.Run("TooManyArguments", func(t *testing.T) {
+	t.Run("invocation with too many arguments", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -268,7 +271,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
-	t.Run("Parameters", func(t *testing.T) {
+	t.Run("transaction parameters", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -317,4 +320,346 @@ func TestInterpretTransactions(t *testing.T) {
 			arrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
 	})
+}
+
+func TestInterpretTransactionRoles(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("single role with field", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				firstArgument := invocation.Arguments[0]
+				message := firstArgument.(*interpreter.StringValue).Str
+				logs = append(logs, message)
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              transaction(a: String, b: String) {
+
+                  let foo: String
+
+                  prepare(signer: AuthAccount) {
+                      log("a 1")
+                      log(a)
+                      log("b 1")
+                      log(b)
+                      self.foo = signer.address.toString()
+                      log("self.foo 1")
+                      log(self.foo)
+                  }
+
+                  role role1 {
+                      let bar: String
+
+                      prepare(signer: AuthAccount) {
+                          log("a 2")
+                          log(a)
+                          log("b 2")
+                          log(b)
+                          self.bar = signer.address.toString()
+                          log("self.bar")
+                          log(self.bar)
+                      }
+                  }
+
+                  execute {
+                      log("self.foo 2")
+                      log(self.foo)
+                      log("self.role1.bar")
+                      log(self.role1.bar)
+                  }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		signer := newTestAuthAccountValue(
+			nil,
+			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
+		)
+
+		err = inter.InvokeTransaction(
+			0,
+			interpreter.NewUnmeteredStringValue("A"),
+			interpreter.NewUnmeteredStringValue("B"),
+			signer,
+		)
+		assert.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				// transaction prepare
+				"a 1",
+				"A",
+				"b 1",
+				"B",
+				"self.foo 1",
+				"0x0000000000000001",
+				// role prepare
+				"a 2",
+				"A",
+				"b 2",
+				"B",
+				"self.bar",
+				"0x0000000000000001",
+				// execute
+				"self.foo 2",
+				"0x0000000000000001",
+				"self.role1.bar",
+				"0x0000000000000001",
+			},
+			logs,
+		)
+	})
+
+	t.Run("multiple roles, each with a field", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				firstArgument := invocation.Arguments[0]
+				message := firstArgument.(*interpreter.StringValue).Str
+				logs = append(logs, message)
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              transaction(a: String, b: String) {
+
+                  let foo: String
+
+                  prepare(signer: AuthAccount) {
+                      log("a 1")
+                      log(a)
+                      log("b 1")
+                      log(b)
+                      self.foo = signer.address.toString()
+                      log("self.foo 1")
+                      log(self.foo)
+                  }
+
+                  role role1 {
+                      let bar: String
+
+                      prepare(signer: AuthAccount) {
+                          log("a 2")
+                          log(a)
+                          log("b 2")
+                          log(b)
+                          self.bar = signer.address.toString()
+                          log("self.bar")
+                          log(self.bar)
+                      }
+                  }
+
+                  role role2 {
+                      let baz: String
+
+                      prepare(signer: AuthAccount) {
+                          log("a 3")
+                          log(a)
+                          log("b 3")
+                          log(b)
+                          self.baz = signer.address.toString()
+                          log("self.baz")
+                          log(self.baz)
+                      }
+                  }
+
+                  execute {
+                      log("self.foo 2")
+                      log(self.foo)
+                      log("self.role1.bar")
+                      log(self.role1.bar)
+                      log("self.role2.baz")
+                      log(self.role2.baz)
+                  }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		signer := newTestAuthAccountValue(
+			nil,
+			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
+		)
+
+		err = inter.InvokeTransaction(
+			0,
+			interpreter.NewUnmeteredStringValue("A"),
+			interpreter.NewUnmeteredStringValue("B"),
+			signer,
+		)
+		assert.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				// transaction prepare
+				"a 1",
+				"A",
+				"b 1",
+				"B",
+				"self.foo 1",
+				"0x0000000000000001",
+				// role1 prepare
+				"a 2",
+				"A",
+				"b 2",
+				"B",
+				"self.bar",
+				"0x0000000000000001",
+				// role2 prepare
+				"a 3",
+				"A",
+				"b 3",
+				"B",
+				"self.baz",
+				"0x0000000000000001",
+				// execute
+				"self.foo 2",
+				"0x0000000000000001",
+				"self.role1.bar",
+				"0x0000000000000001",
+				"self.role2.baz",
+				"0x0000000000000001",
+			},
+			logs,
+		)
+	})
+
+	t.Run("single role, multiple signers", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				firstArgument := invocation.Arguments[0]
+				message := firstArgument.(*interpreter.StringValue).Str
+				logs = append(logs, message)
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              transaction {
+
+                  prepare(signer1: AuthAccount, signer2: AuthAccount) {}
+
+                  role role1 {
+                      let signer1Address: String
+                      let signer2Address: String
+
+                      prepare(signer1: AuthAccount, signer2: AuthAccount) {
+                          self.signer1Address = signer1.address.toString()
+                          self.signer2Address = signer2.address.toString()
+                      }
+                  }
+
+                  execute {
+                      log("self.role1.signer1Address")
+                      log(self.role1.signer1Address)
+                      log("self.role1.signer2Address")
+                      log(self.role1.signer2Address)
+                  }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		signer1 := newTestAuthAccountValue(
+			nil,
+			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
+		)
+
+		signer2 := newTestAuthAccountValue(
+			nil,
+			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
+		)
+
+		err = inter.InvokeTransaction(
+			0,
+			signer1,
+			signer2,
+		)
+		assert.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				"self.role1.signer1Address",
+				"0x0000000000000001",
+				"self.role1.signer2Address",
+				"0x0000000000000002",
+			},
+			logs,
+		)
+	})
+
 }
