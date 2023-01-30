@@ -103,8 +103,8 @@ func (e *Encoder) Encode(value cadence.Value) (err error) {
 type jsonValue any
 
 type jsonValueObject struct {
-	Type  string    `json:"type"`
 	Value jsonValue `json:"value"`
+	Type  string    `json:"type"`
 }
 
 type jsonEmptyValueObject struct {
@@ -122,8 +122,8 @@ type jsonCompositeValue struct {
 }
 
 type jsonCompositeField struct {
-	Name  string    `json:"name"`
 	Value jsonValue `json:"value"`
+	Name  string    `json:"name"`
 }
 
 type jsonPathLinkValue struct {
@@ -137,16 +137,16 @@ type jsonPathValue struct {
 }
 
 type jsonFieldType struct {
-	Id   string    `json:"id"`
 	Type jsonValue `json:"type"`
+	Id   string    `json:"id"`
 }
 
 type jsonNominalType struct {
+	Type         jsonValue             `json:"type"`
 	Kind         string                `json:"kind"`
 	TypeID       string                `json:"typeID"`
 	Fields       []jsonFieldType       `json:"fields"`
 	Initializers [][]jsonParameterType `json:"initializers"`
-	Type         jsonValue             `json:"type"`
 }
 
 type jsonSimpleType struct {
@@ -154,25 +154,25 @@ type jsonSimpleType struct {
 }
 
 type jsonUnaryType struct {
-	Kind string    `json:"kind"`
 	Type jsonValue `json:"type"`
+	Kind string    `json:"kind"`
 }
 
 type jsonConstantSizedArrayType struct {
-	Kind string    `json:"kind"`
 	Type jsonValue `json:"type"`
+	Kind string    `json:"kind"`
 	Size uint      `json:"size"`
 }
 
 type jsonDictionaryType struct {
-	Kind      string    `json:"kind"`
 	KeyType   jsonValue `json:"key"`
 	ValueType jsonValue `json:"value"`
+	Kind      string    `json:"kind"`
 }
 
 type jsonReferenceType struct {
-	Kind       string    `json:"kind"`
 	Type       jsonValue `json:"type"`
+	Kind       string    `json:"kind"`
 	Authorized bool      `json:"authorized"`
 }
 
@@ -184,16 +184,16 @@ type jsonRestrictedType struct {
 }
 
 type jsonParameterType struct {
+	Type  jsonValue `json:"type"`
 	Label string    `json:"label"`
 	Id    string    `json:"id"`
-	Type  jsonValue `json:"type"`
 }
 
 type jsonFunctionType struct {
+	Return     jsonValue           `json:"return"`
 	Kind       string              `json:"kind"`
 	TypeID     string              `json:"typeID"`
 	Parameters []jsonParameterType `json:"parameters"`
-	Return     jsonValue           `json:"return"`
 }
 
 type jsonTypeValue struct {
@@ -202,8 +202,8 @@ type jsonTypeValue struct {
 
 type jsonStorageCapabilityValue struct {
 	Path       jsonValue `json:"path"`
-	Address    string    `json:"address"`
 	BorrowType jsonValue `json:"borrowType"`
+	Address    string    `json:"address"`
 }
 
 type jsonFunctionValue struct {

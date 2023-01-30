@@ -25,16 +25,16 @@ import (
 // Config is a constant/read-only configuration of an environment.
 type Config struct {
 	Debugger *interpreter.Debugger
-	// AtreeValidationEnabled configures if atree validation is enabled.
-	AtreeValidationEnabled bool
-	// TracingEnabled configures if tracing is enabled.
-	TracingEnabled bool
-	// ResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled.
-	ResourceOwnerChangeHandlerEnabled bool
-	// CoverageReportingEnabled configures if coverage reporting is enabled.
-	CoverageReportingEnabled bool
-	// StackDepthLimit specifies the maximum depth for call stacks.
+	// StackDepthLimit specifies the maximum depth for call stacks
 	StackDepthLimit uint64
+	// AtreeValidationEnabled configures if atree validation is enabled
+	AtreeValidationEnabled bool
+	// TracingEnabled configures if tracing is enabled
+	TracingEnabled bool
+	// ResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled
+	ResourceOwnerChangeHandlerEnabled bool
+	// CoverageReportingEnabled configures if coverage reporting is enabled
+	CoverageReportingEnabled bool
 	// AccountLinkingEnabled specifies if account linking is enabled
 	AccountLinkingEnabled bool
 }

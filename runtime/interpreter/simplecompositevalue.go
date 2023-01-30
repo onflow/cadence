@@ -30,16 +30,16 @@ import (
 // SimpleCompositeValue
 
 type SimpleCompositeValue struct {
-	TypeID     sema.TypeID
-	staticType StaticType
-	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
-	FieldNames      []string
+	staticType      StaticType
 	Fields          map[string]Value
 	ComputeField    func(name string, interpreter *Interpreter, locationRange LocationRange) Value
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
 	stringer func(common.MemoryGauge, SeenReferences) string
+	TypeID   sema.TypeID
+	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
+	FieldNames []string
 }
 
 var _ Value = &SimpleCompositeValue{}

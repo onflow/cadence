@@ -80,8 +80,8 @@ func (d *PragmaDeclaration) DeclarationDocString() string {
 func (d *PragmaDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias PragmaDeclaration
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "PragmaDeclaration",
 		Alias: (*Alias)(d),

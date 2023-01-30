@@ -1940,9 +1940,9 @@ func (v TypeValue) String() string {
 // StorageCapability
 
 type StorageCapability struct {
+	BorrowType Type
 	Path       Path
 	Address    Address
-	BorrowType Type
 }
 
 var _ Value = StorageCapability{}

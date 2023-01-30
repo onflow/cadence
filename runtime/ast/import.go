@@ -29,10 +29,10 @@ import (
 // ImportDeclaration
 
 type ImportDeclaration struct {
-	Identifiers []Identifier
 	Location    common.Location
-	LocationPos Position
+	Identifiers []Identifier
 	Range
+	LocationPos Position
 }
 
 var _ Element = &ImportDeclaration{}
@@ -90,8 +90,8 @@ func (d *ImportDeclaration) DeclarationDocString() string {
 func (d *ImportDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias ImportDeclaration
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "ImportDeclaration",
 		Alias: (*Alias)(d),

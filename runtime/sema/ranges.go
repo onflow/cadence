@@ -25,10 +25,10 @@ import (
 )
 
 type Range struct {
-	Identifier      string
 	Type            Type
-	DeclarationKind common.DeclarationKind
+	Identifier      string
 	DocString       string
+	DeclarationKind common.DeclarationKind
 }
 
 type Ranges struct {

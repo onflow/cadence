@@ -67,24 +67,25 @@ type Environment interface {
 	NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value
 }
 
-type interpreterEnvironment struct {
-	config Config
-
-	baseActivation      *interpreter.VariableActivation
-	baseValueActivation *sema.VariableActivation
-
-	InterpreterConfig *interpreter.Config
-	CheckerConfig     *sema.Config
-
-	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-	stackDepthLimiter                     *stackDepthLimiter
-	checkedImports                        importResolutionResults
-
-	// the following fields are re-configurable, see Configure
+// interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
+// that gets reconfigured by interpreterEnvironment.Configure
+type interpreterEnvironmentReconfigured struct {
 	runtimeInterface Interface
 	storage          *Storage
 	coverageReport   *CoverageReport
 	codesAndPrograms codesAndPrograms
+}
+
+type interpreterEnvironment struct {
+	interpreterEnvironmentReconfigured
+	baseActivation                        *interpreter.VariableActivation
+	baseValueActivation                   *sema.VariableActivation
+	InterpreterConfig                     *interpreter.Config
+	CheckerConfig                         *sema.Config
+	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
+	stackDepthLimiter                     *stackDepthLimiter
+	checkedImports                        importResolutionResults
+	config                                Config
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -347,6 +348,8 @@ func (e *interpreterEnvironment) ParseAndCheckProgram(
 	)
 }
 
+// parseAndCheckProgram parses and checks the given program.
+// If storeProgram is true, it calls Interface.SetProgram.
 func (e *interpreterEnvironment) parseAndCheckProgram(
 	code []byte,
 	location common.Location,
@@ -356,7 +359,33 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	program *interpreter.Program,
 	err error,
 ) {
-	wrapError := func(err error) error {
+
+	// NOTE: Always ensure to call maybeSetProgram
+	// on all error paths of parseAndCheckProgram,
+	// except for once Interface.SetProgram was called!
+	//
+	// If the program is supposed to be stored,
+	// there was a call to Interface.GetProgram before.
+	// If an error occurs after calling Interface.GetProgram,
+	// then we *must* also call Interface.SetProgram, with nil.
+	//
+	// See the documentation for Interface.GetProgram
+	// for an explanation of this invariant.
+
+	maybeSetProgram := func() error {
+
+		if !storeProgram {
+			return nil
+		}
+
+		var err error
+		wrapPanic(func() {
+			err = e.runtimeInterface.SetProgram(location, program)
+		})
+		return err
+	}
+
+	wrapParsingCheckingError := func(err error) error {
 		return &ParsingCheckingError{
 			Err:      err,
 			Location: location,
@@ -380,7 +409,14 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 		},
 	)
 	if err != nil {
-		return nil, wrapError(err)
+		// IMPORTANT: even when an error occurs,
+		// we still might need to set the program
+		setProgramErr := maybeSetProgram()
+		if setProgramErr != nil {
+			return nil, setProgramErr
+		}
+
+		return nil, wrapParsingCheckingError(err)
 	}
 
 	if storeProgram {
@@ -391,7 +427,14 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 
 	elaboration, err := e.check(location, parse, checkedImports)
 	if err != nil {
-		return nil, wrapError(err)
+		// IMPORTANT: even when an error occurs,
+		// we still might need to set the program
+		setProgramErr := maybeSetProgram()
+		if setProgramErr != nil {
+			return nil, setProgramErr
+		}
+
+		return nil, wrapParsingCheckingError(err)
 	}
 
 	// Return
@@ -401,13 +444,9 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 		Elaboration: elaboration,
 	}
 
-	if storeProgram {
-		wrapPanic(func() {
-			err = e.runtimeInterface.SetProgram(location, program)
-		})
-		if err != nil {
-			return nil, err
-		}
+	err = maybeSetProgram()
+	if err != nil {
+		return nil, err
 	}
 
 	return program, nil
@@ -526,9 +565,20 @@ func (e *interpreterEnvironment) getProgram(
 		var code []byte
 		code, err = e.getCode(location)
 		if err != nil {
+			var setProgramErr error
+			wrapPanic(func() {
+				setProgramErr = e.runtimeInterface.SetProgram(location, program)
+			})
+			if setProgramErr != nil {
+				return nil, setProgramErr
+			}
 			return nil, err
 		}
 
+		// NOTE: parseAndCheckProgram calls Interface.SetProgram on error, if needed.
+		// Do NOT call / move the calls of Interface.SetProgram here:
+		// The error returned from parseAndCheckProgram might be the result
+		// of a call to Interface.SetProgram, in which case it should not be called again.
 		program, err = e.parseAndCheckProgram(
 			code,
 			location,

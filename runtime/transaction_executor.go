@@ -26,25 +26,29 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type interpreterTransactionExecutor struct {
-	runtime *interpreterRuntime
-	script  Script
-	context Context
-
-	// prepare
-	preprocessOnce   sync.Once
-	preprocessErr    error
+type interpreterTransactionExecutorPreparation struct {
 	codesAndPrograms codesAndPrograms
+	environment      Environment
+	preprocessErr    error
+	transactionType  *sema.TransactionType
 	storage          *Storage
 	program          *interpreter.Program
-	environment      Environment
-	transactionType  *sema.TransactionType
 	authorizers      []Address
+	preprocessOnce   sync.Once
+}
 
-	// execute
-	executeOnce sync.Once
+type interpreterTransactionExecutorExecution struct {
 	executeErr  error
 	interpret   InterpretFunc
+	executeOnce sync.Once
+}
+
+type interpreterTransactionExecutor struct {
+	context Context
+	interpreterTransactionExecutorExecution
+	runtime *interpreterRuntime
+	script  Script
+	interpreterTransactionExecutorPreparation
 }
 
 func newInterpreterTransactionExecutor(

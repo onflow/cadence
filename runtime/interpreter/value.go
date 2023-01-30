@@ -898,14 +898,14 @@ func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Val
 // StringValue
 
 type StringValue struct {
-	Str string
-	// length is the cached length of the string, based on grapheme clusters.
-	// a negative value indicates the length has not been initialized, see Length()
-	length int
 	// graphemes is a grapheme cluster segmentation iterator,
 	// which is initialized lazily and reused/reset in functions
 	// that are based on grapheme clusters
 	graphemes *uniseg.Graphemes
+	Str       string
+	// length is the cached length of the string, based on grapheme clusters.
+	// a negative value indicates the length has not been initialized, see Length()
+	length int
 }
 
 func NewUnmeteredStringValue(str string) *StringValue {
@@ -1362,9 +1362,9 @@ type ArrayValue struct {
 	Type             ArrayStaticType
 	semaType         sema.ArrayType
 	array            *atree.Array
-	isDestroyed      bool
 	isResourceKinded *bool
 	elementSize      uint
+	isDestroyed      bool
 }
 
 type ArrayValueIterator struct {
@@ -13843,33 +13843,33 @@ func (UFix64Value) Scale() int {
 // CompositeValue
 
 type CompositeValue struct {
-	dictionary          *atree.OrderedMap
-	Location            common.Location
-	QualifiedIdentifier string
-	Kind                common.CompositeKind
-	InjectedFields      map[string]Value
-	ComputedFields      map[string]ComputedField
-	NestedVariables     map[string]*Variable
-	Functions           map[string]FunctionValue
-	Destructor          FunctionValue
-	Stringer            func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
-	isDestroyed         bool
-	typeID              common.TypeID
-	staticType          StaticType
+	Destructor      FunctionValue
+	Location        common.Location
+	staticType      StaticType
+	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
+	InjectedFields  map[string]Value
+	ComputedFields  map[string]ComputedField
+	NestedVariables map[string]*Variable
+	Functions       map[string]FunctionValue
+	dictionary      *atree.OrderedMap
+	typeID          common.TypeID
 
 	// attachments also have a reference to their base value. This field is set in three cases:
 	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
 	// 2) When a resource `r`'s destructor is invoked, all of `r`'s attachments' destructors will also run, and
 	//    have their `base` fields set to `&r`
 	// 3) When a value is transferred, this field is copied between its attachments
-	base *EphemeralReferenceValue
+	base                *EphemeralReferenceValue
+	QualifiedIdentifier string
+	Kind                common.CompositeKind
+	isDestroyed         bool
 }
 
 type ComputedField func(*Interpreter, LocationRange) Value
 
 type CompositeField struct {
-	Name  string
 	Value Value
+	Name  string
 }
 
 const attachmentNamePrefix = "$"
@@ -16963,10 +16963,10 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 // StorageReferenceValue
 
 type StorageReferenceValue struct {
-	Authorized           bool
-	TargetStorageAddress common.Address
-	TargetPath           PathValue
 	BorrowedType         sema.Type
+	TargetPath           PathValue
+	TargetStorageAddress common.Address
+	Authorized           bool
 }
 
 var _ Value = &StorageReferenceValue{}
@@ -17299,9 +17299,9 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
-	Authorized   bool
 	Value        Value
 	BorrowedType sema.Type
+	Authorized   bool
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -17913,8 +17913,8 @@ func accountGetCapabilityFunction(
 // PathValue
 
 type PathValue struct {
-	Domain     common.PathDomain
 	Identifier string
+	Domain     common.PathDomain
 }
 
 func NewUnmeteredPathValue(domain common.PathDomain, identifier string) PathValue {
@@ -18168,9 +18168,9 @@ func (PathValue) ChildStorables() []atree.Storable {
 // StorageCapabilityValue
 
 type StorageCapabilityValue struct {
-	Address    AddressValue
-	Path       PathValue
 	BorrowType StaticType
+	Path       PathValue
+	Address    AddressValue
 }
 
 func NewUnmeteredStorageCapabilityValue(
@@ -18387,12 +18387,15 @@ func (v *StorageCapabilityValue) ChildStorables() []atree.Storable {
 // PathLinkValue
 
 type PathLinkValue struct {
-	TargetPath PathValue
 	Type       StaticType
+	TargetPath PathValue
 }
 
 func NewUnmeteredPathLinkValue(targetPath PathValue, staticType StaticType) PathLinkValue {
-	return PathLinkValue{TargetPath: targetPath, Type: staticType}
+	return PathLinkValue{
+		TargetPath: targetPath,
+		Type:       staticType,
+	}
 }
 
 func NewPathLinkValue(memoryGauge common.MemoryGauge, targetPath PathValue, staticType StaticType) PathLinkValue {
@@ -18527,10 +18530,10 @@ func (v PathLinkValue) ChildStorables() []atree.Storable {
 // PublishedValue
 
 type PublishedValue struct {
-	Recipient AddressValue
 	// NB: If `publish` and `claim` are ever extended to support arbitrary values, rather than just capabilities,
 	// this will need to be changed to `Value`, and more storage-related operations must be implemented for `PublishedValue`
-	Value *StorageCapabilityValue
+	Value     *StorageCapabilityValue
+	Recipient AddressValue
 }
 
 func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value *StorageCapabilityValue) *PublishedValue {

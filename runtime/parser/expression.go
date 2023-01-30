@@ -64,28 +64,28 @@ type exprMetaLeftDenotationFunc func(
 )
 
 type literalExpr struct {
-	tokenType      lexer.TokenType
 	nullDenotation exprNullDenotationFunc
+	tokenType      lexer.TokenType
 }
 
 type infixExpr struct {
-	tokenType        lexer.TokenType
-	leftBindingPower int
-	rightAssociative bool
 	leftDenotation   infixExprFunc
+	leftBindingPower int
+	tokenType        lexer.TokenType
+	rightAssociative bool
 }
 
 type binaryExpr struct {
-	tokenType        lexer.TokenType
 	leftBindingPower int
-	rightAssociative bool
 	operation        ast.Operation
+	tokenType        lexer.TokenType
+	rightAssociative bool
 }
 
 type prefixExpr struct {
-	tokenType      lexer.TokenType
-	bindingPower   int
 	nullDenotation prefixExprFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
 }
 
 type unaryExpr struct {
@@ -95,9 +95,9 @@ type unaryExpr struct {
 }
 
 type postfixExpr struct {
-	tokenType      lexer.TokenType
-	bindingPower   int
 	leftDenotation postfixExprFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
 }
 
 var exprNullDenotations = [lexer.TokenMax]exprNullDenotationFunc{}

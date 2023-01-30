@@ -25,13 +25,13 @@ import (
 
 // Invocation
 type Invocation struct {
+	LocationRange      LocationRange
 	Self               *MemberAccessibleValue
 	Base               *EphemeralReferenceValue
+	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
+	Interpreter        *Interpreter
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
-	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
-	LocationRange      LocationRange
-	Interpreter        *Interpreter
 }
 
 func NewInvocation(

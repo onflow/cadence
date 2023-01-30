@@ -30,18 +30,16 @@ import (
 // The zero value is a valid configuration.
 // Calls to Load do not modify this struct.
 type Config struct {
-	// Mode controls the level of information returned for each program.
-	Mode LoadMode
-
-	// ResolveAddressContractNames is called to resolve the contract names of an address location.
+	// ResolveAddressContractNames is called to resolve the contract names of an address location
 	ResolveAddressContractNames func(address common.Address) ([]string, error)
-
-	// ResolveCode is called to resolve an import to its source code.
+	// ResolveCode is called to resolve an import to its source code
 	ResolveCode func(
 		location common.Location,
 		importingLocation common.Location,
 		importRange ast.Range,
 	) ([]byte, error)
+	// Mode controls the level of information returned for each program
+	Mode LoadMode
 }
 
 func NewSimpleConfig(

@@ -128,8 +128,8 @@ func (m *Members) FieldPosition(name string, compositeKind common.CompositeKind)
 func (m *Members) MarshalJSON() ([]byte, error) {
 	type Alias Members
 	return json.Marshal(&struct {
-		Declarations []Declaration
 		*Alias
+		Declarations []Declaration
 	}{
 		Declarations: m.declarations,
 		Alias:        (*Alias)(m),

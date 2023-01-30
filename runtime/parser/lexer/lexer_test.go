@@ -48,8 +48,8 @@ func withTokens(tokenStream TokenStream, fn func([]Token)) {
 }
 
 type token struct {
-	Token
 	Source string
+	Token
 }
 
 func testLex(t *testing.T, input string, expected []token) {

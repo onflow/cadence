@@ -27,10 +27,10 @@ import (
 )
 
 type ParameterList struct {
-	once                    sync.Once
-	Parameters              []*Parameter
 	_parametersByIdentifier map[string]*Parameter
+	Parameters              []*Parameter
 	Range
+	once sync.Once
 }
 
 func NewParameterList(

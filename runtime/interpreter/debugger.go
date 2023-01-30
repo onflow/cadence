@@ -33,10 +33,10 @@ type Stop struct {
 }
 
 type Debugger struct {
-	pauseRequested uint32
 	stops          chan Stop
 	continues      chan struct{}
 	breakpoints    map[common.Location]*bitset.BitSet
+	pauseRequested uint32
 }
 
 func NewDebugger() *Debugger {

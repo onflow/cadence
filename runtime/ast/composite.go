@@ -40,13 +40,13 @@ type CompositeLikeDeclaration interface {
 }
 
 type CompositeDeclaration struct {
+	Members      *Members
+	DocString    string
+	Conformances []*NominalType
+	Identifier   Identifier
+	Range
 	Access        Access
 	CompositeKind common.CompositeKind
-	Identifier    Identifier
-	Conformances  []*NominalType
-	Members       *Members
-	DocString     string
-	Range
 }
 
 var _ Element = &CompositeDeclaration{}
@@ -114,8 +114,8 @@ func (d *CompositeDeclaration) DeclarationDocString() string {
 func (d *CompositeDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias CompositeDeclaration
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "CompositeDeclaration",
 		Alias: (*Alias)(d),
@@ -286,13 +286,13 @@ const (
 // FieldDeclaration
 
 type FieldDeclaration struct {
-	Access         Access
-	Flags          FieldDeclarationFlags
-	VariableKind   VariableKind
-	Identifier     Identifier
 	TypeAnnotation *TypeAnnotation
 	DocString      string
+	Identifier     Identifier
 	Range
+	Access       Access
+	VariableKind VariableKind
+	Flags        FieldDeclarationFlags
 }
 
 var _ Element = &FieldDeclaration{}
@@ -364,11 +364,11 @@ func (d *FieldDeclaration) DeclarationDocString() string {
 func (d *FieldDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FieldDeclaration
 	return json.Marshal(&struct {
+		*Alias
 		Type     string
 		Flags    FieldDeclarationFlags `json:",omitempty"`
 		IsStatic bool
 		IsNative bool
-		*Alias
 	}{
 		Type:     "FieldDeclaration",
 		Alias:    (*Alias)(d),
@@ -474,10 +474,10 @@ func (d *FieldDeclaration) IsNative() bool {
 // EnumCaseDeclaration
 
 type EnumCaseDeclaration struct {
-	Access     Access
-	Identifier Identifier
 	DocString  string
+	Identifier Identifier
 	StartPos   Position `json:"-"`
+	Access     Access
 }
 
 var _ Element = &EnumCaseDeclaration{}
@@ -541,9 +541,9 @@ func (d *EnumCaseDeclaration) DeclarationDocString() string {
 func (d *EnumCaseDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias EnumCaseDeclaration
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "EnumCaseDeclaration",
 		Range: NewUnmeteredRangeFromPositioned(d),

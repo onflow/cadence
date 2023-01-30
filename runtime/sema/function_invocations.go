@@ -24,10 +24,10 @@ import (
 )
 
 type FunctionInvocation struct {
-	StartPos                   Position
-	EndPos                     Position
 	FunctionType               *FunctionType
 	TrailingSeparatorPositions []ast.Position
+	StartPos                   Position
+	EndPos                     Position
 }
 
 type FunctionInvocations struct {
