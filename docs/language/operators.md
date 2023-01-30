@@ -349,7 +349,8 @@ Comparison operators work with boolean and integer values.
   xs == ys // is `true`
   ```
 
-- Inequality: `!=`, is supported for booleans, numbers, addresses, strings, characters, enums, paths, `Type` values, references, and `Void` values (`()`). Variable-sized arrays, fixed-size arrays, and optionals also support inequality tests if their inner types do.
+- Inequality: `!=`, is supported for booleans, numbers, addresses, strings, characters, enums, paths, `Type` values, references, and `Void` values (`()`). 
+  Variable-sized arrays, fixed-size arrays, and optionals also support inequality tests if their inner types do.
 
   Both sides of the inequality operator may be optional, even of different levels,
   so it is for example possible to compare a non-optional with a double-optional (`??`).
