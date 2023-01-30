@@ -13843,23 +13843,23 @@ func (UFix64Value) Scale() int {
 // CompositeValue
 
 type CompositeValue struct {
-	Destructor          FunctionValue
-	Location            common.Location
-	staticType          StaticType
-	Stringer            func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
-	InjectedFields      map[string]Value
-	ComputedFields      map[string]ComputedField
-	NestedVariables     map[string]*Variable
-	Functions           map[string]FunctionValue
-	dictionary          *atree.OrderedMap
-	typeID              common.TypeID
+	Destructor      FunctionValue
+	Location        common.Location
+	staticType      StaticType
+	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
+	InjectedFields  map[string]Value
+	ComputedFields  map[string]ComputedField
+	NestedVariables map[string]*Variable
+	Functions       map[string]FunctionValue
+	dictionary      *atree.OrderedMap
+	typeID          common.TypeID
 
 	// attachments also have a reference to their base value. This field is set in three cases:
 	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
 	// 2) When a resource `r`'s destructor is invoked, all of `r`'s attachments' destructors will also run, and
 	//    have their `base` fields set to `&r`
 	// 3) When a value is transferred, this field is copied between its attachments
-	base *EphemeralReferenceValue
+	base                *EphemeralReferenceValue
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
 	isDestroyed         bool
