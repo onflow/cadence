@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -5649,7 +5648,6 @@ func IsNilType(ty Type) bool {
 
 type TransactionType struct {
 	Members           *StringMemberOrderedMap
-	Roles             *orderedmap.OrderedMap[string, *TransactionRoleType]
 	Fields            []string
 	PrepareParameters []Parameter
 	Parameters        []Parameter

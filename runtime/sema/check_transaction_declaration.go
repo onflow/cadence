@@ -103,8 +103,15 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 
 	checker.checkResourceFieldsInvalidated(transactionType, members)
 
-	transactionType.Roles.Foreach(func(_ string, roleTye *TransactionRoleType) {
-		checker.checkResourceFieldsInvalidated(roleTye, roleTye.Members)
+	transactionType.Members.Foreach(func(_ string, member *Member) {
+		transactionRoleType, ok := member.TypeAnnotation.Type.(*TransactionRoleType)
+		if !ok {
+			return
+		}
+		checker.checkResourceFieldsInvalidated(
+			transactionRoleType,
+			transactionRoleType.Members,
+		)
 	})
 
 	return
