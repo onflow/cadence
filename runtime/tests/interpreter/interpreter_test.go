@@ -652,7 +652,7 @@ func TestInterpretArrayEquality(t *testing.T) {
 	testBooleanFunction(t, "fixed array [Int; 3] should be unequal to a different array", true, `
 		let xs: [Int; 3] = [1, 2, 3]
 		let ys: [Int; 3] = [4, 5, 6]
-		return xs != xs
+		return xs != ys
 	`)
 
 	testBooleanFunction(t, "fixed array [[Int; 2]; 1] should equal itself", true, `
