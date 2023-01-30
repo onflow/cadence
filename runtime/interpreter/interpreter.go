@@ -209,14 +209,14 @@ type Storage interface {
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
-	Program      *Program
 	Location     common.Location
+	statement    ast.Statement
+	Program      *Program
 	SharedState  *SharedState
 	Globals      GlobalVariables
+	activations  *VariableActivations
 	Transactions []*HostFunctionValue
 	interpreted  bool
-	activations  *VariableActivations
-	statement    ast.Statement
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -2419,11 +2419,11 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 }()
 
 type ValueConverterDeclaration struct {
-	name         string
-	convert      func(*Interpreter, Value, LocationRange) Value
 	min          Value
 	max          Value
+	convert      func(*Interpreter, Value, LocationRange) Value
 	functionType *sema.FunctionType
+	name         string
 }
 
 // It would be nice if return types in Go's function types would be covariant
@@ -2947,8 +2947,8 @@ func defineBaseFunctions(activation *VariableActivation) {
 }
 
 type converterFunction struct {
-	name      string
 	converter *HostFunctionValue
+	name      string
 }
 
 // Converter functions are stateless functions. Hence they can be re-used across interpreters.
@@ -3003,8 +3003,8 @@ func defineConverterFunctions(activation *VariableActivation) {
 }
 
 type runtimeTypeConstructor struct {
-	name      string
 	converter *HostFunctionValue
+	name      string
 }
 
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
@@ -3299,7 +3299,12 @@ func (interpreter *Interpreter) recordStorageMutation() {
 	}
 }
 
-func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
+func (interpreter *Interpreter) newStorageIterationFunction(
+	addressValue AddressValue,
+	domain common.PathDomain,
+	pathType sema.Type,
+) *HostFunctionValue {
+
 	address := addressValue.ToAddress()
 	config := interpreter.SharedState.Config
 
@@ -3331,8 +3336,17 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 			}()
 
 			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
+				staticType := value.StaticType(inter)
+
+				// Perform a forced type loading to see if the underlying type is not broken.
+				// If broken, skip this value from the iteration.
+				typeError := inter.checkTypeLoading(staticType)
+				if typeError != nil {
+					continue
+				}
+
 				pathValue := NewPathValue(inter, domain, key)
-				runtimeType := NewTypeValue(inter, value.StaticType(inter))
+				runtimeType := NewTypeValue(inter, staticType)
 
 				subInvocation := NewInvocation(
 					inter,
@@ -3370,6 +3384,24 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 		},
 		sema.AccountForEachFunctionType(pathType),
 	)
+}
+
+func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch r := r.(type) {
+			case errors.UserError, errors.ExternalError:
+				typeError = r.(error)
+			default:
+				panic(r)
+			}
+		}
+	}()
+
+	// Here it is only interested in whether the type can be properly loaded.
+	_, typeError = interpreter.ConvertStaticToSemaType(staticType)
+
+	return
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {

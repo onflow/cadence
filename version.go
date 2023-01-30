@@ -21,4 +21,4 @@
 
 package cadence
 
-const Version = "v0.30.0-attachments-2"
+const Version = "v0.31.3-attachments-2"

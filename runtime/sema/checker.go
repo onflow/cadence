@@ -90,31 +90,29 @@ type ContractValueHandlerFunc func(
 // Checker
 
 type Checker struct {
-	Program     *ast.Program
-	Location    common.Location
-	Elaboration *Elaboration
-	Config      *Config
-
-	errors                             []error
-	valueActivations                   *VariableActivations
-	resources                          *Resources
-	typeActivations                    *VariableActivations
-	containerTypes                     map[Type]bool
-	functionActivations                FunctionActivations
-	inCondition                        bool
-	isChecked                          bool
-	inCreate                           bool
-	inInvocation                       bool
-	inAssignment                       bool
-	allowSelfResourceFieldInvalidation bool
-	currentMemberExpression            *ast.MemberExpression
-	// initialized lazily. use beforeExtractor()
-	_beforeExtractor *BeforeExtractor
-	expectedType     Type
-
 	// memoryGauge is used for metering memory usage
-	memoryGauge  common.MemoryGauge
-	PositionInfo *PositionInfo
+	memoryGauge             common.MemoryGauge
+	Location                common.Location
+	expectedType            Type
+	resources               *Resources
+	valueActivations        *VariableActivations
+	currentMemberExpression *ast.MemberExpression
+	typeActivations         *VariableActivations
+	containerTypes          map[Type]bool
+	Program                 *ast.Program
+	PositionInfo            *PositionInfo
+	Config                  *Config
+	Elaboration             *Elaboration
+	// initialized lazily. use beforeExtractor()
+	_beforeExtractor                   *BeforeExtractor
+	errors                             []error
+	functionActivations                *FunctionActivations
+	inCondition                        bool
+	allowSelfResourceFieldInvalidation bool
+	inAssignment                       bool
+	inInvocation                       bool
+	inCreate                           bool
+	isChecked                          bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -136,9 +134,9 @@ func NewChecker(
 		return nil, errors.NewDefaultUserError("invalid default access check mode")
 	}
 
-	functionActivations := FunctionActivations{
+	functionActivations := &FunctionActivations{
 		// Pre-allocate a common function depth
-		activations: make([]FunctionActivation, 0, 2),
+		activations: make([]*FunctionActivation, 0, 2),
 	}
 	functionActivations.EnterFunction(
 		&FunctionType{

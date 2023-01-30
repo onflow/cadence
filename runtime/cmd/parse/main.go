@@ -57,12 +57,12 @@ type benchResult struct {
 }
 
 type result struct {
-	Path     string       `json:"path,omitempty"`
-	Code     []byte       `json:"-"`
-	Bench    *benchResult `json:"bench,omitempty"`
-	BenchStr string       `json:"-"`
 	Error    error        `json:"error,omitempty"`
+	Bench    *benchResult `json:"bench,omitempty"`
 	Program  *ast.Program `json:"program"`
+	Path     string       `json:"path,omitempty"`
+	BenchStr string       `json:"-"`
+	Code     []byte       `json:"-"`
 }
 
 type output interface {

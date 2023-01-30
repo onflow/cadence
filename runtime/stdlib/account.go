@@ -622,10 +622,10 @@ func newAccountKeysAddFunction(
 }
 
 type AccountKey struct {
-	KeyIndex  int
 	PublicKey *PublicKey
-	HashAlgo  sema.HashAlgorithm
+	KeyIndex  int
 	Weight    int
+	HashAlgo  sema.HashAlgorithm
 	IsRevoked bool
 }
 
@@ -1786,17 +1786,17 @@ func updateAccountContractCode(
 }
 
 type DeployedContractConstructorInvocation struct {
-	Address              common.Address
 	ContractType         *sema.CompositeType
 	ConstructorArguments []interpreter.Value
 	ArgumentTypes        []sema.Type
 	ParameterTypes       []sema.Type
+	Address              common.Address
 }
 
 type InvalidContractArgumentError struct {
-	Index        int
 	ExpectedType sema.Type
 	ActualType   sema.Type
+	Index        int
 }
 
 var _ errors.UserError = &InvalidContractArgumentError{}
@@ -1996,8 +1996,8 @@ func newAuthAccountContractsRemoveFunction(
 
 // ContractRemovalError
 type ContractRemovalError struct {
-	Name string
 	interpreter.LocationRange
+	Name string
 }
 
 var _ errors.UserError = &ContractRemovalError{}

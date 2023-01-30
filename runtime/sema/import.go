@@ -33,10 +33,10 @@ type Import interface {
 
 // ImportElement
 type ImportElement struct {
-	DeclarationKind common.DeclarationKind
-	Access          ast.Access
 	Type            Type
 	ArgumentLabels  []string
+	DeclarationKind common.DeclarationKind
+	Access          ast.Access
 }
 
 // ElaborationImport

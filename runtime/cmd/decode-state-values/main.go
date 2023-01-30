@@ -150,8 +150,8 @@ func (s *slabStorage) GenerateStorageID(_ atree.Address) (atree.StorageID, error
 
 func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 	var slabs []struct {
-		atree.StorageID
 		storageKey
+		atree.StorageID
 	}
 
 	// NOTE: iteration over map is safe,
@@ -167,8 +167,8 @@ func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 		}
 
 		slabs = append(slabs, struct {
-			atree.StorageID
 			storageKey
+			atree.StorageID
 		}{
 			StorageID:  storageID,
 			storageKey: key,

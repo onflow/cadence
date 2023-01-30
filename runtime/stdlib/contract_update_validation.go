@@ -397,9 +397,9 @@ func containsEnums(declaration ast.Declaration) bool {
 // ContractUpdateError is reported upon any invalid update to a contract or contract interface.
 // It contains all the errors reported during the update validation.
 type ContractUpdateError struct {
+	Location     common.Location
 	ContractName string
 	Errors       []error
-	Location     common.Location
 }
 
 var _ errors.UserError = &ContractUpdateError{}
@@ -422,9 +422,9 @@ func (e *ContractUpdateError) ImportLocation() common.Location {
 // FieldMismatchError is reported during a contract update, when a type of a field
 // does not match the existing type of the same field.
 type FieldMismatchError struct {
+	Err       error
 	DeclName  string
 	FieldName string
-	Err       error
 	ast.Range
 }
 

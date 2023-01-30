@@ -30,13 +30,15 @@ type Import interface {
 
 // VirtualImport
 
+type VirtualImportGlobal struct {
+	Value Value
+	Name  string
+}
+
 type VirtualImport struct {
-	Globals []struct {
-		Name  string
-		Value Value
-	}
 	TypeCodes   TypeCodes
 	Elaboration *sema.Elaboration
+	Globals     []VirtualImportGlobal
 }
 
 func (VirtualImport) isImport() {}
