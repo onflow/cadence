@@ -5944,7 +5944,55 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 }
 
+type logPanicError struct{}
+
+func (logPanicError) Error() string {
+	return ""
+}
+
+var _ error = logPanicError{}
+
 func TestRuntimeExternalError(t *testing.T) {
+
+	t.Parallel()
+
+	interpreterRuntime := newTestInterpreterRuntime()
+
+	script := []byte(`
+      transaction {
+        prepare() {
+          log("ok")
+        }
+      }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getSigningAccounts: func() ([]Address, error) {
+			return nil, nil
+		},
+		log: func(message string) {
+			panic(logPanicError{})
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := interpreterRuntime.ExecuteTransaction(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	RequireError(t, err)
+
+	assertRuntimeErrorIsExternalError(t, err)
+}
+
+func TestRuntimeExternalNonError(t *testing.T) {
 
 	t.Parallel()
 
@@ -5983,7 +6031,11 @@ func TestRuntimeExternalError(t *testing.T) {
 
 	RequireError(t, err)
 
-	assertRuntimeErrorIsExternalError(t, err)
+	var runtimeError Error
+	require.ErrorAs(t, err, &runtimeError)
+
+	innerError := runtimeError.Unwrap()
+	require.ErrorAs(t, innerError, &runtimeErrors.ExternalNonError{})
 }
 
 func TestRuntimeDeployCodeCaching(t *testing.T) {

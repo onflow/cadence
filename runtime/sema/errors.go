@@ -1599,6 +1599,10 @@ func (e *ImportedProgramError) ChildErrors() []error {
 	return []error{e.Err}
 }
 
+func (e *ImportedProgramError) Unwrap() error {
+	return e.Err
+}
+
 // AlwaysFailingNonResourceCastingTypeError
 
 type AlwaysFailingNonResourceCastingTypeError struct {

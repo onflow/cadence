@@ -64,7 +64,7 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 			return err
 		}
 
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			err = validator.ValidatePublicKey(publicKey)
 		})
 		return err
@@ -277,7 +277,7 @@ func newPublicKeyVerifySignatureFunction(
 			}
 
 			var valid bool
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				valid, err = verififier.VerifySignature(
 					signature,
 					domainSeparationTag,
@@ -338,7 +338,7 @@ func newPublicKeyVerifyPoPFunction(
 			}
 
 			var valid bool
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				valid, err = verifier.BLSVerifyPOP(publicKey, signature)
 			})
 			if err != nil {
