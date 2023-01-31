@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -104,8 +103,15 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 
 	checker.checkResourceFieldsInvalidated(transactionType, members)
 
-	transactionType.Roles.Foreach(func(_ string, roleTye *TransactionRoleType) {
-		checker.checkResourceFieldsInvalidated(roleTye, roleTye.Members)
+	transactionType.Members.Foreach(func(_ string, member *Member) {
+		transactionRoleType, ok := member.TypeAnnotation.Type.(*TransactionRoleType)
+		if !ok {
+			return
+		}
+		checker.checkResourceFieldsInvalidated(
+			transactionRoleType,
+			transactionRoleType.Members,
+		)
 	})
 
 	return
@@ -337,67 +343,49 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.PrepareParameters = checker.parameters(parameterList)
 	}
 
-	var fieldDeclarationsByIdentifier map[string]*ast.FieldDeclaration
-	fieldDeclarationByIdentifier := func(identifier string) *ast.FieldDeclaration {
-		if fieldDeclarationsByIdentifier == nil {
-			fieldDeclarationsByIdentifier = make(map[string]*ast.FieldDeclaration, len(declaration.Fields))
-			for _, field := range declaration.Fields {
-				fieldDeclarationsByIdentifier[field.Identifier.Identifier] = field
-			}
-		}
-		return fieldDeclarationsByIdentifier[identifier]
-	}
-
-	roles := &orderedmap.OrderedMap[string, *TransactionRoleType]{}
 	for _, roleDeclaration := range declaration.Roles {
 		transactionRoleType := checker.transactionRoleType(roleDeclaration)
 		checker.Elaboration.SetTransactionRoleDeclarationType(roleDeclaration, transactionRoleType)
 
-		// Ensure roles are not duplicated
-		roleName := roleDeclaration.Identifier.Identifier
-		if _, ok := roles.Get(roleName); ok {
-			checker.report(
-				&DuplicateTransactionRoleError{
-					Name: roleName,
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						roleDeclaration.Identifier,
-					),
-				},
-			)
-		} else {
-			roles.Set(roleName, transactionRoleType)
-		}
-
 		// Ensure roles and fields do not clash
-		if _, ok := members.Get(roleName); ok {
-			field := fieldDeclarationByIdentifier(roleName)
-			if field != nil {
+		roleName := roleDeclaration.Identifier.Identifier
+		if member, ok := members.Get(roleName); ok {
+
+			identifierRange := ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				roleDeclaration.Identifier,
+			)
+
+			if member.DeclarationKind == common.DeclarationKindTransactionRole {
+				checker.report(
+					&DuplicateTransactionRoleError{
+						Name:  roleName,
+						Range: identifierRange,
+					},
+				)
+			} else {
 				checker.report(
 					&TransactionRoleWithFieldNameError{
-						FieldIdentifier: field.Identifier,
-						Range: ast.NewRangeFromPositioned(
-							checker.memoryGauge,
-							roleDeclaration.Identifier,
-						),
+						FieldIdentifier: member.Identifier,
+						Range:           identifierRange,
 					},
 				)
 			}
-		} else {
-			members.Set(
-				roleName,
-				&Member{
-					ContainerType:   transactionType,
-					Identifier:      roleDeclaration.Identifier,
-					DeclarationKind: common.DeclarationKindTransactionRole,
-					VariableKind:    ast.VariableKindConstant,
-					TypeAnnotation:  NewTypeAnnotation(transactionRoleType),
-					DocString:       roleDeclaration.DocString,
-				},
-			)
+			continue
 		}
+
+		members.Set(
+			roleName,
+			&Member{
+				ContainerType:   transactionType,
+				Identifier:      roleDeclaration.Identifier,
+				DeclarationKind: common.DeclarationKindTransactionRole,
+				VariableKind:    ast.VariableKindConstant,
+				TypeAnnotation:  NewTypeAnnotation(transactionRoleType),
+				DocString:       roleDeclaration.DocString,
+			},
+		)
 	}
-	transactionType.Roles = roles
 
 	checker.Elaboration.SetTransactionDeclarationType(declaration, transactionType)
 	checker.Elaboration.TransactionTypes = append(checker.Elaboration.TransactionTypes, transactionType)
