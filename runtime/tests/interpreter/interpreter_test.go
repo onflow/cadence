@@ -597,6 +597,70 @@ func TestInterpretParameters(t *testing.T) {
 		inter, b, value)
 }
 
+func TestInterpretArrayEquality(t *testing.T) {
+	t.Parallel()
+
+	testBooleanFunction := func(t *testing.T, name string, expected bool, innerCode string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.Equal(t, bool(boolVal), expected)
+		})
+
+	}
+
+	// variable sized arrays
+	nestingLimit := 4
+
+	for i := 0; i < nestingLimit; i++ {
+		nestingLevel := i
+		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
+
+		for _, opStr := range []string{"==", "!="} {
+			op := opStr
+			testname := fmt.Sprintf("test variable size array %s at nesting level %d", op, nestingLevel)
+			code := fmt.Sprintf(` 
+					let xs = %s
+					return xs %s xs
+				`,
+				array,
+				op,
+			)
+
+			testBooleanFunction(t, testname, op == "==", code)
+		}
+	}
+
+	// fixed size arrays
+
+	testBooleanFunction(t, "fixed array [Int; 3] should not equal a different array", false, `
+		let xs: [Int; 3] = [1, 2, 3]
+		let ys: [Int; 3] = [4, 5, 6]
+		return xs == ys
+	`)
+
+	testBooleanFunction(t, "fixed array [Int; 3] should be unequal to a different array", true, `
+		let xs: [Int; 3] = [1, 2, 3]
+		let ys: [Int; 3] = [4, 5, 6]
+		return xs != ys
+	`)
+
+	testBooleanFunction(t, "fixed array [[Int; 2]; 1] should equal itself", true, `
+		let xs: [[Int; 2]; 1] = [[42, 1337]]
+		return xs == xs
+	`)
+}
+
 func TestInterpretArrayIndexing(t *testing.T) {
 
 	t.Parallel()
