@@ -239,10 +239,10 @@ func (e RedeclarationError) Error() string {
 // DereferenceError
 
 type DereferenceError struct {
-	Cause        string
+	LocationRange
 	ExpectedType sema.Type
 	ActualType   sema.Type
-	LocationRange
+	Cause        string
 }
 
 var _ errors.UserError = DereferenceError{}

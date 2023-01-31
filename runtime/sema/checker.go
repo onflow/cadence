@@ -91,28 +91,28 @@ type ContractValueHandlerFunc func(
 
 type Checker struct {
 	// memoryGauge is used for metering memory usage
-	memoryGauge             common.MemoryGauge
-	Location                common.Location
-	expectedType            Type
-	resources               *Resources
-	valueActivations        *VariableActivations
-	currentMemberExpression *ast.MemberExpression
-	typeActivations         *VariableActivations
-	containerTypes          map[Type]struct{}
-	Program                 *ast.Program
-	PositionInfo            *PositionInfo
-	Config                  *Config
-	Elaboration             *Elaboration
+	memoryGauge  common.MemoryGauge
+	Location     common.Location
+	expectedType Type
+	Config       *Config
 	// initialized lazily. use beforeExtractor()
-	_beforeExtractor                   *BeforeExtractor
-	errors                             []error
-	functionActivations                *FunctionActivations
-	inCondition                        bool
-	allowSelfResourceFieldInvalidation bool
-	inAssignment                       bool
-	inInvocation                       bool
-	inCreate                           bool
-	isChecked                          bool
+	_beforeExtractor                 *BeforeExtractor
+	currentMemberExpression          *ast.MemberExpression
+	typeActivations                  *VariableActivations
+	containerTypes                   map[Type]struct{}
+	Program                          *ast.Program
+	PositionInfo                     *PositionInfo
+	resources                        *Resources
+	Elaboration                      *Elaboration
+	valueActivations                 *VariableActivations
+	resourceFieldInvalidationAllowed func(*ast.MemberExpression) *Member
+	functionActivations              *FunctionActivations
+	errors                           []error
+	inCondition                      bool
+	inAssignment                     bool
+	inInvocation                     bool
+	inCreate                         bool
+	isChecked                        bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -1355,9 +1355,10 @@ func (checker *Checker) recordResourceInvalidation(
 		return nil
 	}
 
-	reportInvalidNestedMove := func() {
+	reportInvalidNestedMove := func(identifier *ast.Identifier) {
 		checker.report(
 			&InvalidNestedResourceMoveError{
+				Identifier: identifier,
 				Range: ast.NewRangeFromPositioned(
 					checker.memoryGauge,
 					expression,
@@ -1366,31 +1367,12 @@ func (checker *Checker) recordResourceInvalidation(
 		)
 	}
 
-	accessedSelfMember := checker.accessedSelfMember(expression)
-
-	switch expression.(type) {
-	case *ast.MemberExpression:
-
-		if accessedSelfMember == nil ||
-			!checker.allowSelfResourceFieldInvalidation {
-
-			reportInvalidNestedMove()
-			return nil
+	getRecordedResourceInvalidation := func(res Resource) *recordedResourceInvalidation {
+		invalidation := ResourceInvalidation{
+			Kind:     invalidationKind,
+			StartPos: expression.StartPosition(),
+			EndPos:   expression.EndPosition(checker.memoryGauge),
 		}
-
-	case *ast.IndexExpression:
-		reportInvalidNestedMove()
-		return nil
-	}
-
-	invalidation := ResourceInvalidation{
-		Kind:     invalidationKind,
-		StartPos: expression.StartPosition(),
-		EndPos:   expression.EndPosition(checker.memoryGauge),
-	}
-
-	if checker.allowSelfResourceFieldInvalidation && accessedSelfMember != nil {
-		res := Resource{Member: accessedSelfMember}
 
 		checker.maybeAddResourceInvalidation(res, invalidation)
 
@@ -1400,37 +1382,51 @@ func (checker *Checker) recordResourceInvalidation(
 		}
 	}
 
-	identifierExpression, ok := expression.(*ast.IdentifierExpression)
-	if !ok {
+	switch expression := expression.(type) {
+	case *ast.IdentifierExpression:
+		variable := checker.findAndCheckValueVariable(expression, false)
+		if variable == nil {
+			return nil
+		}
+
+		if invalidationKind != ResourceInvalidationKindMoveTemporary &&
+			variable.DeclarationKind == common.DeclarationKindSelf {
+
+			checker.report(
+				&InvalidSelfInvalidationError{
+					InvalidationKind: invalidationKind,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						expression,
+					),
+				},
+			)
+		}
+
+		return getRecordedResourceInvalidation(Resource{
+			Variable: variable,
+		})
+
+	case *ast.MemberExpression:
+		resourceFieldInvalidationAllowed := checker.resourceFieldInvalidationAllowed
+		if resourceFieldInvalidationAllowed != nil {
+			member := resourceFieldInvalidationAllowed(expression)
+			if member != nil {
+				return getRecordedResourceInvalidation(Resource{
+					Member: member,
+				})
+			}
+		}
+
+		reportInvalidNestedMove(&expression.Identifier)
 		return nil
-	}
 
-	variable := checker.findAndCheckValueVariable(identifierExpression, false)
-	if variable == nil {
+	case *ast.IndexExpression:
+		reportInvalidNestedMove(nil)
 		return nil
-	}
 
-	if invalidationKind != ResourceInvalidationKindMoveTemporary &&
-		variable.DeclarationKind == common.DeclarationKindSelf {
-
-		checker.report(
-			&InvalidSelfInvalidationError{
-				InvalidationKind: invalidationKind,
-				Range: ast.NewRangeFromPositioned(
-					checker.memoryGauge,
-					expression,
-				),
-			},
-		)
-	}
-
-	res := Resource{Variable: variable}
-
-	checker.maybeAddResourceInvalidation(res, invalidation)
-
-	return &recordedResourceInvalidation{
-		resource:     res,
-		invalidation: invalidation,
+	default:
+		return nil
 	}
 }
 
@@ -1798,11 +1794,14 @@ func (checker *Checker) isWriteableAccess(access ast.Access) bool {
 	}
 }
 
-func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
-	allowSelfResourceFieldInvalidation := checker.allowSelfResourceFieldInvalidation
-	checker.allowSelfResourceFieldInvalidation = true
+func (checker *Checker) withResourceFieldInvalidationAllowed(
+	invalidationAllowed func(*ast.MemberExpression) *Member,
+	f func(),
+) {
+	oldInvalidationAllowed := checker.resourceFieldInvalidationAllowed
+	checker.resourceFieldInvalidationAllowed = invalidationAllowed
 	defer func() {
-		checker.allowSelfResourceFieldInvalidation = allowSelfResourceFieldInvalidation
+		checker.resourceFieldInvalidationAllowed = oldInvalidationAllowed
 	}()
 
 	f()

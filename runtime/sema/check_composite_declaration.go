@@ -171,17 +171,22 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 	// NOTE: check destructors after initializer and functions
 
-	checker.withSelfResourceInvalidationAllowed(func() {
-		checker.checkDestructors(
-			declaration.Members.Destructors(),
-			declaration.Members.FieldsByIdentifier(),
-			compositeType.Members,
-			compositeType,
-			declaration.DeclarationKind(),
-			declaration.DeclarationDocString(),
-			kind,
-		)
-	})
+	checker.withResourceFieldInvalidationAllowed(
+		func(expression *ast.MemberExpression) *Member {
+			return checker.accessedSelfMember(expression)
+		},
+		func() {
+			checker.checkDestructors(
+				declaration.Members.Destructors(),
+				declaration.Members.FieldsByIdentifier(),
+				compositeType.Members,
+				compositeType,
+				declaration.DeclarationKind(),
+				declaration.DeclarationDocString(),
+				kind,
+			)
+		},
+	)
 
 	// NOTE: visit interfaces first
 	// DON'T use `nestedDeclarations`, because of non-deterministic order

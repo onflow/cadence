@@ -1860,6 +1860,7 @@ func (e *MissingResourceAnnotationError) Error() string {
 // InvalidNestedResourceMoveError
 
 type InvalidNestedResourceMoveError struct {
+	Identifier *ast.Identifier
 	ast.Range
 }
 
@@ -1871,6 +1872,11 @@ func (*InvalidNestedResourceMoveError) isSemanticError() {}
 func (*InvalidNestedResourceMoveError) IsUserError() {}
 
 func (e *InvalidNestedResourceMoveError) Error() string {
+	identifier := e.Identifier
+	if identifier != nil {
+		return fmt.Sprintf("cannot move nested resource-kinded field `%s`", identifier.Identifier)
+	}
+
 	return "cannot move nested resource"
 }
 

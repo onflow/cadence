@@ -82,13 +82,37 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		declaration.PostConditions,
 		VoidType,
 		func() {
-			checker.withSelfResourceInvalidationAllowed(func() {
-				checker.visitTransactionExecuteFunction(declaration.Execute, transactionType)
-			})
+			checker.withResourceFieldInvalidationAllowed(
+				func(expression *ast.MemberExpression) *Member {
+					// In addition to the behaviour in composite destructors,
+					// where a self member may be invalidated,
+					// also allow invalidation of role members
+					memberInfo, _ := checker.Elaboration.MemberExpressionMemberInfo(expression)
+					if _, ok := memberInfo.AccessedType.(*TransactionRoleType); ok {
+						return memberInfo.Member
+					}
+
+					return checker.accessedSelfMember(expression)
+				},
+				func() {
+					checker.visitTransactionExecuteFunction(declaration.Execute, transactionType)
+				},
+			)
 		},
 	)
 
-	checker.checkResourceFieldsInvalidated(transactionType, transactionType.Members)
+	checker.checkResourceFieldsInvalidated(transactionType, members)
+
+	transactionType.Members.Foreach(func(_ string, member *Member) {
+		transactionRoleType, ok := member.TypeAnnotation.Type.(*TransactionRoleType)
+		if !ok {
+			return
+		}
+		checker.checkResourceFieldsInvalidated(
+			transactionRoleType,
+			transactionRoleType.Members,
+		)
+	})
 
 	return
 }

@@ -88,17 +88,17 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		return nil, err
 	}
 
+	config := options.Config
+	if config == nil {
+		config = &sema.Config{}
+	}
+
+	if config.AccessCheckMode == sema.AccessCheckModeDefault {
+		config.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted
+	}
+	config.ExtendedElaborationEnabled = true
+
 	check := func() (*sema.Checker, error) {
-
-		config := options.Config
-		if config == nil {
-			config = &sema.Config{}
-		}
-
-		if config.AccessCheckMode == sema.AccessCheckModeDefault {
-			config.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted
-		}
-		config.ExtendedElaborationEnabled = true
 
 		checker, err := sema.NewChecker(
 			program,

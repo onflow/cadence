@@ -198,10 +198,10 @@ func (d *TransactionDeclaration) String() string {
 // TransactionRoleDeclaration
 
 type TransactionRoleDeclaration struct {
-	Identifier Identifier
 	Prepare    *SpecialFunctionDeclaration
 	DocString  string
 	Fields     []*FieldDeclaration
+	Identifier Identifier
 	Range
 }
 

@@ -57,7 +57,7 @@ import (
 
 */
 
-// A Resource is a variable or a member
+// A Resource is a variable OR a member
 type Resource struct {
 	Variable *Variable
 	Member   *Member
