@@ -2234,16 +2234,16 @@ func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expect
 // visitExpressionWithForceType
 //
 // Parameters:
-// expr         - Expression to check
-// expectedType - Contextually expected type of the expression
-// forceType    - Specifies whether to use the expected type as a hard requirement (forceType = true)
-//
-//	or whether to use the expected type for type inferring only (forceType = false)
+//   - expr: Expression to check
+//   - expectedType: Contextually expected type of the expression
+//   - forceType:
+//     Specifies whether to use the expected type as a hard requirement (forceType = true)
+//     or whether to use the expected type for type inferring only (forceType = false)
 //
 // Return types:
-// visibleType - The type that others should 'see' as the type of this expression. This could be
-//
-//	used as the type of the expression to avoid the type errors being delegated up.
+//   - visibleType:
+//     The type that others should 'see' as the type of this expression.
+//     This could be used as the type of the expression to avoid the type errors being delegated up.
 //
 // actualType  - The actual type of the expression.
 func (checker *Checker) visitExpressionWithForceType(

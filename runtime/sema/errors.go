@@ -2621,6 +2621,27 @@ func (e *NonReferenceTypeReferenceError) SecondaryError() string {
 	)
 }
 
+// InvalidReferenceTargetTypeError is reported when a reference expression
+// targets a type which may not be referenced.
+type InvalidReferenceTargetTypeError struct {
+	TargetType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidReferenceTargetTypeError{}
+var _ errors.UserError = &InvalidReferenceTargetTypeError{}
+
+func (*InvalidReferenceTargetTypeError) isSemanticError() {}
+
+func (*InvalidReferenceTargetTypeError) IsUserError() {}
+
+func (e *InvalidReferenceTargetTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot create reference to `%s`",
+		e.TargetType.QualifiedString(),
+	)
+}
+
 // InvalidResourceCreationError
 
 type InvalidResourceCreationError struct {

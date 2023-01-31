@@ -1279,3 +1279,28 @@ func TestCheckReferenceTypeImplicitConformance(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
+
+func TestCheckInvalidReferenceTargetType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("transaction role", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          transaction {
+
+              role role1 {}
+
+              execute {
+                  &self.role1 as &AnyStruct
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidReferenceTargetTypeError{}, errs[0])
+	})
+}
