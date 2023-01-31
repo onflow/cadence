@@ -552,10 +552,72 @@ func TestCheckTransactionRoles(t *testing.T) {
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidTransactionPrepareParameterTypeError{}, errs[0])
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("missing role", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          transaction {
+
+              prepare(first: AuthAccount, second: AuthAccount) {}
+
+              role role1 {
+                  prepare(signer: AuthAccount) {}
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.RoleCountMismatchError{}, errs[0])
+	})
+
+	t.Run("too many roles", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          transaction {
+
+              prepare(signer: AuthAccount) {}
+
+              role role1 {
+                  prepare(signer: AuthAccount) {}
+              }
+
+              role role2 {
+                  prepare(signer: AuthAccount) {}
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.RoleCountMismatchError{}, errs[0])
+	})
+
+	t.Run("correct number of roles", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          transaction {
+
+              prepare(first: AuthAccount, second: AuthAccount) {}
+
+              role role1 {
+                  prepare(signer: AuthAccount) {}
+              }
+
+              role role2 {
+                  prepare(signer: AuthAccount) {}
+              }
+          }
+        `)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("matching prepare", func(t *testing.T) {
@@ -589,7 +651,7 @@ func TestCheckTransactionRoles(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.MissingRolePrepareError{}, errs[0])
+		require.IsType(t, &sema.PrepareParameterCountMismatchError{}, errs[0])
 	})
 
 	t.Run("fewer prepare parameters", func(t *testing.T) {
@@ -644,6 +706,19 @@ func TestCheckTransactionRoles(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.PrepareParameterCountMismatchError{}, errs[0])
+	})
+
+	t.Run("roles are not required", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          transaction {
+
+              prepare(first: AuthAccount, second: AuthAccount) {}
+          }
+        `)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("transaction parameter usage", func(t *testing.T) {

@@ -3094,20 +3094,26 @@ func (e *PrepareParameterCountMismatchError) Error() string {
 	)
 }
 
-// MissingRolePrepareError
-type MissingRolePrepareError struct {
+// RoleCountMismatchError
+type RoleCountMismatchError struct {
+	ActualCount   int
+	ExpectedCount int
 	ast.Range
 }
 
-var _ SemanticError = &MissingRolePrepareError{}
-var _ errors.UserError = &MissingRolePrepareError{}
+var _ SemanticError = &RoleCountMismatchError{}
+var _ errors.UserError = &RoleCountMismatchError{}
 
-func (*MissingRolePrepareError) isSemanticError() {}
+func (*RoleCountMismatchError) isSemanticError() {}
 
-func (*MissingRolePrepareError) IsUserError() {}
+func (*RoleCountMismatchError) IsUserError() {}
 
-func (e *MissingRolePrepareError) Error() string {
-	return "role is missing prepare block that matches transaction's"
+func (e *RoleCountMismatchError) Error() string {
+	return fmt.Sprintf(
+		"transaction must have one role for each prepare parameter: expected %d, got %d",
+		e.ExpectedCount,
+		e.ActualCount,
+	)
 }
 
 // InvalidNestedDeclarationError
