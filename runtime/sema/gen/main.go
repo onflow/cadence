@@ -282,7 +282,11 @@ func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{
 func typeExpr(t ast.Type) dst.Expr {
 	switch t := t.(type) {
 	case *ast.NominalType:
-		return typeVarIdent(t.Identifier.Identifier)
+		identifier := t.Identifier.Identifier
+		if identifier == "" {
+			identifier = "Void"
+		}
+		return typeVarIdent(identifier)
 
 	case *ast.OptionalType:
 		return &dst.UnaryExpr{
@@ -859,11 +863,11 @@ func stringMemberResolverMapType() *dst.MapType {
 	}
 }
 
-func typeAnnotationCallExpr(returnTypeExpr dst.Expr) *dst.CallExpr {
+func typeAnnotationCallExpr(ty dst.Expr) *dst.CallExpr {
 	return &dst.CallExpr{
 		Fun: dst.NewIdent("NewTypeAnnotation"),
 		Args: []dst.Expr{
-			returnTypeExpr,
+			ty,
 		},
 	}
 }

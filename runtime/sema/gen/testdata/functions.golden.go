@@ -28,7 +28,7 @@ const TestTypeNothingFunctionName = "nothing"
 
 var TestTypeNothingFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		Type,
+		VoidType,
 	),
 }
 
@@ -47,7 +47,7 @@ var TestTypeParamsFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		Type,
+		VoidType,
 	),
 }
 
