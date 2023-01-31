@@ -171,7 +171,7 @@ func (checker *Checker) checkRolePrepareParameterList(
 			)
 		}
 	} else {
-		// If the transaction declaration's prepare block has no parameters,
+		// If the transaction declaration's prepare block has parameters,
 		// then all roles should have exactly one parameter
 		const expectedPrepareParameterCount = 1
 		if transactionRolePrepareParameterCount != expectedPrepareParameterCount {
