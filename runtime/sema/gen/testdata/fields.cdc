@@ -16,4 +16,10 @@ pub struct Test {
 
     /// This is a test parameterized-type field.
     let testParam: Foo<Bar>
+
+    /// This is a test address field.
+    let testAddress: Address
+
+    /// This is a test type field.
+    let testType: Type
 }

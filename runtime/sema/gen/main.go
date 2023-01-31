@@ -283,8 +283,13 @@ func typeExpr(t ast.Type) dst.Expr {
 	switch t := t.(type) {
 	case *ast.NominalType:
 		identifier := t.Identifier.Identifier
-		if identifier == "" {
+		switch identifier {
+		case "":
 			identifier = "Void"
+		case "Address":
+			identifier = "TheAddress"
+		case "Type":
+			identifier = "Meta"
 		}
 		return typeVarIdent(identifier)
 

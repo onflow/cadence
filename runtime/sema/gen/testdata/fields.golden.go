@@ -75,6 +75,20 @@ var TestTypeTestParamFieldType = FooType.Instantiate([]Type{BarType}, panicUnexp
 const TestTypeTestParamFieldDocString = `This is a test parameterized-type field.
 `
 
+const TestTypeTestAddressFieldName = "testAddress"
+
+var TestTypeTestAddressFieldType = TheAddressType
+
+const TestTypeTestAddressFieldDocString = `This is a test address field.
+`
+
+const TestTypeTestTypeFieldName = "testType"
+
+var TestTypeTestTypeFieldType = MetaType
+
+const TestTypeTestTypeFieldDocString = `This is a test type field.
+`
+
 const TestTypeName = "Test"
 
 var TestType = &SimpleType{
@@ -182,6 +196,38 @@ var TestType = &SimpleType{
 						identifier,
 						TestTypeTestParamFieldType,
 						TestTypeTestParamFieldDocString,
+					)
+				},
+			},
+			TestTypeTestAddressFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeTestAddressFieldType,
+						TestTypeTestAddressFieldDocString,
+					)
+				},
+			},
+			TestTypeTestTypeFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeTestTypeFieldType,
+						TestTypeTestTypeFieldDocString,
 					)
 				},
 			},
