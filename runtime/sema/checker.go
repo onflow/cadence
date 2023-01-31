@@ -348,20 +348,20 @@ func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Decl
 		return
 	}
 
-	validDeclarationKinds := map[common.DeclarationKind]bool{}
-
 	validTopLevelDeclarations := validTopLevelDeclarationsHandler(checker.Location)
 	if validTopLevelDeclarations == nil {
 		return
 	}
 
+	validDeclarationKindMask := 0
+
 	for _, declarationKind := range validTopLevelDeclarations {
-		validDeclarationKinds[declarationKind] = true
+		validDeclarationKindMask |= 1 << declarationKind
 	}
 
 	for _, declaration := range declarations {
-		isValid := validDeclarationKinds[declaration.DeclarationKind()]
-		if isValid {
+		isValid := validDeclarationKindMask & (1 << declaration.DeclarationKind())
+		if isValid != 0 {
 			continue
 		}
 
