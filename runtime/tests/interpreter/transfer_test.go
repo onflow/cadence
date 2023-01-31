@@ -65,7 +65,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 			Kind: common.DeclarationKindStructure,
 		})
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,

@@ -96,7 +96,7 @@ func testAccount(
 	}
 	checkerConfig.BaseValueActivation = baseValueActivation
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range valueDeclarations {
 		interpreter.Declare(baseActivation, valueDeclaration)
 	}
@@ -2986,7 +2986,7 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			}
 			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 			baseValueActivation.DeclareValue(authAccountValueDeclaration)
-			baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+			baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 			interpreter.Declare(baseActivation, authAccountValueDeclaration)
 
 			importedChecker, err := checker.ParseAndCheckWithOptions(t,

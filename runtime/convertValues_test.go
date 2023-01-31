@@ -178,7 +178,7 @@ func TestExportValue(t *testing.T) {
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					common.Address{},
+					common.ZeroAddress,
 				)
 			},
 			expected: cadence.NewArray([]cadence.Value{}).
@@ -195,7 +195,7 @@ func TestExportValue(t *testing.T) {
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					interpreter.NewUnmeteredIntValueFromInt64(42),
 					interpreter.NewUnmeteredStringValue("foo"),
 				)
@@ -493,7 +493,7 @@ func TestExportValue(t *testing.T) {
 						inter,
 						interpreter.EmptyLocationRange,
 						interpreter.ByteArrayStaticType,
-						common.Address{},
+						common.ZeroAddress,
 					),
 				)
 			},
@@ -513,7 +513,7 @@ func TestExportValue(t *testing.T) {
 						inter,
 						interpreter.EmptyLocationRange,
 						blockIDStaticType,
-						common.Address{},
+						common.ZeroAddress,
 					),
 					interpreter.NewUnmeteredUFix64ValueWithInteger(1, interpreter.EmptyLocationRange),
 				)
@@ -612,7 +612,7 @@ func TestImportValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 			),
 			expectedType: &sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -630,7 +630,7 @@ func TestImportValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 				interpreter.NewUnmeteredStringValue("foo"),
 			),
@@ -3102,7 +3102,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-			common.Address{},
+			common.ZeroAddress,
 		)
 
 		actual, err := exportValueWithInterpreter(
@@ -3148,7 +3148,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
-				common.Address{},
+				common.ZeroAddress,
 			),
 			actual,
 		)
@@ -3166,7 +3166,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
@@ -3221,7 +3221,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 				interpreter.NewUnmeteredStringValue("foo"),
 			),
@@ -3266,14 +3266,14 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					interpreter.NewUnmeteredInt8Value(4),
 					interpreter.NewUnmeteredInt8Value(3),
 				),
@@ -3283,7 +3283,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					interpreter.NewUnmeteredInt8Value(42),
 					interpreter.NewUnmeteredInt8Value(54),
 				),
@@ -4693,7 +4693,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		inter,
 		interpreter.EmptyLocationRange,
 		staticArrayType,
-		common.Address{},
+		common.ZeroAddress,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
 		interpreter.NewUnmeteredStringValue("foo"),
 	)
@@ -4791,7 +4791,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		"Foo",
 		common.CompositeKindStructure,
 		internalCompositeValueFields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 
 	externalCompositeValue := cadence.Struct{

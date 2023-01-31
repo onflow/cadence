@@ -70,7 +70,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 					cadence.Struct{}.
 						WithType(&cadence.StructType{
 							Location: common.AddressLocation{
-								Address: common.Address{},
+								Address: common.ZeroAddress,
 								Name:    "Foo",
 							},
 							QualifiedIdentifier: "Foo.Bar",
@@ -120,7 +120,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 					cadence.Struct{}.
 						WithType(&cadence.StructType{
 							Location: common.AddressLocation{
-								Address: common.Address{},
+								Address: common.ZeroAddress,
 								Name:    "Foo",
 							},
 							QualifiedIdentifier: "Foo.Bar",

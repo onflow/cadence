@@ -31,6 +31,9 @@ const AddressLength = 8
 
 type Address [AddressLength]byte
 
+// Singleton for address 0x0. This should be used in place of an empty initializer `Address{}`
+var ZeroAddress Address = Address{}
+
 // MustBytesToAddress returns Address with value b.
 //
 // If the address is too large, then the function panics.

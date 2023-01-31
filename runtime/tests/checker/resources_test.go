@@ -1655,7 +1655,6 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 	})
 

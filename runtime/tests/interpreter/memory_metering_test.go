@@ -1053,7 +1053,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 			interpreter.Declare(baseActivation, valueDeclaration)
@@ -1094,7 +1094,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 			stdlib.NewPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
@@ -1148,7 +1148,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 			stdlib.NewPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
@@ -8753,7 +8753,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, logFunction)
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
@@ -9097,7 +9097,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, logFunction)
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
