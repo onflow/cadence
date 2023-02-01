@@ -16,7 +16,7 @@ on:
         required: true
       base:
         description: 'Base branch for the release'
-        required: false
+        required: true
         default: 'master'
 
 env:

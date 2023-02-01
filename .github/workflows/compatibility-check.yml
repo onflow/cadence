@@ -6,10 +6,10 @@ on:
       branch:
         description: 'Current branch/tag'
         required: true
+        default: 'master'
       base:
         description: 'Base branch/tag'
-        required: false
-        default: 'master'
+        required: true
 
 env:
   GO_VERSION: '1.19.2'
