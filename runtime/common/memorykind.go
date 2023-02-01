@@ -105,7 +105,6 @@ const (
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
-	MemoryKindCadenceSimpleType
 	MemoryKindCadenceOptionalType
 	MemoryKindCadenceVariableSizedArrayType
 	MemoryKindCadenceConstantSizedArrayType
@@ -152,6 +151,8 @@ const (
 	MemoryKindFunctionBlock
 	MemoryKindParameter
 	MemoryKindParameterList
+	MemoryKindTypeParameter
+	MemoryKindTypeParameterList
 	MemoryKindTransfer
 	MemoryKindMembers
 	MemoryKindTypeAnnotation

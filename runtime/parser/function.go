@@ -169,6 +169,122 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	), nil
 }
 
+func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
+	var typeParameters []*ast.TypeParameter
+
+	p.skipSpaceAndComments()
+
+	if !p.current.Is(lexer.TokenLess) {
+		return nil, nil
+	}
+
+	startPos := p.current.StartPos
+	// Skip the opening paren
+	p.next()
+
+	var endPos ast.Position
+
+	expectTypeParameter := true
+
+	atEnd := false
+	for !atEnd {
+		p.skipSpaceAndComments()
+		switch p.current.Type {
+		case lexer.TokenIdentifier:
+			if !expectTypeParameter {
+				p.report(&MissingCommaInParameterListError{
+					Pos: p.current.StartPos,
+				})
+			}
+			typeParameter, err := parseTypeParameter(p)
+			if err != nil {
+				return nil, err
+			}
+
+			typeParameters = append(typeParameters, typeParameter)
+			expectTypeParameter = false
+
+		case lexer.TokenComma:
+			if expectTypeParameter {
+				return nil, p.syntaxError(
+					"expected type parameter or end of type parameter list, got %s",
+					p.current.Type,
+				)
+			}
+			// Skip the comma
+			p.next()
+			expectTypeParameter = true
+
+		case lexer.TokenGreater:
+			endPos = p.current.EndPos
+			// Skip the closing paren
+			p.next()
+			atEnd = true
+
+		case lexer.TokenEOF:
+			return nil, p.syntaxError(
+				"missing %s at end of type parameter list",
+				lexer.TokenGreater,
+			)
+
+		default:
+			if expectTypeParameter {
+				return nil, p.syntaxError(
+					"expected parameter or end of type parameter list, got %s",
+					p.current.Type,
+				)
+			} else {
+				return nil, p.syntaxError(
+					"expected comma or end of type parameter list, got %s",
+					p.current.Type,
+				)
+			}
+		}
+	}
+
+	return ast.NewTypeParameterList(
+		p.memoryGauge,
+		typeParameters,
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
+	), nil
+}
+
+func parseTypeParameter(p *parser) (*ast.TypeParameter, error) {
+	p.skipSpaceAndComments()
+
+	if !p.current.Is(lexer.TokenIdentifier) {
+		return nil, p.syntaxError(
+			"expected type parameter name, got %s",
+			p.current.Type,
+		)
+	}
+
+	identifier := p.tokenToIdentifier(p.current)
+	p.nextSemanticToken()
+
+	var err error
+	var typeBound *ast.TypeAnnotation
+	if p.current.Is(lexer.TokenColon) {
+		p.nextSemanticToken()
+
+		typeBound, err = parseTypeAnnotation(p)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	return ast.NewTypeParameter(
+		p.memoryGauge,
+		identifier,
+		typeBound,
+	), nil
+}
+
 func parseFunctionDeclaration(
 	p *parser,
 	functionBlockIsOptional bool,
@@ -195,6 +311,16 @@ func parseFunctionDeclaration(
 	// Skip the identifier
 	p.next()
 
+	var typeParameterList *ast.TypeParameterList
+
+	if p.config.TypeParametersEnabled {
+		var err error
+		typeParameterList, err = parseTypeParameterList(p)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	parameterList, returnTypeAnnotation, functionBlock, err :=
 		parseFunctionParameterListAndRest(p, functionBlockIsOptional)
 
@@ -208,6 +334,7 @@ func parseFunctionDeclaration(
 		staticPos != nil,
 		nativePos != nil,
 		identifier,
+		typeParameterList,
 		parameterList,
 		returnTypeAnnotation,
 		functionBlock,

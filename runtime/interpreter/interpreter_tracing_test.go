@@ -158,7 +158,7 @@ func TestInterpreterTracing(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			cloned,
 		)
 		require.NotNil(t, array)

@@ -145,7 +145,7 @@ func NewBlockValue(
 		inter,
 		locationRange,
 		BlockIDStaticType,
-		common.Address{},
+		common.ZeroAddress,
 		values...,
 	)
 
@@ -176,7 +176,7 @@ func getBlockAtHeight(
 	exists bool,
 ) {
 	var err error
-	wrapPanic(func() {
+	errors.WrapPanic(func() {
 		block, exists, err = provider.GetBlockAtHeight(height)
 	})
 	if err != nil {
@@ -201,7 +201,7 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 
 			var height uint64
 			var err error
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				height, err = provider.GetCurrentBlockHeight()
 			})
 			if err != nil {

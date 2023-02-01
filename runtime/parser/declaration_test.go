@@ -1342,6 +1342,274 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("with empty type parameters, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < > () {}"),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					TypeParameterList: &ast.TypeParameterList{
+						TypeParameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+								EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with type parameters, single type parameter, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < A  > () {}"),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					TypeParameterList: &ast.TypeParameterList{
+						TypeParameters: []*ast.TypeParameter{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Offset: 11, Line: 1, Column: 11},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+							EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
+								EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with type parameters, multiple parameters, type bound, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < A  , B : C > () {}"),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					TypeParameterList: &ast.TypeParameterList{
+						TypeParameters: []*ast.TypeParameter{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Offset: 11, Line: 1, Column: 11},
+								},
+							},
+							{
+								Identifier: ast.Identifier{
+									Identifier: "B",
+									Pos:        ast.Position{Offset: 16, Line: 1, Column: 16},
+								},
+								TypeBound: &ast.TypeAnnotation{
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "C",
+											Pos:        ast.Position{Offset: 20, Line: 1, Column: 20},
+										},
+									},
+									StartPos: ast.Position{Offset: 20, Line: 1, Column: 20},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 22, Offset: 22},
+						},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 24, Offset: 24},
+							EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 25, Offset: 25},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
+								EndPos:   ast.Position{Line: 1, Column: 28, Offset: 28},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with type parameters, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo<A>() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected '(' as start of parameter list, got '<'",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing type parameter list end, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < "),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "missing '>' at end of type parameter list",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing type parameter list separator, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < A B > () { } "),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&MissingCommaInParameterListError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+	})
+
 }
 
 func TestParseAccess(t *testing.T) {

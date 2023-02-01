@@ -425,7 +425,7 @@ func (e *interpreterEnvironment) check(
 
 func (e *interpreterEnvironment) newLocationHandler() sema.LocationHandlerFunc {
 	return func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
 		})
 		return
@@ -546,7 +546,7 @@ func (e *interpreterEnvironment) getProgram(
 		return load()
 	}
 
-	wrapPanic(func() {
+	errors.WrapPanic(func() {
 		program, err = e.runtimeInterface.GetAndSetProgram(location, func() (program *interpreter.Program, err error) {
 			// Loading is done by Cadence.
 			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
@@ -566,14 +566,14 @@ func (e *interpreterEnvironment) getProgram(
 
 func (e *interpreterEnvironment) getCode(location common.Location) (code []byte, err error) {
 	if addressLocation, ok := location.(common.AddressLocation); ok {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			code, err = e.runtimeInterface.GetAccountContractCode(
 				addressLocation.Address,
 				addressLocation.Name,
 			)
 		})
 	} else {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			code, err = e.runtimeInterface.GetCode(location)
 		})
 	}
@@ -632,7 +632,7 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	) {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			e.runtimeInterface.RecordTrace(functionName, interpreter.Location, duration, attrs)
 		})
 	}
@@ -737,7 +737,7 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 
 func (e *interpreterEnvironment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 	return func() (uuid uint64, err error) {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			uuid, err = e.runtimeInterface.GenerateUUID()
 		})
 		return
@@ -854,7 +854,7 @@ func (e *interpreterEnvironment) loadContract(
 	case stdlib.CryptoCheckerLocation:
 		contract, err := stdlib.NewCryptoContract(
 			inter,
-			constructorGenerator(common.Address{}),
+			constructorGenerator(common.ZeroAddress),
 			invocationRange,
 		)
 		if err != nil {
@@ -902,7 +902,7 @@ func (e *interpreterEnvironment) newOnInvokedFunctionReturnHandler() func(_ *int
 func (e *interpreterEnvironment) newOnMeterComputation() interpreter.OnMeterComputationFunc {
 	return func(compKind common.ComputationKind, intensity uint) {
 		var err error
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			err = e.runtimeInterface.MeterComputation(compKind, intensity)
 		})
 		if err != nil {
@@ -990,7 +990,7 @@ func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.On
 		oldOwner common.Address,
 		newOwner common.Address,
 	) {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			e.runtimeInterface.ResourceOwnerChanged(
 				interpreter,
 				resource,

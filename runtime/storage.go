@@ -98,7 +98,7 @@ func (s *Storage) GetStorageMap(
 
 		var data []byte
 		var err error
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
 		})
 		if err != nil {
@@ -243,7 +243,7 @@ func (s *Storage) commitNewStorageMaps() error {
 
 	for pair := s.newStorageMaps.Oldest(); pair != nil; pair = pair.Next() {
 		var err error
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			err = s.Ledger.SetValue(
 				pair.Key.Address[:],
 				[]byte(pair.Key.Key),

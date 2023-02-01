@@ -159,7 +159,7 @@ func newBLSAggregatePublicKeysFunction(
 
 			var err error
 			var aggregatedPublicKey *PublicKey
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				aggregatedPublicKey, err = aggregator.BLSAggregatePublicKeys(publicKeys)
 			})
 
@@ -231,7 +231,7 @@ func newBLSAggregateSignaturesFunction(
 
 			var err error
 			var aggregatedSignature []byte
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				aggregatedSignature, err = aggregator.BLSAggregateSignatures(bytesArray)
 			})
 

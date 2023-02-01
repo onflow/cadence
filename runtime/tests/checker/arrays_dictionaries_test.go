@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -473,6 +474,107 @@ func TestCheckArrayConcat(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckVariableSizedArrayEqual(t *testing.T) {
+	t.Parallel()
+
+	for i := 0; i < 4; i++ {
+		nestingLevel := i
+		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
+
+		for _, opStr := range []string{"==", "!="} {
+			op := opStr
+			testName := fmt.Sprintf("test array %s at nesting level %d", op, nestingLevel)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+				code := fmt.Sprintf(`
+					fun test(): Bool {
+						let xs = %s
+						return xs %s xs
+					}`,
+					array,
+					op,
+				)
+
+				_, err := ParseAndCheck(t, code)
+				require.NoError(t, err)
+			})
+		}
+	}
+}
+
+func TestCheckFixedSizedArrayEqual(t *testing.T) {
+	t.Parallel()
+
+	testValid := func(name, code string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+			require.NoError(t, err)
+		})
+	}
+
+	testValid("[Int; 3]", `
+		fun test(): Bool {
+			let xs: [Int; 3] = [1, 2, 3]
+			return xs == xs
+		}
+	`)
+
+	testValid("[[Int; 3]; 2]", `
+		fun test(): Bool {
+			let xs: [Int; 3] = [1, 2, 3]
+			let ys: [[Int; 3]; 2] = [xs, xs]
+			return ys == ys
+		}
+	`)
+}
+
+func TestCheckInvalidArrayEqual(t *testing.T) {
+	t.Parallel()
+
+	assertInvalid := func(name, innerCode string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n}", innerCode)
+
+			_, err := ParseAndCheck(t, code)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+		})
+	}
+
+	assertInvalid("variable size array", `
+		let xs = [fun(){}]
+		return xs == xs
+	`)
+
+	assertInvalid("fixed size array", `
+		let xs: [((): Void); 1] = [fun(){}]
+		return xs == xs
+	`)
+
+	assertInvalid("fixed size equaling variable-size", `
+		let xs: [Int; 3] = [1, 2, 3]
+		let ys: [Int] = [1, 2, 3]
+		return xs == ys
+	`)
+
+	assertInvalid("fixed size arrays of different lengths", `
+		let xs: [Int; 2] = [42, 1337]
+		let ys: [Int; 3] = [1, 2, 3]
+		return xs == ys
+	`)
+
+	assertInvalid("fixed size arrays of different types", `
+		let xs: [Int; 2] = [42, 1337]
+		let ys: [String; 3] = ["O", "w", "O"]
+		return xs != ys
+	`)
+}
+
 func TestCheckInvalidArrayConcat(t *testing.T) {
 
 	t.Parallel()
@@ -772,8 +874,8 @@ func TestCheckArrayIndexOfNonEquatableValueArray(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       fun test(): Int? {
-          let x = [[1, 2], [3]]
-          return x.firstIndex(of: [3])
+          let x = [[fun(){}, fun(){}], [fun(){}]]
+          return x.firstIndex(of: [fun(){}])
       }
     `)
 
@@ -851,8 +953,8 @@ func TestCheckInvalidArrayContainsNotEquatable(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       fun test(): Bool {
-          let z = [[1], [2], [3]]
-          return z.contains([1, 2])
+          let z = [[fun(){}], [fun(){}], [fun(){}]]
+          return z.contains([fun(){}])
       }
     `)
 

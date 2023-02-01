@@ -16,27 +16,28 @@
  * limitations under the License.
  */
 
-package stdlib
+package errors
 
 import (
 	goRuntime "runtime"
-
-	"github.com/onflow/cadence/runtime/errors"
 )
 
-func wrapPanic(f func()) {
+func WrapPanic(f func()) {
 	defer func() {
 		if r := recover(); r != nil {
 			// don't wrap Go errors and internal errors
 			switch r := r.(type) {
-			case goRuntime.Error, errors.InternalError:
+			case goRuntime.Error, InternalError:
 				panic(r)
+			case error:
+				panic(ExternalError{
+					Recovered: r,
+				})
 			default:
-				panic(errors.ExternalError{
+				panic(ExternalNonError{
 					Recovered: r,
 				})
 			}
-
 		}
 	}()
 	f()
