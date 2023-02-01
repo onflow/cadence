@@ -92,6 +92,9 @@ type Executor interface {
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
+	// Config() returns the runtime.Config this Runtime was instantiated with.
+	Config() Config
+
 	// NewScriptExecutor returns an executor which executes the given script.
 	NewScriptExecutor(Script, Context) Executor
 
@@ -213,6 +216,10 @@ func NewInterpreterRuntime(defaultConfig Config) Runtime {
 	return &interpreterRuntime{
 		defaultConfig: defaultConfig,
 	}
+}
+
+func (r *interpreterRuntime) Config() Config {
+	return r.defaultConfig
 }
 
 func (r *interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms codesAndPrograms) {
