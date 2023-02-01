@@ -13,7 +13,7 @@ release a new version of Cadence.
 Cadence releases should be backwards compatible and are not supposed to have any breaking changes. There may be exceptions from this rule - in those cases any Cadence release that contains breaking changes must be discussed with the wider Flow community and there must be a consensus that the breaking changes are requried to improveve Cadence.
 This step ensures the version that is going to be released does not contain such changes.
 
-_If it is acceptable to have breaking changes in the new version, you may skip this step and proceed to the [releasing](#releasing)
+_If it is expected to have breaking changes in the new version, you may skip this step and proceed to the [releasing](#releasing)
 step._
 
 Check for breaking changes can be done using the [BackwardCompatibilityCheck](https://github.com/onflow/cadence/actions/workflows/compatibility-check.yml)
