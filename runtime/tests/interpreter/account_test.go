@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ func testAccount(
 	}
 	checkerConfig.BaseValueActivation = baseValueActivation
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range valueDeclarations {
 		interpreter.Declare(baseActivation, valueDeclaration)
 	}
@@ -2986,7 +2986,7 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			}
 			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 			baseValueActivation.DeclareValue(authAccountValueDeclaration)
-			baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+			baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 			interpreter.Declare(baseActivation, authAccountValueDeclaration)
 
 			importedChecker, err := checker.ParseAndCheckWithOptions(t,

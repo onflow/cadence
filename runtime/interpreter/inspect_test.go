@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,13 +55,13 @@ func TestInspectValue(t *testing.T) {
 			VariableSizedStaticType{
 				Type: dictionaryStaticType,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			dictValue,
 		)
 
 		optionalValue := NewUnmeteredSomeValueNonCopying(arrayValue)
 
-		compositeValue = newTestCompositeValue(inter, common.Address{})
+		compositeValue = newTestCompositeValue(inter, common.ZeroAddress)
 		compositeValue.SetMember(
 			inter,
 			EmptyLocationRange,

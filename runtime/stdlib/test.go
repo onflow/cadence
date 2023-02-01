@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -822,7 +822,7 @@ func newEmulatorBackend(
 		emulatorBackendTypeName,
 		common.CompositeKindStructure,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 }
 
@@ -1611,7 +1611,7 @@ func NewTestInterpreterContractValueHandler(
 		case CryptoCheckerLocation:
 			contract, err := NewCryptoContract(
 				inter,
-				constructorGenerator(common.Address{}),
+				constructorGenerator(common.ZeroAddress),
 				invocationRange,
 			)
 			if err != nil {
@@ -1623,7 +1623,7 @@ func NewTestInterpreterContractValueHandler(
 			contract, err := NewTestContract(
 				inter,
 				testFramework,
-				constructorGenerator(common.Address{}),
+				constructorGenerator(common.ZeroAddress),
 				invocationRange,
 			)
 			if err != nil {
@@ -1634,7 +1634,7 @@ func NewTestInterpreterContractValueHandler(
 		default:
 			// During tests, imported contracts can be constructed using the constructor,
 			// similar to structs. Therefore, generate a constructor function.
-			return constructorGenerator(common.Address{})
+			return constructorGenerator(common.ZeroAddress)
 		}
 	}
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -178,7 +178,7 @@ func TestExportValue(t *testing.T) {
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					common.Address{},
+					common.ZeroAddress,
 				)
 			},
 			expected: cadence.NewArray([]cadence.Value{}).
@@ -195,7 +195,7 @@ func TestExportValue(t *testing.T) {
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					interpreter.NewUnmeteredIntValueFromInt64(42),
 					interpreter.NewUnmeteredStringValue("foo"),
 				)
@@ -493,7 +493,7 @@ func TestExportValue(t *testing.T) {
 						inter,
 						interpreter.EmptyLocationRange,
 						interpreter.ByteArrayStaticType,
-						common.Address{},
+						common.ZeroAddress,
 					),
 				)
 			},
@@ -513,7 +513,7 @@ func TestExportValue(t *testing.T) {
 						inter,
 						interpreter.EmptyLocationRange,
 						blockIDStaticType,
-						common.Address{},
+						common.ZeroAddress,
 					),
 					interpreter.NewUnmeteredUFix64ValueWithInteger(1, interpreter.EmptyLocationRange),
 				)
@@ -612,7 +612,7 @@ func TestImportValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 			),
 			expectedType: &sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -630,7 +630,7 @@ func TestImportValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 				interpreter.NewUnmeteredStringValue("foo"),
 			),
@@ -1450,7 +1450,7 @@ func TestExportResourceArrayValue(t *testing.T) {
 		}).WithType(fooResourceType),
 	}).WithType(cadence.VariableSizedArrayType{
 		ElementType: &cadence.ResourceType{
-			Location:            common.StringLocation("test"),
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -1508,7 +1508,7 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 	}).WithType(cadence.DictionaryType{
 		KeyType: cadence.StringType{},
 		ElementType: &cadence.ResourceType{
-			Location:            common.StringLocation("test"),
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -1531,7 +1531,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	t.Parallel()
 
 	barResourceType := &cadence.ResourceType{
-		Location:            TestLocation,
+		Location:            common.ScriptLocation{},
 		QualifiedIdentifier: "Bar",
 		Fields: []cadence.Field{
 			{
@@ -1546,7 +1546,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	}
 
 	fooResourceType := &cadence.ResourceType{
-		Location:            TestLocation,
+		Location:            common.ScriptLocation{},
 		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -1634,7 +1634,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 		},
 		Context{
 			Interface: inter,
-			Location:  TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 
@@ -1655,7 +1655,7 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 		},
 		Context{
 			Interface: &testRuntimeInterface{},
-			Location:  TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 
@@ -1820,7 +1820,7 @@ func TestExportTypeValue(t *testing.T) {
 		expected := cadence.TypeValue{
 			StaticType: &cadence.StructType{
 				QualifiedIdentifier: "S",
-				Location:            TestLocation,
+				Location:            common.ScriptLocation{},
 				Fields:              []cadence.Field{},
 			},
 		}
@@ -2077,7 +2077,7 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
     `
 
 	fooStructType := &cadence.StructType{
-		Location:            TestLocation,
+		Location:            common.ScriptLocation{},
 		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -2179,19 +2179,19 @@ var fooResourceFields = []cadence.Field{
 }
 
 var fooStructType = &cadence.StructType{
-	Location:            TestLocation,
+	Location:            common.ScriptLocation{},
 	QualifiedIdentifier: "Foo",
 	Fields:              fooFields,
 }
 
 var fooResourceType = &cadence.ResourceType{
-	Location:            TestLocation,
+	Location:            common.ScriptLocation{},
 	QualifiedIdentifier: "Foo",
 	Fields:              fooResourceFields,
 }
 
 var fooEventType = &cadence.EventType{
-	Location:            TestLocation,
+	Location:            common.ScriptLocation{},
 	QualifiedIdentifier: "Foo",
 	Fields:              fooFields,
 }
@@ -2202,7 +2202,7 @@ func TestRuntimeEnumValue(t *testing.T) {
 
 	enumValue := cadence.Enum{
 		EnumType: &cadence.EnumType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Direction",
 			Fields: []cadence.Field{
 				{
@@ -2286,7 +2286,7 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 		scriptParam,
 		Context{
 			Interface: runtimeInterface,
-			Location:  TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 }
@@ -2542,7 +2542,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 	// Complex struct value
 	complexStructValue := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -2695,7 +2695,7 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 	// Complex struct value
 	complexStructValue := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -2804,7 +2804,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with wrong field type
 
 	malformedStructType1 := &cadence.StructType{
-		Location:            TestLocation,
+		Location:            common.ScriptLocation{},
 		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -2825,7 +2825,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 
 	malformedStruct2 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -2842,7 +2842,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with nested malformed array value
 	malformedStruct3 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Bar",
 			Fields: []cadence.Field{
 				{
@@ -2863,7 +2863,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with nested malformed dictionary value
 	malformedStruct4 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Baz",
 			Fields: []cadence.Field{
 				{
@@ -2888,7 +2888,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with nested array with mismatching element type
 	malformedStruct5 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Bar",
 			Fields: []cadence.Field{
 				{
@@ -3102,7 +3102,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-			common.Address{},
+			common.ZeroAddress,
 		)
 
 		actual, err := exportValueWithInterpreter(
@@ -3148,7 +3148,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
-				common.Address{},
+				common.ZeroAddress,
 			),
 			actual,
 		)
@@ -3166,7 +3166,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
@@ -3221,7 +3221,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 				interpreter.NewUnmeteredStringValue("foo"),
 			),
@@ -3266,14 +3266,14 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					interpreter.NewUnmeteredInt8Value(4),
 					interpreter.NewUnmeteredInt8Value(3),
 				),
@@ -3283,7 +3283,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					interpreter.NewUnmeteredInt8Value(42),
 					interpreter.NewUnmeteredInt8Value(54),
 				),
@@ -3556,7 +3556,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		// Struct with nested malformed dictionary value
 		malformedStruct := cadence.Struct{
 			StructType: &cadence.StructType{
-				Location:            TestLocation,
+				Location:            common.ScriptLocation{},
 				QualifiedIdentifier: "Foo",
 				Fields: []cadence.Field{
 					{
@@ -3669,7 +3669,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3722,7 +3722,7 @@ func TestTypeValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3767,7 +3767,7 @@ func TestTypeValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3827,7 +3827,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3874,7 +3874,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3921,7 +3921,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3970,7 +3970,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4026,7 +4026,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4058,7 +4058,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 	}
@@ -4437,7 +4437,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		RequireError(t, err)
@@ -4506,7 +4506,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4579,7 +4579,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4652,7 +4652,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4693,7 +4693,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		inter,
 		interpreter.EmptyLocationRange,
 		staticArrayType,
-		common.Address{},
+		common.ZeroAddress,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
 		interpreter.NewUnmeteredStringValue("foo"),
 	)
@@ -4791,7 +4791,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		"Foo",
 		common.CompositeKindStructure,
 		internalCompositeValueFields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 
 	externalCompositeValue := cadence.Struct{
@@ -4873,7 +4873,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 		structValue := cadence.Struct{
 			StructType: &cadence.StructType{
-				Location:            TestLocation,
+				Location:            common.ScriptLocation{},
 				QualifiedIdentifier: "Foo",
 				Fields: []cadence.Field{
 					{
@@ -4911,7 +4911,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 		structValue := cadence.Struct{
 			StructType: &cadence.StructType{
-				Location:            TestLocation,
+				Location:            common.ScriptLocation{},
 				QualifiedIdentifier: "Foo",
 				Fields: []cadence.Field{
 					{
@@ -4981,7 +4981,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 		jsonCdc := `
           {
             "value": {
-              "id": "S.test.Foo",
+              "id": "s.0000000000000000000000000000000000000000000000000000000000000000.Foo",
               "fields": [
                 {
                   "name": "bytes",
@@ -5024,7 +5024,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -5047,7 +5047,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 		jsonCdc := `
           {
             "value": {
-              "id": "S.test.Foo",
+              "id": "s.0000000000000000000000000000000000000000000000000000000000000000.Foo",
               "fields": [
                 {
                   "name": "bytes",
@@ -5089,7 +5089,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 

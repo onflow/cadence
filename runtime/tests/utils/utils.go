@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,10 +65,14 @@ func AssertEqualWithDiff(t *testing.T, expected, actual any) {
 				s.WriteString("\n")
 			}
 
-			t.Errorf("Not equal: \n"+
-				"expected: %s\n"+
-				"actual  : %s\n\n"+
-				"%s", expected, actual, s.String(),
+			t.Errorf(
+				"Not equal: \n"+
+					"expected: %s\n"+
+					"actual  : %s\n\n"+
+					"%s",
+				expected,
+				actual,
+				s.String(),
 			)
 		}
 	}
