@@ -12,5 +12,11 @@ pub struct Test {
     pub fun paramsAndReturn(a: Int, _ b: String): Bool {}
 
     /// This is a test function with a type parameter.
-    // TODO: pub fun typeParam<T>()
+    pub fun typeParam<T>() {}
+
+    /// This is a test function with a type parameter and a type bound.
+    pub fun typeParamWithBound<T: &Any>() {}
+
+    /// This is a test function with a type parameter and a parameter using it.
+    pub fun typeParamWithBoundAndParam<T>(t: T) {}
 }
