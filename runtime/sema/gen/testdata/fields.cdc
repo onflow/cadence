@@ -22,4 +22,10 @@ pub struct Test {
 
     /// This is a test type field.
     let testType: Type
+
+    /// This is a test capability field.
+    let testCap: Capability
+
+    /// This is a test specific capability field.
+    let testCapInt: Capability<Int>
 }

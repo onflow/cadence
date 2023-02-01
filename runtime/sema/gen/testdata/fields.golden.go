@@ -89,6 +89,20 @@ var TestTypeTestTypeFieldType = MetaType
 const TestTypeTestTypeFieldDocString = `This is a test type field.
 `
 
+const TestTypeTestCapFieldName = "testCap"
+
+var TestTypeTestCapFieldType = &CapabilityType{}
+
+const TestTypeTestCapFieldDocString = `This is a test capability field.
+`
+
+const TestTypeTestCapIntFieldName = "testCapInt"
+
+var TestTypeTestCapIntFieldType = (&CapabilityType{}).Instantiate([]Type{IntType}, panicUnexpected)
+
+const TestTypeTestCapIntFieldDocString = `This is a test specific capability field.
+`
+
 const TestTypeName = "Test"
 
 var TestType = &SimpleType{
@@ -228,6 +242,38 @@ var TestType = &SimpleType{
 						identifier,
 						TestTypeTestTypeFieldType,
 						TestTypeTestTypeFieldDocString,
+					)
+				},
+			},
+			TestTypeTestCapFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeTestCapFieldType,
+						TestTypeTestCapFieldDocString,
+					)
+				},
+			},
+			TestTypeTestCapIntFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeTestCapIntFieldType,
+						TestTypeTestCapIntFieldDocString,
 					)
 				},
 			},

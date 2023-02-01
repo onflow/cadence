@@ -290,7 +290,15 @@ func typeExpr(t ast.Type) dst.Expr {
 			identifier = "TheAddress"
 		case "Type":
 			identifier = "Meta"
+		case "Capability":
+			return &dst.UnaryExpr{
+				Op: token.AND,
+				X: &dst.CompositeLit{
+					Type: dst.NewIdent("CapabilityType"),
+				},
+			}
 		}
+
 		return typeVarIdent(identifier)
 
 	case *ast.OptionalType:
