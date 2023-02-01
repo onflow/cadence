@@ -70,7 +70,10 @@ const TestTypeTestConstIntsFieldDocString = `This is a test constant-sized integ
 
 const TestTypeTestParamFieldName = "testParam"
 
-var TestTypeTestParamFieldType = FooType.Instantiate([]Type{BarType}, panicUnexpected)
+var TestTypeTestParamFieldType = MustInstantiate(
+	FooType,
+	BarType,
+)
 
 const TestTypeTestParamFieldDocString = `This is a test parameterized-type field.
 `
@@ -98,7 +101,10 @@ const TestTypeTestCapFieldDocString = `This is a test capability field.
 
 const TestTypeTestCapIntFieldName = "testCapInt"
 
-var TestTypeTestCapIntFieldType = (&CapabilityType{}).Instantiate([]Type{IntType}, panicUnexpected)
+var TestTypeTestCapIntFieldType = MustInstantiate(
+	&CapabilityType{},
+	IntType,
+)
 
 const TestTypeTestCapIntFieldDocString = `This is a test specific capability field.
 `

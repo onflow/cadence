@@ -239,6 +239,15 @@ type ParameterizedType interface {
 	TypeArguments() []Type
 }
 
+func MustInstantiate(t ParameterizedType, typeArguments ...Type) Type {
+	return t.Instantiate(
+		typeArguments,
+		func(err error) {
+			panic(errors.NewUnexpectedErrorFromCause(err))
+		},
+	)
+}
+
 // TypeAnnotation
 
 type TypeAnnotation struct {

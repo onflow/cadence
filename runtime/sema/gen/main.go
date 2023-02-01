@@ -430,28 +430,25 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 
 	case *ast.InstantiationType:
 		typeArguments := t.TypeArguments
-		typeArgumentExprs := make([]dst.Expr, 0, len(typeArguments))
+		argumentExprs := []dst.Expr{
+			typeExpr(t.Type, typeParams),
+		}
+
 		for _, argument := range typeArguments {
-			typeArgumentExprs = append(
-				typeArgumentExprs,
+			argumentExprs = append(
+				argumentExprs,
 				typeExpr(argument.Type, typeParams),
 			)
 		}
 
+		for _, expr := range argumentExprs {
+			expr.Decorations().Before = dst.NewLine
+			expr.Decorations().After = dst.NewLine
+		}
+
 		return &dst.CallExpr{
-			Fun: &dst.SelectorExpr{
-				X:   typeExpr(t.Type, typeParams),
-				Sel: dst.NewIdent("Instantiate"),
-			},
-			Args: []dst.Expr{
-				&dst.CompositeLit{
-					Type: &dst.ArrayType{
-						Elt: dst.NewIdent("Type"),
-					},
-					Elts: typeArgumentExprs,
-				},
-				dst.NewIdent("panicUnexpected"),
-			},
+			Fun:  dst.NewIdent("MustInstantiate"),
+			Args: argumentExprs,
 		}
 
 	default:
