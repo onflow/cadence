@@ -6863,6 +6863,19 @@ func singleIdentifierLocationResolver(t testing.TB) func(identifiers []Identifie
 	}
 }
 
+func TestRuntimeGetConfig(t *testing.T) {
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+	// depends on newTestInterpreterRuntime using the interpreterRuntime struct
+	underlying, ok := rt.(*interpreterRuntime)
+	require.True(t, ok)
+
+	config := rt.Config()
+	expected := underlying.defaultConfig
+	require.Equal(t, expected, config)
+}
+
 func TestRuntimePanics(t *testing.T) {
 
 	t.Parallel()
