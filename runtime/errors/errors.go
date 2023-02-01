@@ -48,16 +48,36 @@ type UserError interface {
 // ExternalError is an error that occurred externally.
 // It contains the recovered value.
 type ExternalError struct {
-	Recovered any
+	Recovered error
 }
 
-func NewExternalError(recovered any) ExternalError {
+func NewExternalError(recovered error) ExternalError {
 	return ExternalError{
 		Recovered: recovered,
 	}
 }
 
 func (e ExternalError) Error() string {
+	return fmt.Sprint(e.Recovered)
+}
+
+func (e ExternalError) Unwrap() error {
+	return e.Recovered
+}
+
+// ExternalNonError is an non-error-typed panic that occurred externally.
+// It contains the recovered value.
+type ExternalNonError struct {
+	Recovered any
+}
+
+func NewExternalNonError(recovered error) ExternalError {
+	return ExternalError{
+		Recovered: recovered,
+	}
+}
+
+func (e ExternalNonError) Error() string {
 	return fmt.Sprint(e.Recovered)
 }
 

@@ -77,7 +77,7 @@ func emitEventFields(
 		panic(err)
 	}
 
-	wrapPanic(func() {
+	errors.WrapPanic(func() {
 		err = emitEvent(exportedEvent)
 	})
 	if err != nil {

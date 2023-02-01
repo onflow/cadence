@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -54,7 +55,7 @@ func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryVal
 				func() uint64 {
 					var rand uint64
 					var err error
-					wrapPanic(func() {
+					errors.WrapPanic(func() {
 						rand, err = generator.UnsafeRandom()
 					})
 					if err != nil {
