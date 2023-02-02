@@ -23,26 +23,29 @@ import (
 	"io"
 	"log"
 	"os"
+	"reflect"
 	"strings"
 
 	"encoding/csv"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/pretty"
+	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/tools/analysis"
 )
 
 const LoadMode = analysis.NeedTypes
 
 type ContractsChecker struct {
-	Codes              map[common.Location][]byte
-	errorPrettyPrinter pretty.ErrorPrettyPrinter
+	Codes      map[common.Location][]byte
+	outputFile *os.File
 }
 
 func NewContractChecker(outputFile *os.File) *ContractsChecker {
 	checker := &ContractsChecker{
-		Codes:              map[common.Location][]byte{},
-		errorPrettyPrinter: pretty.NewErrorPrettyPrinter(outputFile, false),
+		Codes:      map[common.Location][]byte{},
+		outputFile: outputFile,
 	}
 
 	return checker
@@ -124,13 +127,57 @@ func (c *ContractsChecker) analyze(
 
 		err := programs.Load(config, location)
 		if err != nil {
-			c.prettyPrintError(err, location)
+			c.printProgramErrors(err, location)
 		}
 	}
 }
 
-func (c *ContractsChecker) prettyPrintError(err error, location common.Location) {
-	printErr := c.errorPrettyPrinter.PrettyPrintError(err, location, c.Codes)
+func (c *ContractsChecker) printProgramErrors(err error, location common.Location) {
+	parsingCheckingError, ok := err.(analysis.ParsingCheckingError)
+	if !ok {
+		c.print(fmt.Sprintf("unknown program error: %s", err))
+		return
+	}
+
+	switch err := parsingCheckingError.Unwrap().(type) {
+	case parser.Error:
+		for _, childError := range err.ChildErrors() {
+			parserError, ok := childError.(ast.HasPosition)
+			if !ok {
+				panic(fmt.Errorf("unknown parser error: %w", childError))
+			}
+			c.printError(parserError, location)
+		}
+	case *sema.CheckerError:
+		for _, childError := range err.ChildErrors() {
+			semaError, ok := childError.(ast.HasPosition)
+			if !ok {
+				panic(fmt.Errorf("unknown checker error: %w", childError))
+			}
+			c.printError(semaError, location)
+		}
+	default:
+		panic(fmt.Errorf("unknown parsing/checking error: %w", err))
+	}
+}
+
+func (c *ContractsChecker) printError(err ast.HasPosition, location common.Location) {
+	// Print <location>:<position>:<error-type>
+
+	errorString := fmt.Sprintf("%s:%s:%s\n",
+		location,
+		err.StartPosition().String(),
+
+		// Ideally should print error code, but just print the error type for now,
+		// since there are no error codes at the moment.
+		reflect.TypeOf(err),
+	)
+
+	c.print(errorString)
+}
+
+func (c *ContractsChecker) print(errorString string) {
+	_, printErr := c.outputFile.WriteString(errorString)
 	if printErr != nil {
 		panic(printErr)
 	}
