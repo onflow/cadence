@@ -28,6 +28,7 @@ import (
 	"unicode"
 
 	"github.com/dave/dst/decorator"
+	"github.com/dave/dst/decorator/resolver/guess"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -545,10 +546,10 @@ func goBoolLit(b bool) dst.Expr {
 	return dst.NewIdent(strconv.FormatBool(false))
 }
 
-func declarationKindExpr(kind string) *dst.SelectorExpr {
-	return &dst.SelectorExpr{
-		X:   dst.NewIdent("common"),
-		Sel: dst.NewIdent(fmt.Sprintf("DeclarationKind%s", kind)),
+func declarationKindExpr(kind string) *dst.Ident {
+	return &dst.Ident{
+		Path: "github.com/onflow/cadence/runtime/common",
+		Name: fmt.Sprintf("DeclarationKind%s", kind),
 	}
 }
 
@@ -751,17 +752,17 @@ func simpleTypeMemberResolver(fullTypeName string, declaration ast.Declaration) 
 	parameters := []*dst.Field{
 		goField(
 			"memoryGauge",
-			&dst.SelectorExpr{
-				X:   dst.NewIdent("common"),
-				Sel: dst.NewIdent("MemoryGauge"),
+			&dst.Ident{
+				Path: "github.com/onflow/cadence/runtime/common",
+				Name: "MemoryGauge",
 			},
 		),
 		goField("identifier", dst.NewIdent("string")),
 		goField(
 			"targetRange",
-			&dst.SelectorExpr{
-				X:   dst.NewIdent("ast"),
-				Sel: dst.NewIdent("Range"),
+			&dst.Ident{
+				Path: "github.com/onflow/cadence/runtime/ast",
+				Name: "Range",
 			},
 		),
 		goField(
@@ -903,12 +904,6 @@ func gen(inPath string, outFile *os.File) {
 	program := parseCadenceFile(inPath)
 
 	var gen generator
-	gen.addDecls(
-		goImportDeclaration(
-			"github.com/onflow/cadence/runtime/ast",
-			"github.com/onflow/cadence/runtime/common",
-		),
-	)
 
 	for _, declaration := range program.Declarations() {
 		_ = ast.AcceptDeclaration[struct{}](declaration, &gen)
@@ -917,35 +912,15 @@ func gen(inPath string, outFile *os.File) {
 	writeGoFile(inPath, outFile, gen.decls)
 }
 
-func goImportDeclaration(paths ...string) *dst.GenDecl {
-
-	specs := make([]dst.Spec, 0, len(paths))
-
-	for _, path := range paths {
-		specs = append(
-			specs,
-			&dst.ImportSpec{
-				Path: &dst.BasicLit{
-					Kind:  token.STRING,
-					Value: strconv.Quote(path),
-				},
-			},
-		)
-	}
-
-	return &dst.GenDecl{
-		Tok:   token.IMPORT,
-		Specs: specs,
-	}
-}
-
 func writeGoFile(inPath string, outFile *os.File, decls []dst.Decl) {
 	err := parsedHeaderTemplate.Execute(outFile, inPath)
 	if err != nil {
 		panic(err)
 	}
 
-	err = decorator.Fprint(
+	restorer := decorator.NewRestorerWithImports("sema", guess.RestorerResolver{})
+
+	err = restorer.Fprint(
 		outFile,
 		&dst.File{
 			Name:  dst.NewIdent("sema"),

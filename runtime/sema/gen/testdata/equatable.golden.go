@@ -19,11 +19,6 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
-
 const TestTypeName = "Test"
 
 var TestType = &SimpleType{
