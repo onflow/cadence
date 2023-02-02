@@ -100,6 +100,8 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 			invocation.Self = &self
 			interpreter.declareVariable(sema.SelfIdentifier, self)
 
+			var prepareArguments []Value
+
 			if declaration.ParameterList != nil {
 				// If the transaction has a parameter list of N parameters,
 				// bind the first N arguments of the invocation to the transaction parameters,
@@ -108,13 +110,14 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				transactionParameterCount := len(declaration.ParameterList.Parameters)
 
 				transactionArguments := invocation.Arguments[:transactionParameterCount]
-				prepareArguments := invocation.Arguments[transactionParameterCount:]
+				prepareArguments = invocation.Arguments[transactionParameterCount:]
 
 				interpreter.bindParameterArguments(declaration.ParameterList, transactionArguments)
 				invocation.Arguments = prepareArguments
 			}
 
 			if prepareFunction != nil {
+
 				prepare := interpreter.functionDeclarationValue(
 					prepareFunction,
 					prepareFunctionType,
@@ -124,7 +127,8 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				prepare.invoke(invocation)
 			}
 
-			for _, rolePrepareFunction := range rolePrepareFunctions {
+			for roleIndex, rolePrepareFunction := range rolePrepareFunctions {
+				invocation.Arguments = prepareArguments[roleIndex : roleIndex+1]
 				rolePrepareFunction.invoke(invocation)
 			}
 
@@ -136,11 +140,10 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 					transactionScope,
 				)
 
-				invocationWithoutArguments := invocation
-				invocationWithoutArguments.Arguments = nil
+				invocation.Arguments = nil
 
 				body = func() StatementResult {
-					value := execute.invoke(invocationWithoutArguments)
+					value := execute.invoke(invocation)
 					return ReturnResult{
 						Value: value,
 					}

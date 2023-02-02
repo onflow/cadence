@@ -74,6 +74,28 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		checker.checkRolePrepareParameterList(roleDeclaration, transactionType)
 	}
 
+	transactionPrepareParameterCount := len(transactionType.PrepareParameters)
+
+	// If the transaction has roles and the prepare block has parameters,
+	// then there should be exactly one role for each parameter
+	roleCount := len(declaration.Roles)
+	if roleCount > 0 &&
+		prepareFunctionDeclaration != nil &&
+		transactionPrepareParameterCount > 0 &&
+		roleCount != transactionPrepareParameterCount {
+
+		checker.report(
+			&RoleCountMismatchError{
+				ActualCount:   roleCount,
+				ExpectedCount: transactionPrepareParameterCount,
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					prepareFunctionDeclaration.FunctionDeclaration.ParameterList,
+				),
+			},
+		)
+	}
+
 	if declaration.PreConditions != nil {
 		checker.visitConditions(*declaration.PreConditions)
 	}
@@ -132,52 +154,46 @@ func (checker *Checker) checkRolePrepareParameterList(
 
 	transactionPrepareParameterCount := len(transactionType.PrepareParameters)
 	transactionRolePrepareParameterCount := len(transactionRoleType.PrepareParameters)
-	if transactionPrepareParameterCount != transactionRolePrepareParameterCount {
-		if roleDeclaration.Prepare == nil {
-			checker.report(
-				&MissingRolePrepareError{
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						roleDeclaration.Identifier,
-					),
-				},
-			)
-		} else {
+
+	// If the transaction declaration's prepare block has no parameters,
+	// then the roles should not have any either
+	if transactionPrepareParameterCount == 0 {
+		if transactionRolePrepareParameterCount != 0 {
 			checker.report(
 				&PrepareParameterCountMismatchError{
 					ActualCount:   transactionRolePrepareParameterCount,
 					ExpectedCount: transactionPrepareParameterCount,
 					Range: ast.NewRangeFromPositioned(
 						checker.memoryGauge,
-						roleDeclaration.Prepare,
+						roleDeclaration.Prepare.FunctionDeclaration.ParameterList,
 					),
 				},
 			)
 		}
-	}
+	} else {
+		// If the transaction declaration's prepare block has parameters,
+		// then all roles should have exactly one parameter
+		const expectedPrepareParameterCount = 1
+		if transactionRolePrepareParameterCount != expectedPrepareParameterCount {
 
-	minPrepareParameterCount := transactionPrepareParameterCount
-	if transactionRolePrepareParameterCount < minPrepareParameterCount {
-		minPrepareParameterCount = transactionRolePrepareParameterCount
-	}
-
-	for prepareParameterIndex := 0; prepareParameterIndex < minPrepareParameterCount; prepareParameterIndex++ {
-		transactionPrepareParameter := transactionType.PrepareParameters[prepareParameterIndex]
-		transactionRolePrepareParameter := transactionRoleType.PrepareParameters[prepareParameterIndex]
-
-		if !transactionRolePrepareParameter.TypeAnnotation.
-			Equal(transactionPrepareParameter.TypeAnnotation) {
-
-			parameter := roleDeclaration.Prepare.FunctionDeclaration.ParameterList.Parameters[prepareParameterIndex]
+			var errorRange ast.Range
+			if roleDeclaration.Prepare == nil {
+				errorRange = ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					roleDeclaration.Identifier,
+				)
+			} else {
+				errorRange = ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					roleDeclaration.Prepare.FunctionDeclaration.ParameterList,
+				)
+			}
 
 			checker.report(
-				&TypeMismatchError{
-					ExpectedType: transactionPrepareParameter.TypeAnnotation.Type,
-					ActualType:   transactionRolePrepareParameter.TypeAnnotation.Type,
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						parameter.TypeAnnotation,
-					),
+				&PrepareParameterCountMismatchError{
+					ActualCount:   transactionRolePrepareParameterCount,
+					ExpectedCount: expectedPrepareParameterCount,
+					Range:         errorRange,
 				},
 			)
 		}

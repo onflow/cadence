@@ -410,7 +410,7 @@ func TestInterpretTransactionRoles(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("B"),
 			signer,
 		)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t,
 			[]string{
@@ -466,53 +466,59 @@ func TestInterpretTransactionRoles(t *testing.T) {
 			`
               transaction(a: String, b: String) {
 
-                  let foo: String
+                  let first: String
+                  let second: String
 
-                  prepare(signer: AuthAccount) {
+                  prepare(first: AuthAccount, second: AuthAccount) {
                       log("a 1")
                       log(a)
                       log("b 1")
                       log(b)
-                      self.foo = signer.address.toString()
-                      log("self.foo 1")
-                      log(self.foo)
+                      self.first = first.address.toString()
+                      log("self.first 1")
+                      log(self.first)
+                      self.second = second.address.toString()
+                      log("self.second 1")
+                      log(self.second)
                   }
 
                   role role1 {
-                      let bar: String
+                      let signer: String
 
                       prepare(signer: AuthAccount) {
                           log("a 2")
                           log(a)
                           log("b 2")
                           log(b)
-                          self.bar = signer.address.toString()
-                          log("self.bar")
-                          log(self.bar)
+                          self.signer = signer.address.toString()
+                          log("self.signer 1")
+                          log(self.signer)
                       }
                   }
 
                   role role2 {
-                      let baz: String
+                      let signer: String
 
                       prepare(signer: AuthAccount) {
                           log("a 3")
                           log(a)
                           log("b 3")
                           log(b)
-                          self.baz = signer.address.toString()
-                          log("self.baz")
-                          log(self.baz)
+                          self.signer = signer.address.toString()
+                          log("self.signer 2")
+                          log(self.signer)
                       }
                   }
 
                   execute {
-                      log("self.foo 2")
-                      log(self.foo)
-                      log("self.role1.bar")
-                      log(self.role1.bar)
-                      log("self.role2.baz")
-                      log(self.role2.baz)
+                      log("self.first 2")
+                      log(self.first)
+                      log("self.second 2")
+                      log(self.second)
+                      log("self.role1.signer")
+                      log(self.role1.signer)
+                      log("self.role2.signer")
+                      log(self.role2.signer)
                   }
               }
             `,
@@ -527,18 +533,23 @@ func TestInterpretTransactionRoles(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		signer := newTestAuthAccountValue(
+		firstSigner := newTestAuthAccountValue(
 			nil,
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
+		)
+		secondSigner := newTestAuthAccountValue(
+			nil,
+			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
 		)
 
 		err = inter.InvokeTransaction(
 			0,
 			interpreter.NewUnmeteredStringValue("A"),
 			interpreter.NewUnmeteredStringValue("B"),
-			signer,
+			firstSigner,
+			secondSigner,
 		)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t,
 			[]string{
@@ -547,119 +558,35 @@ func TestInterpretTransactionRoles(t *testing.T) {
 				"A",
 				"b 1",
 				"B",
-				"self.foo 1",
+				"self.first 1",
 				"0x0000000000000001",
+				"self.second 1",
+				"0x0000000000000002",
 				// role1 prepare
 				"a 2",
 				"A",
 				"b 2",
 				"B",
-				"self.bar",
+				"self.signer 1",
 				"0x0000000000000001",
 				// role2 prepare
 				"a 3",
 				"A",
 				"b 3",
 				"B",
-				"self.baz",
-				"0x0000000000000001",
+				"self.signer 2",
+				"0x0000000000000002",
 				// execute
-				"self.foo 2",
+				"self.first 2",
 				"0x0000000000000001",
-				"self.role1.bar",
+				"self.second 2",
+				"0x0000000000000002",
+				"self.role1.signer",
 				"0x0000000000000001",
-				"self.role2.baz",
-				"0x0000000000000001",
-			},
-			logs,
-		)
-	})
-
-	t.Run("single role, multiple signers", func(t *testing.T) {
-
-		t.Parallel()
-
-		var logs []string
-
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
-			"log",
-			stdlib.LogFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				firstArgument := invocation.Arguments[0]
-				message := firstArgument.(*interpreter.StringValue).Str
-				logs = append(logs, message)
-				return interpreter.Void
-			},
-		)
-
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(valueDeclaration)
-
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, valueDeclaration)
-
-		inter, err := parseCheckAndInterpretWithOptions(t,
-			`
-              transaction {
-
-                  prepare(signer1: AuthAccount, signer2: AuthAccount) {}
-
-                  role role1 {
-                      let signer1Address: String
-                      let signer2Address: String
-
-                      prepare(signer1: AuthAccount, signer2: AuthAccount) {
-                          self.signer1Address = signer1.address.toString()
-                          self.signer2Address = signer2.address.toString()
-                      }
-                  }
-
-                  execute {
-                      log("self.role1.signer1Address")
-                      log(self.role1.signer1Address)
-                      log("self.role1.signer2Address")
-                      log(self.role1.signer2Address)
-                  }
-              }
-            `,
-			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
-				},
-				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
-				},
-			},
-		)
-		require.NoError(t, err)
-
-		signer1 := newTestAuthAccountValue(
-			nil,
-			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
-		)
-
-		signer2 := newTestAuthAccountValue(
-			nil,
-			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
-		)
-
-		err = inter.InvokeTransaction(
-			0,
-			signer1,
-			signer2,
-		)
-		assert.NoError(t, err)
-
-		assert.Equal(t,
-			[]string{
-				"self.role1.signer1Address",
-				"0x0000000000000001",
-				"self.role1.signer2Address",
+				"self.role2.signer",
 				"0x0000000000000002",
 			},
 			logs,
 		)
 	})
-
 }
