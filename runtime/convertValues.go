@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -211,8 +211,6 @@ func exportValueWithInterpreter(
 		)
 	case interpreter.AddressValue:
 		return cadence.NewMeteredAddress(inter, v), nil
-	case interpreter.PathLinkValue:
-		return exportPathLinkValue(v, inter), nil
 	case interpreter.PathValue:
 		return exportPathValue(inter, v), nil
 	case interpreter.TypeValue:
@@ -557,12 +555,6 @@ func exportDictionaryValue(
 	return dictionary.WithType(exportType), err
 }
 
-func exportPathLinkValue(v interpreter.PathLinkValue, inter *interpreter.Interpreter) cadence.PathLink {
-	path := exportPathValue(inter, v.TargetPath)
-	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
-	return cadence.NewMeteredLink(inter, path, ty)
-}
-
 func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) cadence.Path {
 	domain := v.Domain.Identifier()
 	common.UseMemory(gauge, common.MemoryUsage{
@@ -782,8 +774,6 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		return nil, errors.NewDefaultUserError("cannot import contract")
 	case cadence.Function:
 		return nil, errors.NewDefaultUserError("cannot import function")
-	case cadence.PathLink:
-		return nil, errors.NewDefaultUserError("cannot import link")
 	default:
 		// This means the implementation has unhandled types.
 		// Hence, return an internal error
@@ -1153,7 +1143,7 @@ func (i valueImporter) importArrayValue(
 		inter,
 		locationRange,
 		staticArrayType,
-		common.Address{},
+		common.ZeroAddress,
 		values...,
 	), nil
 }
@@ -1321,7 +1311,7 @@ func (i valueImporter) importCompositeValue(
 		qualifiedIdentifier,
 		kind,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	), nil
 }
 

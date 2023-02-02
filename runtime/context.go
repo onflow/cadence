@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,9 @@ type Context struct {
 	CoverageReport *CoverageReport
 }
 
+// codesAndPrograms collects the source code and AST for each location.
+// It is purely used for debugging: Both the codes and the programs
+// are provided in runtime errors.
 type codesAndPrograms struct {
 	codes    map[Location][]byte
 	programs map[Location]*ast.Program

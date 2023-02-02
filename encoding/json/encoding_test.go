@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1633,35 +1633,6 @@ func TestEncodeContract(t *testing.T) {
 	}
 
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
-}
-
-func TestEncodeLink(t *testing.T) {
-
-	t.Parallel()
-
-	testEncodeAndDecode(
-		t,
-		cadence.NewPathLink(
-			cadence.NewPath("storage", "foo"),
-			"Bar",
-		),
-		// language=json
-		`
-          {
-            "type": "Link",
-            "value": {
-              "targetPath": {
-                "type": "Path",
-                "value": {
-                  "domain": "storage",
-                  "identifier": "foo"
-                }
-              },
-              "borrowType": "Bar"
-            }
-          }
-        `,
-	)
 }
 
 func TestEncodeSimpleTypes(t *testing.T) {

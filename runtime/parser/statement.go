@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -163,6 +163,16 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 
 		p.next()
 
+		var typeParameterList *ast.TypeParameterList
+
+		if p.config.TypeParametersEnabled {
+			var err error
+			typeParameterList, err = parseTypeParameterList(p)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		parameterList, returnTypeAnnotation, functionBlock, err :=
 			parseFunctionParameterListAndRest(p, false)
 
@@ -176,6 +186,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 			false,
 			false,
 			identifier,
+			typeParameterList,
 			parameterList,
 			returnTypeAnnotation,
 			functionBlock,
