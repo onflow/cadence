@@ -191,19 +191,9 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 	for _, memberDeclaration := range decl.Members.Declarations() {
 		ast.AcceptDeclaration[struct{}](memberDeclaration, g)
 
-		memberDeclarationKind := memberDeclaration.DeclarationKind()
-		switch memberDeclarationKind {
-		case common.DeclarationKindField,
-			common.DeclarationKindFunction:
-
-			memberDeclarations = append(memberDeclarations, memberDeclaration)
-
-		default:
-			panic(fmt.Errorf(
-				"%s members are not supported",
-				memberDeclarationKind.Name(),
-			))
-		}
+		// Visiting unsupported declarations panics,
+		// so only supported member declarations are added
+		memberDeclarations = append(memberDeclarations, memberDeclaration)
 	}
 
 	var (
