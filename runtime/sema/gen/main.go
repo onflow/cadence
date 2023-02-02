@@ -109,61 +109,85 @@ func (g *generator) VisitFunctionDeclaration(decl *ast.FunctionDeclaration) (_ s
 		panic("static function declarations are not supported")
 	}
 
-	// Name
-
 	functionName := decl.Identifier.Identifier
 	fullTypeName := g.fullTypeName()
 
+	g.addFunctionNameDeclaration(fullTypeName, functionName)
+
+	var typeParams map[string]string
+
+	if decl.TypeParameterList != nil {
+		typeParams = g.addFunctionTypeParameterDeclarations(decl, fullTypeName, functionName)
+	}
+
+	g.addFunctionTypeDeclaration(decl, fullTypeName, functionName, typeParams)
+
+	g.addFunctionDocStringDeclaration(decl, fullTypeName, functionName)
+
+	return
+}
+
+func (g *generator) addFunctionNameDeclaration(
+	fullTypeName string,
+	functionName string,
+) {
 	g.addDecls(
 		goConstDecl(
 			functionNameVarName(fullTypeName, functionName),
 			goStringLit(functionName),
 		),
 	)
+}
 
-	// Type parameters
+func (g *generator) addFunctionTypeParameterDeclarations(
+	decl *ast.FunctionDeclaration,
+	fullTypeName string,
+	functionName string,
+) (typeParams map[string]string) {
+	typeParameters := decl.TypeParameterList.TypeParameters
+	typeParams = make(map[string]string, len(typeParameters))
 
-	var typeParams map[string]string
+	for _, typeParameter := range typeParameters {
+		typeParameterName := typeParameter.Identifier.Identifier
 
-	if decl.TypeParameterList != nil {
-		typeParameters := decl.TypeParameterList.TypeParameters
-		typeParams = make(map[string]string, len(typeParameters))
-
-		for _, typeParameter := range typeParameters {
-			typeParameterName := typeParameter.Identifier.Identifier
-
-			var typeBound dst.Expr
-			if typeParameter.TypeBound != nil {
-				typeBound = typeExpr(
-					typeParameter.TypeBound.Type,
-					typeParams,
-				)
-			}
-
-			typeParams[typeParameterName] = functionTypeParameterVarName(
-				fullTypeName,
-				functionName,
-				typeParameterName,
-			)
-
-			g.addDecls(
-				goVarDecl(
-					functionTypeParameterVarName(
-						fullTypeName,
-						functionName,
-						typeParameterName,
-					),
-					typeParameterExpr(
-						typeParameterName,
-						typeBound,
-					),
-				),
+		var typeBound dst.Expr
+		if typeParameter.TypeBound != nil {
+			typeBound = typeExpr(
+				typeParameter.TypeBound.Type,
+				typeParams,
 			)
 		}
+
+		typeParams[typeParameterName] = functionTypeParameterVarName(
+			fullTypeName,
+			functionName,
+			typeParameterName,
+		)
+
+		g.addDecls(
+			goVarDecl(
+				functionTypeParameterVarName(
+					fullTypeName,
+					functionName,
+					typeParameterName,
+				),
+				typeParameterExpr(
+					typeParameterName,
+					typeBound,
+				),
+			),
+		)
 	}
 
-	// Type
+	return
+}
 
+func (g *generator) addFunctionTypeDeclaration(
+	decl *ast.FunctionDeclaration,
+	fullTypeName string,
+	functionName string,
+	typeParams map[string]string,
+) {
 	parameters := decl.ParameterList.Parameters
 
 	parameterTypeAnnotations := make([]*ast.TypeAnnotation, 0, len(parameters))
@@ -187,9 +211,13 @@ func (g *generator) VisitFunctionDeclaration(decl *ast.FunctionDeclaration) (_ s
 			),
 		),
 	)
+}
 
-	// Doc string
-
+func (g *generator) addFunctionDocStringDeclaration(
+	decl *ast.FunctionDeclaration,
+	fullTypeName string,
+	functionName string,
+) {
 	docString := g.declarationDocString(decl)
 
 	g.addDecls(
@@ -198,8 +226,6 @@ func (g *generator) VisitFunctionDeclaration(decl *ast.FunctionDeclaration) (_ s
 			goRawLit(docString),
 		),
 	)
-
-	return
 }
 
 func (g *generator) declarationDocString(decl ast.Declaration) string {
