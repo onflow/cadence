@@ -1,3 +1,4 @@
+// Code generated from testdata/storable.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -18,4 +19,16 @@
 
 package sema
 
-//go:generate go run ./gen/main.go block.cdc block.gen.go
+const TestTypeName = "Test"
+
+var TestType = &SimpleType{
+	Name:          TestTypeName,
+	QualifiedName: TestTypeName,
+	TypeID:        TestTypeName,
+	tag:           TestTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     false,
+	Exportable:    false,
+	Importable:    false,
+}

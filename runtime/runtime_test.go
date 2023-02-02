@@ -460,7 +460,7 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block stdlib.Blo
 
 	encoded := buf.Bytes()
 	var hash stdlib.BlockHash
-	copy(hash[sema.BlockIDSize-len(encoded):], encoded)
+	copy(hash[sema.BlockTypeIdFieldType.Size-int64(len(encoded)):], encoded)
 
 	block = stdlib.Block{
 		Height:    height,

@@ -503,7 +503,7 @@ func TestExportValue(t *testing.T) {
 			label: "Block (invalid)",
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				blockIDStaticType :=
-					interpreter.ConvertSemaToStaticType(nil, sema.BlockTypeIDFieldType).(interpreter.ArrayStaticType)
+					interpreter.ConvertSemaToStaticType(nil, sema.BlockTypeIdFieldType).(interpreter.ArrayStaticType)
 
 				return interpreter.NewBlockValue(
 					inter,
