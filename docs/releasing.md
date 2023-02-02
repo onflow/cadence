@@ -28,10 +28,9 @@ branch against `v0.21.0` branch/tag.
 
 <img src="images/compatibility_check_action_params.png" width="300"/>
 
-⚠️ _Note: The compatibility checker is sensitive to error messages. 
-Thus, if there are error message changes in the current code, the workflow will fail.
-You would then have to manually inspect the workflow output (diff) and determine whether the difference in output is
-only due to the error messages, or are there any other differences in the reported errors._
+⚠️ _Note: If the workflow fails due to differences in checking results, you may want to analyze the outputs/diff to see
+whether they are actual breaking changes.
+The workflow also uploads the checking results as artifacts, which can be downloaded and analyzed manually._
 
 ### Releasing
 

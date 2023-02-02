@@ -74,7 +74,7 @@ jobs:
 
       # Check contracts using current branch
 
-      - name: Check contracts using current branch
+      - name: Check contracts using ${{ inputs.current-branch }}
         working-directory: ./tools/compatibility-check
         run: |
           go get github.com/onflow/cadence@${{ inputs.current-branch }}
@@ -83,12 +83,22 @@ jobs:
 
       # Check contracts using base branch
 
-      - name: Check contracts using base branch
+      - name: Check contracts using ${{ inputs.base-branch }}
         working-directory: ./tools/compatibility-check
         run: |
           go get github.com/onflow/cadence@${{ inputs.base-branch }}
           go mod tidy
           go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-old.txt
+
+      # Upload checking results for later use
+
+      - name: Archive checking results
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.chain }}-checking-results
+          path: |
+            ./tmp/output-old.txt
+            ./tmp/output-new.txt
 
       # Check Diff
 
