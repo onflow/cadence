@@ -31,7 +31,9 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ inputs.current-branch }}
+          # Checkout the branch where the workflow is available.
+          # Usually this is the master branch.
+          ref: ${{ github.ref_name }}
 
       - uses: actions/setup-go@v3
         with:
@@ -42,7 +44,7 @@ jobs:
         run: |
           mkdir tmp
 
-      - name: Generate chache key
+      - name: Generate cache key
         id: cache-key-generator
         # cache key should include chain name
         run: echo "cache-key=${{ github.workflow }}-${{ inputs.chain }}-$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
@@ -72,20 +74,31 @@ jobs:
 
       # Check contracts using current branch
 
-      - name: Check contracts using current branch
+      - name: Check contracts using ${{ inputs.current-branch }}
         working-directory: ./tools/compatibility-check
         run: |
+          go get github.com/onflow/cadence@${{ inputs.current-branch }}
+          go mod tidy
           go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-new.txt
 
       # Check contracts using base branch
 
-      - name: Checkout base branch
-        run: git checkout ${{ inputs.base-branch }}
-
-      - name: Check contracts using base branch
+      - name: Check contracts using ${{ inputs.base-branch }}
         working-directory: ./tools/compatibility-check
         run: |
+          go get github.com/onflow/cadence@${{ inputs.base-branch }}
+          go mod tidy
           go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-old.txt
+
+      # Upload checking results for later use
+
+      - name: Archive checking results
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.chain }}-checking-results
+          path: |
+            ./tmp/output-old.txt
+            ./tmp/output-new.txt
 
       # Check Diff
 

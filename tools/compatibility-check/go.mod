@@ -3,8 +3,7 @@ module github.com/onflow/cadence/tools/compatibility_check
 go 1.19
 
 require (
-	github.com/kylelemons/godebug v1.1.0
-	github.com/onflow/cadence v0.31.2
+	github.com/onflow/cadence v0.31.2-0.20230201191829-559e775dc4af
 	github.com/rs/zerolog v1.26.1
 	github.com/sergi/go-diff v1.2.0
 )
@@ -28,6 +27,3 @@ require (
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
-
-// Should always use the current version of cadence.
-replace github.com/onflow/cadence => ../../../cadence

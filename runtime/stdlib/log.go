@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -59,7 +60,7 @@ func NewLogFunction(logger Logger) StandardLibraryValue {
 			message := value.MeteredString(memoryGauge, interpreter.SeenReferences{})
 
 			var err error
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				err = logger.ProgramLog(message)
 			})
 			if err != nil {

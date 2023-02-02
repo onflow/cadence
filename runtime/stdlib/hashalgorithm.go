@@ -151,7 +151,7 @@ func hash(
 	hashAlgorithm := NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
 
 	var result []byte
-	wrapPanic(func() {
+	errors.WrapPanic(func() {
 		result, err = hasher.Hash(data, tag, hashAlgorithm)
 	})
 	if err != nil {

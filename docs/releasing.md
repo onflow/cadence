@@ -28,10 +28,9 @@ branch against `v0.21.0` branch/tag.
 
 <img src="images/compatibility_check_action_params.png" width="300"/>
 
-⚠️ _Note: The compatibility checker is sensitive to error messages. 
-Thus, if there are error message changes in the current code, the workflow will fail.
-You would then have to manually inspect the workflow output (diff) and determine whether the difference in output is
-only due to the error messages, or are there any other differences in the reported errors._
+⚠️ _Note: If the workflow fails due to differences in checking results, you may want to analyze the outputs/diff to see
+whether they are actual breaking changes.
+The workflow also uploads the checking results as artifacts, which can be downloaded and analyzed manually._
 
 ### Releasing
 
@@ -53,7 +52,7 @@ base branch (`master` in this case).
 
 ### Checking backward compatibility
 
-- Checkout the current branch (`master`) 
+- Checkout the `master` branch
   ```
   git checkout master
   ```
@@ -67,15 +66,23 @@ base branch (`master` in this case).
   go run ./cmd/get_contracts/main.go --chain=flow-mainnet --u=access.mainnet.nodes.onflow.org:9000 > ../../tmp/mainnet_contracts.csv
   cd ../..
   ```
+- Navigate to the `compatibility-check` tool and update it to use the Cadence branch from which the new release
+  would be created.
+  Here, since the release would also be done on the master branch, the current branch would also be `master`.
+  ```
+  cd ./tools/compatibility-check
+  go get github.com/onflow/cadence@master
+  go mod tidy
+  ```
 - Check the contracts using the current branch.
   This will write the parsing and checking errors to the `tmp/mainnet_output_new.txt` file.
   ```
-  cd ./tools/compatibility-check
   go run ./cmd/check_contracts/main.go ../../tmp/mainnet_contracts.csv ../../tmp/mainnet_output_new.txt
   ```
-- Checkout the Cadence version that is currently deployed on networks (`v0.21.0`), and repeat the previous step.
+- Update the tool to Cadence version that is currently deployed on networks (`v0.21.0`), and repeat the previous step.
   ```
-  git checkout v0.21.0
+  go get github.com/onflow/cadence@v0.21.0
+  go mod tidy
   go run ./cmd/check_contracts/main.go ../../tmp/mainnet_contracts.csv ../../tmp/mainnet_output_old.txt
   cd ../..
   ```

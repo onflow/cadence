@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -144,7 +145,7 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 	executor.transactionType = transactionType
 
 	var authorizers []Address
-	wrapPanic(func() {
+	errors.WrapPanic(func() {
 		authorizers, err = runtimeInterface.GetSigningAccounts()
 	})
 	if err != nil {

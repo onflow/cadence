@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	goRuntime "runtime"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -93,6 +92,9 @@ type Executor interface {
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
+	// Config() returns the runtime.Config this Runtime was instantiated with.
+	Config() Config
+
 	// NewScriptExecutor returns an executor which executes the given script.
 	NewScriptExecutor(Script, Context) Executor
 
@@ -216,6 +218,10 @@ func NewInterpreterRuntime(defaultConfig Config) Runtime {
 	}
 }
 
+func (r *interpreterRuntime) Config() Config {
+	return r.defaultConfig
+}
+
 func (r *interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms codesAndPrograms) {
 	recovered := recover()
 	if recovered == nil {
@@ -316,23 +322,6 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	return err
 }
 
-func wrapPanic(f func()) {
-	defer func() {
-		if r := recover(); r != nil {
-			// don't wrap Go errors and internal errors
-			switch r := r.(type) {
-			case goRuntime.Error, errors.InternalError:
-				panic(r)
-			default:
-				panic(errors.ExternalError{
-					Recovered: r,
-				})
-			}
-		}
-	}()
-	f()
-}
-
 // userPanicToError Executes `f` and gracefully handle `UserError` panics.
 // All on-user panics (including `InternalError` and `ExternalError`) are propagated up.
 func userPanicToError(f func()) (returnedError error) {
@@ -397,7 +386,7 @@ func validateArgumentParams(
 		var value cadence.Value
 		var err error
 
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			value, err = decoder.DecodeArgument(
 				argument,
 				exportedParameterType,
