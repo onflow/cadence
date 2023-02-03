@@ -1,6 +1,7 @@
 #!/bin/bash
 
-v=$(git describe --tags --abbrev=0 | sed -Ee 's/^v|-.*//')
+# Read the version to be replaced from the `version.go` file.
+v=$(sed -En 's/const Version = "v(.*)"/\1/p' version.go)
 
 case "$1" in
   major)
@@ -16,7 +17,10 @@ case "$1" in
     ;;
 
   *)
-    v2=$1
+
+    # Trim off preceding `v` if any.
+    # This is to support both input version formats: `0.1.0` and `v0.1.0`.
+    v2=$(echo "$1" | sed -Ee 's/^v|-.*//')
     ;;
 esac
 
