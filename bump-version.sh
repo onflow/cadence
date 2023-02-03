@@ -27,10 +27,20 @@ esac
 echo "$v => $v2"
 
 for f in $VERSIONED_FILES; do \
+  prevCount=$(grep -c -i "$v2" "$f")
+
+  # Replace the version.
   echo "- $f"; \
   if [[ "$OSTYPE" == "darwin"* ]]; then
     sed -i '' "s/$v/$v2/g" "$f"; \
   else
     sed -i "s/$v/$v2/g" "$f"; \
+  fi
+
+  # Check if the version has being properly replaced.
+  newCount=$(grep -c -i "$v2" "$f")
+  if [[ $newCount -le $prevCount ]]; then
+    echo "fail to update version in '$f'"
+    exit 1
   fi
 done
