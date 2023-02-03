@@ -64,6 +64,7 @@ var parsedHeaderTemplate = template.Must(template.New("header").Parse(headerTemp
 var parserConfig = parser.Config{
 	StaticModifierEnabled: true,
 	NativeModifierEnabled: true,
+	TypeParametersEnabled: true,
 }
 
 func initialUpper(s string) string {
@@ -110,8 +111,83 @@ func (g *generator) VisitFunctionDeclaration(decl *ast.FunctionDeclaration) (_ s
 
 	functionName := decl.Identifier.Identifier
 	fullTypeName := g.fullTypeName()
-	docString := g.declarationDocString(decl)
 
+	g.addFunctionNameDeclaration(fullTypeName, functionName)
+
+	var typeParams map[string]string
+
+	if decl.TypeParameterList != nil {
+		typeParams = g.addFunctionTypeParameterDeclarations(decl, fullTypeName, functionName)
+	}
+
+	g.addFunctionTypeDeclaration(decl, fullTypeName, functionName, typeParams)
+
+	g.addFunctionDocStringDeclaration(decl, fullTypeName, functionName)
+
+	return
+}
+
+func (g *generator) addFunctionNameDeclaration(
+	fullTypeName string,
+	functionName string,
+) {
+	g.addDecls(
+		goConstDecl(
+			functionNameVarName(fullTypeName, functionName),
+			goStringLit(functionName),
+		),
+	)
+}
+
+func (g *generator) addFunctionTypeParameterDeclarations(
+	decl *ast.FunctionDeclaration,
+	fullTypeName string,
+	functionName string,
+) (typeParams map[string]string) {
+	typeParameters := decl.TypeParameterList.TypeParameters
+	typeParams = make(map[string]string, len(typeParameters))
+
+	for _, typeParameter := range typeParameters {
+		typeParameterName := typeParameter.Identifier.Identifier
+
+		var typeBound dst.Expr
+		if typeParameter.TypeBound != nil {
+			typeBound = typeExpr(
+				typeParameter.TypeBound.Type,
+				typeParams,
+			)
+		}
+
+		typeParams[typeParameterName] = functionTypeParameterVarName(
+			fullTypeName,
+			functionName,
+			typeParameterName,
+		)
+
+		g.addDecls(
+			goVarDecl(
+				functionTypeParameterVarName(
+					fullTypeName,
+					functionName,
+					typeParameterName,
+				),
+				typeParameterExpr(
+					typeParameterName,
+					typeBound,
+				),
+			),
+		)
+	}
+
+	return
+}
+
+func (g *generator) addFunctionTypeDeclaration(
+	decl *ast.FunctionDeclaration,
+	fullTypeName string,
+	functionName string,
+	typeParams map[string]string,
+) {
 	parameters := decl.ParameterList.Parameters
 
 	parameterTypeAnnotations := make([]*ast.TypeAnnotation, 0, len(parameters))
@@ -123,24 +199,33 @@ func (g *generator) VisitFunctionDeclaration(decl *ast.FunctionDeclaration) (_ s
 	}
 
 	g.addDecls(
-		goConstDecl(
-			functionNameVarName(fullTypeName, functionName),
-			goStringLit(functionName),
-		),
 		goVarDecl(
 			functionTypeVarName(fullTypeName, functionName),
-			typeExpr(&ast.FunctionType{
-				ReturnTypeAnnotation:     decl.ReturnTypeAnnotation,
-				ParameterTypeAnnotations: parameterTypeAnnotations,
-			}),
+			functionTypeExpr(
+				&ast.FunctionType{
+					ReturnTypeAnnotation:     decl.ReturnTypeAnnotation,
+					ParameterTypeAnnotations: parameterTypeAnnotations,
+				},
+				decl.TypeParameterList,
+				typeParams,
+			),
 		),
+	)
+}
+
+func (g *generator) addFunctionDocStringDeclaration(
+	decl *ast.FunctionDeclaration,
+	fullTypeName string,
+	functionName string,
+) {
+	docString := g.declarationDocString(decl)
+
+	g.addDecls(
 		goConstDecl(
 			functionDocStringVarName(fullTypeName, functionName),
 			goRawLit(docString),
 		),
 	)
-
-	return
 }
 
 func (g *generator) declarationDocString(decl ast.Declaration) string {
@@ -259,7 +344,7 @@ func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{
 		),
 		goVarDecl(
 			fieldTypeVarName(fullTypeName, fieldName),
-			typeExpr(decl.TypeAnnotation.Type),
+			typeExpr(decl.TypeAnnotation.Type, nil),
 		),
 		goConstDecl(
 			fieldDocStringVarName(fullTypeName, fieldName),
@@ -270,10 +355,24 @@ func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{
 	return
 }
 
-func typeExpr(t ast.Type) dst.Expr {
+func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 	switch t := t.(type) {
 	case *ast.NominalType:
 		identifier := t.Identifier.Identifier
+
+		typeParamVarName, ok := typeParams[identifier]
+		if ok {
+			return &dst.UnaryExpr{
+				Op: token.AND,
+				X: &dst.CompositeLit{
+					Type: dst.NewIdent("GenericType"),
+					Elts: []dst.Expr{
+						goKeyValue("TypeParameter", dst.NewIdent(typeParamVarName)),
+					},
+				},
+			}
+		}
+
 		switch identifier {
 		case "":
 			identifier = "Void"
@@ -298,7 +397,7 @@ func typeExpr(t ast.Type) dst.Expr {
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("OptionalType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type)),
+					goKeyValue("Type", typeExpr(t.Type, typeParams)),
 				},
 			},
 		}
@@ -309,7 +408,7 @@ func typeExpr(t ast.Type) dst.Expr {
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("ReferenceType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type)),
+					goKeyValue("Type", typeExpr(t.Type, typeParams)),
 				},
 			},
 		}
@@ -320,7 +419,7 @@ func typeExpr(t ast.Type) dst.Expr {
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("VariableSizedType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type)),
+					goKeyValue("Type", typeExpr(t.Type, typeParams)),
 				},
 			},
 		}
@@ -331,7 +430,7 @@ func typeExpr(t ast.Type) dst.Expr {
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("ConstantSizedType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type)),
+					goKeyValue("Type", typeExpr(t.Type, typeParams)),
 					goKeyValue(
 						"Size",
 						&dst.BasicLit{
@@ -342,104 +441,161 @@ func typeExpr(t ast.Type) dst.Expr {
 				},
 			},
 		}
+
 	case *ast.FunctionType:
-		// TODO: type parameters
-
-		parameterTypeAnnotations := t.ParameterTypeAnnotations
-		parameterCount := len(parameterTypeAnnotations)
-
-		var parametersExpr dst.Expr
-
-		if parameterCount > 0 {
-			parameterExprs := make([]dst.Expr, 0, parameterCount)
-
-			for _, parameterTypeAnnotation := range parameterTypeAnnotations {
-
-				parameterExpr := &dst.CompositeLit{
-					Elts: []dst.Expr{
-						goKeyValue(
-							"TypeAnnotation",
-							typeAnnotationCallExpr(typeExpr(parameterTypeAnnotation.Type)),
-						),
-					},
-				}
-				parameterExpr.Decorations().Before = dst.NewLine
-				parameterExpr.Decorations().After = dst.NewLine
-
-				parameterExprs = append(
-					parameterExprs,
-					parameterExpr,
-				)
-			}
-
-			parametersExpr = &dst.CompositeLit{
-				Type: &dst.ArrayType{
-					Elt: dst.NewIdent("Parameter"),
-				},
-				Elts: parameterExprs,
-			}
-		}
-
-		returnTypeExpr := typeExpr(t.ReturnTypeAnnotation.Type)
-		returnTypeExpr.Decorations().Before = dst.NewLine
-		returnTypeExpr.Decorations().After = dst.NewLine
-
-		var compositeElements []dst.Expr
-
-		if parametersExpr != nil {
-			compositeElements = append(
-				compositeElements,
-				goKeyValue(
-					"Parameters",
-					parametersExpr,
-				),
-			)
-		}
-
-		compositeElements = append(
-			compositeElements,
-			goKeyValue(
-				"ReturnTypeAnnotation",
-				typeAnnotationCallExpr(returnTypeExpr),
-			),
-		)
-
-		return &dst.UnaryExpr{
-			Op: token.AND,
-			X: &dst.CompositeLit{
-				Type: dst.NewIdent("FunctionType"),
-				Elts: compositeElements,
-			},
-		}
+		return functionTypeExpr(t, nil, typeParams)
 
 	case *ast.InstantiationType:
 		typeArguments := t.TypeArguments
-		typeArgumentExprs := make([]dst.Expr, 0, len(typeArguments))
+		argumentExprs := []dst.Expr{
+			typeExpr(t.Type, typeParams),
+		}
+
 		for _, argument := range typeArguments {
-			typeArgumentExprs = append(
-				typeArgumentExprs,
-				typeExpr(argument.Type),
+			argumentExprs = append(
+				argumentExprs,
+				typeExpr(argument.Type, typeParams),
 			)
 		}
 
+		for _, expr := range argumentExprs {
+			expr.Decorations().Before = dst.NewLine
+			expr.Decorations().After = dst.NewLine
+		}
+
 		return &dst.CallExpr{
-			Fun: &dst.SelectorExpr{
-				X:   typeExpr(t.Type),
-				Sel: dst.NewIdent("Instantiate"),
-			},
-			Args: []dst.Expr{
-				&dst.CompositeLit{
-					Type: &dst.ArrayType{
-						Elt: dst.NewIdent("Type"),
-					},
-					Elts: typeArgumentExprs,
-				},
-				dst.NewIdent("panicUnexpected"),
-			},
+			Fun:  dst.NewIdent("MustInstantiate"),
+			Args: argumentExprs,
 		}
 
 	default:
 		panic(fmt.Errorf("%T types are not supported", t))
+	}
+}
+
+func functionTypeExpr(
+	t *ast.FunctionType,
+	typeParameterList *ast.TypeParameterList,
+	typeParams map[string]string,
+) dst.Expr {
+
+	// Type parameters
+
+	var typeParameterTypeAnnotations []*ast.TypeParameter
+	if typeParameterList != nil {
+		typeParameterTypeAnnotations = typeParameterList.TypeParameters
+	}
+	typeParameterCount := len(typeParameterTypeAnnotations)
+
+	var typeParametersExpr dst.Expr
+
+	if typeParameterCount > 0 {
+		typeParameterExprs := make([]dst.Expr, 0, typeParameterCount)
+
+		for _, typeParameterTypeAnnotation := range typeParameterTypeAnnotations {
+			typeParameterName := typeParameterTypeAnnotation.Identifier.Identifier
+			typeParameterExpr := dst.NewIdent(typeParams[typeParameterName])
+
+			typeParameterExpr.Decorations().Before = dst.NewLine
+			typeParameterExpr.Decorations().After = dst.NewLine
+
+			typeParameterExprs = append(
+				typeParameterExprs,
+				typeParameterExpr,
+			)
+		}
+
+		typeParametersExpr = &dst.CompositeLit{
+			Type: &dst.ArrayType{
+				Elt: &dst.StarExpr{
+					X: dst.NewIdent("TypeParameter"),
+				},
+			},
+			Elts: typeParameterExprs,
+		}
+	}
+
+	// Parameters
+
+	parameterTypeAnnotations := t.ParameterTypeAnnotations
+	parameterCount := len(parameterTypeAnnotations)
+
+	var parametersExpr dst.Expr
+
+	if parameterCount > 0 {
+		parameterExprs := make([]dst.Expr, 0, parameterCount)
+
+		for _, parameterTypeAnnotation := range parameterTypeAnnotations {
+
+			parameterExpr := &dst.CompositeLit{
+				Elts: []dst.Expr{
+					goKeyValue(
+						"TypeAnnotation",
+						typeAnnotationCallExpr(typeExpr(parameterTypeAnnotation.Type, typeParams)),
+					),
+				},
+			}
+			parameterExpr.Decorations().Before = dst.NewLine
+			parameterExpr.Decorations().After = dst.NewLine
+
+			parameterExprs = append(
+				parameterExprs,
+				parameterExpr,
+			)
+		}
+
+		parametersExpr = &dst.CompositeLit{
+			Type: &dst.ArrayType{
+				Elt: dst.NewIdent("Parameter"),
+			},
+			Elts: parameterExprs,
+		}
+	}
+
+	// Return type
+
+	returnTypeExpr := typeExpr(t.ReturnTypeAnnotation.Type, typeParams)
+	returnTypeExpr.Decorations().Before = dst.NewLine
+	returnTypeExpr.Decorations().After = dst.NewLine
+
+	// Composite literal elements
+
+	var compositeElements []dst.Expr
+
+	if typeParametersExpr != nil {
+		compositeElements = append(
+			compositeElements,
+			goKeyValue(
+				"TypeParameters",
+				typeParametersExpr,
+			),
+		)
+	}
+
+	if parametersExpr != nil {
+		compositeElements = append(
+			compositeElements,
+			goKeyValue(
+				"Parameters",
+				parametersExpr,
+			),
+		)
+	}
+
+	compositeElements = append(
+		compositeElements,
+		goKeyValue(
+			"ReturnTypeAnnotation",
+			typeAnnotationCallExpr(returnTypeExpr),
+		),
+	)
+
+	return &dst.UnaryExpr{
+		Op: token.AND,
+		X: &dst.CompositeLit{
+			Type: dst.NewIdent("FunctionType"),
+			Elts: compositeElements,
+		},
 	}
 }
 
@@ -587,6 +743,10 @@ func fieldTypeVarName(fullTypeName, fieldName string) string {
 
 func functionTypeVarName(fullTypeName, functionName string) string {
 	return memberVarName(fullTypeName, functionName, "Function", "Type")
+}
+
+func functionTypeParameterVarName(fullTypeName, functionName, typeParameterName string) string {
+	return memberVarName(fullTypeName, functionName, "Function", "TypeParameter"+typeParameterName)
 }
 
 func fieldDocStringVarName(fullTypeName, fieldName string) string {
@@ -872,6 +1032,26 @@ func typeAnnotationCallExpr(ty dst.Expr) *dst.CallExpr {
 		Fun: dst.NewIdent("NewTypeAnnotation"),
 		Args: []dst.Expr{
 			ty,
+		},
+	}
+}
+
+func typeParameterExpr(name string, typeBound dst.Expr) dst.Expr {
+	elements := []dst.Expr{
+		goKeyValue("Name", goStringLit(name)),
+	}
+	if typeBound != nil {
+		elements = append(
+			elements,
+			goKeyValue("TypeBound", typeBound),
+		)
+	}
+
+	return &dst.UnaryExpr{
+		Op: token.AND,
+		X: &dst.CompositeLit{
+			Type: dst.NewIdent("TypeParameter"),
+			Elts: elements,
 		},
 	}
 }
