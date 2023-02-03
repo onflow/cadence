@@ -571,12 +571,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 						break
 					}
 
-					isCommaOrFrom, err := isNextTokenCommaOrFrom(p)
-					if err != nil {
-						return err
-					}
-
-					if !isCommaOrFrom {
+					if !isNextTokenCommaOrFrom(p) {
 						return p.syntaxError(
 							"expected %s, got keyword %q",
 							lexer.TokenIdentifier,
@@ -700,10 +695,12 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 }
 
 // isNextTokenCommaOrFrom check whether the token to follow is a comma or a from token.
-func isNextTokenCommaOrFrom(p *parser) (b bool, err error) {
-	p.startBuffering()
+func isNextTokenCommaOrFrom(p *parser) bool {
+	current := p.current
+	cursor := p.tokens.Cursor()
 	defer func() {
-		err = p.replayBuffered()
+		p.current = current
+		p.tokens.Revert(cursor)
 	}()
 
 	// skip the current token
@@ -713,12 +710,13 @@ func isNextTokenCommaOrFrom(p *parser) (b bool, err error) {
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		isFrom := string(p.currentTokenSource()) == keywordFrom
-		return isFrom, nil
+		return isFrom
+
 	case lexer.TokenComma:
-		return true, nil
-	default:
-		return false, nil
+		return true
 	}
+
+	return false
 }
 
 func parseHexadecimalLocation(p *parser) common.AddressLocation {
