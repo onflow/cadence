@@ -309,7 +309,7 @@ func defineReferenceType() {
 		nullDenotation: func(p *parser, right ast.Type, tokenRange ast.Range) ast.Type {
 			return ast.NewReferenceType(
 				p.memoryGauge,
-				false,
+				nil,
 				right,
 				tokenRange.StartPos,
 			)
@@ -936,6 +936,29 @@ func defineIdentifierTypes() {
 			case KeywordAuth:
 				p.skipSpaceAndComments()
 
+				var authorization ast.Authorization
+
+				current := p.current
+				if current.Is(lexer.TokenParenOpen) {
+					_, err := p.mustOne(lexer.TokenParenOpen)
+					if err != nil {
+						return nil, err
+					}
+					entitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose)
+					if err != nil {
+						return nil, err
+					}
+					if len(entitlements) < 1 {
+						return nil, p.syntaxError("entitlements list cannot be empty")
+					}
+					authorization.Entitlements = entitlements
+					_, err = p.mustOne(lexer.TokenParenClose)
+					if err != nil {
+						return nil, err
+					}
+					p.skipSpaceAndComments()
+				}
+
 				_, err := p.mustOne(lexer.TokenAmpersand)
 				if err != nil {
 					return nil, err
@@ -948,7 +971,7 @@ func defineIdentifierTypes() {
 
 				return ast.NewReferenceType(
 					p.memoryGauge,
-					true,
+					&authorization,
 					right,
 					token.StartPos,
 				), nil

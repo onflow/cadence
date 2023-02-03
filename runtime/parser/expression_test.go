@@ -2378,7 +2378,6 @@ func TestParseNilCoelesceReference(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					Type: &ast.OptionalType{
 						Type: &ast.ReferenceType{
-							Authorized: false,
 							Type: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "Int",

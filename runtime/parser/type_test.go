@@ -285,7 +285,6 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorized: false,
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "Int",
@@ -307,7 +306,7 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorized: true,
+				Authorization: &ast.Authorization{},
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "Int",
@@ -317,6 +316,91 @@ func TestParseReferenceType(t *testing.T) {
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
 			result,
+		)
+	})
+
+	t.Run("authorized, one entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth(X) &Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorization: &ast.Authorization{
+					Entitlements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+							},
+						},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("authorized, two entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth(X, Y) &Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorization: &ast.Authorization{
+					Entitlements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "Y",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
+						},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("authorized, empty entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth() &Int")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "entitlements list cannot be empty",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -335,7 +419,6 @@ func TestParseOptionalReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			&ast.OptionalType{
 				Type: &ast.ReferenceType{
-					Authorized: false,
 					Type: &ast.NominalType{
 						Identifier: ast.Identifier{
 							Identifier: "Int",
@@ -2830,7 +2913,7 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.ReferenceType{
-						Authorized: true,
+						Authorization: &ast.Authorization{},
 						Type: &ast.NominalType{
 							Identifier: ast.Identifier{
 								Identifier: "R", Pos: ast.Position{Offset: 21, Line: 2, Column: 20}},
