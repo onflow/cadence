@@ -7015,3 +7015,130 @@ func TestParseNestedPragma(t *testing.T) {
 	})
 
 }
+
+func TestParseMemberDocStrings(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("functions", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+          struct Test {
+
+              /// noReturnNoBlock
+              fun noReturnNoBlock()
+
+              /// returnNoBlock
+              fun returnNoBlock(): Int
+
+              /// returnAndBlock
+              fun returnAndBlock(): String {}
+          }
+	    `)
+
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.FunctionDeclaration{
+								DocString: " noReturnNoBlock",
+								Identifier: ast.Identifier{
+									Identifier: "noReturnNoBlock",
+									Pos:        ast.Position{Offset: 78, Line: 5, Column: 18},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 93, Line: 5, Column: 33},
+										EndPos:   ast.Position{Offset: 94, Line: 5, Column: 34},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "",
+											Pos:        ast.Position{Offset: 94, Line: 5, Column: 34},
+										},
+									},
+									StartPos: ast.Position{Offset: 94, Line: 5, Column: 34},
+								},
+								StartPos: ast.Position{Offset: 74, Line: 5, Column: 14},
+							},
+							&ast.FunctionDeclaration{
+								DocString: " returnNoBlock",
+								Identifier: ast.Identifier{
+									Identifier: "returnNoBlock",
+									Pos:        ast.Position{Offset: 147, Line: 8, Column: 18},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 160, Line: 8, Column: 31},
+										EndPos:   ast.Position{Offset: 161, Line: 8, Column: 32},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 164, Line: 8, Column: 35},
+										},
+									},
+									StartPos: ast.Position{Offset: 164, Line: 8, Column: 35},
+								},
+								StartPos: ast.Position{Offset: 143, Line: 8, Column: 14},
+							},
+							&ast.FunctionDeclaration{
+								DocString: " returnAndBlock",
+								Identifier: ast.Identifier{
+									Identifier: "returnAndBlock",
+									Pos:        ast.Position{Offset: 220, Line: 11, Column: 18},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 234, Line: 11, Column: 32},
+										EndPos:   ast.Position{Offset: 235, Line: 11, Column: 33},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "String",
+											Pos:        ast.Position{Offset: 238, Line: 11, Column: 36},
+										},
+									},
+									StartPos: ast.Position{Offset: 238, Line: 11, Column: 36},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 245, Line: 11, Column: 43},
+											EndPos:   ast.Position{Offset: 246, Line: 11, Column: 44},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 216, Line: 11, Column: 14},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
+						EndPos:   ast.Position{Offset: 258, Line: 12, Column: 10},
+					},
+				},
+			},
+			result,
+		)
+	})
+}

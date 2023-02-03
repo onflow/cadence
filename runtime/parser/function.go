@@ -238,17 +238,21 @@ func parseFunctionParameterListAndRest(
 		return
 	}
 
+	current := p.current
+	cursor := p.tokens.Cursor()
 	p.skipSpaceAndComments()
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
 		p.nextSemanticToken()
+
 		returnTypeAnnotation, err = parseTypeAnnotation(p)
 		if err != nil {
 			return
 		}
-
-		p.skipSpaceAndComments()
 	} else {
+		p.tokens.Revert(cursor)
+		p.current = current
+
 		positionBeforeMissingReturnType := parameterList.EndPos
 		returnType := ast.NewNominalType(
 			p.memoryGauge,
@@ -266,15 +270,20 @@ func parseFunctionParameterListAndRest(
 		)
 	}
 
-	p.skipSpaceAndComments()
-
-	if !functionBlockIsOptional ||
-		p.current.Is(lexer.TokenBraceOpen) {
-
-		functionBlock, err = parseFunctionBlock(p)
-		if err != nil {
+	if functionBlockIsOptional {
+		current = p.current
+		cursor := p.tokens.Cursor()
+		p.skipSpaceAndComments()
+		if !p.current.Is(lexer.TokenBraceOpen) {
+			p.tokens.Revert(cursor)
+			p.current = current
 			return
 		}
+	}
+
+	functionBlock, err = parseFunctionBlock(p)
+	if err != nil {
+		return
 	}
 
 	return
