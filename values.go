@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,11 +68,11 @@ func NewMeteredVoid(memoryGauge common.MemoryGauge) Void {
 func (Void) isValue() {}
 
 func (Void) Type() Type {
-	return NewVoidType()
+	return TheVoidType
 }
 
-func (Void) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredVoidType(gauge)
+func (v Void) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (Void) ToGoValue() any {
@@ -105,7 +105,7 @@ func (Optional) isValue() {}
 func (o Optional) Type() Type {
 	var innerType Type
 	if o.Value == nil {
-		innerType = NewNeverType()
+		innerType = TheNeverType
 	} else {
 		innerType = o.Value.Type()
 	}
@@ -118,7 +118,7 @@ func (o Optional) Type() Type {
 func (o Optional) MeteredType(gauge common.MemoryGauge) Type {
 	var innerType Type
 	if o.Value == nil {
-		innerType = NewMeteredNeverType(gauge)
+		innerType = TheNeverType
 	} else {
 		innerType = o.Value.MeteredType(gauge)
 	}
@@ -164,11 +164,11 @@ func NewMeteredBool(memoryGauge common.MemoryGauge, b bool) Bool {
 func (Bool) isValue() {}
 
 func (Bool) Type() Type {
-	return NewBoolType()
+	return TheBoolType
 }
 
-func (Bool) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredBoolType(gauge)
+func (v Bool) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Bool) ToGoValue() any {
@@ -206,11 +206,11 @@ func NewMeteredString(
 func (String) isValue() {}
 
 func (String) Type() Type {
-	return NewStringType()
+	return TheStringType
 }
 
-func (String) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredStringType(gauge)
+func (v String) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v String) ToGoValue() any {
@@ -235,11 +235,11 @@ func NewBytes(b []byte) Bytes {
 func (Bytes) isValue() {}
 
 func (Bytes) Type() Type {
-	return NewBytesType()
+	return TheBytesType
 }
 
-func (Bytes) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredBytesType(gauge)
+func (v Bytes) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Bytes) ToGoValue() any {
@@ -279,11 +279,11 @@ func NewMeteredCharacter(
 func (Character) isValue() {}
 
 func (Character) Type() Type {
-	return NewCharacterType()
+	return TheCharacterType
 }
 
-func (Character) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredCharacterType(gauge)
+func (v Character) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Character) ToGoValue() any {
@@ -325,11 +325,11 @@ func BytesToMeteredAddress(memoryGauge common.MemoryGauge, b []byte) Address {
 func (Address) isValue() {}
 
 func (Address) Type() Type {
-	return NewAddressType()
+	return TheAddressType
 }
 
-func (Address) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredAddressType(gauge)
+func (Address) MeteredType(common.MemoryGauge) Type {
+	return TheAddressType
 }
 
 func (v Address) ToGoValue() any {
@@ -381,11 +381,11 @@ func NewMeteredIntFromBig(
 func (Int) isValue() {}
 
 func (Int) Type() Type {
-	return NewIntType()
+	return TheIntType
 }
 
-func (Int) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredIntType(gauge)
+func (v Int) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int) ToGoValue() any {
@@ -432,11 +432,11 @@ func (v Int8) ToGoValue() any {
 }
 
 func (Int8) Type() Type {
-	return NewInt8Type()
+	return TheInt8Type
 }
 
-func (Int8) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt8Type(gauge)
+func (v Int8) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int8) ToBigEndianBytes() []byte {
@@ -467,11 +467,11 @@ func NewMeteredInt16(memoryGauge common.MemoryGauge, v int16) Int16 {
 func (Int16) isValue() {}
 
 func (Int16) Type() Type {
-	return NewInt16Type()
+	return TheInt16Type
 }
 
-func (Int16) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt16Type(gauge)
+func (v Int16) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int16) ToGoValue() any {
@@ -508,11 +508,11 @@ func NewMeteredInt32(memoryGauge common.MemoryGauge, v int32) Int32 {
 func (Int32) isValue() {}
 
 func (Int32) Type() Type {
-	return NewInt32Type()
+	return TheInt32Type
 }
 
-func (Int32) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt32Type(gauge)
+func (v Int32) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int32) ToGoValue() any {
@@ -549,11 +549,11 @@ func NewMeteredInt64(memoryGauge common.MemoryGauge, v int64) Int64 {
 func (Int64) isValue() {}
 
 func (Int64) Type() Type {
-	return NewInt64Type()
+	return TheInt64Type
 }
 
-func (Int64) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt64Type(gauge)
+func (v Int64) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int64) ToGoValue() any {
@@ -611,11 +611,11 @@ func NewMeteredInt128FromBig(
 func (Int128) isValue() {}
 
 func (Int128) Type() Type {
-	return NewInt128Type()
+	return TheInt128Type
 }
 
-func (Int128) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt128Type(gauge)
+func (v Int128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int128) ToGoValue() any {
@@ -679,11 +679,11 @@ func NewMeteredInt256FromBig(
 func (Int256) isValue() {}
 
 func (Int256) Type() Type {
-	return NewInt256Type()
+	return TheInt256Type
 }
 
-func (Int256) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt256Type(gauge)
+func (v Int256) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int256) ToGoValue() any {
@@ -742,11 +742,11 @@ func NewMeteredUIntFromBig(
 func (UInt) isValue() {}
 
 func (UInt) Type() Type {
-	return NewUIntType()
+	return TheUIntType
 }
 
-func (UInt) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUIntType(gauge)
+func (v UInt) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt) ToGoValue() any {
@@ -789,11 +789,11 @@ func NewMeteredUInt8(gauge common.MemoryGauge, v uint8) UInt8 {
 func (UInt8) isValue() {}
 
 func (UInt8) Type() Type {
-	return NewUInt8Type()
+	return TheUInt8Type
 }
 
-func (UInt8) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt8Type(gauge)
+func (v UInt8) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt8) ToGoValue() any {
@@ -828,11 +828,11 @@ func NewMeteredUInt16(gauge common.MemoryGauge, v uint16) UInt16 {
 func (UInt16) isValue() {}
 
 func (UInt16) Type() Type {
-	return NewUInt16Type()
+	return TheUInt16Type
 }
 
-func (UInt16) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt16Type(gauge)
+func (v UInt16) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt16) ToGoValue() any {
@@ -869,11 +869,11 @@ func NewMeteredUInt32(gauge common.MemoryGauge, v uint32) UInt32 {
 func (UInt32) isValue() {}
 
 func (UInt32) Type() Type {
-	return NewUInt32Type()
+	return TheUInt32Type
 }
 
-func (UInt32) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt32Type(gauge)
+func (v UInt32) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt32) ToGoValue() any {
@@ -910,11 +910,11 @@ func NewMeteredUInt64(gauge common.MemoryGauge, v uint64) UInt64 {
 func (UInt64) isValue() {}
 
 func (UInt64) Type() Type {
-	return NewUInt64Type()
+	return TheUInt64Type
 }
 
-func (UInt64) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt64Type(gauge)
+func (v UInt64) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt64) ToGoValue() any {
@@ -972,11 +972,11 @@ func NewMeteredUInt128FromBig(
 func (UInt128) isValue() {}
 
 func (UInt128) Type() Type {
-	return NewUInt128Type()
+	return TheUInt128Type
 }
 
-func (UInt128) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt128Type(gauge)
+func (v UInt128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt128) ToGoValue() any {
@@ -1040,11 +1040,11 @@ func NewMeteredUInt256FromBig(
 func (UInt256) isValue() {}
 
 func (UInt256) Type() Type {
-	return NewUInt256Type()
+	return TheUInt256Type
 }
 
-func (UInt256) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt256Type(gauge)
+func (v UInt256) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt256) ToGoValue() any {
@@ -1087,11 +1087,11 @@ func NewMeteredWord8(gauge common.MemoryGauge, v uint8) Word8 {
 func (Word8) isValue() {}
 
 func (Word8) Type() Type {
-	return NewWord8Type()
+	return TheWord8Type
 }
 
-func (Word8) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredWord8Type(gauge)
+func (v Word8) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Word8) ToGoValue() any {
@@ -1126,11 +1126,11 @@ func NewMeteredWord16(gauge common.MemoryGauge, v uint16) Word16 {
 func (Word16) isValue() {}
 
 func (Word16) Type() Type {
-	return NewWord16Type()
+	return TheWord16Type
 }
 
-func (Word16) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredWord16Type(gauge)
+func (v Word16) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Word16) ToGoValue() any {
@@ -1167,11 +1167,11 @@ func NewMeteredWord32(gauge common.MemoryGauge, v uint32) Word32 {
 func (Word32) isValue() {}
 
 func (Word32) Type() Type {
-	return NewWord32Type()
+	return TheWord32Type
 }
 
-func (Word32) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredWord32Type(gauge)
+func (v Word32) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Word32) ToGoValue() any {
@@ -1208,11 +1208,11 @@ func NewMeteredWord64(gauge common.MemoryGauge, v uint64) Word64 {
 func (Word64) isValue() {}
 
 func (Word64) Type() Type {
-	return NewWord64Type()
+	return TheWord64Type
 }
 
-func (Word64) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredWord64Type(gauge)
+func (v Word64) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Word64) ToGoValue() any {
@@ -1270,11 +1270,11 @@ func NewMeteredFix64(gauge common.MemoryGauge, constructor func() (string, error
 func (Fix64) isValue() {}
 
 func (Fix64) Type() Type {
-	return NewFix64Type()
+	return TheFix64Type
 }
 
-func (Fix64) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredFix64Type(gauge)
+func (v Fix64) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Fix64) ToGoValue() any {
@@ -1339,11 +1339,11 @@ func ParseUFix64(s string) (uint64, error) {
 func (UFix64) isValue() {}
 
 func (UFix64) Type() Type {
-	return NewUFix64Type()
+	return TheUFix64Type
 }
 
-func (UFix64) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUFix64Type(gauge)
+func (v UFix64) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UFix64) ToGoValue() any {
@@ -1396,7 +1396,7 @@ func (v Array) Type() Type {
 	return v.ArrayType
 }
 
-func (v Array) MeteredType(_ common.MemoryGauge) Type {
+func (v Array) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1456,7 +1456,7 @@ func (v Dictionary) Type() Type {
 	return v.DictionaryType
 }
 
-func (v Dictionary) MeteredType(_ common.MemoryGauge) Type {
+func (v Dictionary) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1544,7 +1544,7 @@ func (v Struct) Type() Type {
 	return v.StructType
 }
 
-func (v Struct) MeteredType(_ common.MemoryGauge) Type {
+func (v Struct) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1622,7 +1622,7 @@ func (v Resource) Type() Type {
 	return v.ResourceType
 }
 
-func (v Resource) MeteredType(_ common.MemoryGauge) Type {
+func (v Resource) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1679,7 +1679,7 @@ func (v Event) Type() Type {
 	return v.EventType
 }
 
-func (v Event) MeteredType(_ common.MemoryGauge) Type {
+func (v Event) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1735,7 +1735,7 @@ func (v Contract) Type() Type {
 	return v.ContractType
 }
 
-func (v Contract) MeteredType(_ common.MemoryGauge) Type {
+func (v Contract) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1756,49 +1756,6 @@ func (v Contract) ToGoValue() any {
 
 func (v Contract) String() string {
 	return formatComposite(v.ContractType.ID(), v.ContractType.Fields, v.Fields)
-}
-
-// PathLink
-
-type PathLink struct {
-	TargetPath Path
-	// TODO: a future version might want to export the whole type
-	BorrowType string
-}
-
-var _ Value = PathLink{}
-
-func NewPathLink(targetPath Path, borrowType string) PathLink {
-	return PathLink{
-		TargetPath: targetPath,
-		BorrowType: borrowType,
-	}
-}
-
-func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) PathLink {
-	common.UseMemory(gauge, common.CadencePathLinkValueMemoryUsage)
-	return NewPathLink(targetPath, borrowType)
-}
-
-func (PathLink) isValue() {}
-
-func (v PathLink) Type() Type {
-	return nil
-}
-
-func (v PathLink) MeteredType(_ common.MemoryGauge) Type {
-	return v.Type()
-}
-
-func (v PathLink) ToGoValue() any {
-	return nil
-}
-
-func (v PathLink) String() string {
-	return format.PathLink(
-		v.BorrowType,
-		v.TargetPath.String(),
-	)
 }
 
 // Path
@@ -1825,11 +1782,11 @@ func NewMeteredPath(gauge common.MemoryGauge, domain, identifier string) Path {
 func (Path) isValue() {}
 
 func (Path) Type() Type {
-	return NewPathType()
+	return ThePathType
 }
 
-func (Path) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredPathType(gauge)
+func (v Path) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (Path) ToGoValue() any {
@@ -1865,11 +1822,11 @@ func NewMeteredTypeValue(gauge common.MemoryGauge, staticType Type) TypeValue {
 func (TypeValue) isValue() {}
 
 func (TypeValue) Type() Type {
-	return NewMetaType()
+	return TheMetaType
 }
 
-func (TypeValue) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredMetaType(gauge)
+func (v TypeValue) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (TypeValue) ToGoValue() any {
@@ -1958,7 +1915,7 @@ func (v Enum) Type() Type {
 	return v.EnumType
 }
 
-func (v Enum) MeteredType(_ common.MemoryGauge) Type {
+func (v Enum) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -2005,7 +1962,7 @@ func (v Function) Type() Type {
 	return v.FunctionType
 }
 
-func (v Function) MeteredType(_ common.MemoryGauge) Type {
+func (v Function) MeteredType(common.MemoryGauge) Type {
 	return v.FunctionType
 }
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,47 +140,47 @@ func TestParseBuffering(t *testing.T) {
 		_, errs := Parse(
 			nil,
 			[]byte("a b c d"),
-			func(p *parser) (any, error) {
+			func(p *parser) (struct{}, error) {
 				_, err := p.mustToken(lexer.TokenIdentifier, "a")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				p.startBuffering()
 
 				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				p.acceptBuffered()
 
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				_, err = p.mustToken(lexer.TokenIdentifier, "d")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
-				return nil, nil
+				return struct{}{}, nil
 			},
 			Config{},
 		)
@@ -195,47 +195,47 @@ func TestParseBuffering(t *testing.T) {
 		_, errs := Parse(
 			nil,
 			[]byte("a b x d"),
-			func(p *parser) (any, error) {
+			func(p *parser) (struct{}, error) {
 				_, err := p.mustToken(lexer.TokenIdentifier, "a")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				p.startBuffering()
 
 				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				p.acceptBuffered()
 
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				_, err = p.mustToken(lexer.TokenIdentifier, "d")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
-				return nil, nil
+				return struct{}{}, nil
 			},
 			Config{},
 		)
@@ -258,58 +258,58 @@ func TestParseBuffering(t *testing.T) {
 		_, errs := Parse(
 			nil,
 			[]byte("a b c d"),
-			func(p *parser) (any, error) {
+			func(p *parser) (struct{}, error) {
 				_, err := p.mustToken(lexer.TokenIdentifier, "a")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				p.startBuffering()
 
 				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				err = p.replayBuffered()
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustToken(lexer.TokenIdentifier, "d")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
-				return nil, nil
+				return struct{}{}, nil
 			},
 			Config{},
 		)
@@ -324,14 +324,14 @@ func TestParseBuffering(t *testing.T) {
 		_, errs := Parse(
 			nil,
 			[]byte("a b c d"),
-			func(p *parser) (any, error) {
+			func(p *parser) (struct{}, error) {
 				_, err := p.mustToken(lexer.TokenIdentifier, "a")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				p.startBuffering()
@@ -370,31 +370,31 @@ func TestParseBuffering(t *testing.T) {
 
 				err = p.replayBuffered()
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
 				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustOne(lexer.TokenSpace)
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 				_, err = p.mustToken(lexer.TokenIdentifier, "d")
 				if err != nil {
-					return nil, err
+					return struct{}{}, err
 				}
 
-				return nil, nil
+				return struct{}{}, nil
 			},
 			Config{},
 		)
@@ -598,15 +598,15 @@ func TestParseEOF(t *testing.T) {
 	_, errs := Parse(
 		nil,
 		[]byte("a b"),
-		func(p *parser) (any, error) {
+		func(p *parser) (struct{}, error) {
 			_, err := p.mustToken(lexer.TokenIdentifier, "a")
 			if err != nil {
-				return nil, err
+				return struct{}{}, err
 			}
 			p.skipSpaceAndComments()
 			_, err = p.mustToken(lexer.TokenIdentifier, "b")
 			if err != nil {
-				return nil, err
+				return struct{}{}, err
 			}
 
 			p.next()
@@ -635,7 +635,7 @@ func TestParseEOF(t *testing.T) {
 				p.current,
 			)
 
-			return nil, nil
+			return struct{}{}, nil
 		},
 		Config{},
 	)
@@ -685,12 +685,11 @@ func TestParseNames(t *testing.T) {
 
 		actual, err := testParseProgram(code)
 
-		if validExpected {
-			assert.NotNil(t, actual)
-			assert.NoError(t, err)
+		assert.NotNil(t, actual)
 
+		if validExpected {
+			assert.NoError(t, err)
 		} else {
-			assert.Nil(t, actual)
 			assert.IsType(t, Error{}, err)
 		}
 	}
@@ -1004,7 +1003,7 @@ func TestParseWhitespaceAtEnd(t *testing.T) {
 	_, errs := Parse(
 		nil,
 		[]byte("a  "),
-		func(p *parser) (any, error) {
+		func(p *parser) (lexer.Token, error) {
 			return p.mustToken(lexer.TokenIdentifier, "a")
 		},
 		Config{},

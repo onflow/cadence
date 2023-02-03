@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -194,7 +194,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
+					Location:  common.ScriptLocation{},
 				},
 			)
 			require.NoError(t, err)
@@ -242,12 +242,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -286,12 +285,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -323,12 +321,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -360,12 +357,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -397,12 +393,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -434,12 +429,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -471,12 +465,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -508,12 +501,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -544,7 +536,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -580,7 +572,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -611,7 +603,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -642,7 +634,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -673,7 +665,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -704,7 +696,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -735,7 +727,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -766,7 +758,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -819,7 +811,7 @@ func TestLogFunctionStringConversionMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -879,7 +871,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.TransactionLocation{},
 			},
 		)
 
@@ -917,7 +909,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.TransactionLocation{},
 			},
 		)
 
@@ -963,7 +955,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.TransactionLocation{},
 			},
 		)
 
@@ -999,6 +991,8 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		return intf
 	}
 
+	nextScriptLocation := newScriptLocationGenerator()
+
 	executeScript := func(script []byte, meter memoryMeter, args ...cadence.Value) error {
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -1007,7 +1001,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface(meter),
-				Location:  TestLocation,
+				Location:  nextScriptLocation(),
 			},
 		)
 

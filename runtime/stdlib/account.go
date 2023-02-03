@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				inter,
 				func() (address common.Address) {
 					var err error
-					wrapPanic(func() {
+					errors.WrapPanic(func() {
 						address, err = creator.CreateAccount(payerAddress)
 					})
 					if err != nil {
@@ -314,7 +314,7 @@ func newAccountBalanceGetFunction(
 	return func() interpreter.UFix64Value {
 		return interpreter.NewUFix64Value(gauge, func() (balance uint64) {
 			var err error
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				balance, err = provider.GetAccountBalance(address)
 			})
 			if err != nil {
@@ -343,7 +343,7 @@ func newAccountAvailableBalanceGetFunction(
 	return func() interpreter.UFix64Value {
 		return interpreter.NewUFix64Value(gauge, func() (balance uint64) {
 			var err error
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				balance, err = provider.GetAccountAvailableBalance(address)
 			})
 			if err != nil {
@@ -382,7 +382,7 @@ func newStorageUsedGetFunction(
 			inter,
 			func() uint64 {
 				var capacity uint64
-				wrapPanic(func() {
+				errors.WrapPanic(func() {
 					capacity, err = provider.GetStorageUsed(address)
 				})
 				if err != nil {
@@ -421,7 +421,7 @@ func newStorageCapacityGetFunction(
 			inter,
 			func() uint64 {
 				var capacity uint64
-				wrapPanic(func() {
+				errors.WrapPanic(func() {
 					capacity, err = provider.GetStorageCapacity(address)
 				})
 				if err != nil {
@@ -477,7 +477,7 @@ func newAccountKeysAddFunction(
 			weight := weightValue.ToInt(locationRange)
 
 			var accountKey *AccountKey
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				accountKey, err = handler.AddAccountKey(address, publicKey, hashAlgo, weight)
 			})
 			if err != nil {
@@ -546,7 +546,7 @@ func newAccountKeysGetFunction(
 
 			var err error
 			var accountKey *AccountKey
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				accountKey, err = provider.GetAccountKey(address, index)
 			})
 
@@ -626,7 +626,7 @@ func newAccountKeysForEachFunction(
 			var count uint64
 			var err error
 
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				count, err = provider.AccountKeysCount(address)
 			})
 
@@ -637,7 +637,7 @@ func newAccountKeysForEachFunction(
 			var accountKey *AccountKey
 
 			for index := uint64(0); index < count; index++ {
-				wrapPanic(func() {
+				errors.WrapPanic(func() {
 					accountKey, err = provider.GetAccountKey(address, int(index))
 				})
 				if err != nil {
@@ -690,7 +690,7 @@ func newAccountKeysCountGetter(
 			var count uint64
 			var err error
 
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				count, err = provider.AccountKeysCount(address)
 			})
 			if err != nil {
@@ -735,7 +735,7 @@ func newAccountKeysRevokeFunction(
 
 			var err error
 			var accountKey *AccountKey
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				accountKey, err = handler.RevokeAccountKey(address, index)
 			})
 			if err != nil {
@@ -1077,7 +1077,7 @@ func newAccountContractsGetNamesFunction(
 	) *interpreter.ArrayValue {
 		var names []string
 		var err error
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			names, err = provider.GetAccountContractNames(address)
 		})
 		if err != nil {
@@ -1108,7 +1108,7 @@ func newAccountContractsGetNamesFunction(
 			inter,
 			locationRange,
 			arrayType,
-			common.Address{},
+			common.ZeroAddress,
 			values...,
 		)
 	}
@@ -1139,7 +1139,7 @@ func newAccountContractsGetFunction(
 
 			var code []byte
 			var err error
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				code, err = provider.GetAccountContractCode(address, name)
 			})
 			if err != nil {
@@ -1203,7 +1203,7 @@ func newAccountContractsBorrowFunction(
 
 			var code []byte
 			var err error
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				code, err = handler.GetAccountContractCode(address, name)
 			})
 			if err != nil {
@@ -1252,7 +1252,7 @@ type AccountContractAdditionHandler interface {
 	ParseAndCheckProgram(
 		code []byte,
 		location common.Location,
-		program bool,
+		getAndSetProgram bool,
 	) (*interpreter.Program, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(address common.Address, name string, code []byte) error
@@ -1372,12 +1372,12 @@ func newAuthAccountContractsChangeFunction(
 			// NOTE: *DO NOT* store the program – the new or updated program
 			// should not be effective during the execution
 
-			const storeProgram = false
+			const getAndSetProgram = false
 
 			program, err := handler.ParseAndCheckProgram(
 				code,
 				location,
-				storeProgram,
+				getAndSetProgram,
 			)
 			handleContractUpdateError(err)
 
@@ -1651,7 +1651,7 @@ func updateAccountContractCode(
 	}
 
 	// NOTE: only update account code if contract instantiation succeeded
-	wrapPanic(func() {
+	errors.WrapPanic(func() {
 		err = handler.UpdateAccountContractCode(address, name, code)
 	})
 	if err != nil {
@@ -1808,7 +1808,7 @@ func newAuthAccountContractsRemoveFunction(
 
 			var code []byte
 			var err error
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				code, err = handler.GetAccountContractCode(address, name)
 			})
 			if err != nil {
@@ -1836,7 +1836,7 @@ func newAuthAccountContractsRemoveFunction(
 					})
 				}
 
-				wrapPanic(func() {
+				errors.WrapPanic(func() {
 					err = handler.RemoveAccountContractCode(address, name)
 				})
 				if err != nil {

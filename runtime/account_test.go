@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,15 +62,13 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  common.ScriptLocation{},
 		},
 	)
 	RequireError(t, err)
@@ -104,15 +102,13 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 		storage:                    newTestLedger(nil, nil),
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.NoError(t, err)
@@ -140,15 +136,13 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 		storage:                    newTestLedger(nil, nil),
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.NoError(t, err)
@@ -246,9 +240,9 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 	t.Parallel()
 
-	initTestEnvironment := func(t *testing.T) accountTestEnvironment {
+	initTestEnvironment := func(t *testing.T, location Location) accountTestEnvironment {
 		testEnv := newAccountTestEnv()
-		addAuthAccountKey(t, testEnv.runtime, testEnv.runtimeInterface)
+		addAuthAccountKey(t, testEnv.runtime, testEnv.runtimeInterface, location)
 		return testEnv
 	}
 
@@ -256,7 +250,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		t.Parallel()
 
-		testEnv := initTestEnvironment(t)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		assert.Equal(t, []*stdlib.AccountKey{accountKeyA}, testEnv.storage.keys)
 		assert.Equal(t, accountKeyA, testEnv.storage.returnedKey)
@@ -265,7 +260,9 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 	t.Run("get existing key", func(t *testing.T) {
 
 		t.Parallel()
-		testEnv := initTestEnvironment(t)
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
 			code: `
@@ -279,7 +276,11 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
+		err := test.executeTransaction(
+			testEnv.runtime,
+			testEnv.runtimeInterface,
+			nextTransactionLocation(),
+		)
 		require.NoError(t, err)
 
 		assert.Equal(t, []*stdlib.AccountKey{accountKeyA}, testEnv.storage.keys)
@@ -297,7 +298,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		t.Parallel()
 
-		testEnv := initTestEnvironment(t)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
 			code: `
@@ -310,7 +312,11 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
+		err := test.executeTransaction(
+			testEnv.runtime,
+			testEnv.runtimeInterface,
+			nextTransactionLocation(),
+		)
 		require.NoError(t, err)
 		assert.Nil(t, testEnv.storage.returnedKey)
 	})
@@ -319,7 +325,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		t.Parallel()
 
-		testEnv := initTestEnvironment(t)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
 			code: `
@@ -332,7 +339,11 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
+		err := test.executeTransaction(
+			testEnv.runtime,
+			testEnv.runtimeInterface,
+			nextTransactionLocation(),
+		)
 		require.NoError(t, err)
 
 		assert.Equal(t, []*stdlib.AccountKey{revokedAccountKeyA}, testEnv.storage.keys)
@@ -343,7 +354,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		t.Parallel()
 
-		testEnv := initTestEnvironment(t)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
 			code: `
@@ -356,7 +368,11 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
+		err := test.executeTransaction(
+			testEnv.runtime,
+			testEnv.runtimeInterface,
+			nextTransactionLocation(),
+		)
 		require.NoError(t, err)
 		assert.Nil(t, testEnv.storage.returnedKey)
 	})
@@ -364,7 +380,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 	t.Run("get key count", func(t *testing.T) {
 		t.Parallel()
 
-		testEnv := initTestEnvironment(t)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
 			code: `
@@ -382,7 +399,11 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
+		err := test.executeTransaction(
+			testEnv.runtime,
+			testEnv.runtimeInterface,
+			nextTransactionLocation(),
+		)
 		require.NoError(t, err)
 		assert.Equal(t, []*stdlib.AccountKey{revokedAccountKeyA}, testEnv.storage.keys)
 		assert.Equal(t, revokedAccountKeyA, testEnv.storage.returnedKey)
@@ -391,7 +412,9 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 	t.Run("test keys forEach", func(t *testing.T) {
 		t.Parallel()
 
-		testEnv := initTestEnvironment(t)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
+
 		test := accountKeyTestCase{
 			code: `
                 transaction {
@@ -417,7 +440,11 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
+		err := test.executeTransaction(
+			testEnv.runtime,
+			testEnv.runtimeInterface,
+			nextTransactionLocation(),
+		)
 		require.NoError(t, err)
 
 		keys := make(map[int]*AccountKey, len(testEnv.storage.keys))
@@ -727,15 +754,13 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 		storage: storage,
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	result, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.NoError(t, err)
@@ -801,15 +826,13 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 		storage: storage,
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	result, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.NoError(t, err)
@@ -999,7 +1022,7 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 	return runtimeInterface
 }
 
-func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRuntimeInterface) {
+func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRuntimeInterface, location Location) {
 	test := accountKeyTestCase{
 		name: "Add key",
 		code: `
@@ -1020,7 +1043,7 @@ func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRunt
 		args: []cadence.Value{},
 	}
 
-	err := test.executeTransaction(runtime, runtimeInterface)
+	err := test.executeTransaction(runtime, runtimeInterface, location)
 	require.NoError(t, err)
 }
 
@@ -1051,6 +1074,7 @@ type accountKeyTestCase struct {
 func (test accountKeyTestCase) executeTransaction(
 	runtime Runtime,
 	runtimeInterface *testRuntimeInterface,
+	location Location,
 ) error {
 	args := encodeArgs(test.args)
 
@@ -1061,7 +1085,7 @@ func (test accountKeyTestCase) executeTransaction(
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.TransactionLocation{},
+			Location:  location,
 		},
 	)
 	return err
@@ -1116,7 +1140,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 	}
@@ -1930,15 +1954,13 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		result, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -1988,15 +2010,13 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -2028,15 +2048,13 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		result, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -2073,15 +2091,13 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 		errs := checker.RequireCheckerErrors(t, err, 1)
@@ -2111,15 +2127,13 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 		errs := checker.RequireCheckerErrors(t, err, 1)

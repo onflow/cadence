@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeUInt64,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt64Value(500),
 			),
 			NewArrayValue(
@@ -57,7 +57,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredInt256ValueFromBigInt(largeBigInt),
 			),
 			NewUnmeteredUInt64Value(500),
@@ -82,7 +82,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.Address{},
+				common.ZeroAddress,
 			): nil,
 			NewArrayValue(
 				inter,
@@ -90,7 +90,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt64Value(2),
 				NewUnmeteredUInt128ValueFromUint64(3),
 			): {2, 3},
@@ -100,7 +100,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(4),
 				NewUnmeteredIntValueFromInt64(5),
 			): {4, 5},

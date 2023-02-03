@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,8 +71,6 @@ func TestRuntimeCoverage(t *testing.T) {
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	coverageReport := NewCoverageReport()
 
 	value, err := runtime.ExecuteScript(
@@ -81,7 +79,7 @@ func TestRuntimeCoverage(t *testing.T) {
 		},
 		Context{
 			Interface:      runtimeInterface,
-			Location:       nextTransactionLocation(),
+			Location:       common.ScriptLocation{},
 			CoverageReport: coverageReport,
 		},
 	)
@@ -104,7 +102,7 @@ func TestRuntimeCoverage(t *testing.T) {
                "7": 1
              }
            },
-           "t.0000000000000000000000000000000000000000000000000000000000000000": {
+           "s.0000000000000000000000000000000000000000000000000000000000000000": {
              "line_hits": {
                "5": 1,
                "6": 1,
