@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/onflow/cadence v0.31.2-0.20230201191829-559e775dc4af
 	github.com/rs/zerolog v1.26.1
+	github.com/schollz/progressbar/v3 v3.8.3
 	github.com/sergi/go-diff v1.2.0
 )
 
@@ -14,6 +15,8 @@ require (
 	github.com/fxamacker/circlehash v0.3.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.14 // indirect
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381 // indirect
+	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/onflow/atree v0.4.0 // indirect
 	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a // indirect
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c // indirect
@@ -24,6 +27,7 @@ require (
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9 // indirect
 	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/term v0.1.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )

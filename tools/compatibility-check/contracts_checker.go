@@ -21,12 +21,13 @@ package compatibility_check
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"reflect"
 	"strings"
 
 	"encoding/csv"
+
+	"github.com/schollz/progressbar/v3"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -120,10 +121,13 @@ func (c *ContractsChecker) analyze(
 ) {
 	programs := make(analysis.Programs, len(locations))
 
-	log.Println("Checking contracts ...")
+	addressCount := len(locations)
+	progress := progressbar.Default(100, "Checking contracts:")
 
-	for _, location := range locations {
-		log.Printf("Checking %s", location.Description())
+	for index, location := range locations {
+		if index%(addressCount/20) == 0 {
+			_ = progress.Add(5)
+		}
 
 		err := programs.Load(config, location)
 		if err != nil {

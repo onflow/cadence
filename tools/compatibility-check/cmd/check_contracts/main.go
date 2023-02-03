@@ -55,4 +55,6 @@ func main() {
 
 	checker := compatibility_check.NewContractChecker(outputFile)
 	checker.CheckCSV(csvFile)
+
+	log.Info().Msgf("Checking results are written to: %s", outputPath)
 }
