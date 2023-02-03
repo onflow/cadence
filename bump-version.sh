@@ -20,7 +20,7 @@ case "$1" in
 
     # Trim off preceding `v` if any.
     # This is to support both input version formats: `0.1.0` and `v0.1.0`.
-    v2=$(echo "$1" | sed -Ee 's/^v|-.*//')
+    v2=$(echo "$1" | sed -Ee 's/^v//')
     ;;
 esac
 
