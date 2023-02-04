@@ -6569,6 +6569,106 @@ func TestParseMemberDocStrings(t *testing.T) {
 		)
 	})
 
+	t.Run("special functions", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+          struct Test {
+
+              /// unknown
+              unknown()
+
+              /// initNoBlock
+              init()
+
+              /// destroyWithBlock
+              destroy() {}
+          }
+	    `)
+
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindUnknown,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									DocString: " unknown",
+									Identifier: ast.Identifier{
+										Identifier: "unknown",
+										Pos:        ast.Position{Offset: 66, Line: 5, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 73, Line: 5, Column: 21},
+											EndPos:   ast.Position{Offset: 74, Line: 5, Column: 22},
+										},
+									},
+									StartPos: ast.Position{Offset: 66, Line: 5, Column: 14},
+								},
+							},
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindInitializer,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									DocString: " initNoBlock",
+									Identifier: ast.Identifier{
+										Identifier: "init",
+										Pos:        ast.Position{Offset: 121, Line: 8, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 125, Line: 8, Column: 18},
+											EndPos:   ast.Position{Offset: 126, Line: 8, Column: 19},
+										},
+									},
+									StartPos: ast.Position{Offset: 121, Line: 8, Column: 14},
+								},
+							},
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindDestructor,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									DocString: " destroyWithBlock",
+									Identifier: ast.Identifier{
+										Identifier: "destroy",
+										Pos:        ast.Position{Offset: 178, Line: 11, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 185, Line: 11, Column: 21},
+											EndPos:   ast.Position{Offset: 186, Line: 11, Column: 22},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 188, Line: 11, Column: 24},
+												EndPos:   ast.Position{Offset: 189, Line: 11, Column: 25},
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 178, Line: 11, Column: 14},
+								},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
+						EndPos:   ast.Position{Offset: 201, Line: 12, Column: 10},
+					},
+				},
+			},
+			result,
+		)
+	})
 
 }
 
