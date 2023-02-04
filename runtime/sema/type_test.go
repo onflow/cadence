@@ -51,20 +51,42 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 
 	ty := &ConstantSizedType{
 		Type: &FunctionType{
+			Purity: FunctionPurityImpure,
 			Parameters: []Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(Int8Type),
+					TypeAnnotation: Int8TypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: NewTypeAnnotation(
-				Int16Type,
-			),
+			ReturnTypeAnnotation: Int16TypeAnnotation,
 		},
 		Size: 2,
 	}
 
 	assert.Equal(t,
-		"[((Int8): Int16); 2]",
+		"[fun(Int8): Int16; 2]",
+		ty.String(),
+	)
+}
+
+func TestConstantSizedType_String_OfViewFunctionType(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &ConstantSizedType{
+		Type: &FunctionType{
+			Purity: FunctionPurityView,
+			Parameters: []Parameter{
+				{
+					TypeAnnotation: Int8TypeAnnotation,
+				},
+			},
+			ReturnTypeAnnotation: Int16TypeAnnotation,
+		},
+		Size: 2,
+	}
+
+	assert.Equal(t,
+		"[view fun(Int8): Int16; 2]",
 		ty.String(),
 	)
 }
@@ -94,17 +116,15 @@ func TestVariableSizedType_String_OfFunctionType(t *testing.T) {
 		Type: &FunctionType{
 			Parameters: []Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(Int8Type),
+					TypeAnnotation: Int8TypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: NewTypeAnnotation(
-				Int16Type,
-			),
+			ReturnTypeAnnotation: Int16TypeAnnotation,
 		},
 	}
 
 	assert.Equal(t,
-		"[((Int8): Int16)]",
+		"[fun(Int8): Int16]",
 		ty.String(),
 	)
 }
@@ -524,7 +544,7 @@ func TestBeforeType_Strings(t *testing.T) {
 
 	t.Parallel()
 
-	expected := "(<T: AnyStruct>(_ value: T): T)"
+	expected := "view fun<T: AnyStruct>(_ value: T): T"
 
 	assert.Equal(t,
 		expected,
@@ -1483,22 +1503,24 @@ func TestCommonSuperType(t *testing.T) {
 		t.Parallel()
 
 		funcType1 := &FunctionType{
+			Purity: FunctionPurityImpure,
 			Parameters: []Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(StringType),
+					TypeAnnotation: StringTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
+			ReturnTypeAnnotation: Int8TypeAnnotation,
 			Members:              &StringMemberOrderedMap{},
 		}
 
 		funcType2 := &FunctionType{
+			Purity: FunctionPurityImpure,
 			Parameters: []Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(IntType),
+					TypeAnnotation: IntTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
+			ReturnTypeAnnotation: Int8TypeAnnotation,
 			Members:              &StringMemberOrderedMap{},
 		}
 

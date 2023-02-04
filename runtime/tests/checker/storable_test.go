@@ -115,7 +115,8 @@ func TestCheckStorable(t *testing.T) {
 
 	nonStorableTypes := []sema.Type{
 		&sema.FunctionType{
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+			Purity:               sema.FunctionPurityImpure,
+			ReturnTypeAnnotation: sema.IntTypeAnnotation,
 		},
 		sema.NeverType,
 		sema.VoidType,

@@ -444,7 +444,7 @@ func TestInterpretFunctionType(t *testing.T) {
       let b = FunctionType(parameters: [Type<String>(), Type<Int>()], return: Type<Bool>())
       let c = FunctionType(parameters: [], return: Type<String>())
 
-      let d = Type<((String): Int)>();
+      let d = Type<fun(String): Int>();
     `)
 
 	assert.Equal(t,
@@ -453,10 +453,10 @@ func TestInterpretFunctionType(t *testing.T) {
 				Type: &sema.FunctionType{
 					Parameters: []sema.Parameter{
 						{
-							TypeAnnotation: sema.TypeAnnotation{Type: sema.StringType},
+							TypeAnnotation: sema.StringTypeAnnotation,
 						},
 					},
-					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.IntType},
+					ReturnTypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
 		},
@@ -468,10 +468,10 @@ func TestInterpretFunctionType(t *testing.T) {
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
 					Parameters: []sema.Parameter{
-						{TypeAnnotation: sema.TypeAnnotation{Type: sema.StringType}},
-						{TypeAnnotation: sema.TypeAnnotation{Type: sema.IntType}},
+						{TypeAnnotation: sema.StringTypeAnnotation},
+						{TypeAnnotation: sema.IntTypeAnnotation},
 					},
-					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.BoolType},
+					ReturnTypeAnnotation: sema.BoolTypeAnnotation,
 				},
 			},
 		},
@@ -482,7 +482,7 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.StringType},
+					ReturnTypeAnnotation: sema.StringTypeAnnotation,
 				},
 			},
 		},

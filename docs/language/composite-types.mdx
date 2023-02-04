@@ -228,6 +228,23 @@ token.id = 23
 
 Initializers do not support overloading.
 
+Initializers can also be declared with the `view` keyword, to indicate that they do not perform any mutating operations, 
+and to allow them to be called from within other `view` functions. 
+In an initializer, writes to `self` are considered `view` (unlike within other composite functions),
+as the value being constructed here is by definition local to the context calling the initializer. 
+
+```cadence
+pub struct Token {
+    pub let id: Int
+    pub var balance: Int
+
+    view init(id: Int, balance: Int) {
+        self.id = id
+        self.balance = balance
+    }
+}
+```
+
 ## Composite Type Functions
 
 Composite types may contain functions.
@@ -274,14 +291,14 @@ the types are only compatible if their names match.
 
 ```cadence
 // Declare a structure named `A` which has a function `test`
-// which has type `((): Void)`.
+// which has type `fun(): Void`.
 //
 struct A {
     fun test() {}
 }
 
 // Declare a structure named `B` which has a function `test`
-// which has type `((): Void)`.
+// which has type `fun(): Void`.
 //
 struct B {
     fun test() {}

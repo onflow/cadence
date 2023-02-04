@@ -688,7 +688,7 @@ func TestCheckImportVirtual(t *testing.T) {
 			fooType,
 			"bar",
 			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UInt64Type),
+				ReturnTypeAnnotation: sema.UInt64TypeAnnotation,
 			},
 			"",
 		))

@@ -893,3 +893,17 @@ func (InvalidHexLengthError) IsUserError() {}
 func (InvalidHexLengthError) Error() string {
 	return "hex string has non-even length"
 }
+
+// InvalidatedResourceReferenceError is reported when accessing a reference value
+// that is pointing to a moved or destroyed resource.
+type InvalidatedResourceReferenceError struct {
+	LocationRange
+}
+
+var _ errors.UserError = InvalidatedResourceReferenceError{}
+
+func (InvalidatedResourceReferenceError) IsUserError() {}
+
+func (e InvalidatedResourceReferenceError) Error() string {
+	return "referenced resource has been moved or destroyed after taking the reference"
+}

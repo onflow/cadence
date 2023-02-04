@@ -19,8 +19,6 @@
 package runtime
 
 import (
-	"encoding/hex"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -191,18 +189,7 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 	signerAccount = common.MustBytesToAddress([]byte{0x1})
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: []byte(fmt.Sprintf(
-				`
-	             transaction {
-	                 prepare(signer: AuthAccount) {
-	                     signer.contracts.update__experimental(name: "Foo", code: "%s".decodeHex())
-	                 }
-	             }
-	           `,
-				hex.EncodeToString(
-					[]byte(fooContractV2),
-				),
-			)),
+			Source: utils.UpdateTransaction("Foo", []byte(fooContractV2)),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -223,18 +210,7 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: []byte(fmt.Sprintf(
-				`
-	             transaction {
-	                 prepare(signer: AuthAccount) {
-	                     signer.contracts.update__experimental(name: "Bar", code: "%s".decodeHex())
-	                 }
-	             }
-	           `,
-				hex.EncodeToString(
-					[]byte(barContractV2),
-				),
-			)),
+			Source: utils.UpdateTransaction("Bar", []byte(barContractV2)),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -242,4 +218,92 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+}
+
+func TestContractUpdateWithPrecedingIdentifiers(t *testing.T) {
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	fooLocation := common.AddressLocation{
+		Address: signerAccount,
+		Name:    "Foo",
+	}
+
+	const fooContractV1 = `
+        pub contract Foo {
+            // NOTE: invalid preceding identifier in member declaration
+            bar pub let foo: Int
+
+            init() {
+                self.foo = 1
+            }
+        }
+    `
+
+	const fooContractV2 = `
+        pub contract Foo {
+            pub let foo: Int
+
+            init() {
+                self.foo = 1
+            }
+        }
+    `
+
+	// Assume contract with deprecated syntax is already deployed
+
+	accountCodes := map[common.Location][]byte{
+		fooLocation: []byte(fooContractV1),
+	}
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Update contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: utils.UpdateTransaction("Foo", []byte(fooContractV2)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
 }

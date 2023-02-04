@@ -81,9 +81,9 @@ A matcher is an object that consists of a test function and associated utility f
 ```cadence
 pub struct Matcher {
 
-    pub let test: ((AnyStruct): Bool)
+    pub let test: fun(AnyStruct): Bool
 
-    pub init(test: ((AnyStruct): Bool)) {
+    pub init(test: fun(AnyStruct): Bool) {
         self.test = test
     }
 
@@ -118,7 +118,7 @@ The `or` method returns a new matcher that succeeds if at-least this or the give
 A matcher that accepts a generic-typed test function can be constructed using the `newMatcher` function.
 
 ```cadence
-fun newMatcher<T: AnyStruct>(_ test: ((T): Bool)): Test.Matcher
+fun newMatcher<T: AnyStruct>(_ test: fun(T): Bool): Test.Matcher
 ```
 
 The type parameter `T` is bound to `AnyStruct` type. It is also optional.

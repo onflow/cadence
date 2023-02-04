@@ -193,10 +193,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
+		)
 
 		value, err := inter.Invoke("test", ref)
 		require.NoError(t, err)
@@ -315,10 +316,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
+		)
 
 		value, err := inter.Invoke("test", ref)
 		require.NoError(t, err)
@@ -432,11 +434,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
-
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
+		)
 		value, err := inter.Invoke("test", ref)
 		require.NoError(t, err)
 
@@ -554,10 +556,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
+		)
 
 		value, err := inter.Invoke("test", ref)
 		require.NoError(t, err)
@@ -2345,7 +2348,8 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 	)
 
 	_, err := inter.Invoke("test")
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestInterpretArrayOptionalResourceReference(t *testing.T) {
@@ -2382,185 +2386,53 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 	)
 
 	_, err := inter.Invoke("test")
-	require.NoError(t, err)
-}
-
-func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
-
-	t.Parallel()
-
-	const resourceCode = `
-	  resource R {
-          var value: Int
-
-          init() {
-              self.value = 0
-          }
-
-          fun increment() {
-              self.value = self.value + 1
-          }
-      }
-	`
-
-	t.Run("composite", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, resourceCode+`
-
-          fun test(): Int {
-
-              let resources <- {
-                  "r": <-create R()
-              }
-
-              let ref = &resources["r"] as &R?
-              let r <-resources.remove(key: "r")
-	          destroy r
-              destroy resources
-
-              ref!.increment()
-              return ref!.value
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-
-		var invalidatedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &invalidatedResourceErr)
-
-		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
-	})
-
-	t.Run("dictionary", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, resourceCode+`
-
-          fun test(): Int {
-
-              let resources <- {
-                  "nested": <-{"r": <-create R()}
-              }
-
-              let ref = &resources["nested"] as &{String: R}?
-              let nested <-resources.remove(key: "nested")
-	          destroy nested
-              destroy resources
-
-              return ref!.length
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-
-		var invalidatedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &invalidatedResourceErr)
-
-		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
-	})
-
-	t.Run("array", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, resourceCode+`
-
-          fun test(): Int {
-
-              let resources <- {
-                  "nested": <-[<-create R()]
-              }
-
-              let ref = &resources["nested"] as &[R]?
-              let nested <-resources.remove(key: "nested")
-	          destroy nested
-              destroy resources
-
-              return ref!.length
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-
-		var invalidatedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &invalidatedResourceErr)
-
-		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
-	})
-
-	t.Run("optional", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, resourceCode+`
-
-          fun test(): Int {
-
-              let resources: @[R?] <- [<-create R()]
-
-              let ref = &resources[0] as &R?
-              let r <-resources.remove(at: 0)
-		      destroy r
-              destroy resources
-
-              ref!.increment()
-              return ref!.value
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-
-		var invalidatedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &invalidatedResourceErr)
-
-		assert.Equal(t, 24, invalidatedResourceErr.StartPosition().Line)
-	})
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
-
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-        resource interface I {
-             pub fun receiveResource(_ r: @Bar) {
-                pre {
-                    destroyResource(<-r)
-                }
-            }
-        }
+	didError := false
+	_, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource interface I {
+               pub fun receiveResource(_ r: @Bar) {
+                  pre {
+                      destroyResource(<-r)
+                  }
+              }
+          }
 
-        fun destroyResource(_ r: @Bar): Bool {
-            destroy r
-            return true
-        }
+          fun destroyResource(_ r: @Bar): Bool {
+              destroy r
+              return true
+          }
 
-        resource Foo: I {
-             pub fun receiveResource(_ r: @Bar) {
-                destroy r
-            }
-        }
+          resource Foo: I {
+               pub fun receiveResource(_ r: @Bar) {
+                  destroy r
+              }
+          }
 
-        resource Bar  {}
+          resource Bar  {}
 
-        fun test() {
-            let foo <- create Foo()
-            let bar <- create Bar()
+          fun test() {
+              let foo <- create Foo()
+              let bar <- create Bar()
+              foo.receiveResource(<- bar)
+              destroy foo
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				require.IsType(t, err, &sema.CheckerError{})
+				require.IsType(t, err.(*sema.CheckerError).Errors[0], &sema.PurityError{})
+				didError = true
+			},
+		},
+	)
 
-            foo.receiveResource(<- bar)
-            destroy foo
-        }
-    `)
-
-	_, err := inter.Invoke("test")
-	RequireError(t, err)
-
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	require.NoError(t, err)
+	require.True(t, didError)
 }

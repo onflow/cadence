@@ -30,9 +30,18 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var InvalidLiteralError = parser.NewUnpositionedSyntaxError("invalid literal")
-var UnsupportedLiteralError = parser.NewUnpositionedSyntaxError("unsupported literal")
-var LiteralExpressionTypeError = parser.NewUnpositionedSyntaxError("input is not a literal")
+var InvalidLiteralError = parser.NewSyntaxError(
+	ast.Position{Line: 1},
+	"invalid literal",
+)
+var UnsupportedLiteralError = parser.NewSyntaxError(
+	ast.Position{Line: 1},
+	"unsupported literal",
+)
+var LiteralExpressionTypeError = parser.NewSyntaxError(
+	ast.Position{Line: 1},
+	"input is not a literal",
+)
 
 // ParseLiteral parses a single literal string, that should have the given type.
 //
@@ -84,7 +93,8 @@ func ParseLiteralArgumentList(
 	parameterCount := len(parameterTypes)
 
 	if argumentCount != parameterCount {
-		return nil, parser.NewUnpositionedSyntaxError(
+		return nil, parser.NewSyntaxError(
+			ast.Position{Line: 1},
 			"invalid number of arguments: got %d, expected %d",
 			argumentCount,
 			parameterCount,
@@ -97,7 +107,8 @@ func ParseLiteralArgumentList(
 		parameterType := parameterTypes[i]
 		value, err := LiteralValue(inter, argument.Expression, parameterType)
 		if err != nil {
-			return nil, parser.NewUnpositionedSyntaxError(
+			return nil, parser.NewSyntaxError(
+				ast.Position{Line: 1},
 				"invalid argument at index %d: %v", i, err,
 			)
 		}
@@ -147,7 +158,8 @@ func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression,
 	}
 
 	if !sema.IsSubType(pathType, ty) {
-		return nil, parser.NewUnpositionedSyntaxError(
+		return nil, parser.NewSyntaxError(
+			ast.Position{Line: 1},
 			"path literal type %s is not subtype of requested path type %s",
 			pathType, ty,
 		)

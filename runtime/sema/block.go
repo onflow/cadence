@@ -19,3 +19,5 @@
 package sema
 
 //go:generate go run ./gen/main.go block.cdc block.gen.go
+
+var BlockTypeAnnotation = NewTypeAnnotation(BlockType)

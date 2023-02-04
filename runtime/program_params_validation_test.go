@@ -128,7 +128,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
 
             pub struct Foo {
-                pub var funcTypedField: (():Void)
+                pub var funcTypedField: fun(): Void
 
                 init() {
                     self.funcTypedField = fun() {}
@@ -178,7 +178,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
 
             pub struct interface Bar {
-                pub var funcTypedField: (():Void)
+                pub var funcTypedField: fun():Void
             }
         `
 
@@ -251,7 +251,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: [(():Void)]) {
+            pub fun main(arg: [fun():Void]) {
             }
         `
 
@@ -297,7 +297,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: {String: (():Void)}) {
+            pub fun main(arg: {String: fun():Void}) {
             }
         `
 
@@ -533,7 +533,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 	t.Parallel()
 
-	expectCheckerErrors := func(t *testing.T, err error, expectedErrors ...error) {
+	RequireCheckerErrors := func(t *testing.T, err error, expectedErrors ...error) {
 		RequireError(t, err)
 
 		require.IsType(t, Error{}, err)
@@ -659,10 +659,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			}: []byte(`
                 pub contract C {
                     pub struct Foo {
-                        pub var funcTypedField: (():Void)
+                        pub var funcTypedField: fun (): Void
 
                         init() {
-                            self.funcTypedField = fun() {}
+                            self.funcTypedField = fun () {}
                         }
                     }
                }
@@ -676,7 +676,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
         `
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
-		expectCheckerErrors(
+		RequireCheckerErrors(
 			t,
 			err,
 			&sema.InvalidNonImportableTransactionParameterTypeError{},
@@ -729,7 +729,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			}: []byte(`
                 pub contract C {
                     pub struct interface Bar {
-                        pub var funcTypedField: (():Void)
+                        pub var funcTypedField: fun (): Void
                     }
                 }
             `),
@@ -743,7 +743,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
-		expectCheckerErrors(
+		RequireCheckerErrors(
 			t,
 			err,
 			&sema.InvalidNonImportableTransactionParameterTypeError{},
@@ -772,7 +772,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
-		expectCheckerErrors(
+		RequireCheckerErrors(
 			t,
 			err,
 			&sema.InvalidNonImportableTransactionParameterTypeError{},
@@ -789,7 +789,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, nil, cadence.NewOptional(nil))
 
-		expectCheckerErrors(
+		RequireCheckerErrors(
 			t,
 			err,
 			&sema.InvalidNonImportableTransactionParameterTypeError{},
@@ -816,7 +816,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
-		expectCheckerErrors(
+		RequireCheckerErrors(
 			t,
 			err,
 			&sema.InvalidNonImportableTransactionParameterTypeError{},
@@ -838,12 +838,12 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-          transaction(arg: [(():Void)]) {}
+          transaction(arg: [fun(): Void]) {}
         `
 
 		err := executeTransaction(t, script, nil, cadence.NewArray([]cadence.Value{}))
 
-		expectCheckerErrors(
+		RequireCheckerErrors(
 			t,
 			err,
 			&sema.InvalidNonImportableTransactionParameterTypeError{},
@@ -876,12 +876,12 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-          transaction(arg: {String: (():Void)}) {}
+          transaction(arg: {String: fun(): Void}) {}
         `
 
 		err := executeTransaction(t, script, nil, cadence.NewArray([]cadence.Value{}))
 
-		expectCheckerErrors(
+		RequireCheckerErrors(
 			t,
 			err,
 			&sema.InvalidNonImportableTransactionParameterTypeError{},
@@ -988,7 +988,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				err := executeTransaction(t, script, nil, test.argument)
 
 				if test.expectErrors {
-					expectCheckerErrors(
+					RequireCheckerErrors(
 						t,
 						err,
 						&sema.InvalidNonImportableTransactionParameterTypeError{},

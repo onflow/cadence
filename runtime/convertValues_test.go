@@ -122,12 +122,19 @@ func TestExportValue(t *testing.T) {
 	testCharacter, _ := cadence.NewCharacter("a")
 
 	testFunction := &interpreter.InterpretedFunctionValue{
-		Type: &sema.FunctionType{
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
-		},
+		Type: sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.VoidTypeAnnotation,
+		),
 	}
 
-	testFunctionType := cadence.NewFunctionType("(():Void)", []cadence.Parameter{}, cadence.VoidType{})
+	testFunctionType := cadence.NewFunctionType(
+		"fun():Void",
+		sema.FunctionPurityImpure,
+		[]cadence.Parameter{},
+		cadence.VoidType{},
+	)
 
 	for _, tt := range []exportTest{
 		{
@@ -2063,7 +2070,7 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 	script := `
         pub struct Foo {
             pub let answer: Int
-            pub let f: ((): Void)
+            pub let f: fun(): Void
 
             init() {
                 self.answer = 42
@@ -2089,7 +2096,7 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 				Type: (&cadence.FunctionType{
 					Parameters: []cadence.Parameter{},
 					ReturnType: cadence.VoidType{},
-				}).WithID("(():Void)"),
+				}).WithID("fun():Void"),
 			},
 		},
 	}
@@ -2101,7 +2108,7 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 			FunctionType: (&cadence.FunctionType{
 				Parameters: []cadence.Parameter{},
 				ReturnType: cadence.VoidType{},
-			}).WithID("(():Void)"),
+			}).WithID("fun():Void"),
 		},
 	}).WithType(fooStructType)
 

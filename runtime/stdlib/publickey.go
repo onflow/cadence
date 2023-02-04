@@ -29,19 +29,20 @@ const publicKeyConstructorFunctionDocString = `
 Constructs a new public key
 `
 
-var publicKeyConstructorFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
+var publicKeyConstructorFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
 		{
 			Identifier:     sema.PublicKeyTypePublicKeyFieldName,
-			TypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
+			TypeAnnotation: sema.ByteArrayTypeAnnotation,
 		},
 		{
 			Identifier:     sema.PublicKeyTypeSignAlgoFieldName,
-			TypeAnnotation: sema.NewTypeAnnotation(sema.SignatureAlgorithmType),
+			TypeAnnotation: sema.SignatureAlgorithmTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
-}
+	sema.PublicKeyTypeAnnotation,
+)
 
 type PublicKey struct {
 	PublicKey []byte

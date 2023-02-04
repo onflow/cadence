@@ -1341,6 +1341,7 @@ func (e *BinaryExpression) IsLeftAssociative() bool {
 // FunctionExpression
 
 type FunctionExpression struct {
+	Purity               FunctionPurity
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
@@ -1352,6 +1353,7 @@ var _ Expression = &FunctionExpression{}
 
 func NewFunctionExpression(
 	gauge common.MemoryGauge,
+	purity FunctionPurity,
 	parameters *ParameterList,
 	returnType *TypeAnnotation,
 	functionBlock *FunctionBlock,
@@ -1360,6 +1362,7 @@ func NewFunctionExpression(
 	common.UseMemory(gauge, common.FunctionExpressionMemoryUsage)
 
 	return &FunctionExpression{
+		Purity:               purity,
 		ParameterList:        parameters,
 		ReturnTypeAnnotation: returnType,
 		FunctionBlock:        functionBlock,
@@ -1391,6 +1394,7 @@ var functionExpressionEmptyBlockDoc prettier.Doc = prettier.Text(" {}")
 
 func FunctionDocument(
 	access Access,
+	purity FunctionPurity,
 	isStatic bool,
 	isNative bool,
 	includeKeyword bool,
@@ -1439,6 +1443,14 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			prettier.Text(access.Keyword()),
+			prettier.Space,
+		)
+	}
+
+	if purity != FunctionPurityUnspecified {
+		doc = append(
+			doc,
+			prettier.Text(purity.Keyword()),
 			prettier.Space,
 		)
 	}
@@ -1498,6 +1510,7 @@ func FunctionDocument(
 func (e *FunctionExpression) Doc() prettier.Doc {
 	return FunctionDocument(
 		AccessNotSpecified,
+		e.Purity,
 		false,
 		false,
 		true,
@@ -1777,7 +1790,6 @@ func (*DestroyExpression) precedence() precedence {
 
 type ReferenceExpression struct {
 	Expression Expression
-	Type       Type     `json:"TargetType"`
 	StartPos   Position `json:"-"`
 }
 
@@ -1787,14 +1799,12 @@ var _ Expression = &ReferenceExpression{}
 func NewReferenceExpression(
 	gauge common.MemoryGauge,
 	expression Expression,
-	targetType Type,
 	startPos Position,
 ) *ReferenceExpression {
 	common.UseMemory(gauge, common.ReferenceExpressionMemoryUsage)
 
 	return &ReferenceExpression{
 		Expression: expression,
-		Type:       targetType,
 		StartPos:   startPos,
 	}
 }
@@ -1817,7 +1827,6 @@ func (e *ReferenceExpression) String() string {
 }
 
 var referenceExpressionRefOperatorDoc prettier.Doc = prettier.Text("&")
-var referenceExpressionAsOperatorDoc prettier.Doc = prettier.Text("as")
 
 func (e *ReferenceExpression) Doc() prettier.Doc {
 	doc := parenthesizedExpressionDoc(
@@ -1831,10 +1840,6 @@ func (e *ReferenceExpression) Doc() prettier.Doc {
 			prettier.Group{
 				Doc: doc,
 			},
-			prettier.Line{},
-			referenceExpressionAsOperatorDoc,
-			prettier.Line{},
-			e.Type.Doc(),
 		},
 	}
 }
@@ -1844,7 +1849,7 @@ func (e *ReferenceExpression) StartPosition() Position {
 }
 
 func (e *ReferenceExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
-	return e.Type.EndPosition(memoryGauge)
+	return e.Expression.EndPosition(memoryGauge)
 }
 
 func (e *ReferenceExpression) MarshalJSON() ([]byte, error) {

@@ -51,6 +51,7 @@ var beforeType = func() *FunctionType {
 	)
 
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -80,6 +81,12 @@ type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, 
 
 type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common.Location) bool
 
+type PurityCheckScope struct {
+	// whether encountering an impure operation should cause an error
+	EnforcePurity   bool
+	ActivationDepth int
+}
+
 type ContractValueHandlerFunc func(
 	checker *Checker,
 	declaration *ast.CompositeDeclaration,
@@ -106,6 +113,7 @@ type Checker struct {
 	_beforeExtractor                   *BeforeExtractor
 	errors                             []error
 	functionActivations                *FunctionActivations
+	purityCheckScopes                  []PurityCheckScope
 	inCondition                        bool
 	allowSelfResourceFieldInvalidation bool
 	inAssignment                       bool
@@ -117,6 +125,12 @@ type Checker struct {
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
 var _ ast.StatementVisitor[struct{}] = &Checker{}
 var _ ast.ExpressionVisitor[Type] = &Checker{}
+
+var baseFunctionType = NewSimpleFunctionType(
+	FunctionPurityImpure,
+	nil,
+	VoidTypeAnnotation,
+)
 
 func NewChecker(
 	program *ast.Program,
@@ -138,9 +152,7 @@ func NewChecker(
 		activations: make([]*FunctionActivation, 0, 2),
 	}
 	functionActivations.EnterFunction(
-		&FunctionType{
-			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-		},
+		baseFunctionType,
 		0,
 	)
 
@@ -154,6 +166,7 @@ func NewChecker(
 		resources:           NewResources(),
 		functionActivations: functionActivations,
 		containerTypes:      map[Type]bool{},
+		purityCheckScopes:   []PurityCheckScope{{}},
 		memoryGauge:         memoryGauge,
 	}
 
@@ -196,6 +209,47 @@ func (checker *Checker) SetMemoryGauge(gauge common.MemoryGauge) {
 
 func (checker *Checker) IsChecked() bool {
 	return checker.isChecked
+}
+
+func (checker *Checker) CurrentPurityScope() PurityCheckScope {
+	return checker.purityCheckScopes[len(checker.purityCheckScopes)-1]
+}
+
+func (checker *Checker) PushNewPurityScope(enforce bool, depth int) {
+	checker.purityCheckScopes = append(
+		checker.purityCheckScopes,
+		PurityCheckScope{
+			EnforcePurity:   enforce,
+			ActivationDepth: depth,
+		},
+	)
+}
+
+func (checker *Checker) PopPurityScope() PurityCheckScope {
+	scope := checker.CurrentPurityScope()
+	checker.purityCheckScopes = checker.purityCheckScopes[:len(checker.purityCheckScopes)-1]
+	return scope
+}
+
+func (checker *Checker) EnforcePurity(operation ast.Element, purity FunctionPurity) {
+	if purity == FunctionPurityImpure {
+		checker.ObserveImpureOperation(operation)
+	}
+}
+
+func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
+	scope := checker.CurrentPurityScope()
+	if scope.EnforcePurity {
+		checker.report(
+			&PurityError{Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation)},
+		)
+	}
+}
+
+func (checker *Checker) InNewPurityScope(enforce bool, f func()) {
+	checker.PushNewPurityScope(enforce, checker.ValueActivationDepth())
+	f()
+	checker.PopPurityScope()
 }
 
 type stopChecking struct{}
@@ -260,6 +314,7 @@ func (checker *Checker) report(err error) {
 	if err == nil {
 		return
 	}
+
 	checker.errors = append(checker.errors, err)
 	if checker.Config.ErrorShortCircuitingEnabled {
 		panic(stopChecking{})
@@ -389,7 +444,11 @@ func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Decl
 }
 
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
-	functionType := checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
+	functionType := checker.functionType(
+		declaration.Purity,
+		declaration.ParameterList,
+		declaration.ReturnTypeAnnotation,
+	)
 	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 	checker.declareFunctionDeclaration(declaration, functionType)
 }
@@ -1057,10 +1116,13 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 
 	returnTypeAnnotation := checker.ConvertTypeAnnotation(t.ReturnTypeAnnotation)
 
-	return &FunctionType{
-		Parameters:           parameters,
-		ReturnTypeAnnotation: returnTypeAnnotation,
-	}
+	purity := PurityFromAnnotation(t.PurityAnnotation)
+
+	return NewSimpleFunctionType(
+		purity,
+		parameters,
+		returnTypeAnnotation,
+	)
 }
 
 func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type {
@@ -1205,6 +1267,7 @@ func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation
 }
 
 func (checker *Checker) functionType(
+	purity ast.FunctionPurity,
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
@@ -1214,6 +1277,7 @@ func (checker *Checker) functionType(
 		checker.ConvertTypeAnnotation(returnTypeAnnotation)
 
 	return &FunctionType{
+		Purity:               PurityFromAnnotation(purity),
 		Parameters:           convertedParameters,
 		ReturnTypeAnnotation: convertedReturnTypeAnnotation,
 	}
@@ -1221,11 +1285,10 @@ func (checker *Checker) functionType(
 
 func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter {
 
-	var parameters []Parameter
+	// TODO: required for initializer conformance checking at the moment, optimize/refactor
+	var parameters = make([]Parameter, len(parameterList.Parameters))
 
-	parameterCount := len(parameterList.Parameters)
-	if parameterCount > 0 {
-		parameters = make([]Parameter, parameterCount)
+	if len(parameterList.Parameters) > 0 {
 
 		for i, parameter := range parameterList.Parameters {
 			convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)

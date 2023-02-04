@@ -36,19 +36,16 @@ const authAccountFunctionDocString = `
 Creates a new account, paid by the given existing account
 `
 
-var authAccountFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
+var authAccountFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	[]sema.Parameter{
 		{
-			Identifier: "payer",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.AuthAccountType,
-			),
+			Identifier:     "payer",
+			TypeAnnotation: sema.AuthAccountTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.AuthAccountType,
-	),
-}
+	sema.AuthAccountTypeAnnotation,
+)
 
 type EventEmitter interface {
 	EmitEvent(
@@ -64,8 +61,6 @@ type AuthAccountHandler interface {
 	AvailableBalanceProvider
 	StorageUsedProvider
 	StorageCapacityProvider
-	AccountEncodedKeyAdditionHandler
-	AccountEncodedKeyRevocationHandler
 	AuthAccountKeysHandler
 	AuthAccountContractsHandler
 }
@@ -149,14 +144,17 @@ const getAuthAccountDocString = `
 Returns the AuthAccount for the given address. Only available in scripts
 `
 
-var getAuthAccountFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{{
-		Label:          sema.ArgumentLabelNotRequired,
-		Identifier:     "address",
-		TypeAnnotation: sema.NewTypeAnnotation(sema.TheAddressType),
-	}},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
-}
+var getAuthAccountFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
+		{
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "address",
+			TypeAnnotation: sema.AddressTypeAnnotation,
+		},
+	},
+	sema.AuthAccountTypeAnnotation,
+)
 
 func NewGetAuthAccountFunction(handler AuthAccountHandler) StandardLibraryValue {
 	return NewStandardLibraryFunction(
@@ -192,8 +190,6 @@ func NewAuthAccountValue(
 		newAccountAvailableBalanceGetFunction(gauge, handler, addressValue),
 		newStorageUsedGetFunction(handler, addressValue),
 		newStorageCapacityGetFunction(handler, addressValue),
-		newAddPublicKeyFunction(gauge, handler, addressValue),
-		newRemovePublicKeyFunction(gauge, handler, addressValue),
 		func() interpreter.Value {
 			return newAuthAccountContractsValue(
 				gauge,
@@ -438,116 +434,6 @@ func newStorageCapacityGetFunction(
 	}
 }
 
-type AccountEncodedKeyAdditionHandler interface {
-	EventEmitter
-	// AddEncodedAccountKey appends an encoded key to an account.
-	AddEncodedAccountKey(address common.Address, key []byte) error
-}
-
-func newAddPublicKeyFunction(
-	gauge common.MemoryGauge,
-	handler AccountEncodedKeyAdditionHandler,
-	addressValue interpreter.AddressValue,
-) *interpreter.HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			locationRange := invocation.LocationRange
-
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue, locationRange)
-			if err != nil {
-				panic("addPublicKey requires the first argument to be a byte array")
-			}
-
-			errors.WrapPanic(func() {
-				err = handler.AddEncodedAccountKey(address, publicKey)
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			inter := invocation.Interpreter
-			handler.EmitEvent(
-				inter,
-				AccountKeyAddedEventType,
-				[]interpreter.Value{
-					addressValue,
-					publicKeyValue,
-				},
-				locationRange,
-			)
-
-			return interpreter.Void
-		},
-		sema.AuthAccountTypeAddPublicKeyFunctionType,
-	)
-}
-
-type AccountEncodedKeyRevocationHandler interface {
-	EventEmitter
-	// RevokeEncodedAccountKey removes a key from an account by index, add returns the encoded key.
-	RevokeEncodedAccountKey(address common.Address, index int) ([]byte, error)
-}
-
-func newRemovePublicKeyFunction(
-	gauge common.MemoryGauge,
-	handler AccountEncodedKeyRevocationHandler,
-	addressValue interpreter.AddressValue,
-) *interpreter.HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			index, ok := invocation.Arguments[0].(interpreter.IntValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			var publicKey []byte
-			var err error
-			errors.WrapPanic(func() {
-				publicKey, err = handler.RevokeEncodedAccountKey(address, index.ToInt(invocation.LocationRange))
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			publicKeyValue := interpreter.ByteSliceToByteArrayValue(
-				inter,
-				publicKey,
-			)
-
-			handler.EmitEvent(
-				inter,
-				AccountKeyRemovedEventType,
-				[]interpreter.Value{
-					addressValue,
-					publicKeyValue,
-				},
-				locationRange,
-			)
-
-			return interpreter.Void
-		},
-		sema.AuthAccountTypeRemovePublicKeyFunctionType,
-	)
-}
-
 type AccountKeyAdditionHandler interface {
 	EventEmitter
 	PublicKeyValidator
@@ -693,7 +579,7 @@ func newAccountKeysGetFunction(
 	)
 }
 
-// the AccountKey in `forEachKey(_ f: ((AccountKey): Bool)): Void`
+// the AccountKey in `forEachKey(_ f: fun(AccountKey): Bool): Void`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
 func newAccountKeysForEachFunction(
@@ -1571,7 +1457,9 @@ func newAuthAccountContractsChangeFunction(
 				oldProgram, err := parser.ParseProgram(
 					gauge,
 					oldCode,
-					parser.Config{},
+					parser.Config{
+						IgnoreLeadingIdentifierEnabled: true,
+					},
 				)
 
 				if !ignoreUpdatedProgramParserError(err) {
@@ -2011,8 +1899,9 @@ const getAccountFunctionDocString = `
 Returns the public account for the given address
 `
 
-var getAccountFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
+var getAccountFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "address",
@@ -2021,10 +1910,8 @@ var getAccountFunctionType = &sema.FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.PublicAccountType,
-	),
-}
+	sema.PublicAccountTypeAnnotation,
+)
 
 type PublicAccountHandler interface {
 	BalanceProvider

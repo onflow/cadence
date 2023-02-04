@@ -103,26 +103,27 @@ Returns the deployed contract.
 `
 
 var AuthAccountContractsTypeAddFunctionType = &FunctionType{
+	Purity: FunctionPurityImpure,
 	Parameters: []Parameter{
 		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
+			Identifier:     "name",
+			TypeAnnotation: StringTypeAnnotation,
 		},
 		{
-			Identifier: "code",
-			TypeAnnotation: NewTypeAnnotation(
-				ByteArrayType,
-			),
+			Identifier:     "code",
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		DeployedContractType,
-	),
+	ReturnTypeAnnotation: DeployedContractTypeAnnotation,
 	// additional arguments are passed to the contract initializer
 	RequiredArgumentCount: RequiredArgumentCount(2),
 }
+
+var OptionalDeployedContractTypeAnnotation = NewTypeAnnotation(
+	&OptionalType{
+		Type: DeployedContractType,
+	},
+)
 
 const authAccountContractsTypeUpdateExperimentalFunctionDocString = `
 **Experimental**
@@ -143,25 +144,20 @@ or if the given name does not match the name of the contract/contract interface 
 Returns the deployed contract for the updated contract.
 `
 
-var AuthAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
-	Parameters: []Parameter{
+var AuthAccountContractsTypeUpdateExperimentalFunctionType = NewSimpleFunctionType(
+	FunctionPurityImpure,
+	[]Parameter{
 		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
+			Identifier:     "name",
+			TypeAnnotation: StringTypeAnnotation,
 		},
 		{
-			Identifier: "code",
-			TypeAnnotation: NewTypeAnnotation(
-				ByteArrayType,
-			),
+			Identifier:     "code",
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		DeployedContractType,
-	),
-}
+	DeployedContractTypeAnnotation,
+)
 
 const authAccountContractsTypeRemoveFunctionDocString = `
 Removes the contract/contract interface from the account which has the given name, if any.
@@ -171,16 +167,13 @@ Returns the removed deployed contract, if any.
 Returns nil if no contract/contract interface with the given name exists in the account.
 `
 
-var AuthAccountContractsTypeRemoveFunctionType = &FunctionType{
-	Parameters: []Parameter{
+var AuthAccountContractsTypeRemoveFunctionType = NewSimpleFunctionType(
+	FunctionPurityImpure,
+	[]Parameter{
 		{
 			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: DeployedContractType,
-		},
-	),
-}
+	OptionalDeployedContractTypeAnnotation,
+)

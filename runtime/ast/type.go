@@ -432,6 +432,7 @@ func (t *DictionaryType) CheckEqual(other Type, checker TypeEqualityChecker) err
 // FunctionType
 
 type FunctionType struct {
+	PurityAnnotation         FunctionPurity
 	ReturnTypeAnnotation     *TypeAnnotation
 	ParameterTypeAnnotations []*TypeAnnotation `json:",omitempty"`
 	Range
@@ -441,12 +442,14 @@ var _ Type = &FunctionType{}
 
 func NewFunctionType(
 	memoryGauge common.MemoryGauge,
+	purity FunctionPurity,
 	parameterTypes []*TypeAnnotation,
 	returnType *TypeAnnotation,
 	astRange Range,
 ) *FunctionType {
 	common.UseMemory(memoryGauge, common.FunctionTypeMemoryUsage)
 	return &FunctionType{
+		PurityAnnotation:         purity,
 		ParameterTypeAnnotations: parameterTypes,
 		ReturnTypeAnnotation:     returnType,
 		Range:                    astRange,
@@ -459,14 +462,27 @@ func (t *FunctionType) String() string {
 	return Prettier(t)
 }
 
-const functionTypeStartDoc = prettier.Text("(")
-const functionTypeEndDoc = prettier.Text(")")
+const functionTypeKeywordDoc = prettier.Text("fun")
+const openParenthesisDoc = prettier.Text("(")
+const closeParenthesisDoc = prettier.Text(")")
 const functionTypeParameterSeparatorDoc = prettier.Text(",")
 
 func (t *FunctionType) Doc() prettier.Doc {
 	parametersDoc := prettier.Concat{
 		prettier.SoftLine{},
 	}
+
+	var result prettier.Concat
+
+	if t.PurityAnnotation != FunctionPurityUnspecified {
+		result = append(
+			result,
+			prettier.Text(t.PurityAnnotation.Keyword()),
+			prettier.Space,
+		)
+	}
+
+	result = append(result, functionTypeKeywordDoc, prettier.Space)
 
 	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
 		if i > 0 {
@@ -482,22 +498,23 @@ func (t *FunctionType) Doc() prettier.Doc {
 		)
 	}
 
-	return prettier.Concat{
-		functionTypeStartDoc,
+	result = append(
+		result,
 		prettier.Group{
 			Doc: prettier.Concat{
-				functionTypeStartDoc,
+				openParenthesisDoc,
 				prettier.Indent{
 					Doc: parametersDoc,
 				},
 				prettier.SoftLine{},
-				functionTypeEndDoc,
+				closeParenthesisDoc,
 			},
 		},
 		typeSeparatorSpaceDoc,
 		t.ReturnTypeAnnotation.Doc(),
-		functionTypeEndDoc,
-	}
+	)
+
+	return result
 }
 
 func (t *FunctionType) MarshalJSON() ([]byte, error) {

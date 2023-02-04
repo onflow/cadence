@@ -46,12 +46,27 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) (_ struct{}
 		)
 
 	case *ast.VariableDeclaration:
+		declarationType := checker.visitVariableDeclarationValues(test, true)
+
 		checker.checkConditionalBranches(
 			func() Type {
 				checker.enterValueScope()
 				defer checker.leaveValueScope(thenElement.EndPosition, true)
 
-				checker.visitVariableDeclaration(test, true)
+				if castingExpression, ok := test.Value.(*ast.CastingExpression); ok &&
+					castingExpression.Operation == ast.OperationFailableCast {
+
+					castingTypes := checker.Elaboration.CastingExpressionTypes(castingExpression)
+					leftHandType := castingTypes.StaticValueType
+					if leftHandType.IsResourceType() {
+						checker.recordResourceInvalidation(
+							castingExpression.Expression,
+							leftHandType,
+							ResourceInvalidationKindMoveDefinite,
+						)
+					}
+				}
+				checker.declareVariableDeclaration(test, declarationType)
 
 				checker.checkBlock(thenElement)
 				return nil

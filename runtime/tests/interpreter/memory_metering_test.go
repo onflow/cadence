@@ -122,7 +122,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(33), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPrimitiveStaticType))
@@ -443,7 +443,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindDictionaryValueBase))
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
 		// 4 String: 1 for type, 3 for values
@@ -681,7 +681,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(480), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
-		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindVariable))
 
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindCompositeStaticType))
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindCompositeTypeInfo))
@@ -709,7 +709,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindSimpleCompositeValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindSimpleCompositeValue))
 	})
 
 	t.Run("public account", func(t *testing.T) {
@@ -8473,7 +8473,7 @@ func TestInterpretASTMetering(t *testing.T) {
                 var d: [String] = []                               // variable sized type
                 var e: {Int: String} = {}                          // dictionary type
 
-                var f: ((String):Int) = fun(_a: String): Int {     // function type
+                var f: fun(String):Int = fun(_a: String): Int {     // function type
                     return 1
                 }
 
@@ -8733,12 +8733,10 @@ func TestInterpretValueStringConversion(t *testing.T) {
 					{
 						Label:          sema.ArgumentLabelNotRequired,
 						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			``,
 			func(invocation interpreter.Invocation) interpreter.Value {
@@ -9077,12 +9075,10 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 					{
 						Label:          sema.ArgumentLabelNotRequired,
 						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			``,
 			func(invocation interpreter.Invocation) interpreter.Value {
@@ -9181,7 +9177,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 			},
 			{
 				name:        "Function",
-				constructor: "((String): AnyStruct)",
+				constructor: "fun(String): AnyStruct",
 			},
 			{
 				name:        "Reference",

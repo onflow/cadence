@@ -1250,6 +1250,8 @@ type MemberMismatch struct {
 }
 
 type InitializerMismatch struct {
+	CompositePurity     FunctionPurity
+	InterfacePurity     FunctionPurity
 	CompositeParameters []Parameter
 	InterfaceParameters []Parameter
 }
@@ -2057,13 +2059,7 @@ func (e *ResourceUseAfterInvalidationError) SecondaryError() string {
 func (e *ResourceUseAfterInvalidationError) ErrorNotes() []errors.ErrorNote {
 	invalidation := e.Invalidation
 	return []errors.ErrorNote{
-		PreviousResourceInvalidationNote{
-			ResourceInvalidation: invalidation,
-			Range: ast.NewUnmeteredRange(
-				invalidation.StartPos,
-				invalidation.EndPos,
-			),
-		},
+		newPreviousResourceInvalidationNote(invalidation),
 	}
 }
 
@@ -2072,6 +2068,16 @@ func (e *ResourceUseAfterInvalidationError) ErrorNotes() []errors.ErrorNote {
 type PreviousResourceInvalidationNote struct {
 	ResourceInvalidation
 	ast.Range
+}
+
+func newPreviousResourceInvalidationNote(invalidation ResourceInvalidation) PreviousResourceInvalidationNote {
+	return PreviousResourceInvalidationNote{
+		ResourceInvalidation: invalidation,
+		Range: ast.NewUnmeteredRange(
+			invalidation.StartPos,
+			invalidation.EndPos,
+		),
+	}
 }
 
 func (n PreviousResourceInvalidationNote) Message() string {
@@ -3821,7 +3827,7 @@ func (e *InvalidEntryPointTypeError) Error() string {
 	)
 }
 
-// ImportedProgramError
+// ExternalMutationError
 
 type ExternalMutationError struct {
 	ContainerType Type
@@ -3852,4 +3858,44 @@ func (e *ExternalMutationError) SecondaryError() string {
 		e.Name,
 		e.ContainerType.QualifiedString(),
 	)
+}
+
+type PurityError struct {
+	ast.Range
+}
+
+func (e *PurityError) Error() string {
+	return "Impure operation performed in view context"
+}
+
+var _ SemanticError = &PurityError{}
+var _ errors.UserError = &PurityError{}
+
+func (*PurityError) IsUserError() {}
+
+func (*PurityError) isSemanticError() {}
+
+// InvalidatedResourceReferenceError
+
+type InvalidatedResourceReferenceError struct {
+	Invalidation ResourceInvalidation
+	ast.Range
+}
+
+var _ SemanticError = &InvalidatedResourceReferenceError{}
+var _ errors.UserError = &InvalidatedResourceReferenceError{}
+
+func (*InvalidatedResourceReferenceError) isSemanticError() {}
+
+func (*InvalidatedResourceReferenceError) IsUserError() {}
+
+func (e *InvalidatedResourceReferenceError) Error() string {
+	return "invalid reference: referenced resource may have been moved or destroyed"
+}
+
+func (e *InvalidatedResourceReferenceError) ErrorNotes() []errors.ErrorNote {
+	invalidation := e.Invalidation
+	return []errors.ErrorNote{
+		newPreviousResourceInvalidationNote(invalidation),
+	}
 }

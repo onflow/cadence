@@ -188,6 +188,7 @@ type jsonFunctionType struct {
 	Return     jsonValue           `json:"return"`
 	Kind       string              `json:"kind"`
 	TypeID     string              `json:"typeID"`
+	Purity     string              `json:"purity"`
 	Parameters []jsonParameterType `json:"parameters"`
 }
 
@@ -795,12 +796,16 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
 	case *cadence.FunctionType:
-		return jsonFunctionType{
+		typeJson := jsonFunctionType{
 			Kind:       "Function",
 			TypeID:     typ.ID(),
 			Return:     prepareType(typ.ReturnType, results),
 			Parameters: prepareParameters(typ.Parameters, results),
 		}
+		if typ.Purity == cadence.FunctionPurityView {
+			typeJson.Purity = "view"
+		}
+		return typeJson
 	case cadence.ReferenceType:
 		return jsonReferenceType{
 			Kind:       "Reference",

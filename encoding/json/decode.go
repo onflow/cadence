@@ -133,6 +133,7 @@ const (
 	labelKey        = "label"
 	parametersKey   = "parameters"
 	returnKey       = "return"
+	purityKey       = "purity"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -894,13 +895,23 @@ func (d *Decoder) decodeFieldType(valueJSON any, results typeDecodingResults) ca
 	)
 }
 
-func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id any, results typeDecodingResults) cadence.Type {
+func (d *Decoder) decodePurity(purity any) cadence.FunctionPurity {
+	functionPurity := toString(purity)
+	if functionPurity == "view" {
+		return cadence.FunctionPurityView
+	}
+	return cadence.FunctionPurityUnspecified
+}
+
+func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id any, purity any, results typeDecodingResults) cadence.Type {
 	parameters := d.decodeParamTypes(toSlice(parametersValue), results)
 	returnType := d.decodeType(returnValue, results)
+	functionPurity := d.decodePurity(purity)
 
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
 		"",
+		functionPurity,
 		parameters,
 		returnType,
 	).WithID(toString(id))
@@ -1070,7 +1081,11 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		returnValue := obj.Get(returnKey)
 		parametersValue := obj.Get(parametersKey)
 		idValue := obj.Get(typeIDKey)
-		return d.decodeFunctionType(returnValue, parametersValue, idValue, results)
+		purity, hasPurity := obj[purityKey]
+		if !hasPurity {
+			purity = "impure"
+		}
+		return d.decodeFunctionType(returnValue, parametersValue, idValue, purity, results)
 	case "Restriction":
 		restrictionsValue := obj.Get(restrictionsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))

@@ -125,6 +125,8 @@ var PublicAccountType = func() *CompositeType {
 	return publicAccountType
 }()
 
+var PublicAccountTypeAnnotation = NewTypeAnnotation(PublicAccountType)
+
 var PublicAccountPathsType = &VariableSizedType{
 	Type: PublicPathType,
 }
@@ -134,7 +136,10 @@ All the public paths of an account
 `
 
 func AccountForEachFunctionType(pathType Type) *FunctionType {
+	const functionPurity = FunctionPurityImpure
+
 	iterFunctionType := &FunctionType{
+		Purity: functionPurity,
 		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -144,12 +149,13 @@ func AccountForEachFunctionType(pathType Type) *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "type",
-				TypeAnnotation: NewTypeAnnotation(MetaType),
+				TypeAnnotation: MetaTypeAnnotation,
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+		ReturnTypeAnnotation: BoolTypeAnnotation,
 	}
 	return &FunctionType{
+		Purity: functionPurity,
 		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -157,7 +163,7 @@ func AccountForEachFunctionType(pathType Type) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(iterFunctionType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+		ReturnTypeAnnotation: VoidTypeAnnotation,
 	}
 }
 
@@ -223,6 +229,7 @@ var PublicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -230,7 +237,7 @@ var PublicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "capabilityPath",
-				TypeAnnotation: NewTypeAnnotation(PublicPathType),
+				TypeAnnotation: PublicPathTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(

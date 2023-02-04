@@ -54,15 +54,15 @@ var TestTypeParamsFunctionType = &FunctionType{
 const TestTypeParamsFunctionDocString = `This is a test function with parameters.
 `
 
-const TestTypeReturnFunctionName = "return"
+const TestTypeReturnBoolFunctionName = "returnBool"
 
-var TestTypeReturnFunctionType = &FunctionType{
+var TestTypeReturnBoolFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		BoolType,
 	),
 }
 
-const TestTypeReturnFunctionDocString = `This is a test function with a return type.
+const TestTypeReturnBoolFunctionDocString = `This is a test function with a return type.
 `
 
 const TestTypeParamsAndReturnFunctionName = "paramsAndReturn"
@@ -194,7 +194,7 @@ var TestType = &SimpleType{
 					)
 				},
 			},
-			TestTypeReturnFunctionName: {
+			TestTypeReturnBoolFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge,
 					identifier string,
@@ -205,8 +205,8 @@ var TestType = &SimpleType{
 						memoryGauge,
 						t,
 						identifier,
-						TestTypeReturnFunctionType,
-						TestTypeReturnFunctionDocString,
+						TestTypeReturnBoolFunctionType,
+						TestTypeReturnBoolFunctionDocString,
 					)
 				},
 			},

@@ -1621,20 +1621,12 @@ pub contract ItemNFT: NonFungibleToken {
 
        // get a reference to the garment that item stores
        pub fun borrowGarment(): &GarmentNFT.NFT? {
-           let garmentOptional <- self.garment <- nil
-           let garment <- garmentOptional!
-           let garmentRef = &garment as auth &GarmentNFT.NFT
-           self.garment <-! garment
-           return garmentRef
+           return &self.garment as &GarmentNFT.NFT?
        }
 
        // get a reference to the material that item stores
        pub fun borrowMaterial(): &MaterialNFT.NFT?  {
-           let materialOptional <- self.material <- nil
-           let material <- materialOptional!
-           let materialRef = &material as auth &MaterialNFT.NFT
-           self.material <-! material
-           return materialRef
+           return &self.material as &MaterialNFT.NFT?
        }
 
        // change name of item nft
@@ -4413,7 +4405,7 @@ pub contract ExampleNFT {
 
         pub fun getIDs(): [UInt64]
 
-        pub fun idExists(id: UInt64): Bool
+        pub view fun idExists(id: UInt64): Bool
     }
 
     // The definition of the Collection resource that
@@ -4454,7 +4446,7 @@ pub contract ExampleNFT {
 
         // idExists checks to see if a NFT 
         // with the given ID exists in the collection
-        pub fun idExists(id: UInt64): Bool {
+        pub view fun idExists(id: UInt64): Bool {
             return self.ownedNFTs[id] != nil
         }
 
@@ -4660,10 +4652,6 @@ pub contract ExampleMarketplace {
 
             // deposit the NFT into the buyers collection
             receiverReference.deposit(token: <- self.ownerCollection.borrow()!.withdraw(withdrawID: tokenID))
-
-            log("NFT Reference after transfer:")
-            log(nftRef)
-            log(nftRef.id)
 
             emit TokenPurchased(id: tokenID, price: price, seller: self.owner?.address, buyer: receiverReference.owner?.address)
         }

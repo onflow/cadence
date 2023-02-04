@@ -21,8 +21,10 @@ package parser
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -256,6 +258,22 @@ func TestParseVariableDeclaration(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("with purity", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("view var x = 1")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view modifier for variable",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
 		)
 	})
 
@@ -558,6 +576,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 						},
 					},
+					Purity: ast.FunctionPurityUnspecified,
 					ReturnTypeAnnotation: &ast.TypeAnnotation{
 						IsResource: false,
 						Type: &ast.NominalType{
@@ -1019,6 +1038,52 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("view function", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations("view fun foo (): X { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					Purity: ast.FunctionPurityView,
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
+								EndPos:   ast.Position{Line: 1, Column: 21, Offset: 21},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("native, enabled", func(t *testing.T) {
 
 		t.Parallel()
@@ -1070,6 +1135,18 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("double purity annot", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("view view fun foo (): X { }")
+		require.Equal(t, 1, len(errs))
+		require.Equal(t, errs[0], &SyntaxError{
+			Message: "invalid second view modifier",
+			Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+		})
 	})
 
 	t.Run("native, disabled", func(t *testing.T) {
@@ -2091,6 +2168,24 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("two identifiers, address location, repeated commas", func(t *testing.T) {
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`import foo, , bar from 0xaaaa`)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 1, Column: 12, Offset: 12},
+					Message: `expected identifier or keyword "from", got ','`,
+				},
+			},
+			errs,
+		)
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t, expected, result)
+	})
+
 	t.Run("no identifiers, identifier location", func(t *testing.T) {
 
 		t.Parallel()
@@ -2114,6 +2209,19 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("unexpected token as identifier", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`import foo, bar, baz, @ from 0x42`)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 22, Offset: 22},
+				Message: `unexpected token in import declaration: got '@', expected keyword "from" or ','`,
+			},
+		}, errs)
+
+	})
 	t.Run("from keyword as second identifier", func(t *testing.T) {
 
 		t.Parallel()
@@ -2301,6 +2409,17 @@ func TestParseEvent(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("invalid event name", func(t *testing.T) {
+		_, errs := testParseDeclarations(`event continue {}`)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 6, Offset: 6},
+				Message: "expected identifier after start of event declaration, got keyword continue",
+			},
+		}, errs)
+	})
 }
 
 func TestParseFieldWithVariableKind(t *testing.T) {
@@ -2456,10 +2575,15 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("native let foo: Int", Config{})
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
-		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
 	})
 
 	t.Run("static", func(t *testing.T) {
@@ -2509,10 +2633,15 @@ func TestParseField(t *testing.T) {
 			Config{},
 		)
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
-		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
 	})
 
 	t.Run("static native, enabled", func(t *testing.T) {
@@ -2560,14 +2689,11 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("static native let foo: Int", Config{})
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -2643,14 +2769,11 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("pub static native let foo: Int", Config{})
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
-					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -2912,8 +3035,218 @@ func TestParseCompositeDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("struct with view member", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`struct S { 
+			view fun foo() {}
+		}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "S",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{&ast.FunctionDeclaration{
+							Purity: ast.FunctionPurityView,
+							Access: ast.AccessNotSpecified,
+							ParameterList: &ast.ParameterList{
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 27, Line: 2, Column: 15},
+									EndPos:   ast.Position{Offset: 28, Line: 2, Column: 16},
+								},
+							},
+							ReturnTypeAnnotation: &ast.TypeAnnotation{
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "",
+										Pos:        ast.Position{Offset: 28, Line: 2, Column: 16},
+									},
+									NestedIdentifiers: nil,
+								},
+								StartPos: ast.Position{Line: 2, Column: 16, Offset: 28},
+							},
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 24, Line: 2, Column: 12},
+							},
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 30, Line: 2, Column: 18},
+										EndPos:   ast.Position{Offset: 31, Line: 2, Column: 19},
+									},
+								},
+							},
+							StartPos: ast.Position{Offset: 15, Line: 2, Column: 3},
+						}},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 35},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("struct with view initializer", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`struct S { 
+			view init() {}
+		}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "S",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{&ast.SpecialFunctionDeclaration{
+							Kind: common.DeclarationKindInitializer,
+							FunctionDeclaration: &ast.FunctionDeclaration{
+								Purity: ast.FunctionPurityView,
+								Identifier: ast.Identifier{
+									Identifier: "init",
+									Pos:        ast.Position{Offset: 20, Line: 2, Column: 8},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 24, Line: 2, Column: 12},
+										EndPos:   ast.Position{Offset: 25, Line: 2, Column: 13},
+									},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 27, Line: 2, Column: 15},
+											EndPos:   ast.Position{Offset: 28, Line: 2, Column: 16},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 15, Line: 2, Column: 3},
+							},
+						}},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 32},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("resource with view destructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`resource S { 
+			view destroy() {}
+		}`)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view annotation on destructor",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 3},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("resource with view field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`struct S { 
+			view foo: Int
+		}`)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view modifier for variable",
+					Pos:     ast.Position{Offset: 15, Line: 2, Column: 3},
+				},
+			},
+			errs,
+		)
+	})
 }
 
+func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
+
+	t.Parallel()
+
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		t.Run(kind.Keyword(), func(t *testing.T) {
+
+			code := fmt.Sprintf(`%s Foo { fun test(_ self: Int) {} }`, kind.Keyword())
+
+			selfKeywordPos := strings.Index(code, "self")
+
+			expectedErrPos := ast.Position{Line: 1, Column: selfKeywordPos, Offset: selfKeywordPos}
+
+			_, err := testParseDeclarations(code)
+
+			utils.AssertEqualWithDiff(
+				t,
+				[]error{
+					&SyntaxError{
+						Pos:     expectedErrPos,
+						Message: "expected identifier for parameter name, got keyword self",
+					},
+				},
+				err,
+			)
+		})
+	}
+}
+
+func TestParseInvalidParameterWithoutLabel(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseDeclarations(`pub fun foo(continue: Int) {}`)
+
+	utils.AssertEqualWithDiff(t, []error{
+		&SyntaxError{
+			Pos:     ast.Position{Line: 1, Column: 12, Offset: 12},
+			Message: "expected identifier for argument label or parameter name, got keyword continue",
+		},
+	}, errs)
+}
+
+func TestParseParametersWithExtraLabels(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseDeclarations(`pub fun foo(_ foo: String, label fable table: Int) {}`)
+
+	utils.AssertEqualWithDiff(t, []error{
+		&SyntaxError{
+			Pos:     ast.Position{Line: 1, Column: 39, Offset: 39},
+			Message: "expected ':' after parameter name, got identifier",
+		},
+	}, errs)
+}
 func TestParseInterfaceDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -3147,6 +3480,80 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("invalid interface name", func(t *testing.T) {
+		_, errs := testParseDeclarations(`pub struct interface continue {}`)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 21, Offset: 21},
+				Message: "expected identifier following struct declaration, got keyword continue",
+			},
+		}, errs)
+	})
+
+	t.Run("struct with view member", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`struct interface S { 
+			view fun foo() {}
+		}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.InterfaceDeclaration{
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "S",
+						Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{&ast.FunctionDeclaration{
+							Purity: ast.FunctionPurityView,
+							Access: ast.AccessNotSpecified,
+							ParameterList: &ast.ParameterList{
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 37, Line: 2, Column: 15},
+									EndPos:   ast.Position{Offset: 38, Line: 2, Column: 16},
+								},
+							},
+							ReturnTypeAnnotation: &ast.TypeAnnotation{
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "",
+										Pos:        ast.Position{Offset: 38, Line: 2, Column: 16},
+									},
+									NestedIdentifiers: nil,
+								},
+								StartPos: ast.Position{Line: 2, Column: 16, Offset: 38},
+							},
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 34, Line: 2, Column: 12},
+							},
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 40, Line: 2, Column: 18},
+										EndPos:   ast.Position{Offset: 41, Line: 2, Column: 19},
+									},
+								},
+							},
+							StartPos: ast.Position{Offset: 25, Line: 2, Column: 3},
+						}},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 45},
+					},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseEnumDeclaration(t *testing.T) {
@@ -3199,6 +3606,22 @@ func TestParseEnumDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("enum case with view modifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" enum E { view case e }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view modifier for enum case",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("enum case with static modifier, enabled", func(t *testing.T) {
 
 		t.Parallel()
@@ -3227,10 +3650,15 @@ func TestParseEnumDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(" enum E { static case e }")
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
-		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
 	})
 
 	t.Run("enum case with native modifier, enabled", func(t *testing.T) {
@@ -3261,10 +3689,15 @@ func TestParseEnumDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(" enum E { native case e }")
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
-		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
 	})
 }
 
@@ -3995,6 +4428,31 @@ func TestParseTransactionDeclaration(t *testing.T) {
 			result.Declarations(),
 		)
 	})
+
+	t.Run("invalid identifiers instead of special function declarations", func(t *testing.T) {
+		code := `
+		transaction {
+			var x: Int
+
+			uwu(signer: AuthAccount) {}
+
+			pre {
+				x > 1
+			}
+			post {
+				x == 2
+			}
+
+		}
+		`
+
+		_, errs := testParseDeclarations(code)
+
+		utils.AssertEqualWithDiff(t,
+			`unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
+			errs[0].Error(),
+		)
+	})
 }
 
 func TestParseFunctionAndBlock(t *testing.T) {
@@ -4419,9 +4877,6 @@ func TestParseStructureWithConformances(t *testing.T) {
 
 func TestParseInvalidMember(t *testing.T) {
 
-	// For now, leading unknown identifiers are valid.
-	// This will be rejected in Stable Cadence.
-
 	t.Parallel()
 
 	const code = `
@@ -4430,9 +4885,33 @@ func TestParseInvalidMember(t *testing.T) {
         }
 	`
 
-	_, errs := testParseDeclarations(code)
+	t.Run("ignore", func(t *testing.T) {
+		t.Parallel()
 
-	require.Empty(t, errs)
+		_, errs := ParseDeclarations(nil, []byte(code), Config{
+			IgnoreLeadingIdentifierEnabled: true,
+		})
+		require.Empty(t, errs)
+
+	})
+
+	t.Run("report", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := ParseDeclarations(nil, []byte(code), Config{
+			IgnoreLeadingIdentifierEnabled: false,
+		})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 35, Line: 3, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParsePreAndPostConditions(t *testing.T) {
@@ -4876,6 +5355,22 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		)
 	})
 
+	t.Run("with purity", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("view #foo")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("static, enabled", func(t *testing.T) {
 
 		t.Parallel()
@@ -5184,6 +5679,86 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 			},
 		},
 		result.Declarations(),
+	)
+}
+
+func TestParseInvalidImportWithPurity(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        view import x from 0x1
+	`
+	_, errs := testParseDeclarations(code)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "invalid view modifier for import",
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseInvalidEventWithPurity(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        view event Foo()
+	`
+	_, errs := testParseDeclarations(code)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "invalid view modifier for event",
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseInvalidCompositeWithPurity(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        view struct S {}
+	`
+	_, errs := testParseDeclarations(code)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "invalid view modifier for struct",
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseInvalidTransactionWithPurity(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        view transaction {}
+	`
+	_, errs := testParseDeclarations(code)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "invalid view modifier for transaction",
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		errs,
 	)
 }
 
@@ -5835,6 +6410,59 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 		},
 		result.Declarations(),
 	)
+}
+
+func TestParseInvalidCompositeFunctionNames(t *testing.T) {
+
+	t.Parallel()
+
+	interfacePossibilities := []bool{true, false}
+
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		for _, isInterface := range interfacePossibilities {
+
+			interfaceKeyword := ""
+			if isInterface {
+				interfaceKeyword = "interface"
+			}
+
+			body := "{}"
+			if isInterface {
+				body = ""
+			}
+
+			testName := fmt.Sprintf("%s_%s", kind.Keyword(), interfaceKeyword)
+
+			t.Run(testName, func(t *testing.T) {
+
+				_, err := ParseProgram(
+					nil,
+					[]byte(fmt.Sprintf(
+						`
+                          %[1]s %[2]s Test {
+                              fun init() %[3]s
+                              fun destroy() %[3]s
+                          }
+                        `,
+						kind.Keyword(),
+						interfaceKeyword,
+						body,
+					)),
+					Config{},
+				)
+
+				errs, ok := err.(Error)
+				assert.True(t, ok, "Parser error does not conform to parser.Error")
+				syntaxErr := errs.Errors[0].(*SyntaxError)
+
+				utils.AssertEqualWithDiff(
+					t,
+					"expected identifier after start of function declaration, got keyword init",
+					syntaxErr.Message,
+				)
+			})
+		}
+	}
 }
 
 func TestParseAccessModifiers(t *testing.T) {
@@ -6560,14 +7188,11 @@ func TestParseNestedPragma(t *testing.T) {
 
 		_, errs := parse("static native #pragma", Config{})
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -6642,14 +7267,11 @@ func TestParseNestedPragma(t *testing.T) {
 
 		_, errs := parse("pub static native #pragma", Config{})
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
-					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,

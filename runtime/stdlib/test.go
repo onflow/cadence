@@ -54,7 +54,7 @@ const transactionArgsFieldName = "arguments"
 
 const accountAddressFieldName = "address"
 
-const matcherTestFunctionName = "test"
+const matcherTestFieldName = "test"
 
 const addressesFieldName = "addresses"
 
@@ -186,7 +186,7 @@ var matcherType = func() *sema.CompositeType {
 	return compositeType
 }()
 
-var matcherTestFunctionType = compositeFunctionType(matcherType, matcherTestFunctionName)
+var matcherTestFunctionType = compositeFunctionType(matcherType, matcherTestFieldName)
 
 func compositeFunctionType(parent *sema.CompositeType, funcName string) *sema.FunctionType {
 	testFunc, ok := parent.Members.Get(funcName)
@@ -327,24 +327,19 @@ Fails the test-case if the given condition is false, and reports a message which
 const testAssertFunctionName = "assert"
 
 var testAssertFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "condition",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.BoolType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "condition",
+			TypeAnnotation: sema.BoolTypeAnnotation,
 		},
 		{
-			Identifier: "message",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 	RequiredArgumentCount: sema.RequiredArgumentCount(1),
 }
 
@@ -385,17 +380,14 @@ Fails the test-case with a message.
 const testFailFunctionName = "fail"
 
 var testFailFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
-			Identifier: "message",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 	RequiredArgumentCount: sema.RequiredArgumentCount(0),
 }
 
@@ -435,6 +427,7 @@ var testExpectFunctionType = func() *sema.FunctionType {
 	}
 
 	return &sema.FunctionType{
+		Purity: matcherTestFunctionType.Purity,
 		Parameters: []sema.Parameter{
 			{
 				Label:      sema.ArgumentLabelNotRequired,
@@ -454,9 +447,7 @@ var testExpectFunctionType = func() *sema.FunctionType {
 		TypeParameters: []*sema.TypeParameter{
 			typeParameter,
 		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			sema.VoidType,
-		),
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	}
 }()
 
@@ -497,14 +488,14 @@ func invokeMatcherTest(
 	testFunc := matcher.GetMember(
 		inter,
 		locationRange,
-		matcherTestFunctionName,
+		matcherTestFieldName,
 	)
 
 	funcValue, ok := testFunc.(interpreter.FunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError(
-			"invalid type for '%s'. expected function",
-			matcherTestFunctionName,
+			"invalid value type for field '%s'. expected function value",
+			matcherTestFieldName,
 		))
 	}
 
@@ -538,20 +529,17 @@ Read a local file, and return the content as a string.
 
 const testReadFileFunctionName = "readFile"
 
-var testReadFileFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
+var testReadFileFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	[]sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "path",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.StringType,
-	),
-}
+	sema.StringTypeAnnotation,
+)
 
 func testReadFileFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -580,11 +568,13 @@ Creates a blockchain which is backed by a new emulator instance.
 
 const testNewEmulatorBlockchainFunctionName = "newEmulatorBlockchain"
 
-var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+var testNewEmulatorBlockchainFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	nil,
+	sema.NewTypeAnnotation(
 		blockchainType,
 	),
-}
+)
 
 func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -644,7 +634,7 @@ func getNestedTypeConstructorValue(parent interpreter.Value, typeName string) *i
 // Accepts test function that accepts subtype of 'AnyStruct'.
 //
 // Signature:
-//    fun newMatcher<T: AnyStruct>(test: ((T): Bool)): Test.Matcher
+//    fun newMatcher<T: AnyStruct>(test: fun(T): Bool): Test.Matcher
 //
 // where `T` is optional, and bound to `AnyStruct`.
 //
@@ -652,7 +642,7 @@ func getNestedTypeConstructorValue(parent interpreter.Value, typeName string) *i
 
 const newMatcherFunctionDocString = `
 Creates a matcher with a test function.
-The test function is of type '((T): Bool)', where 'T' is bound to 'AnyStruct'.
+The test function is of type 'fun(T): Bool', where 'T' is bound to 'AnyStruct'.
 `
 
 const newMatcherFunctionName = "newMatcher"
@@ -666,6 +656,7 @@ var newMatcherFunctionType = func() *sema.FunctionType {
 	}
 
 	return &sema.FunctionType{
+		Purity:        sema.FunctionPurityView,
 		IsConstructor: true,
 		Parameters: []sema.Parameter{
 			{
@@ -1509,17 +1500,17 @@ func newMatcherWithGenericTestFunction(
 
 	inter := invocation.Interpreter
 
-	staticType, ok := testFunc.StaticType(inter).(interpreter.FunctionStaticType)
-	if !ok {
+	typeParameterPair := invocation.TypeParameterTypes.Oldest()
+	if typeParameterPair == nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	parameters := staticType.Type.Parameters
+	parameterType := typeParameterPair.Value
 
 	// Wrap the user provided test function with a function that validates the argument types.
 	// i.e: create a closure that cast the arguments.
 	//
-	// e.g: convert `newMatcher(test: ((Int): Bool))` to:
+	// e.g: convert `newMatcher(test: fun(Int): Bool)` to:
 	//
 	//  newMatcher(fun (b: AnyStruct): Bool {
 	//      return test(b as! Int)
@@ -1532,15 +1523,14 @@ func newMatcherWithGenericTestFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
-			for i, argument := range invocation.Arguments {
-				paramType := parameters[i].TypeAnnotation.Type
+			for _, argument := range invocation.Arguments {
 				argumentStaticType := argument.StaticType(inter)
 
-				if !inter.IsSubTypeOfSemaType(argumentStaticType, paramType) {
+				if !inter.IsSubTypeOfSemaType(argumentStaticType, parameterType) {
 					argumentSemaType := inter.MustConvertStaticToSemaType(argumentStaticType)
 
 					panic(interpreter.TypeMismatchError{
-						ExpectedType:  paramType,
+						ExpectedType:  parameterType,
 						ActualType:    argumentSemaType,
 						LocationRange: invocation.LocationRange,
 					})
