@@ -21,7 +21,6 @@ package interpreter_test
 import (
 	"fmt"
 	"math/big"
-	"sort"
 	"strings"
 	"testing"
 
