@@ -30,3 +30,5 @@ var VoidType = &SimpleType{
 	Exportable:    true,
 	Importable:    false,
 }
+
+var VoidTypeAnnotation = NewTypeAnnotation(VoidType)
