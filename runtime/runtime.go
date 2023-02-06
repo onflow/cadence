@@ -92,7 +92,7 @@ type Executor interface {
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
-	// Config() returns the runtime.Config this Runtime was instantiated with.
+	// Config returns the runtime.Config this Runtime was instantiated with.
 	Config() Config
 
 	// NewScriptExecutor returns an executor which executes the given script.
@@ -212,7 +212,7 @@ type interpreterRuntime struct {
 }
 
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
-func NewInterpreterRuntime(defaultConfig Config) Runtime {
+func NewInterpreterRuntime(defaultConfig Config) *interpreterRuntime {
 	return &interpreterRuntime{
 		defaultConfig: defaultConfig,
 	}
