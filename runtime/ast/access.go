@@ -20,18 +20,89 @@ package ast
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=Access
+//go:generate go run golang.org/x/tools/cmd/stringer -type=PrimitiveAccess
 
-type Access uint
+type Access interface {
+	isAccess()
+	Keyword() string
+	Description() string
+	String() string
+	MarshalJSON() ([]byte, error)
+	IsLessPermissiveThan(Access) bool
+}
+
+type EntitlementAccess struct {
+	Entitlements []*NominalType
+}
+
+var _ Access = EntitlementAccess{}
+
+func NewEntitlementAccess(entitlements []*NominalType) EntitlementAccess {
+	return EntitlementAccess{Entitlements: entitlements}
+}
+
+func (EntitlementAccess) isAccess() {}
+
+func (EntitlementAccess) Description() string {
+	return "entitled access"
+}
+
+func (e EntitlementAccess) entitlementsString() string {
+	str := strings.Builder{}
+	for i, entitlement := range e.Entitlements {
+		str.Write([]byte(entitlement.String()))
+		if i < len(e.Entitlements)-1 {
+			str.Write([]byte(", "))
+		}
+	}
+	return str.String()
+}
+
+func (e EntitlementAccess) String() string {
+	return "EntitlementAccess" + e.entitlementsString()
+}
+
+func (e EntitlementAccess) Keyword() string {
+	return "access(" + e.entitlementsString() + ")"
+}
+
+func (e EntitlementAccess) MarshalJSON() ([]byte, error) {
+	return json.Marshal(e.String())
+}
+
+func (e EntitlementAccess) subset(other EntitlementAccess) bool {
+	otherSet := make(map[*NominalType]struct{})
+	for _, entitlement := range other.Entitlements {
+		otherSet[entitlement] = struct{}{}
+	}
+
+	for _, entitlement := range e.Entitlements {
+		if _, found := otherSet[entitlement]; !found {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
+	if primitive, isPrimitive := other.(PrimitiveAccess); isPrimitive {
+		return primitive == AccessPublic || primitive == AccessPublicSettable
+	}
+	return e.subset(other.(EntitlementAccess))
+}
+
+type PrimitiveAccess uint8
 
 // NOTE: order indicates permissiveness: from least to most permissive!
 
 const (
-	AccessNotSpecified Access = iota
+	AccessNotSpecified PrimitiveAccess = iota
 	AccessPrivate
 	AccessContract
 	AccessAccount
@@ -39,19 +110,25 @@ const (
 	AccessPublicSettable
 )
 
-func AccessCount() int {
-	return len(_Access_index) - 1
+func PrimitiveAccessCount() int {
+	return len(_PrimitiveAccess_index) - 1
 }
 
-func (a Access) IsLessPermissiveThan(otherAccess Access) bool {
-	return a < otherAccess
+func (PrimitiveAccess) isAccess() {}
+
+func (a PrimitiveAccess) IsLessPermissiveThan(otherAccess Access) bool {
+	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
+		return a < otherPrimitive
+	}
+	// only private access is guaranteed to be less permissive than entitlement-based access
+	return a == AccessPrivate
 }
 
 // TODO: remove.
 //   only used by tests which are not updated yet
 //   to include contract and account access
 
-var BasicAccesses = []Access{
+var BasicAccesses = []PrimitiveAccess{
 	AccessNotSpecified,
 	AccessPrivate,
 	AccessPublic,
@@ -63,7 +140,7 @@ var AllAccesses = append(BasicAccesses[:],
 	AccessAccount,
 )
 
-func (a Access) Keyword() string {
+func (a PrimitiveAccess) Keyword() string {
 	switch a {
 	case AccessNotSpecified:
 		return ""
@@ -82,7 +159,7 @@ func (a Access) Keyword() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (a Access) Description() string {
+func (a PrimitiveAccess) Description() string {
 	switch a {
 	case AccessNotSpecified:
 		return "not specified"
@@ -101,6 +178,6 @@ func (a Access) Description() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (a Access) MarshalJSON() ([]byte, error) {
+func (a PrimitiveAccess) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
 }

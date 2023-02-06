@@ -31,7 +31,7 @@ func TestAccess_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	for access := Access(0); access < Access(AccessCount()); access++ {
+	for access := PrimitiveAccess(0); access < PrimitiveAccess(PrimitiveAccessCount()); access++ {
 		actual, err := json.Marshal(access)
 		require.NoError(t, err)
 

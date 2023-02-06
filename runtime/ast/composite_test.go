@@ -157,6 +157,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
+			Access:       AccessNotSpecified,
 			VariableKind: VariableKindConstant,
 			Identifier: Identifier{
 				Identifier: "xyz",
@@ -239,6 +240,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
+			Access: AccessNotSpecified,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -306,6 +308,7 @@ func TestFieldDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
+			Access:       AccessNotSpecified,
 			VariableKind: VariableKindConstant,
 			Identifier: Identifier{
 				Identifier: "xyz",
@@ -359,6 +362,7 @@ func TestFieldDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
+			Access: AccessNotSpecified,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -533,6 +537,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			},
 			Members: NewMembers(nil, []Declaration{
 				&FieldDeclaration{
+					Access: AccessNotSpecified,
 					Identifier: Identifier{
 						Identifier: "x",
 					},
@@ -610,6 +615,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 				&SpecialFunctionDeclaration{
 					Kind: common.DeclarationKindInitializer,
 					FunctionDeclaration: &FunctionDeclaration{
+						Access: AccessNotSpecified,
 						ParameterList: &ParameterList{
 							Parameters: []*Parameter{
 								{
@@ -676,6 +682,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			},
 			Members: NewMembers(nil, []Declaration{
 				&EnumCaseDeclaration{
+					Access: AccessNotSpecified,
 					Identifier: Identifier{
 						Identifier: "x",
 					},
@@ -785,6 +792,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 			},
 			Members: NewMembers(nil, []Declaration{
 				&FieldDeclaration{
+					Access: AccessNotSpecified,
 					Identifier: Identifier{
 						Identifier: "x",
 					},
@@ -822,6 +830,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 				&SpecialFunctionDeclaration{
 					Kind: common.DeclarationKindInitializer,
 					FunctionDeclaration: &FunctionDeclaration{
+						Access: AccessNotSpecified,
 						ParameterList: &ParameterList{
 							Parameters: []*Parameter{
 								{
@@ -865,6 +874,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 			},
 			Members: NewMembers(nil, []Declaration{
 				&EnumCaseDeclaration{
+					Access: AccessNotSpecified,
 					Identifier: Identifier{
 						Identifier: "x",
 					},
@@ -887,6 +897,7 @@ func TestEnumCaseDeclaration_Doc(t *testing.T) {
 	t.Parallel()
 
 	decl := &EnumCaseDeclaration{
+		Access: AccessNotSpecified,
 		Identifier: Identifier{
 			Identifier: "x",
 		},
@@ -906,6 +917,7 @@ func TestEnumCaseDeclaration_String(t *testing.T) {
 	t.Parallel()
 
 	decl := &EnumCaseDeclaration{
+		Access: AccessNotSpecified,
 		Identifier: Identifier{
 			Identifier: "x",
 		},

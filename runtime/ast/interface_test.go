@@ -121,6 +121,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 			},
 			Members: NewMembers(nil, []Declaration{
 				&FieldDeclaration{
+					Access: AccessNotSpecified,
 					Identifier: Identifier{
 						Identifier: "x",
 					},
@@ -206,6 +207,7 @@ func TestInterfaceDeclaration_String(t *testing.T) {
 			},
 			Members: NewMembers(nil, []Declaration{
 				&FieldDeclaration{
+					Access: AccessNotSpecified,
 					Identifier: Identifier{
 						Identifier: "x",
 					},

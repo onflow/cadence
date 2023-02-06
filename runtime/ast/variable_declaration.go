@@ -75,7 +75,7 @@ func NewVariableDeclaration(
 
 func NewEmptyVariableDeclaration(gauge common.MemoryGauge) *VariableDeclaration {
 	common.UseMemory(gauge, common.VariableDeclarationMemoryUsage)
-	return &VariableDeclaration{}
+	return &VariableDeclaration{Access: AccessNotSpecified}
 }
 
 func (*VariableDeclaration) isDeclaration() {}

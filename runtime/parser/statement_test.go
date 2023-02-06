@@ -483,6 +483,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		expected := &ast.IfStatement{
 			Test: &ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: false,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -532,6 +533,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		expected := &ast.IfStatement{
 			Test: &ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -1599,6 +1601,7 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 	}
 
 	ifTestVariableDeclaration := &ast.VariableDeclaration{
+		Access:     ast.AccessNotSpecified,
 		IsConstant: false,
 		Identifier: ast.Identifier{
 			Identifier: "y",
@@ -2225,6 +2228,7 @@ func TestParseMoveStatement(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
@@ -2321,6 +2325,7 @@ func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpre
 					Block: &ast.Block{
 						Statements: []ast.Statement{
 							&ast.VariableDeclaration{
+								Access:     ast.AccessNotSpecified,
 								IsConstant: true,
 								Identifier: ast.Identifier{
 									Identifier: "r",
@@ -2489,6 +2494,7 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 11, Line: 2, Column: 10},
@@ -2605,6 +2611,7 @@ func TestParseReferenceExpressionStatement(t *testing.T) {
 	}
 
 	expectedVariableDeclaration := &ast.VariableDeclaration{
+		Access:     ast.AccessNotSpecified,
 		IsConstant: true,
 		Identifier: ast.Identifier{
 			Identifier: "x",

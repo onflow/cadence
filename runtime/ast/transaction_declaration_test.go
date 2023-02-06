@@ -121,6 +121,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 		Prepare: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindPrepare,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				ParameterList: &ParameterList{
 					Parameters: []*Parameter{
 						{
@@ -153,6 +154,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 		Execute: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindExecute,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				FunctionBlock: &FunctionBlock{
 					Block: &Block{
 						Statements: []Statement{
@@ -383,6 +385,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 		Prepare: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindPrepare,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				ParameterList: &ParameterList{
 					Parameters: []*Parameter{
 						{
@@ -415,6 +418,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 		Execute: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindExecute,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				FunctionBlock: &FunctionBlock{
 					Block: &Block{
 						Statements: []Statement{

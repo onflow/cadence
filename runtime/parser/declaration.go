@@ -64,7 +64,7 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 
 func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
-	access := ast.AccessNotSpecified
+	var access ast.Access = ast.AccessNotSpecified
 	var accessPos *ast.Position
 
 	purity := ast.FunctionPurityUnspecified
@@ -267,7 +267,7 @@ var enumeratedAccessModifierKeywords = common.EnumerateWords(
 //	access
 //	    : 'priv'
 //	    | 'pub' ( '(' 'set' ')' )?
-//	    | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' ) ')'
+//	    | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' | '<ENTITLEMENT LIST>' ) ')'
 func parseAccess(p *parser) (ast.Access, error) {
 
 	switch string(p.currentTokenSource()) {
@@ -332,32 +332,44 @@ func parseAccess(p *parser) (ast.Access, error) {
 			)
 		}
 
-		var access ast.Access
+		var access ast.Access = ast.AccessNotSpecified
 
 		keyword := p.currentTokenSource()
 		switch string(keyword) {
 		case KeywordAll:
 			access = ast.AccessPublic
+			// Skip the keyword
+			p.nextSemanticToken()
 
 		case KeywordAccount:
 			access = ast.AccessAccount
+			// Skip the keyword
+			p.nextSemanticToken()
 
 		case KeywordContract:
 			access = ast.AccessContract
+			// Skip the keyword
+			p.nextSemanticToken()
 
 		case KeywordSelf:
 			access = ast.AccessPrivate
+			// Skip the keyword
+			p.nextSemanticToken()
 
 		default:
-			return ast.AccessNotSpecified, p.syntaxError(
-				"expected keyword %s, got %q",
-				enumeratedAccessModifierKeywords,
-				keyword,
-			)
+			entitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose)
+			if err != nil {
+				return ast.AccessNotSpecified, err
+			}
+			if len(entitlements) < 1 {
+				return ast.AccessNotSpecified, p.syntaxError(
+					"expected keyword %s or a list of entitlements, got %q",
+					enumeratedAccessModifierKeywords,
+					keyword,
+				)
+			}
+			access = ast.NewEntitlementAccess(entitlements)
 		}
-
-		// Skip the keyword
-		p.nextSemanticToken()
 
 		_, err = p.mustOne(lexer.TokenParenClose)
 		if err != nil {
@@ -1148,7 +1160,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 	const functionBlockIsOptional = true
 
-	access := ast.AccessNotSpecified
+	var access ast.Access = ast.AccessNotSpecified
 	var accessPos *ast.Position
 
 	purity := ast.FunctionPurityUnspecified

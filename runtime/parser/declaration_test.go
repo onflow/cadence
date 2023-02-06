@@ -46,6 +46,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: false,
 					Identifier: ast.Identifier{
 						Identifier: "x",
@@ -117,6 +118,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: true,
 					Identifier: ast.Identifier{
 						Identifier: "x",
@@ -152,6 +154,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: true,
 					Identifier: ast.Identifier{
 						Identifier: "x",
@@ -187,6 +190,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: true,
 					Identifier: ast.Identifier{
 						Identifier: "r2",
@@ -229,6 +233,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: false,
 					Identifier: ast.Identifier{
 						Identifier: "x",
@@ -567,6 +572,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -661,6 +667,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -719,6 +726,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 2, Column: 14, Offset: 15},
@@ -842,6 +850,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 2, Column: 4, Offset: 13},
@@ -889,6 +898,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 7, Column: 4, Offset: 43},
@@ -936,6 +946,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 7, Column: 4, Offset: 43},
@@ -988,6 +999,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "main",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -1050,6 +1062,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -1102,7 +1115,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
-					Flags: ast.FunctionDeclarationFlagsIsNative,
+					Access: ast.AccessNotSpecified,
+					Flags:  ast.FunctionDeclarationFlagsIsNative,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
@@ -1184,7 +1198,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
-					Flags: ast.FunctionDeclarationFlagsIsStatic,
+					Access: ast.AccessNotSpecified,
+					Flags:  ast.FunctionDeclarationFlagsIsStatic,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
@@ -1255,7 +1270,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
-					Flags: ast.FunctionDeclarationFlagsIsStatic | ast.FunctionDeclarationFlagsIsNative,
+					Access: ast.AccessNotSpecified,
+					Flags:  ast.FunctionDeclarationFlagsIsStatic | ast.FunctionDeclarationFlagsIsNative,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 18, Offset: 18},
@@ -1634,16 +1650,66 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
-	t.Run("access, invalid inner keyword", func(t *testing.T) {
+	t.Run("access, entitlement", func(t *testing.T) {
 
 		t.Parallel()
 
 		result, errs := parse("access ( foo )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.EntitlementAccess{
+				Entitlements: []*ast.NominalType{
+					{
+						Identifier: ast.Identifier{
+							Identifier: "foo",
+							Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("access, multiple entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo , bar )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.EntitlementAccess{
+				Entitlements: []*ast.NominalType{
+					{
+						Identifier: ast.Identifier{
+							Identifier: "foo",
+							Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+					},
+					{
+						Identifier: ast.Identifier{
+							Identifier: "bar",
+							Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("access, multiple entitlements no comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo bar )")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected keyword \"all\", \"account\", \"contract\", or \"self\", got \"foo\"",
-					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+					Message: "unexpected token: got identifier, expected ',' or ')'",
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
@@ -2034,6 +2100,7 @@ func TestParseEvent(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
 					CompositeKind: common.CompositeKindEvent,
 					Identifier: ast.Identifier{
 						Identifier: "E",
@@ -2044,6 +2111,7 @@ func TestParseEvent(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									ParameterList: &ast.ParameterList{
 										Range: ast.Range{
 											StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
@@ -2087,6 +2155,7 @@ func TestParseEvent(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									ParameterList: &ast.ParameterList{
 										Parameters: []*ast.Parameter{
 											{
@@ -2281,6 +2350,7 @@ func TestParseField(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
+				Access:       ast.AccessNotSpecified,
 				Flags:        ast.FieldDeclarationFlagsIsNative,
 				VariableKind: ast.VariableKindConstant,
 				Identifier: ast.Identifier{
@@ -2336,6 +2406,7 @@ func TestParseField(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
+				Access:       ast.AccessNotSpecified,
 				Flags:        ast.FieldDeclarationFlagsIsStatic,
 				VariableKind: ast.VariableKindConstant,
 				Identifier: ast.Identifier{
@@ -2395,6 +2466,7 @@ func TestParseField(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
+				Access:       ast.AccessNotSpecified,
 				Flags:        ast.FieldDeclarationFlagsIsStatic | ast.FieldDeclarationFlagsIsNative,
 				VariableKind: ast.VariableKindConstant,
 				Identifier: ast.Identifier{
@@ -2607,6 +2679,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
 					CompositeKind: common.CompositeKindStructure,
 					Identifier: ast.Identifier{
 						Identifier: "Test",
@@ -2639,6 +2712,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "init",
 										Pos:        ast.Position{Offset: 76, Line: 5, Column: 14},
@@ -2857,6 +2931,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 						[]ast.Declaration{&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
+								Access: ast.AccessNotSpecified,
 								Purity: ast.FunctionPurityView,
 								Identifier: ast.Identifier{
 									Identifier: "init",
@@ -3060,6 +3135,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.InterfaceDeclaration{
+					Access:        ast.AccessNotSpecified,
 					CompositeKind: common.CompositeKindStructure,
 					Identifier: ast.Identifier{
 						Identifier: "Test",
@@ -3092,6 +3168,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "init",
 										Pos:        ast.Position{Offset: 86, Line: 5, Column: 14},
@@ -3184,6 +3261,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindDestructor,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "destroy",
 										Pos:        ast.Position{Offset: 193, Line: 11, Column: 14},
@@ -4403,6 +4481,7 @@ func TestParseStructure(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindStructure,
 				Identifier: ast.Identifier{
 					Identifier: "Test",
@@ -4435,6 +4514,7 @@ func TestParseStructure(t *testing.T) {
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
+								Access: ast.AccessNotSpecified,
 								Identifier: ast.Identifier{
 									Identifier: "init",
 									Pos:        ast.Position{Offset: 70, Line: 5, Column: 12},
@@ -4581,6 +4661,7 @@ func TestParseStructureWithConformances(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindStructure,
 				Identifier: ast.Identifier{
 					Identifier: "Test",
@@ -4955,6 +5036,7 @@ func TestParseInterface(t *testing.T) {
 		}
 
 		test := &ast.InterfaceDeclaration{
+			Access:        ast.AccessNotSpecified,
 			CompositeKind: common.CompositeKindStructure,
 			Identifier: ast.Identifier{
 				Identifier: "Test",
@@ -4987,6 +5069,7 @@ func TestParseInterface(t *testing.T) {
 					&ast.SpecialFunctionDeclaration{
 						Kind: common.DeclarationKindInitializer,
 						FunctionDeclaration: &ast.FunctionDeclaration{
+							Access: ast.AccessNotSpecified,
 							Identifier: ast.Identifier{
 								Identifier: "init",
 								Pos:        ast.Position{Offset: 79, Line: 5, Column: 16},
@@ -5523,6 +5606,7 @@ func TestParseResource(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindResource,
 				Identifier: ast.Identifier{
 					Identifier: "Test",
@@ -5552,6 +5636,7 @@ func TestParseEventDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindEvent,
 				Identifier: ast.Identifier{
 					Identifier: "Transfer",
@@ -5562,6 +5647,7 @@ func TestParseEventDeclaration(t *testing.T) {
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
+								Access: ast.AccessNotSpecified,
 								ParameterList: &ast.ParameterList{
 									Parameters: []*ast.Parameter{
 										{
@@ -5732,6 +5818,7 @@ func TestParseResourceReturnType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
@@ -5780,6 +5867,7 @@ func TestParseMovingVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -5815,6 +5903,7 @@ func TestParseResourceParameterType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
@@ -5883,6 +5972,7 @@ func TestParseMovingVariableDeclarationWithTypeAnnotation(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -5928,6 +6018,7 @@ func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindStructure,
 				Identifier: ast.Identifier{
 					Identifier: "X",
@@ -5984,6 +6075,7 @@ func TestParseDestructor(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindResource,
 				Identifier: ast.Identifier{
 					Identifier: "Test",
@@ -5994,6 +6086,7 @@ func TestParseDestructor(t *testing.T) {
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindDestructor,
 							FunctionDeclaration: &ast.FunctionDeclaration{
+								Access: ast.AccessNotSpecified,
 								Identifier: ast.Identifier{
 									Identifier: "destroy",
 									Pos:        ast.Position{Offset: 37, Line: 3, Column: 12},
@@ -6040,6 +6133,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindStructure,
 				Identifier: ast.Identifier{
 					Identifier: "Kitty",
@@ -6048,6 +6142,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 				Members: ast.NewUnmeteredMembers(
 					[]ast.Declaration{
 						&ast.FieldDeclaration{
+							Access:       ast.AccessNotSpecified,
 							VariableKind: ast.VariableKindConstant,
 							Identifier: ast.Identifier{
 								Identifier: "id",
@@ -6070,6 +6165,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
+								Access: ast.AccessNotSpecified,
 								Identifier: ast.Identifier{
 									Identifier: "init",
 									Pos:        ast.Position{Offset: 38, Line: 2, Column: 37},
