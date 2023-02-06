@@ -221,7 +221,7 @@ type testRuntimeInterface struct {
 	computationUsed            func() (uint64, error)
 	memoryUsed                 func() (uint64, error)
 	interactionUsed            func() (uint64, error)
-	updatedContractLocations   []common.AddressLocation
+	updatedContractCode        bool
 }
 
 // testRuntimeInterface should implement Interface
@@ -385,17 +385,7 @@ func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name s
 		return err
 	}
 
-	location := common.AddressLocation{
-		Name:    name,
-		Address: address,
-	}
-
-	if _, ok := i.programs[location]; ok {
-		i.updatedContractLocations = append(
-			i.updatedContractLocations,
-			location,
-		)
-	}
+	i.updatedContractCode = true
 
 	return nil
 }
@@ -675,10 +665,12 @@ func (i *testRuntimeInterface) onScriptExecutionStart() {
 }
 
 func (i *testRuntimeInterface) invalidateUpdatedPrograms() {
-	for _, location := range i.updatedContractLocations {
-		delete(i.programs, location)
+	if i.updatedContractCode {
+		for location := range i.programs {
+			delete(i.programs, location)
+		}
+		i.updatedContractCode = false
 	}
-	i.updatedContractLocations = i.updatedContractLocations[0:0]
 }
 
 func TestRuntimeImport(t *testing.T) {
