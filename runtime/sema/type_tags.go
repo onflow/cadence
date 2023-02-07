@@ -657,10 +657,16 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 		restrictedTypeMask,
 		transactionTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
+
 	case anyResourceAttachmentMask:
 		return AnyResourceAttachmentType
+
 	case anyStructAttachmentMask:
 		return AnyStructAttachmentType
+
+	case capabilityControllerTypeMask:
+		return CapabilityControllerType
+
 	default:
 		return nil
 	}
