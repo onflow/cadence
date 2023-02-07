@@ -18668,7 +18668,7 @@ var _ Value = &CapabilityControllerValue{}
 var _ MemberAccessibleValue = &CapabilityControllerValue{}
 
 func (v CapabilityControllerValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	panic("not implemented") // TODO: Implement
+	return NonStorable{Value: v}, nil
 }
 
 func (v CapabilityControllerValue) String() string {
@@ -18687,7 +18687,7 @@ func (v CapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visi
 }
 
 func (v CapabilityControllerValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
-	panic("not implemented") // TODO: Implement
+	// NO-OP
 }
 
 func (v CapabilityControllerValue) StaticType(interpreter *Interpreter) StaticType {
@@ -18703,7 +18703,7 @@ func (v CapabilityControllerValue) StaticType(interpreter *Interpreter) StaticTy
 // e.g. the element type of an array, it also ensures the nested values'
 // static types are subtypes.
 func (v CapabilityControllerValue) ConformsToStaticType(interpreter *Interpreter, locationRange LocationRange, results TypeConformanceResults) bool {
-	panic("not implemented") // TODO: Implement
+	return true // TODO verify this, given that we store the borrowed type as a field. Capabilities themselves are invariant though
 }
 
 func (v CapabilityControllerValue) RecursiveString(_ SeenReferences) string {
@@ -18773,11 +18773,11 @@ func (v CapabilityControllerValue) GetMember(interpreter *Interpreter, locationR
 }
 
 func (v CapabilityControllerValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	// Capabilities have no removable members (fields / functions)
+	// Capability controllers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v CapabilityControllerValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
-	// Capabilities have no settable members (fields / functions)
+	// Capability controllers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

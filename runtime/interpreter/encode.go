@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 const cborTagSize = 2
@@ -218,7 +219,6 @@ const (
 	CBORTagReferenceStaticType
 	CBORTagRestrictedStaticType
 	CBORTagCapabilityStaticType
-	CBORTagCapabilityControllerStaticType
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -1386,22 +1386,10 @@ func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
 	}
 }
 
-// Encode encodes CapabilityControllerStaticType as
-//
-//	cbor.Tag{
-//			Number: CBORTagCapabilityControllerStaticType,
-//			Content: StaticType(v.BorrowType)
-//	}
 func (t CapabilityControllerStaticType) Encode(e *cbor.StreamEncoder) error {
-	err := e.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, CBORTagCapabilityControllerStaticType,
-	})
-	if err != nil {
-		return err
+	return NonStorableStaticTypeError{
+		Type: sema.CapabilityControllerType,
 	}
-
-	return EncodeStaticType(e, t.BorrowType)
 }
 
 // compositeTypeInfo
