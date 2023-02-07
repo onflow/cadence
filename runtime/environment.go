@@ -336,7 +336,11 @@ func (e *interpreterEnvironment) ParseAndCheckProgram(
 		code,
 		location,
 		storeProgram,
-		importResolutionResults{},
+		importResolutionResults{
+			// Current program is already in check.
+			// So mark it also as 'already seen'.
+			location: true,
+		},
 	)
 }
 
