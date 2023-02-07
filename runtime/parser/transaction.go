@@ -94,6 +94,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				nil,
 				nil,
 				identifier,
+				"",
 			)
 			if err != nil {
 				return nil, err

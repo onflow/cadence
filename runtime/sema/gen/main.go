@@ -554,7 +554,13 @@ func functionTypeExpr(
 
 	// Return type
 
-	returnTypeExpr := typeExpr(t.ReturnTypeAnnotation.Type, typeParams)
+	var returnTypeExpr dst.Expr
+	if t.ReturnTypeAnnotation != nil {
+		returnTypeExpr = typeExpr(t.ReturnTypeAnnotation.Type, typeParams)
+	} else {
+		returnTypeExpr = typeVarIdent("Void")
+	}
+
 	returnTypeExpr.Decorations().Before = dst.NewLine
 	returnTypeExpr.Decorations().After = dst.NewLine
 

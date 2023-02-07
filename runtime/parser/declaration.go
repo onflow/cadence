@@ -1285,6 +1285,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				staticPos,
 				nativePos,
 				identifier,
+				docString,
 			)
 		}
 
@@ -1370,29 +1371,15 @@ func parseSpecialFunctionDeclaration(
 	staticPos *ast.Position,
 	nativePos *ast.Position,
 	identifier ast.Identifier,
+	docString string,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
 	startPos := ast.EarliestPosition(identifier.Pos, accessPos, staticPos, nativePos)
 
-	// TODO: switch to parseFunctionParameterListAndRest once old parser is deprecated:
-	//   allow a return type annotation while parsing, but reject later.
-
-	parameterList, err := parseParameterList(p)
+	parameterList, returnTypeAnnotation, functionBlock, err :=
+		parseFunctionParameterListAndRest(p, functionBlockIsOptional)
 	if err != nil {
 		return nil, err
-	}
-
-	p.skipSpaceAndComments()
-
-	var functionBlock *ast.FunctionBlock
-
-	if !functionBlockIsOptional ||
-		p.current.Is(lexer.TokenBraceOpen) {
-
-		functionBlock, err = parseFunctionBlock(p)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	declarationKind := common.DeclarationKindUnknown
@@ -1405,6 +1392,21 @@ func parseSpecialFunctionDeclaration(
 
 	case keywordPrepare:
 		declarationKind = common.DeclarationKindPrepare
+	}
+
+	if returnTypeAnnotation != nil {
+		var kindDescription string
+		if declarationKind != common.DeclarationKindUnknown {
+			kindDescription = declarationKind.Name()
+		} else {
+			kindDescription = "special function"
+		}
+
+		p.report(NewSyntaxError(
+			returnTypeAnnotation.StartPos,
+			"invalid return type for %s",
+			kindDescription,
+		))
 	}
 
 	return ast.NewSpecialFunctionDeclaration(
@@ -1421,7 +1423,7 @@ func parseSpecialFunctionDeclaration(
 			nil,
 			functionBlock,
 			startPos,
-			"",
+			docString,
 		),
 	), nil
 }

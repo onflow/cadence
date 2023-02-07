@@ -2840,16 +2840,6 @@ func TestParseFunctionExpression(t *testing.T) {
 						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
-						},
-					},
-					StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Range: ast.Range{
@@ -5416,15 +5406,6 @@ func TestParseMissingReturnType(t *testing.T) {
 							StartPos: ast.Position{Offset: 42, Line: 3, Column: 16},
 							EndPos:   ast.Position{Offset: 43, Line: 3, Column: 17},
 						},
-					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Pos: ast.Position{Offset: 43, Line: 3, Column: 17},
-							},
-						},
-						StartPos: ast.Position{Offset: 43, Line: 3, Column: 17},
 					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
