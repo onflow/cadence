@@ -218,6 +218,7 @@ const (
 	transactionTypeMask
 
 	invalidTypeMask
+	capabilityControllerTypeMask
 )
 
 var (
@@ -325,10 +326,11 @@ var (
 	FunctionTypeTag      = newTypeTagFromLowerMask(functionTypeMask)
 	InterfaceTypeTag     = newTypeTagFromLowerMask(interfaceTypeMask)
 
-	RestrictedTypeTag  = newTypeTagFromUpperMask(restrictedTypeMask)
-	CapabilityTypeTag  = newTypeTagFromUpperMask(capabilityTypeMask)
-	InvalidTypeTag     = newTypeTagFromUpperMask(invalidTypeMask)
-	TransactionTypeTag = newTypeTagFromUpperMask(transactionTypeMask)
+	RestrictedTypeTag           = newTypeTagFromUpperMask(restrictedTypeMask)
+	CapabilityTypeTag           = newTypeTagFromUpperMask(capabilityTypeMask)
+	InvalidTypeTag              = newTypeTagFromUpperMask(invalidTypeMask)
+	TransactionTypeTag          = newTypeTagFromUpperMask(transactionTypeMask)
+	CapabilityControllerTypeTag = newTypeTagFromUpperMask(capabilityControllerTypeMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
