@@ -138,7 +138,7 @@ func newTestInterpreterRuntime() testInterpreterRuntime {
 	return testInterpreterRuntime{
 		interpreterRuntime: NewInterpreterRuntime(Config{
 			AtreeValidationEnabled: true,
-		}),
+		}).(*interpreterRuntime),
 	}
 }
 
