@@ -220,6 +220,7 @@ const (
 	anyStructAttachmentMask
 
 	invalidTypeMask
+	capabilityControllerTypeMask
 )
 
 var (
@@ -333,6 +334,7 @@ var (
 	TransactionTypeTag           = newTypeTagFromUpperMask(transactionTypeMask)
 	AnyResourceAttachmentTypeTag = newTypeTagFromUpperMask(anyResourceAttachmentMask)
 	AnyStructAttachmentTypeTag   = newTypeTagFromUpperMask(anyStructAttachmentMask)
+	CapabilityControllerTypeTag  = newTypeTagFromUpperMask(capabilityControllerTypeMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
