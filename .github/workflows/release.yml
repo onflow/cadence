@@ -1,0 +1,75 @@
+# This workflow automates the release process.
+# It follows the below steps:
+#   - Bump the version to the target release version
+#   - Run tests and lint
+#   - Create and push a branch `release/v<version>` with version bump changes
+#   - Open a PR from `release/<version>` branch to `master`
+#   - Create and push a release tag with name `v<version>`
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+      base:
+        description: 'Base branch for the release'
+        required: true
+        default: 'master'
+
+env:
+  GO_VERSION: '1.19.2'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: "${{ github.event.inputs.version }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install wabt
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.base }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Bump Version
+        run: make release bump=${{ github.event.inputs.version }}
+
+      - name: Run Tests
+        run: |
+          make test
+          make lint-github-actions
+
+      - name: Config git
+        run: |
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+      - name: Open Pull Request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          branch: release/v${{ github.event.inputs.version }}
+          title: 'Merge `release/v${{ github.event.inputs.version }}` to `${{ inputs.base }}`'
+          commit-message: v${{ github.event.inputs.version }}
+          body: |
+            Merge `release/v${{ github.event.inputs.version }}` branch to `${{ inputs.base }}`
+
+      - name: Tag and Push
+        run: |
+          git checkout release/v${{ github.event.inputs.version }}
+          git tag v${{ github.event.inputs.version }}
+          git push origin v${{ github.event.inputs.version }}

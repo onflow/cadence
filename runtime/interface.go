@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,40 +30,32 @@ import (
 )
 
 type Interface interface {
+	MeterInterface
+
 	// ResolveLocation resolves an import location.
 	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// GetCode returns the code at a given location
 	GetCode(location Location) ([]byte, error)
-	// GetProgram returns the program for the given location, if available.
-	//
-	// NOTE:
+	// GetAndSetProgram returns the program for the given location, if available,
+	// or sets the program by calling the given load function.
 	//
 	// For implementations:
-	// - During execution, this function MUST always return the *same* program,
+	// - Perform a lookup for the location and return the program if it exists.
+	// - If the program does not exist, call load, and store the result,
+	//   *EVEN IF loading failed* (program is nil / error is non-nil)!
+	// - During execution of a high-level program (e.g. script, transaction, etc.),
+	//   this function MUST always return the *same* program,
 	//   i.e. it may NOT return a different program,
 	//   an elaboration in the program that is not annotating the AST in the program;
 	//   or a program/elaboration and then nothing in a subsequent call.
-	// - This function MUST also return what was set using SetProgram,
-	//   it may NOT return something different or nothing/nil (!) after SetProgram was called.
-	//   Do NOT implement this as a cache!
-	//
-	// For uses:
-	// - ONLY call this function when a program must be parsed and checked,
-	//   as an optimization to reuse the result of a potential previous parse and check.
-	// - If GetProgram returns nil, Cadence MUST call SetProgram:
-	//   There's an informal contract between Cadence and the implementer:
-	//   Cadence calls GetProgram to potentially avoid having to parse and check a program.
-	//   If the implementer returns nil from GetProgram,
-	//   it expects that Cadence sets the resulting parsed and checked program with SetProgram.
-	// - The behaviour after GetProgram returning nil or a program must be always deterministic:
-	//   As SetProgram is called when GetProgram is nil, then SetProgram MUST also be called when
-	//   GetProgram returns a program. This prevents nondeterministic behaviour
-	//
-	// Deprecated: This function should be refactored to ensure that SetProgram is always called
-	//
-	GetProgram(Location) (*interpreter.Program, error)
-	// SetProgram sets the program for the given location.
-	SetProgram(Location, *interpreter.Program) error
+	// - This function MUST also return exactly what was previously returned from load,
+	//   *EVEN IF loading failed* (program is nil / error is non-nil),
+	//   and it may NOT return something different
+	// - Do NOT implement this as a cache!
+	GetAndSetProgram(
+		location Location,
+		load func() (*interpreter.Program, error),
+	) (*interpreter.Program, error)
 	// SetInterpreterSharedState sets the shared state of all interpreters.
 	SetInterpreterSharedState(state *interpreter.SharedState)
 	// GetInterpreterSharedState gets the shared state of all interpreters.
@@ -100,9 +92,6 @@ type Interface interface {
 	EmitEvent(cadence.Event) error
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() (uint64, error)
-	// MeterComputation is a callback method for metering computation, it returns error
-	// when computation passes the limit (set by the environment)
-	MeterComputation(operationType common.ComputationKind, intensity uint) error
 	// DecodeArgument decodes a transaction/script argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 	// GetCurrentBlockHeight returns the current block height.
@@ -153,8 +142,20 @@ type Interface interface {
 		oldOwner common.Address,
 		newOwner common.Address,
 	)
+}
+
+type MeterInterface interface {
 	// MeterMemory gets called when new memory is allocated or used by the interpreter
 	MeterMemory(usage common.MemoryUsage) error
+	// MeterComputation is a callback method for metering computation, it returns error
+	// when computation passes the limit (set by the environment)
+	MeterComputation(operationType common.ComputationKind, intensity uint) error
+	// ComputationUsed returns the total computation used in the current runtime.
+	ComputationUsed() (uint64, error)
+	// MemoryUsed returns the total memory (estimate) used in the current runtime.
+	MemoryUsed() (uint64, error)
+	// InteractionUsed returns the total storage interaction used in the current runtime.
+	InteractionUsed() (uint64, error)
 }
 
 type Metrics interface {

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,10 @@ package cadence
 import (
 	"fmt"
 	"math/big"
+	"reflect"
 	"testing"
 	"unicode/utf8"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -232,16 +234,6 @@ func TestStringer(t *testing.T) {
 				},
 			}),
 			expected: "S.test.FooContract(y: \"bar\")",
-		},
-		"Link": {
-			value: NewPathLink(
-				Path{
-					Domain:     "storage",
-					Identifier: "foo",
-				},
-				"Int",
-			),
-			expected: "PathLink<Int>(/storage/foo)",
 		},
 		"Path": {
 			value: Path{
@@ -628,4 +620,114 @@ func TestNewUInt256FromBig(t *testing.T) {
 	)
 	_, err = NewUInt256FromBig(aboveMax)
 	require.Error(t, err)
+}
+
+//go:linkname typelinks reflect.typelinks
+func typelinks() (sections []unsafe.Pointer, offset [][]int32)
+
+//go:linkname add reflect.add
+func add(p unsafe.Pointer, x uintptr, whySafe string) unsafe.Pointer
+
+func TestGetType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple values", func(t *testing.T) {
+
+		// This method test all simple typed values (and any newly added values/types).
+
+		t.Parallel()
+
+		complexTypes := map[reflect.Type]struct{}{
+			reflect.TypeOf(Array{}):      {},
+			reflect.TypeOf(Contract{}):   {},
+			reflect.TypeOf(Dictionary{}): {},
+			reflect.TypeOf(Event{}):      {},
+			reflect.TypeOf(Resource{}):   {},
+			reflect.TypeOf(Struct{}):     {},
+		}
+
+		var valueInterface Value
+		valueInterfaceType := reflect.TypeOf(&valueInterface).Elem()
+
+		checkedTypes := map[Type]struct{}{}
+
+		sections, offsets := typelinks()
+		for i, base := range sections {
+			for _, offset := range offsets[i] {
+				typeAddr := add(base, uintptr(offset), "")
+				valueType := reflect.TypeOf(*(*interface{})(unsafe.Pointer(&typeAddr)))
+
+				if !valueType.Implements(valueInterfaceType) {
+					continue
+				}
+
+				valueType = valueType.Elem()
+
+				if _, ok := complexTypes[valueType]; ok {
+					continue
+				}
+
+				valueInstance := reflect.New(valueType)
+				value := valueInstance.Elem().Interface().(Value)
+
+				// Check whether the type is always returned
+				cadenceType := value.Type()
+				assert.NotNil(t, cadenceType)
+
+				// Check if the type is not a duplicate of some other type
+				// i.e: two values can't return the same type.
+				assert.NotContains(t, checkedTypes, cadenceType)
+				checkedTypes[cadenceType] = struct{}{}
+			}
+		}
+	})
+
+	t.Run("array value", func(t *testing.T) {
+		t.Parallel()
+
+		typ := NewConstantSizedArrayType(4, TheInt8Type)
+		arrayValue := NewArray([]Value{}).WithType(typ)
+		assert.Equal(t, arrayValue.Type(), typ)
+	})
+
+	t.Run("contract value", func(t *testing.T) {
+		t.Parallel()
+
+		typ := NewContractType(nil, "Foo", nil, nil)
+		value := NewContract([]Value{}).WithType(typ)
+		assert.Equal(t, typ, value.Type())
+	})
+
+	t.Run("dictionary value", func(t *testing.T) {
+		t.Parallel()
+
+		typ := NewDictionaryType(TheInt8Type, TheStringType)
+		value := NewDictionary([]KeyValuePair{}).WithType(typ)
+		assert.Equal(t, typ, value.Type())
+	})
+
+	t.Run("event value", func(t *testing.T) {
+		t.Parallel()
+
+		typ := NewEventType(nil, "Foo", nil, nil)
+		value := NewEvent([]Value{}).WithType(typ)
+		assert.Equal(t, typ, value.Type())
+	})
+
+	t.Run("resource value", func(t *testing.T) {
+		t.Parallel()
+
+		typ := NewResourceType(nil, "Foo", nil, nil)
+		value := NewResource([]Value{}).WithType(typ)
+		assert.Equal(t, typ, value.Type())
+	})
+
+	t.Run("struct value", func(t *testing.T) {
+		t.Parallel()
+
+		typ := NewStructType(nil, "Foo", nil, nil)
+		value := NewStruct([]Value{}).WithType(typ)
+		assert.Equal(t, typ, value.Type())
+	})
 }
