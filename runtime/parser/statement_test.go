@@ -19,7 +19,6 @@
 package parser
 
 import (
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -53,7 +52,6 @@ func TestParseReplInput(t *testing.T) {
 	assert.IsType(t, &ast.VariableDeclaration{}, actual[1])
 	assert.IsType(t, &ast.ExpressionStatement{}, actual[2])
 }
-
 func TestParseReturnStatement(t *testing.T) {
 
 	t.Parallel()
@@ -992,97 +990,6 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 		)
 	})
 
-	t.Run("function expression with purity and without name", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseStatements("view fun () {}")
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			[]ast.Statement{
-				&ast.ExpressionStatement{
-					Expression: &ast.FunctionExpression{
-						Purity: ast.FunctionPurityView,
-						ParameterList: &ast.ParameterList{
-							Range: ast.Range{
-								StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-								EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
-							},
-						},
-						ReturnTypeAnnotation: &ast.TypeAnnotation{
-							IsResource: false,
-							Type: &ast.NominalType{
-								Identifier: ast.Identifier{
-									Identifier: "",
-									Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
-								},
-							},
-							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-						},
-						FunctionBlock: &ast.FunctionBlock{
-							Block: &ast.Block{
-								Range: ast.Range{
-									StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-									EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
-								},
-							},
-						},
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					},
-				},
-			},
-			result,
-		)
-	})
-
-	t.Run("function declaration with purity and name", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseStatements("view fun foo() {}")
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			[]ast.Statement{
-				&ast.FunctionDeclaration{
-					Purity: ast.FunctionPurityView,
-					Access: ast.AccessNotSpecified,
-					Identifier: ast.Identifier{
-						Identifier: "foo",
-						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
-					},
-					ParameterList: &ast.ParameterList{
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
-						},
-					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "",
-								Pos:        ast.Position{Line: 1, Column: 13, Offset: 13},
-							},
-						},
-						StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
-					},
-					FunctionBlock: &ast.FunctionBlock{
-						Block: &ast.Block{
-							Range: ast.Range{
-								StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
-								EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
-							},
-						},
-					},
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-				},
-			},
-			result,
-		)
-	})
-
 	t.Run("function expression without name", func(t *testing.T) {
 
 		t.Parallel()
@@ -1125,51 +1032,6 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 			result,
 		)
 	})
-
-	t.Run("function expression with keyword as name", func(t *testing.T) {
-		t.Parallel()
-
-		result, errs := testParseStatements("fun continue() {}")
-
-		require.Empty(t, result)
-
-		utils.AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Message: "expected identifier after start of function declaration, got keyword continue",
-				Pos:     ast.Position{Line: 1, Column: 4, Offset: 4},
-			},
-		}, errs)
-	})
-
-	t.Run("function expression with purity, and keyword as name", func(t *testing.T) {
-		t.Parallel()
-
-		result, errs := testParseStatements("view fun break() {}")
-
-		require.Empty(t, result)
-
-		utils.AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Message: "expected identifier after start of function declaration, got keyword break",
-				Pos:     ast.Position{Line: 1, Column: 9, Offset: 9},
-			},
-		}, errs)
-	})
-}
-
-func TestParseViewNonFunction(t *testing.T) {
-	t.Parallel()
-
-	_, errs := testParseStatements("view return 3")
-	utils.AssertEqualWithDiff(t,
-		[]error{
-			&SyntaxError{
-				Message: "statements on the same line must be separated with a semicolon",
-				Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
-			},
-		},
-		errs,
-	)
 }
 
 func TestParseStatements(t *testing.T) {
@@ -1378,15 +1240,6 @@ func TestParseSwitchStatement(t *testing.T) {
 				},
 			},
 			result,
-		)
-	})
-
-	t.Run("Invalid identifiers in switch cases", func(t *testing.T) {
-		code := "switch 1 {AAAAA: break; case 3: break; default: break}"
-		_, errs := testParseStatements(code)
-		utils.AssertEqualWithDiff(t,
-			`unexpected token: got identifier, expected "case" or "default"`,
-			errs[0].Error(),
 		)
 	})
 }
@@ -2562,135 +2415,6 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 		},
 		result.Declarations(),
 	)
-}
-
-func TestParseReferenceExpressionStatement(t *testing.T) {
-
-	t.Parallel()
-
-	result, errs := testParseStatements(
-		`
-          let x = &1 as &Int
-          (x!)
-	    `,
-	)
-	require.Empty(t, errs)
-
-	castingExpression := &ast.CastingExpression{
-		Expression: &ast.ReferenceExpression{
-			Expression: &ast.IntegerExpression{
-				PositiveLiteral: []byte("1"),
-				Value:           big.NewInt(1),
-				Base:            10,
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
-					EndPos:   ast.Position{Offset: 20, Line: 2, Column: 19},
-				},
-			},
-			StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
-		},
-		Operation: ast.OperationCast,
-		TypeAnnotation: &ast.TypeAnnotation{
-			Type: &ast.ReferenceType{
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "Int",
-						Pos:        ast.Position{Offset: 26, Line: 2, Column: 25},
-					},
-				},
-				StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
-			},
-			StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
-		},
-	}
-
-	expectedVariableDeclaration := &ast.VariableDeclaration{
-		IsConstant: true,
-		Identifier: ast.Identifier{
-			Identifier: "x",
-			Pos:        ast.Position{Line: 2, Column: 14, Offset: 15},
-		},
-		StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
-		Value:    castingExpression,
-		Transfer: &ast.Transfer{
-			Operation: ast.TransferOperationCopy,
-			Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
-		},
-	}
-
-	castingExpression.ParentVariableDeclaration = expectedVariableDeclaration
-
-	utils.AssertEqualWithDiff(t,
-		[]ast.Statement{
-			expectedVariableDeclaration,
-			&ast.ExpressionStatement{
-				Expression: &ast.ForceExpression{
-					Expression: &ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "x",
-							Pos:        ast.Position{Offset: 41, Line: 3, Column: 11},
-						},
-					},
-					EndPos: ast.Position{Offset: 42, Line: 3, Column: 12},
-				},
-			},
-		},
-		result,
-	)
-}
-
-func TestSoftKeywordsInStatement(t *testing.T) {
-	t.Parallel()
-
-	posFromName := func(name string, offset int) ast.Position {
-		offsetPos := len(name) + offset
-		return ast.Position{
-			Line:   1,
-			Offset: offsetPos,
-			Column: offsetPos,
-		}
-	}
-
-	testSoftKeyword := func(name string) {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			code := fmt.Sprintf(`%s = 42`, name)
-
-			result, errs := testParseStatements(code)
-			require.Empty(t, errs)
-
-			expected := []ast.Statement{
-				&ast.AssignmentStatement{
-					Target: &ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: name,
-							Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
-						},
-					},
-					Transfer: &ast.Transfer{
-						Operation: ast.TransferOperationCopy,
-						Pos:       posFromName(name, 1),
-					},
-					Value: &ast.IntegerExpression{
-						PositiveLiteral: []byte("42"),
-						Base:            10,
-						Value:           big.NewInt(42),
-						Range: ast.NewUnmeteredRange(
-							posFromName(name, 3),
-							posFromName(name, 4),
-						),
-					},
-				},
-			}
-			utils.AssertEqualWithDiff(t, expected, result)
-
-		})
-	}
-
-	for keyword := range softKeywords {
-		testSoftKeyword(keyword)
-	}
 }
 
 func TestParseStatementsWithWhitespace(t *testing.T) {

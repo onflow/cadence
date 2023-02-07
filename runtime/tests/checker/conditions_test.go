@@ -369,7 +369,7 @@ func TestCheckInvalidFunctionPostConditionWithFunction(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       fun test() {
           post {
-              (view fun (): Int { return 2 })() == 2
+              (fun (): Int { return 2 })() == 2
           }
       }
     `)
@@ -491,11 +491,10 @@ func TestCheckFunctionWithPostConditionAndResourceResult(t *testing.T) {
         }
     `)
 
-	errs := RequireCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 2)
 
-	require.IsType(t, &sema.InvalidMoveOperationError{}, errs[1])
-	require.IsType(t, &sema.TypeMismatchError{}, errs[2])
-	require.IsType(t, &sema.PurityError{}, errs[0])
+	require.IsType(t, &sema.InvalidMoveOperationError{}, errs[0])
+	require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 // TestCheckConditionCreateBefore tests if the AST expression extractor properly handles

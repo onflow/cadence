@@ -631,7 +631,7 @@ func (v Int128) Big() *big.Int {
 }
 
 func (v Int128) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int128TypeSize)
+	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v Int128) String() string {
@@ -699,7 +699,7 @@ func (v Int256) Big() *big.Int {
 }
 
 func (v Int256) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int256TypeSize)
+	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v Int256) String() string {
@@ -992,7 +992,7 @@ func (v UInt128) Big() *big.Int {
 }
 
 func (v UInt128) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt128TypeSize)
+	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v UInt128) String() string {
@@ -1060,7 +1060,7 @@ func (v UInt256) Big() *big.Int {
 }
 
 func (v UInt256) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt256TypeSize)
+	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v UInt256) String() string {

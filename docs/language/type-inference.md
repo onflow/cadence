@@ -108,7 +108,7 @@ let add = (a: Int8, b: Int8): Int {
     return a + b
 }
 
-// `add` has type `fun(Int8, Int8): Int`
+// `add` has type `((Int8, Int8): Int)`
 ```
 
 Type inference is performed for each expression / statement, and not across statements.

@@ -24,97 +24,92 @@ type RuntimeTypeConstructor struct {
 	DocString string
 }
 
-var MetaTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	nil,
-	MetaTypeAnnotation,
-)
-
-var OptionalTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var OptionalTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
-			TypeAnnotation: MetaTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	MetaTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+}
 
-var VariableSizedArrayTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var VariableSizedArrayTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
-			TypeAnnotation: MetaTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	MetaTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+}
 
-var ConstantSizedArrayTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var ConstantSizedArrayTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Identifier:     "type",
-			TypeAnnotation: MetaTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 		{
 			Identifier:     "size",
-			TypeAnnotation: IntTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
-	MetaTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+}
 
-var OptionalMetaTypeAnnotation = NewTypeAnnotation(&OptionalType{
-	Type: MetaType,
-})
-
-var DictionaryTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var DictionaryTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Identifier:     "key",
-			TypeAnnotation: MetaTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 		{
 			Identifier:     "value",
-			TypeAnnotation: MetaTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	OptionalMetaTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
+}
 
-var CompositeTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var CompositeTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "identifier",
-			TypeAnnotation: StringTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
-	OptionalMetaTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
+}
 
-var InterfaceTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var InterfaceTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "identifier",
-			TypeAnnotation: StringTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
-	OptionalMetaTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
+}
 
-var FunctionTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var FunctionTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Identifier: "parameters",
 			TypeAnnotation: NewTypeAnnotation(
@@ -125,15 +120,14 @@ var FunctionTypeFunctionType = NewSimpleFunctionType(
 		},
 		{
 			Identifier:     "return",
-			TypeAnnotation: MetaTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	MetaTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+}
 
-var RestrictedTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var RestrictedTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Identifier: "identifier",
 			TypeAnnotation: NewTypeAnnotation(
@@ -151,35 +145,41 @@ var RestrictedTypeFunctionType = NewSimpleFunctionType(
 			),
 		},
 	},
-	OptionalMetaTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
+}
 
-var ReferenceTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var ReferenceTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Identifier:     "authorized",
-			TypeAnnotation: BoolTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(BoolType),
 		},
 		{
 			Identifier:     "type",
-			TypeAnnotation: MetaTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	MetaTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+}
 
-var CapabilityTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var CapabilityTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
-			TypeAnnotation: MetaTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	OptionalMetaTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
+}
 
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
@@ -203,21 +203,21 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
 		Name:  "DictionaryType",
 		Value: DictionaryTypeFunctionType,
-		DocString: `Creates a run-time type representing a dictionary type of the given run-time key and value types.
+		DocString: `Creates a run-time type representing a dictionary type of the given run-time key and value types. 
 		Returns nil if the key type is not a valid dictionary key.`,
 	},
 
 	{
 		Name:  "CompositeType",
 		Value: CompositeTypeFunctionType,
-		DocString: `Creates a run-time type representing the composite type associated with the given type identifier.
+		DocString: `Creates a run-time type representing the composite type associated with the given type identifier. 
 		Returns nil if the identifier does not correspond to any composite type.`,
 	},
 
 	{
 		Name:  "InterfaceType",
 		Value: InterfaceTypeFunctionType,
-		DocString: `Creates a run-time type representing the interface type associated with the given type identifier.
+		DocString: `Creates a run-time type representing the interface type associated with the given type identifier. 
 		Returns nil if the identifier does not correspond to any interface type.`,
 	},
 
@@ -236,7 +236,7 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
 		Name:  "RestrictedType",
 		Value: RestrictedTypeFunctionType,
-		DocString: `Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument.
+		DocString: `Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument. 
 		Returns nil if the restriction is not valid.`,
 	},
 

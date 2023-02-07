@@ -248,7 +248,6 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
                 "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
                 "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
             },
-			"Purity": "Unspecified",
             "ReturnTypeAnnotation": {
                 "IsResource": true,
                 "AnnotatedType": {
@@ -290,7 +289,6 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 
 	decl := &FunctionDeclaration{
 		Access: AccessPublic,
-		Purity: FunctionPurityView,
 		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
 			Identifier: "xyz",
@@ -331,8 +329,6 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 	require.Equal(t,
 		prettier.Concat{
 			prettier.Text("pub"),
-			prettier.Space,
-			prettier.Text("view"),
 			prettier.Space,
 			prettier.Text("static"),
 			prettier.Space,
@@ -719,7 +715,6 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
                     "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
                     "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
                 },
-				"Purity": "Unspecified",
                 "ReturnTypeAnnotation": {
                     "IsResource": true,
                     "AnnotatedType": {

@@ -55,7 +55,9 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 		checkFunction := stdlib.NewStandardLibraryFunction(
 			"check",
 			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
 			},
 			``,
 			func(invocation interpreter.Invocation) interpreter.Value {

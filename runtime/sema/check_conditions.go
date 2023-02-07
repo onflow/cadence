@@ -21,25 +21,23 @@ package sema
 import "github.com/onflow/cadence/runtime/ast"
 
 func (checker *Checker) visitConditions(conditions []*ast.Condition) {
-	// all condition blocks are `view`
-	checker.InNewPurityScope(true, func() {
-		// flag the checker to be inside a condition.
-		// this flag is used to detect illegal expressions,
-		// see e.g. VisitFunctionExpression
 
-		wasInCondition := checker.inCondition
-		checker.inCondition = true
-		defer func() {
-			checker.inCondition = wasInCondition
-		}()
+	// flag the checker to be inside a condition.
+	// this flag is used to detect illegal expressions,
+	// see e.g. VisitFunctionExpression
 
-		// check all conditions: check the expression
-		// and ensure the result is boolean
+	wasInCondition := checker.inCondition
+	checker.inCondition = true
+	defer func() {
+		checker.inCondition = wasInCondition
+	}()
 
-		for _, condition := range conditions {
-			checker.checkCondition(condition)
-		}
-	})
+	// check all conditions: check the expression
+	// and ensure the result is boolean
+
+	for _, condition := range conditions {
+		checker.checkCondition(condition)
+	}
 }
 
 func (checker *Checker) checkCondition(condition *ast.Condition) Type {

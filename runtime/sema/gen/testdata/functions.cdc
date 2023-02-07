@@ -6,7 +6,7 @@ pub struct Test {
     pub fun params(a: Int, _ b: String) {}
 
     /// This is a test function with a return type.
-    pub fun returnBool(): Bool {}
+    pub fun return(): Bool {}
 
     /// This is a test function with parameters and a return type.
     pub fun paramsAndReturn(a: Int, _ b: String): Bool {}

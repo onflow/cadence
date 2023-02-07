@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"sort"
 	"strings"
 	"testing"
 
@@ -27,7 +28,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckRange(t *testing.T) {
@@ -70,33 +70,45 @@ func TestCheckRange(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	var ranges map[sema.Range]int
+	var ranges []sema.Range
 
-	// we don't care about the ordering of these ranges, but that finding all the ranges at a position returns the correct values.
-	getCounts := func(ranges []sema.Range) map[sema.Range]int {
-		bag := make(map[sema.Range]int, len(ranges))
-		for _, rnge := range ranges {
-			if !strings.HasPrefix(rnge.Identifier, "_TEST_") {
+	isLess := func(a, b sema.Range) bool {
+		res := strings.Compare(a.Identifier, b.Identifier)
+		switch res {
+		case -1:
+			return true
+		case 1:
+			return false
+		default:
+			if a.DeclarationKind < b.DeclarationKind {
+				return true
+			} else if a.DeclarationKind > b.DeclarationKind {
+				return false
+			}
+			return strings.Compare(string(a.Type.ID()), string(b.Type.ID())) < 0
+		}
+	}
+
+	sortAndFilterRanges := func() {
+		filteredRanges := make([]sema.Range, 0, len(ranges))
+		for _, r := range ranges {
+			if !strings.HasPrefix(r.Identifier, "_TEST_") {
 				continue
 			}
-			count := bag[rnge] // default to 0
-			bag[rnge] = count + 1
+			filteredRanges = append(filteredRanges, r)
 		}
-		return bag
+
+		ranges = filteredRanges
+
+		sort.SliceStable(ranges, func(i, j int) bool {
+			a := ranges[i]
+			b := ranges[j]
+			return isLess(a, b)
+		})
 	}
 
-	getUnorderedRanges := func(pos *sema.Position) map[sema.Range]int {
-		if pos == nil {
-			return getCounts(checker.PositionInfo.Ranges.All())
-		}
-		return getCounts(checker.PositionInfo.Ranges.FindAll(*pos))
-	}
-
-	// assert that the unordered repr of expected matches that of ranges
-	assertSetsEqual := func(t *testing.T, expected []sema.Range, ranges map[sema.Range]int) {
-		bag := getCounts(expected)
-		utils.AssertEqualWithDiff(t, bag, ranges)
-	}
+	ranges = checker.PositionInfo.Ranges.All()
+	sortAndFilterRanges()
 
 	barTypeVariable, ok := checker.Elaboration.GetGlobalType("_TEST_Bar")
 	require.True(t, ok, "missing global type _TEST_Bar")
@@ -113,9 +125,7 @@ func TestCheckRange(t *testing.T) {
 	fooValueVariable, ok := checker.Elaboration.GetGlobalValue("_TEST_foo")
 	require.True(t, ok, "missing global value _TEST_foo")
 
-	ranges = getUnorderedRanges(nil)
-
-	assertSetsEqual(t,
+	assert.Equal(t,
 		[]sema.Range{
 			{
 				Identifier:      "_TEST_Bar",
@@ -126,11 +136,6 @@ func TestCheckRange(t *testing.T) {
 				Identifier:      "_TEST_Bar",
 				Type:            barTypeVariable.Type,
 				DeclarationKind: common.DeclarationKindStructure,
-			},
-			{
-				Identifier:      "_TEST_foo",
-				Type:            fooValueVariable.Type,
-				DeclarationKind: common.DeclarationKindFunction,
 			},
 			{
 				Identifier:      "_TEST_Baz",
@@ -167,12 +172,18 @@ func TestCheckRange(t *testing.T) {
 				Type:            sema.StringType,
 				DeclarationKind: common.DeclarationKindConstant,
 			},
+			{
+				Identifier:      "_TEST_foo",
+				Type:            fooValueVariable.Type,
+				DeclarationKind: common.DeclarationKindFunction,
+			},
 		},
 		ranges,
 	)
 
-	ranges = getUnorderedRanges(&sema.Position{Line: 8, Column: 0})
-	assertSetsEqual(t,
+	ranges = checker.PositionInfo.Ranges.FindAll(sema.Position{Line: 8, Column: 0})
+	sortAndFilterRanges()
+	assert.Equal(t,
 		[]sema.Range{
 			{
 				Identifier:      "_TEST_Bar",
@@ -183,11 +194,6 @@ func TestCheckRange(t *testing.T) {
 				Identifier:      "_TEST_Bar",
 				Type:            barTypeVariable.Type,
 				DeclarationKind: common.DeclarationKindStructure,
-			},
-			{
-				Identifier:      "_TEST_foo",
-				Type:            fooValueVariable.Type,
-				DeclarationKind: common.DeclarationKindFunction,
 			},
 			{
 				Identifier:      "_TEST_Baz",
@@ -214,12 +220,18 @@ func TestCheckRange(t *testing.T) {
 				Type:            sema.IntType,
 				DeclarationKind: common.DeclarationKindConstant,
 			},
+			{
+				Identifier:      "_TEST_foo",
+				Type:            fooValueVariable.Type,
+				DeclarationKind: common.DeclarationKindFunction,
+			},
 		},
 		ranges,
 	)
 
-	ranges = getUnorderedRanges(&sema.Position{Line: 8, Column: 100})
-	assertSetsEqual(t,
+	ranges = checker.PositionInfo.Ranges.FindAll(sema.Position{Line: 8, Column: 100})
+	sortAndFilterRanges()
+	assert.Equal(t,
 		[]sema.Range{
 			{
 				Identifier:      "_TEST_Bar",

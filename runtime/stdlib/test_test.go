@@ -339,24 +339,6 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
-               Test.equal(1)
-           }
-        `
-
-		inter, err := newTestContractInterpreter(t, script)
-		require.NoError(t, err)
-
-		_, err = inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("use equal matcher with primitive", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-           import Test
-
            pub fun test(): Bool {
                let matcher = Test.equal(1)
                return matcher.test(1)
@@ -671,7 +653,7 @@ func TestTestExpect(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &interpreter.TypeMismatchError{})
+		assert.ErrorAs(t, err, &AssertionError{})
 	})
 
 	t.Run("with explicit types", func(t *testing.T) {

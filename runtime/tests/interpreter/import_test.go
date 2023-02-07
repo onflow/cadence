@@ -50,7 +50,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			fooType,
 			"bar",
 			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.UInt64TypeAnnotation,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UInt64Type),
 			},
 			"",
 		))
@@ -99,7 +99,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 								return interpreter.NewUnmeteredUInt64Value(42)
 							},
 							&sema.FunctionType{
-								ReturnTypeAnnotation: sema.UIntTypeAnnotation,
+								ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UIntType),
 							},
 						),
 					}
@@ -331,7 +331,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 		`
           import R from 0x1
 
-          fun test(createR: fun(): @R) {
+          fun test(createR: ((): @R)) {
               let r <- createR()
               destroy r
           }

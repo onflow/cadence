@@ -71,6 +71,10 @@ type Interface interface {
 	AllocateStorageIndex(owner []byte) (atree.StorageIndex, error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
+	// AddEncodedAccountKey appends an encoded key to an account.
+	AddEncodedAccountKey(address Address, publicKey []byte) error
+	// RevokeEncodedAccountKey removes a key from an account by index, add returns the encoded key.
+	RevokeEncodedAccountKey(address Address, index int) (publicKey []byte, err error)
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.

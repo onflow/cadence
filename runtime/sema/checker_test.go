@@ -164,73 +164,81 @@ func TestFunctionSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("fun(Int): Void <: fun(AnyStruct): Void", func(t *testing.T) {
+	t.Run("((Int): Void) <: ((AnyStruct): Void)", func(t *testing.T) {
 		assert.False(t,
 			IsSubType(
 				&FunctionType{
 					Parameters: []Parameter{
 						{
-							TypeAnnotation: IntTypeAnnotation,
+							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
 					},
-					ReturnTypeAnnotation: VoidTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 				&FunctionType{
 					Parameters: []Parameter{
 						{
-							TypeAnnotation: AnyStructTypeAnnotation,
+							TypeAnnotation: NewTypeAnnotation(AnyStructType),
 						},
 					},
-					ReturnTypeAnnotation: VoidTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 			),
 		)
 	})
 
-	t.Run("fun(AnyStruct): Void <: fun(Int): Void", func(t *testing.T) {
+	t.Run("((AnyStruct): Void) <: ((Int): Void)", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
 					Parameters: []Parameter{
 						{
-							TypeAnnotation: AnyStructTypeAnnotation,
+							TypeAnnotation: NewTypeAnnotation(AnyStructType),
 						},
 					},
-					ReturnTypeAnnotation: VoidTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 				&FunctionType{
 					Parameters: []Parameter{
 						{
-							TypeAnnotation: IntTypeAnnotation,
+							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
 					},
-					ReturnTypeAnnotation: VoidTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 			),
 		)
 	})
 
-	t.Run("fun(): Int <: fun(): AnyStruct", func(t *testing.T) {
+	t.Run("((): Int) <: ((): AnyStruct)", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
-					ReturnTypeAnnotation: IntTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 				},
 				&FunctionType{
-					ReturnTypeAnnotation: AnyStructTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(AnyStructType),
 				},
 			),
 		)
 	})
 
-	t.Run("fun(): Any <: fun(): Int", func(t *testing.T) {
+	t.Run("((): Any) <: ((): Int)", func(t *testing.T) {
 		assert.False(t,
 			IsSubType(
 				&FunctionType{
-					ReturnTypeAnnotation: AnyStructTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(AnyStructType),
 				},
 				&FunctionType{
-					ReturnTypeAnnotation: IntTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 				},
 			),
 		)
@@ -241,11 +249,11 @@ func TestFunctionSubtyping(t *testing.T) {
 			IsSubType(
 				&FunctionType{
 					IsConstructor:        false,
-					ReturnTypeAnnotation: VoidTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 				},
 				&FunctionType{
 					IsConstructor:        true,
-					ReturnTypeAnnotation: VoidTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 				},
 			),
 		)
@@ -256,10 +264,10 @@ func TestFunctionSubtyping(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
-					ReturnTypeAnnotation: VoidTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 				},
 				&FunctionType{
-					ReturnTypeAnnotation: VoidTypeAnnotation,
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 				},
 			),
 		)

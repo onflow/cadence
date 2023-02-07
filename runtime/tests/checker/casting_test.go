@@ -5899,7 +5899,7 @@ func TestCheckResourceConstructorCast(t *testing.T) {
 		`
           resource R {}
 
-          let c = R as fun(): @R
+          let c = R as ((): @R)
         `,
 	)
 
@@ -5916,7 +5916,7 @@ func TestCheckResourceConstructorReturn(t *testing.T) {
 		`
           resource R {}
 
-          fun test(): fun(): @R {
+          fun test(): ((): @R) {
               return R
           }
         `,
@@ -6049,7 +6049,8 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 							),
 						},
 					},
-					ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+					ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
+					RequiredArgumentCount: nil,
 				},
 			)
 
@@ -6383,7 +6384,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			}
 		})
 
-		t.Run("Reference, with cast", func(t *testing.T) {
+		t.Run("Reference, without type", func(t *testing.T) {
 			t.Parallel()
 
 			checker, err := ParseAndCheckWithAny(t, `
@@ -6393,7 +6394,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
+			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 0)
 		})
 
 		t.Run("Reference, with type", func(t *testing.T) {
@@ -6406,7 +6407,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
+			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 0)
 		})
 
 		t.Run("Conditional expr valid", func(t *testing.T) {
@@ -6615,7 +6616,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let x =
                     fun (_ x: Int): Int {
                         return x * 2
-                    } as fun(Int): Int
+                    } as ((Int): Int)
             `)
 
 			require.NoError(t, err)
@@ -6631,7 +6632,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 func TestCastResourceAsEnumAsEmptyDict(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, "resource foo { enum x : foo { } }")
+	_, err := ParseAndCheck(t, "resource as { enum x : as { } }")
 
 	errs := RequireCheckerErrors(t, err, 2)
 

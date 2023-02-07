@@ -665,7 +665,6 @@ func TestFunctionType_Doc(t *testing.T) {
 	t.Parallel()
 
 	ty := &FunctionType{
-		PurityAnnotation: FunctionPurityView,
 		ParameterTypeAnnotations: []*TypeAnnotation{
 			{
 				IsResource: true,
@@ -695,10 +694,7 @@ func TestFunctionType_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Concat{
-			prettier.Text("view"),
-			prettier.Space,
-			prettier.Text("fun"),
-			prettier.Space,
+			prettier.Text("("),
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("("),
@@ -723,6 +719,7 @@ func TestFunctionType_Doc(t *testing.T) {
 			},
 			prettier.Text(": "),
 			prettier.Text("EF"),
+			prettier.Text(")"),
 		},
 		ty.Doc(),
 	)
@@ -761,7 +758,7 @@ func TestFunctionType_String(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		"fun (@AB, @CD): EF",
+		"((@AB, @CD): EF)",
 		ty.String(),
 	)
 }
@@ -824,7 +821,6 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
                     "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
                 }
            ],
-		   "PurityAnnotation": "Unspecified",
            "ReturnTypeAnnotation": {
                "IsResource": true,
                "AnnotatedType": {

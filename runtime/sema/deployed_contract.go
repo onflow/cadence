@@ -88,8 +88,6 @@ var DeployedContractType = &SimpleType{
 	},
 }
 
-var DeployedContractTypeAnnotation = NewTypeAnnotation(DeployedContractType)
-
 const DeployedContractTypeAddressFieldName = "address"
 
 const deployedContractTypeAddressFieldDocString = `

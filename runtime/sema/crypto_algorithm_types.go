@@ -32,8 +32,6 @@ var SignatureAlgorithmType = newNativeEnumType(
 	nil,
 )
 
-var SignatureAlgorithmTypeAnnotation = NewTypeAnnotation(SignatureAlgorithmType)
-
 type SignatureAlgorithm uint8
 
 // NOTE: only add new algorithms, do *NOT* change existing items,
@@ -108,17 +106,18 @@ func (algo SignatureAlgorithm) DocString() string {
 
 const HashAlgorithmTypeHashFunctionName = "hash"
 
-var HashAlgorithmTypeHashFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var HashAlgorithmTypeHashFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "data",
-			TypeAnnotation: ByteArrayTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
 		},
 	},
-	ByteArrayTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		ByteArrayType,
+	),
+}
 
 const HashAlgorithmTypeHashFunctionDocString = `
 Returns the hash of the given data
@@ -126,21 +125,24 @@ Returns the hash of the given data
 
 const HashAlgorithmTypeHashWithTagFunctionName = "hashWithTag"
 
-var HashAlgorithmTypeHashWithTagFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "data",
-			TypeAnnotation: ByteArrayTypeAnnotation,
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "data",
+			TypeAnnotation: NewTypeAnnotation(
+				ByteArrayType,
+			),
 		},
 		{
 			Identifier:     "tag",
-			TypeAnnotation: StringTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
-	ByteArrayTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		ByteArrayType,
+	),
+}
 
 const HashAlgorithmTypeHashWithTagFunctionDocString = `
 Returns the hash of the given data and tag
@@ -166,8 +168,6 @@ var HashAlgorithmType = newNativeEnumType(
 		}
 	},
 )
-
-var HashAlgorithmTypeAnnotation = NewTypeAnnotation(HashAlgorithmType)
 
 type HashAlgorithm uint8
 

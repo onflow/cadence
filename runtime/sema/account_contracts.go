@@ -31,8 +31,10 @@ Returns nil if no contract/contract interface with the given name exists in the 
 var AccountContractsTypeGetFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
-			Identifier:     "name",
-			TypeAnnotation: StringTypeAnnotation,
+			Identifier: "name",
+			TypeAnnotation: NewTypeAnnotation(
+				StringType,
+			),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
@@ -64,7 +66,7 @@ var AccountContractsTypeBorrowFunctionType = func() *FunctionType {
 		Parameters: []Parameter{
 			{
 				Identifier:     "name",
-				TypeAnnotation: StringTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(StringType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(

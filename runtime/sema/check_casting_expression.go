@@ -57,12 +57,17 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 	)
 
 	if leftHandType.IsResourceType() {
+		checker.recordResourceInvalidation(
+			leftHandExpression,
+			leftHandType,
+			ResourceInvalidationKindMoveDefinite,
+		)
+
+		// If the failable casted type is a resource, the failable cast expression
+		// must occur in an optional binding, i.e. inside a variable declaration
+		// as the if-statement test element
 
 		if expression.Operation == ast.OperationFailableCast {
-
-			// If the failable casted type is a resource, the failable cast expression
-			// must occur in an optional binding, i.e. inside a variable declaration
-			// as the if-statement test element
 
 			if expression.ParentVariableDeclaration == nil ||
 				expression.ParentVariableDeclaration.ParentIfStatement == nil {
@@ -81,23 +86,6 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 					},
 				)
 			}
-
-			// NOTE: Counter-intuitively, do not *always* invalidate the casted expression:
-			// As the failable cast must occur in an if-statement, the statement itself
-			// takes care of the invalidation:
-			// - In the then-branch, the cast succeeded, so the casted variable becomes invalidated
-			// - Whereas in the else-branch, the cast failed, and the casted variable is still available
-
-		} else {
-
-			// For non-failable casts of a resource,
-			// always record an invalidation
-
-			checker.recordResourceInvalidation(
-				leftHandExpression,
-				leftHandType,
-				ResourceInvalidationKindMoveDefinite,
-			)
 		}
 	}
 
@@ -158,6 +146,10 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		return rightHandType
 
 	case ast.OperationCast:
+		// If there are errors in the lhs-expr, then the target type is considered as
+		// the inferred-type of the expression. i.e: exprActualType == rightHandType
+		// Then, it is not possible to determine whether the target type is redundant.
+		// Therefore, don't check for redundant casts, if there are errors.
 		if checker.Config.ExtendedElaborationEnabled && !hasErrors {
 			checker.Elaboration.SetStaticCastTypes(
 				expression,

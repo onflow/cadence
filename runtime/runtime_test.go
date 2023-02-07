@@ -2697,7 +2697,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 					FunctionType: (&cadence.FunctionType{
 						Parameters: []cadence.Parameter{},
 						ReturnType: cadence.IntType{},
-					}).WithID("fun():Int"),
+					}).WithID("(():Int)"),
 				},
 			},
 		)
@@ -2716,7 +2716,6 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                 `,
 				expected: cadence.Function{
 					FunctionType: (&cadence.FunctionType{
-						Purity: sema.FunctionPurityView,
 						Parameters: []cadence.Parameter{
 							{
 								Label:      sema.ArgumentLabelNotRequired,
@@ -2725,7 +2724,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 							},
 						},
 						ReturnType: cadence.NeverType{},
-					}).WithID("view fun(String):Never"),
+					}).WithID("((String):Never)"),
 				},
 			},
 		)
@@ -2751,7 +2750,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 					FunctionType: (&cadence.FunctionType{
 						Parameters: []cadence.Parameter{},
 						ReturnType: cadence.VoidType{},
-					}).WithID("fun():Void"),
+					}).WithID("(():Void)"),
 				},
 			},
 		)
@@ -2812,7 +2811,7 @@ func TestRuntimeScriptParameterTypeNotImportableError(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-      pub fun main(x: fun(): Int) {
+      pub fun main(x: ((): Int)) {
         return
       }
     `)

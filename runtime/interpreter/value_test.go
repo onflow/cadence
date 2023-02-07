@@ -1119,25 +1119,16 @@ func TestStringer(t *testing.T) {
 		},
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {
-				inter := newTestInterpreter(t)
-
 				array := NewArrayValue(
-					inter,
+					newTestInterpreter(t),
 					EmptyLocationRange,
 					VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
 					common.ZeroAddress,
 				)
-				arrayRef := NewUnmeteredEphemeralReferenceValue(
-					false,
-					array,
-					&sema.VariableSizedType{
-						Type: sema.AnyStructType,
-					},
-				)
-
-				array.Insert(inter, EmptyLocationRange, 0, arrayRef)
+				arrayRef := &EphemeralReferenceValue{Value: array}
+				array.Insert(newTestInterpreter(t), EmptyLocationRange, 0, arrayRef)
 				return array
 			}(),
 			expected: `[[...]]`,
@@ -3762,15 +3753,14 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		t.Parallel()
 
-		functionType := sema.NewSimpleFunctionType(
-			sema.FunctionPurityImpure,
-			[]sema.Parameter{
+		functionType := &sema.FunctionType{
+			Parameters: []sema.Parameter{
 				{
-					TypeAnnotation: sema.IntTypeAnnotation,
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
-			sema.BoolTypeAnnotation,
-		)
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
+		}
 
 		for name, f := range map[string]Value{
 			"InterpretedFunctionValue": &InterpretedFunctionValue{
@@ -3995,7 +3985,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		t.Parallel()
 
 		test(
-			func(*Interpreter) Value {
+			func(_ *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
 					false,
 					TrueValue,
@@ -4006,7 +3996,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 
 		test(
-			func(*Interpreter) Value {
+			func(_ *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
 					false,
 					TrueValue,

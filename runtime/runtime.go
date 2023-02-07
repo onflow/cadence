@@ -550,7 +550,6 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 	if environment == nil {
 		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
 	}
-
 	environment.Configure(
 		context.Interface,
 		codesAndPrograms,

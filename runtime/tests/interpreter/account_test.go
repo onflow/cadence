@@ -52,27 +52,6 @@ func testAccount(
 	*interpreter.Interpreter,
 	func() map[storageKey]interpreter.Value,
 ) {
-	return testAccountWithErrorHandler(
-		t,
-		address,
-		auth,
-		code,
-		checkerConfig,
-		nil,
-	)
-}
-
-func testAccountWithErrorHandler(
-	t *testing.T,
-	address interpreter.AddressValue,
-	auth bool,
-	code string,
-	checkerConfig sema.Config,
-	checkerErrorHandler func(error),
-) (
-	*interpreter.Interpreter,
-	func() map[storageKey]interpreter.Value,
-) {
 
 	var valueDeclarations []stdlib.StandardLibraryValue
 
@@ -127,14 +106,12 @@ func testAccountWithErrorHandler(
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &checkerConfig,
 			Config: &interpreter.Config{
-				BaseActivation:                       baseActivation,
-				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
-				InvalidatedResourceValidationEnabled: true,
+				BaseActivation:       baseActivation,
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				AuthAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
 					return newTestAuthAccountValue(nil, address)
 				},
 			},
-			HandleCheckerError: checkerErrorHandler,
 		},
 	)
 	require.NoError(t, err)

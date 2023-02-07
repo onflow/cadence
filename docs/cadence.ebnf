@@ -197,7 +197,6 @@ fullType
     : ( Auth? Ampersand (* followed by no whitespace *) )?
       innerType
       ( (* no whitespace *) Optional)*
-    | '(' fullType ')'
     ;
 
 
@@ -224,10 +223,10 @@ nominalType
     ;
 
 functionType
-    : Fun '(' 
-        ( typeAnnotation ( ',' typeAnnotation )* )?
+    : '('
+        '(' ( typeAnnotation ( ',' typeAnnotation )* )? ')'
+        ':' typeAnnotation
       ')'
-      ( ':' typeAnnotation )?
     ;
 
 variableSizedType

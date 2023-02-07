@@ -363,7 +363,8 @@ func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
+				RequiredArgumentCount: nil,
 			},
 		)
 

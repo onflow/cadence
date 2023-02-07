@@ -1547,30 +1547,20 @@ func (t *ContractInterfaceType) Equal(other Type) bool {
 
 // Function
 
-type FunctionPurity int
-
-const (
-	FunctionPurityUnspecified FunctionPurity = iota
-	FunctionPurityView
-)
-
 // TODO: type parameters
 type FunctionType struct {
 	ReturnType Type
 	typeID     string
-	Purity     FunctionPurity
 	Parameters []Parameter
 }
 
 func NewFunctionType(
 	typeID string,
-	purity FunctionPurity,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	return &FunctionType{
 		typeID:     typeID,
-		Purity:     purity,
 		Parameters: parameters,
 		ReturnType: returnType,
 	}
@@ -1579,12 +1569,11 @@ func NewFunctionType(
 func NewMeteredFunctionType(
 	gauge common.MemoryGauge,
 	typeID string,
-	purity FunctionPurity,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	common.UseMemory(gauge, common.CadenceFunctionTypeMemoryUsage)
-	return NewFunctionType(typeID, purity, parameters, returnType)
+	return NewFunctionType(typeID, parameters, returnType)
 }
 
 func (*FunctionType) isType() {}

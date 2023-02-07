@@ -327,11 +327,11 @@ func TestArrayMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun test() {
-                let array: [AnyStruct] = [nil] as [(fun(AnyStruct):Void)?]
+                let array: [AnyStruct] = [nil] as [((AnyStruct):Void)?]
 
                 array[0] = log
 
-                let logger = array[0] as! (fun(AnyStruct): Void)
+                let logger = array[0] as! ((AnyStruct):Void)
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
@@ -357,13 +357,13 @@ func TestArrayMutation(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): [String] {
-                let array: [AnyStruct] = [nil, nil] as [(fun():String)?]
+                let array: [AnyStruct] = [nil, nil] as [(():String)?]
 
                 array[0] = foo
                 array[1] = bar
 
-                let callFoo = array[0] as! fun(): String
-                let callBar = array[1] as! fun(): String
+                let callFoo = array[0] as! (():String)
+                let callBar = array[1] as! (():String)
                 return [callFoo(), callBar()]
             }
 
@@ -412,7 +412,7 @@ func TestArrayMutation(t *testing.T) {
             }
 
             fun test(): [String] {
-                let array: [AnyStruct] = [nil, nil] as [(fun():String)?]
+                let array: [AnyStruct] = [nil, nil] as [(():String)?]
 
                 let a = Foo()
                 let b = Bar()
@@ -420,8 +420,8 @@ func TestArrayMutation(t *testing.T) {
                 array[0] = a.foo
                 array[1] = b.bar
 
-                let callFoo = array[0] as! fun():String
-                let callBar = array[1] as! fun():String
+                let callFoo = array[0] as! (():String)
+                let callBar = array[1] as! (():String)
 
                 return [callFoo(), callBar()]
             }
@@ -468,7 +468,7 @@ func TestArrayMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                 fun test() {
-                    let array: [AnyStruct] = [nil] as [(fun():Void)?]
+                    let array: [AnyStruct] = [nil] as [(():Void)?]
 
                     array[0] = log
                 }
@@ -721,7 +721,7 @@ func TestDictionaryMutation(t *testing.T) {
 
                 dict["test"] = log
 
-                let logger = dict["test"]! as! fun(AnyStruct): Void
+                let logger = dict["test"]! as! ((AnyStruct): Void)
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
@@ -752,8 +752,8 @@ func TestDictionaryMutation(t *testing.T) {
                dict["foo"] = foo
                dict["bar"] = bar
 
-               let callFoo = dict["foo"]! as! fun():String
-               let callBar = dict["bar"]! as! fun():String
+               let callFoo = dict["foo"]! as! (():String)
+               let callBar = dict["bar"]! as! (():String)
                return [callFoo(), callBar()]
            }
 
@@ -810,8 +810,8 @@ func TestDictionaryMutation(t *testing.T) {
                dict["foo"] = a.foo
                dict["bar"] = b.bar
 
-               let callFoo = dict["foo"]! as! fun():String
-               let callBar = dict["bar"]! as! fun():String
+               let callFoo = dict["foo"]! as! (():String)
+               let callBar = dict["bar"]! as! (():String)
 
                return [callFoo(), callBar()]
            }
@@ -858,7 +858,7 @@ func TestDictionaryMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                fun test() {
-                   let dict: {String: AnyStruct} = {} as {String: fun():Void}
+                   let dict: {String: AnyStruct} = {} as {String: (():Void)}
 
                    dict["log"] = log
                }
@@ -910,7 +910,7 @@ func TestDictionaryMutation(t *testing.T) {
             struct S {}
 
             fun test(owner: PublicAccount) {
-                let funcs: {String: fun(PublicAccount, [UInt64]): [S]} = {}
+                let funcs: {String: ((PublicAccount, [UInt64]): [S])} = {}
 
                 funcs["test"] = fun (owner: PublicAccount, ids: [UInt64]): [S] { return [] }
 

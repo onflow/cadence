@@ -72,6 +72,12 @@ func NewSyntaxError(pos ast.Position, message string, params ...any) *SyntaxErro
 	}
 }
 
+func NewUnpositionedSyntaxError(message string, params ...any) *SyntaxError {
+	return &SyntaxError{
+		Message: fmt.Sprintf(message, params...),
+	}
+}
+
 var _ ParseError = &SyntaxError{}
 var _ errors.UserError = &SyntaxError{}
 

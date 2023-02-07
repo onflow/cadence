@@ -402,7 +402,7 @@ Function values can only be exported, they cannot be imported.
   "value": {
     "functionType": {
       "kind": "Function",
-      "typeID": "fun():Void",
+      "typeID": "(():Void)",
       "parameters": [],
       "return": {
         "kind": "Void"

@@ -29,6 +29,8 @@ const AuthAccountTypeBalanceFieldName = "balance"
 const AuthAccountTypeAvailableBalanceFieldName = "availableBalance"
 const AuthAccountTypeStorageUsedFieldName = "storageUsed"
 const AuthAccountTypeStorageCapacityFieldName = "storageCapacity"
+const AuthAccountTypeAddPublicKeyFunctionName = "addPublicKey"
+const AuthAccountTypeRemovePublicKeyFunctionName = "removePublicKey"
 const AuthAccountTypeSaveFunctionName = "save"
 const AuthAccountTypeLoadFunctionName = "load"
 const AuthAccountTypeTypeFunctionName = "type"
@@ -78,7 +80,7 @@ var AuthAccountType = func() *CompositeType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "newCapabilityPath",
-				TypeAnnotation: CapabilityPathTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -122,6 +124,18 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountTypeStorageCapacityFieldName,
 			UInt64Type,
 			accountTypeStorageCapacityFieldDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountType,
+			AuthAccountTypeAddPublicKeyFunctionName,
+			AuthAccountTypeAddPublicKeyFunctionType,
+			authAccountTypeAddPublicKeyFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountType,
+			AuthAccountTypeRemovePublicKeyFunctionName,
+			AuthAccountTypeRemovePublicKeyFunctionType,
+			authAccountTypeRemovePublicKeyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
@@ -244,8 +258,6 @@ var AuthAccountType = func() *CompositeType {
 	return authAccountType
 }()
 
-var AuthAccountTypeAnnotation = NewTypeAnnotation(AuthAccountType)
-
 var AuthAccountPublicPathsType = &VariableSizedType{
 	Type: PublicPathType,
 }
@@ -309,6 +321,44 @@ var AuthAccountForEachPrivateFunctionType = AccountForEachFunctionType(PrivatePa
 
 var AuthAccountForEachStoredFunctionType = AccountForEachFunctionType(StoragePathType)
 
+var AuthAccountTypeAddPublicKeyFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "key",
+			TypeAnnotation: NewTypeAnnotation(
+				ByteArrayType,
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const authAccountTypeAddPublicKeyFunctionDocString = `
+Adds the given byte representation of a public key to the account's keys
+`
+
+var AuthAccountTypeRemovePublicKeyFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "index",
+			TypeAnnotation: NewTypeAnnotation(
+				IntType,
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const authAccountTypeRemovePublicKeyFunctionDocString = `
+Removes the public key at the given index from the account's keys
+`
+
 var AuthAccountTypeSaveFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
@@ -317,7 +367,6 @@ var AuthAccountTypeSaveFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -334,10 +383,10 @@ var AuthAccountTypeSaveFunctionType = func() *FunctionType {
 			{
 				Label:          "to",
 				Identifier:     "path",
-				TypeAnnotation: StoragePathTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
-		ReturnTypeAnnotation: VoidTypeAnnotation,
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }()
 
@@ -358,7 +407,6 @@ var AuthAccountTypeLoadFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -366,7 +414,7 @@ var AuthAccountTypeLoadFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: StoragePathTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -387,21 +435,20 @@ If there is an object stored, the type of the object is returned without modifyi
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
 `
 
-var AuthAccountTypeTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var AuthAccountTypeTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Label:          "at",
 			Identifier:     "path",
-			TypeAnnotation: StoragePathTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(StoragePathType),
 		},
 	},
-	NewTypeAnnotation(
+	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
 			Type: MetaType,
 		},
 	),
-)
+}
 
 const authAccountTypeLoadFunctionDocString = `
 Loads an object from the account's storage which is stored under the given path, or nil if no object is stored under the given path.
@@ -425,7 +472,6 @@ var AuthAccountTypeCopyFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -433,7 +479,7 @@ var AuthAccountTypeCopyFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: StoragePathTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -469,7 +515,6 @@ var AuthAccountTypeBorrowFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -477,7 +522,7 @@ var AuthAccountTypeBorrowFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: StoragePathTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -515,7 +560,6 @@ var AuthAccountTypeLinkFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -523,11 +567,11 @@ var AuthAccountTypeLinkFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "newCapabilityPath",
-				TypeAnnotation: CapabilityPathTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 			},
 			{
 				Identifier:     "target",
-				TypeAnnotation: PathTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(PathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -561,17 +605,16 @@ Creates a capability at the given public or private path which targets this acco
 Returns nil if a link for the given capability path already exists, or the newly created capability if not.
 `
 
-var AuthAccountTypeUnlinkFunctionType = NewSimpleFunctionType(
-	FunctionPurityImpure,
-	[]Parameter{
+var AuthAccountTypeUnlinkFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
-			TypeAnnotation: CapabilityPathTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 		},
 	},
-	VoidTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+}
 
 const authAccountTypeUnlinkFunctionDocString = `
 Removes the capability at the given public or private path
@@ -588,7 +631,6 @@ var AuthAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -596,7 +638,7 @@ var AuthAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "capabilityPath",
-				TypeAnnotation: CapabilityPathTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -613,21 +655,20 @@ const authAccountTypeGetCapabilityFunctionDocString = `
 Returns the capability at the given private or public path, or nil if it does not exist
 `
 
-var AccountTypeGetLinkTargetFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var AccountTypeGetLinkTargetFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
-			TypeAnnotation: CapabilityPathTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 		},
 	},
-	NewTypeAnnotation(
+	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
 			Type: PathType,
 		},
 	),
-)
+}
 
 // AuthAccountKeysType represents the keys associated with an auth account.
 var AuthAccountKeysType = func() *CompositeType {
@@ -676,76 +717,72 @@ var AuthAccountKeysType = func() *CompositeType {
 	return accountKeys
 }()
 
-var AuthAccountKeysTypeAddFunctionType = NewSimpleFunctionType(
-	FunctionPurityImpure,
-	[]Parameter{
+var AuthAccountKeysTypeAddFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Identifier:     AccountKeyPublicKeyFieldName,
-			TypeAnnotation: PublicKeyTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(PublicKeyType),
 		},
 		{
 			Identifier:     AccountKeyHashAlgoFieldName,
-			TypeAnnotation: HashAlgorithmTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
 		},
 		{
 			Identifier:     AccountKeyWeightFieldName,
-			TypeAnnotation: UFix64TypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(UFix64Type),
 		},
 	},
-	AccountKeyTypeAnnotation,
-)
+	ReturnTypeAnnotation:  NewTypeAnnotation(AccountKeyType),
+	RequiredArgumentCount: RequiredArgumentCount(3),
+}
 
-var AccountKeysTypeGetFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
+var AccountKeysTypeGetFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexFieldName,
-			TypeAnnotation: IntTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
-	NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
-)
+	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
+	RequiredArgumentCount: RequiredArgumentCount(1),
+}
 
-// fun keys.forEach(_ function: fun(AccountKey): Bool): Void
+// fun keys.forEach(_ function: ((AccountKey): Bool)): Void
 var AccountKeysTypeForEachFunctionType = func() *FunctionType {
-	const functionPurity = FunctionPurityImpure
-
-	// fun(AccountKey): Bool
-	iterFunctionType := NewSimpleFunctionType(
-		functionPurity,
-		[]Parameter{
+	// ((AccountKey): Bool)
+	iterFunctionType := &FunctionType{
+		Parameters: []Parameter{
 			{
-				TypeAnnotation: AccountKeyTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(AccountKeyType),
 			},
 		},
-		BoolTypeAnnotation,
-	)
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+	}
 
-	return NewSimpleFunctionType(
-		functionPurity,
-		[]Parameter{
+	return &FunctionType{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "function",
 				TypeAnnotation: NewTypeAnnotation(iterFunctionType),
 			},
 		},
-		VoidTypeAnnotation,
-	)
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+	}
 }()
 
 var AccountKeysTypeCountFieldType = UInt64Type
 
-var AuthAccountKeysTypeRevokeFunctionType = NewSimpleFunctionType(
-	FunctionPurityImpure,
-	[]Parameter{
+var AuthAccountKeysTypeRevokeFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexFieldName,
-			TypeAnnotation: IntTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
-	NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
-)
+	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
+	RequiredArgumentCount: RequiredArgumentCount(1),
+}
 
 func init() {
 	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
@@ -803,7 +840,7 @@ const authAccountKeysTypeRevokeFunctionDocString = `
 Revokes the key at the given index of the account.
 `
 const accountKeysTypeForEachFunctionDocString = `
-Iterates through all the keys of this account, passing each key to the provided function and short-circuiting if the function returns false.
+Iterates through all the keys of this account, passing each key to the provided function and short-circuiting if the function returns false. 
 
 The order of iteration is undefined.
 `
@@ -816,9 +853,8 @@ const authAccountTypeInboxPublishFunctionDocString = `
 Publishes the argument value under the given name, to be later claimed by the specified recipient
 `
 
-var AuthAccountTypeInboxPublishFunctionType = NewSimpleFunctionType(
-	FunctionPurityImpure,
-	[]Parameter{
+var AuthAccountTypeInboxPublishFunctionType = &FunctionType{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "value",
@@ -826,15 +862,17 @@ var AuthAccountTypeInboxPublishFunctionType = NewSimpleFunctionType(
 		},
 		{
 			Identifier:     "name",
-			TypeAnnotation: StringTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 		{
 			Identifier:     "recipient",
-			TypeAnnotation: AddressTypeAnnotation,
+			TypeAnnotation: NewTypeAnnotation(TheAddressType),
 		},
 	},
-	VoidTypeAnnotation,
-)
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
 
 const authAccountTypeInboxUnpublishFunctionDocString = `
 Unpublishes the value specified by the argument string
@@ -848,7 +886,6 @@ var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
 		},
 	}
 	return &FunctionType{
-		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -856,7 +893,7 @@ var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "name",
-				TypeAnnotation: StringTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(StringType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -883,7 +920,6 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 		},
 	}
 	return &FunctionType{
-		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -891,11 +927,11 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "name",
-				TypeAnnotation: StringTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(StringType),
 			},
 			{
 				Identifier:     "provider",
-				TypeAnnotation: AddressTypeAnnotation,
+				TypeAnnotation: NewTypeAnnotation(TheAddressType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(

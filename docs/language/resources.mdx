@@ -354,7 +354,7 @@ resource R {}
 // the resource parameter `resource`. Each call to the returned function
 // would return the resource, which should not be possible.
 //
-fun makeCloner(resource: @R): fun(): @R {
+fun makeCloner(resource: @R): ((): @R) {
     return fun (): @R {
         return <-resource
     }

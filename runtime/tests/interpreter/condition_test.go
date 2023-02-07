@@ -1090,15 +1090,18 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	// and not a resource (composite value)
 
 	checkFunctionType := &sema.FunctionType{
-		Purity: sema.FunctionPurityView,
 		Parameters: []sema.Parameter{
 			{
-				Label:          sema.ArgumentLabelNotRequired,
-				Identifier:     "value",
-				TypeAnnotation: sema.AnyStructTypeAnnotation,
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.AnyStructType,
+				),
 			},
 		},
-		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			sema.VoidType,
+		),
 	}
 
 	valueDeclaration := stdlib.StandardLibraryValue{
@@ -1144,7 +1147,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
                   return <- self.resources.remove(key: "original")!
               }
 
-              view fun use(_ r: &R): Bool {
+              fun use(_ r: &R): Bool {
                   check(r)
                   return true
               }

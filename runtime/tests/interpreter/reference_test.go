@@ -21,13 +21,14 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
+
+	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -368,7 +369,7 @@ func TestInterpretContainerVariance(t *testing.T) {
           }
 
           fun test(): Int {
-              let dict: {Int: fun(): Int} = {}
+              let dict: {Int: ((): Int)} = {}
               let dictRef = &dict as &{Int: AnyStruct}
 
               dictRef[0] = f2
@@ -430,6 +431,360 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
+	})
+}
+
+func TestInterpretResourceReferenceAfterMove(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {
+                let value: String
+
+                init(value: String) {
+                    self.value = value
+                }
+            }
+
+            fun test(target: &[R]): String {
+                let r <- create R(value: "testValue")
+                let ref = &r as &R
+                target.append(<-r)
+                return ref.value
+            }
+        `)
+
+		address := common.Address{0x1}
+
+		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+
+		array := interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.ConvertSemaToStaticType(nil, rType),
+			},
+			address,
+		)
+
+		arrayRef := &interpreter.EphemeralReferenceValue{
+			Authorized: false,
+			Value:      array,
+			BorrowedType: &sema.VariableSizedType{
+				Type: rType,
+			},
+		}
+
+		value, err := inter.Invoke("test", arrayRef)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("testValue"),
+			value,
+		)
+	})
+
+	t.Run("array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {
+                let value: String
+
+                init(value: String) {
+                    self.value = value
+                }
+            }
+
+            fun test(target: &[[R]]): String {
+                let rs <- [<-create R(value: "testValue")]
+                let ref = &rs as &[R]
+                target.append(<-rs)
+                return ref[0].value
+            }
+        `)
+
+		address := common.Address{0x1}
+
+		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+
+		array := interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.VariableSizedStaticType{
+					Type: interpreter.ConvertSemaToStaticType(nil, rType),
+				},
+			},
+			address,
+		)
+
+		arrayRef := &interpreter.EphemeralReferenceValue{
+			Authorized: false,
+			Value:      array,
+			BorrowedType: &sema.VariableSizedType{
+				Type: &sema.VariableSizedType{
+					Type: rType,
+				},
+			},
+		}
+
+		value, err := inter.Invoke("test", arrayRef)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("testValue"),
+			value,
+		)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {
+                let value: String
+
+                init(value: String) {
+                    self.value = value
+                }
+            }
+
+            fun test(target: &[{Int: R}]): String? {
+                let rs <- {1: <-create R(value: "testValue")}
+                let ref = &rs as &{Int: R}
+                target.append(<-rs)
+                return ref[1]?.value
+            }
+        `)
+
+		address := common.Address{0x1}
+
+		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+
+		array := interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeInt,
+					ValueType: interpreter.ConvertSemaToStaticType(nil, rType),
+				},
+			},
+			address,
+		)
+
+		arrayRef := &interpreter.EphemeralReferenceValue{
+			Authorized: false,
+			Value:      array,
+			BorrowedType: &sema.VariableSizedType{
+				Type: &sema.DictionaryType{
+					KeyType:   sema.IntType,
+					ValueType: rType,
+				},
+			},
+		}
+
+		value, err := inter.Invoke("test", arrayRef)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredStringValue("testValue"),
+			),
+			value,
+		)
+	})
+}
+
+func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("container on stack", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R2 {
+              let value: String
+
+              init() {
+                  self.value = "test"
+              }
+          }
+
+          resource R1 {
+              var r2: @R2?
+
+              init() {
+                  self.r2 <- nil
+              }
+
+              destroy() {
+                  destroy self.r2
+              }
+
+              fun borrowR2(): &R2? {
+                  let optR2 <- self.r2 <- nil
+                  let r2 <- optR2!
+                  let ref = &r2 as &R2
+                  self.r2 <-! r2
+                  return ref
+              }
+          }
+
+          fun test(): String {
+              let r2 <- create R2()
+              let r1 <- create R1()
+              r1.r2 <-! r2
+              let optRef = r1.borrowR2()
+              let value = optRef!.value
+              destroy r1
+              return value
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("test"),
+			value,
+		)
+
+	})
+
+	t.Run("container in account", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              resource R2 {
+                  let value: String
+
+                  init() {
+                      self.value = "test"
+                  }
+              }
+
+              resource R1 {
+                  var r2: @R2?
+
+                  init() {
+                      self.r2 <- nil
+                  }
+
+                  destroy() {
+                      destroy self.r2
+                  }
+
+                  fun borrowR2(): &R2? {
+                      let optR2 <- self.r2 <- nil
+                      let r2 <- optR2!
+                      let ref = &r2 as &R2
+                      self.r2 <-! r2
+                      return ref
+                  }
+              }
+
+              fun createR1(): @R1 {
+                  return <- create R1()
+              }
+
+              fun getOwnerR1(r1: &R1): Address? {
+                  return r1.owner?.address
+              }
+
+              fun getOwnerR2(r1: &R1): Address? {
+                  return r1.r2?.owner?.address
+              }
+
+              fun test(r1: &R1): String {
+                  let r2 <- create R2()
+                  r1.r2 <-! r2
+                  let optRef = r1.borrowR2()
+                  let value = optRef!.value
+                  return value
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					PublicAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
+						return newTestPublicAccountValue(nil, address)
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		r1, err := inter.Invoke("createR1")
+		require.NoError(t, err)
+
+		r1 = r1.Transfer(inter, interpreter.EmptyLocationRange, atree.Address{1}, false, nil)
+
+		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
+
+		ref := &interpreter.EphemeralReferenceValue{
+			Value:        r1,
+			BorrowedType: r1Type,
+		}
+
+		// Test
+
+		value, err := inter.Invoke("test", ref)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("test"),
+			value,
+		)
+
+		// Check R1 owner
+
+		r1Address, err := inter.Invoke("getOwnerR1", ref)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.AddressValue{1},
+			),
+			r1Address,
+		)
+
+		// Check R2 owner
+
+		r2Address, err := inter.Invoke("getOwnerR2", ref)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.AddressValue{1},
+			),
+			r2Address,
+		)
 	})
 }
 
@@ -537,703 +892,5 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		innerValue := value.(*interpreter.SomeValue).
 			InnerValue(inter, interpreter.EmptyLocationRange)
 		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
-	})
-}
-
-func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
-
-	t.Parallel()
-
-	errorHandler := func(tt *testing.T) func(err error) {
-		return func(err error) {
-			errors := checker.RequireCheckerErrors(tt, err, 1)
-			invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-			assert.ErrorAs(tt, errors[0], &invalidatedRefError)
-		}
-	}
-
-	t.Run("stack to account", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-            fun test() {
-                let r <-create R()
-                let ref = &r as &R
-
-                // Move the resource into the account
-                account.save(<-r, to: /storage/r)
-
-                // Update the reference
-                ref.id = 2
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-
-	t.Run("stack to account readonly", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-            fun test() {
-                let r <-create R()
-                let ref = &r as &R
-
-                // Move the resource into the account
-                account.save(<-r, to: /storage/r)
-
-                // 'Read' a field from the reference
-                let id = ref.id
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-
-	t.Run("account to stack", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-            fun test(target: &[R]) {
-                target.append(<- create R())
-
-                // Take reference while in the account
-                let ref = &target[0] as &R
-
-                // Move the resource out of the account onto the stack
-                let movedR <- target.remove(at: 0)
-
-                // Update the reference
-                ref.id = 2
-
-                destroy movedR
-            }
-        `)
-
-		address := common.Address{0x1}
-
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
-
-		array := interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(nil, rType),
-			},
-			address,
-		)
-
-		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
-			array,
-			&sema.VariableSizedType{
-				Type: rType,
-			},
-		)
-
-		_, err := inter.Invoke("test", arrayRef)
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-
-	t.Run("stack to stack", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter, err := parseCheckAndInterpretWithOptions(
-			t,
-			`
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-            fun test() {
-                let r1 <-create R()
-                let ref = &r1 as &R
-
-                // Move the resource onto the same stack
-                let r2 <- r1
-
-                // Update the reference
-                ref.id = 2
-
-                destroy r2
-            }`,
-
-			ParseCheckAndInterpretOptions{
-				HandleCheckerError: errorHandler(t),
-			},
-		)
-		require.NoError(t, err)
-
-		_, err = inter.Invoke("test")
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-
-	t.Run("one account to another account", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-            fun test(target1: &[R], target2: &[R]) {
-                target1.append(<- create R())
-
-                // Take reference while in the account_1
-                let ref = &target1[0] as &R
-
-                // Move the resource out of the account_1 into the account_2
-                target2.append(<- target1.remove(at: 0))
-
-                // Update the reference
-                ref.id = 2
-            }
-        `)
-
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
-
-		// Resource array in account 0x01
-
-		array1 := interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(nil, rType),
-			},
-			common.Address{0x1},
-		)
-
-		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
-			array1,
-			&sema.VariableSizedType{
-				Type: rType,
-			},
-		)
-
-		// Resource array in account 0x02
-
-		array2 := interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(nil, rType),
-			},
-			common.Address{0x2},
-		)
-
-		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
-			array2,
-			&sema.VariableSizedType{
-				Type: rType,
-			},
-		)
-
-		_, err := inter.Invoke("test", arrayRef1, arrayRef2)
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-
-	t.Run("account to stack to same account", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-            fun test(target: &[R]): Int {
-                target.append(<- create R())
-
-                // Take reference while in the account
-                let ref = &target[0] as &R
-
-                // Move the resource out of the account onto the stack. This should invalidate the reference.
-                let movedR <- target.remove(at: 0)
-
-                // Append an extra resource just to force an index change
-                target.append(<- create R())
-
-                // Move the resource back into the account (now at a different index)
-                // Despite the resource being back in its original account, reference is still invalid.
-                target.append(<- movedR)
-
-                // Update the reference
-                ref.id = 2
-
-                return target[1].id
-            }
-        `)
-
-		address := common.Address{0x1}
-
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
-
-		array := interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(nil, rType),
-			},
-			address,
-		)
-
-		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
-			array,
-			&sema.VariableSizedType{
-				Type: rType,
-			},
-		)
-
-		_, err := inter.Invoke("test", arrayRef)
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-
-	t.Run("account to stack storage reference", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(
-			t,
-			address,
-			true,
-			`
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-             fun test() {
-                let r1 <-create R()
-                account.save(<-r1, to: /storage/r)
-
-                let r1Ref = account.borrow<&R>(from: /storage/r)!
-
-                let r2 <- account.load<@R>(from: /storage/r)!
-
-                r1Ref.id = 2
-                destroy r2
-            }`,
-			sema.Config{},
-		)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
-	})
-
-	t.Run("multiple references with moves", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter, err := parseCheckAndInterpretWithOptions(t, `
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 5
-                }
-            }
-
-            var ref1: &R? = nil
-            var ref2: &R? = nil
-            var ref3: &R? = nil
-
-            fun setup(collection: &[R]) {
-                collection.append(<- create R())
-
-                // Take reference while in the account
-                ref1 = &collection[0] as &R
-
-                // Move the resource out of the account onto the stack. This should invalidate ref1.
-                let movedR <- collection.remove(at: 0)
-
-                // Take a reference while on stack
-                ref2 = &movedR as &R
-
-                // Append an extra resource just to force an index change
-                collection.append(<- create R())
-
-                // Move the resource again into the account (now at a different index)
-                collection.append(<- movedR)
-
-                // Take another reference
-                ref3 = &collection[1] as &R
-            }
-
-            fun getRef1Id(): Int {
-                return ref1!.id
-            }
-
-            fun getRef2Id(): Int {
-                return ref2!.id
-            }
-
-            fun getRef3Id(): Int {
-                return ref3!.id
-            }
-        `,
-			ParseCheckAndInterpretOptions{
-				HandleCheckerError: errorHandler(t),
-			},
-		)
-		require.NoError(t, err)
-
-		address := common.Address{0x1}
-
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
-
-		array := interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(nil, rType),
-			},
-			address,
-		)
-
-		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
-			array,
-			&sema.VariableSizedType{
-				Type: rType,
-			},
-		)
-
-		_, err = inter.Invoke("setup", arrayRef)
-		require.NoError(t, err)
-
-		// First reference must be invalid
-		_, err = inter.Invoke("getRef1Id")
-		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-
-		// Second reference must be invalid
-		_, err = inter.Invoke("getRef2Id")
-		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-
-		// Third reference must be valid
-		result, err := inter.Invoke("getRef3Id")
-		assert.NoError(t, err)
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredIntValueFromInt64(5),
-			result,
-		)
-	})
-
-	t.Run("ref source is field", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(
-			t,
-			`
-            pub fun test() {
-                let r <- create R()
-                let s = S()
-                s.b = &r as &R
-
-                let x = s.b!     // get reference from a struct field
-                let movedR <- r  // move the resource
-                x.a
-
-                destroy movedR
-            }
-
-            pub resource R {
-                pub let a: Int
-
-                init() {
-                    self.a = 5
-                }
-            }
-
-            pub struct S {
-                pub(set) var b: &R?
-
-                init() {
-                    self.b = nil
-                }
-            }`,
-		)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-
-	t.Run("ref target is field", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(
-			t,
-			`
-            pub fun test() {
-                let r <- create R()
-                let s = S()
-                s.b = &r as &R
-
-                s.b = &r as &R   // assign reference to a struct field
-                let movedR <- r  // move the resource
-                s.b!.a
-
-                destroy movedR
-            }
-
-            pub resource R {
-                pub let a: Int
-
-                init() {
-                    self.a = 5
-                }
-            }
-
-            pub struct S {
-                pub(set) var b: &R?
-
-                init() {
-                    self.b = nil
-                }
-            }`,
-		)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-
-	t.Run("resource is array element", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(
-			t,
-			`
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-            fun test() {
-                let array <- [<- create R()]
-                let ref = &array[0] as &R
-
-                // remove the resource from array
-                let r <- array.remove(at: 0)
-
-                // Update the reference
-                ref.id = 2
-
-                destroy r
-                destroy array
-            }`,
-		)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-
-	t.Run("resource is dictionary entry", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(
-			t,
-			`
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-            fun test() {
-                let dictionary <- {0: <- create R()}
-                let ref = (&dictionary[0] as &R?)!
-
-                // remove the resource from array
-                let r <- dictionary.remove(key: 0)
-
-                // Update the reference
-                ref.id = 2
-
-                destroy r
-                destroy dictionary
-            }`,
-		)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-}
-
-func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
-
-	t.Parallel()
-
-	errorHandler := func(tt *testing.T) func(err error) {
-		return func(err error) {
-			errors := checker.RequireCheckerErrors(tt, err, 1)
-			invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-			assert.ErrorAs(tt, errors[0], &invalidatedRefError)
-		}
-	}
-
-	t.Run("on stack", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
-            resource R {
-                pub(set) var id: Int
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-            fun test() {
-                let r <-create R()
-                let ref = &r as &R
-
-                destroy r
-
-                // Update the reference
-                ref.id = 2
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
-	})
-
-	t.Run("ref source is field", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(
-			t,
-			`
-            pub fun test() {
-                let r <- create R()
-                let s = S()
-                s.b = &r as &R
-
-                let x = s.b!     // get reference from a struct field
-                destroy r        // destroy the resource
-                x.a
-            }
-
-            pub resource R {
-                pub let a: Int
-
-                init() {
-                    self.a = 5
-                }
-            }
-
-            pub struct S {
-                pub(set) var b: &R?
-
-                init() {
-                    self.b = nil
-                }
-            }`,
-		)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 	})
 }

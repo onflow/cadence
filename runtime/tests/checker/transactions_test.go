@@ -175,29 +175,6 @@ func TestCheckTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("PreConditions must be view", func(t *testing.T) {
-		test(t,
-			`
-              transaction {
-				  var foo: fun (): Int
-
-                  prepare() {
-					  self.foo = fun (): Int {
-						return 40
-					  }
-                  }
-
-                  pre {
-					  self.foo() > 30
-                  }
-              }
-            `,
-			[]error{
-				&sema.PurityError{},
-			},
-		)
-	})
-
 	t.Run("PostConditions", func(t *testing.T) {
 		test(t,
 			`
@@ -219,29 +196,6 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			nil,
-		)
-	})
-
-	t.Run("PostConditions must be view", func(t *testing.T) {
-		test(t,
-			`
-              transaction {
-				  var foo: fun (): Int
-
-                  prepare() {
-					  self.foo = fun (): Int {
-						return 40
-					  }
-                  }
-
-                  post {
-					  self.foo() > 30
-                  }
-              }
-            `,
-			[]error{
-				&sema.PurityError{},
-			},
 		)
 	})
 
@@ -383,7 +337,7 @@ func TestCheckTransactions(t *testing.T) {
 	t.Run("InvalidNonStorableParameter", func(t *testing.T) {
 		test(t,
 			`
-		      transaction(x: fun(Int): Int) {
+		      transaction(x: ((Int): Int)) {
 				execute {
 				  x(0)
 				}

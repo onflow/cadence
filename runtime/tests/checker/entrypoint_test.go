@@ -62,7 +62,7 @@ func TestEntryPointParameters(t *testing.T) {
 				{
 					Label:          "",
 					Identifier:     "a",
-					TypeAnnotation: sema.IntTypeAnnotation,
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
 			parameters,
@@ -101,7 +101,7 @@ func TestEntryPointParameters(t *testing.T) {
 				{
 					Label:          "",
 					Identifier:     "a",
-					TypeAnnotation: sema.IntTypeAnnotation,
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
 			parameters,
@@ -127,7 +127,7 @@ func TestEntryPointParameters(t *testing.T) {
 				{
 					Label:          "",
 					Identifier:     "a",
-					TypeAnnotation: sema.IntTypeAnnotation,
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
 			parameters,
@@ -153,7 +153,7 @@ func TestEntryPointParameters(t *testing.T) {
 				{
 					Label:          "",
 					Identifier:     "a",
-					TypeAnnotation: sema.IntTypeAnnotation,
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
 			parameters,

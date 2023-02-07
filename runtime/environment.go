@@ -287,6 +287,14 @@ func (e *interpreterEnvironment) EmitEvent(
 	)
 }
 
+func (e *interpreterEnvironment) AddEncodedAccountKey(address common.Address, key []byte) error {
+	return e.runtimeInterface.AddEncodedAccountKey(address, key)
+}
+
+func (e *interpreterEnvironment) RevokeEncodedAccountKey(address common.Address, index int) ([]byte, error) {
+	return e.runtimeInterface.RevokeEncodedAccountKey(address, index)
+}
+
 func (e *interpreterEnvironment) AddAccountKey(
 	address common.Address,
 	key *stdlib.PublicKey,

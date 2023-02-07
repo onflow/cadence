@@ -24,37 +24,7 @@ import (
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 )
-
-type FunctionPurity int
-
-const (
-	FunctionPurityUnspecified FunctionPurity = iota
-	FunctionPurityView
-)
-
-func (p FunctionPurity) Keyword() string {
-	switch p {
-	case FunctionPurityUnspecified:
-		return ""
-	case FunctionPurityView:
-		return "view"
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
-func (p FunctionPurity) MarshalJSON() ([]byte, error) {
-	switch p {
-	case FunctionPurityUnspecified:
-		return json.Marshal("Unspecified")
-	case FunctionPurityView:
-		return json.Marshal("View")
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
 
 type FunctionDeclarationFlags uint8
 
@@ -64,7 +34,6 @@ const (
 )
 
 type FunctionDeclaration struct {
-	Purity               FunctionPurity
 	TypeParameterList    *TypeParameterList
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
@@ -83,7 +52,6 @@ var _ Statement = &FunctionDeclaration{}
 func NewFunctionDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
-	purity FunctionPurity,
 	isStatic bool,
 	isNative bool,
 	identifier Identifier,
@@ -106,7 +74,6 @@ func NewFunctionDeclaration(
 
 	return &FunctionDeclaration{
 		Access:               access,
-		Purity:               purity,
 		Flags:                flags,
 		Identifier:           identifier,
 		TypeParameterList:    typeParameterList,
@@ -163,7 +130,6 @@ func (d *FunctionDeclaration) DeclarationAccess() Access {
 func (d *FunctionDeclaration) ToExpression(memoryGauge common.MemoryGauge) *FunctionExpression {
 	return NewFunctionExpression(
 		memoryGauge,
-		d.Purity,
 		d.ParameterList,
 		d.ReturnTypeAnnotation,
 		d.FunctionBlock,
@@ -182,7 +148,6 @@ func (d *FunctionDeclaration) DeclarationDocString() string {
 func (d *FunctionDeclaration) Doc() prettier.Doc {
 	return FunctionDocument(
 		d.Access,
-		d.Purity,
 		d.IsStatic(),
 		d.IsNative(),
 		true,
@@ -292,7 +257,6 @@ func (d *SpecialFunctionDeclaration) DeclarationDocString() string {
 func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
 	return FunctionDocument(
 		d.FunctionDeclaration.Access,
-		d.FunctionDeclaration.Purity,
 		d.FunctionDeclaration.IsStatic(),
 		d.FunctionDeclaration.IsNative(),
 		false,

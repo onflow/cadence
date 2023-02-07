@@ -99,9 +99,9 @@ pub contract Test {
 
     pub struct Matcher {
 
-        pub let test: fun(AnyStruct): Bool
+        pub let test: ((AnyStruct): Bool)
 
-        pub init(test: fun(AnyStruct): Bool) {
+        pub init(test: ((AnyStruct): Bool)) {
             self.test = test
         }
 

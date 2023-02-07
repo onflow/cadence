@@ -70,7 +70,6 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		declaration.Members.Fields(),
 		interfaceType,
 		declaration.DeclarationDocString(),
-		interfaceType.InitializerPurity,
 		interfaceType.InitializerParameters,
 		kind,
 		nil,
@@ -164,7 +163,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 
 func (checker *Checker) checkInterfaceFunctions(
 	functions []*ast.FunctionDeclaration,
-	selfType NominalType,
+	selfType Type,
 	declarationKind common.DeclarationKind,
 	selfDocString string,
 ) {
@@ -207,6 +206,7 @@ func (checker *Checker) checkInterfaceFunctions(
 					checkResourceLoss: checkResourceLoss,
 				},
 			)
+
 		}()
 	}
 }
@@ -341,8 +341,6 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	interfaceType.InitializerParameters =
 		checker.initializerParameters(declaration.Members.Initializers())
-	interfaceType.InitializerPurity =
-		checker.initializerPurity(declaration.Members.Initializers())
 
 	// Declare nested declarations' members
 

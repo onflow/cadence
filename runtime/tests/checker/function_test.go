@@ -181,7 +181,7 @@ func TestCheckFunctionReturnFunction(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-      fun foo(): fun(Int): Void {
+      fun foo(): ((Int): Void) {
           return bar
       }
 
@@ -294,7 +294,7 @@ func TestCheckInvalidResourceCapturingThroughVariable(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       resource Kitty {}
 
-      fun makeKittyCloner(): fun(): @Kitty {
+      fun makeKittyCloner(): ((): @Kitty) {
           let kitty <- create Kitty()
           return fun (): @Kitty {
               return <-kitty
@@ -316,7 +316,7 @@ func TestCheckInvalidResourceCapturingThroughParameter(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       resource Kitty {}
 
-      fun makeKittyCloner(kitty: @Kitty): fun(): @Kitty {
+      fun makeKittyCloner(kitty: @Kitty): ((): @Kitty) {
           return fun (): @Kitty {
               return <-kitty
           }
@@ -336,7 +336,7 @@ func TestCheckInvalidSelfResourceCapturing(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       resource Kitty {
-          fun makeCloner(): fun(): @Kitty {
+          fun makeCloner(): ((): @Kitty) {
               return fun (): @Kitty {
                   return <-self
               }
@@ -368,7 +368,7 @@ func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
           }
       }
 
-      fun makeKittyIdGetter(): fun(): Int {
+      fun makeKittyIdGetter(): ((): Int) {
           let kitty <- create Kitty(id: 1)
           let getId = fun (): Int {
               return kitty.id

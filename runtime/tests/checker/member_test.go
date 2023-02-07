@@ -173,8 +173,9 @@ func TestCheckOptionalChainingFunctionRead(t *testing.T) {
 
 	expectedType := &sema.OptionalType{
 		Type: &sema.FunctionType{
-			Purity:               sema.FunctionPurityImpure,
-			ReturnTypeAnnotation: sema.IntTypeAnnotation,
+			ReturnTypeAnnotation: sema.TypeAnnotation{
+				Type: sema.IntType,
+			},
 		},
 	}
 
@@ -271,9 +272,9 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.FunctionType{
-				Purity:               sema.FunctionPurityImpure,
-				Parameters:           []sema.Parameter{},
-				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
 			},
 			RequireGlobalValue(t, checker.Elaboration, "f"),
 		)
@@ -289,7 +290,7 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
           }
 
           let s = S()
-          let f = s.f as fun(): Void
+          let f = s.f as ((): Void)
         `)
 
 		require.NoError(t, err)

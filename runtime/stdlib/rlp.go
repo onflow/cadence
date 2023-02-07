@@ -68,17 +68,20 @@ If any error is encountered while decoding, the program aborts.
 
 const rlpDecodeStringFunctionName = "decodeString"
 
-var rlpDecodeStringFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityView,
-	[]sema.Parameter{
+var rlpDecodeStringFunctionType = &sema.FunctionType{
+	Parameters: []sema.Parameter{
 		{
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     "input",
-			TypeAnnotation: sema.ByteArrayTypeAnnotation,
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "input",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				sema.ByteArrayType,
+			),
 		},
 	},
-	sema.ByteArrayTypeAnnotation,
-)
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.ByteArrayType,
+	),
+}
 
 type RLPDecodeStringError struct {
 	interpreter.LocationRange
@@ -139,17 +142,20 @@ If any error is encountered while decoding, the program aborts.
 
 const rlpDecodeListFunctionName = "decodeList"
 
-var rlpDecodeListFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityView,
-	[]sema.Parameter{
+var rlpDecodeListFunctionType = &sema.FunctionType{
+	Parameters: []sema.Parameter{
 		{
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     "input",
-			TypeAnnotation: sema.ByteArrayTypeAnnotation,
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "input",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				sema.ByteArrayType,
+			),
 		},
 	},
-	sema.ByteArrayArrayTypeAnnotation,
-)
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.ByteArrayArrayType,
+	),
+}
 
 type RLPDecodeListError struct {
 	interpreter.LocationRange

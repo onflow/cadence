@@ -32,5 +32,3 @@ var AnyStructType = &SimpleType{
 	// The actual importability is checked at runtime
 	Importable: true,
 }
-
-var AnyStructTypeAnnotation = NewTypeAnnotation(AnyStructType)

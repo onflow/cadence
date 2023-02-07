@@ -2249,13 +2249,12 @@ func returnReferenceCasted(fromType, targetType string, operation ast.Operation,
 		if isResource {
 			return fmt.Sprintf(
 				`
-                  fun test(): Bool {
+                  fun test(): %[2]s? {
                       let x <- create R()
                       let r = &x as %[1]s
                       let r2 = r as? %[2]s
-                      let isSuccess = r2 != nil
                       destroy x
-                      return isSuccess
+                      return r2
                   }
                 `,
 				fromType,
@@ -2279,13 +2278,12 @@ func returnReferenceCasted(fromType, targetType string, operation ast.Operation,
 		if isResource {
 			return fmt.Sprintf(
 				`
-                  fun test(): Bool {
+                  fun test(): %[2]s {
                       let x <- create R()
                       let r = &x as %[1]s
                       let r2 = r as! %[2]s
-                      let isSuccess = r2 != nil
                       destroy x
-                      return isSuccess
+                      return r2
                   }
                 `,
 				fromType,
@@ -2321,15 +2319,6 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 
 	switch operation {
 	case ast.OperationFailableCast:
-		if isResource {
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
-			break
-		}
 
 		require.IsType(t,
 			&interpreter.SomeValue{},
@@ -2343,15 +2332,6 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 		)
 
 	case ast.OperationForceCast:
-		if isResource {
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
-			break
-		}
 
 		require.IsType(t,
 			&interpreter.EphemeralReferenceValue{},
@@ -2376,16 +2356,6 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 	switch operation {
 	case ast.OperationFailableCast:
 		require.NoError(t, err)
-
-		if isResource {
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
-			break
-		}
 
 		require.IsType(t,
 			interpreter.Nil,
@@ -3674,7 +3644,7 @@ func TestInterpretResourceConstructorCast(t *testing.T) {
                   resource R {}
 
                   fun test(): AnyStruct {
-                      return R %s fun(): @R
+                      return R %s ((): @R)
                   }
                 `,
 				operation.Symbol(),
@@ -3701,7 +3671,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             fun test(): String {
                 let x: AnyStruct = foo
-                let y = x as! fun(String):String
+                let y = x as! ((String):String)
 
                 return y("hello")
             }
@@ -3721,7 +3691,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): String {
-                let x = foo as fun(String):String
+                let x = foo as ((String):String)
                 return x("hello")
             }
 
@@ -3740,7 +3710,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): String {
-                 let x = foo as! fun(AnyStruct):String
+                 let x = foo as! ((AnyStruct):String)
                  return x("hello")
             }
 
@@ -3760,7 +3730,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): AnyStruct {
-                let x = foo as! fun(String):AnyStruct
+                let x = foo as! ((String):AnyStruct)
                 return x("hello")
             }
 
@@ -3779,7 +3749,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): String {
-                let x = foo as! fun(String):String
+                let x = foo as! ((String):String)
                 return x("hello")
             }
 
@@ -3801,7 +3771,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
             fun test(): String {
                 let x = foo()
                 let y: AnyStruct = x.bar
-                let z = y as! fun(String):String
+                let z = y as! ((String):String)
                 return z("hello")
             }
 
