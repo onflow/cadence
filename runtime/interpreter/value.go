@@ -18656,3 +18656,128 @@ func (v AccountLinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) 
 func (v AccountLinkValue) ChildStorables() []atree.Storable {
 	return nil
 }
+
+type CapabilityControllerValue struct {
+	IssueHeight  uint64
+	BorrowType   StaticType
+	CapabilityID uint64
+	IsRevoked    bool
+}
+
+var _ Value = &CapabilityControllerValue{}
+var _ MemberAccessibleValue = &CapabilityControllerValue{}
+
+func (v CapabilityControllerValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (v CapabilityControllerValue) String() string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.String()
+	}
+
+	return format.CapabilityController(borrowType)
+}
+
+func (v CapabilityControllerValue) IsValue() {}
+
+func (v CapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitCapabilityControllerValue(interpreter, v)
+}
+
+func (v CapabilityControllerValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (v CapabilityControllerValue) StaticType(interpreter *Interpreter) StaticType {
+	return NewCapabilityControllerStaticType(interpreter, v.BorrowType)
+}
+
+// ConformsToStaticType returns true if the value (i.e. its dynamic type)
+// conforms to its own static type.
+// Non-container values trivially always conform to their own static type.
+// Container values conform to their own static type,
+// and this function recursively checks conformance for nested values.
+// If the container contains static type information about nested values,
+// e.g. the element type of an array, it also ensures the nested values'
+// static types are subtypes.
+func (v CapabilityControllerValue) ConformsToStaticType(interpreter *Interpreter, locationRange LocationRange, results TypeConformanceResults) bool {
+	panic("not implemented") // TODO: Implement
+}
+
+func (v CapabilityControllerValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v CapabilityControllerValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.CapabilityControllerStringMemoryUsage)
+
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.MeteredString(memoryGauge)
+	}
+	return format.CapabilityController(borrowType)
+}
+
+func (v CapabilityControllerValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v CapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (v CapabilityControllerValue) Transfer(interpreter *Interpreter, locationRange LocationRange, address atree.Address, remove bool, storable atree.Storable) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v CapabilityControllerValue) DeepRemove(interpreter *Interpreter) {
+	// NO-OP
+}
+
+// Clone returns a new value that is equal to this value.
+// NOTE: not used by interpreter, but used externally (e.g. state migration)
+// NOTE: memory metering is unnecessary for Clone methods
+func (v CapabilityControllerValue) Clone(interpreter *Interpreter) Value {
+	// TODO ask about this, since we expose a block height when this was issued. state migrations might affect this
+	return v
+}
+
+func (CapabilityControllerValue) IsImportable(interpreter *Interpreter) bool {
+	return sema.CapabilityControllerType.Importable
+}
+
+func (v CapabilityControllerValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+	switch name {
+	case sema.CapabilityControllerTypeIssueHeightFieldName:
+		return NewUInt64Value(interpreter, func() uint64 { return v.IssueHeight })
+	case sema.CapabilityControllerTypeBorrowTypeFieldName:
+		return NewTypeValue(interpreter, v.BorrowType)
+	case sema.CapabilityControllerTypeCapabilityIDFieldName:
+		return NewUInt64Value(interpreter, func() uint64 { return v.CapabilityID })
+	case sema.CapabilityControllerTypeIsRevokedFieldName:
+		return AsBoolValue(v.IsRevoked)
+	case sema.CapabilityControllerTypeTargetFunctionName:
+		panic("not implemented")
+	case sema.CapabilityControllerTypeRevokeFunctionName:
+		panic("not implemented")
+	case sema.CapabilityControllerTypeRetargetFunctionName:
+		panic("not implemented")
+	}
+
+	return nil
+}
+
+func (v CapabilityControllerValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+	// Capabilities have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (v CapabilityControllerValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
+	// Capabilities have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
