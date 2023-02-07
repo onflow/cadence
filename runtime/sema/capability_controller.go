@@ -20,4 +20,4 @@ package sema
 
 //go:generate go run ./gen/main.go capability_controller.cdc capability_controller.gen.go
 
-// var CapabilityControllerTypeAnnotation = NewTypeAnnotation(CapabilityControllerType)
+var CapabilityControllerTypeAnnotation = NewTypeAnnotation(CapabilityControllerType)
