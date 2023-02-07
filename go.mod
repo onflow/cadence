@@ -29,12 +29,16 @@ require (
 
 require github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 
+require github.com/SaveTheRbtz/mph v0.1.2
+
+require github.com/zeebo/xxh3 v1.0.2 // indirect
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fxamacker/circlehash v0.3.0 // indirect
 	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
-	github.com/klauspost/cpuid/v2 v2.0.14 // indirect
-	github.com/mattn/go-colorable v0.1.7 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.0 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
@@ -45,7 +49,7 @@ require (
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/term v0.1.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
