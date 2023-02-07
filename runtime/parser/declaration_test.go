@@ -1700,6 +1700,56 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
+	t.Run("access, entitlements list starting with keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( self , bar )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			nil,
+			result,
+		)
+	})
+
+	t.Run("access, entitlements list ending with keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo, self )")
+		// this will have to be rejected in the type checker
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.EntitlementAccess{
+				Entitlements: []*ast.NominalType{
+					{
+						Identifier: ast.Identifier{
+							Identifier: "foo",
+							Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+					},
+					{
+						Identifier: ast.Identifier{
+							Identifier: "self",
+							Pos:        ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("access, multiple entitlements no comma", func(t *testing.T) {
 
 		t.Parallel()
