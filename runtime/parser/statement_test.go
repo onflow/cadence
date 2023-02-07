@@ -2688,7 +2688,7 @@ func TestSoftKeywordsInStatement(t *testing.T) {
 		})
 	}
 
-	for keyword := range softKeywords {
+	for _, keyword := range softKeywords {
 		testSoftKeyword(keyword)
 	}
 }
