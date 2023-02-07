@@ -338,7 +338,11 @@ func (e *interpreterEnvironment) ParseAndCheckProgram(
 			return code, nil
 		},
 		getAndSetProgram,
-		importResolutionResults{},
+		importResolutionResults{
+			// Current program is already in check.
+			// So mark it also as 'already seen'.
+			location: true,
+		},
 	)
 }
 
