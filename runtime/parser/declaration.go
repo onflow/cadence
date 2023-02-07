@@ -709,7 +709,7 @@ func isNextTokenCommaOrFrom(p *parser) bool {
 	// Lookahead the next token
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
-		return string(p.currentTokenSource()) == KeywordFrom
+		return string(p.currentTokenSource()) == keywordFrom
 
 	case lexer.TokenComma:
 		return true
