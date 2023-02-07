@@ -509,10 +509,10 @@ func defineRestrictedOrDictionaryType() {
 		lexer.TokenBraceOpen,
 		func(p *parser, rightBindingPower int, left ast.Type) (result ast.Type, err error, done bool) {
 
-			// Start buffering before skipping the `{` token,
-			// so it can be replayed in case the
+			// Perform a lookahead
 
-			p.startBuffering()
+			current := p.current
+			cursor := p.tokens.Cursor()
 
 			// Skip the `{` token.
 			p.next()
@@ -521,8 +521,10 @@ func defineRestrictedOrDictionaryType() {
 			// The buffered tokens are replayed to allow them to be re-parsed.
 
 			if p.current.Is(lexer.TokenSpace) {
-				err = p.replayBuffered()
-				return left, err, true
+				p.current = current
+				p.tokens.Revert(cursor)
+
+				return left, nil, true
 			}
 
 			// It was determined that a restricted type is parsed.
@@ -530,11 +532,10 @@ func defineRestrictedOrDictionaryType() {
 			// was higher. In that case, replay the buffered tokens and stop.
 
 			if rightBindingPower >= typeLeftBindingPowerRestriction {
-				err = p.replayBuffered()
-				return left, err, true
+				p.current = current
+				p.tokens.Revert(cursor)
+				return left, nil, true
 			}
-
-			p.acceptBuffered()
 
 			nominalTypes, endPos, err := parseNominalTypes(p, lexer.TokenBraceClose)
 			if err != nil {

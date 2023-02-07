@@ -128,10 +128,30 @@ func newTestLedger(
 	return storage
 }
 
-func newTestInterpreterRuntime() Runtime {
-	return NewInterpreterRuntime(Config{
-		AtreeValidationEnabled: true,
-	})
+type testInterpreterRuntime struct {
+	*interpreterRuntime
+}
+
+var _ Runtime = testInterpreterRuntime{}
+
+func newTestInterpreterRuntime() testInterpreterRuntime {
+	return testInterpreterRuntime{
+		interpreterRuntime: NewInterpreterRuntime(Config{
+			AtreeValidationEnabled: true,
+		}).(*interpreterRuntime),
+	}
+}
+
+func (r testInterpreterRuntime) ExecuteTransaction(script Script, context Context) error {
+	i := context.Interface.(*testRuntimeInterface)
+	i.onTransactionExecutionStart()
+	return r.interpreterRuntime.ExecuteTransaction(script, context)
+}
+
+func (r testInterpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
+	i := context.Interface.(*testRuntimeInterface)
+	i.onScriptExecutionStart()
+	return r.interpreterRuntime.ExecuteScript(script, context)
 }
 
 type testRuntimeInterface struct {
@@ -201,6 +221,7 @@ type testRuntimeInterface struct {
 	computationUsed            func() (uint64, error)
 	memoryUsed                 func() (uint64, error)
 	interactionUsed            func() (uint64, error)
+	updatedContractCode        bool
 }
 
 // testRuntimeInterface should implement Interface
@@ -358,7 +379,15 @@ func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name s
 	if i.updateAccountContractCode == nil {
 		panic("must specify testRuntimeInterface.updateAccountContractCode")
 	}
-	return i.updateAccountContractCode(address, name, code)
+
+	err = i.updateAccountContractCode(address, name, code)
+	if err != nil {
+		return err
+	}
+
+	i.updatedContractCode = true
+
+	return nil
 }
 
 func (i *testRuntimeInterface) GetAccountContractCode(address Address, name string) (code []byte, err error) {
@@ -625,6 +654,23 @@ func (i *testRuntimeInterface) InteractionUsed() (uint64, error) {
 	}
 
 	return i.interactionUsed()
+}
+
+func (i *testRuntimeInterface) onTransactionExecutionStart() {
+	i.invalidateUpdatedPrograms()
+}
+
+func (i *testRuntimeInterface) onScriptExecutionStart() {
+	i.invalidateUpdatedPrograms()
+}
+
+func (i *testRuntimeInterface) invalidateUpdatedPrograms() {
+	if i.updatedContractCode {
+		for location := range i.programs {
+			delete(i.programs, location)
+		}
+		i.updatedContractCode = false
+	}
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -6198,6 +6244,16 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
         }
     `
 
+	const callHelloTransactionTemplate = `
+        import HelloWorld from 0x%s
+
+        transaction {
+            prepare(signer: AuthAccount) {
+                log(HelloWorld.hello())
+            }
+        }
+    `
+
 	createAccountTx := []byte(`
         transaction {
             prepare(signer: AuthAccount) {
@@ -6213,14 +6269,13 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
+	var loggedMessages []string
 
 	var accountCounter uint8 = 0
 
 	var signerAddresses []Address
 
 	var programHits []string
-
-	var codeChanged bool
 
 	runtimeInterface := &testRuntimeInterface{
 		createAccount: func(payer Address) (address Address, err error) {
@@ -6243,8 +6298,6 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			return accountCodes[location], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			codeChanged = true
-
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
@@ -6256,18 +6309,9 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			events = append(events, event)
 			return nil
 		},
-	}
-
-	// When code is changed, the parsed+checked programs have to be invalidated
-
-	clearProgramsIfNeeded := func() {
-		if !codeChanged {
-			return
-		}
-
-		for location := range runtimeInterface.programs {
-			delete(runtimeInterface.programs, location)
-		}
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -6294,8 +6338,6 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	signerAddresses = []Address{{accountCounter}}
 
-	codeChanged = false
-
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
@@ -6314,8 +6356,6 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	}
 
 	require.NotContains(t, runtimeInterface.programs, location)
-
-	clearProgramsIfNeeded()
 
 	// call the initial hello function
 
@@ -6343,7 +6383,6 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	// update the contract
 
 	programHits = nil
-	codeChanged = false
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -6366,9 +6405,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	)
 	require.NotNil(t, runtimeInterface.programs[location])
 
-	clearProgramsIfNeeded()
-
-	// call the new hello function
+	// call the new hello function from a script
 
 	result2, err := runtime.ExecuteScript(
 		Script{
@@ -6381,6 +6418,27 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, cadence.String("2"), result2)
+
+	// call the new hello function from a transaction
+
+	callTransaction := []byte(fmt.Sprintf(callHelloTransactionTemplate, Address{accountCounter}))
+
+	loggedMessages = nil
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: callTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t,
+		[]string{`"2"`},
+		loggedMessages,
+	)
 }
 
 func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
@@ -6635,8 +6693,6 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	var accountCode []byte
 	var events []cadence.Event
 
-	var codeChanged bool
-
 	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
 	runtimeInterface := &testRuntimeInterface{
@@ -6669,7 +6725,6 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 			return accountCode, nil
 		},
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
-			codeChanged = true
 			accountCode = code
 			return nil
 		},
@@ -6679,23 +6734,10 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 		},
 	}
 
-	// When code is changed, the parsed+checked programs have to be invalidated
-
-	clearProgramsIfNeeded := func() {
-		if !codeChanged {
-			return
-		}
-
-		for location := range runtimeInterface.programs {
-			delete(runtimeInterface.programs, location)
-		}
-	}
-
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	// Deploy the Test contract
 
-	codeChanged = false
 	deployTx1 := DeploymentTransaction("Test", []byte(contract1))
 
 	err := runtime.ExecuteTransaction(
@@ -6715,8 +6757,6 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	}
 
 	require.NotContains(t, runtimeInterface.programs, location)
-
-	clearProgramsIfNeeded()
 
 	// Use the Test contract
 
@@ -6758,8 +6798,6 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 	// Update the Test contract
 
-	codeChanged = false
-
 	deployTx2 := UpdateTransaction("Test", []byte(contract2))
 
 	err = runtime.ExecuteTransaction(
@@ -6781,8 +6819,6 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 		runtimeInterface.programs[location],
 	)
 	require.NotNil(t, runtimeInterface.programs[location])
-
-	clearProgramsIfNeeded()
 
 	// Use the new Test contract
 
@@ -6919,12 +6955,9 @@ func TestRuntimeGetConfig(t *testing.T) {
 	t.Parallel()
 
 	rt := newTestInterpreterRuntime()
-	// depends on newTestInterpreterRuntime using the interpreterRuntime struct
-	underlying, ok := rt.(*interpreterRuntime)
-	require.True(t, ok)
 
 	config := rt.Config()
-	expected := underlying.defaultConfig
+	expected := rt.defaultConfig
 	require.Equal(t, expected, config)
 }
 
