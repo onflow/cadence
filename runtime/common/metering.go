@@ -156,27 +156,29 @@ var (
 
 	// Static Types
 
-	PrimitiveStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
-	CompositeStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
-	InterfaceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
-	VariableSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
-	ConstantSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
-	DictionaryStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
-	OptionalStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
-	RestrictedStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
-	ReferenceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
-	CapabilityStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
-	FunctionStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
+	PrimitiveStaticTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
+	CompositeStaticTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
+	InterfaceStaticTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
+	VariableSizedStaticTypeMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
+	ConstantSizedStaticTypeMemoryUsage        = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
+	DictionaryStaticTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
+	OptionalStaticTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
+	RestrictedStaticTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
+	ReferenceStaticTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
+	CapabilityStaticTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
+	FunctionStaticTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
+	CapabilityControllerStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCapabilityControllerStaticType)
 
 	// Sema types
 
-	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
-	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
-	DictionarySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
-	OptionalSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
-	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
-	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
-	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+	VariableSizedSemaTypeMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
+	ConstantSizedSemaTypeMemoryUsage        = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
+	DictionarySemaTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	OptionalSemaTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
+	RestrictedSemaTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
+	ReferenceSemaTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
+	CapabilitySemaTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+	CapabilityControllerSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCapabilityControllerSemaType)
 
 	// Storage related memory usages
 
@@ -248,6 +250,7 @@ var (
 	PublicAccountKeysStringMemoryUsage      = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
 	AuthAccountInboxStringMemoryUsage       = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
 	StorageCapabilityValueStringMemoryUsage = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
+	CapabilityControllerStringMemoryUsage   = NewRawStringMemoryUsage(len("CapabilityController(borrowType: )"))
 	PathLinkValueStringMemoryUsage          = NewRawStringMemoryUsage(len("PathLink<>()"))
 	PublishedValueStringMemoryUsage         = NewRawStringMemoryUsage(len("PublishedValue<>()"))
 

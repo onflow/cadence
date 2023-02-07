@@ -35,3 +35,15 @@ func StorageCapability(borrowType string, address string, path string) string {
 		path,
 	)
 }
+
+func CapabilityController(borrowType string) string {
+	var typeArgument string
+	if borrowType != "" {
+		typeArgument = fmt.Sprintf("<%s>", borrowType)
+	}
+
+	return fmt.Sprintf(
+		"CapabilityController(borrowType: %s)",
+		typeArgument,
+	)
+}

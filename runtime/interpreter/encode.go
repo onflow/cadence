@@ -218,6 +218,7 @@ const (
 	CBORTagReferenceStaticType
 	CBORTagRestrictedStaticType
 	CBORTagCapabilityStaticType
+	CBORTagCapabilityControllerStaticType
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -1383,6 +1384,24 @@ func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
 	return NonStorableStaticTypeError{
 		Type: t.Type,
 	}
+}
+
+// Encode encodes CapabilityControllerStaticType as
+//
+//	cbor.Tag{
+//			Number: CBORTagCapabilityControllerStaticType,
+//			Content: StaticType(v.BorrowType)
+//	}
+func (t CapabilityControllerStaticType) Encode(e *cbor.StreamEncoder) error {
+	err := e.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagCapabilityControllerStaticType,
+	})
+	if err != nil {
+		return err
+	}
+
+	return EncodeStaticType(e, t.BorrowType)
 }
 
 // compositeTypeInfo

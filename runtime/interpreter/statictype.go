@@ -945,3 +945,39 @@ func (p TypeParameter) String() string {
 	}
 	return builder.String()
 }
+
+type CapabilityControllerStaticType struct {
+	BorrowType StaticType
+}
+
+func NewCapabilityControllerStaticType(gauge common.MemoryGauge, borrowType StaticType) CapabilityControllerStaticType {
+	common.UseMemory(gauge, common.CapabilityControllerStaticTypeMemoryUsage)
+
+	return CapabilityControllerStaticType{
+		BorrowType: borrowType,
+	}
+}
+
+var _ StaticType = &CapabilityControllerStaticType{}
+
+func (t CapabilityControllerStaticType) String() string {
+	panic("not implemented") // TODO: Implement
+}
+
+func (t CapabilityControllerStaticType) isStaticType() {}
+
+/*
+	 this returns the size (in bytes) of the largest inhabitant of this type,
+		or UnknownElementSize if the largest inhabitant has arbitrary size
+*/
+func (t CapabilityControllerStaticType) elementSize() uint {
+	panic("not implemented") // TODO: Implement
+}
+
+func (t CapabilityControllerStaticType) Equal(other StaticType) bool {
+	panic("not implemented") // TODO: Implement
+}
+
+func (t CapabilityControllerStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	panic("not implemented") // TODO: Implement
+}

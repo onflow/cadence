@@ -51,6 +51,7 @@ const (
 	MemoryKindBigInt
 	MemoryKindSimpleCompositeValue
 	MemoryKindPublishedValue
+	MemoryKindCapabilityControllerValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
@@ -74,6 +75,7 @@ const (
 	MemoryKindReferenceStaticType
 	MemoryKindCapabilityStaticType
 	MemoryKindFunctionStaticType
+	MemoryKindCapabilityControllerStaticType
 
 	// Cadence Values
 	MemoryKindCadenceVoidValue
@@ -237,6 +239,7 @@ const (
 	MemoryKindRestrictedSemaType
 	MemoryKindReferenceSemaType
 	MemoryKindCapabilitySemaType
+	MemoryKindCapabilityControllerSemaType
 
 	// ordered-map
 	MemoryKindOrderedMap
