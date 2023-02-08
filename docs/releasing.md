@@ -35,7 +35,7 @@ The workflow also uploads the checking results as artifacts, which can be downlo
 ### Releasing
 
 Releasing a new version of Cadence can be easily done by using the [Release GitHub action](https://github.com/onflow/cadence/actions/workflows/release.yml)
-Run the workflow by providing `0.21.2` (note the version is without `v`) as the `Release version` and `master` as the
+Run the workflow by providing `v0.21.2` as the `Release version` and `master` as the
 `Base branch`.
 
 <img src="images/release_action.png" width="800"/>
