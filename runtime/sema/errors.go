@@ -262,26 +262,26 @@ func (e *AssignmentToConstantError) SecondaryError() string {
 
 // TypeMismatchError
 
-type TypeMismatchError struct {
+type TypeMismatchErrorNew struct {
 	ExpectedType Type
 	ActualType   Type
 	Expression   ast.Expression
 	ast.Range
 }
 
-var _ SemanticError = &TypeMismatchError{}
-var _ errors.UserError = &TypeMismatchError{}
-var _ errors.SecondaryError = &TypeMismatchError{}
+var _ SemanticError = &TypeMismatchErrorNew{}
+var _ errors.UserError = &TypeMismatchErrorNew{}
+var _ errors.SecondaryError = &TypeMismatchErrorNew{}
 
-func (*TypeMismatchError) isSemanticError() {}
+func (*TypeMismatchErrorNew) isSemanticError() {}
 
-func (*TypeMismatchError) IsUserError() {}
+func (*TypeMismatchErrorNew) IsUserError() {}
 
-func (e *TypeMismatchError) Error() string {
+func (e *TypeMismatchErrorNew) Error() string {
 	return "mismatched types"
 }
 
-func (e *TypeMismatchError) SecondaryError() string {
+func (e *TypeMismatchErrorNew) SecondaryError() string {
 	expected, actual := ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,

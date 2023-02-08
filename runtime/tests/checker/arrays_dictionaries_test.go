@@ -65,13 +65,13 @@ func TestCheckInvalidDictionaryTypeKey(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+	typeMismatchError := errs[0].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, sema.IntType, typeMismatchError.ExpectedType)
 	assert.Equal(t, sema.StringType, typeMismatchError.ActualType)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-	typeMismatchError = errs[1].(*sema.TypeMismatchError)
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
+	typeMismatchError = errs[1].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, sema.IntType, typeMismatchError.ExpectedType)
 	assert.Equal(t, sema.StringType, typeMismatchError.ActualType)
 }
@@ -86,13 +86,13 @@ func TestCheckInvalidDictionaryTypeValue(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	typeMisMatchError := errs[0].(*sema.TypeMismatchError)
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+	typeMisMatchError := errs[0].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, sema.StringType, typeMisMatchError.ExpectedType)
 	assert.Equal(t, sema.IntType, typeMisMatchError.ActualType)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-	typeMisMatchError = errs[1].(*sema.TypeMismatchError)
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
+	typeMisMatchError = errs[1].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, sema.StringType, typeMisMatchError.ExpectedType)
 	assert.Equal(t, sema.IntType, typeMisMatchError.ActualType)
 }
@@ -107,23 +107,23 @@ func TestCheckInvalidDictionaryTypeSwapped(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 4)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	typeMisMatchError := errs[0].(*sema.TypeMismatchError)
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+	typeMisMatchError := errs[0].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, sema.IntType, typeMisMatchError.ExpectedType)
 	assert.Equal(t, sema.StringType, typeMisMatchError.ActualType)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-	typeMisMatchError = errs[1].(*sema.TypeMismatchError)
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
+	typeMisMatchError = errs[1].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, sema.StringType, typeMisMatchError.ExpectedType)
 	assert.Equal(t, sema.IntType, typeMisMatchError.ActualType)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
-	typeMisMatchError = errs[2].(*sema.TypeMismatchError)
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
+	typeMisMatchError = errs[2].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, sema.IntType, typeMisMatchError.ExpectedType)
 	assert.Equal(t, sema.StringType, typeMisMatchError.ActualType)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
-	typeMisMatchError = errs[3].(*sema.TypeMismatchError)
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[3])
+	typeMisMatchError = errs[3].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, sema.StringType, typeMisMatchError.ExpectedType)
 	assert.Equal(t, sema.IntType, typeMisMatchError.ActualType)
 }
@@ -185,8 +185,8 @@ func TestCheckInvalidDictionaryIndexing(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+	typeMismatchError := errs[0].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, sema.StringType, typeMismatchError.ExpectedType)
 	assert.Equal(t, sema.BoolType, typeMismatchError.ActualType)
 }
@@ -218,7 +218,7 @@ func TestCheckInvalidDictionaryIndexingAssignment(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckDictionaryRemove(t *testing.T) {
@@ -248,7 +248,7 @@ func TestCheckInvalidDictionaryRemove(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckDictionaryInsert(t *testing.T) {
@@ -278,7 +278,7 @@ func TestCheckInvalidDictionaryInsert(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckDictionaryKeys(t *testing.T) {
@@ -358,7 +358,7 @@ func TestCheckInvalidArrayAppend(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckArrayAppendBound(t *testing.T) {
@@ -425,7 +425,7 @@ func TestCheckInvalidArrayAppendAll(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 
 	_, err = ParseAndCheck(t, `
 	  fun test(): [Int] {
@@ -438,7 +438,7 @@ func TestCheckInvalidArrayAppendAll(t *testing.T) {
 
 	errs = RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidArrayAppendAllOnConstantSize(t *testing.T) {
@@ -590,7 +590,7 @@ func TestCheckInvalidArrayConcat(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidArrayConcatOfConstantSized(t *testing.T) {
@@ -704,7 +704,7 @@ func TestCheckInvalidArrayInsert(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidArrayInsertIntoConstantSized(t *testing.T) {
@@ -753,7 +753,7 @@ func TestCheckInvalidArrayRemove(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidArrayRemoveFromConstantSized(t *testing.T) {
@@ -894,7 +894,7 @@ func TestCheckArrayFirstIndexWrongType(t *testing.T) {
       }
     `)
 	errs := RequireCheckerErrors(t, err, 1)
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidResourceFirstIndex(t *testing.T) {
@@ -944,7 +944,7 @@ func TestCheckInvalidArrayContains(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidArrayContainsNotEquatable(t *testing.T) {
@@ -1014,7 +1014,7 @@ func TestCheckInvalidDictionaryContainsKey(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckEmptyDictionary(t *testing.T) {
@@ -1092,7 +1092,7 @@ func TestCheckInvalidArraySubtyping(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckDictionarySubtyping(t *testing.T) {
@@ -1147,7 +1147,7 @@ func TestCheckInvalidDictionarySubtyping(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckConstantSizedArrayDeclaration(t *testing.T) {

@@ -1078,8 +1078,8 @@ func TestCheckInvalidCompositeFieldAssignmentWrongType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 2)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 		})
 	}
 }
@@ -1205,7 +1205,7 @@ func TestCheckInvalidCompositeFunctionAssignment(t *testing.T) {
 				errs[0].(*sema.AssignmentToConstantMemberError).Name,
 			)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 		})
 	}
 }
@@ -1432,7 +1432,7 @@ func TestCheckInvalidIncompatibleSameCompositeTypes(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 		}
 	}

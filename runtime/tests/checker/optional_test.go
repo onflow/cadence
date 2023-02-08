@@ -50,7 +50,7 @@ func TestCheckInvalidOptional(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckOptionalNesting(t *testing.T) {
@@ -109,7 +109,7 @@ func TestCheckInvalidNonOptionalNil(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckNilsComparison(t *testing.T) {
@@ -370,7 +370,7 @@ func TestCheckInvalidNonOptionalReturn(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidOptionalIntegerConversion(t *testing.T) {
@@ -384,7 +384,7 @@ func TestCheckInvalidOptionalIntegerConversion(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckOptionalMap(t *testing.T) {
@@ -432,7 +432,7 @@ func TestCheckOptionalMap(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("invalid return type", func(t *testing.T) {
@@ -448,6 +448,6 @@ func TestCheckOptionalMap(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 }

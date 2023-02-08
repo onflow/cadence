@@ -2490,7 +2490,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 	}
 
 	if !IsSubType(ty, p.TypeBound) {
-		return &TypeMismatchError{
+		return &TypeMismatchErrorNew{
 			ExpectedType: p.TypeBound,
 			ActualType:   ty,
 			Range:        typeRange,

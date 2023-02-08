@@ -678,7 +678,7 @@ func (checker *Checker) checkInvocationArgumentParameterTypeCompatibility(
 	if !checker.checkTypeCompatibility(argument, argumentType, parameterType) {
 
 		checker.report(
-			&TypeMismatchError{
+			&TypeMismatchErrorNew{
 				ExpectedType: parameterType,
 				ActualType:   argumentType,
 				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, argument),

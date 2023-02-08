@@ -63,7 +63,7 @@ func TestCheckOptionalTypeConstructor(t *testing.T) {
 			code: `
               let result = OptionalType(3)
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "too many args",
@@ -135,7 +135,7 @@ func TestCheckVariableSizedArrayTypeConstructor(t *testing.T) {
 			code: `
               let result = VariableSizedArrayType(3)
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "too many args",
@@ -207,14 +207,14 @@ func TestCheckConstantSizedArrayTypeConstructor(t *testing.T) {
 			code: `
               let result = ConstantSizedArrayType(type: 3, size: 4)
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "type mismatch second arg",
 			code: `
               let result = ConstantSizedArrayType(type: Type<Int>(), size: "")
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "too many args",
@@ -308,14 +308,14 @@ func TestCheckDictionaryTypeConstructor(t *testing.T) {
 			code: `
               let result = DictionaryType(key: 3, value: Type<String>())
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "type mismatch second arg",
 			code: `
 			let result = DictionaryType(key: Type<String>(), value: "")
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "too many args",
@@ -393,7 +393,7 @@ func TestCheckCompositeTypeConstructor(t *testing.T) {
 			code: `
               let result = CompositeType(3)
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "too many args",
@@ -450,7 +450,7 @@ func TestCheckInterfaceTypeConstructor(t *testing.T) {
 			code: `
               let result = InterfaceType(3)
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "too many args",
@@ -514,21 +514,21 @@ func TestCheckFunctionTypeConstructor(t *testing.T) {
 			code: `
               let result = FunctionType(parameters: Type<String>(), return: Type<String>())
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "type mismatch nested first arg",
 			code: `
               let result = FunctionType(parameters: [Type<String>(), 3], return: Type<String>())
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "type mismatch second arg",
 			code: `
               let result = FunctionType(parameters: [Type<String>(), Type<Int>()], return: "")
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "too many args",
@@ -614,14 +614,14 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 			code: `
               let result = ReferenceType(authorized: "", type: Type<Int>())
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "type mismatch second arg",
 			code: `
               let result = ReferenceType(authorized: true, type: "")
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "too many args",
@@ -717,14 +717,14 @@ func TestCheckRestrictedTypeConstructor(t *testing.T) {
 			code: `
               let result = RestrictedType(identifier: 3, restrictions: ["I"])
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "type mismatch second arg",
 			code: `
               let result = RestrictedType(identifier: "A", restrictions: [3])
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "too many args",
@@ -817,7 +817,7 @@ func TestCheckCapabilityTypeConstructor(t *testing.T) {
 			code: `
               let result = CapabilityType(3)
             `,
-			expectedError: &sema.TypeMismatchError{},
+			expectedError: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "too many args",

@@ -807,7 +807,7 @@ func TestCheckDynamicCastingStructInterface(t *testing.T) {
 					if fromType == "S" {
 						errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 					} else {
 						require.NoError(t, err)
 					}
@@ -969,7 +969,7 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 				if fromType == "R" {
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				} else {
 					require.NoError(t, err)
 				}
@@ -999,7 +999,7 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 				if fromType == "R" {
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				} else {
 					require.NoError(t, err)
 				}

@@ -52,7 +52,7 @@ func TestCheckInvalidConditionalExpressionTest(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidConditionalExpressionElse(t *testing.T) {
@@ -83,8 +83,8 @@ func TestCheckInvalidConditionalExpressionElse(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		typeMismatchError := errs[0].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		typeMismatchError := errs[0].(*sema.TypeMismatchErrorNew)
 
 		assert.Equal(t, sema.Int8Type, typeMismatchError.ExpectedType)
 		assert.Equal(t, sema.StringType, typeMismatchError.ActualType)

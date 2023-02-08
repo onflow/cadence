@@ -433,8 +433,8 @@ func TestCheckInvalidTransactionSelfMoveReturnFromFunction(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+	require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+	typeMismatchErr := errs[0].(*sema.TypeMismatchErrorNew)
 
 	assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
 	assert.IsType(t, &sema.TransactionType{}, typeMismatchErr.ActualType)

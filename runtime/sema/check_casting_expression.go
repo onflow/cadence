@@ -122,7 +122,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 			if !FailableCastCanSucceed(leftHandType, rightHandType) {
 
 				checker.report(
-					&TypeMismatchError{
+					&TypeMismatchErrorNew{
 						ActualType:   leftHandType,
 						ExpectedType: rightHandType,
 						Range:        ast.NewRangeFromPositioned(checker.memoryGauge, leftHandExpression),

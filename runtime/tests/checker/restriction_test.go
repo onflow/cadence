@@ -238,7 +238,7 @@ func TestCheckRestrictedType(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 	})
 
 	t.Run("struct: non-concrete restricted type", func(t *testing.T) {
@@ -256,7 +256,7 @@ func TestCheckRestrictedType(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 	})
 
 	t.Run("restricted resource interface ", func(t *testing.T) {
@@ -627,7 +627,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("struct type to restricted type with different restricted type", func(t *testing.T) {
@@ -643,7 +643,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("restricted resource type to restricted type with same type, no restrictions", func(t *testing.T) {

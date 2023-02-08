@@ -51,8 +51,8 @@ func TestCheckInvalidAnyStructResourceType(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 }
 
 func TestCheckAnyResource(t *testing.T) {
@@ -81,6 +81,6 @@ func TestCheckInvalidAnyResourceNonResourceType(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[1])
 }

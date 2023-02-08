@@ -110,7 +110,7 @@ func TestCheckTypeArguments(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("capability, instantiation with two arguments", func(t *testing.T) {
@@ -243,7 +243,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("Capability<&String> is not a subtype of Capability<&Int>", func(t *testing.T) {
@@ -283,6 +283,6 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 }

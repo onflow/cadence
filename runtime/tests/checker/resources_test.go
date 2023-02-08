@@ -1421,7 +1421,7 @@ func TestCheckInvalidUnaryCreateAndDestroyWithWrongInitializerArguments(t *testi
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[1])
 }
 

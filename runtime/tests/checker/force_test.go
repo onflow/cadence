@@ -96,8 +96,8 @@ func TestCheckForce(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		typeMismatchError := errs[0].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		typeMismatchError := errs[0].(*sema.TypeMismatchErrorNew)
 
 		expected := &sema.OptionalType{Type: sema.StringType}
 		assert.Equal(t, expected, typeMismatchError.ExpectedType)
@@ -115,8 +115,8 @@ func TestCheckForce(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		typeMismatchError := errs[0].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		typeMismatchError := errs[0].(*sema.TypeMismatchErrorNew)
 
 		expectedType := &sema.OptionalType{Type: sema.StringType}
 		assert.Equal(t, expectedType, typeMismatchError.ExpectedType)

@@ -276,8 +276,8 @@ func TestCheckDictionaryTypeInference(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		typeMismatchErr := errs[0].(*sema.TypeMismatchErrorNew)
 
 		assert.Equal(t, sema.Int8Type, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.StringType, typeMismatchErr.ActualType)
@@ -311,8 +311,8 @@ func TestCheckReturnTypeInference(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		typeMismatchErr := errs[0].(*sema.TypeMismatchErrorNew)
 
 		assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.IntType, typeMismatchErr.ActualType)
@@ -388,8 +388,8 @@ func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 			typeParamMismatchErr.ActualType,
 		)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		typeMismatchErr := errs[1].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
+		typeMismatchErr := errs[1].(*sema.TypeMismatchErrorNew)
 
 		assert.Equal(
 			t,
@@ -711,8 +711,8 @@ func TestCastExpressionTypeInference(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		typeMismatchErr := errs[0].(*sema.TypeMismatchErrorNew)
 
 		assert.Equal(t, sema.Int8Type, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.StringType, typeMismatchErr.ActualType)
@@ -733,8 +733,8 @@ func TestCheckVoidTypeInference(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		typeMismatchErr := errs[0].(*sema.TypeMismatchErrorNew)
 
 		assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.IntType, typeMismatchErr.ActualType)

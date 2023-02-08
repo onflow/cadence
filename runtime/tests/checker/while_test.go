@@ -38,7 +38,7 @@ func TestCheckInvalidWhileTest(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckWhileTest(t *testing.T) {

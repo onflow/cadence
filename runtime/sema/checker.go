@@ -2254,7 +2254,7 @@ func (checker *Checker) visitExpressionWithForceType(
 		!IsSubType(actualType, expectedType) {
 
 		checker.report(
-			&TypeMismatchError{
+			&TypeMismatchErrorNew{
 				ExpectedType: expectedType,
 				ActualType:   actualType,
 				Expression:   expr,

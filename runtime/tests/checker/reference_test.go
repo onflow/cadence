@@ -435,7 +435,7 @@ func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("resource / struct", func(t *testing.T) {
@@ -452,7 +452,7 @@ func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 }
 
@@ -470,7 +470,7 @@ func TestCheckInvalidReferenceExpressionDifferentStructs(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidReferenceExpressionTypeMismatchDifferentResources(t *testing.T) {
@@ -487,7 +487,7 @@ func TestCheckInvalidReferenceExpressionTypeMismatchDifferentResources(t *testin
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckReferenceResourceArrayIndexing(t *testing.T) {
@@ -967,7 +967,7 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -983,7 +983,7 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("non-composite", func(t *testing.T) {
@@ -997,7 +997,7 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("as optional", func(t *testing.T) {
@@ -1045,7 +1045,7 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("upcast to optional", func(t *testing.T) {
@@ -1144,9 +1144,9 @@ func TestCheckInvalidDictionaryAccessReference(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 
-	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	typeMismatchError := errs[0].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, 17, typeMismatchError.StartPos.Column)
 	assert.Equal(t, 21, typeMismatchError.EndPos.Column)
 }
@@ -1162,9 +1162,9 @@ func TestCheckDictionaryAccessReferenceIsOptional(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 
-	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	typeMismatchError := errs[0].(*sema.TypeMismatchErrorNew)
 	assert.Equal(t, 21, typeMismatchError.StartPos.Column)
 	assert.Equal(t, 35, typeMismatchError.EndPos.Column)
 }
@@ -1207,7 +1207,7 @@ func TestCheckInvalidDictionaryAccessNonOptionalReference(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckArrayAccessReference(t *testing.T) {
@@ -1276,6 +1276,6 @@ func TestCheckReferenceTypeImplicitConformance(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 }

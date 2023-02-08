@@ -67,7 +67,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		if !isOptional || optionalType.Equal(declarationType) {
 			if !valueType.IsInvalidType() {
 				checker.report(
-					&TypeMismatchError{
+					&TypeMismatchErrorNew{
 						ExpectedType: &OptionalType{},
 						ActualType:   valueType,
 						Range:        ast.NewRangeFromPositioned(checker.memoryGauge, declaration.Value),

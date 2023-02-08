@@ -73,7 +73,7 @@ func TestCheckInvalidCastingIntLiteralToString(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckCastingIntLiteralToAnyStruct(t *testing.T) {
@@ -253,7 +253,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -274,7 +274,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -346,7 +346,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -367,7 +367,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -392,7 +392,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -436,7 +436,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -478,9 +478,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 3)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -502,7 +502,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			errs := RequireCheckerErrors(t, err, 3)
 
 			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[0])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[2])
 
 		})
@@ -578,7 +578,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -599,7 +599,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -624,7 +624,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -666,8 +666,8 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 2)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -688,7 +688,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -711,7 +711,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -756,7 +756,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -777,7 +777,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 	})
@@ -957,7 +957,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -978,7 +978,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -1045,7 +1045,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1089,7 +1089,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1131,7 +1131,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1398,7 +1398,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1412,7 +1412,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -1477,7 +1477,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1491,7 +1491,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -1516,7 +1516,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1553,7 +1553,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1588,9 +1588,9 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 3)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1604,7 +1604,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 2)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
 		})
 	})
@@ -1672,7 +1672,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1686,7 +1686,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -1711,7 +1711,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1746,8 +1746,8 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 2)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1761,7 +1761,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -1784,7 +1784,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1822,7 +1822,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -1836,7 +1836,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 	})
@@ -1995,7 +1995,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -2009,7 +2009,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -2069,7 +2069,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -2106,7 +2106,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -2141,7 +2141,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -2309,7 +2309,7 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 		}
 
@@ -2371,7 +2371,7 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 		}
 
@@ -2425,7 +2425,7 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 		}
 
@@ -2540,7 +2540,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -2553,7 +2553,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -2614,7 +2614,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -2627,7 +2627,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -2661,7 +2661,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -2699,7 +2699,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -2737,9 +2737,9 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 3)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -2752,7 +2752,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 2)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
 			})
 		})
@@ -2817,7 +2817,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -2830,7 +2830,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -2865,7 +2865,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -2904,8 +2904,8 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 2)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -2918,7 +2918,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 		})
 
@@ -2946,7 +2946,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -2988,7 +2988,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -3004,7 +3004,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 		})
 
@@ -3156,7 +3156,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -3172,7 +3172,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 		})
 
@@ -3212,7 +3212,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 						errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 
 						return
 					}
@@ -3264,7 +3264,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run("dynamic", func(t *testing.T) {
@@ -3311,7 +3311,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run("dynamic", func(t *testing.T) {
@@ -3356,7 +3356,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run("dynamic", func(t *testing.T) {
@@ -3454,7 +3454,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 						errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 
 						return
 					}
@@ -3624,7 +3624,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -3637,7 +3637,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -3699,7 +3699,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -3712,7 +3712,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -3746,7 +3746,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -3785,7 +3785,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -3824,9 +3824,9 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 3)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -3839,7 +3839,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 2)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
 			})
 		})
@@ -3904,7 +3904,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("dynamic", func(t *testing.T) {
@@ -3917,7 +3917,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 
@@ -3952,7 +3952,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -3991,8 +3991,8 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 2)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -4005,7 +4005,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 		})
 
@@ -4033,7 +4033,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -4075,7 +4075,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -4091,7 +4091,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 		})
 
@@ -4243,7 +4243,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("dynamic", func(t *testing.T) {
@@ -4259,7 +4259,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 		})
 
@@ -4299,7 +4299,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 						errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 
 						return
 					}
@@ -4351,7 +4351,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run("dynamic", func(t *testing.T) {
@@ -4398,7 +4398,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run("dynamic", func(t *testing.T) {
@@ -4443,7 +4443,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run("dynamic", func(t *testing.T) {
@@ -4651,7 +4651,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
@@ -4675,7 +4675,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
@@ -4719,7 +4719,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			for _, ty := range []sema.Type{
@@ -4747,7 +4747,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run(fmt.Sprintf("%s -> conforming restricted type", ty), func(t *testing.T) {
@@ -4770,7 +4770,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run(fmt.Sprintf("restricted %s -> non-conforming restricted type", ty), func(t *testing.T) {
@@ -4793,9 +4793,9 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 3)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 					assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
 				})
 			}
 
@@ -4820,7 +4820,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
@@ -4844,7 +4844,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			for _, ty := range []sema.Type{
@@ -4872,7 +4872,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run(fmt.Sprintf("restricted %s -> non-conforming resource", ty), func(t *testing.T) {
@@ -4895,8 +4895,8 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 2)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 				})
 
 				t.Run(fmt.Sprintf("%s -> unrestricted type", ty), func(t *testing.T) {
@@ -4919,7 +4919,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				// Supertype: restricted AnyResource / Any
@@ -4945,7 +4945,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run(fmt.Sprintf("resource -> restricted %s with conformance restriction", ty), func(t *testing.T) {
@@ -5012,7 +5012,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run(fmt.Sprintf("restricted type -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
@@ -5037,7 +5037,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 
 				})
 
@@ -5071,7 +5071,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 							errs := RequireCheckerErrors(t, err, 1)
 
-							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 
 							return
 						}
@@ -5102,7 +5102,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 						errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 					})
 
 					t.Run(fmt.Sprintf("restricted %s -> restricted %s with non-conformance restriction", ty, otherType), func(t *testing.T) {
@@ -5128,7 +5128,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 						errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 					})
 
 					t.Run(fmt.Sprintf("%s -> restricted %s", ty, otherType), func(t *testing.T) {
@@ -5152,7 +5152,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 						errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 					})
 
 					// Supertype: AnyResource / Any
@@ -5182,7 +5182,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 							errs := RequireCheckerErrors(t, err, 1)
 
-							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 
 							return
 						}
@@ -5298,7 +5298,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
@@ -5322,7 +5322,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
@@ -5366,7 +5366,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			for _, ty := range []sema.Type{
@@ -5394,7 +5394,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run(fmt.Sprintf("%s -> conforming restricted type", ty), func(t *testing.T) {
@@ -5417,7 +5417,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run(fmt.Sprintf("restricted %s -> non-conforming restricted type", ty), func(t *testing.T) {
@@ -5440,9 +5440,9 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 3)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 					assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
 				})
 			}
 
@@ -5467,7 +5467,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
@@ -5491,7 +5491,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 			})
 
 			for _, ty := range []sema.Type{
@@ -5519,7 +5519,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run(fmt.Sprintf("restricted %s -> non-conforming resource", ty), func(t *testing.T) {
@@ -5542,8 +5542,8 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 2)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 				})
 
 				t.Run(fmt.Sprintf("%s -> unrestricted type", ty), func(t *testing.T) {
@@ -5566,7 +5566,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				// Supertype: restricted AnyStruct / Any
@@ -5592,7 +5592,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run(fmt.Sprintf("resource -> restricted %s with conformance restriction", ty), func(t *testing.T) {
@@ -5659,7 +5659,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				t.Run(fmt.Sprintf("restricted type -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
@@ -5684,7 +5684,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 				})
 
 				for _, otherType := range []sema.Type{
@@ -5717,7 +5717,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 							errs := RequireCheckerErrors(t, err, 1)
 
-							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 
 							return
 						}
@@ -5748,7 +5748,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 						errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 					})
 
 					t.Run(fmt.Sprintf("restricted %s -> restricted %s with non-conformance restriction", ty, otherType), func(t *testing.T) {
@@ -5774,7 +5774,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 						errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 					})
 
 					t.Run(fmt.Sprintf("%s -> restricted %s", ty, otherType), func(t *testing.T) {
@@ -5798,7 +5798,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 						errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 					})
 
 					// Supertype: AnyStruct / Any
@@ -5905,7 +5905,7 @@ func TestCheckResourceConstructorCast(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckResourceConstructorReturn(t *testing.T) {
@@ -5924,7 +5924,7 @@ func TestCheckResourceConstructorReturn(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckStaticCastElaboration(t *testing.T) {
@@ -6267,9 +6267,9 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 3)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 0)
 		})
@@ -6329,9 +6329,9 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 3)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
 
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 0)
 		})

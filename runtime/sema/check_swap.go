@@ -44,7 +44,7 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 	// i.e: The two types have to be equal.
 	if lhsValid && rhsValid && !leftType.Equal(rightType) {
 		checker.report(
-			&TypeMismatchError{
+			&TypeMismatchErrorNew{
 				ExpectedType: leftType,
 				ActualType:   rightType,
 				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, swap.Right),

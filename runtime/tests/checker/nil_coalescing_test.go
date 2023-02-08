@@ -75,7 +75,7 @@ func TestCheckInvalidNilCoalescingMismatch(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckNilCoalescingRightSubtype(t *testing.T) {
@@ -114,7 +114,7 @@ func TestCheckInvalidNilCoalescingOptionalsInt(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckNilCoalescingNilLiteralInt(t *testing.T) {
@@ -139,7 +139,7 @@ func TestCheckInvalidNilCoalescingMismatchNonOptional(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidNilCoalescingRightSubtype(t *testing.T) {
@@ -152,7 +152,7 @@ func TestCheckInvalidNilCoalescingRightSubtype(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckInvalidNilCoalescingNonMatchingTypes(t *testing.T) {

@@ -92,8 +92,8 @@ func TestCheckInvalidFunctionNonBoolCondition(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 }
 
 func TestCheckFunctionPostConditionWithBefore(t *testing.T) {
@@ -408,7 +408,7 @@ func TestCheckInvalidFunctionPostConditionWithMessageUsingBooleanLiteral(t *test
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 }
 
 func TestCheckFunctionPostConditionWithMessageUsingResult(t *testing.T) {
@@ -494,7 +494,7 @@ func TestCheckFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 2)
 
 	require.IsType(t, &sema.InvalidMoveOperationError{}, errs[0])
-	require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 }
 
 // TestCheckConditionCreateBefore tests if the AST expression extractor properly handles

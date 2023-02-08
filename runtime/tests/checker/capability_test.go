@@ -244,7 +244,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("struct", func(t *testing.T) {
@@ -260,7 +260,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 }
@@ -414,7 +414,7 @@ func TestCheckCapability_check(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 
 		t.Run("struct", func(t *testing.T) {
@@ -430,7 +430,7 @@ func TestCheckCapability_check(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			require.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 		})
 	})
 }

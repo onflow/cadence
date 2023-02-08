@@ -113,14 +113,14 @@ func TestCheckIsInstance(t *testing.T) {
 			code: `
               let result = (1).isInstance(3)
             `,
-			expectedErrorType: &sema.TypeMismatchError{},
+			expectedErrorType: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "nil is not a type",
 			code: `
               let result = (1).isInstance(nil)
             `,
-			expectedErrorType: &sema.TypeMismatchError{},
+			expectedErrorType: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "argument label",
@@ -202,7 +202,7 @@ func TestCheckIsSubtype(t *testing.T) {
 			code: `
               let result = Type<Int>().isSubtype(of: 3)
             `,
-			expectedErrorType: &sema.TypeMismatchError{},
+			expectedErrorType: &sema.TypeMismatchErrorNew{},
 		},
 		{
 			name: "isSubtype must take an argument",

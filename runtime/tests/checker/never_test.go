@@ -58,8 +58,8 @@ func TestCheckNever(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
-		typeMismatchErr := errors[0].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errors[0])
+		typeMismatchErr := errors[0].(*sema.TypeMismatchErrorNew)
 
 		assert.Equal(t, sema.NeverType, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.IntType, typeMismatchErr.ActualType)
@@ -78,8 +78,8 @@ func TestCheckNever(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
-		typeMismatchErr := errors[0].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errors[0])
+		typeMismatchErr := errors[0].(*sema.TypeMismatchErrorNew)
 
 		assert.Equal(t, sema.NeverType, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.StringType, typeMismatchErr.ActualType)
@@ -98,8 +98,8 @@ func TestCheckNever(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
-		typeMismatchErr := errors[0].(*sema.TypeMismatchError)
+		require.IsType(t, &sema.TypeMismatchErrorNew{}, errors[0])
+		typeMismatchErr := errors[0].(*sema.TypeMismatchErrorNew)
 
 		assert.Equal(t, sema.NeverType, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.StringType, typeMismatchErr.ActualType)

@@ -249,7 +249,7 @@ func TestTestNewMatcher(t *testing.T) {
 		_, err := newTestContractInterpreter(t, script)
 
 		errs := checker.RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("custom matcher with explicit type", func(t *testing.T) {
@@ -294,7 +294,7 @@ func TestTestNewMatcher(t *testing.T) {
 
 		errs := checker.RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 	})
 
 	t.Run("combined matcher mismatching types", func(t *testing.T) {
@@ -395,8 +395,8 @@ func TestTestEqualMatcher(t *testing.T) {
 		require.Error(t, err)
 
 		errs := checker.RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 	})
 
 	t.Run("with explicit types", func(t *testing.T) {
@@ -432,7 +432,7 @@ func TestTestEqualMatcher(t *testing.T) {
 
 		errs := checker.RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 	})
 
 	t.Run("matcher or", func(t *testing.T) {
@@ -559,10 +559,10 @@ func TestTestEqualMatcher(t *testing.T) {
 		_, err := newTestContractInterpreter(t, script)
 
 		errs := checker.RequireCheckerErrors(t, err, 4)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[3])
 	})
 
 	t.Run("resource matcher and", func(t *testing.T) {
@@ -590,9 +590,9 @@ func TestTestEqualMatcher(t *testing.T) {
 		_, err := newTestContractInterpreter(t, script)
 
 		errs := checker.RequireCheckerErrors(t, err, 3)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[2])
 	})
 }
 
@@ -689,7 +689,7 @@ func TestTestExpect(t *testing.T) {
 
 		errs := checker.RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 	})
 
 	t.Run("resource with resource matcher", func(t *testing.T) {
@@ -710,8 +710,8 @@ func TestTestExpect(t *testing.T) {
 		_, err := newTestContractInterpreter(t, script)
 
 		errs := checker.RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[1])
 	})
 
 	t.Run("resource with struct matcher", func(t *testing.T) {
@@ -733,7 +733,7 @@ func TestTestExpect(t *testing.T) {
 		_, err := newTestContractInterpreter(t, script)
 
 		errs := checker.RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 
 	t.Run("struct with resource matcher", func(t *testing.T) {
@@ -755,6 +755,6 @@ func TestTestExpect(t *testing.T) {
 		_, err := newTestContractInterpreter(t, script)
 
 		errs := checker.RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchErrorNew{}, errs[0])
 	})
 }
