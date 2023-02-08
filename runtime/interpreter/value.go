@@ -18662,6 +18662,7 @@ type CapabilityControllerValue struct {
 	BorrowType   StaticType
 	CapabilityID uint64
 	IsRevoked    bool
+	TargetPath   PathValue
 }
 
 var _ Value = &CapabilityControllerValue{}
@@ -18672,12 +18673,7 @@ func (v CapabilityControllerValue) Storable(_ atree.SlabStorage, _ atree.Address
 }
 
 func (v CapabilityControllerValue) String() string {
-	var borrowType string
-	if v.BorrowType != nil {
-		borrowType = v.BorrowType.String()
-	}
-
-	return format.CapabilityController(borrowType)
+	return v.RecursiveString(SeenReferences{})
 }
 
 func (v CapabilityControllerValue) IsValue() {}
@@ -18706,8 +18702,13 @@ func (v CapabilityControllerValue) ConformsToStaticType(interpreter *Interpreter
 	return true // TODO verify this, given that we store the borrowed type as a field. Capabilities themselves are invariant though
 }
 
-func (v CapabilityControllerValue) RecursiveString(_ SeenReferences) string {
-	return v.String()
+func (v CapabilityControllerValue) RecursiveString(seenReferences SeenReferences) string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.String()
+	}
+
+	return format.CapabilityController(borrowType, v.TargetPath.RecursiveString(seenReferences))
 }
 
 func (v CapabilityControllerValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
@@ -18717,7 +18718,7 @@ func (v CapabilityControllerValue) MeteredString(memoryGauge common.MemoryGauge,
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.MeteredString(memoryGauge)
 	}
-	return format.CapabilityController(borrowType)
+	return format.CapabilityController(borrowType, v.TargetPath.MeteredString(memoryGauge, seenReferences))
 }
 
 func (v CapabilityControllerValue) IsResourceKinded(_ *Interpreter) bool {
@@ -18762,7 +18763,7 @@ func (v CapabilityControllerValue) GetMember(interpreter *Interpreter, locationR
 	case sema.CapabilityControllerTypeIsRevokedFieldName:
 		return AsBoolValue(v.IsRevoked)
 	case sema.CapabilityControllerTypeTargetFunctionName:
-		panic("not implemented")
+		return v.TargetPath // TODO add indirection to actually track this path in case it's retargeted
 	case sema.CapabilityControllerTypeRevokeFunctionName:
 		panic("not implemented")
 	case sema.CapabilityControllerTypeRetargetFunctionName:
