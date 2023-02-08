@@ -43,7 +43,7 @@ Run the workflow by providing `0.21.2` (note the version is without `v`) as the 
 
 If everything goes well, this will create and push a new tag `v0.21.2` for the release.
 
-It'll also create a new branch `release/v0.21.2` on the repo and a PR to merge the version bump changes (tag and version number constant in version.go) to the
+It'll also create a new branch `release/v0.21.2` on the repo and a PR to merge the version bump changes (version number constant in version.go, etc.) to the
 base branch (`master` in this case).
 
 
