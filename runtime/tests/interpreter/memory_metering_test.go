@@ -7952,7 +7952,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 'main', 'foo', 'bar', empty-return-type
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindIdentifier))
 	})
 
 	t.Run("parameters", func(t *testing.T) {
@@ -7973,7 +7973,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 'main', 'foo', 'String', 'bar', 'String', empty-return-type
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindIdentifier))
 	})
 
 	t.Run("composite declaration", func(t *testing.T) {
@@ -8000,7 +8000,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
 	})
 
 	t.Run("member resolvers", func(t *testing.T) {
@@ -8021,7 +8021,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
@@ -8497,13 +8497,13 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInstantiationType))
-		assert.Equal(t, uint64(17), meter.getMemory(common.MemoryKindNominalType))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindNominalType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindRestrictedType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindVariableSizedType))
 
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindTypeAnnotation))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindTypeAnnotation))
 	})
 
 	t.Run("position info", func(t *testing.T) {

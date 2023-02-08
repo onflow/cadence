@@ -26,7 +26,10 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 )
 
-require github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
+require (
+	github.com/dave/dst v0.27.2
+	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
