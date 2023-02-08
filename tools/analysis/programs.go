@@ -130,7 +130,7 @@ func (programs Programs) check(
 
 				default:
 					if seenImports[importedLocation] {
-						return nil, &sema.CyclicImportsError{
+						return nil, &sema.ImportedProgramError{
 							Location: importedLocation,
 						}
 					}
