@@ -16,7 +16,7 @@ on:
     branches:
       - master
       - 'v**'
-      - 'supun**'
+      - 'supun**' # just trigger this for testing
 
 env:
   GO_VERSION: '1.19.2'
