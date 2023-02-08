@@ -10,6 +10,12 @@ on:
       base:
         description: 'Base branch/tag'
         required: true
+        default: 'latest'
+
+  pull_request:
+    branches:
+      - master
+      - 'v**'
 
 env:
   GO_VERSION: '1.19.2'
@@ -19,18 +25,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      # Map step output to the job output, so that next job can use these values.
+      branch: ${{ steps.setup.outputs.branch }}
+      base: ${{ steps.setup.outputs.base }}
+    steps:
+      - name: Setup
+        id: setup
+        # If the workflow is running on a pull request, then take the PR's source branch as the current branch,
+        # and the PR's target as the base branch.
+        #
+        # When getting the PR's source branch, Use the commit hash ('github.event.pull_request.head.sha'),
+        # instead of the branch name, since 'go get' command does not support all kinds of branch names.
+        #
+        # Here there also is a limitation that we can't use the 'merge-branch' because it is not visible to 'go get'.
+        # So the workflow will not work across forks.
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "branch=`(echo "${{ github.event.pull_request.head.sha }}")`" >> $GITHUB_OUTPUT
+            echo "base=`(echo "${{ github.base_ref }}")`" >> $GITHUB_OUTPUT
+          else
+            echo "branch=`(echo "${{ inputs.branch }}")`" >> $GITHUB_OUTPUT
+            echo "base=`(echo "${{ inputs.base }}")`" >> $GITHUB_OUTPUT
+          fi
   mainnet:
+    needs: setup
     uses: ./.github/workflows/compatibility-check-template.yml
     with:
-      base-branch: ${{ inputs.base }}
-      current-branch: ${{ inputs.branch }}
+      base-branch: ${{ needs.setup.outputs.base }}
+      current-branch: ${{ needs.setup.outputs.branch }}
       chain: flow-mainnet
       url: access.mainnet.nodes.onflow.org:9000
 
   testnet:
+    needs: setup
     uses: ./.github/workflows/compatibility-check-template.yml
     with:
-      base-branch:  ${{ inputs.base }}
-      current-branch: ${{ inputs.branch }}
+      base-branch:  ${{ needs.setup.outputs.base }}
+      current-branch: ${{ needs.setup.outputs.branch }}
       chain: flow-testnet
       url: access.testnet.nodes.onflow.org:9000
