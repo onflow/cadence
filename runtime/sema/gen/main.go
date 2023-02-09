@@ -332,6 +332,10 @@ func (*generator) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) str
 	panic("transaction declarations are not supported")
 }
 
+func (*generator) VisitTransactionRoleDeclaration(_ *ast.TransactionRoleDeclaration) struct{} {
+	panic("transaction role declarations are not supported")
+}
+
 func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{}) {
 	fieldName := decl.Identifier.Identifier
 	fullTypeName := g.fullTypeName()
