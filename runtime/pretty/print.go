@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -251,24 +251,18 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 
 	lines := strings.Split(string(code), "\n")
 
-	for i, excerpt := range excerpts {
+	for excerptIndex, excerpt := range excerpts {
 
 		lineNumberString := ""
 		lineNumberLength := 0
 		if excerpt.startPos != nil {
 
-			plainLineNumberString := strconv.Itoa(excerpt.startPos.Line)
+			plainLineNumberString := strconv.Itoa(excerpt.endPos.Line)
 			lineNumberLength = len(plainLineNumberString)
-
-			// prepare line number string
-			lineNumberString = plainLineNumberString + " | "
-			if p.useColor {
-				lineNumberString = colorizeMeta(lineNumberString)
-			}
 		}
 
 		// write arrow, location, and position (if any)
-		if i == 0 {
+		if excerptIndex == 0 {
 			p.writeCodeExcerptLocation(location, lineNumberLength, excerpt.startPos)
 		}
 
@@ -278,7 +272,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			excerpt.startPos.Line <= len(lines) &&
 			len(code) > 0 {
 
-			if i > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
+			if excerptIndex > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
 				p.writeCodeExcerptContinuation(lineNumberLength)
 			}
 			lastLineNumber = excerpt.startPos.Line
@@ -293,19 +287,35 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			p.writeString(emptyLineNumbers)
 			p.writeString("\n")
 
-			// line number
-			p.writeString(lineNumberString)
+			var line string
+			for lineNumber := excerpt.startPos.Line - 1; lineNumber < excerpt.endPos.Line; lineNumber++ {
+				plainLineNumberString := strconv.Itoa(lineNumber + 1)
 
-			// code line
-			line := lines[excerpt.startPos.Line-1]
-			if len(line) > maxLineLength {
-				p.writeString(line[:maxLineLength])
-				p.writeString(excerptDots)
-			} else {
-				p.writeString(line)
+				// if the line number increases in digit length during the error,
+				// fill the extra space with blank spaces
+				if lineNumberLength > len(plainLineNumberString) {
+					p.writeString(" ")
+				}
+
+				// prepare line number string
+				lineNumberString = plainLineNumberString + " | "
+				if p.useColor {
+					lineNumberString = colorizeMeta(lineNumberString)
+				}
+				// line number
+				p.writeString(lineNumberString)
+
+				// code line
+				line = lines[lineNumber]
+				if len(line) > maxLineLength {
+					p.writeString(line[:maxLineLength])
+					p.writeString(excerptDots)
+				} else {
+					p.writeString(line)
+				}
+
+				p.writeString("\n")
 			}
-
-			p.writeString("\n")
 
 			// indicator line
 			p.writeString(emptyLineNumbers)
@@ -316,7 +326,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			}
 
 			p.writeString(" ")
-			for i := 0; i < indicatorLength; i++ {
+			for i := 0; i < indicatorLength && i < excerpt.endPos.Column; i++ {
 				c := line[i]
 				if c != '\t' {
 					c = ' '
@@ -325,7 +335,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			}
 
 			columns := 1
-			if excerpt.endPos != nil && excerpt.endPos.Line == excerpt.startPos.Line {
+			if excerpt.endPos != nil {
 				endColumn := excerpt.endPos.Column
 				if endColumn >= maxLineLength {
 					endColumn = maxLineLength - 1

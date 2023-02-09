@@ -39,7 +39,7 @@ and use them as building blocks for new applications. Flow is designed to enable
 because of the way that interfaces, resources and capabilities are designed.
 [Interfaces](../language/interfaces) allow projects to support any generic type as long as it supports a standard set of functionality specified by an interface.
 [Resources](../language/resources) can be passed around and owned by accounts, contracts or even other resources,
-unlocking different use-cases depending on where the resource is stored.
+unlocking different use cases depending on where the resource is stored.
 [Capabilities](../language/capability-based-access-control) allow exposing user-defined sets of functionality through special objects
 that enforce strict security with Cadence's type system.
 The combination of these allows developers to do more with less, re-using known safe code and design patterns
@@ -463,7 +463,7 @@ access(self) var ownerCollection: Capability<&ExampleNFT.Collection>
 access(account) let ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>
 ```
 
-If a object like a contract or resource owns a capability, they can borrow a reference to that capability at any time
+If an object like a contract or resource owns a capability, they can borrow a reference to that capability at any time
 to access that functionality without having to get it from the owner's account every time.
 
 This is especially important if the owner wants to expose some functionality that is only intended for one person,
@@ -496,7 +496,7 @@ In this case however, it doesn't make sense. If a user decides to store their fo
 then, those NFTs are not available to be shown to any app or smart contract that queries the main collection,
 so it is as if the owner doesn't actually own the NFT! In cases like this, we usually recommend using a capability to the main
 collection so that the main collection can remain unchanged and fully usable by other smart contracts and apps.
-This also means that if a for-sale NFT gets transferred by some means other than a purchase, than you need a way to get rid of the stale listing.
+This also means that if a for-sale NFT gets transferred by some means other than a purchase, then you need a way to get rid of the stale listing.
 That is out of the scope of this tutorial though.
 
 Enough explaining! Lets execute some code!
@@ -657,7 +657,7 @@ transaction {
                             .borrow<&AnyResource{ExampleMarketplace.SalePublic}>()
                             ?? panic("Could not borrow seller's sale reference")
 
-        // purchase the NFT the the seller is selling, giving them the capability
+        // purchase the NFT the seller is selling, giving them the capability
         // to your NFT collection and giving them the tokens to buy it
         saleRef.purchase(tokenID: 1, recipient: self.collectionCapability, buyTokens: <-self.temporaryVault)
 

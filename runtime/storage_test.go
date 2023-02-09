@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3540,38 +3540,13 @@ func TestRuntimeStorageIteration(t *testing.T) {
             }
         `))
 
-		newRuntimeInterface := func() (Interface, *[]Location) {
-			programs := map[Location]*interpreter.Program{}
-
-			var programStack []Location
-
-			runtimeInterface := &testRuntimeInterface{
+		newRuntimeInterface := func() Interface {
+			return &testRuntimeInterface{
 				storage: ledger,
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
 				},
 				resolveLocation: singleIdentifierLocationResolver(t),
-				getProgram: func(location Location) (*interpreter.Program, error) {
-					programStack = append(programStack, location)
-					return programs[location], nil
-				},
-				setProgram: func(location Location, program *interpreter.Program) error {
-					programs[location] = program
-
-					if _, ok := location.(common.TransactionLocation); ok {
-						return nil
-					}
-
-					require.NotEmpty(t, programStack)
-					lastLocation := programStack[0]
-					require.Equal(t, lastLocation, location)
-
-					lastIndex := len(programStack) - 1
-					programStack[lastIndex] = nil
-					programStack = programStack[:lastIndex]
-
-					return nil
-				},
 				updateAccountContractCode: func(address Address, name string, code []byte) error {
 					location := common.AddressLocation{
 						Address: address,
@@ -3599,12 +3574,11 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				},
 			}
 
-			return runtimeInterface, &programStack
 		}
 
 		// Deploy contract
 
-		runtimeInterface, _ := newRuntimeInterface()
+		runtimeInterface := newRuntimeInterface()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -3619,7 +3593,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Store values
 
-		runtimeInterface, _ = newRuntimeInterface()
+		runtimeInterface = newRuntimeInterface()
 
 		err = runtime.ExecuteTransaction(
 			Script{
@@ -3655,9 +3629,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
 		contractIsBroken = true
 
-		var programStack *[]Location
-
-		runtimeInterface, programStack = newRuntimeInterface()
+		runtimeInterface = newRuntimeInterface()
 
 		// Read value
 		err = runtime.ExecuteTransaction(
@@ -3685,8 +3657,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-
-		require.Empty(t, *programStack)
 	})
 
 	t.Run("broken contract, type checking problem", func(t *testing.T) {
@@ -3706,38 +3676,13 @@ func TestRuntimeStorageIteration(t *testing.T) {
             }
         `))
 
-		newRuntimeInterface := func() (Interface, *[]Location) {
-			programs := map[Location]*interpreter.Program{}
-
-			var programStack []Location
-
-			runtimeInterface := &testRuntimeInterface{
+		newRuntimeInterface := func() Interface {
+			return &testRuntimeInterface{
 				storage: ledger,
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
 				},
 				resolveLocation: singleIdentifierLocationResolver(t),
-				getProgram: func(location Location) (*interpreter.Program, error) {
-					programStack = append(programStack, location)
-					return programs[location], nil
-				},
-				setProgram: func(location Location, program *interpreter.Program) error {
-					programs[location] = program
-
-					if _, ok := location.(common.TransactionLocation); ok {
-						return nil
-					}
-
-					require.NotEmpty(t, programStack)
-					lastLocation := programStack[0]
-					require.Equal(t, lastLocation, location)
-
-					lastIndex := len(programStack) - 1
-					programStack[lastIndex] = nil
-					programStack = programStack[:lastIndex]
-
-					return nil
-				},
 				updateAccountContractCode: func(address Address, name string, code []byte) error {
 					location := common.AddressLocation{
 						Address: address,
@@ -3766,13 +3711,11 @@ func TestRuntimeStorageIteration(t *testing.T) {
 					return nil
 				},
 			}
-
-			return runtimeInterface, &programStack
 		}
 
 		// Deploy contract
 
-		runtimeInterface, _ := newRuntimeInterface()
+		runtimeInterface := newRuntimeInterface()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -3787,13 +3730,12 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Store values
 
-		runtimeInterface, _ = newRuntimeInterface()
+		runtimeInterface = newRuntimeInterface()
 
 		err = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Test from 0x1
-
                     transaction {
                         prepare(signer: AuthAccount) {
                             signer.save("Hello, World!", to: /storage/first)
@@ -3802,7 +3744,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
                             signer.save(1, to: /storage/fourth)
                             signer.save(Test.Foo(), to: /storage/fifth)
                             signer.save("two", to: /storage/sixth)
-
                             signer.link<&String>(/private/a, target:/storage/first)
                             signer.link<&[String]>(/private/b, target:/storage/second)
                             signer.link<&Test.Foo>(/private/c, target:/storage/third)
@@ -3823,9 +3764,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
 		contractIsBroken = true
 
-		var programStack *[]Location
-
-		runtimeInterface, programStack = newRuntimeInterface()
+		runtimeInterface = newRuntimeInterface()
 
 		// Read value
 		err = runtime.ExecuteTransaction(
@@ -3839,7 +3778,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
                                 total = total + 1
                                 return true
                             })
-
                             // Total values iterated should be 4.
                             // The two broken values must be skipped.
                             assert(total == 4)
@@ -3853,7 +3791,5 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-
-		require.Empty(t, *programStack)
 	})
 }

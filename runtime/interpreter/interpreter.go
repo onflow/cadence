@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1255,7 +1255,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			return contractValue
 		}
 	} else {
-		constructor := constructorGenerator(common.Address{})
+		constructor := constructorGenerator(common.ZeroAddress)
 		constructor.NestedVariables = nestedVariables
 		variable.SetValue(constructor)
 	}
@@ -1325,7 +1325,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			qualifiedIdentifier,
 			declaration.CompositeKind,
 			caseValueFields,
-			common.Address{},
+			common.ZeroAddress,
 		)
 		caseValues[i] = EnumCase{
 			Value:    caseValue,
@@ -3276,7 +3276,7 @@ func (interpreter *Interpreter) accountPaths(addressValue AddressValue, location
 		interpreter,
 		locationRange,
 		NewVariableSizedStaticType(interpreter, pathType),
-		common.Address{},
+		common.ZeroAddress,
 		values...,
 	)
 }
@@ -4000,7 +4000,7 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 				// and performs a dynamic type check
 
 				return AsBoolValue(
-					reference.ReferencedValue(interpreter) != nil,
+					reference.ReferencedValue(interpreter, invocation.LocationRange, false) != nil,
 				)
 
 			default:

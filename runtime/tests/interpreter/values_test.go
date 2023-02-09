@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1263,7 +1263,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 					Value: rawValue,
 				},
 			},
-			common.Address{},
+			common.ZeroAddress,
 		)
 
 		if enum.GetField(inter, interpreter.EmptyLocationRange, sema.EnumRawValueFieldName) == nil {
@@ -1323,7 +1323,7 @@ func randomDictionaryValue(
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		keyValues...,
 	)
 }
@@ -1347,7 +1347,7 @@ func randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpre
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		elements...,
 	)
 }
@@ -1412,7 +1412,7 @@ func randomCompositeValue(
 		identifier,
 		kind,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 }
 

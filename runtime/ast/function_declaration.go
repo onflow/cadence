@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ const (
 )
 
 type FunctionDeclaration struct {
+	TypeParameterList    *TypeParameterList
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
@@ -54,6 +55,7 @@ func NewFunctionDeclaration(
 	isStatic bool,
 	isNative bool,
 	identifier Identifier,
+	typeParameterList *TypeParameterList,
 	parameterList *ParameterList,
 	returnTypeAnnotation *TypeAnnotation,
 	functionBlock *FunctionBlock,
@@ -74,6 +76,7 @@ func NewFunctionDeclaration(
 		Access:               access,
 		Flags:                flags,
 		Identifier:           identifier,
+		TypeParameterList:    typeParameterList,
 		ParameterList:        parameterList,
 		ReturnTypeAnnotation: returnTypeAnnotation,
 		FunctionBlock:        functionBlock,
@@ -149,6 +152,7 @@ func (d *FunctionDeclaration) Doc() prettier.Doc {
 		d.IsNative(),
 		true,
 		d.Identifier.Identifier,
+		d.TypeParameterList,
 		d.ParameterList,
 		d.ReturnTypeAnnotation,
 		d.FunctionBlock,
@@ -257,6 +261,7 @@ func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
 		d.FunctionDeclaration.IsNative(),
 		false,
 		d.Kind.Keywords(),
+		d.FunctionDeclaration.TypeParameterList,
 		d.FunctionDeclaration.ParameterList,
 		d.FunctionDeclaration.ReturnTypeAnnotation,
 		d.FunctionDeclaration.FunctionBlock,
