@@ -100,27 +100,20 @@ type CoverageReport struct {
 	// Contains an *ast.Program per location.
 	Programs map[common.Location]*ast.Program `json:"-"`
 	// Contains locations excluded from coverage collection.
-	ExcludedLocations []common.Location `json:"-"`
+	ExcludedLocations map[common.Location]struct{} `json:"-"`
 }
 
 // ExcludeLocation adds the given location to the array of excluded
 // locations.
 func (r *CoverageReport) ExcludeLocation(location Location) {
-	if r.IsLocationExcluded(location) {
-		return
-	}
-	r.ExcludedLocations = append(r.ExcludedLocations, location)
+	r.ExcludedLocations[location] = struct{}{}
 }
 
 // IsLocationExcluded checks whether the given location is excluded
 // or not, from coverage collection.
 func (r *CoverageReport) IsLocationExcluded(location Location) bool {
-	for _, excludedLocation := range r.ExcludedLocations {
-		if excludedLocation == location {
-			return true
-		}
-	}
-	return false
+	_, ok := r.ExcludedLocations[location]
+	return ok
 }
 
 // AddLineHit increments the hit count for the given line, on the given
@@ -210,8 +203,9 @@ func (r *CoverageReport) CoveredStatementsPercentage() string {
 // NewCoverageReport creates and returns a *CoverageReport.
 func NewCoverageReport() *CoverageReport {
 	return &CoverageReport{
-		Coverage: map[common.Location]*LocationCoverage{},
-		Programs: map[common.Location]*ast.Program{},
+		Coverage:          map[common.Location]*LocationCoverage{},
+		Programs:          map[common.Location]*ast.Program{},
+		ExcludedLocations: map[common.Location]struct{}{},
 	}
 }
 
