@@ -103,7 +103,7 @@ type CoverageReport struct {
 	ExcludedLocations map[common.Location]struct{} `json:"-"`
 }
 
-// ExcludeLocation adds the given location to the array of excluded
+// ExcludeLocation adds the given location to the map of excluded
 // locations.
 func (r *CoverageReport) ExcludeLocation(location Location) {
 	r.ExcludedLocations[location] = struct{}{}
