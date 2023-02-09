@@ -209,6 +209,7 @@ func TestAccountAttachmentExport(t *testing.T) {
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -227,14 +228,14 @@ func TestAccountAttachmentExport(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface1,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 		},
 	)
+	require.NoError(t, err)
+
 	require.IsType(t, cadence.Optional{}, v)
 	require.IsType(t, cadence.Attachment{}, v.(cadence.Optional).Value)
 	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Optional).Value.String())
-
-	require.NoError(t, err)
 }
 
 func TestAccountAttachedExport(t *testing.T) {
@@ -296,6 +297,7 @@ func TestAccountAttachedExport(t *testing.T) {
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -314,15 +316,15 @@ func TestAccountAttachedExport(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface1,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 		},
 	)
+	require.NoError(t, err)
+
 	require.IsType(t, cadence.Resource{}, v)
 	require.Len(t, v.(cadence.Resource).Fields, 2)
 	require.IsType(t, cadence.Attachment{}, v.(cadence.Resource).Fields[1])
 	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Resource).Fields[1].String())
-
-	require.NoError(t, err)
 }
 
 func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
