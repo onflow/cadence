@@ -47,11 +47,15 @@ This is the UUID of the created capability.
 All copies of the same capability will have the same UUID
 `
 
-const CapabilityControllerTypeIsRevokedFieldName = "isRevoked"
+const CapabilityControllerTypeIsRevokedFunctionName = "isRevoked"
 
-var CapabilityControllerTypeIsRevokedFieldType = BoolType
+var CapabilityControllerTypeIsRevokedFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		BoolType,
+	),
+}
 
-const CapabilityControllerTypeIsRevokedFieldDocString = `Is the capability revoked.
+const CapabilityControllerTypeIsRevokedFunctionDocString = `Is the capability revoked.
 `
 
 const CapabilityControllerTypeTargetFunctionName = "target"
@@ -156,19 +160,19 @@ var CapabilityControllerType = &SimpleType{
 					)
 				},
 			},
-			CapabilityControllerTypeIsRevokedFieldName: {
-				Kind: common.DeclarationKindField,
+			CapabilityControllerTypeIsRevokedFunctionName: {
+				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge,
 					identifier string,
 					targetRange ast.Range,
 					report func(error)) *Member {
 
-					return NewPublicConstantFieldMember(
+					return NewPublicFunctionMember(
 						memoryGauge,
 						t,
 						identifier,
-						CapabilityControllerTypeIsRevokedFieldType,
-						CapabilityControllerTypeIsRevokedFieldDocString,
+						CapabilityControllerTypeIsRevokedFunctionType,
+						CapabilityControllerTypeIsRevokedFunctionDocString,
 					)
 				},
 			},
