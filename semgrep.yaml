@@ -4,6 +4,8 @@ rules:
     - go
   message: Host function values must have a static type
   pattern-either:
-    - pattern: NewHostFunctionValue(..., nil)
-    - pattern: interpreter.NewHostFunctionValue(..., nil)
+    - pattern: NewHostFunctionValue($GAUGE, nil, $HOST_FUNC)
+    - pattern: interpreter.NewHostFunctionValue($GAUGE, nil, $HOST_FUNC)
+    - pattern: NewUnmeteredHostFunctionValue(nil, $HOST_FUNC)
+    - pattern: interpreter.NewUnmeteredHostFunctionValue(nil, $HOST_FUNC)
   severity: ERROR

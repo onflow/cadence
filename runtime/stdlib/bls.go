@@ -124,6 +124,7 @@ func newBLSAggregatePublicKeysFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		blsAggregatePublicKeysFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeysValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -181,7 +182,6 @@ func newBLSAggregatePublicKeysFunction(
 				aggregatedPublicKeyValue,
 			)
 		},
-		blsAggregatePublicKeysFunctionType,
 	)
 }
 
@@ -196,6 +196,7 @@ func newBLSAggregateSignaturesFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		blsAggregateSignaturesFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signaturesValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -247,7 +248,6 @@ func newBLSAggregateSignaturesFunction(
 				aggregatedSignatureValue,
 			)
 		},
-		blsAggregateSignaturesFunctionType,
 	)
 }
 

@@ -964,6 +964,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	if declaration.CompositeKind == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
 			interpreter,
+			constructorType,
 			func(invocation Invocation) Value {
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -980,7 +981,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 				return nil
 			},
-			constructorType,
 		)
 	} else {
 		compositeInitializerFunction := interpreter.compositeInitializerFunction(declaration, lexicalScope)
@@ -1078,6 +1078,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
 		return NewHostFunctionValue(
 			interpreter,
+			constructorType,
 			func(invocation Invocation) Value {
 
 				interpreter := invocation.Interpreter
@@ -1176,7 +1177,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 				return value
 			},
-			constructorType,
 		)
 	}
 
@@ -1317,6 +1317,7 @@ func EnumConstructorFunction(
 
 	constructor := NewHostFunctionValue(
 		gauge,
+		sema.EnumConstructorType(enumType),
 		func(invocation Invocation) Value {
 			rawValue, ok := invocation.Arguments[0].(IntegerValue)
 			if !ok {
@@ -1332,7 +1333,6 @@ func EnumConstructorFunction(
 
 			return NewSomeValueNonCopying(invocation.Interpreter, caseValue)
 		},
-		sema.EnumConstructorType(enumType),
 	)
 
 	constructor.NestedVariables = nestedVariables
@@ -2178,6 +2178,7 @@ func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFun
 	functionType := sema.FromStringFunctionType(ty)
 
 	hostFunctionImpl := NewUnmeteredHostFunctionValue(
+		functionType,
 		func(invocation Invocation) Value {
 			argument, ok := invocation.Arguments[0].(*StringValue)
 			if !ok {
@@ -2187,7 +2188,6 @@ func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFun
 			inter := invocation.Interpreter
 			return parser(inter, argument.Str)
 		},
-		functionType,
 	)
 	return fromStringFunctionValue{
 		receiverType: ty,
@@ -2642,6 +2642,7 @@ func init() {
 		BaseActivation,
 		"DictionaryType",
 		NewUnmeteredHostFunctionValue(
+			sema.DictionaryTypeFunctionType,
 			func(invocation Invocation) Value {
 				keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -2674,13 +2675,13 @@ func init() {
 					),
 				)
 			},
-			sema.DictionaryTypeFunctionType,
 		))
 
 	defineBaseValue(
 		BaseActivation,
 		"CompositeType",
 		NewUnmeteredHostFunctionValue(
+			sema.CompositeTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
@@ -2701,7 +2702,6 @@ func init() {
 					),
 				)
 			},
-			sema.CompositeTypeFunctionType,
 		),
 	)
 
@@ -2709,6 +2709,7 @@ func init() {
 		BaseActivation,
 		"InterfaceType",
 		NewUnmeteredHostFunctionValue(
+			sema.InterfaceTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
@@ -2729,7 +2730,6 @@ func init() {
 					),
 				)
 			},
-			sema.InterfaceTypeFunctionType,
 		),
 	)
 
@@ -2737,6 +2737,7 @@ func init() {
 		BaseActivation,
 		"FunctionType",
 		NewUnmeteredHostFunctionValue(
+			sema.FunctionTypeFunctionType,
 			func(invocation Invocation) Value {
 				parameters, ok := invocation.Arguments[0].(*ArrayValue)
 				if !ok {
@@ -2776,7 +2777,6 @@ func init() {
 				)
 				return NewUnmeteredTypeValue(functionStaticType)
 			},
-			sema.FunctionTypeFunctionType,
 		),
 	)
 
@@ -2784,8 +2784,8 @@ func init() {
 		BaseActivation,
 		"RestrictedType",
 		NewUnmeteredHostFunctionValue(
-			RestrictedTypeFunction,
 			sema.RestrictedTypeFunctionType,
+			RestrictedTypeFunction,
 		),
 	)
 }
@@ -2900,10 +2900,10 @@ var converterFunctionValues = func() []converterFunction {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.convert
 		converterFunctionValue := NewUnmeteredHostFunctionValue(
+			declaration.functionType,
 			func(invocation Invocation) Value {
 				return convert(invocation.Interpreter, invocation.Arguments[0], invocation.LocationRange)
 			},
-			declaration.functionType,
 		)
 
 		addMember := func(name string, value Value) {
@@ -2952,6 +2952,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
 		name: "OptionalType",
 		converter: NewUnmeteredHostFunctionValue(
+			sema.OptionalTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -2966,12 +2967,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					),
 				)
 			},
-			sema.OptionalTypeFunctionType,
 		),
 	},
 	{
 		name: "VariableSizedArrayType",
 		converter: NewUnmeteredHostFunctionValue(
+			sema.VariableSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -2987,12 +2988,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					),
 				)
 			},
-			sema.VariableSizedArrayTypeFunctionType,
 		),
 	},
 	{
 		name: "ConstantSizedArrayType",
 		converter: NewUnmeteredHostFunctionValue(
+			sema.ConstantSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -3013,12 +3014,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					),
 				)
 			},
-			sema.ConstantSizedArrayTypeFunctionType,
 		),
 	},
 	{
 		name: "ReferenceType",
 		converter: NewUnmeteredHostFunctionValue(
+			sema.ReferenceTypeFunctionType,
 			func(invocation Invocation) Value {
 				authorizedValue, ok := invocation.Arguments[0].(BoolValue)
 				if !ok {
@@ -3040,12 +3041,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					),
 				)
 			},
-			sema.ReferenceTypeFunctionType,
 		),
 	},
 	{
 		name: "CapabilityType",
 		converter: NewUnmeteredHostFunctionValue(
+			sema.CapabilityTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -3070,7 +3071,6 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					),
 				)
 			},
-			sema.CapabilityTypeFunctionType,
 		),
 	},
 }
@@ -3083,6 +3083,9 @@ func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 
 // typeFunction is the `Type` function. It is stateless, hence it can be re-used across interpreters.
 var typeFunction = NewUnmeteredHostFunctionValue(
+	&sema.FunctionType{
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+	},
 	func(invocation Invocation) Value {
 		typeParameterPair := invocation.TypeParameterTypes.Oldest()
 		if typeParameterPair == nil {
@@ -3093,9 +3096,6 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 
 		staticType := ConvertSemaToStaticType(invocation.Interpreter, ty)
 		return NewTypeValue(invocation.Interpreter, staticType)
-	},
-	&sema.FunctionType{
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 	},
 )
 
@@ -3250,6 +3250,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 
 	return NewHostFunctionValue(
 		interpreter,
+		sema.AccountForEachFunctionType(pathType),
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3321,7 +3322,6 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 
 			return Void
 		},
-		sema.AccountForEachFunctionType(pathType),
 	)
 }
 
@@ -3350,6 +3350,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
+		sema.AuthAccountTypeSaveFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3395,7 +3396,6 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			return Void
 		},
-		sema.AuthAccountTypeSaveFunctionType,
 	)
 }
 
@@ -3406,6 +3406,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
+		sema.AuthAccountTypeTypeFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3431,8 +3432,6 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 				),
 			)
 		},
-
-		sema.AuthAccountTypeTypeFunctionType,
 	)
 }
 
@@ -3451,6 +3450,8 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
+		// same as sema.AuthAccountTypeCopyFunctionType
+		sema.AuthAccountTypeLoadFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3511,9 +3512,6 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			return NewSomeValueNonCopying(invocation.Interpreter, transferredValue)
 		},
-
-		// same as sema.AuthAccountTypeCopyFunctionType
-		sema.AuthAccountTypeLoadFunctionType,
 	)
 }
 
@@ -3524,6 +3522,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 	return NewHostFunctionValue(
 		interpreter,
+		sema.AuthAccountTypeBorrowFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3566,7 +3565,6 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 			return NewSomeValueNonCopying(interpreter, reference)
 		},
-		sema.AuthAccountTypeBorrowFunctionType,
 	)
 }
 
@@ -3577,6 +3575,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
+		sema.AuthAccountTypeLinkFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3636,7 +3635,6 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			)
 
 		},
-		sema.AuthAccountTypeLinkFunctionType,
 	)
 }
 
@@ -3672,6 +3670,7 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 
 	return NewHostFunctionValue(
 		interpreter,
+		sema.AuthAccountTypeLinkAccountFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3711,7 +3710,6 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 			)
 
 		},
-		sema.AuthAccountTypeLinkAccountFunctionType,
 	)
 }
 
@@ -3722,6 +3720,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 	return NewHostFunctionValue(
 		interpreter,
+		sema.AccountTypeGetLinkTargetFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3749,7 +3748,6 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 				link.TargetPath,
 			)
 		},
-		sema.AccountTypeGetLinkTargetFunctionType,
 	)
 }
 
@@ -3760,6 +3758,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 	return NewHostFunctionValue(
 		interpreter,
+		sema.AuthAccountTypeUnlinkFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3777,7 +3776,6 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 			return Void
 		},
-		sema.AuthAccountTypeUnlinkFunctionType,
 	)
 }
 
@@ -3792,6 +3790,7 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 
 	return NewHostFunctionValue(
 		interpreter,
+		sema.CapabilityTypeBorrowFunctionType(borrowType),
 		func(invocation Invocation) Value {
 
 			interpreter := invocation.Interpreter
@@ -3869,7 +3868,6 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 				panic(errors.NewUnreachableError())
 			}
 		},
-		sema.CapabilityTypeBorrowFunctionType(borrowType),
 	)
 }
 
@@ -3884,6 +3882,7 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 
 	return NewHostFunctionValue(
 		interpreter,
+		sema.CapabilityTypeCheckFunctionType(borrowType),
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3946,7 +3945,6 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 				panic(errors.NewUnreachableError())
 			}
 		},
-		sema.CapabilityTypeCheckFunctionType(borrowType),
 	)
 }
 
@@ -4223,6 +4221,7 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
 		interpreter,
+		sema.IsInstanceFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4246,19 +4245,18 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 				interpreter.IsSubType(selfType, staticType),
 			)
 		},
-		sema.IsInstanceFunctionType,
 	)
 }
 
 func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
 		interpreter,
+		sema.GetTypeFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 			staticType := self.StaticType(interpreter)
 			return NewTypeValue(interpreter, staticType)
 		},
-		sema.GetTypeFunctionType,
 	)
 }
 
