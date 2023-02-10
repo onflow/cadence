@@ -10,10 +10,10 @@ release a new version of Cadence.
 
 ### Checking backward compatibility
 
-Certain Cadence versions are not supposed to have any breaking changes.
+Cadence releases should be backwards compatible and are not supposed to have any breaking changes. There may be exceptions from this rule - in those cases any Cadence release that contains breaking changes must be discussed with the wider Flow community and there must be a consensus that the breaking changes are requried to improveve Cadence.
 This step ensures the version that is going to be released does not contain such changes.
 
-_If it is acceptable to have breaking changes in the new version, you may skip this step and proceed to the [releasing](#releasing)
+_If it is expected to have breaking changes in the new version, you may skip this step and proceed to the [releasing](#releasing)
 step._
 
 Check for breaking changes can be done using the [BackwardCompatibilityCheck](https://github.com/onflow/cadence/actions/workflows/compatibility-check.yml)
@@ -35,14 +35,14 @@ The workflow also uploads the checking results as artifacts, which can be downlo
 ### Releasing
 
 Releasing a new version of Cadence can be easily done by using the [Release GitHub action](https://github.com/onflow/cadence/actions/workflows/release.yml)
-Run the workflow by providing `0.21.2` (note the version is without `v`) as the `Release version` and `master` as the
+Run the workflow by providing `v0.21.2` as the `Release version` and `master` as the
 `Base branch`.
 
 <img src="images/release_action.png" width="800"/>
 
 If everything goes well, this will create and push a new tag `v0.21.2` for the release.
 
-It'll also create a new branch `release/v0.21.2` on the repo and a PR to merge the version bump changes to the
+It'll also create a new branch `release/v0.21.2` on the repo and a PR to merge the version bump changes (version number constant in version.go, etc.) to the
 base branch (`master` in this case).
 
 

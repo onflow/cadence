@@ -1,3 +1,4 @@
+// Code generated from testdata/importable.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -18,17 +19,16 @@
 
 package sema
 
-// VoidType represents the void type
-var VoidType = &SimpleType{
-	Name:          "Void",
-	QualifiedName: "Void",
-	TypeID:        "Void",
-	tag:           VoidTypeTag,
+const TestTypeName = "Test"
+
+var TestType = &SimpleType{
+	Name:          TestTypeName,
+	QualifiedName: TestTypeName,
+	TypeID:        TestTypeName,
+	tag:           TestTypeTag,
 	IsResource:    false,
 	Storable:      false,
-	Equatable:     true,
-	Exportable:    true,
-	Importable:    false,
+	Equatable:     false,
+	Exportable:    false,
+	Importable:    true,
 }
-
-var VoidTypeAnnotation = NewTypeAnnotation(VoidType)

@@ -214,6 +214,7 @@ func parseTransactionPrepare(p *parser) (*ast.SpecialFunctionDeclaration, error)
 		nil,
 		nil,
 		identifier,
+		"",
 	)
 }
 

@@ -136,7 +136,7 @@ func NewVM(wasm []byte) (VM, error) {
 				return nil, wasmtime.NewTrap(fmt.Sprintf("add: invalid right: %#+v", right))
 			}
 
-			return leftNumber.Plus(inter, rightNumber), nil
+			return leftNumber.Plus(inter, rightNumber, interpreter.EmptyLocationRange), nil
 		},
 	)
 

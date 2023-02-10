@@ -1211,8 +1211,11 @@ func (checker *Checker) functionType(
 ) *FunctionType {
 	convertedParameters := checker.parameters(parameterList)
 
-	convertedReturnTypeAnnotation :=
-		checker.ConvertTypeAnnotation(returnTypeAnnotation)
+	convertedReturnTypeAnnotation := VoidTypeAnnotation
+	if returnTypeAnnotation != nil {
+		convertedReturnTypeAnnotation =
+			checker.ConvertTypeAnnotation(returnTypeAnnotation)
+	}
 
 	return &FunctionType{
 		Parameters:           convertedParameters,
@@ -2130,7 +2133,7 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	ty := checker.ConvertType(t.Type)
 
 	// Always convert (check) the type arguments,
-	// even if the instantiated type
+	// even if the instantiated type is invalid
 
 	var typeArgumentAnnotations []TypeAnnotation
 	typeArgumentCount := len(t.TypeArguments)
