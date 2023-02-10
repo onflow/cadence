@@ -46,6 +46,14 @@ func (c *LocationCoverage) AddLineHit(line int) {
 // lines over the total statements for a given location.
 func (c *LocationCoverage) Percentage() string {
 	coveredLines := c.CoveredLines()
+	// The ground truth of which statements are interpreted/executed
+	// is the `interpreterEnvironment.newOnStatementHandler()` function.
+	// This means that every call of `CoverageReport.AddLineHit()` from
+	// that callback, should be respected. The `CoverageReport.InspectProgram()`
+	// may have failed, for whatever reason, to find a specific line.
+	// This is a good insight to solidify its implementation and debug
+	// the inspection failure. Ideally, this condition will never be true,
+	// except for tests. We just leave it here, as a fail-safe mechanism.
 	if coveredLines > c.Statements {
 		// We saturate the percentage at 100%, when the inspector
 		// fails to correctly count all statements for a given
