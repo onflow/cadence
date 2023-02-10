@@ -349,6 +349,7 @@ var testAssertFunctionType = &sema.FunctionType{
 }
 
 var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
+	testAssertFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		condition, ok := invocation.Arguments[0].(interpreter.BoolValue)
 		if !ok {
@@ -373,7 +374,6 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return interpreter.Void
 	},
-	testAssertFunctionType,
 )
 
 // 'Test.fail' function
@@ -400,6 +400,7 @@ var testFailFunctionType = &sema.FunctionType{
 }
 
 var testFailFunction = interpreter.NewUnmeteredHostFunctionValue(
+	testFailFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		var message string
 		if len(invocation.Arguments) > 0 {
@@ -415,7 +416,6 @@ var testFailFunction = interpreter.NewUnmeteredHostFunctionValue(
 			LocationRange: invocation.LocationRange,
 		})
 	},
-	testFailFunctionType,
 )
 
 // 'Test.expect' function
@@ -461,6 +461,7 @@ var testExpectFunctionType = func() *sema.FunctionType {
 }()
 
 var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
+	testExpectFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		value := invocation.Arguments[0]
 
@@ -485,7 +486,6 @@ var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return interpreter.Void
 	},
-	testExpectFunctionType,
 )
 
 func invokeMatcherTest(
@@ -555,6 +555,7 @@ var testReadFileFunctionType = &sema.FunctionType{
 
 func testReadFileFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		testReadFileFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			pathString, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -568,7 +569,6 @@ func testReadFileFunction(testFramework TestFramework) *interpreter.HostFunction
 
 			return interpreter.NewUnmeteredStringValue(content)
 		},
-		testReadFileFunctionType,
 	)
 }
 
@@ -588,6 +588,7 @@ var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
 
 func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		testNewEmulatorBlockchainFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
@@ -621,7 +622,6 @@ func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter
 
 			return blockchain
 		},
-		testNewEmulatorBlockchainFunctionType,
 	)
 }
 
@@ -700,6 +700,7 @@ var newMatcherFunctionType = func() *sema.FunctionType {
 }()
 
 var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	newMatcherFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		test, ok := invocation.Arguments[0].(interpreter.FunctionValue)
 		if !ok {
@@ -708,7 +709,6 @@ var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return newMatcherWithGenericTestFunction(invocation, test)
 	},
-	newMatcherFunctionType,
 )
 
 // 'EmulatorBackend' struct.
@@ -842,6 +842,7 @@ var emulatorBackendExecuteScriptFunctionType = interfaceFunctionType(
 
 func emulatorBackendExecuteScriptFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendExecuteScriptFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -859,7 +860,6 @@ func emulatorBackendExecuteScriptFunction(testFramework TestFramework) *interpre
 
 			return newScriptResult(inter, result.Value, result)
 		},
-		emulatorBackendExecuteScriptFunctionType,
 	)
 }
 
@@ -949,6 +949,7 @@ var emulatorBackendCreateAccountFunctionType = interfaceFunctionType(
 
 func emulatorBackendCreateAccountFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendCreateAccountFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			account, err := testFramework.CreateAccount()
 			if err != nil {
@@ -965,7 +966,6 @@ func emulatorBackendCreateAccountFunction(testFramework TestFramework) *interpre
 				account,
 			)
 		},
-		emulatorBackendCreateAccountFunctionType,
 	)
 }
 
@@ -1022,6 +1022,7 @@ var emulatorBackendAddTransactionFunctionType = interfaceFunctionType(
 
 func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendAddTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
@@ -1089,7 +1090,6 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 
 			return interpreter.Void
 		},
-		emulatorBackendAddTransactionFunctionType,
 	)
 }
 
@@ -1199,6 +1199,7 @@ var emulatorBackendExecuteNextTransactionFunctionType = interfaceFunctionType(
 
 func emulatorBackendExecuteNextTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendExecuteNextTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			result := testFramework.ExecuteNextTransaction()
 
@@ -1209,7 +1210,6 @@ func emulatorBackendExecuteNextTransactionFunction(testFramework TestFramework) 
 
 			return newTransactionResult(invocation.Interpreter, result)
 		},
-		emulatorBackendExecuteNextTransactionFunctionType,
 	)
 }
 
@@ -1285,6 +1285,7 @@ var emulatorBackendCommitBlockFunctionType = interfaceFunctionType(
 
 func emulatorBackendCommitBlockFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendCommitBlockFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			err := testFramework.CommitBlock()
 			if err != nil {
@@ -1293,7 +1294,6 @@ func emulatorBackendCommitBlockFunction(testFramework TestFramework) *interprete
 
 			return interpreter.Void
 		},
-		emulatorBackendCommitBlockFunctionType,
 	)
 }
 
@@ -1334,6 +1334,7 @@ var equalMatcherFunctionType = func() *sema.FunctionType {
 }()
 
 var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	equalMatcherFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		otherValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
 		if !ok {
@@ -1344,6 +1345,7 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		equalTestFunc := interpreter.NewHostFunctionValue(
 			nil,
+			matcherTestFunctionType,
 			func(invocation interpreter.Invocation) interpreter.Value {
 
 				thisValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
@@ -1359,12 +1361,10 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 				return interpreter.AsBoolValue(equal)
 			},
-			matcherTestFunctionType,
 		)
 
 		return newMatcherWithGenericTestFunction(invocation, equalTestFunc)
 	},
-	equalMatcherFunctionType,
 )
 
 // 'EmulatorBackend.deployContract' function
@@ -1382,6 +1382,7 @@ var emulatorBackendDeployContractFunctionType = interfaceFunctionType(
 
 func emulatorBackendDeployContractFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendDeployContractFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
@@ -1421,7 +1422,6 @@ func emulatorBackendDeployContractFunction(testFramework TestFramework) *interpr
 
 			return newErrorValue(inter, err)
 		},
-		emulatorBackendDeployContractFunctionType,
 	)
 }
 
@@ -1438,6 +1438,7 @@ var emulatorBackendUseConfigFunctionType = interfaceFunctionType(
 
 func emulatorBackendUseConfigFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendUseConfigFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
@@ -1480,7 +1481,6 @@ func emulatorBackendUseConfigFunction(testFramework TestFramework) *interpreter.
 
 			return interpreter.Void
 		},
-		emulatorBackendUseConfigFunctionType,
 	)
 }
 
@@ -1529,6 +1529,7 @@ func newMatcherWithGenericTestFunction(
 	// No need to validate if the matcher is created as a matcher combinator.
 	//
 	matcherTestFunction := interpreter.NewUnmeteredHostFunctionValue(
+		matcherTestFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
@@ -1554,7 +1555,6 @@ func newMatcherWithGenericTestFunction(
 
 			return value
 		},
-		matcherTestFunctionType,
 	)
 
 	matcherConstructor := getNestedTypeConstructorValue(

@@ -62,7 +62,7 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 	var publicTypes *ArrayValue
 
 	address := addressValue.ToAddress()
-	return NewHostFunctionValue(inter, func(inv Invocation) Value {
+	return NewHostFunctionValue(inter, sema.DeployedContractTypePublicTypesFunctionType, func(inv Invocation) Value {
 		if publicTypes == nil {
 			innerInter := inv.Interpreter
 			contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
@@ -97,5 +97,5 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 		}
 
 		return publicTypes
-	}, sema.DeployedContractTypePublicTypesFunctionType)
+	})
 }
