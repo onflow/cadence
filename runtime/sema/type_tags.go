@@ -357,7 +357,8 @@ var (
 				Or(BlockTypeTag).
 				Or(DeployedContractTypeTag).
 				Or(CapabilityTypeTag).
-				Or(FunctionTypeTag)
+				Or(FunctionTypeTag).
+				Or(CapabilityControllerTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)
