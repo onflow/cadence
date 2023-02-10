@@ -43,15 +43,15 @@ func AccountCapability(address string) string {
 	)
 }
 
-func CapabilityController(borrowType string, targetPath string) string {
+func CapabilityController(borrowType string, capabilityID string) string {
 	var typeArgument string
 	if borrowType != "" {
 		typeArgument = fmt.Sprintf("<%s>", borrowType)
 	}
 
 	return fmt.Sprintf(
-		"CapabilityController(borrowType: %s, target: %s)",
+		"CapabilityController(borrowType: %s, capabilityID: %s)",
 		typeArgument,
-		targetPath,
+		capabilityID,
 	)
 }
