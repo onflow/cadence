@@ -110,7 +110,8 @@ func (t AnyResourceType) Equal(other Type) bool {
 // OptionalType
 
 type OptionalType struct {
-	Type Type
+	Type   Type
+	typeID string
 }
 
 func NewOptionalType(typ Type) OptionalType {
@@ -125,7 +126,10 @@ func NewMeteredOptionalType(gauge common.MemoryGauge, typ Type) OptionalType {
 func (OptionalType) isType() {}
 
 func (t OptionalType) ID() string {
-	return fmt.Sprintf("%s?", t.Type.ID())
+	if len(t.typeID) == 0 {
+		t.typeID = fmt.Sprintf("%s?", t.Type.ID())
+	}
+	return t.typeID
 }
 
 func (t OptionalType) Equal(other Type) bool {
@@ -826,6 +830,7 @@ type ArrayType interface {
 
 type VariableSizedArrayType struct {
 	ElementType Type
+	typeID      string
 }
 
 func NewVariableSizedArrayType(
@@ -845,7 +850,10 @@ func NewMeteredVariableSizedArrayType(
 func (VariableSizedArrayType) isType() {}
 
 func (t VariableSizedArrayType) ID() string {
-	return fmt.Sprintf("[%s]", t.ElementType.ID())
+	if len(t.typeID) == 0 {
+		t.typeID = fmt.Sprintf("[%s]", t.ElementType.ID())
+	}
+	return t.typeID
 }
 
 func (t VariableSizedArrayType) Element() Type {
@@ -866,6 +874,7 @@ func (t VariableSizedArrayType) Equal(other Type) bool {
 type ConstantSizedArrayType struct {
 	ElementType Type
 	Size        uint
+	typeID      string
 }
 
 func NewConstantSizedArrayType(
@@ -890,7 +899,10 @@ func NewMeteredConstantSizedArrayType(
 func (ConstantSizedArrayType) isType() {}
 
 func (t ConstantSizedArrayType) ID() string {
-	return fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
+	if len(t.typeID) == 0 {
+		t.typeID = fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
+	}
+	return t.typeID
 }
 
 func (t ConstantSizedArrayType) Element() Type {
@@ -912,6 +924,7 @@ func (t ConstantSizedArrayType) Equal(other Type) bool {
 type DictionaryType struct {
 	KeyType     Type
 	ElementType Type
+	typeID      string
 }
 
 func NewDictionaryType(
@@ -936,11 +949,14 @@ func NewMeteredDictionaryType(
 func (DictionaryType) isType() {}
 
 func (t DictionaryType) ID() string {
-	return fmt.Sprintf(
-		"{%s:%s}",
-		t.KeyType.ID(),
-		t.ElementType.ID(),
-	)
+	if len(t.typeID) == 0 {
+		t.typeID = fmt.Sprintf(
+			"{%s:%s}",
+			t.KeyType.ID(),
+			t.ElementType.ID(),
+		)
+	}
+	return t.typeID
 }
 
 func (t DictionaryType) Equal(other Type) bool {
@@ -1008,6 +1024,7 @@ type StructType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewStructType(
@@ -1038,11 +1055,14 @@ func NewMeteredStructType(
 func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		if t.Location == nil {
+			t.typeID = t.QualifiedIdentifier
+		} else {
+			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+		}
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*StructType) isCompositeType() {}
@@ -1084,6 +1104,7 @@ type ResourceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewResourceType(
@@ -1114,11 +1135,14 @@ func NewMeteredResourceType(
 func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		if t.Location == nil {
+			t.typeID = t.QualifiedIdentifier
+		} else {
+			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+		}
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*ResourceType) isCompositeType() {}
@@ -1160,6 +1184,7 @@ type EventType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializer         []Parameter
+	typeID              string
 }
 
 func NewEventType(
@@ -1190,11 +1215,14 @@ func NewMeteredEventType(
 func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		if t.Location == nil {
+			t.typeID = t.QualifiedIdentifier
+		} else {
+			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+		}
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*EventType) isCompositeType() {}
@@ -1236,6 +1264,7 @@ type ContractType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewContractType(
@@ -1266,11 +1295,14 @@ func NewMeteredContractType(
 func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		if t.Location == nil {
+			t.typeID = t.QualifiedIdentifier
+		} else {
+			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+		}
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*ContractType) isCompositeType() {}
@@ -1324,6 +1356,7 @@ type StructInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewStructInterfaceType(
@@ -1354,11 +1387,14 @@ func NewMeteredStructInterfaceType(
 func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		if t.Location == nil {
+			t.typeID = t.QualifiedIdentifier
+		} else {
+			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+		}
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*StructInterfaceType) isInterfaceType() {}
@@ -1400,6 +1436,7 @@ type ResourceInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewResourceInterfaceType(
@@ -1430,11 +1467,14 @@ func NewMeteredResourceInterfaceType(
 func (*ResourceInterfaceType) isType() {}
 
 func (t *ResourceInterfaceType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		if t.Location == nil {
+			t.typeID = t.QualifiedIdentifier
+		} else {
+			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+		}
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*ResourceInterfaceType) isInterfaceType() {}
@@ -1476,6 +1516,7 @@ type ContractInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewContractInterfaceType(
@@ -1506,11 +1547,14 @@ func NewMeteredContractInterfaceType(
 func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		if t.Location == nil {
+			t.typeID = t.QualifiedIdentifier
+		} else {
+			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+		}
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*ContractInterfaceType) isInterfaceType() {}
@@ -1612,6 +1656,7 @@ func (t *FunctionType) Equal(other Type) bool {
 type ReferenceType struct {
 	Type       Type
 	Authorized bool
+	typeID     string
 }
 
 func NewReferenceType(
@@ -1636,11 +1681,14 @@ func NewMeteredReferenceType(
 func (ReferenceType) isType() {}
 
 func (t ReferenceType) ID() string {
-	id := fmt.Sprintf("&%s", t.Type.ID())
-	if t.Authorized {
-		id = "auth" + id
+	if len(t.typeID) == 0 {
+		id := fmt.Sprintf("&%s", t.Type.ID())
+		if t.Authorized {
+			id = "auth" + id
+		}
+		t.typeID = id
 	}
-	return id
+	return t.typeID
 }
 
 func (t ReferenceType) Equal(other Type) bool {
@@ -1858,6 +1906,7 @@ func (t PrivatePathType) Equal(other Type) bool {
 
 type CapabilityType struct {
 	BorrowType Type
+	typeID     string
 }
 
 func NewCapabilityType(borrowType Type) CapabilityType {
@@ -1875,10 +1924,14 @@ func NewMeteredCapabilityType(
 func (CapabilityType) isType() {}
 
 func (t CapabilityType) ID() string {
-	if t.BorrowType != nil {
-		return fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
+	if len(t.typeID) == 0 {
+		if t.BorrowType != nil {
+			t.typeID = fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
+		} else {
+			t.typeID = "Capability"
+		}
 	}
-	return "Capability"
+	return t.typeID
 }
 
 func (t CapabilityType) Equal(other Type) bool {
@@ -1901,6 +1954,7 @@ type EnumType struct {
 	RawType             Type
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewEnumType(
@@ -1934,11 +1988,14 @@ func NewMeteredEnumType(
 func (*EnumType) isType() {}
 
 func (t *EnumType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		if t.Location == nil {
+			t.typeID = t.QualifiedIdentifier
+		} else {
+			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+		}
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*EnumType) isCompositeType() {}

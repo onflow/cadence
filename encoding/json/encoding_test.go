@@ -2988,7 +2988,11 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, opti
 	decodedVal, err := json.Decode(nil, []byte(actualJSON), options...)
 	require.NoError(t, err)
 
-	assert.Equal(t, expectedVal, decodedVal)
+	assert.Equal(
+		t,
+		valueWithCachedTypeID(expectedVal),
+		valueWithCachedTypeID(decodedVal),
+	)
 }
 
 var fooResourceType = &cadence.ResourceType{
@@ -3216,4 +3220,92 @@ func TestExportFunctionValue(t *testing.T) {
           }
         `,
 	)
+}
+
+// valueWithCachedTypeID recursively caches type ID of value v's type.
+// This is needed because each type ID is lazily cached on
+// its first use in ID() to avoid performance penalty.
+func valueWithCachedTypeID(v cadence.Value) cadence.Value {
+	if v == nil {
+		return v
+	}
+
+	typeWithCachedTypeID(v.Type())
+
+	switch v := v.(type) {
+
+	case cadence.TypeValue:
+		typeWithCachedTypeID(v.StaticType)
+
+	case cadence.Optional:
+		valueWithCachedTypeID(v.Value)
+
+	case cadence.Array:
+		for _, v := range v.Values {
+			valueWithCachedTypeID(v)
+		}
+
+	case cadence.Dictionary:
+		for _, p := range v.Pairs {
+			valueWithCachedTypeID(p.Key)
+			valueWithCachedTypeID(p.Value)
+		}
+
+	case cadence.Struct:
+		for _, f := range v.Fields {
+			valueWithCachedTypeID(f)
+		}
+
+	case cadence.Resource:
+		for _, f := range v.Fields {
+			valueWithCachedTypeID(f)
+		}
+
+	case cadence.Event:
+		for _, f := range v.Fields {
+			valueWithCachedTypeID(f)
+		}
+
+	case cadence.Contract:
+		for _, f := range v.Fields {
+			valueWithCachedTypeID(f)
+		}
+
+	case cadence.Enum:
+		for _, f := range v.Fields {
+			valueWithCachedTypeID(f)
+		}
+	}
+
+	return v
+}
+
+// typeWithCachedTypeID recursively caches type ID of type t.
+// This is needed because each type ID is lazily cached on
+// its first use in ID() to avoid performance penalty.
+func typeWithCachedTypeID(t cadence.Type) cadence.Type {
+	if t == nil {
+		return t
+	}
+
+	// Cache type ID by calling ID()
+	t.ID()
+
+	switch t := t.(type) {
+
+	case cadence.CompositeType:
+		fields := t.CompositeFields()
+		for _, f := range fields {
+			typeWithCachedTypeID(f.Type)
+		}
+
+		initializers := t.CompositeInitializers()
+		for _, params := range initializers {
+			for _, p := range params {
+				typeWithCachedTypeID(p.Type)
+			}
+		}
+	}
+
+	return t
 }
