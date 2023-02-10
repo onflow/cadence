@@ -23,4 +23,5 @@ import (
 )
 
 func TestCapabilityControllerValue(t *testing.T) {
+	// TODO add tests when capcons are integrated with accounts
 }
