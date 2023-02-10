@@ -62,40 +62,43 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 	var publicTypes *ArrayValue
 
 	address := addressValue.ToAddress()
-	return NewHostFunctionValue(inter, sema.DeployedContractTypePublicTypesFunctionType, func(inv Invocation) Value {
-		if publicTypes == nil {
-			innerInter := inv.Interpreter
-			contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
-			// we're only looking at the contract as a whole, so no need to construct a nested path
-			qualifiedIdent := name.Str
-			typeID := common.NewTypeIDFromQualifiedName(innerInter, contractLocation, qualifiedIdent)
-			compositeType, err := innerInter.GetCompositeType(contractLocation, qualifiedIdent, typeID)
-			if err != nil {
-				panic(err)
-			}
-
-			nestedTypes := compositeType.NestedTypes
-			pair := nestedTypes.Oldest()
-			// all top-level type declarations in a contract must be public
-			// no need to filter here for public visiblity
-			yieldNext := func() Value {
-				if pair == nil {
-					return nil
+	return NewHostFunctionValue(
+		inter,
+		sema.DeployedContractTypePublicTypesFunctionType,
+		func(inv Invocation) Value {
+			if publicTypes == nil {
+				innerInter := inv.Interpreter
+				contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
+				// we're only looking at the contract as a whole, so no need to construct a nested path
+				qualifiedIdent := name.Str
+				typeID := common.NewTypeIDFromQualifiedName(innerInter, contractLocation, qualifiedIdent)
+				compositeType, err := innerInter.GetCompositeType(contractLocation, qualifiedIdent, typeID)
+				if err != nil {
+					panic(err)
 				}
-				typeValue := NewTypeValue(innerInter, ConvertSemaToStaticType(innerInter, pair.Value))
-				pair = pair.Next()
-				return typeValue
+
+				nestedTypes := compositeType.NestedTypes
+				pair := nestedTypes.Oldest()
+				// all top-level type declarations in a contract must be public
+				// no need to filter here for public visiblity
+				yieldNext := func() Value {
+					if pair == nil {
+						return nil
+					}
+					typeValue := NewTypeValue(innerInter, ConvertSemaToStaticType(innerInter, pair.Value))
+					pair = pair.Next()
+					return typeValue
+				}
+
+				publicTypes = NewArrayValueWithIterator(
+					innerInter,
+					NewVariableSizedStaticType(innerInter, PrimitiveStaticTypeMetaType),
+					common.Address{},
+					uint64(nestedTypes.Len()),
+					yieldNext,
+				)
 			}
 
-			publicTypes = NewArrayValueWithIterator(
-				innerInter,
-				NewVariableSizedStaticType(innerInter, PrimitiveStaticTypeMetaType),
-				common.Address{},
-				uint64(nestedTypes.Len()),
-				yieldNext,
-			)
-		}
-
-		return publicTypes
-	})
+			return publicTypes
+		})
 }
