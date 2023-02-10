@@ -11,7 +11,7 @@ pub struct CapabilityController {
     pub let capabilityID: UInt64
    
     /// Is the capability revoked.
-    pub let isRevoked: Bool
+    pub fun isRevoked(): Bool
 
     /// Returns the targeted storage path of the capability.
     pub fun target(): StoragePath {}
