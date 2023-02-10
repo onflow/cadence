@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeCrypto_verify(t *testing.T) {
@@ -104,7 +103,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.NoError(t, err)
@@ -129,7 +128,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 			},
 			Context{
 				Interface: inter,
-				Location:  utils.TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 	}
@@ -249,6 +248,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{}
+	nextScriptLocation := newScriptLocationGenerator()
 
 	testHashAlgorithm := func(algo sema.CryptoAlgorithm) {
 		script := fmt.Sprintf(`
@@ -265,7 +265,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  nextScriptLocation(),
 			},
 		)
 
@@ -289,6 +289,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{}
+	nextScriptLocation := newScriptLocationGenerator()
 
 	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
 		script := fmt.Sprintf(`
@@ -305,7 +306,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  nextScriptLocation(),
 			},
 		)
 
@@ -343,6 +344,8 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
       }
     `
 
+	nextScriptLocation := newScriptLocationGenerator()
+
 	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
 
 		value, err := runtime.ExecuteScript(
@@ -365,7 +368,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  nextScriptLocation(),
 			},
 		)
 
@@ -447,7 +450,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -518,7 +521,7 @@ func TestBLSVerifyPoP(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.NoError(t, err)
@@ -575,7 +578,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.NoError(t, err)
@@ -651,7 +654,7 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.NoError(t, err)
@@ -811,7 +814,7 @@ func TestTraversingMerkleProof(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.NoError(t, err)

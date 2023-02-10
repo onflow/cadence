@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -705,11 +705,10 @@ func defineGreaterThanOrBitwiseRightShiftExpression() {
 				return left, nil, true
 			}
 
-			// Start buffering before skipping the `>` token,
-			// so it can be replayed in case the right binding power
-			// was higher than the determined left binding power.
+			// Perform a lookahead for '>'
 
-			p.startBuffering()
+			current := p.current
+			cursor := p.tokens.Cursor()
 
 			// Skip the `>` token.
 			p.next()
@@ -731,14 +730,14 @@ func defineGreaterThanOrBitwiseRightShiftExpression() {
 				// was higher. In that case, replay the buffered tokens and stop.
 
 				if rightBindingPower >= exprLeftBindingPowerBitwiseShift {
-					err = p.replayBuffered()
-					return left, err, true
+					p.current = current
+					p.tokens.Revert(cursor)
+
+					return left, nil, true
 				}
 
 				// The previous attempt to parse a bitwise right shift succeeded,
 				// accept the buffered tokens.
-
-				p.acceptBuffered()
 
 				nextRightBindingPower = exprLeftBindingPowerBitwiseShift
 
@@ -749,10 +748,8 @@ func defineGreaterThanOrBitwiseRightShiftExpression() {
 				// The previous attempt to parse a bitwise right shift failed,
 				// replay the buffered tokens.
 
-				err = p.replayBuffered()
-				if err != nil {
-					return nil, err, true
-				}
+				p.current = current
+				p.tokens.Revert(cursor)
 
 				// The expression was determined to *not* be a bitwise shift,
 				// so it must be a comparison expression.

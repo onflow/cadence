@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -159,7 +159,7 @@ func newBLSAggregatePublicKeysFunction(
 
 			var err error
 			var aggregatedPublicKey *PublicKey
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				aggregatedPublicKey, err = aggregator.BLSAggregatePublicKeys(publicKeys)
 			})
 
@@ -231,7 +231,7 @@ func newBLSAggregateSignaturesFunction(
 
 			var err error
 			var aggregatedSignature []byte
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				aggregatedSignature, err = aggregator.BLSAggregateSignatures(bytesArray)
 			})
 

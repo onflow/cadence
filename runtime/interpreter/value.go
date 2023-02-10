@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1308,7 +1308,7 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter, locationRange Location
 	return NewArrayValueWithIterator(
 		interpreter,
 		ByteArrayStaticType,
-		common.Address{},
+		common.ZeroAddress,
 		uint64(len(bs)),
 		func() Value {
 			if i >= len(bs) {
@@ -1669,7 +1669,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 	return NewArrayValueWithIterator(
 		interpreter,
 		v.Type,
-		common.Address{},
+		common.ZeroAddress,
 		v.array.Count()+other.array.Count(),
 		func() Value {
 
@@ -2652,7 +2652,7 @@ func (v *ArrayValue) Slice(
 	return NewArrayValueWithIterator(
 		interpreter,
 		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
-		common.Address{},
+		common.ZeroAddress,
 		uint64(toIndex-fromIndex),
 		func() Value {
 
@@ -15104,7 +15104,7 @@ func NewEnumCaseValue(
 		enumType.QualifiedIdentifier(),
 		enumType.Kind,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 
 	v.Functions = functions
@@ -15164,7 +15164,7 @@ func attachmentBaseAndSelfValues(
 	return
 }
 
-func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRange LocationRange, f func(*CompositeValue)) {
+func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationRange, f func(*CompositeValue)) {
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -15256,7 +15256,7 @@ func NewDictionaryValue(
 		interpreter,
 		locationRange,
 		dictionaryType,
-		common.Address{},
+		common.ZeroAddress,
 		keysAndValues...,
 	)
 }
@@ -15737,7 +15737,7 @@ func (v *DictionaryValue) GetMember(
 		return NewArrayValueWithIterator(
 			interpreter,
 			NewVariableSizedStaticType(interpreter, v.Type.KeyType),
-			common.Address{},
+			common.ZeroAddress,
 			v.dictionary.Count(),
 			func() Value {
 
@@ -15764,7 +15764,7 @@ func (v *DictionaryValue) GetMember(
 		return NewArrayValueWithIterator(
 			interpreter,
 			NewVariableSizedStaticType(interpreter, v.Type.ValueType),
-			common.Address{},
+			common.ZeroAddress,
 			v.dictionary.Count(),
 			func() Value {
 
@@ -17076,21 +17076,33 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 	return &referenced, nil
 }
 
-func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-	value, err := v.dereference(interpreter, EmptyLocationRange)
-	if err != nil {
+func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value {
+	referencedValue, err := v.dereference(interpreter, EmptyLocationRange)
+	if err == nil {
+		return referencedValue
+	}
+	if forceCastErr, ok := err.(ForceCastTypeMismatchError); ok {
+		if errorOnFailedDereference {
+			// relay the type mismatch error with a dereference error context
+			panic(DereferenceError{
+				ExpectedType:  forceCastErr.ExpectedType,
+				ActualType:    forceCastErr.ActualType,
+				LocationRange: locationRange,
+			})
+		}
 		return nil
 	}
-	return value
+	panic(err)
 }
 
 func (v *StorageReferenceValue) mustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})
 	}
@@ -17098,6 +17110,7 @@ func (v *StorageReferenceValue) mustReferencedValue(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+
 	return self
 }
 
@@ -17234,8 +17247,8 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
+	referencedValue, err := v.dereference(interpreter, locationRange)
+	if referencedValue == nil || err != nil {
 		return false
 	}
 
@@ -17366,7 +17379,9 @@ func (v *EphemeralReferenceValue) MeteredString(memoryGauge common.MemoryGauge, 
 func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 	referencedValue := v.ReferencedValue(inter, EmptyLocationRange)
 	if referencedValue == nil {
-		panic(DereferenceError{})
+		panic(DereferenceError{
+			Cause: "the value being referenced has been destroyed or moved",
+		})
 	}
 
 	self := *referencedValue
@@ -17408,6 +17423,7 @@ func (v *EphemeralReferenceValue) mustReferencedValue(
 	referencedValue := v.ReferencedValue(interpreter, locationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
+			Cause:         "the value being referenced has been destroyed or moved",
 			LocationRange: locationRange,
 		})
 	}

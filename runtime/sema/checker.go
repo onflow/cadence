@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1224,8 +1224,11 @@ func (checker *Checker) functionType(
 ) *FunctionType {
 	convertedParameters := checker.parameters(parameterList)
 
-	convertedReturnTypeAnnotation :=
-		checker.ConvertTypeAnnotation(returnTypeAnnotation)
+	convertedReturnTypeAnnotation := VoidTypeAnnotation
+	if returnTypeAnnotation != nil {
+		convertedReturnTypeAnnotation =
+			checker.ConvertTypeAnnotation(returnTypeAnnotation)
+	}
 
 	return &FunctionType{
 		Parameters:           convertedParameters,
@@ -2089,7 +2092,7 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	ty := checker.ConvertType(t.Type)
 
 	// Always convert (check) the type arguments,
-	// even if the instantiated type
+	// even if the instantiated type is invalid
 
 	var typeArgumentAnnotations []TypeAnnotation
 	typeArgumentCount := len(t.TypeArguments)
@@ -2177,8 +2180,10 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 }
 
 func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
-	actualType, _ := checker.visitExpression(expr, expectedType)
-	return actualType
+	// Always return 'visibleType' as the type of the expression,
+	// to avoid bubbling up type-errors of inner expressions.
+	visibleType, _ := checker.visitExpression(expr, expectedType)
+	return visibleType
 }
 
 func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type) (visibleType Type, actualType Type) {
@@ -2186,8 +2191,10 @@ func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type) 
 }
 
 func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expectedType Type, forceType bool) Type {
-	actualType, _ := checker.visitExpressionWithForceType(expr, expectedType, forceType)
-	return actualType
+	// Always return 'visibleType' as the type of the expression,
+	// to avoid bubbling up type-errors of inner expressions.
+	visibleType, _ := checker.visitExpressionWithForceType(expr, expectedType, forceType)
+	return visibleType
 }
 
 // visitExpressionWithForceType
@@ -2240,6 +2247,7 @@ func (checker *Checker) visitExpressionWithForceType(
 
 		// If there are type mismatch errors, return the expected type as the visible-type of the expression.
 		// This is done to avoid the same error getting delegated up.
+		// i.e: Impact of the mismatched type would be local to that expression only.
 		return expectedType, actualType
 	}
 

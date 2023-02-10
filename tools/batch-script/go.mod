@@ -6,6 +6,7 @@ require (
 	github.com/onflow/cadence v0.21.2
 	github.com/onflow/flow-go-sdk v0.24.0
 	github.com/rs/zerolog v1.26.1
+	github.com/schollz/progressbar/v3 v3.8.3
 	google.golang.org/grpc v1.40.0
 )
 
@@ -18,6 +19,8 @@ require (
 	github.com/go-test/deep v1.0.5 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381 // indirect
+	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/onflow/atree v0.1.1 // indirect
 	github.com/onflow/flow-go/crypto v0.21.3 // indirect
 	github.com/onflow/flow/protobuf/go/flow v0.2.2 // indirect
@@ -30,6 +33,7 @@ require (
 	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e // indirect
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
 	golang.org/x/sys v0.0.0-20210917161153-d61c044b1678 // indirect
+	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/genproto v0.0.0-20211007155348-82e027067bd4 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect

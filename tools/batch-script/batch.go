@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ type Config struct {
 	// 0 is treated as the latest block height.
 	AtBlockHeight     uint64
 	FlowAccessNodeURL string
+	Chain             flow.ChainID
 	ConcurrentClients int
 	Pause             time.Duration
 }
@@ -56,6 +57,7 @@ var DefaultConfig = Config{
 	BatchSize:         1000,
 	AtBlockHeight:     0,
 	FlowAccessNodeURL: "access.mainnet.nodes.onflow.org:9000",
+	Chain:             flow.Mainnet,
 	ConcurrentClients: 10, // should be a good number to not produce too much traffic
 	Pause:             500 * time.Millisecond,
 }
@@ -66,7 +68,9 @@ func BatchScript(
 	conf Config,
 	script string,
 	handler func(cadence.Value),
+	retryOnErrors bool,
 ) error {
+
 	code := []byte(script)
 
 	flowClient := getFlowClient(conf.FlowAccessNodeURL)
@@ -77,7 +81,7 @@ func BatchScript(
 	}
 	log.Info().Uint64("blockHeight", currentBlock.Height).Msg("Fetched block info")
 
-	ap, err := InitAddressProvider(ctx, log, flow.Mainnet, currentBlock.ID, flowClient, conf.Pause)
+	ap, err := InitAddressProvider(ctx, log, conf.Chain, currentBlock.ID, flowClient, conf.Pause)
 	if err != nil {
 		return err
 	}
@@ -106,7 +110,21 @@ func BatchScript(
 			for accountAddresses := range addressChan {
 				accountsCadenceValues := convertAddresses(accountAddresses)
 				arguments := []cadence.Value{cadence.NewArray(accountsCadenceValues)}
-				result := retryScriptUntilSuccess(ctx, log, currentBlock.Height, code, arguments, client, conf.Pause)
+				result, success := retryScriptUntilSuccess(
+					ctx,
+					log,
+					currentBlock.Height,
+					code,
+					arguments,
+					client,
+					conf.Pause,
+					retryOnErrors,
+				)
+
+				if !success {
+					continue
+				}
+
 				handler(result)
 			}
 
@@ -150,29 +168,35 @@ func retryScriptUntilSuccess(
 	arguments []cadence.Value,
 	flowClient *flowclient.Client,
 	pause time.Duration,
-) (result cadence.Value) {
+	retryOnErrors bool,
+) (result cadence.Value, success bool) {
 	var err error
 
 	for {
 		time.Sleep(pause)
 
-		log.Info().Msgf("executing script")
+		log.Debug().Msgf("executing script")
 
-		result, err = flowClient.ExecuteScriptAtBlockHeight(
+		result, err = flowClient.ExecuteScriptAtLatestBlock(
 			ctx,
-			blockHeight,
 			script,
 			arguments,
 			grpc.MaxCallRecvMsgSize(16*1024*1024),
 		)
 		if err == nil {
+			success = true
+			break
+		}
+
+		if !retryOnErrors {
+			log.Warn().Msgf("received unknown error: %s", err.Error())
 			break
 		}
 
 		log.Warn().Msgf("received unknown error, retrying: %s", err.Error())
 	}
 
-	return result
+	return result, success
 }
 
 // convertAddresses generates an array of cadence.Value from an array of flow.Address

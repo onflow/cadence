@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -215,8 +215,6 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeEvent(valueJSON)
 	case contractTypeStr:
 		return d.decodeContract(valueJSON)
-	case linkTypeStr:
-		return d.decodeLink(valueJSON)
 	case pathTypeStr:
 		return d.decodePath(valueJSON)
 	case typeTypeStr:
@@ -823,29 +821,6 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 	))
 }
 
-func (d *Decoder) decodeLink(valueJSON any) cadence.PathLink {
-	obj := toObject(valueJSON)
-
-	targetPath, ok := d.decodeJSON(obj.Get(targetPathKey)).(cadence.Path)
-	if !ok {
-		panic(errors.NewDefaultUserError("invalid link: missing or invalid target path"))
-	}
-
-	borrowType := obj.GetString(borrowTypeKey)
-
-	common.UseMemory(d.gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// no need to add 1 to account for empty string: string is metered in Link struct
-		Amount: uint64(len(borrowType)),
-	})
-
-	return cadence.NewMeteredLink(
-		d.gauge,
-		targetPath,
-		borrowType,
-	)
-}
-
 func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 	obj := toObject(valueJSON)
 
@@ -1142,111 +1117,111 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Any":
-		return cadence.NewMeteredAnyType(d.gauge)
+		return cadence.TheAnyType
 	case "AnyStruct":
-		return cadence.NewMeteredAnyStructType(d.gauge)
+		return cadence.TheAnyStructType
 	case "AnyStructAttachment":
-		return cadence.NewMeteredAnyStructAttachmentType(d.gauge)
+		return cadence.TheAnyStructAttachmentType
 	case "AnyResource":
-		return cadence.NewMeteredAnyResourceType(d.gauge)
+		return cadence.TheAnyResourceType
 	case "AnyResourceAttachment":
-		return cadence.NewMeteredAnyResourceAttachmentType(d.gauge)
+		return cadence.TheAnyResourceAttachmentType
 	case "Type":
-		return cadence.NewMeteredMetaType(d.gauge)
+		return cadence.TheMetaType
 	case "Void":
-		return cadence.NewMeteredVoidType(d.gauge)
+		return cadence.TheVoidType
 	case "Never":
-		return cadence.NewMeteredNeverType(d.gauge)
+		return cadence.TheNeverType
 	case "Bool":
-		return cadence.NewMeteredBoolType(d.gauge)
+		return cadence.TheBoolType
 	case "String":
-		return cadence.NewMeteredStringType(d.gauge)
+		return cadence.TheStringType
 	case "Character":
-		return cadence.NewMeteredCharacterType(d.gauge)
+		return cadence.TheCharacterType
 	case "Bytes":
-		return cadence.NewMeteredBytesType(d.gauge)
+		return cadence.TheBytesType
 	case "Address":
-		return cadence.NewMeteredAddressType(d.gauge)
+		return cadence.TheAddressType
 	case "Number":
-		return cadence.NewMeteredNumberType(d.gauge)
+		return cadence.TheNumberType
 	case "SignedNumber":
-		return cadence.NewMeteredSignedNumberType(d.gauge)
+		return cadence.TheSignedNumberType
 	case "Integer":
-		return cadence.NewMeteredIntegerType(d.gauge)
+		return cadence.TheIntegerType
 	case "SignedInteger":
-		return cadence.NewMeteredSignedIntegerType(d.gauge)
+		return cadence.TheSignedIntegerType
 	case "FixedPoint":
-		return cadence.NewMeteredFixedPointType(d.gauge)
+		return cadence.TheFixedPointType
 	case "SignedFixedPoint":
-		return cadence.NewMeteredSignedFixedPointType(d.gauge)
+		return cadence.TheSignedFixedPointType
 	case "Int":
-		return cadence.NewMeteredIntType(d.gauge)
+		return cadence.TheIntType
 	case "Int8":
-		return cadence.NewMeteredInt8Type(d.gauge)
+		return cadence.TheInt8Type
 	case "Int16":
-		return cadence.NewMeteredInt16Type(d.gauge)
+		return cadence.TheInt16Type
 	case "Int32":
-		return cadence.NewMeteredInt32Type(d.gauge)
+		return cadence.TheInt32Type
 	case "Int64":
-		return cadence.NewMeteredInt64Type(d.gauge)
+		return cadence.TheInt64Type
 	case "Int128":
-		return cadence.NewMeteredInt128Type(d.gauge)
+		return cadence.TheInt128Type
 	case "Int256":
-		return cadence.NewMeteredInt256Type(d.gauge)
+		return cadence.TheInt256Type
 	case "UInt":
-		return cadence.NewMeteredUIntType(d.gauge)
+		return cadence.TheUIntType
 	case "UInt8":
-		return cadence.NewMeteredUInt8Type(d.gauge)
+		return cadence.TheUInt8Type
 	case "UInt16":
-		return cadence.NewMeteredUInt16Type(d.gauge)
+		return cadence.TheUInt16Type
 	case "UInt32":
-		return cadence.NewMeteredUInt32Type(d.gauge)
+		return cadence.TheUInt32Type
 	case "UInt64":
-		return cadence.NewMeteredUInt64Type(d.gauge)
+		return cadence.TheUInt64Type
 	case "UInt128":
-		return cadence.NewMeteredUInt128Type(d.gauge)
+		return cadence.TheUInt128Type
 	case "UInt256":
-		return cadence.NewMeteredUInt256Type(d.gauge)
+		return cadence.TheUInt256Type
 	case "Word8":
-		return cadence.NewMeteredWord8Type(d.gauge)
+		return cadence.TheWord8Type
 	case "Word16":
-		return cadence.NewMeteredWord16Type(d.gauge)
+		return cadence.TheWord16Type
 	case "Word32":
-		return cadence.NewMeteredWord32Type(d.gauge)
+		return cadence.TheWord32Type
 	case "Word64":
-		return cadence.NewMeteredWord64Type(d.gauge)
+		return cadence.TheWord64Type
 	case "Fix64":
-		return cadence.NewMeteredFix64Type(d.gauge)
+		return cadence.TheFix64Type
 	case "UFix64":
-		return cadence.NewMeteredUFix64Type(d.gauge)
+		return cadence.TheUFix64Type
 	case "Path":
-		return cadence.NewMeteredPathType(d.gauge)
+		return cadence.ThePathType
 	case "CapabilityPath":
-		return cadence.NewMeteredCapabilityPathType(d.gauge)
+		return cadence.TheCapabilityPathType
 	case "StoragePath":
-		return cadence.NewMeteredStoragePathType(d.gauge)
+		return cadence.TheStoragePathType
 	case "PublicPath":
-		return cadence.NewMeteredPublicPathType(d.gauge)
+		return cadence.ThePublicPathType
 	case "PrivatePath":
-		return cadence.NewMeteredPrivatePathType(d.gauge)
+		return cadence.ThePrivatePathType
 	case "AuthAccount":
-		return cadence.NewMeteredAuthAccountType(d.gauge)
+		return cadence.TheAuthAccountType
 	case "PublicAccount":
-		return cadence.NewMeteredPublicAccountType(d.gauge)
+		return cadence.ThePublicAccountType
 	case "AuthAccount.Keys":
-		return cadence.NewMeteredAuthAccountKeysType(d.gauge)
+		return cadence.TheAuthAccountKeysType
 	case "PublicAccount.Keys":
-		return cadence.NewMeteredPublicAccountKeysType(d.gauge)
+		return cadence.ThePublicAccountKeysType
 	case "AuthAccount.Contracts":
-		return cadence.NewMeteredAuthAccountContractsType(d.gauge)
+		return cadence.TheAuthAccountContractsType
 	case "PublicAccount.Contracts":
-		return cadence.NewMeteredPublicAccountContractsType(d.gauge)
+		return cadence.ThePublicAccountContractsType
 	case "DeployedContract":
-		return cadence.NewMeteredDeployedContractType(d.gauge)
+		return cadence.TheDeployedContractType
 	case "AccountKey":
-		return cadence.NewMeteredAccountKeyType(d.gauge)
+		return cadence.TheAccountKeyType
 	case "Block":
-		return cadence.NewMeteredBlockType(d.gauge)
+		return cadence.TheBlockType
 	default:
 		fieldsValue := obj.Get(fieldsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))

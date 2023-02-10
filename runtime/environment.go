@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ type Environment interface {
 	ParseAndCheckProgram(
 		code []byte,
 		location common.Location,
-		storeProgram bool,
+		getAndSetProgram bool,
 	) (
 		*interpreter.Program,
 		error,
@@ -335,15 +335,17 @@ func (e *interpreterEnvironment) TemporarilyRecordCode(location common.AddressLo
 func (e *interpreterEnvironment) ParseAndCheckProgram(
 	code []byte,
 	location common.Location,
-	storeProgram bool,
+	getAndSetProgram bool,
 ) (
 	*interpreter.Program,
 	error,
 ) {
-	return e.parseAndCheckProgram(
-		code,
+	return e.getProgram(
 		location,
-		storeProgram,
+		func() ([]byte, error) {
+			return code, nil
+		},
+		getAndSetProgram,
 		importResolutionResults{},
 	)
 }
@@ -353,38 +355,12 @@ func (e *interpreterEnvironment) ParseAndCheckProgram(
 func (e *interpreterEnvironment) parseAndCheckProgram(
 	code []byte,
 	location common.Location,
-	storeProgram bool,
 	checkedImports importResolutionResults,
 ) (
-	program *interpreter.Program,
+	program *ast.Program,
+	elaboration *sema.Elaboration,
 	err error,
 ) {
-
-	// NOTE: Always ensure to call maybeSetProgram
-	// on all error paths of parseAndCheckProgram,
-	// except for once Interface.SetProgram was called!
-	//
-	// If the program is supposed to be stored,
-	// there was a call to Interface.GetProgram before.
-	// If an error occurs after calling Interface.GetProgram,
-	// then we *must* also call Interface.SetProgram, with nil.
-	//
-	// See the documentation for Interface.GetProgram
-	// for an explanation of this invariant.
-
-	maybeSetProgram := func() error {
-
-		if !storeProgram {
-			return nil
-		}
-
-		var err error
-		wrapPanic(func() {
-			err = e.runtimeInterface.SetProgram(location, program)
-		})
-		return err
-	}
-
 	wrapParsingCheckingError := func(err error) error {
 		return &ParsingCheckingError{
 			Err:      err,
@@ -392,16 +368,11 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 		}
 	}
 
-	if storeProgram {
-		e.codesAndPrograms.setCode(location, code)
-	}
-
 	// Parse
 
-	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser.ParseProgram(e, code, parser.Config{})
+			program, err = parser.ParseProgram(e, code, parser.Config{})
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -409,47 +380,17 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 		},
 	)
 	if err != nil {
-		// IMPORTANT: even when an error occurs,
-		// we still might need to set the program
-		setProgramErr := maybeSetProgram()
-		if setProgramErr != nil {
-			return nil, setProgramErr
-		}
-
-		return nil, wrapParsingCheckingError(err)
-	}
-
-	if storeProgram {
-		e.codesAndPrograms.setProgram(location, parse)
+		return nil, nil, wrapParsingCheckingError(err)
 	}
 
 	// Check
 
-	elaboration, err := e.check(location, parse, checkedImports)
+	elaboration, err = e.check(location, program, checkedImports)
 	if err != nil {
-		// IMPORTANT: even when an error occurs,
-		// we still might need to set the program
-		setProgramErr := maybeSetProgram()
-		if setProgramErr != nil {
-			return nil, setProgramErr
-		}
-
-		return nil, wrapParsingCheckingError(err)
+		return program, nil, wrapParsingCheckingError(err)
 	}
 
-	// Return
-
-	program = &interpreter.Program{
-		Program:     parse,
-		Elaboration: elaboration,
-	}
-
-	err = maybeSetProgram()
-	if err != nil {
-		return nil, err
-	}
-
-	return program, nil
+	return program, elaboration, nil
 }
 
 func (e *interpreterEnvironment) check(
@@ -484,7 +425,7 @@ func (e *interpreterEnvironment) check(
 
 func (e *interpreterEnvironment) newLocationHandler() sema.LocationHandlerFunc {
 	return func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
 		})
 		return
@@ -528,7 +469,12 @@ func (e *interpreterEnvironment) resolveImport(
 			defer delete(e.checkedImports, importedLocation)
 		}
 
-		program, err := e.getProgram(importedLocation, e.checkedImports)
+		const getAndSetProgram = true
+		program, err := e.GetProgram(
+			importedLocation,
+			getAndSetProgram,
+			e.checkedImports,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -541,70 +487,93 @@ func (e *interpreterEnvironment) resolveImport(
 	}, nil
 }
 
-func (e *interpreterEnvironment) GetProgram(location Location) (*interpreter.Program, error) {
-	return e.getProgram(location, importResolutionResults{})
+func (e *interpreterEnvironment) GetProgram(
+	location Location,
+	storeProgram bool,
+	checkedImports importResolutionResults,
+) (
+	*interpreter.Program,
+	error,
+) {
+	return e.getProgram(
+		location,
+		func() ([]byte, error) {
+			return e.getCode(location)
+		},
+		storeProgram,
+		checkedImports,
+	)
 }
 
 // getProgram returns the existing program at the given location, if available.
 // If it is not available, it loads the code, and then parses and checks it.
 func (e *interpreterEnvironment) getProgram(
 	location Location,
+	getCode func() ([]byte, error),
+	getAndSetProgram bool,
 	checkedImports importResolutionResults,
 ) (
 	program *interpreter.Program,
 	err error,
 ) {
-	wrapPanic(func() {
-		program, err = e.runtimeInterface.GetProgram(location)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if program == nil {
-		var code []byte
-		code, err = e.getCode(location)
+	load := func() (*interpreter.Program, error) {
+		code, err := getCode()
 		if err != nil {
-			var setProgramErr error
-			wrapPanic(func() {
-				setProgramErr = e.runtimeInterface.SetProgram(location, program)
-			})
-			if setProgramErr != nil {
-				return nil, setProgramErr
-			}
 			return nil, err
 		}
 
-		// NOTE: parseAndCheckProgram calls Interface.SetProgram on error, if needed.
-		// Do NOT call / move the calls of Interface.SetProgram here:
-		// The error returned from parseAndCheckProgram might be the result
-		// of a call to Interface.SetProgram, in which case it should not be called again.
-		program, err = e.parseAndCheckProgram(
+		e.codesAndPrograms.setCode(location, code)
+
+		parsedProgram, elaboration, err := e.parseAndCheckProgram(
 			code,
 			location,
-			true,
 			checkedImports,
 		)
+		if parsedProgram != nil {
+			e.codesAndPrograms.setProgram(location, parsedProgram)
+		}
 		if err != nil {
 			return nil, err
 		}
+
+		return &interpreter.Program{
+			Program:     parsedProgram,
+			Elaboration: elaboration,
+		}, nil
 	}
 
-	e.codesAndPrograms.setProgram(location, program.Program)
+	if !getAndSetProgram {
+		return load()
+	}
 
-	return program, nil
+	errors.WrapPanic(func() {
+		program, err = e.runtimeInterface.GetAndSetProgram(location, func() (program *interpreter.Program, err error) {
+			// Loading is done by Cadence.
+			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
+			// then do not treat it as an external error (the load callback is called by the embedder)
+			panicErr := userPanicToError(func() {
+				program, err = load()
+			})
+			if panicErr != nil {
+				return nil, panicErr
+			}
+			return
+		})
+	})
+
+	return
 }
 
 func (e *interpreterEnvironment) getCode(location common.Location) (code []byte, err error) {
 	if addressLocation, ok := location.(common.AddressLocation); ok {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			code, err = e.runtimeInterface.GetAccountContractCode(
 				addressLocation.Address,
 				addressLocation.Name,
 			)
 		})
 	} else {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			code, err = e.runtimeInterface.GetCode(location)
 		})
 	}
@@ -663,7 +632,7 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	) {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			e.runtimeInterface.RecordTrace(functionName, interpreter.Location, duration, attrs)
 		})
 	}
@@ -768,7 +737,7 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 
 func (e *interpreterEnvironment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 	return func() (uuid uint64, err error) {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			uuid, err = e.runtimeInterface.GenerateUUID()
 		})
 		return
@@ -853,7 +822,12 @@ func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLo
 			}
 
 		default:
-			program, err := e.GetProgram(location)
+			const getAndSetProgram = true
+			program, err := e.GetProgram(
+				location,
+				getAndSetProgram,
+				importResolutionResults{},
+			)
 			if err != nil {
 				panic(err)
 			}
@@ -880,7 +854,7 @@ func (e *interpreterEnvironment) loadContract(
 	case stdlib.CryptoCheckerLocation:
 		contract, err := stdlib.NewCryptoContract(
 			inter,
-			constructorGenerator(common.Address{}),
+			constructorGenerator(common.ZeroAddress),
 			invocationRange,
 		)
 		if err != nil {
@@ -928,7 +902,7 @@ func (e *interpreterEnvironment) newOnInvokedFunctionReturnHandler() func(_ *int
 func (e *interpreterEnvironment) newOnMeterComputation() interpreter.OnMeterComputationFunc {
 	return func(compKind common.ComputationKind, intensity uint) {
 		var err error
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			err = e.runtimeInterface.MeterComputation(compKind, intensity)
 		})
 		if err != nil {
@@ -1016,7 +990,7 @@ func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.On
 		oldOwner common.Address,
 		newOwner common.Address,
 	) {
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			e.runtimeInterface.ResourceOwnerChanged(
 				interpreter,
 				resource,

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	goRuntime "runtime"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -93,6 +92,9 @@ type Executor interface {
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
+	// Config returns the runtime.Config this Runtime was instantiated with.
+	Config() Config
+
 	// NewScriptExecutor returns an executor which executes the given script.
 	NewScriptExecutor(Script, Context) Executor
 
@@ -216,6 +218,10 @@ func NewInterpreterRuntime(defaultConfig Config) Runtime {
 	}
 }
 
+func (r *interpreterRuntime) Config() Config {
+	return r.defaultConfig
+}
+
 func (r *interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms codesAndPrograms) {
 	recovered := recover()
 	if recovered == nil {
@@ -263,6 +269,10 @@ func (r *interpreterRuntime) NewScriptExecutor(
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+	location := context.Location
+	if _, ok := location.(common.ScriptLocation); !ok {
+		return nil, errors.NewUnexpectedError("invalid non-script location: %s", location)
+	}
 	return r.NewScriptExecutor(script, context).Result()
 }
 
@@ -305,24 +315,11 @@ func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Conte
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
 	_, err = r.NewTransactionExecutor(script, context).Result()
+	location := context.Location
+	if _, ok := location.(common.TransactionLocation); !ok {
+		return errors.NewUnexpectedError("invalid non-transaction location: %s", location)
+	}
 	return err
-}
-
-func wrapPanic(f func()) {
-	defer func() {
-		if r := recover(); r != nil {
-			// don't wrap Go errors and internal errors
-			switch r := r.(type) {
-			case goRuntime.Error, errors.InternalError:
-				panic(r)
-			default:
-				panic(errors.ExternalError{
-					Recovered: r,
-				})
-			}
-		}
-	}()
-	f()
 }
 
 // userPanicToError Executes `f` and gracefully handle `UserError` panics.
@@ -389,7 +386,7 @@ func validateArgumentParams(
 		var value cadence.Value
 		var err error
 
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			value, err = decoder.DecodeArgument(
 				argument,
 				exportedParameterType,

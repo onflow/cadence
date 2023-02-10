@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 			return err
 		}
 
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			err = validator.ValidatePublicKey(publicKey)
 		})
 		return err
@@ -277,7 +277,7 @@ func newPublicKeyVerifySignatureFunction(
 			}
 
 			var valid bool
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				valid, err = verififier.VerifySignature(
 					signature,
 					domainSeparationTag,
@@ -338,7 +338,7 @@ func newPublicKeyVerifyPoPFunction(
 			}
 
 			var valid bool
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				valid, err = verifier.BLSVerifyPOP(publicKey, signature)
 			})
 			if err != nil {

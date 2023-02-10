@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,14 @@
 package analysis_test
 
 import (
+	"fmt"
 	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/tests/checker"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -294,5 +296,84 @@ func TestStdlib(t *testing.T) {
 
 	_, err := analysis.Load(config, scriptLocation)
 	require.NoError(t, err)
+}
 
+func TestCyclicImports(t *testing.T) {
+
+	t.Parallel()
+
+	fooContractAddress := common.MustBytesToAddress([]byte{0x1})
+	fooContractLocation := common.AddressLocation{
+		Address: fooContractAddress,
+		Name:    "Foo",
+	}
+	const fooContractCode = `
+        import 0x2
+        pub contract Foo {}
+	`
+
+	barContractAddress := common.MustBytesToAddress([]byte{0x2})
+	barContractLocation := common.AddressLocation{
+		Address: barContractAddress,
+		Name:    "Bar",
+	}
+	const barContractCode = `
+        import 0x1
+        pub contract Bar {}
+	`
+
+	config := &analysis.Config{
+		Mode: analysis.NeedTypes,
+		ResolveAddressContractNames: func(address common.Address) ([]string, error) {
+			switch address {
+			case fooContractAddress:
+				return []string{fooContractLocation.Name}, nil
+			case barContractAddress:
+				return []string{barContractLocation.Name}, nil
+			default:
+				return nil, fmt.Errorf(
+					"import of unknown location: %s",
+					address,
+				)
+			}
+		},
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) ([]byte, error) {
+			switch location {
+			case fooContractLocation:
+				return []byte(fooContractCode), nil
+
+			case barContractLocation:
+				return []byte(barContractCode), nil
+
+			default:
+				require.FailNow(t,
+					"import of unknown location: %s",
+					"location: %s",
+					location,
+				)
+				return nil, nil
+			}
+		},
+	}
+
+	_, err := analysis.Load(config, fooContractLocation)
+	require.Error(t, err)
+
+	var checkerError *sema.CheckerError
+	require.ErrorAs(t, err, &checkerError)
+
+	errs := checker.RequireCheckerErrors(t, checkerError, 1)
+
+	var importedProgramErr *sema.ImportedProgramError
+	require.ErrorAs(t, errs[0], &importedProgramErr)
+
+	var nestedCheckerErr *sema.CheckerError
+	require.ErrorAs(t, importedProgramErr.Err, &nestedCheckerErr)
+
+	errs = checker.RequireCheckerErrors(t, nestedCheckerErr, 1)
+	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }

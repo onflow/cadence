@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -209,7 +209,7 @@ func makeContractValueHandler(
 		invocationRange ast.Range,
 	) interpreter.ContractValue {
 
-		constructor := constructorGenerator(common.Address{})
+		constructor := constructorGenerator(common.ZeroAddress)
 
 		value, err := inter.InvokeFunctionValue(
 			constructor,
@@ -276,7 +276,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
@@ -597,6 +597,70 @@ func TestInterpretParameters(t *testing.T) {
 		inter, b, value)
 }
 
+func TestInterpretArrayEquality(t *testing.T) {
+	t.Parallel()
+
+	testBooleanFunction := func(t *testing.T, name string, expected bool, innerCode string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.Equal(t, bool(boolVal), expected)
+		})
+
+	}
+
+	// variable sized arrays
+	nestingLimit := 4
+
+	for i := 0; i < nestingLimit; i++ {
+		nestingLevel := i
+		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
+
+		for _, opStr := range []string{"==", "!="} {
+			op := opStr
+			testname := fmt.Sprintf("test variable size array %s at nesting level %d", op, nestingLevel)
+			code := fmt.Sprintf(` 
+					let xs = %s
+					return xs %s xs
+				`,
+				array,
+				op,
+			)
+
+			testBooleanFunction(t, testname, op == "==", code)
+		}
+	}
+
+	// fixed size arrays
+
+	testBooleanFunction(t, "fixed array [Int; 3] should not equal a different array", false, `
+		let xs: [Int; 3] = [1, 2, 3]
+		let ys: [Int; 3] = [4, 5, 6]
+		return xs == ys
+	`)
+
+	testBooleanFunction(t, "fixed array [Int; 3] should be unequal to a different array", true, `
+		let xs: [Int; 3] = [1, 2, 3]
+		let ys: [Int; 3] = [4, 5, 6]
+		return xs != ys
+	`)
+
+	testBooleanFunction(t, "fixed array [[Int; 2]; 1] should equal itself", true, `
+		let xs: [[Int; 2]; 1] = [[42, 1337]]
+		return xs == xs
+	`)
+}
+
 func TestInterpretArrayIndexing(t *testing.T) {
 
 	t.Parallel()
@@ -681,7 +745,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
 		interpreter.NewUnmeteredIntValueFromInt64(2),
 	)
@@ -1864,7 +1928,7 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, testFunction)
 
 	inter, err := interpreter.NewInterpreter(
@@ -1973,7 +2037,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, testFunction)
 
 	inter, err := interpreter.NewInterpreter(
@@ -2421,7 +2485,7 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.FalseValue,
 			interpreter.TrueValue,
 		),
@@ -2466,7 +2530,7 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.FalseValue,
 			interpreter.TrueValue,
 		),
@@ -2508,7 +2572,7 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.FalseValue,
 			interpreter.TrueValue,
 		),
@@ -2550,7 +2614,7 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.FalseValue,
 			interpreter.TrueValue,
 		),
@@ -2599,7 +2663,7 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.FalseValue,
 			interpreter.TrueValue,
 		),
@@ -2675,7 +2739,7 @@ func TestInterpretArrayCopy(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(0),
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
@@ -2716,7 +2780,7 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 			interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -4016,7 +4080,7 @@ func TestInterpretImportError(t *testing.T) {
 
 	mainChecker := parseAndCheck(code, TestLocation)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	storage := newUnmeteredInMemoryStorage()
@@ -4749,7 +4813,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
 		storage := newUnmeteredInMemoryStorage()
@@ -6349,7 +6413,7 @@ func TestInterpretSwapVariables(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
@@ -6390,7 +6454,7 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
@@ -6820,7 +6884,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
 			fields1,
-			common.Address{},
+			common.ZeroAddress,
 		),
 		interpreter.NewCompositeValue(
 			inter,
@@ -6829,7 +6893,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
 			fields2,
-			common.Address{},
+			common.ZeroAddress,
 		),
 		interpreter.NewCompositeValue(
 			inter,
@@ -6838,7 +6902,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
 			common.CompositeKindEvent,
 			fields3,
-			common.Address{},
+			common.ZeroAddress,
 		),
 	}
 
@@ -6896,7 +6960,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		"S",
 		common.CompositeKindStructure,
 		nil,
-		common.Address{},
+		common.ZeroAddress,
 	)
 	sValue.Functions = map[string]interpreter.FunctionValue{}
 
@@ -7055,7 +7119,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 					},
-					common.Address{},
+					common.ZeroAddress,
 					testCase.value,
 				),
 				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
@@ -7070,7 +7134,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 						Size: 1,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					testCase.value,
 				),
 				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
@@ -7171,7 +7235,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					TestLocation.QualifiedIdentifier(testType.ID()),
 					common.CompositeKindEvent,
 					fields,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			}
 
@@ -7358,7 +7422,7 @@ func TestInterpretReferenceUse(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -7410,7 +7474,7 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(0),
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -7588,7 +7652,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 						Type: interpreter.PrimitiveStaticTypeString,
 					},
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
@@ -7675,7 +7739,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 						Type: interpreter.PrimitiveStaticTypeString,
 					},
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
@@ -7916,7 +7980,7 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -7958,7 +8022,7 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -8164,7 +8228,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -8194,7 +8258,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: 2,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(40),
 			interpreter.NewUnmeteredIntValueFromInt64(60),
 		),
@@ -8594,7 +8658,7 @@ func TestInterpretHexDecode(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
@@ -8940,7 +9004,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredStringValue("2"),
 				interpreter.NewUnmeteredStringValue("3"),
 			),
@@ -8986,7 +9050,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -9059,7 +9123,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 						interpreter.VariableSizedStaticType{
 							Type: interpreter.PrimitiveStaticTypeString,
 						},
-						common.Address{},
+						common.ZeroAddress,
 					)
 				},
 			)
@@ -9127,7 +9191,7 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 						interpreter.VariableSizedStaticType{
 							Type: interpreter.PrimitiveStaticTypeString,
 						},
-						common.Address{},
+						common.ZeroAddress,
 					)
 				},
 			)
@@ -9561,7 +9625,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, logFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -9689,7 +9753,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: stringIntDictionaryStaticType,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
@@ -9869,7 +9933,7 @@ func TestInterpretMissingMember(t *testing.T) {
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
 
-	var missingMemberError interpreter.MissingMemberValueError
+	var missingMemberError interpreter.UseBeforeInitializationError
 	require.ErrorAs(t, err, &missingMemberError)
 
 	require.Equal(t, "y", missingMemberError.Name)
@@ -10205,7 +10269,7 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,

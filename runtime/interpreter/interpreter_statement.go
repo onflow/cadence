@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -588,7 +588,7 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 	}
 
 	if expression, ok := expression.(*ast.MemberExpression); ok {
-		panic(MissingMemberValueError{
+		panic(UseBeforeInitializationError{
 			Name: expression.Identifier.Identifier,
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,

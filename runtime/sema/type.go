@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -245,6 +245,15 @@ type ParameterizedType interface {
 	Instantiate(typeArguments []Type, report func(err error)) Type
 	BaseType() Type
 	TypeArguments() []Type
+}
+
+func MustInstantiate(t ParameterizedType, typeArguments ...Type) Type {
+	return t.Instantiate(
+		typeArguments,
+		func(err error) {
+			panic(errors.NewUnexpectedErrorFromCause(err))
+		},
+	)
 }
 
 // TypeAnnotation
@@ -2161,9 +2170,8 @@ func (t *VariableSizedType) IsImportable(results map[*Member]bool) bool {
 	return t.Type.IsImportable(results)
 }
 
-func (*VariableSizedType) IsEquatable() bool {
-	// TODO:
-	return false
+func (v *VariableSizedType) IsEquatable() bool {
+	return v.Type.IsEquatable()
 }
 
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -2304,9 +2312,8 @@ func (t *ConstantSizedType) IsImportable(results map[*Member]bool) bool {
 	return t.Type.IsImportable(results)
 }
 
-func (*ConstantSizedType) IsEquatable() bool {
-	// TODO:
-	return false
+func (t *ConstantSizedType) IsEquatable() bool {
+	return t.Type.IsEquatable()
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
