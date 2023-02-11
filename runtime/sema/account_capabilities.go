@@ -19,12 +19,14 @@
 package sema
 
 // .get<T>
-const AccountCapabilitiesGetFunctionDocString = `
+const AccountCapabilitiesTypeGetFunctionName = `get`
+const AccountCapabilitiesTypeGetFunctionDocString = `
 get returns the capability at the public path, if one was stored there.
 `
 
 // .borrow<T>
-const AccountCapabilitiesBorrowFunctionDocString = `
+const AccountCapabilitiesTypeBorrowFunctionName = `borrow`
+const AccountCapabilitiesTypeBorrowFunctionDocString = `
 borrow gets the capability at the given path, and borrows the capability if it exists.
 
 Returns ` + "nil" + ` if the capability does not exist or cannot be borrowed using the given type.
@@ -32,32 +34,37 @@ Returns ` + "nil" + ` if the capability does not exist or cannot be borrowed usi
 The function is equivalent to ` + "get(path)?.borrow()`."
 
 // .forEach
-const AccountCapabilitiesForEachFunctionDocString = `
+const AccountCapabilitiesTypeForEachFunctionName = "forEach"
+const AccountCapabilitiesTypeForEachFunctionDocString = `
 For each iterates through all the public capabilities of the public account.
 
 Returning false from the function stops the iteration.
 `
 
 // .getController
-const AuthAccountCapabilitiesGetControllerFunctionDocString = `
+const AuthAccountCapabilitiesTypeGetControllerFunctionName = "getController"
+const AuthAccountCapabilitiesTypeGetControllerFunctionDocString = `
 Get capability controller for capability with the specified id.
 
 If the id does not reference an existing capability or the capability does not target a storage path on this address, return ` + "`nil`"
 
 // .getControllers
-const AuthAccountCapabilitiesGetControllersFunctionDocString = `
+const AuthAccountCapabilitiesTypeGetControllersFunctionName = "getControllers"
+const AuthAccountCapabilitiesTypeGetControllersFunctionDocString = `
 Get all capability controllers for capabilities that target this storage path
 `
 
 // .forEachController
-const AuthAccountCapabilitiesForEachControllerFunctionDocString = `
+const AuthAccountCapabilitiesTypeForEachControllerFunctionName = "forEachController"
+const AuthAccountCapabilitiesTypeForEachControllerFunctionDocString = `
 Iterate through all capability controllers for capabilities that target this storage path.
 
 Returning false from the function stops the iteration.
 `
 
 // .issue
-const AuthAccountCapabilitiesIssueFunctionDocString = `
+const AuthAccountCapabilitiesTypeIssueFunctionName = "issue"
+const AuthAccountCapabilitiesTypeIssueFunctionDocString = `
 Issue/create a new capability.
 `
 
@@ -69,7 +76,7 @@ var genericTypeT = &GenericType{
 	TypeParameter: typeParamT,
 }
 
-var AccountCapabilitiesGetFunctionType = &FunctionType{
+var AccountCapabilitiesTypeGetFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{
 		typeParamT,
 	},
@@ -89,7 +96,7 @@ var AccountCapabilitiesGetFunctionType = &FunctionType{
 	),
 }
 
-var AccountCapabilitiesBorrowFunctionType = &FunctionType{
+var AccountCapabilitiesTypeBorrowFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{
 		typeParamT,
 	},
@@ -114,7 +121,7 @@ func higherOrderPredicate(params []Parameter) TypeAnnotation {
 	)
 }
 
-var AccountCapabilitiesForEachFunctionType = &FunctionType{
+var AccountCapabilitiesTypeForEachFunctionType = &FunctionType{
 	// function: fun(PublicPath, Type): Bool
 	Parameters: []Parameter{
 		{
@@ -135,7 +142,7 @@ var AccountCapabilitiesForEachFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 }
 
-var AuthAccountCapabilitiesGetControllerFunctionType = &FunctionType{
+var AuthAccountCapabilitiesTypeGetControllerFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
 			Identifier:     "byCapabilityID",
@@ -151,7 +158,7 @@ var AuthAccountCapabilitiesGetControllerFunctionType = &FunctionType{
 	),
 }
 
-var AuthAccountCapabilitiesGetControllersFunctionType = &FunctionType{
+var AuthAccountCapabilitiesTypeGetControllersFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
 			Identifier:     "forPath",
@@ -167,7 +174,7 @@ var AuthAccountCapabilitiesGetControllersFunctionType = &FunctionType{
 	),
 }
 
-var AuthAccountCapabilitiesForEachControllerFunctionType = &FunctionType{
+var AuthAccountCapabilitiesTypeForEachControllerFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
 			Identifier:     "forPath",
@@ -190,7 +197,7 @@ var AuthAccountCapabilitiesForEachControllerFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 }
 
-var AuthAccountCapabilitiesIssueFunctionType = &FunctionType{
+var AuthAccountCapabilitiesTypeIssueFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{typeParamT},
 	Parameters: []Parameter{
 		{
