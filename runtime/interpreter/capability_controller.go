@@ -43,7 +43,6 @@ func NewCapabilityControllerValue(
 	revoke func() error,
 	retarget func(newPath PathValue) error,
 ) Value {
-	staticType := CapabilityControllerStaticType{BorrowType: borrowType}
 
 	fields := map[string]Value{
 		sema.CapabilityControllerTypeIssueHeightFieldName: NewUInt64Value(gauge, func() uint64 {
@@ -104,8 +103,10 @@ func NewCapabilityControllerValue(
 			common.UseMemory(memoryGauge, common.CapabilityControllerStringMemoryUsage)
 			borrowTypeStr := borrowType.MeteredString(memoryGauge)
 
-			idStr := fmt.Sprint(capabilityID) // probably better to take the log10(capabilityID) first
-			common.UseMemory(memoryGauge, common.NewStringMemoryUsage(len(idStr)))
+			memoryUsage := common.NewStringMemoryUsage(OverEstimateUintStringLength(uint(capabilityID)))
+			common.UseMemory(memoryGauge, memoryUsage)
+
+			idStr := fmt.Sprint(capabilityID)
 
 			str = format.CapabilityController(borrowTypeStr, idStr)
 		}
@@ -113,5 +114,14 @@ func NewCapabilityControllerValue(
 		return str
 	}
 
-	return NewSimpleCompositeValue(gauge, sema.CapabilityControllerType.ID(), staticType, capabilityControllerFieldNames, fields, computeField, nil, stringer)
+	return NewSimpleCompositeValue(
+		gauge,
+		sema.CapabilityControllerType.ID(),
+		PrimitiveStaticTypeCapabilityController,
+		capabilityControllerFieldNames,
+		fields,
+		computeField,
+		nil,
+		stringer,
+	)
 }
