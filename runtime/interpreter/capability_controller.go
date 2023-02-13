@@ -27,14 +27,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type CapabilityControllerValue struct {
-	IssueHeight  uint64
-	BorrowType   StaticType
-	CapabilityID uint64
-	IsRevoked    bool
-	TargetPath   PathValue
-}
-
 var capabilityControllerFieldNames = []string{
 	sema.CapabilityControllerTypeIssueHeightFieldName,
 	sema.CapabilityControllerTypeBorrowTypeFieldName,
