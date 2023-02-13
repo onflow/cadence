@@ -28,7 +28,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 const cborTagSize = 2
@@ -1383,12 +1382,6 @@ func (t CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
 	return NonStorableStaticTypeError{
 		Type: t.Type,
-	}
-}
-
-func (t CapabilityControllerStaticType) Encode(e *cbor.StreamEncoder) error {
-	return NonStorableStaticTypeError{
-		Type: sema.CapabilityControllerType,
 	}
 }
 
