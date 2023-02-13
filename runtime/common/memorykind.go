@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,6 @@ const (
 	MemoryKindBigInt
 	MemoryKindSimpleCompositeValue
 	MemoryKindPublishedValue
-	MemoryKindCapabilityControllerValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
@@ -75,7 +74,6 @@ const (
 	MemoryKindReferenceStaticType
 	MemoryKindCapabilityStaticType
 	MemoryKindFunctionStaticType
-	MemoryKindCapabilityControllerStaticType
 
 	// Cadence Values
 	MemoryKindCadenceVoidValue
@@ -107,7 +105,6 @@ const (
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
-	MemoryKindCadenceSimpleType
 	MemoryKindCadenceOptionalType
 	MemoryKindCadenceVariableSizedArrayType
 	MemoryKindCadenceConstantSizedArrayType
@@ -154,6 +151,8 @@ const (
 	MemoryKindFunctionBlock
 	MemoryKindParameter
 	MemoryKindParameterList
+	MemoryKindTypeParameter
+	MemoryKindTypeParameterList
 	MemoryKindTransfer
 	MemoryKindMembers
 	MemoryKindTypeAnnotation
@@ -230,7 +229,6 @@ const (
 	MemoryKindRestrictedSemaType
 	MemoryKindReferenceSemaType
 	MemoryKindCapabilitySemaType
-	MemoryKindCapabilityControllerSemaType
 
 	// ordered-map
 	MemoryKindOrderedMap

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,17 @@ import (
 	"context"
 	"encoding/csv"
 	"flag"
+	"fmt"
 	"os"
 	"time"
 
-	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/onflow/flow-go-sdk"
+
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
 
 	"github.com/onflow/cadence/tools/batch-script"
 )
@@ -38,6 +42,8 @@ import (
 var urlFlag = flag.String("u", "", "Flow Access Node URL")
 var pauseFlag = flag.String("p", "", "pause duration")
 var clientsFlag = flag.Int("c", 0, "number of clients")
+var chainFlag = flag.String("chain", "", "Flow blockchain")
+var retryFlag = flag.Bool("retry", false, "Retry on errors")
 
 var csvHeader = []string{"location", "code"}
 
@@ -49,6 +55,16 @@ func main() {
 	url := *urlFlag
 	if url != "" {
 		config.FlowAccessNodeURL = url
+	}
+
+	chain := *chainFlag
+	if chain != "" {
+		var err error
+		config.Chain, err = chainIdFromString(chain)
+		if err != nil {
+			log.Err(err).Msg("invalid chain name")
+			return
+		}
 	}
 
 	pause := *pauseFlag
@@ -95,6 +111,7 @@ func main() {
 					}
 				},
 			),
+			*retryFlag,
 		)
 
 		if err != nil {
@@ -123,5 +140,17 @@ func main() {
 
 	if err := writer.Error(); err != nil {
 		log.Err(err).Msg("failed to write CSV")
+	}
+}
+
+func chainIdFromString(chain string) (flow.ChainID, error) {
+	chainID := flow.ChainID(chain)
+	switch chainID {
+	case flow.Mainnet,
+		flow.Testnet,
+		flow.Emulator:
+		return chainID, nil
+	default:
+		return chainID, fmt.Errorf("unsupported chain: %s", chain)
 	}
 }

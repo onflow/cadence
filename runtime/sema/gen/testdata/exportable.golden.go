@@ -1,7 +1,8 @@
+// Code generated from testdata/exportable.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +17,18 @@
  * limitations under the License.
  */
 
-package stdlib
+package sema
 
-import (
-	goRuntime "runtime"
+const TestTypeName = "Test"
 
-	"github.com/onflow/cadence/runtime/errors"
-)
-
-func wrapPanic(f func()) {
-	defer func() {
-		if r := recover(); r != nil {
-			// don't wrap Go errors and internal errors
-			switch r := r.(type) {
-			case goRuntime.Error, errors.InternalError:
-				panic(r)
-			default:
-				panic(errors.ExternalError{
-					Recovered: r,
-				})
-			}
-
-		}
-	}()
-	f()
+var TestType = &SimpleType{
+	Name:          TestTypeName,
+	QualifiedName: TestTypeName,
+	TypeID:        TestTypeName,
+	tag:           TestTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Exportable:    true,
+	Importable:    false,
 }

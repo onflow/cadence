@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 
 	fooStruct := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
+			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields:              []cadence.Field{},
 		},
@@ -98,7 +98,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -314,15 +314,16 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllNumberTypes {
+			typString := typ.QualifiedString()
 
-			t.Run(typ.QualifiedString(), func(t *testing.T) {
+			t.Run(typString, func(t *testing.T) {
 				t.Parallel()
 
 				script := fmt.Sprintf(`
                         pub fun main(arg: %s?) {
                         }
                     `,
-					typ.QualifiedString(),
+					typString,
 				)
 
 				err := executeScript(t, script, cadence.NewOptional(nil))
@@ -544,6 +545,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		require.IsType(t, &sema.CheckerError{}, parsingCheckingErr.Err)
 		checkerErr := parsingCheckingErr.Err.(*sema.CheckerError)
 
+		require.Len(t, checkerErr.Errors, len(expectedErrors))
 		for i, err := range expectedErrors {
 			assert.IsType(t, err, checkerErr.Errors[i])
 		}
@@ -560,8 +562,11 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 	fooStruct := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            TestLocation,
-			QualifiedIdentifier: "Foo",
+			Location: common.AddressLocation{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			},
+			QualifiedIdentifier: "C.Foo",
 			Fields:              []cadence.Field{},
 		},
 		Fields: []cadence.Value{},
@@ -575,7 +580,12 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		Fields: []cadence.Value{},
 	}
 
-	executeTransaction := func(t *testing.T, script string, arg cadence.Value) (err error) {
+	executeTransaction := func(
+		t *testing.T,
+		script string,
+		contracts map[common.AddressLocation][]byte,
+		arg cadence.Value,
+	) (err error) {
 		var encodedArg []byte
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
@@ -585,7 +595,15 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
+			storage:         storage,
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return contracts[location], nil
+			},
 			meterMemory: func(_ common.MemoryUsage) error {
 				return nil
 			},
@@ -602,7 +620,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.TransactionLocation{},
 			},
 		)
 	}
@@ -610,35 +628,54 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 	t.Run("Struct", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-            transaction(arg: Foo) {
-            }
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+                pub contract C {
+                    pub struct Foo {}
+                }
+            `),
+		}
 
-            pub struct Foo {
-            }
+		script := `
+          import C from 0x1
+
+          transaction(arg: C.Foo) {}
         `
 
-		err := executeTransaction(t, script, fooStruct)
+		err := executeTransaction(t, script, contracts, fooStruct)
 		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Struct", func(t *testing.T) {
 		t.Parallel()
 
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+                pub contract C {
+                    pub struct Foo {
+                        pub var funcTypedField: fun (): Void
+
+                        init() {
+                            self.funcTypedField = fun () {}
+                        }
+                    }
+               }
+            `),
+		}
+
 		script := `
-            transaction(arg: Foo?) {
-            }
+          import C from 0x1
 
-            pub struct Foo {
-                pub var funcTypedField: fun():Void
-
-                init() {
-                    self.funcTypedField = fun() {}
-                }
-            }
+          transaction(arg: C.Foo?) {}
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 		RequireCheckerErrors(
 			t,
 			err,
@@ -650,45 +687,61 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            transaction(arg: AnyStruct?) {
-            }
+          transaction(arg: AnyStruct?) {}
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, nil, cadence.NewOptional(nil))
 		assert.NoError(t, err)
 	})
 
 	t.Run("Interface", func(t *testing.T) {
 		t.Parallel()
 
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+                pub contract C {
+                    pub struct Foo: Bar {}
+
+                    pub struct interface Bar {}
+                }
+            `),
+		}
 		script := `
-            transaction(arg: {Bar}) {
-            }
+          import C from 0x1
 
-            pub struct Foo: Bar {
-            }
-
-            pub struct interface Bar {
-            }
+          transaction(arg: {C.Bar}) {}
         `
 
-		err := executeTransaction(t, script, fooStruct)
+		err := executeTransaction(t, script, contracts, fooStruct)
 		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Interface", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-            transaction(arg: {Bar}?) {
-            }
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+                pub contract C {
+                    pub struct interface Bar {
+                        pub var funcTypedField: fun (): Void
+                    }
+                }
+            `),
+		}
 
-            pub struct interface Bar {
-                pub var funcTypedField: fun():Void
-            }
+		script := `
+          import C from 0x1
+
+          transaction(arg: {C.Bar}?) {}
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
 		RequireCheckerErrors(
 			t,
@@ -700,15 +753,24 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 	t.Run("Resource", func(t *testing.T) {
 		t.Parallel()
 
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+                pub contract C {
+                    pub resource Baz {}
+                }
+            `),
+		}
+
 		script := `
-            transaction(arg: @Baz?) {
-            }
+          import C from 0x1
 
-            pub resource Baz {
-            }
-        `
+          transaction(arg: @C.Baz?) {}
+ `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
 		RequireCheckerErrors(
 			t,
@@ -722,11 +784,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            transaction(arg: @AnyResource?) {
-            }
+          transaction(arg: @AnyResource?) {}
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, nil, cadence.NewOptional(nil))
 
 		RequireCheckerErrors(
 			t,
@@ -739,15 +800,21 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 	t.Run("Contract", func(t *testing.T) {
 		t.Parallel()
 
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+                pub contract C {}
+            `),
+		}
 		script := `
-            transaction(arg: Foo?) {
-            }
+          import C from 0x1
 
-            pub contract Foo {
-            }
+          transaction(arg: C?) {}
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
 		RequireCheckerErrors(
 			t,
@@ -760,11 +827,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            transaction(arg: [String]) {
-            }
+          transaction(arg: [String]) {}
         `
 
-		err := executeTransaction(t, script, cadence.NewArray([]cadence.Value{}))
+		err := executeTransaction(t, script, nil, cadence.NewArray([]cadence.Value{}))
 		assert.NoError(t, err)
 	})
 
@@ -772,11 +838,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            transaction(arg: [fun():Void]) {
-            }
+          transaction(arg: [fun(): Void]) {}
         `
 
-		err := executeTransaction(t, script, cadence.NewArray([]cadence.Value{}))
+		err := executeTransaction(t, script, nil, cadence.NewArray([]cadence.Value{}))
 
 		RequireCheckerErrors(
 			t,
@@ -789,11 +854,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            transaction(arg: {String: Bool}) {
-            }
+          transaction(arg: {String: Bool}) {}
         `
 
-		err := executeTransaction(t, script, cadence.NewDictionary([]cadence.KeyValuePair{}))
+		err := executeTransaction(t, script, nil, cadence.NewDictionary([]cadence.KeyValuePair{}))
 		assert.NoError(t, err)
 	})
 
@@ -801,11 +865,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            transaction(arg: Capability<&Int>?) {
-            }
+          transaction(arg: Capability<&Int>?) {}
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, nil, cadence.NewOptional(nil))
 		assert.NoError(t, err)
 	})
 
@@ -813,11 +876,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            transaction(arg: {String: fun():Void}) {
-            }
+          transaction(arg: {String: fun(): Void}) {}
         `
 
-		err := executeTransaction(t, script, cadence.NewArray([]cadence.Value{}))
+		err := executeTransaction(t, script, nil, cadence.NewArray([]cadence.Value{}))
 
 		RequireCheckerErrors(
 			t,
@@ -830,18 +892,18 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllNumberTypes {
+			typString := typ.QualifiedString()
 
-			t.Run(typ.QualifiedString(), func(t *testing.T) {
+			t.Run(typString, func(t *testing.T) {
 				t.Parallel()
 
 				script := fmt.Sprintf(`
-                        transaction(arg: %s?) {
-                        }
+                      transaction(arg: %s?) {}
                     `,
-					typ.QualifiedString(),
+					typString,
 				)
 
-				err := executeTransaction(t, script, cadence.NewOptional(nil))
+				err := executeTransaction(t, script, nil, cadence.NewOptional(nil))
 				assert.NoError(t, err)
 			})
 		}
@@ -916,13 +978,14 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			t.Run(test.label, func(t *testing.T) {
 				t.Parallel()
 
-				script := fmt.Sprintf(`
-                    transaction(arg: %s) {
-                    }`,
+				script := fmt.Sprintf(
+					`
+                      transaction(arg: %s) {}
+                    `,
 					test.typeSignature,
 				)
 
-				err := executeTransaction(t, script, test.argument)
+				err := executeTransaction(t, script, nil, test.argument)
 
 				if test.expectErrors {
 					RequireCheckerErrors(
@@ -944,38 +1007,61 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 	t.Run("Invalid struct as AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-                transaction(arg: AnyStruct?) {
-                }
-                pub struct Foo {
-                    pub var nonImportableField: PublicAccount.Keys?
-                    init() {
-                        self.nonImportableField = nil
-                    }
-                }
-            `
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+               pub contract C {
+                   pub struct Foo {
+                      pub var nonImportableField: PublicAccount.Keys?
 
-		err := executeTransaction(t, script, cadence.NewOptional(fooStruct))
+                      init() {
+                          self.nonImportableField = nil
+                      }
+                  }
+               }
+            `),
+		}
+
+		script := `
+          import C from 0x1
+
+          transaction(arg: AnyStruct?) {}
+        `
+
+		err := executeTransaction(t, script, contracts, cadence.NewOptional(fooStruct))
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
 	t.Run("Invalid struct as valid interface", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-                transaction(arg: {Bar}?) {
-                }
-                pub struct Foo: Bar {
-                    pub var nonImportableField: PublicAccount.Keys?
-                    init() {
-                        self.nonImportableField = nil
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+               pub contract C {
+                    pub struct Foo: Bar {
+                        pub var nonImportableField: PublicAccount.Keys?
+                        init() {
+                            self.nonImportableField = nil
+                        }
                     }
-                }
-                pub struct interface Bar {
-                }
-            `
 
-		err := executeTransaction(t, script, cadence.NewOptional(fooStruct))
+                    pub struct interface Bar {}
+               }
+            `),
+		}
+
+		script := `
+          import C from 0x1
+
+          transaction(arg: {C.Bar}?) {}
+        `
+
+		err := executeTransaction(t, script, contracts, cadence.NewOptional(fooStruct))
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
@@ -983,11 +1069,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                transaction(arg: AnyStruct) {
-                }
-            `
+          transaction(arg: AnyStruct) {}
+        `
 
-		err := executeTransaction(t, script, publicAccountKeys)
+		err := executeTransaction(t, script, nil, publicAccountKeys)
 		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
@@ -997,12 +1082,12 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                transaction(arg: [AnyStruct]) {
-                }
-            `
+            transaction(arg: [AnyStruct]) {}
+        `
 
 		err := executeTransaction(t,
 			script,
+			nil,
 			cadence.NewArray([]cadence.Value{
 				publicAccountKeys,
 			}),
@@ -1014,8 +1099,13 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 	t.Run("invalid HashAlgorithm", func(t *testing.T) {
 
+		script := `
+          transaction(arg: HashAlgorithm) {}
+        `
+
 		err := executeTransaction(t,
-			`transaction(arg: HashAlgorithm) {}`,
+			script,
+			nil,
 			cadence.NewEnum(
 				[]cadence.Value{
 					cadence.NewUInt8(0),
@@ -1030,8 +1120,12 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 	t.Run("invalid SignatureAlgorithm", func(t *testing.T) {
 
+		script := `
+          transaction(arg: SignatureAlgorithm) {}
+        `
 		err := executeTransaction(t,
-			`transaction(arg: SignatureAlgorithm) {}`,
+			script,
+			nil,
 			cadence.NewEnum(
 				[]cadence.Value{
 					cadence.NewUInt8(0),
