@@ -47,6 +47,7 @@ const (
 	DeclarationKindStructureInterface
 	DeclarationKindResourceInterface
 	DeclarationKindContractInterface
+	DeclarationKindEntitlement
 	DeclarationKindImport
 	DeclarationKindSelf
 	DeclarationKindTransaction
@@ -117,6 +118,8 @@ func (k DeclarationKind) Name() string {
 		return "resource interface"
 	case DeclarationKindContractInterface:
 		return "contract interface"
+	case DeclarationKindEntitlement:
+		return "entitlement"
 	case DeclarationKindImport:
 		return "import"
 	case DeclarationKindSelf:
@@ -168,6 +171,8 @@ func (k DeclarationKind) Keywords() string {
 		return "resource interface"
 	case DeclarationKindContractInterface:
 		return "contract interface"
+	case DeclarationKindEntitlement:
+		return "entitlement"
 	case DeclarationKindImport:
 		return "import"
 	case DeclarationKindSelf:

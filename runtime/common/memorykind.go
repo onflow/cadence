@@ -161,6 +161,7 @@ const (
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
 	MemoryKindInterfaceDeclaration
+	MemoryKindEntitlementDeclaration
 	MemoryKindEnumCaseDeclaration
 	MemoryKindFieldDeclaration
 	MemoryKindTransactionDeclaration

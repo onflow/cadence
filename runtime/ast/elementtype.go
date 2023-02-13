@@ -35,6 +35,7 @@ const (
 	ElementTypeSpecialFunctionDeclaration
 	ElementTypeCompositeDeclaration
 	ElementTypeInterfaceDeclaration
+	ElementTypeEntitlementDeclaration
 	ElementTypeFieldDeclaration
 	ElementTypeEnumCaseDeclaration
 	ElementTypePragmaDeclaration
