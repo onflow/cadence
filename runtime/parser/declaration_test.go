@@ -1451,6 +1451,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -1510,6 +1511,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -1576,6 +1578,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -1980,7 +1983,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})

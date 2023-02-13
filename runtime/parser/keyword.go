@@ -58,6 +58,7 @@ const (
 	KeywordStruct      = "struct"
 	KeywordResource    = "resource"
 	KeywordInterface   = "interface"
+	KeywordEntitlement = "entitlement"
 	KeywordTransaction = "transaction"
 	KeywordPrepare     = "prepare"
 	KeywordExecute     = "execute"
@@ -108,6 +109,7 @@ var allKeywords = []string{
 	KeywordStruct,
 	KeywordResource,
 	KeywordInterface,
+	KeywordEntitlement,
 	KeywordTransaction,
 	KeywordPrepare,
 	KeywordExecute,
