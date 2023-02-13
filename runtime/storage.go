@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ func (s *Storage) GetStorageMap(
 
 		var data []byte
 		var err error
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
 		})
 		if err != nil {
@@ -243,7 +243,7 @@ func (s *Storage) commitNewStorageMaps() error {
 
 	for pair := s.newStorageMaps.Oldest(); pair != nil; pair = pair.Next() {
 		var err error
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			err = s.Ledger.SetValue(
 				pair.Key.Address[:],
 				[]byte(pair.Key.Key),

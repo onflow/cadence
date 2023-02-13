@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
  */
 
 package parser
+
+import "github.com/SaveTheRbtz/mph"
 
 // NOTE: ensure to update allKeywords when adding a new keyword
 const (
@@ -69,73 +71,81 @@ const (
 	// NOTE: ensure to update allKeywords when adding a new keyword
 )
 
-var allKeywords = map[string]struct{}{
-	KeywordIf:          {},
-	KeywordElse:        {},
-	KeywordWhile:       {},
-	KeywordBreak:       {},
-	KeywordContinue:    {},
-	KeywordReturn:      {},
-	KeywordTrue:        {},
-	KeywordFalse:       {},
-	KeywordNil:         {},
-	KeywordLet:         {},
-	KeywordVar:         {},
-	KeywordFun:         {},
-	KeywordAs:          {},
-	KeywordCreate:      {},
-	KeywordDestroy:     {},
-	KeywordFor:         {},
-	KeywordIn:          {},
-	KeywordEmit:        {},
-	KeywordAuth:        {},
-	KeywordPriv:        {},
-	KeywordPub:         {},
-	KeywordAccess:      {},
-	KeywordSet:         {},
-	KeywordAll:         {},
-	KeywordSelf:        {},
-	KeywordInit:        {},
-	KeywordContract:    {},
-	KeywordAccount:     {},
-	KeywordImport:      {},
-	KeywordFrom:        {},
-	KeywordPre:         {},
-	KeywordPost:        {},
-	KeywordEvent:       {},
-	KeywordStruct:      {},
-	KeywordResource:    {},
-	KeywordInterface:   {},
-	KeywordTransaction: {},
-	KeywordPrepare:     {},
-	KeywordExecute:     {},
-	KeywordCase:        {},
-	KeywordSwitch:      {},
-	KeywordDefault:     {},
-	KeywordEnum:        {},
-	KeywordView:        {},
+var allKeywords = []string{
+	KeywordIf,
+	KeywordElse,
+	KeywordWhile,
+	KeywordBreak,
+	KeywordContinue,
+	KeywordReturn,
+	KeywordTrue,
+	KeywordFalse,
+	KeywordNil,
+	KeywordLet,
+	KeywordVar,
+	KeywordFun,
+	KeywordAs,
+	KeywordCreate,
+	KeywordDestroy,
+	KeywordFor,
+	KeywordIn,
+	KeywordEmit,
+	KeywordAuth,
+	KeywordPriv,
+	KeywordPub,
+	KeywordAccess,
+	KeywordSet,
+	KeywordAll,
+	KeywordSelf,
+	KeywordInit,
+	KeywordContract,
+	KeywordAccount,
+	KeywordImport,
+	KeywordFrom,
+	KeywordPre,
+	KeywordPost,
+	KeywordEvent,
+	KeywordStruct,
+	KeywordResource,
+	KeywordInterface,
+	KeywordTransaction,
+	KeywordPrepare,
+	KeywordExecute,
+	KeywordCase,
+	KeywordSwitch,
+	KeywordDefault,
+	KeywordEnum,
+	KeywordView,
 }
 
 // Keywords that can be used in identifier position without ambiguity.
-var softKeywords = map[string]struct{}{
-	KeywordFrom:    {},
-	KeywordAccount: {},
-	KeywordSet:     {},
-	KeywordAll:     {},
-	KeywordView:    {},
+var softKeywords = []string{
+	KeywordFrom,
+	KeywordAccount,
+	KeywordSet,
+	KeywordAll,
+	KeywordView,
 }
 
-// Keywords that aren't allowed in identifier position.
-var hardKeywords = mapDiff(allKeywords, softKeywords)
+var softKeywordsTable = mph.Build(softKeywords)
 
-// take the boolean difference of two maps
-func mapDiff[T comparable, U any](minuend map[T]U, subtrahend map[T]U) map[T]U {
-	diff := make(map[T]U, len(minuend))
-	// iteration order is not important here
-	for k, v := range minuend { // nolint:maprange
-		if _, exists := subtrahend[k]; !exists {
-			diff[k] = v
+// Keywords that aren't allowed in identifier position.
+var hardKeywords = filter(
+	allKeywords,
+	func(keyword string) bool {
+		_, ok := softKeywordsTable.Lookup(keyword)
+		return !ok
+	},
+)
+
+var hardKeywordsTable = mph.Build(hardKeywords)
+
+func filter[T comparable](items []T, f func(T) bool) []T {
+	result := make([]T, 0, len(items))
+	for _, item := range items {
+		if f(item) {
+			result = append(result, item)
 		}
 	}
-	return diff
+	return result
 }

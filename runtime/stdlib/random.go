@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -54,7 +55,7 @@ func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryVal
 				func() uint64 {
 					var rand uint64
 					var err error
-					wrapPanic(func() {
+					errors.WrapPanic(func() {
 						rand, err = generator.UnsafeRandom()
 					})
 					if err != nil {

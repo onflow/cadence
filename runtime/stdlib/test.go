@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -186,7 +186,7 @@ var matcherType = func() *sema.CompositeType {
 	return compositeType
 }()
 
-var matcherTestFieldType = compositeFunctionType(matcherType, matcherTestFieldName)
+var matcherTestFunctionType = compositeFunctionType(matcherType, matcherTestFieldName)
 
 func compositeFunctionType(parent *sema.CompositeType, funcName string) *sema.FunctionType {
 	testFunc, ok := parent.Members.Get(funcName)
@@ -418,29 +418,38 @@ Expect function tests a value against a matcher, and fails the test if it's not 
 
 const testExpectFunctionName = "expect"
 
-var testExpectFunctionType = &sema.FunctionType{
-	Purity: matcherTestFunctionType.Purity,
-	TypeParameters: []*sema.TypeParameter{
-		typeParameter,
-	},
-	Parameters: []sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.GenericType{
-					TypeParameter: typeParameter,
-				},
-			),
+var testExpectFunctionType = func() *sema.FunctionType {
+
+	typeParameter := &sema.TypeParameter{
+		TypeBound: sema.AnyStructType,
+		Name:      "T",
+		Optional:  true,
+	}
+
+	return &sema.FunctionType{
+		Purity: matcherTestFunctionType.Purity,
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "matcher",
+				TypeAnnotation: sema.NewTypeAnnotation(matcherType),
+			},
 		},
-		{
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     "matcher",
-			TypeAnnotation: sema.NewTypeAnnotation(matcherType),
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
 		},
-	},
-	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-}
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+	}
+}()
 
 var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -638,46 +647,48 @@ The test function is of type 'fun(T): Bool', where 'T' is bound to 'AnyStruct'.
 
 const newMatcherFunctionName = "newMatcher"
 
-// Type of the Matcher.test function: fun(T): Bool
-var matcherTestFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityImpure,
-	[]sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.GenericType{
-					TypeParameter: newMatcherFunctionTypeParameter,
-				},
-			),
-		},
-	},
-	sema.BoolTypeAnnotation,
-)
+var newMatcherFunctionType = func() *sema.FunctionType {
 
-var newMatcherFunctionType = &sema.FunctionType{
-	Purity:        sema.FunctionPurityView,
-	IsConstructor: true,
-	TypeParameters: []*sema.TypeParameter{
-		newMatcherFunctionTypeParameter,
-	},
-	Parameters: []sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "test",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				matcherTestFunctionType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
-}
+	typeParameter := &sema.TypeParameter{
+		TypeBound: sema.AnyStructType,
+		Name:      "T",
+		Optional:  true,
+	}
 
-var newMatcherFunctionTypeParameter = &sema.TypeParameter{
-	TypeBound: sema.AnyStructType,
-	Name:      "T",
-	Optional:  true,
-}
+	return &sema.FunctionType{
+		Purity:        sema.FunctionPurityView,
+		IsConstructor: true,
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "test",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					// Type of the 'test' function: ((T): Bool)
+					&sema.FunctionType{
+						Parameters: []sema.Parameter{
+							{
+								Label:      sema.ArgumentLabelNotRequired,
+								Identifier: "value",
+								TypeAnnotation: sema.NewTypeAnnotation(
+									&sema.GenericType{
+										TypeParameter: typeParameter,
+									},
+								),
+							},
+						},
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(
+							sema.BoolType,
+						),
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+		},
+	}
+}()
 
 var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -802,7 +813,7 @@ func newEmulatorBackend(
 		emulatorBackendTypeName,
 		common.CompositeKindStructure,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 }
 
@@ -1285,30 +1296,33 @@ const equalMatcherFunctionDocString = `
 Returns a matcher that succeeds if the tested value is equal to the given value.
 `
 
-var typeParameter = &sema.TypeParameter{
-	TypeBound: sema.AnyStructType,
-	Name:      "T",
-	Optional:  true,
-}
+var equalMatcherFunctionType = func() *sema.FunctionType {
 
-var equalMatcherFunctionType = &sema.FunctionType{
-	IsConstructor: false,
-	TypeParameters: []*sema.TypeParameter{
-		typeParameter,
-	},
-	Parameters: []sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.GenericType{
-					TypeParameter: typeParameter,
-				},
-			),
+	typeParameter := &sema.TypeParameter{
+		TypeBound: sema.AnyStructType,
+		Name:      "T",
+		Optional:  true,
+	}
+
+	return &sema.FunctionType{
+		IsConstructor: false,
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
 		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
-}
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
 
 var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -1530,7 +1544,7 @@ func newMatcherWithGenericTestFunction(
 
 			return value
 		},
-		matcherTestFieldType,
+		matcherTestFunctionType,
 	)
 
 	matcherConstructor := getNestedTypeConstructorValue(
@@ -1587,7 +1601,7 @@ func NewTestInterpreterContractValueHandler(
 		case CryptoCheckerLocation:
 			contract, err := NewCryptoContract(
 				inter,
-				constructorGenerator(common.Address{}),
+				constructorGenerator(common.ZeroAddress),
 				invocationRange,
 			)
 			if err != nil {
@@ -1599,7 +1613,7 @@ func NewTestInterpreterContractValueHandler(
 			contract, err := NewTestContract(
 				inter,
 				testFramework,
-				constructorGenerator(common.Address{}),
+				constructorGenerator(common.ZeroAddress),
 				invocationRange,
 			)
 			if err != nil {
@@ -1610,7 +1624,7 @@ func NewTestInterpreterContractValueHandler(
 		default:
 			// During tests, imported contracts can be constructed using the constructor,
 			// similar to structs. Therefore, generate a constructor function.
-			return constructorGenerator(common.Address{})
+			return constructorGenerator(common.ZeroAddress)
 		}
 	}
 }

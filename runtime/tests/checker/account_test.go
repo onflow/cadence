@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1454,6 +1454,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	t.Parallel()
 
 	t.Run("contracts type", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
           let contracts: AuthAccount.Contracts = authAccount.contracts
 	    `)
@@ -1462,6 +1463,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	})
 
 	t.Run("contracts names", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
           let names: [String] = authAccount.contracts.names
 	    `)
@@ -1470,6 +1472,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	})
 
 	t.Run("update contracts names", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test() {
                 authAccount.contracts.names = ["foo"]
@@ -1483,6 +1486,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	})
 
 	t.Run("get contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract? {
                 return authAccount.contracts.get(name: "foo")
@@ -1493,6 +1497,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	})
 
 	t.Run("borrow contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
@@ -1505,6 +1510,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	})
 
 	t.Run("invalid borrow contract: missing type argument", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
@@ -1519,6 +1525,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	})
 
 	t.Run("add contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract {
                 return authAccount.contracts.add(name: "foo", code: "012".decodeHex())
@@ -1529,6 +1536,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	})
 
 	t.Run("update contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract {
                 return authAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
@@ -1539,6 +1547,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	})
 
 	t.Run("remove contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract? {
                 return authAccount.contracts.remove(name: "foo")
@@ -1547,6 +1556,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
 }
 
 func TestPublicAccountContracts(t *testing.T) {
@@ -1554,6 +1564,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	t.Parallel()
 
 	t.Run("contracts type", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             let contracts: PublicAccount.Contracts = publicAccount.contracts
 	    `)
@@ -1562,6 +1573,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("contracts names", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             let names: [String] = publicAccount.contracts.names
 	    `)
@@ -1570,6 +1582,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("update contracts names", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test() {
                 publicAccount.contracts.names = ["foo"]
@@ -1583,6 +1596,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("get contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract? {
                 return publicAccount.contracts.get(name: "foo")
@@ -1593,6 +1607,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("borrow contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
@@ -1605,6 +1620,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("invalid borrow contract: missing type argument", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
@@ -1619,6 +1635,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("add contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract {
                 return publicAccount.contracts.add(name: "foo", code: "012".decodeHex())
@@ -1633,6 +1650,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("update contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract {
                 return publicAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
@@ -1647,6 +1665,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 	t.Run("remove contract", func(t *testing.T) {
+		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract {
                 return publicAccount.contracts.remove(name: "foo")

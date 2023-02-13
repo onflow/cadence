@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,4 +69,65 @@ func TestExportRecursiveType(t *testing.T) {
 		expected,
 		ExportType(ty, map[sema.TypeID]cadence.Type{}),
 	)
+}
+
+func BenchmarkExportType(b *testing.B) {
+
+	b.Run("simple type", func(b *testing.B) {
+		ty := sema.StringType
+
+		exportedType := ExportType(ty, map[sema.TypeID]cadence.Type{})
+		assert.Equal(b, cadence.NewStringType(), exportedType)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			ExportType(ty, map[sema.TypeID]cadence.Type{})
+		}
+	})
+
+	b.Run("composite type", func(b *testing.B) {
+
+		ty := &sema.CompositeType{
+			Location:   utils.TestLocation,
+			Identifier: "Foo",
+			Kind:       common.CompositeKindResource,
+			Members:    &sema.StringMemberOrderedMap{},
+			Fields:     []string{"foo"},
+		}
+
+		ty.Members.Set("foo", &sema.Member{
+			ContainerType: ty,
+			Access:        ast.AccessNotSpecified,
+			Identifier:    ast.Identifier{Identifier: "foo"},
+			// NOTE: recursive type
+			TypeAnnotation:  sema.NewTypeAnnotation(ty),
+			DeclarationKind: common.DeclarationKindField,
+			VariableKind:    ast.VariableKindVariable,
+		})
+
+		expected := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "foo",
+				},
+			},
+		}
+
+		// NOTE: recursion should be kept
+		expected.Fields[0].Type = expected
+
+		exportedType := ExportType(ty, map[sema.TypeID]cadence.Type{})
+		assert.Equal(b, expected, exportedType)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			ExportType(ty, map[sema.TypeID]cadence.Type{})
+		}
+	})
 }
