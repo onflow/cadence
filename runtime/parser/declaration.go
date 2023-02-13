@@ -357,7 +357,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			p.nextSemanticToken()
 
 		default:
-			entitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose)
+			entitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true)
 			if err != nil {
 				return ast.AccessNotSpecified, err
 			}
@@ -1040,7 +1040,7 @@ func parseCompositeOrInterfaceDeclaration(
 		// Skip the colon
 		p.next()
 
-		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen)
+		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen, false)
 		if err != nil {
 			return nil, err
 		}

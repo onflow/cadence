@@ -1993,26 +1993,18 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( foo, self )")
-		// this will have to be rejected in the type checker
-		require.Empty(t, errs)
-
 		utils.AssertEqualWithDiff(t,
-			ast.EntitlementAccess{
-				Entitlements: []*ast.NominalType{
-					{
-						Identifier: ast.Identifier{
-							Identifier: "foo",
-							Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
-						},
-					},
-					{
-						Identifier: ast.Identifier{
-							Identifier: "self",
-							Pos:        ast.Position{Offset: 14, Line: 1, Column: 14},
-						},
-					},
+			[]error{
+				&SyntaxError{
+					Message: "unexpected non-nominal type: self",
+					Pos:     ast.Position{Offset: 18, Line: 1, Column: 18},
 				},
 			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})

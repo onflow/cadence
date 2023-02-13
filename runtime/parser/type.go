@@ -519,7 +519,7 @@ func defineRestrictedOrDictionaryType() {
 
 			p.acceptBuffered()
 
-			nominalTypes, endPos, err := parseNominalTypes(p, lexer.TokenBraceClose)
+			nominalTypes, endPos, err := parseNominalTypes(p, lexer.TokenBraceClose, false)
 			if err != nil {
 				return nil, err, true
 			}
@@ -547,6 +547,7 @@ func defineRestrictedOrDictionaryType() {
 func parseNominalTypes(
 	p *parser,
 	endTokenType lexer.TokenType,
+	rejectAccessKeywords bool,
 ) (
 	nominalTypes []*ast.NominalType,
 	endPos ast.Position,
@@ -599,6 +600,13 @@ func parseNominalTypes(
 
 			nominalType, ok := ty.(*ast.NominalType)
 			if !ok {
+				return nil, ast.EmptyPosition, p.syntaxError("unexpected non-nominal type: %s", ty)
+			}
+			if rejectAccessKeywords &&
+				nominalType.Identifier.Identifier == KeywordAll ||
+				nominalType.Identifier.Identifier == KeywordAccess ||
+				nominalType.Identifier.Identifier == KeywordAccount ||
+				nominalType.Identifier.Identifier == KeywordSelf {
 				return nil, ast.EmptyPosition, p.syntaxError("unexpected non-nominal type: %s", ty)
 			}
 			nominalTypes = append(nominalTypes, nominalType)
@@ -944,7 +952,7 @@ func defineIdentifierTypes() {
 					if err != nil {
 						return nil, err
 					}
-					entitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose)
+					entitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true)
 					if err != nil {
 						return nil, err
 					}
