@@ -200,6 +200,7 @@ const (
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
 	PrimitiveStaticTypeAuthAccountInbox
+	PrimitiveStaticTypeCapabilityController
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
