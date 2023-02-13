@@ -7420,3 +7420,330 @@ func TestParseNestedPragma(t *testing.T) {
 	})
 
 }
+
+func TestParseEntitlementDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no members", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(" pub entitlement E { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
+					},
+					Members: &ast.Members{},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 21, Offset: 21},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with members", func(t *testing.T) {
+
+		t.Parallel()
+
+		// init and destroy will be rejected in the semantic checker,
+		// since it doesn't make sense for an entitlement to have these
+		result, errs := testParseDeclarations(`
+          entitlement LongNameX {
+              pub(set) var foo: Int
+
+              init(foo: Int)
+
+              pub fun getFoo(): Int
+
+              pub fun getBar(): Int {}
+
+              destroy() {}
+          }
+	    `)
+
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementDeclaration{
+					Access: ast.AccessNotSpecified,
+					Identifier: ast.Identifier{
+						Identifier: "LongNameX",
+						Pos:        ast.Position{Offset: 23, Line: 2, Column: 22},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.FieldDeclaration{
+								Access:       ast.AccessPublicSettable,
+								VariableKind: ast.VariableKindVariable,
+								Identifier: ast.Identifier{
+									Identifier: "foo",
+									Pos:        ast.Position{Offset: 62, Line: 3, Column: 27},
+								},
+								TypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 67, Line: 3, Column: 32},
+										},
+									},
+									StartPos: ast.Position{Offset: 67, Line: 3, Column: 32},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 49, Line: 3, Column: 14},
+									EndPos:   ast.Position{Offset: 69, Line: 3, Column: 34},
+								},
+							},
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindInitializer,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
+									Identifier: ast.Identifier{
+										Identifier: "init",
+										Pos:        ast.Position{Offset: 86, Line: 5, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												Label: "",
+												Identifier: ast.Identifier{
+													Identifier: "foo",
+													Pos:        ast.Position{Offset: 91, Line: 5, Column: 19},
+												},
+												TypeAnnotation: &ast.TypeAnnotation{
+													IsResource: false,
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "Int",
+															Pos:        ast.Position{Offset: 96, Line: 5, Column: 24},
+														},
+													},
+													StartPos: ast.Position{Offset: 96, Line: 5, Column: 24},
+												},
+												StartPos: ast.Position{Offset: 91, Line: 5, Column: 19},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 90, Line: 5, Column: 18},
+											EndPos:   ast.Position{Offset: 99, Line: 5, Column: 27},
+										},
+									},
+									StartPos: ast.Position{Offset: 86, Line: 5, Column: 14},
+								},
+							},
+							&ast.FunctionDeclaration{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "getFoo",
+									Pos:        ast.Position{Offset: 124, Line: 7, Column: 22},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 130, Line: 7, Column: 28},
+										EndPos:   ast.Position{Offset: 131, Line: 7, Column: 29},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 134, Line: 7, Column: 32},
+										},
+									},
+									StartPos: ast.Position{Offset: 134, Line: 7, Column: 32},
+								},
+								StartPos: ast.Position{Offset: 116, Line: 7, Column: 14},
+							},
+							&ast.FunctionDeclaration{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "getBar",
+									Pos:        ast.Position{Offset: 161, Line: 9, Column: 22},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 167, Line: 9, Column: 28},
+										EndPos:   ast.Position{Offset: 168, Line: 9, Column: 29},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 171, Line: 9, Column: 32},
+										},
+									},
+									StartPos: ast.Position{Offset: 171, Line: 9, Column: 32},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 175, Line: 9, Column: 36},
+											EndPos:   ast.Position{Offset: 176, Line: 9, Column: 37},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 153, Line: 9, Column: 14},
+							},
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindDestructor,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
+									Identifier: ast.Identifier{
+										Identifier: "destroy",
+										Pos:        ast.Position{Offset: 193, Line: 11, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 200, Line: 11, Column: 21},
+											EndPos:   ast.Position{Offset: 201, Line: 11, Column: 22},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 203, Line: 11, Column: 24},
+												EndPos:   ast.Position{Offset: 204, Line: 11, Column: 25},
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 193, Line: 11, Column: 14},
+								},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
+						EndPos:   ast.Position{Offset: 216, Line: 12, Column: 10},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("nested entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		// at static checking time, all entitlements nested inside non-contract-kinded composites
+		// will be rejected
+		result, errs := testParseDeclarations(`
+            pub contract C { 
+                pub entitlement E {}
+            }
+        `)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessPublic,
+					CompositeKind: common.CompositeKindContract,
+					Identifier: ast.Identifier{
+						Identifier: "C",
+						Pos:        ast.Position{Line: 2, Column: 25, Offset: 26},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 12, Offset: 13},
+						EndPos:   ast.Position{Line: 4, Column: 12, Offset: 80},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.EntitlementDeclaration{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "E",
+									Pos:        ast.Position{Line: 3, Column: 32, Offset: 63},
+								},
+								Members: &ast.Members{},
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 3, Column: 16, Offset: 47},
+									EndPos:   ast.Position{Line: 3, Column: 35, Offset: 66},
+								},
+							},
+						},
+					),
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement { }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier following entitlement declaration, got '{'",
+					Pos:     ast.Position{Offset: 17, Line: 1, Column: 17},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("no open brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement E }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '{'",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("no close brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement E {")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '}'",
+					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("view modifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub view entitlement E { }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view modifier for entitlement",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+}

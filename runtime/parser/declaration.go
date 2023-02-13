@@ -156,6 +156,16 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
+			case KeywordEntitlement:
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEntitlement)
+				if err != nil {
+					return nil, err
+				}
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for entitlement")
+				}
+				return parseEntitlementDeclaration(p, access, accessPos, docString)
+
 			case KeywordContract:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindContract)
 				if err != nil {
@@ -965,6 +975,63 @@ func parseFieldWithVariableKind(
 	), nil
 }
 
+// parseEntitlementDeclaration parses an entitlement declaration.
+//
+//	entitlementDeclaration : 'entitlement' identifier '{' membersAndNestedDeclarations '}'
+func parseEntitlementDeclaration(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	docString string,
+) (ast.Declaration, error) {
+	startPos := p.current.StartPos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
+
+	// Skip the `entitlement` keyword
+	p.nextSemanticToken()
+	var identifier ast.Identifier
+	identifier, err := p.nonReservedIdentifier("following entitlement declaration")
+	if err != nil {
+		return nil, err
+	}
+
+	p.nextSemanticToken()
+
+	_, err = p.mustOne(lexer.TokenBraceOpen)
+	if err != nil {
+		return nil, err
+	}
+
+	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpaceAndComments()
+
+	endToken, err := p.mustOne(lexer.TokenBraceClose)
+	if err != nil {
+		return nil, err
+	}
+
+	declarationRange := ast.NewRange(
+		p.memoryGauge,
+		startPos,
+		endToken.EndPos,
+	)
+
+	return ast.NewEntitlementDeclaration(
+		p.memoryGauge,
+		access,
+		identifier,
+		members,
+		docString,
+		declarationRange,
+	), nil
+}
+
 // parseCompositeOrInterfaceDeclaration parses an event declaration.
 //
 //	conformances : ':' nominalType ( ',' nominalType )*
@@ -1267,6 +1334,16 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 					return nil, err
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+
+			case KeywordEntitlement:
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEntitlement)
+				if err != nil {
+					return nil, err
+				}
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for entitlement")
+				}
+				return parseEntitlementDeclaration(p, access, accessPos, docString)
 
 			case KeywordEnum:
 				if purity != ast.FunctionPurityUnspecified {
