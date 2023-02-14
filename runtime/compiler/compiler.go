@@ -375,6 +375,11 @@ func (compiler *Compiler) VisitTransactionDeclaration(_ *ast.TransactionDeclarat
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) ir.Stmt {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())

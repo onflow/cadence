@@ -354,3 +354,8 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 		checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
 	}
 }
+
+func (checker *Checker) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) struct{} {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
