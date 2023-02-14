@@ -1056,11 +1056,7 @@ func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
 	if len(t.typeID) == 0 {
-		if t.Location == nil {
-			t.typeID = t.QualifiedIdentifier
-		} else {
-			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
-		}
+		t.typeID = generateID(t.Location, t.QualifiedIdentifier)
 	}
 	return t.typeID
 }
@@ -1136,11 +1132,7 @@ func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
 	if len(t.typeID) == 0 {
-		if t.Location == nil {
-			t.typeID = t.QualifiedIdentifier
-		} else {
-			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
-		}
+		t.typeID = generateID(t.Location, t.QualifiedIdentifier)
 	}
 	return t.typeID
 }
@@ -1216,11 +1208,7 @@ func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
 	if len(t.typeID) == 0 {
-		if t.Location == nil {
-			t.typeID = t.QualifiedIdentifier
-		} else {
-			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
-		}
+		t.typeID = generateID(t.Location, t.QualifiedIdentifier)
 	}
 	return t.typeID
 }
@@ -1296,11 +1284,7 @@ func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
 	if len(t.typeID) == 0 {
-		if t.Location == nil {
-			t.typeID = t.QualifiedIdentifier
-		} else {
-			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
-		}
+		t.typeID = generateID(t.Location, t.QualifiedIdentifier)
 	}
 	return t.typeID
 }
@@ -1388,11 +1372,7 @@ func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
 	if len(t.typeID) == 0 {
-		if t.Location == nil {
-			t.typeID = t.QualifiedIdentifier
-		} else {
-			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
-		}
+		t.typeID = generateID(t.Location, t.QualifiedIdentifier)
 	}
 	return t.typeID
 }
@@ -1468,11 +1448,7 @@ func (*ResourceInterfaceType) isType() {}
 
 func (t *ResourceInterfaceType) ID() string {
 	if len(t.typeID) == 0 {
-		if t.Location == nil {
-			t.typeID = t.QualifiedIdentifier
-		} else {
-			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
-		}
+		t.typeID = generateID(t.Location, t.QualifiedIdentifier)
 	}
 	return t.typeID
 }
@@ -1548,11 +1524,7 @@ func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
 	if len(t.typeID) == 0 {
-		if t.Location == nil {
-			t.typeID = t.QualifiedIdentifier
-		} else {
-			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
-		}
+		t.typeID = generateID(t.Location, t.QualifiedIdentifier)
 	}
 	return t.typeID
 }
@@ -1989,11 +1961,7 @@ func (*EnumType) isType() {}
 
 func (t *EnumType) ID() string {
 	if len(t.typeID) == 0 {
-		if t.Location == nil {
-			t.typeID = t.QualifiedIdentifier
-		} else {
-			t.typeID = string(t.Location.TypeID(nil, t.QualifiedIdentifier))
-		}
+		t.typeID = generateID(t.Location, t.QualifiedIdentifier)
 	}
 	return t.typeID
 }
@@ -2181,4 +2149,42 @@ func (AccountKeyType) ID() string {
 
 func (t AccountKeyType) Equal(other Type) bool {
 	return t == other
+}
+
+func generateID(location common.Location, identifier string) string {
+	if location == nil {
+		return identifier
+	}
+
+	return string(location.TypeID(nil, identifier))
+}
+
+// TypeWithCachedTypeID recursively caches type ID of type t.
+// This is needed because each type ID is lazily cached on
+// its first use in ID() to avoid performance penalty.
+func TypeWithCachedTypeID(t Type) Type {
+	if t == nil {
+		return t
+	}
+
+	// Cache type ID by calling ID()
+	t.ID()
+
+	switch t := t.(type) {
+
+	case CompositeType:
+		fields := t.CompositeFields()
+		for _, f := range fields {
+			TypeWithCachedTypeID(f.Type)
+		}
+
+		initializers := t.CompositeInitializers()
+		for _, params := range initializers {
+			for _, p := range params {
+				TypeWithCachedTypeID(p.Type)
+			}
+		}
+	}
+
+	return t
 }

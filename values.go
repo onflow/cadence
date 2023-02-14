@@ -1974,3 +1974,63 @@ func (v Function) String() string {
 	// TODO: include function type
 	return format.Function("(...)")
 }
+
+// ValueWithCachedTypeID recursively caches type ID of value v's type.
+// This is needed because each type ID is lazily cached on
+// its first use in ID() to avoid performance penalty.
+func ValueWithCachedTypeID[T Value](value T) T {
+	var v Value = value
+
+	if v == nil {
+		return value
+	}
+
+	TypeWithCachedTypeID(value.Type())
+
+	switch v := v.(type) {
+
+	case TypeValue:
+		TypeWithCachedTypeID(v.StaticType)
+
+	case Optional:
+		ValueWithCachedTypeID(v.Value)
+
+	case Array:
+		for _, v := range v.Values {
+			ValueWithCachedTypeID(v)
+		}
+
+	case Dictionary:
+		for _, p := range v.Pairs {
+			ValueWithCachedTypeID(p.Key)
+			ValueWithCachedTypeID(p.Value)
+		}
+
+	case Struct:
+		for _, f := range v.Fields {
+			ValueWithCachedTypeID(f)
+		}
+
+	case Resource:
+		for _, f := range v.Fields {
+			ValueWithCachedTypeID(f)
+		}
+
+	case Event:
+		for _, f := range v.Fields {
+			ValueWithCachedTypeID(f)
+		}
+
+	case Contract:
+		for _, f := range v.Fields {
+			ValueWithCachedTypeID(f)
+		}
+
+	case Enum:
+		for _, f := range v.Fields {
+			ValueWithCachedTypeID(f)
+		}
+	}
+
+	return value
+}

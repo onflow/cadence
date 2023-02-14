@@ -2282,13 +2282,16 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 		scriptParam.Arguments = [][]byte{encodedArg}
 	}
 
-	return rt.ExecuteScript(
+	value, err := rt.ExecuteScript(
 		scriptParam,
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
 		},
 	)
+
+	value = cadence.ValueWithCachedTypeID(value)
+	return value, err
 }
 
 func TestRuntimeArgumentPassing(t *testing.T) {
