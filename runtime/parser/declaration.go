@@ -1384,6 +1384,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				staticPos,
 				nativePos,
 				identifier,
+				docString,
 			)
 		}
 
@@ -1471,6 +1472,7 @@ func parseSpecialFunctionDeclaration(
 	staticPos *ast.Position,
 	nativePos *ast.Position,
 	identifier ast.Identifier,
+	docString string,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
 	startPos := ast.EarliestPosition(identifier.Pos, accessPos, purityPos, staticPos, nativePos)
@@ -1526,7 +1528,7 @@ func parseSpecialFunctionDeclaration(
 			nil,
 			functionBlock,
 			startPos,
-			"",
+			docString,
 		),
 	), nil
 }
