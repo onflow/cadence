@@ -11,16 +11,16 @@ pub struct CapabilityController {
     pub let capabilityID: UInt64
    
     /// Is the capability revoked.
-    pub fun isRevoked(): Bool {}
+    pub fun isRevoked(): Bool
 
     /// Returns the targeted storage path of the capability.
-    pub fun target(): StoragePath {}
+    pub fun target(): StoragePath
    
     /// Revoke the capability making it no longer usable.
     /// When borrowing from a revoked capability the borrow returns nil.
-    pub fun revoke() {}
+    pub fun revoke()
    
     /// Retarget the capability.
     /// This moves the CapCon from one CapCon array to another.
-    pub fun retarget(target: StoragePath) {}
+    pub fun retarget(target: StoragePath)
 }
