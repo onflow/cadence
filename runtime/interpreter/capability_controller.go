@@ -44,11 +44,12 @@ func NewCapabilityControllerValue(
 	retarget func(newPath PathValue) error,
 ) Value {
 
+	borrowTypeValue := NewTypeValue(gauge, borrowType)
 	fields := map[string]Value{
 		sema.CapabilityControllerTypeIssueHeightFieldName: NewUInt64Value(gauge, func() uint64 {
 			return issueHeight
 		}),
-		sema.CapabilityControllerTypeBorrowTypeFieldName: NewTypeValue(gauge, borrowType),
+		sema.CapabilityControllerTypeBorrowTypeFieldName: borrowTypeValue,
 		sema.CapabilityControllerTypeCapabilityIDFieldName: NewUInt64Value(gauge, func() uint64 {
 			return capabilityID
 		}),
@@ -101,7 +102,9 @@ func NewCapabilityControllerValue(
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(memoryGauge, common.CapabilityControllerStringMemoryUsage)
-			borrowTypeStr := borrowType.MeteredString(memoryGauge)
+
+			// "Type<T>()"
+			borrowTypeStr := borrowTypeValue.MeteredString(gauge, seenReferences)
 
 			memoryUsage := common.NewStringMemoryUsage(OverEstimateUintStringLength(uint(capabilityID)))
 			common.UseMemory(memoryGauge, memoryUsage)
