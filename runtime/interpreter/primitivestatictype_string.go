@@ -63,10 +63,12 @@ func _() {
 	_ = x[PrimitiveStaticTypeAuthAccountInbox-98]
 	_ = x[PrimitiveStaticTypeStorageCapabilityController-99]
 	_ = x[PrimitiveStaticTypeAccountCapabilityController-100]
-	_ = x[PrimitiveStaticType_Count-101]
+	_ = x[PrimitiveStaticTypeAuthAccountCapabilities-101]
+	_ = x[PrimitiveStaticTypePublicAccountCapabilities-102]
+	_ = x[PrimitiveStaticType_Count-103]
 }
 
-const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityController_Count"
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountCapabilitiesPublicAccountCapabilities_Count"
 
 var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	0:   _PrimitiveStaticType_name[0:7],
@@ -124,7 +126,9 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	98:  _PrimitiveStaticType_name[435:451],
 	99:  _PrimitiveStaticType_name[451:478],
 	100: _PrimitiveStaticType_name[478:505],
-	101: _PrimitiveStaticType_name[505:511],
+	101: _PrimitiveStaticType_name[505:528],
+	102: _PrimitiveStaticType_name[528:553],
+	103: _PrimitiveStaticType_name[553:559],
 }
 
 func (i PrimitiveStaticType) String() string {

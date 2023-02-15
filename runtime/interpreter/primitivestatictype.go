@@ -202,6 +202,8 @@ const (
 	PrimitiveStaticTypeAuthAccountInbox
 	PrimitiveStaticTypeStorageCapabilityController
 	PrimitiveStaticTypeAccountCapabilityController
+	PrimitiveStaticTypeAuthAccountCapabilities
+	PrimitiveStaticTypePublicAccountCapabilities
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
