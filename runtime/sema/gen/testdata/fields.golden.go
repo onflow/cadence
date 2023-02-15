@@ -28,7 +28,8 @@ const TestTypeTestIntFieldName = "testInt"
 
 var TestTypeTestIntFieldType = UInt64Type
 
-const TestTypeTestIntFieldDocString = `This is a test integer.
+const TestTypeTestIntFieldDocString = `
+This is a test integer.
 `
 
 const TestTypeTestOptIntFieldName = "testOptInt"
@@ -37,7 +38,8 @@ var TestTypeTestOptIntFieldType = &OptionalType{
 	Type: UInt64Type,
 }
 
-const TestTypeTestOptIntFieldDocString = `This is a test optional integer.
+const TestTypeTestOptIntFieldDocString = `
+This is a test optional integer.
 `
 
 const TestTypeTestRefIntFieldName = "testRefInt"
@@ -46,7 +48,8 @@ var TestTypeTestRefIntFieldType = &ReferenceType{
 	Type: UInt64Type,
 }
 
-const TestTypeTestRefIntFieldDocString = `This is a test integer reference.
+const TestTypeTestRefIntFieldDocString = `
+This is a test integer reference.
 `
 
 const TestTypeTestVarIntsFieldName = "testVarInts"
@@ -55,7 +58,8 @@ var TestTypeTestVarIntsFieldType = &VariableSizedType{
 	Type: UInt64Type,
 }
 
-const TestTypeTestVarIntsFieldDocString = `This is a test variable-sized integer array.
+const TestTypeTestVarIntsFieldDocString = `
+This is a test variable-sized integer array.
 `
 
 const TestTypeTestConstIntsFieldName = "testConstInts"
@@ -65,7 +69,8 @@ var TestTypeTestConstIntsFieldType = &ConstantSizedType{
 	Size: 2,
 }
 
-const TestTypeTestConstIntsFieldDocString = `This is a test constant-sized integer array.
+const TestTypeTestConstIntsFieldDocString = `
+This is a test constant-sized integer array.
 `
 
 const TestTypeTestParamFieldName = "testParam"
@@ -75,28 +80,32 @@ var TestTypeTestParamFieldType = MustInstantiate(
 	BarType,
 )
 
-const TestTypeTestParamFieldDocString = `This is a test parameterized-type field.
+const TestTypeTestParamFieldDocString = `
+This is a test parameterized-type field.
 `
 
 const TestTypeTestAddressFieldName = "testAddress"
 
 var TestTypeTestAddressFieldType = TheAddressType
 
-const TestTypeTestAddressFieldDocString = `This is a test address field.
+const TestTypeTestAddressFieldDocString = `
+This is a test address field.
 `
 
 const TestTypeTestTypeFieldName = "testType"
 
 var TestTypeTestTypeFieldType = MetaType
 
-const TestTypeTestTypeFieldDocString = `This is a test type field.
+const TestTypeTestTypeFieldDocString = `
+This is a test type field.
 `
 
 const TestTypeTestCapFieldName = "testCap"
 
 var TestTypeTestCapFieldType = &CapabilityType{}
 
-const TestTypeTestCapFieldDocString = `This is a test capability field.
+const TestTypeTestCapFieldDocString = `
+This is a test capability field.
 `
 
 const TestTypeTestCapIntFieldName = "testCapInt"
@@ -106,7 +115,8 @@ var TestTypeTestCapIntFieldType = MustInstantiate(
 	IntType,
 )
 
-const TestTypeTestCapIntFieldDocString = `This is a test specific capability field.
+const TestTypeTestCapIntFieldDocString = `
+This is a test specific capability field.
 `
 
 const TestTypeName = "Test"
