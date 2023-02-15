@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -830,6 +830,7 @@ func parseEventDeclaration(
 			false,
 			false,
 			ast.NewEmptyIdentifier(p.memoryGauge, ast.EmptyPosition),
+			nil,
 			parameterList,
 			nil,
 			nil,
@@ -1383,6 +1384,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				staticPos,
 				nativePos,
 				identifier,
+				docString,
 			)
 		}
 
@@ -1470,6 +1472,7 @@ func parseSpecialFunctionDeclaration(
 	staticPos *ast.Position,
 	nativePos *ast.Position,
 	identifier ast.Identifier,
+	docString string,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
 	startPos := ast.EarliestPosition(identifier.Pos, accessPos, purityPos, staticPos, nativePos)
@@ -1520,11 +1523,12 @@ func parseSpecialFunctionDeclaration(
 			staticPos != nil,
 			nativePos != nil,
 			identifier,
+			nil,
 			parameterList,
 			nil,
 			functionBlock,
 			startPos,
-			"",
+			docString,
 		),
 	), nil
 }

@@ -290,7 +290,7 @@ Logical operators work with the boolean values `true` and `false`.
 
 Comparison operators work with boolean and integer values.
 
-- Equality: `==`, for booleans and integers
+- Equality: `==`, is supported for booleans, numbers, addresses, strings, characters, enums, paths, `Type` values, references, and `Void` values (`()`). Variable-sized arrays, fixed-size arrays, and optionals also support equality tests if their inner types do.
 
   Both sides of the equality operator may be optional, even of different levels,
   so it is for example possible to compare a non-optional with a double-optional (`??`).
@@ -331,7 +331,26 @@ Comparison operators work with boolean and integer values.
   x == y  // is `true`
   ```
 
-- Inequality: `!=`, for booleans and integers (possibly optional)
+  ```cadence
+  // Equality tests of arrays are possible if their inner types are equatable.
+  let xs: [Int] = [1, 2, 3]
+  let ys: [Int] = [1, 2, 3]
+  xs == ys // is `true`
+
+  let xss: [[Int]] = [xs, xs, xs]
+  let yss: [[Int]] = [ys, ys, ys]
+  xss == yss // is `true`
+  ```
+
+  ```cadence
+  // Equality also applies to fixed-size arrays. If their lengths differ, the result is a type error.
+  let xs: [Int; 2] = [1, 2]
+  let ys: [Int; 2] = [0 + 1, 1 + 1]
+  xs == ys // is `true`
+  ```
+
+- Inequality: `!=`, is supported for booleans, numbers, addresses, strings, characters, enums, paths, `Type` values, references, and `Void` values (`()`). 
+  Variable-sized arrays, fixed-size arrays, and optionals also support inequality tests if their inner types do.
 
   Both sides of the inequality operator may be optional, even of different levels,
   so it is for example possible to compare a non-optional with a double-optional (`??`).
@@ -370,6 +389,20 @@ Comparison operators work with boolean and integer values.
   let x: Int? = 2
   let y: Int?? = 2
   x != y  // is `false`
+  ```
+
+  ```cadence
+  // Inequality tests of arrays are possible if their inner types are equatable.
+  let xs: [Int] = [1, 2, 3]
+  let ys: [Int] = [4, 5, 6]
+  xs != ys // is `true`
+  ```
+
+  ```cadence
+  // Inequality also applies to fixed-size arrays. If their lengths differ, the result is a type error.
+  let xs: [Int; 2] = [1, 2]
+  let ys: [Int; 2] = [1, 2]
+  xs != ys // is `false`
   ```
 
 - Less than: `<`, for integers

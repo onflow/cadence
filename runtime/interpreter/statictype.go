@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -944,40 +944,4 @@ func (p TypeParameter) String() string {
 		builder.WriteString(p.TypeBound.String())
 	}
 	return builder.String()
-}
-
-type CapabilityControllerStaticType struct {
-	BorrowType StaticType
-}
-
-func NewCapabilityControllerStaticType(gauge common.MemoryGauge, borrowType StaticType) CapabilityControllerStaticType {
-	common.UseMemory(gauge, common.CapabilityControllerStaticTypeMemoryUsage)
-
-	return CapabilityControllerStaticType{
-		BorrowType: borrowType,
-	}
-}
-
-var _ StaticType = &CapabilityControllerStaticType{}
-
-func (t CapabilityControllerStaticType) String() string {
-	panic("not implemented") // TODO: Implement
-}
-
-func (t CapabilityControllerStaticType) isStaticType() {}
-
-/*
-	 this returns the size (in bytes) of the largest inhabitant of this type,
-		or UnknownElementSize if the largest inhabitant has arbitrary size
-*/
-func (t CapabilityControllerStaticType) elementSize() uint {
-	panic("not implemented") // TODO: Implement
-}
-
-func (t CapabilityControllerStaticType) Equal(other StaticType) bool {
-	panic("not implemented") // TODO: Implement
-}
-
-func (t CapabilityControllerStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	panic("not implemented") // TODO: Implement
 }

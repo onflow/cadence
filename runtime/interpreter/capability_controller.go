@@ -27,14 +27,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type CapabilityControllerValue struct {
-	IssueHeight  uint64
-	BorrowType   StaticType
-	CapabilityID uint64
-	IsRevoked    bool
-	TargetPath   PathValue
-}
-
 var capabilityControllerFieldNames = []string{
 	sema.CapabilityControllerTypeIssueHeightFieldName,
 	sema.CapabilityControllerTypeBorrowTypeFieldName,
@@ -51,13 +43,13 @@ func NewCapabilityControllerValue(
 	revoke func() error,
 	retarget func(newPath PathValue) error,
 ) Value {
-	staticType := CapabilityControllerStaticType{BorrowType: borrowType}
 
+	borrowTypeValue := NewTypeValue(gauge, borrowType)
 	fields := map[string]Value{
 		sema.CapabilityControllerTypeIssueHeightFieldName: NewUInt64Value(gauge, func() uint64 {
 			return issueHeight
 		}),
-		sema.CapabilityControllerTypeBorrowTypeFieldName: NewTypeValue(gauge, borrowType),
+		sema.CapabilityControllerTypeBorrowTypeFieldName: borrowTypeValue,
 		sema.CapabilityControllerTypeCapabilityIDFieldName: NewUInt64Value(gauge, func() uint64 {
 			return capabilityID
 		}),
@@ -110,10 +102,14 @@ func NewCapabilityControllerValue(
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(memoryGauge, common.CapabilityControllerStringMemoryUsage)
-			borrowTypeStr := borrowType.MeteredString(memoryGauge)
 
-			idStr := fmt.Sprint(capabilityID) // probably better to take the log10(capabilityID) first
-			common.UseMemory(memoryGauge, common.NewStringMemoryUsage(len(idStr)))
+			// "Type<T>()"
+			borrowTypeStr := borrowTypeValue.MeteredString(gauge, seenReferences)
+
+			memoryUsage := common.NewStringMemoryUsage(OverEstimateUintStringLength(uint(capabilityID)))
+			common.UseMemory(memoryGauge, memoryUsage)
+
+			idStr := fmt.Sprint(capabilityID)
 
 			str = format.CapabilityController(borrowTypeStr, idStr)
 		}
@@ -121,5 +117,14 @@ func NewCapabilityControllerValue(
 		return str
 	}
 
-	return NewSimpleCompositeValue(gauge, sema.CapabilityControllerType.ID(), staticType, capabilityControllerFieldNames, fields, computeField, nil, stringer)
+	return NewSimpleCompositeValue(
+		gauge,
+		sema.CapabilityControllerType.ID(),
+		PrimitiveStaticTypeCapabilityController,
+		capabilityControllerFieldNames,
+		fields,
+		computeField,
+		nil,
+		stringer,
+	)
 }

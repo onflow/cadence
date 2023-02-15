@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 const cborTagSize = 2
@@ -1383,12 +1382,6 @@ func (t CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
 	return NonStorableStaticTypeError{
 		Type: t.Type,
-	}
-}
-
-func (t CapabilityControllerStaticType) Encode(e *cbor.StreamEncoder) error {
-	return NonStorableStaticTypeError{
-		Type: sema.CapabilityControllerType,
 	}
 }
 

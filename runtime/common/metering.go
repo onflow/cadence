@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,16 +44,18 @@ var (
 
 	// AST
 
-	ProgramMemoryUsage         = NewConstantMemoryUsage(MemoryKindProgram)
-	IdentifierMemoryUsage      = NewConstantMemoryUsage(MemoryKindIdentifier)
-	ArgumentMemoryUsage        = NewConstantMemoryUsage(MemoryKindArgument)
-	BlockMemoryUsage           = NewConstantMemoryUsage(MemoryKindBlock)
-	FunctionBlockMemoryUsage   = NewConstantMemoryUsage(MemoryKindFunctionBlock)
-	ParameterMemoryUsage       = NewConstantMemoryUsage(MemoryKindParameter)
-	ParameterListMemoryUsage   = NewConstantMemoryUsage(MemoryKindParameterList)
-	TransferMemoryUsage        = NewConstantMemoryUsage(MemoryKindTransfer)
-	TypeAnnotationMemoryUsage  = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
-	DictionaryEntryMemoryUsage = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
+	ProgramMemoryUsage           = NewConstantMemoryUsage(MemoryKindProgram)
+	IdentifierMemoryUsage        = NewConstantMemoryUsage(MemoryKindIdentifier)
+	ArgumentMemoryUsage          = NewConstantMemoryUsage(MemoryKindArgument)
+	BlockMemoryUsage             = NewConstantMemoryUsage(MemoryKindBlock)
+	FunctionBlockMemoryUsage     = NewConstantMemoryUsage(MemoryKindFunctionBlock)
+	ParameterMemoryUsage         = NewConstantMemoryUsage(MemoryKindParameter)
+	ParameterListMemoryUsage     = NewConstantMemoryUsage(MemoryKindParameterList)
+	TypeParameterMemoryUsage     = NewConstantMemoryUsage(MemoryKindTypeParameter)
+	TypeParameterListMemoryUsage = NewConstantMemoryUsage(MemoryKindTypeParameterList)
+	TransferMemoryUsage          = NewConstantMemoryUsage(MemoryKindTransfer)
+	TypeAnnotationMemoryUsage    = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
+	DictionaryEntryMemoryUsage   = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
 
 	// AST Declarations
 
@@ -151,29 +153,27 @@ var (
 
 	// Static Types
 
-	PrimitiveStaticTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
-	CompositeStaticTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
-	InterfaceStaticTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
-	VariableSizedStaticTypeMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
-	ConstantSizedStaticTypeMemoryUsage        = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
-	DictionaryStaticTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
-	OptionalStaticTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
-	RestrictedStaticTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
-	ReferenceStaticTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
-	CapabilityStaticTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
-	FunctionStaticTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
-	CapabilityControllerStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCapabilityControllerStaticType)
+	PrimitiveStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
+	CompositeStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
+	InterfaceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
+	VariableSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
+	ConstantSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
+	DictionaryStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
+	OptionalStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
+	RestrictedStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
+	ReferenceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
+	CapabilityStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
+	FunctionStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
 
 	// Sema types
 
-	VariableSizedSemaTypeMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
-	ConstantSizedSemaTypeMemoryUsage        = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
-	DictionarySemaTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
-	OptionalSemaTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
-	RestrictedSemaTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
-	ReferenceSemaTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
-	CapabilitySemaTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
-	CapabilityControllerSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCapabilityControllerSemaType)
+	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
+	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
+	DictionarySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	OptionalSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
+	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
+	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
+	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
 
 	// Storage related memory usages
 
@@ -204,7 +204,6 @@ var (
 
 	// Cadence external types
 
-	CadenceSimpleTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceSimpleType)
 	CadenceCapabilityTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceCapabilityType)
 	CadenceConstantSizedArrayTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceConstantSizedArrayType)
 	CadenceVariableSizedArrayTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceVariableSizedArrayType)

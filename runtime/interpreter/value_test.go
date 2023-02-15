@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,14 +111,14 @@ func TestOwnerNewArray(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		value,
 	)
 
 	value = array.Get(inter, EmptyLocationRange, 0).(*CompositeValue)
 
-	assert.Equal(t, common.Address{}, array.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, array.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestOwnerArrayDeepCopy(t *testing.T) {
@@ -165,7 +165,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		value,
 	)
 
@@ -415,7 +415,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 	value = array.Remove(inter, EmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, owner, array.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestOwnerNewDictionary(t *testing.T) {
@@ -461,8 +461,8 @@ func TestOwnerNewDictionary(t *testing.T) {
 	queriedValue, _ := dictionary.Get(inter, EmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
-	assert.Equal(t, common.Address{}, dictionary.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, dictionary.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestOwnerDictionary(t *testing.T) {
@@ -579,8 +579,8 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 	)
 	value = queriedValue.(*CompositeValue)
 
-	assert.Equal(t, common.Address{}, dictionaryCopy.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, dictionaryCopy.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestOwnerDictionarySetSome(t *testing.T) {
@@ -749,7 +749,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	value2 = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
-	assert.Equal(t, common.Address{}, value1.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value1.GetOwner())
 	assert.Equal(t, newOwner, value2.GetOwner())
 }
 
@@ -804,7 +804,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 	value = innerValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestOwnerNewComposite(t *testing.T) {
@@ -879,8 +879,8 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		fieldName,
 	).(*CompositeValue)
 
-	assert.Equal(t, common.Address{}, composite.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, composite.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestStringer(t *testing.T) {
@@ -1000,7 +1000,7 @@ func TestStringer(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredIntValueFromInt64(10),
 				NewUnmeteredStringValue("TEST"),
 			),
@@ -1041,7 +1041,7 @@ func TestStringer(t *testing.T) {
 					"Foo",
 					common.CompositeKindResource,
 					fields,
-					common.Address{},
+					common.ZeroAddress,
 				)
 			}(),
 			expected: "S.test.Foo(y: \"bar\")",
@@ -1064,7 +1064,7 @@ func TestStringer(t *testing.T) {
 					"Foo",
 					common.CompositeKindResource,
 					fields,
-					common.Address{},
+					common.ZeroAddress,
 				)
 
 				compositeValue.Stringer = func(_ common.MemoryGauge, _ *CompositeValue, _ SeenReferences) string {
@@ -1127,7 +1127,7 @@ func TestStringer(t *testing.T) {
 					VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
-					common.Address{},
+					common.ZeroAddress,
 				)
 				arrayRef := NewUnmeteredEphemeralReferenceValue(
 					false,
@@ -1188,7 +1188,7 @@ func TestVisitor(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		value,
 	)
 
@@ -1216,7 +1216,7 @@ func TestVisitor(t *testing.T) {
 		"Foo",
 		common.CompositeKindStructure,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 
 	value.Accept(inter, visitor)
@@ -1524,7 +1524,7 @@ func TestGetHashInput(t *testing.T) {
 					"Foo",
 					common.CompositeKindEnum,
 					fields,
-					common.Address{},
+					common.ZeroAddress,
 				)
 			}(),
 			expected: []byte{
@@ -1552,7 +1552,7 @@ func TestGetHashInput(t *testing.T) {
 					strings.Repeat("a", 32),
 					common.CompositeKindEnum,
 					fields,
-					common.Address{},
+					common.ZeroAddress,
 				)
 			}(),
 			expected: append(
@@ -1633,7 +1633,7 @@ func TestBlockValue(t *testing.T) {
 			inter,
 			EmptyLocationRange,
 			ByteArrayStaticType,
-			common.Address{},
+			common.ZeroAddress,
 		),
 		5.0,
 	)
@@ -2418,7 +2418,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
 				NewUnmeteredUInt8Value(2),
 			).Equal(
@@ -2428,7 +2428,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint8ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 					NewUnmeteredUInt8Value(1),
 					NewUnmeteredUInt8Value(2),
 				),
@@ -2447,7 +2447,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
 				NewUnmeteredUInt8Value(2),
 			).Equal(
@@ -2457,7 +2457,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint8ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 					NewUnmeteredUInt8Value(2),
 					NewUnmeteredUInt8Value(3),
 				),
@@ -2476,7 +2476,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
 			).Equal(
 				inter,
@@ -2485,7 +2485,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint8ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 					NewUnmeteredUInt8Value(1),
 					NewUnmeteredUInt8Value(2),
 				),
@@ -2504,7 +2504,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
 				NewUnmeteredUInt8Value(2),
 			).Equal(
@@ -2514,7 +2514,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint8ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 					NewUnmeteredUInt8Value(1),
 				),
 			),
@@ -2536,7 +2536,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2544,7 +2544,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint16ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2561,7 +2561,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				nil,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2569,7 +2569,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint8ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2586,7 +2586,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2594,7 +2594,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					nil,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2611,7 +2611,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				nil,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2619,7 +2619,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					nil,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2636,7 +2636,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
 			).Equal(
 				inter,
@@ -2857,7 +2857,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					ByteArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 					NewUnmeteredUInt8Value(1),
 					NewUnmeteredUInt8Value(2),
 				),
@@ -2898,7 +2898,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2909,7 +2909,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2943,7 +2943,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2954,7 +2954,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2988,7 +2988,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2999,7 +2999,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"Y",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -3033,7 +3033,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -3044,7 +3044,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -3082,7 +3082,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -3093,7 +3093,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -3131,7 +3131,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -3142,7 +3142,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -3176,7 +3176,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -3187,7 +3187,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindResource,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -3214,7 +3214,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -3330,7 +3330,7 @@ func TestPublicKeyValue(t *testing.T) {
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			NewUnmeteredIntValueFromInt64(1),
 			NewUnmeteredIntValueFromInt64(7),
 			NewUnmeteredIntValueFromInt64(3),
@@ -3383,7 +3383,7 @@ func TestPublicKeyValue(t *testing.T) {
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			NewUnmeteredIntValueFromInt64(int64(publicKeyBytes[0])),
 			NewUnmeteredIntValueFromInt64(int64(publicKeyBytes[1])),
 			NewUnmeteredIntValueFromInt64(int64(publicKeyBytes[2])),

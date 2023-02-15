@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,54 +62,52 @@ type Visitor interface {
 	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
 	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
-	VisitCapabilityControllerValue(interpreter *Interpreter, value CapabilityControllerValue)
 }
 
 type EmptyVisitor struct {
-	SimpleCompositeValueVisitor      func(interpreter *Interpreter, value *SimpleCompositeValue)
-	TypeValueVisitor                 func(interpreter *Interpreter, value TypeValue)
-	VoidValueVisitor                 func(interpreter *Interpreter, value VoidValue)
-	BoolValueVisitor                 func(interpreter *Interpreter, value BoolValue)
-	CharacterValueVisitor            func(interpreter *Interpreter, value CharacterValue)
-	StringValueVisitor               func(interpreter *Interpreter, value *StringValue)
-	ArrayValueVisitor                func(interpreter *Interpreter, value *ArrayValue) bool
-	IntValueVisitor                  func(interpreter *Interpreter, value IntValue)
-	Int8ValueVisitor                 func(interpreter *Interpreter, value Int8Value)
-	Int16ValueVisitor                func(interpreter *Interpreter, value Int16Value)
-	Int32ValueVisitor                func(interpreter *Interpreter, value Int32Value)
-	Int64ValueVisitor                func(interpreter *Interpreter, value Int64Value)
-	Int128ValueVisitor               func(interpreter *Interpreter, value Int128Value)
-	Int256ValueVisitor               func(interpreter *Interpreter, value Int256Value)
-	UIntValueVisitor                 func(interpreter *Interpreter, value UIntValue)
-	UInt8ValueVisitor                func(interpreter *Interpreter, value UInt8Value)
-	UInt16ValueVisitor               func(interpreter *Interpreter, value UInt16Value)
-	UInt32ValueVisitor               func(interpreter *Interpreter, value UInt32Value)
-	UInt64ValueVisitor               func(interpreter *Interpreter, value UInt64Value)
-	UInt128ValueVisitor              func(interpreter *Interpreter, value UInt128Value)
-	UInt256ValueVisitor              func(interpreter *Interpreter, value UInt256Value)
-	Word8ValueVisitor                func(interpreter *Interpreter, value Word8Value)
-	Word16ValueVisitor               func(interpreter *Interpreter, value Word16Value)
-	Word32ValueVisitor               func(interpreter *Interpreter, value Word32Value)
-	Word64ValueVisitor               func(interpreter *Interpreter, value Word64Value)
-	Fix64ValueVisitor                func(interpreter *Interpreter, value Fix64Value)
-	UFix64ValueVisitor               func(interpreter *Interpreter, value UFix64Value)
-	CompositeValueVisitor            func(interpreter *Interpreter, value *CompositeValue) bool
-	DictionaryValueVisitor           func(interpreter *Interpreter, value *DictionaryValue) bool
-	NilValueVisitor                  func(interpreter *Interpreter, value NilValue)
-	SomeValueVisitor                 func(interpreter *Interpreter, value *SomeValue) bool
-	StorageReferenceValueVisitor     func(interpreter *Interpreter, value *StorageReferenceValue)
-	AccountReferenceValueVisitor     func(interpreter *Interpreter, value *AccountReferenceValue)
-	EphemeralReferenceValueVisitor   func(interpreter *Interpreter, value *EphemeralReferenceValue)
-	AddressValueVisitor              func(interpreter *Interpreter, value AddressValue)
-	PathValueVisitor                 func(interpreter *Interpreter, value PathValue)
-	StorageCapabilityValueVisitor    func(interpreter *Interpreter, value *StorageCapabilityValue)
-	PathLinkValueVisitor             func(interpreter *Interpreter, value PathLinkValue)
-	AccountLinkValueVisitor          func(interpreter *Interpreter, value AccountLinkValue)
-	PublishedValueVisitor            func(interpreter *Interpreter, value *PublishedValue)
-	InterpretedFunctionValueVisitor  func(interpreter *Interpreter, value *InterpretedFunctionValue)
-	HostFunctionValueVisitor         func(interpreter *Interpreter, value *HostFunctionValue)
-	BoundFunctionValueVisitor        func(interpreter *Interpreter, value BoundFunctionValue)
-	CapabilityControllerValueVisitor func(interpreter *Interpreter, value CapabilityControllerValue)
+	SimpleCompositeValueVisitor     func(interpreter *Interpreter, value *SimpleCompositeValue)
+	TypeValueVisitor                func(interpreter *Interpreter, value TypeValue)
+	VoidValueVisitor                func(interpreter *Interpreter, value VoidValue)
+	BoolValueVisitor                func(interpreter *Interpreter, value BoolValue)
+	CharacterValueVisitor           func(interpreter *Interpreter, value CharacterValue)
+	StringValueVisitor              func(interpreter *Interpreter, value *StringValue)
+	ArrayValueVisitor               func(interpreter *Interpreter, value *ArrayValue) bool
+	IntValueVisitor                 func(interpreter *Interpreter, value IntValue)
+	Int8ValueVisitor                func(interpreter *Interpreter, value Int8Value)
+	Int16ValueVisitor               func(interpreter *Interpreter, value Int16Value)
+	Int32ValueVisitor               func(interpreter *Interpreter, value Int32Value)
+	Int64ValueVisitor               func(interpreter *Interpreter, value Int64Value)
+	Int128ValueVisitor              func(interpreter *Interpreter, value Int128Value)
+	Int256ValueVisitor              func(interpreter *Interpreter, value Int256Value)
+	UIntValueVisitor                func(interpreter *Interpreter, value UIntValue)
+	UInt8ValueVisitor               func(interpreter *Interpreter, value UInt8Value)
+	UInt16ValueVisitor              func(interpreter *Interpreter, value UInt16Value)
+	UInt32ValueVisitor              func(interpreter *Interpreter, value UInt32Value)
+	UInt64ValueVisitor              func(interpreter *Interpreter, value UInt64Value)
+	UInt128ValueVisitor             func(interpreter *Interpreter, value UInt128Value)
+	UInt256ValueVisitor             func(interpreter *Interpreter, value UInt256Value)
+	Word8ValueVisitor               func(interpreter *Interpreter, value Word8Value)
+	Word16ValueVisitor              func(interpreter *Interpreter, value Word16Value)
+	Word32ValueVisitor              func(interpreter *Interpreter, value Word32Value)
+	Word64ValueVisitor              func(interpreter *Interpreter, value Word64Value)
+	Fix64ValueVisitor               func(interpreter *Interpreter, value Fix64Value)
+	UFix64ValueVisitor              func(interpreter *Interpreter, value UFix64Value)
+	CompositeValueVisitor           func(interpreter *Interpreter, value *CompositeValue) bool
+	DictionaryValueVisitor          func(interpreter *Interpreter, value *DictionaryValue) bool
+	NilValueVisitor                 func(interpreter *Interpreter, value NilValue)
+	SomeValueVisitor                func(interpreter *Interpreter, value *SomeValue) bool
+	StorageReferenceValueVisitor    func(interpreter *Interpreter, value *StorageReferenceValue)
+	AccountReferenceValueVisitor    func(interpreter *Interpreter, value *AccountReferenceValue)
+	EphemeralReferenceValueVisitor  func(interpreter *Interpreter, value *EphemeralReferenceValue)
+	AddressValueVisitor             func(interpreter *Interpreter, value AddressValue)
+	PathValueVisitor                func(interpreter *Interpreter, value PathValue)
+	StorageCapabilityValueVisitor   func(interpreter *Interpreter, value *StorageCapabilityValue)
+	PathLinkValueVisitor            func(interpreter *Interpreter, value PathLinkValue)
+	AccountLinkValueVisitor         func(interpreter *Interpreter, value AccountLinkValue)
+	PublishedValueVisitor           func(interpreter *Interpreter, value *PublishedValue)
+	InterpretedFunctionValueVisitor func(interpreter *Interpreter, value *InterpretedFunctionValue)
+	HostFunctionValueVisitor        func(interpreter *Interpreter, value *HostFunctionValue)
+	BoundFunctionValueVisitor       func(interpreter *Interpreter, value BoundFunctionValue)
 }
 
 var _ Visitor = &EmptyVisitor{}
@@ -413,11 +411,4 @@ func (v EmptyVisitor) VisitBoundFunctionValue(interpreter *Interpreter, value Bo
 		return
 	}
 	v.BoundFunctionValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitCapabilityControllerValue(interpreter *Interpreter, value CapabilityControllerValue) {
-	if v.CapabilityControllerValueVisitor == nil {
-		return
-	}
-	v.CapabilityControllerValueVisitor(interpreter, value)
 }

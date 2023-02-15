@@ -14,6 +14,11 @@ const prompts = require('prompts')
 
 type Pull = octokitTypes.components["schemas"]['pull-request-simple']
 
+enum Protocol {
+    HTTPS,
+    SSH,
+}
+
 function isValidSemVer(version: string): boolean {
     return !!asValidSemVer(version)
 }
@@ -37,7 +42,8 @@ class Updater {
     constructor(
         public versions: Map<string, string>,
         public config: CadenceUpdateToolConfigSchema,
-        public octokit: Octokit
+        public octokit: Octokit,
+        public protocol: Protocol
     ) {}
 
     async update(repoName: string | undefined): Promise<void> {
@@ -52,14 +58,17 @@ class Updater {
                 continue
             }
 
-            if (!await this.updateRepo(repo))
+            console.log(`\nChecking repo ${repo.repo} ...`)
+            const updated = await runWithConsoleGroup(async () => {
+                return await this.updateRepo(repo)
+            })
+            if (!updated)
                 break
         }
     }
 
     async updateRepo(repo: Repo): Promise<boolean> {
         const fullRepoName = repo.repo
-        console.log(`Checking repo ${fullRepoName} ...`)
 
         const expectedVersion = this.versions.get(fullRepoName)
         if (expectedVersion) {
@@ -70,22 +79,22 @@ class Updater {
 
         const latestReleaseTagName = await this.fetchLatestReleaseTagName(fullRepoName)
         if (latestReleaseTagName !== null) {
-            console.log(`Latest release of repo ${fullRepoName}: ${latestReleaseTagName}`)
+            console.log(`> Latest release of repo ${fullRepoName}: ${latestReleaseTagName}`)
 
             if (await this.repoModsUpdated(latestReleaseTagName, repo)) {
                 return true
             }
 
-            console.log(`Latest release of repo ${fullRepoName} (${latestReleaseTagName}) is not updated, checking default branch ...`)
+            console.log(`> Latest release of repo ${fullRepoName} (${latestReleaseTagName}) is not updated, checking default branch ...`)
         } else {
-            console.log(`Checking default branch ...`)
+            console.log(`> Checking default branch ...`)
         }
 
         const [owner, repoName] = fullRepoName.split('/')
 
         const repoResponse = await this.octokit.rest.repos.get({owner, repo: repoName})
         const defaultBranch = repoResponse.data.default_branch
-        console.log(`Default branch of repo ${fullRepoName}: ${defaultBranch}`)
+        console.log(`> Default branch of repo ${fullRepoName}: ${defaultBranch}`)
 
         const defaultRefResponse = await this.octokit.rest.git.getRef({
             owner,
@@ -95,7 +104,7 @@ class Updater {
         const defaultRef = defaultRefResponse.data.object.sha
 
         if (await this.repoModsUpdated(defaultRef, repo)) {
-            console.log(`Default branch (${defaultBranch}) of repo ${fullRepoName} is updated`)
+            console.log(`> Default branch (${defaultBranch}) of repo ${fullRepoName} is updated`)
 
             if (repo.needsRelease) {
                 await this.release(repo, defaultBranch)
@@ -107,14 +116,14 @@ class Updater {
         }
 
         if (await this.repoHasUpdatePR(repo)) {
-            console.log(`Update PR needs to get merged`)
+            console.log(`⚠️ Update PR needs to get merged`)
             return false
         }
 
         const updateAnswer = await prompts({
             type: 'confirm',
             name: 'updateRepo',
-            message: 'Would you like to update the repo and create a PR?'
+            message: `Would you like to update repo '${fullRepoName}' and create a PR?`
         })
 
         if (updateAnswer.updateRepo) {
@@ -152,14 +161,14 @@ class Updater {
 
                 const version = versionAnswer.version.trim()
 
-                await new Releaser(fullRepoName, mod.path, version, this.octokit).release()
+                await new Releaser(fullRepoName, mod.path, version, this.octokit, this.protocol).release()
             }
         }
     }
 
     async repoModsUpdated(refName: string, repo: Repo): Promise<boolean> {
         const fullRepoName = repo.repo
-        console.log(`Checking if all mods of repo ${fullRepoName} at version ${refName} are updated ...`)
+        console.log(`> Checking if all mods of repo ${fullRepoName} at version ${refName} are updated ...`)
 
         for (const mod of repo.mods) {
             if (!await this.repoModUpdated(refName, repo, mod)) {
@@ -167,7 +176,7 @@ class Updater {
             }
         }
 
-        console.log(`All mods of mod ${fullRepoName} at repo version ${refName} are up-to-date`)
+        console.log(`✓ All mods of mod ${fullRepoName} at repo version ${refName} are up-to-date`)
 
         return true
     }
@@ -182,14 +191,14 @@ class Updater {
             return true
         }
 
-        console.log(`Checking if mod ${fullModName} at repo version ${refName} is updated ...`)
+        console.log(`> Checking if mod ${fullModName} at repo version ${refName} is updated ...`)
 
         const goMod = await Updater.fetchRaw(fullRepoName, refName, path.join(mod.path, "go.mod"))
 
         for (const dep of mod.deps) {
             const matches = goMod.match(new RegExp(`${dep} ([^ /\n]+)`))
             if (matches === null) {
-                console.error(`Missing go.mod entry for dep ${dep}`)
+                console.error(`> Missing go.mod entry for dep ${dep}`)
                 process.exit(1)
             }
 
@@ -199,7 +208,7 @@ class Updater {
             const actualVersionCommit = extractVersionCommit(actualVersion)
 
             if (!(semVerAtLeast(actualVersion, expectedVersion) || actualVersionCommit == expectedVersion)) {
-                console.warn(`Outdated dep ${dep}: expected ${expectedVersion}, got ${actualVersionCommit ?? actualVersion}`)
+                console.warn(`> Outdated dep ${dep}: expected ${expectedVersion}, got ${actualVersionCommit ?? actualVersion}`)
                 return false
             }
         }
@@ -207,7 +216,7 @@ class Updater {
         const refNameParts = refName.split('/')
         const version = refNameParts[refNameParts.length-1]
 
-        console.log(`All deps of mod ${fullModName} at repo version ${version} are up-to-date`)
+        console.log(`✓ All deps of mod ${fullModName} at repo version ${version} are up-to-date`)
 
         this.versions.set(fullModName, version)
 
@@ -245,7 +254,7 @@ class Updater {
     // See prIsUpdate for the definition of an update PR.
     //
     async repoHasUpdatePR(repo: Repo): Promise<boolean> {
-        console.log(`Checking if an update PR exists ...`)
+        console.log(`> Checking if an update PR exists ...`)
 
         const fullRepoName = repo.repo
         const [owner, repoName] = fullRepoName.split('/')
@@ -259,13 +268,15 @@ class Updater {
             }
         )) {
             for (const pull of page.data) {
-                if (this.prIsUpdate(pull, repo)) {
+                const isVersionUpdatePR = await runWithConsoleGroup(async () => {
+                    return this.prIsUpdate(pull, repo)
+                })
+                if (isVersionUpdatePR)
                     return true
-                }
             }
         }
 
-        console.log(`No update PR found`)
+        console.log(`> No update PR found`)
 
         return false
     }
@@ -277,7 +288,7 @@ class Updater {
     // by mentioning the dependency/version pair in the description
     //
     prIsUpdate(pull: Pull, repo: Repo): boolean {
-        console.log(`Checking if PR ${pull.number} updates a dep of a mod ...`)
+        console.log(`> Checking if PR ${pull.number} updates a dep of a mod ...`)
 
         if (!pull.title.match(/[uU]pdate/)) {
             return false
@@ -296,16 +307,16 @@ class Updater {
         }
 
         for (const [dep, expectedVersion] of expectedVersions.entries()) {
-            console.log(`Checking if PR ${pull.number} updates dep ${dep} to ${expectedVersion} ...`)
+            console.log(`> Checking if PR ${pull.number} updates dep ${dep} to ${expectedVersion} ...`)
 
             if ((pull.body?.indexOf(`${dep} ${expectedVersion}`) ??  -1) >= 0) {
-                console.log(`PR ${pull.html_url} updates dep ${dep} to ${expectedVersion}`)
+                console.log(`> PR ${pull.html_url} updates dep ${dep} to ${expectedVersion}`)
 
                 return true
             }
         }
 
-        console.log(`PR ${pull.html_url} is not an update PR`)
+        console.log(`> PR ${pull.html_url} is not an update PR`)
 
         return false
     }
@@ -331,7 +342,7 @@ class Updater {
         const dir = await mkdtemp(path.join(os.tmpdir(), `${owner}-${repoName}`))
 
         console.log(`Cloning ${fullRepoName} ...`)
-        await exec(`git clone git@github.com:${fullRepoName} ${dir}`)
+        await gitClone(this.protocol, fullRepoName, dir)
         process.chdir(dir)
 
         const rootFullRepoName = this.config.repo
@@ -405,7 +416,6 @@ ${updateList}
         console.log(`Cleaning up clone of ${fullRepoName} ...`)
         await rm(dir, { recursive: true, force: true })
     }
-
 }
 
 async function authenticate(): Promise<Octokit> {
@@ -437,7 +447,8 @@ class Releaser {
         public repo: string,
         public modPath: string,
         public version: string,
-        public octokit: Octokit
+        public octokit: Octokit,
+        public protocol: Protocol
     ) {}
 
     // release tags a release of the given repo.
@@ -463,7 +474,7 @@ class Releaser {
         const dir = await mkdtemp(path.join(os.tmpdir(), `${owner}-${repoName}`))
 
         console.log(`Cloning ${this.repo} ...`)
-        await exec(`git clone git@github.com:${this.repo} ${dir}`)
+        await gitClone(this.protocol, this.repo, dir)
         process.chdir(dir)
 
         console.log(`Tagging ${this.repo} version ${this.version} ...`)
@@ -513,6 +524,11 @@ class Releaser {
                     type: 'string',
                     describe: 'Comma separated list of repo@version',
                     default: ''
+                },
+                useSSH: {
+                    type: 'boolean',
+                    describe: 'Whether to use SSH to connect to GitHub. Defaults to HTTPS',
+                    default: false
                 }
             },
             async (args) => {
@@ -528,7 +544,9 @@ class Releaser {
                     versions.set(repo, version)
                 }
 
-                await new Updater(versions, config, octokit)
+                const protocol = args.useSSH ? Protocol.SSH : Protocol.HTTPS
+
+                await new Updater(versions, config, octokit, protocol)
                     .update(args.repo)
             }
         )
@@ -553,10 +571,40 @@ class Releaser {
                     type: 'string',
                     describe: 'The mod path'
                 },
+                useSSH: {
+                    type: 'boolean',
+                    describe: 'Whether to use SSH to connect to GitHub. Defaults to HTTPS',
+                    default: false
+                }
             },
             async (args) => {
-                await new Releaser(args.repo, args.mod || '', args.version, octokit).release()
+                const protocol = args.useSSH ? Protocol.SSH : Protocol.HTTPS
+                await new Releaser(args.repo, args.mod || '', args.version, octokit, protocol).release()
             }
         )
         .parse()
 })()
+
+
+async function gitClone(protocol: Protocol, fullRepoName: string, dir: string) {
+    let command: string
+    switch (protocol) {
+        case Protocol.HTTPS:
+            command = `git clone https://github.com/${fullRepoName} ${dir}`
+            break
+        case Protocol.SSH:
+            command = `git clone git@github.com:${fullRepoName} ${dir}`
+            break
+        default:
+            console.error(`unsupported protocol: ${protocol}`)
+            return
+    }
+    await exec(command)
+}
+
+async function runWithConsoleGroup(func: () => Promise<boolean>): Promise<boolean> {
+    console.group()
+    const result = func()
+    result.finally(console.groupEnd)
+    return result
+}

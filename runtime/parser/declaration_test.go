@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -358,13 +358,11 @@ func TestParseParameterList(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (any, []error) {
+	parse := func(input string) (*ast.ParameterList, []error) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (any, error) {
-				return parseParameterList(p)
-			},
+			parseParameterList,
 			Config{},
 		)
 	}
@@ -1421,19 +1419,285 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("with empty type parameters, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < > () {}"),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					TypeParameterList: &ast.TypeParameterList{
+						TypeParameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+								EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with type parameters, single type parameter, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < A  > () {}"),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					TypeParameterList: &ast.TypeParameterList{
+						TypeParameters: []*ast.TypeParameter{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Offset: 11, Line: 1, Column: 11},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+							EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
+								EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with type parameters, multiple parameters, type bound, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < A  , B : C > () {}"),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					TypeParameterList: &ast.TypeParameterList{
+						TypeParameters: []*ast.TypeParameter{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Offset: 11, Line: 1, Column: 11},
+								},
+							},
+							{
+								Identifier: ast.Identifier{
+									Identifier: "B",
+									Pos:        ast.Position{Offset: 16, Line: 1, Column: 16},
+								},
+								TypeBound: &ast.TypeAnnotation{
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "C",
+											Pos:        ast.Position{Offset: 20, Line: 1, Column: 20},
+										},
+									},
+									StartPos: ast.Position{Offset: 20, Line: 1, Column: 20},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 22, Offset: 22},
+						},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 24, Offset: 24},
+							EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 25, Offset: 25},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
+								EndPos:   ast.Position{Line: 1, Column: 28, Offset: 28},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with type parameters, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo<A>() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected '(' as start of parameter list, got '<'",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing type parameter list end, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < "),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "missing '>' at end of type parameter list",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing type parameter list separator, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < A B > () { } "),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&MissingCommaInParameterListError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+	})
+
 }
 
 func TestParseAccess(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (any, []error) {
+	parse := func(input string) (ast.Access, []error) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (any, error) {
-				return parseAccess(p)
-			},
+			parseAccess,
 			Config{},
 		)
 	}
@@ -1480,7 +1744,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1501,7 +1765,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1522,7 +1786,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1608,7 +1872,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1629,7 +1893,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1650,7 +1914,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -2162,11 +2426,11 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (any, []error) {
+	parse := func(input string) (*ast.FieldDeclaration, []error) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (any, error) {
+			func(p *parser) (*ast.FieldDeclaration, error) {
 				return parseFieldWithVariableKind(
 					p,
 					ast.AccessNotSpecified,
@@ -2253,11 +2517,11 @@ func TestParseField(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string, config Config) (any, []error) {
+	parse := func(input string, config Config) (ast.Declaration, []error) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (any, error) {
+			func(p *parser) (ast.Declaration, error) {
 				return parseMemberOrNestedDeclaration(
 					p,
 					"",
@@ -6802,11 +7066,11 @@ func TestParseNestedPragma(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string, config Config) (any, []error) {
+	parse := func(input string, config Config) (ast.Declaration, []error) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (any, error) {
+			func(p *parser) (ast.Declaration, error) {
 				return parseMemberOrNestedDeclaration(
 					p,
 					"",
@@ -7014,4 +7278,131 @@ func TestParseNestedPragma(t *testing.T) {
 		)
 	})
 
+}
+
+func TestParseMemberDocStrings(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("functions", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+          struct Test {
+
+              /// noReturnNoBlock
+              fun noReturnNoBlock()
+
+              /// returnNoBlock
+              fun returnNoBlock(): Int
+
+              /// returnAndBlock
+              fun returnAndBlock(): String {}
+          }
+	    `)
+
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.FunctionDeclaration{
+								DocString: " noReturnNoBlock",
+								Identifier: ast.Identifier{
+									Identifier: "noReturnNoBlock",
+									Pos:        ast.Position{Offset: 78, Line: 5, Column: 18},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 93, Line: 5, Column: 33},
+										EndPos:   ast.Position{Offset: 94, Line: 5, Column: 34},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "",
+											Pos:        ast.Position{Offset: 94, Line: 5, Column: 34},
+										},
+									},
+									StartPos: ast.Position{Offset: 94, Line: 5, Column: 34},
+								},
+								StartPos: ast.Position{Offset: 74, Line: 5, Column: 14},
+							},
+							&ast.FunctionDeclaration{
+								DocString: " returnNoBlock",
+								Identifier: ast.Identifier{
+									Identifier: "returnNoBlock",
+									Pos:        ast.Position{Offset: 147, Line: 8, Column: 18},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 160, Line: 8, Column: 31},
+										EndPos:   ast.Position{Offset: 161, Line: 8, Column: 32},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 164, Line: 8, Column: 35},
+										},
+									},
+									StartPos: ast.Position{Offset: 164, Line: 8, Column: 35},
+								},
+								StartPos: ast.Position{Offset: 143, Line: 8, Column: 14},
+							},
+							&ast.FunctionDeclaration{
+								DocString: " returnAndBlock",
+								Identifier: ast.Identifier{
+									Identifier: "returnAndBlock",
+									Pos:        ast.Position{Offset: 220, Line: 11, Column: 18},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 234, Line: 11, Column: 32},
+										EndPos:   ast.Position{Offset: 235, Line: 11, Column: 33},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "String",
+											Pos:        ast.Position{Offset: 238, Line: 11, Column: 36},
+										},
+									},
+									StartPos: ast.Position{Offset: 238, Line: 11, Column: 36},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 245, Line: 11, Column: 43},
+											EndPos:   ast.Position{Offset: 246, Line: 11, Column: 44},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 216, Line: 11, Column: 14},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
+						EndPos:   ast.Position{Offset: 258, Line: 12, Column: 10},
+					},
+				},
+			},
+			result,
+		)
+	})
 }
