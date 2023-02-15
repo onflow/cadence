@@ -69,16 +69,24 @@ var CapabilityControllerTypeTargetFunctionType = &FunctionType{
 const CapabilityControllerTypeTargetFunctionDocString = `Returns the targeted storage path of the capability.
 `
 
-const CapabilityControllerTypeRevokeFunctionName = "revoke"
+const CapabilityControllerTypeDeleteFunctionName = "delete"
 
-var CapabilityControllerTypeRevokeFunctionType = &FunctionType{
+var CapabilityControllerTypeDeleteFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		VoidType,
 	),
 }
 
-const CapabilityControllerTypeRevokeFunctionDocString = `Revoke the capability making it no longer usable.
-When borrowing from a revoked capability the borrow returns nil.
+const CapabilityControllerTypeDeleteFunctionDocString = `Delete this capability controller,
+and disable the controlled capability and its copies.
+
+The controller will be deleted from storage,
+but the controlled capability and its copies remain.
+
+Once this function returns, the controller is no longer usable,
+all further operations on the controller will panic.
+
+Borrowing from the controlled capability or its copies will return nil.
 `
 
 const CapabilityControllerTypeRetargetFunctionName = "retarget"
@@ -192,7 +200,7 @@ var CapabilityControllerType = &SimpleType{
 					)
 				},
 			},
-			CapabilityControllerTypeRevokeFunctionName: {
+			CapabilityControllerTypeDeleteFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge,
 					identifier string,
@@ -203,8 +211,8 @@ var CapabilityControllerType = &SimpleType{
 						memoryGauge,
 						t,
 						identifier,
-						CapabilityControllerTypeRevokeFunctionType,
-						CapabilityControllerTypeRevokeFunctionDocString,
+						CapabilityControllerTypeDeleteFunctionType,
+						CapabilityControllerTypeDeleteFunctionDocString,
 					)
 				},
 			},
