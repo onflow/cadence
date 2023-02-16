@@ -74,13 +74,72 @@ func initialUpper(s string) string {
 	return string(unicode.ToUpper(rune(s[0]))) + s[1:]
 }
 
-func trimLineSpaces(s string) string {
+// turn a non-empty docstring into a formatted raw go string literal, with surrounding backticks.
+// inline backticks for code literals are turned into separate strings that are
+func renderDocString(s string) dst.Expr {
+
+	var docstringChunks []dst.Expr
+
+	lines := strings.Split(s, "\n")
+
 	var b strings.Builder
-	for _, line := range strings.Split(s, "\n") {
-		b.WriteString(strings.TrimSpace(line))
+	b.WriteByte('\n') // start the very first chunk with a newline
+
+	writeAccumulated := func() {
+		if b.Len() == 0 {
+			return
+		}
+
+		docstringChunks = append(docstringChunks, goRawLit(b.String()))
+
+		b.Reset()
+	}
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		chunks := strings.Split(line, "`")
+		if len(chunks) == 1 {
+			b.WriteString(line)
+			b.WriteByte('\n')
+			continue
+		}
+
+		// handle inline backticked expressions by splitting them into regular string literals
+		inChunk := false
+		for _, chunk := range chunks {
+			if inChunk {
+
+				writeAccumulated()
+
+				if len(chunk) > 0 {
+					surrounded := fmt.Sprintf("`%s`", chunk)
+					docstringChunks = append(docstringChunks, goStringLit(surrounded))
+				}
+
+			} else {
+				b.WriteString(chunk)
+			}
+
+			inChunk = !inChunk // splitting by backticks means each chunk is an alternate state
+		}
 		b.WriteByte('\n')
 	}
-	return b.String()
+
+	writeAccumulated()
+
+	result, rest := docstringChunks[0], docstringChunks[1:]
+
+	// perform a left-associative fold over chunks, joining them as `x + y`
+	// the `+` token is left-associative in go
+	for _, chunk := range rest {
+		result = &dst.BinaryExpr{
+			X:  result,
+			Op: token.ADD,
+			Y:  chunk,
+		}
+	}
+
+	return result
 }
 
 type generator struct {
@@ -223,12 +282,12 @@ func (g *generator) addFunctionDocStringDeclaration(
 	g.addDecls(
 		goConstDecl(
 			functionDocStringVarName(fullTypeName, functionName),
-			goRawLit(docString),
+			docString,
 		),
 	)
 }
 
-func (g *generator) declarationDocString(decl ast.Declaration) string {
+func (g *generator) declarationDocString(decl ast.Declaration) dst.Expr {
 	identifier := decl.DeclarationIdentifier().Identifier
 	docString := strings.TrimSpace(decl.DeclarationDocString())
 
@@ -239,12 +298,7 @@ func (g *generator) declarationDocString(decl ast.Declaration) string {
 		))
 	}
 
-	// TODO: allow by splitting and wrapping in double quotes
-	if strings.ContainsRune(docString, '`') {
-		panic(fmt.Errorf("invalid ` in doc string for field %s", g.memberID(identifier)))
-	}
-
-	return trimLineSpaces(docString)
+	return renderDocString(docString)
 }
 
 func (*generator) VisitSpecialFunctionDeclaration(_ *ast.SpecialFunctionDeclaration) struct{} {
@@ -348,7 +402,7 @@ func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{
 		),
 		goConstDecl(
 			fieldDocStringVarName(fullTypeName, fieldName),
-			goRawLit(docString),
+			docString,
 		),
 	)
 
