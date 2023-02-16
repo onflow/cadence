@@ -500,7 +500,7 @@ If there is a structure stored, it is copied.
 The structure stays stored in storage after the function returns.
 
 The given type must be a supertype of the type of the copied structure.
-tIf it is not, the function panics.
+If it is not, the function panics.
 
 The given type must not necessarily be exactly the same as the type of the copied structure.
 
