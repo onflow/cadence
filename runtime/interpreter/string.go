@@ -111,10 +111,10 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
 var stringFunction = func() Value {
 	functionValue := NewUnmeteredHostFunctionValue(
+		sema.StringFunctionType,
 		func(invocation Invocation) Value {
 			return emptyString
 		},
-		sema.StringFunctionType,
 	)
 
 	addMember := func(name string, value Value) {
@@ -129,24 +129,24 @@ var stringFunction = func() Value {
 	addMember(
 		sema.StringTypeEncodeHexFunctionName,
 		NewUnmeteredHostFunctionValue(
-			stringFunctionEncodeHex,
 			sema.StringTypeEncodeHexFunctionType,
+			stringFunctionEncodeHex,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromUtf8FunctionName,
 		NewUnmeteredHostFunctionValue(
-			stringFunctionFromUtf8,
 			sema.StringTypeFromUtf8FunctionType,
+			stringFunctionFromUtf8,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromCharactersFunctionName,
 		NewUnmeteredHostFunctionValue(
-			stringFunctionFromCharacters,
 			sema.StringTypeFromCharactersFunctionType,
+			stringFunctionFromCharacters,
 		),
 	)
 

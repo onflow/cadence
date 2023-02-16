@@ -28,7 +28,8 @@ const BlockTypeHeightFieldName = "height"
 
 var BlockTypeHeightFieldType = UInt64Type
 
-const BlockTypeHeightFieldDocString = `The height of the block.
+const BlockTypeHeightFieldDocString = `
+The height of the block.
 
 If the blockchain is viewed as a tree with the genesis block at the root,
 the height of a node is the number of edges between the node and the genesis block
@@ -38,7 +39,8 @@ const BlockTypeViewFieldName = "view"
 
 var BlockTypeViewFieldType = UInt64Type
 
-const BlockTypeViewFieldDocString = `The view of the block.
+const BlockTypeViewFieldDocString = `
+The view of the block.
 
 It is a detail of the consensus algorithm. It is a monotonically increasing integer and counts rounds in the consensus algorithm.
 Since not all rounds result in a finalized block, the view number is strictly greater than or equal to the block height
@@ -48,7 +50,8 @@ const BlockTypeTimestampFieldName = "timestamp"
 
 var BlockTypeTimestampFieldType = UFix64Type
 
-const BlockTypeTimestampFieldDocString = `Consider observing blocks' status changes off-chain yourself to get a more reliable value.
+const BlockTypeTimestampFieldDocString = `
+Consider observing blocks' status changes off-chain yourself to get a more reliable value.
 `
 
 const BlockTypeIdFieldName = "id"
@@ -58,7 +61,8 @@ var BlockTypeIdFieldType = &ConstantSizedType{
 	Size: 32,
 }
 
-const BlockTypeIdFieldDocString = `The ID of the block.
+const BlockTypeIdFieldDocString = `
+The ID of the block.
 It is essentially the hash of the block
 `
 

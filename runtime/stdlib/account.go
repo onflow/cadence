@@ -455,6 +455,7 @@ func newAccountKeysAddFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AuthAccountKeysTypeAddFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
 			if !ok {
@@ -503,7 +504,6 @@ func newAccountKeysAddFunction(
 				handler,
 			)
 		},
-		sema.AuthAccountKeysTypeAddFunctionType,
 	)
 }
 
@@ -536,6 +536,7 @@ func newAccountKeysGetFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AccountKeysTypeGetFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
 			if !ok {
@@ -575,7 +576,6 @@ func newAccountKeysGetFunction(
 				),
 			)
 		},
-		sema.AccountKeysTypeGetFunctionType,
 	)
 }
 
@@ -591,6 +591,7 @@ func newAccountKeysForEachFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AccountKeysTypeForEachFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
 
@@ -674,7 +675,6 @@ func newAccountKeysForEachFunction(
 
 			return interpreter.Void
 		},
-		sema.AccountKeysTypeForEachFunctionType,
 	)
 }
 
@@ -725,6 +725,7 @@ func newAccountKeysRevokeFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AuthAccountKeysTypeRevokeFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
 			if !ok {
@@ -773,7 +774,6 @@ func newAccountKeysRevokeFunction(
 				),
 			)
 		},
-		sema.AuthAccountKeysTypeRevokeFunctionType,
 	)
 }
 
@@ -847,6 +847,7 @@ func accountInboxPublishFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AuthAccountTypeInboxPublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			value, ok := invocation.Arguments[0].(*interpreter.StorageCapabilityValue)
 			if !ok {
@@ -890,7 +891,6 @@ func accountInboxPublishFunction(
 
 			return interpreter.Void
 		},
-		sema.AuthAccountTypeInboxPublishFunctionType,
 	)
 }
 
@@ -902,6 +902,7 @@ func accountInboxUnpublishFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AuthAccountTypeInboxPublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -957,7 +958,6 @@ func accountInboxUnpublishFunction(
 
 			return interpreter.NewSomeValueNonCopying(inter, value)
 		},
-		sema.AuthAccountTypeInboxPublishFunctionType,
 	)
 }
 
@@ -968,6 +968,7 @@ func accountInboxClaimFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AuthAccountTypeInboxPublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -1036,7 +1037,6 @@ func accountInboxClaimFunction(
 
 			return interpreter.NewSomeValueNonCopying(inter, value)
 		},
-		sema.AuthAccountTypeInboxPublishFunctionType,
 	)
 }
 
@@ -1130,6 +1130,7 @@ func newAccountContractsGetFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AccountContractsTypeGetFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -1163,7 +1164,6 @@ func newAccountContractsGetFunction(
 				return interpreter.Nil
 			}
 		},
-		sema.AccountContractsTypeGetFunctionType,
 	)
 }
 
@@ -1178,6 +1178,7 @@ func newAccountContractsBorrowFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AccountContractsTypeBorrowFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -1242,7 +1243,6 @@ func newAccountContractsBorrowFunction(
 			)
 
 		},
-		sema.AccountContractsTypeBorrowFunctionType,
 	)
 }
 
@@ -1280,6 +1280,7 @@ func newAuthAccountContractsChangeFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AuthAccountContractsTypeAddFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			locationRange := invocation.LocationRange
@@ -1529,7 +1530,6 @@ func newAuthAccountContractsChangeFunction(
 				newCodeValue,
 			)
 		},
-		sema.AuthAccountContractsTypeAddFunctionType,
 	)
 }
 
@@ -1795,6 +1795,7 @@ func newAuthAccountContractsRemoveFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.AuthAccountContractsTypeRemoveFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -1877,7 +1878,6 @@ func newAuthAccountContractsRemoveFunction(
 				return interpreter.Nil
 			}
 		},
-		sema.AuthAccountContractsTypeRemoveFunctionType,
 	)
 }
 
