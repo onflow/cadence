@@ -51,6 +51,7 @@ const AuthAccountTypeStoragePathsFieldName = "storagePaths"
 const AuthAccountTypeInboxPublishFunctionName = "publish"
 const AuthAccountTypeInboxUnpublishFunctionName = "unpublish"
 const AuthAccountTypeInboxClaimFunctionName = "claim"
+const AccountTypeCapabilitiesFieldName = "capabilities"
 
 var AuthAccountTypeLinkAccountFunctionType *FunctionType
 
@@ -236,6 +237,12 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountTypeForEachStoredFunctionName,
 			AuthAccountForEachStoredFunctionType,
 			authAccountForEachStoredDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AccountTypeCapabilitiesFieldName,
+			AuthAccountCapabilitiesType,
+			accountTypeCapabilitiesFieldDocString,
 		),
 	}
 
@@ -814,6 +821,10 @@ The number of keys associated with this account.
 
 const authAccountTypeInboxPublishFunctionDocString = `
 Publishes the argument value under the given name, to be later claimed by the specified recipient
+`
+
+const accountTypeCapabilitiesFieldDocString = `
+The capabilities associated with the account
 `
 
 var AuthAccountTypeInboxPublishFunctionType = NewSimpleFunctionType(
