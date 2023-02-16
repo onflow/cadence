@@ -1022,7 +1022,7 @@ func newBytesValue(bytes []byte) cadence.Array {
 		result[index] = cadence.NewUInt8(value)
 	}
 	return cadence.NewArray(result).
-		WithType(cadence.VariableSizedArrayType{
+		WithType(&cadence.VariableSizedArrayType{
 			ElementType: cadence.UInt8Type{},
 		})
 }
@@ -1047,7 +1047,7 @@ func accountKeyExportedValue(
 		panic(err)
 	}
 
-	return cadence.Struct{
+	value := cadence.Struct{
 		StructType: AccountKeyType,
 		Fields: []cadence.Value{
 			// Key index
@@ -1077,6 +1077,8 @@ func accountKeyExportedValue(
 			cadence.NewBool(isRevoked),
 		},
 	}
+
+	return cadence.ValueWithCachedTypeID(value)
 }
 
 func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRuntimeInterface {
@@ -1321,6 +1323,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			},
 		}
 
+		expected = cadence.ValueWithCachedTypeID(expected)
 		assert.Equal(t, expected, value)
 	})
 
@@ -1615,6 +1618,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			},
 		}
 
+		expected = cadence.ValueWithCachedTypeID(expected)
 		assert.Equal(t, expected, value)
 	})
 
@@ -2121,7 +2125,7 @@ func TestPublicAccountContracts(t *testing.T) {
 					cadence.UInt8(1),
 					cadence.UInt8(2),
 				},
-			}.WithType(cadence.VariableSizedArrayType{
+			}.WithType(&cadence.VariableSizedArrayType{
 				ElementType: cadence.UInt8Type{},
 			}),
 			array.Values[1],

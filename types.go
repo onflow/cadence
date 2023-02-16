@@ -114,26 +114,28 @@ type OptionalType struct {
 	typeID string
 }
 
-func NewOptionalType(typ Type) OptionalType {
-	return OptionalType{Type: typ}
+var _ Type = &OptionalType{}
+
+func NewOptionalType(typ Type) *OptionalType {
+	return &OptionalType{Type: typ}
 }
 
-func NewMeteredOptionalType(gauge common.MemoryGauge, typ Type) OptionalType {
+func NewMeteredOptionalType(gauge common.MemoryGauge, typ Type) *OptionalType {
 	common.UseMemory(gauge, common.CadenceOptionalTypeMemoryUsage)
 	return NewOptionalType(typ)
 }
 
-func (OptionalType) isType() {}
+func (*OptionalType) isType() {}
 
-func (t OptionalType) ID() string {
+func (t *OptionalType) ID() string {
 	if len(t.typeID) == 0 {
 		t.typeID = fmt.Sprintf("%s?", t.Type.ID())
 	}
 	return t.typeID
 }
 
-func (t OptionalType) Equal(other Type) bool {
-	otherOptional, ok := other.(OptionalType)
+func (t *OptionalType) Equal(other Type) bool {
+	otherOptional, ok := other.(*OptionalType)
 	if !ok {
 		return false
 	}
@@ -833,35 +835,37 @@ type VariableSizedArrayType struct {
 	typeID      string
 }
 
+var _ Type = &VariableSizedArrayType{}
+
 func NewVariableSizedArrayType(
 	elementType Type,
-) VariableSizedArrayType {
-	return VariableSizedArrayType{ElementType: elementType}
+) *VariableSizedArrayType {
+	return &VariableSizedArrayType{ElementType: elementType}
 }
 
 func NewMeteredVariableSizedArrayType(
 	gauge common.MemoryGauge,
 	elementType Type,
-) VariableSizedArrayType {
+) *VariableSizedArrayType {
 	common.UseMemory(gauge, common.CadenceVariableSizedArrayTypeMemoryUsage)
 	return NewVariableSizedArrayType(elementType)
 }
 
-func (VariableSizedArrayType) isType() {}
+func (*VariableSizedArrayType) isType() {}
 
-func (t VariableSizedArrayType) ID() string {
+func (t *VariableSizedArrayType) ID() string {
 	if len(t.typeID) == 0 {
 		t.typeID = fmt.Sprintf("[%s]", t.ElementType.ID())
 	}
 	return t.typeID
 }
 
-func (t VariableSizedArrayType) Element() Type {
+func (t *VariableSizedArrayType) Element() Type {
 	return t.ElementType
 }
 
-func (t VariableSizedArrayType) Equal(other Type) bool {
-	otherType, ok := other.(VariableSizedArrayType)
+func (t *VariableSizedArrayType) Equal(other Type) bool {
+	otherType, ok := other.(*VariableSizedArrayType)
 	if !ok {
 		return false
 	}
@@ -877,11 +881,13 @@ type ConstantSizedArrayType struct {
 	typeID      string
 }
 
+var _ Type = &ConstantSizedArrayType{}
+
 func NewConstantSizedArrayType(
 	size uint,
 	elementType Type,
-) ConstantSizedArrayType {
-	return ConstantSizedArrayType{
+) *ConstantSizedArrayType {
+	return &ConstantSizedArrayType{
 		Size:        size,
 		ElementType: elementType,
 	}
@@ -891,26 +897,26 @@ func NewMeteredConstantSizedArrayType(
 	gauge common.MemoryGauge,
 	size uint,
 	elementType Type,
-) ConstantSizedArrayType {
+) *ConstantSizedArrayType {
 	common.UseMemory(gauge, common.CadenceConstantSizedArrayTypeMemoryUsage)
 	return NewConstantSizedArrayType(size, elementType)
 }
 
-func (ConstantSizedArrayType) isType() {}
+func (*ConstantSizedArrayType) isType() {}
 
-func (t ConstantSizedArrayType) ID() string {
+func (t *ConstantSizedArrayType) ID() string {
 	if len(t.typeID) == 0 {
 		t.typeID = fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
 	}
 	return t.typeID
 }
 
-func (t ConstantSizedArrayType) Element() Type {
+func (t *ConstantSizedArrayType) Element() Type {
 	return t.ElementType
 }
 
-func (t ConstantSizedArrayType) Equal(other Type) bool {
-	otherType, ok := other.(ConstantSizedArrayType)
+func (t *ConstantSizedArrayType) Equal(other Type) bool {
+	otherType, ok := other.(*ConstantSizedArrayType)
 	if !ok {
 		return false
 	}
@@ -927,11 +933,13 @@ type DictionaryType struct {
 	typeID      string
 }
 
+var _ Type = &DictionaryType{}
+
 func NewDictionaryType(
 	keyType Type,
 	elementType Type,
-) DictionaryType {
-	return DictionaryType{
+) *DictionaryType {
+	return &DictionaryType{
 		KeyType:     keyType,
 		ElementType: elementType,
 	}
@@ -941,14 +949,14 @@ func NewMeteredDictionaryType(
 	gauge common.MemoryGauge,
 	keyType Type,
 	elementType Type,
-) DictionaryType {
+) *DictionaryType {
 	common.UseMemory(gauge, common.CadenceDictionaryTypeMemoryUsage)
 	return NewDictionaryType(keyType, elementType)
 }
 
-func (DictionaryType) isType() {}
+func (*DictionaryType) isType() {}
 
-func (t DictionaryType) ID() string {
+func (t *DictionaryType) ID() string {
 	if len(t.typeID) == 0 {
 		t.typeID = fmt.Sprintf(
 			"{%s:%s}",
@@ -959,8 +967,8 @@ func (t DictionaryType) ID() string {
 	return t.typeID
 }
 
-func (t DictionaryType) Equal(other Type) bool {
-	otherType, ok := other.(DictionaryType)
+func (t *DictionaryType) Equal(other Type) bool {
+	otherType, ok := other.(*DictionaryType)
 	if !ok {
 		return false
 	}
@@ -1631,11 +1639,13 @@ type ReferenceType struct {
 	typeID     string
 }
 
+var _ Type = &ReferenceType{}
+
 func NewReferenceType(
 	authorized bool,
 	typ Type,
-) ReferenceType {
-	return ReferenceType{
+) *ReferenceType {
+	return &ReferenceType{
 		Authorized: authorized,
 		Type:       typ,
 	}
@@ -1645,14 +1655,14 @@ func NewMeteredReferenceType(
 	gauge common.MemoryGauge,
 	authorized bool,
 	typ Type,
-) ReferenceType {
+) *ReferenceType {
 	common.UseMemory(gauge, common.CadenceReferenceTypeMemoryUsage)
 	return NewReferenceType(authorized, typ)
 }
 
-func (ReferenceType) isType() {}
+func (*ReferenceType) isType() {}
 
-func (t ReferenceType) ID() string {
+func (t *ReferenceType) ID() string {
 	if len(t.typeID) == 0 {
 		var prefix string
 		if t.Authorized {
@@ -1663,7 +1673,7 @@ func (t ReferenceType) ID() string {
 	return t.typeID
 }
 
-func (t ReferenceType) Equal(other Type) bool {
+func (t *ReferenceType) Equal(other Type) bool {
 	otherType, ok := other.(*ReferenceType)
 	if !ok {
 		return false
@@ -1881,21 +1891,23 @@ type CapabilityType struct {
 	typeID     string
 }
 
-func NewCapabilityType(borrowType Type) CapabilityType {
-	return CapabilityType{BorrowType: borrowType}
+var _ Type = &CapabilityType{}
+
+func NewCapabilityType(borrowType Type) *CapabilityType {
+	return &CapabilityType{BorrowType: borrowType}
 }
 
 func NewMeteredCapabilityType(
 	gauge common.MemoryGauge,
 	borrowType Type,
-) CapabilityType {
+) *CapabilityType {
 	common.UseMemory(gauge, common.CadenceCapabilityTypeMemoryUsage)
 	return NewCapabilityType(borrowType)
 }
 
-func (CapabilityType) isType() {}
+func (*CapabilityType) isType() {}
 
-func (t CapabilityType) ID() string {
+func (t *CapabilityType) ID() string {
 	if len(t.typeID) == 0 {
 		if t.BorrowType != nil {
 			t.typeID = fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
@@ -1906,8 +1918,8 @@ func (t CapabilityType) ID() string {
 	return t.typeID
 }
 
-func (t CapabilityType) Equal(other Type) bool {
-	otherType, ok := other.(CapabilityType)
+func (t *CapabilityType) Equal(other Type) bool {
+	otherType, ok := other.(*CapabilityType)
 	if !ok {
 		return false
 	}

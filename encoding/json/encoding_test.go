@@ -1714,7 +1714,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.OptionalType{Type: cadence.IntType{}},
+				StaticType: &cadence.OptionalType{Type: cadence.IntType{}},
 			},
 			// language=json
 			`
@@ -1739,7 +1739,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.VariableSizedArrayType{ElementType: cadence.IntType{}},
+				StaticType: &cadence.VariableSizedArrayType{ElementType: cadence.IntType{}},
 			},
 			// language=json
 			`
@@ -1764,7 +1764,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.ConstantSizedArrayType{
+				StaticType: &cadence.ConstantSizedArrayType{
 					ElementType: cadence.IntType{},
 					Size:        3,
 				},
@@ -1793,7 +1793,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.DictionaryType{
+				StaticType: &cadence.DictionaryType{
 					ElementType: cadence.StringType{},
 					KeyType:     cadence.IntType{},
 				},
@@ -2313,7 +2313,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.ReferenceType{
+				StaticType: &cadence.ReferenceType{
 					Authorized: false,
 					Type:       cadence.IntType{},
 				},
@@ -2382,7 +2382,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.CapabilityType{
+				StaticType: &cadence.CapabilityType{
 					BorrowType: cadence.IntType{},
 				},
 			},
@@ -2726,7 +2726,7 @@ func TestExportRecursiveType(t *testing.T) {
 		},
 	}
 
-	ty.Fields[0].Type = cadence.OptionalType{
+	ty.Fields[0].Type = &cadence.OptionalType{
 		Type: ty,
 	}
 
@@ -2778,7 +2778,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			Initializers: [][]cadence.Parameter{},
 		}
 
-		ty.Fields[0].Type = cadence.OptionalType{
+		ty.Fields[0].Type = &cadence.OptionalType{
 			Type: ty,
 		}
 
@@ -3191,7 +3191,7 @@ func TestExportFunctionValue(t *testing.T) {
 		},
 	}
 
-	ty.Fields[0].Type = cadence.OptionalType{
+	ty.Fields[0].Type = &cadence.OptionalType{
 		Type: ty,
 	}
 
