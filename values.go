@@ -1460,7 +1460,7 @@ func (v Dictionary) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Dictionary) WithType(dictionaryType DictionaryType) Dictionary {
+func (v Dictionary) WithType(dictionaryType *DictionaryType) Dictionary {
 	v.DictionaryType = dictionaryType
 	return v
 }
