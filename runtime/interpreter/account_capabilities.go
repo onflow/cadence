@@ -72,16 +72,7 @@ func NewAuthAccountCapabilitiesValue(
 		return nil
 	}
 
-	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-		if str == "" {
-			common.UseMemory(memoryGauge, common.AuthAccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			return fmt.Sprintf("AuthAccount.Capabilities(%s)", addressStr)
-		}
-
-		return str
-	}
+	stringer := capabilitiesStringer(address, common.AuthAccountCapabilitiesStringMemoryUsage, "AuthAccount")
 
 	return NewSimpleCompositeValue(
 		gauge,
@@ -129,16 +120,7 @@ func NewPublicAccountCapabilitiesValue(
 		return nil
 	}
 
-	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-		if str == "" {
-			common.UseMemory(memoryGauge, common.PublicAccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			return fmt.Sprintf("PublicAccount.Capabilities(%s)", addressStr)
-		}
-
-		return str
-	}
+	stringer := capabilitiesStringer(address, common.PublicAccountCapabilitiesStringMemoryUsage, "PublicAccount")
 
 	return NewSimpleCompositeValue(
 		gauge,
@@ -205,6 +187,19 @@ func newAccountCapabilitiesBorrowFunction(gauge common.MemoryGauge, getCapabilit
 			return result
 		})
 	}, sema.AccountCapabilitiesTypeBorrowFunctionType)
+}
+
+func capabilitiesStringer(address AddressValue, usage common.MemoryUsage, prefix string) func(common.MemoryGauge, SeenReferences) string {
+	var str string
+	return func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+		if str == "" {
+			common.UseMemory(memoryGauge, usage)
+			addressStr := address.MeteredString(memoryGauge, seenReferences)
+			return fmt.Sprintf("%s.Capabilities(%s)", prefix, addressStr)
+		}
+
+		return str
+	}
 }
 
 func assertUnreachable(condition bool) {
