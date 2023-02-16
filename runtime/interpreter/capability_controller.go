@@ -39,8 +39,7 @@ func NewCapabilityControllerValue(
 	capabilityID uint64,
 	targetPath PathValue,
 	borrowType StaticType,
-	isRevoked bool,
-	revoke func() error,
+	delete func() error,
 	retarget func(newPath PathValue) error,
 ) Value {
 
@@ -57,26 +56,20 @@ func NewCapabilityControllerValue(
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
-		case sema.CapabilityControllerTypeIsRevokedFunctionName:
-			return NewHostFunctionValue(inter, func(invocation Invocation) Value {
-				return AsBoolValue(isRevoked)
-			}, sema.CapabilityControllerTypeIsRevokedFunctionType)
-
 		case sema.CapabilityControllerTypeTargetFunctionName:
 			return NewHostFunctionValue(gauge, func(invocation Invocation) Value {
 				return targetPath
 			}, sema.CapabilityControllerTypeTargetFunctionType)
 
-		case sema.CapabilityControllerTypeRevokeFunctionName:
+		case sema.CapabilityControllerTypeDeleteFunctionName:
 			return NewHostFunctionValue(gauge, func(invocation Invocation) Value {
-				err := revoke()
+				err := delete()
 				if err != nil {
 					panic(err)
 				}
 
-				isRevoked = true
 				return Void
-			}, sema.CapabilityControllerTypeRevokeFunctionType)
+			}, sema.CapabilityControllerTypeDeleteFunctionType)
 
 		case sema.CapabilityControllerTypeRetargetFunctionName:
 			return NewHostFunctionValue(gauge, func(invocation Invocation) Value {
