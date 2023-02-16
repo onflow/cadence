@@ -98,7 +98,7 @@ var AccountCapabilitiesTypeGetFunctionType = &FunctionType{
 
 var AccountCapabilitiesTypeBorrowFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{
-		typeParamT,
+		capabilityTypeParameter, // T: &Any
 	},
 	Parameters: []Parameter{
 		{
@@ -109,7 +109,9 @@ var AccountCapabilitiesTypeBorrowFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
-			Type: genericTypeT,
+			Type: &GenericType{
+				TypeParameter: capabilityTypeParameter,
+			},
 		},
 	),
 }

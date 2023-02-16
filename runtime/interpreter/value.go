@@ -16447,6 +16447,9 @@ type OptionalValue interface {
 	Value
 	isOptionalValue()
 	forEach(f func(Value))
+	// andThen : T? -> (T -> U?) -> U?
+	andThen(f func(Value) OptionalValue) OptionalValue
+	// fmap : T? -> (T -> U) -> U?
 	fmap(inter *Interpreter, f func(Value) Value) OptionalValue
 }
 
@@ -16490,6 +16493,10 @@ func (NilValue) isOptionalValue() {}
 func (NilValue) forEach(_ func(Value)) {}
 
 func (n NilValue) fmap(inter *Interpreter, f func(Value) Value) OptionalValue {
+	return n
+}
+
+func (n NilValue) andThen(_ func(Value) OptionalValue) OptionalValue {
 	return n
 }
 
@@ -16672,6 +16679,10 @@ func (v *SomeValue) forEach(f func(Value)) {
 func (v *SomeValue) fmap(inter *Interpreter, f func(Value) Value) OptionalValue {
 	newValue := f(v.value)
 	return NewSomeValueNonCopying(inter, newValue)
+}
+
+func (v *SomeValue) andThen(f func(Value) OptionalValue) OptionalValue {
+	return f(v.value)
 }
 
 func (v *SomeValue) IsDestroyed() bool {
@@ -17883,12 +17894,15 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+// Returns nil if checkCapabilityExistence is specified, and the capability target is empty
 func accountGetCapabilityFunction(
 	gauge common.MemoryGauge,
 	addressValue AddressValue,
 	pathType sema.Type,
 	funcType *sema.FunctionType,
+	checkCapabilityExistence bool,
 ) *HostFunctionValue {
+	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
 		gauge,
@@ -17927,6 +17941,24 @@ func accountGetCapabilityFunction(
 			var borrowStaticType StaticType
 			if borrowType != nil {
 				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
+			}
+
+			if checkCapabilityExistence {
+				target, authorized, err := 
+					interpreter.GetStorageCapabilityFinalTarget(
+						address,
+						path,
+						borrowType,
+						invocation.LocationRange,
+					)
+				if err != nil {
+					panic(err)
+				}
+
+				// avoid leaking any information about the capability target to unauthorized callers
+				if !authorized || target == nil {
+					return nil
+				}
 			}
 
 			return NewStorageCapabilityValue(

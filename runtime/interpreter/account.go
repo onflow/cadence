@@ -60,6 +60,7 @@ func NewAuthAccountValue(
 			address,
 			sema.CapabilityPathType,
 			sema.AuthAccountTypeGetCapabilityFunctionType,
+			false,
 		),
 	}
 
@@ -258,6 +259,7 @@ func NewPublicAccountValue(
 			address,
 			sema.PublicPathType,
 			sema.PublicAccountTypeGetCapabilityFunctionType,
+			false,
 		),
 	}
 
