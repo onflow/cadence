@@ -1239,7 +1239,10 @@ func (test accountKeyTestCase) executeScript(
 		},
 	)
 
-	value = cadence.ValueWithCachedTypeID(value)
+	if err == nil {
+		value = cadence.ValueWithCachedTypeID(value)
+	}
+
 	return value, err
 }
 
@@ -1276,7 +1279,10 @@ func TestRuntimePublicKey(t *testing.T) {
 			},
 		)
 
-		value = cadence.ValueWithCachedTypeID(value)
+		if err == nil {
+			value = cadence.ValueWithCachedTypeID(value)
+		}
+
 		return value, err
 	}
 

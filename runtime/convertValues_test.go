@@ -2290,7 +2290,10 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 		},
 	)
 
-	value = cadence.ValueWithCachedTypeID(value)
+	if err == nil {
+		value = cadence.ValueWithCachedTypeID(value)
+	}
+
 	return value, err
 }
 
