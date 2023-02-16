@@ -2988,7 +2988,11 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, opti
 	decodedVal, err := json.Decode(nil, []byte(actualJSON), options...)
 	require.NoError(t, err)
 
-	assert.Equal(t, expectedVal, decodedVal)
+	assert.Equal(
+		t,
+		cadence.ValueWithCachedTypeID(expectedVal),
+		cadence.ValueWithCachedTypeID(decodedVal),
+	)
 }
 
 var fooResourceType = &cadence.ResourceType{

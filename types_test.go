@@ -118,10 +118,22 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&StructType{
+				QualifiedIdentifier: "Foo",
+			},
+			"Foo",
+		},
+		{
+			&StructType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "Foo",
 			},
 			"S.test.Foo",
+		},
+		{
+			&StructInterfaceType{
+				QualifiedIdentifier: "FooI",
+			},
+			"FooI",
 		},
 		{
 			&StructInterfaceType{
@@ -132,21 +144,85 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&ResourceType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "Foo",
+				QualifiedIdentifier: "Bar",
 			},
-			"S.test.Foo",
+			"Bar",
+		},
+		{
+			&ResourceType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Bar",
+			},
+			"S.test.Bar",
+		},
+		{
+			&ResourceInterfaceType{
+				QualifiedIdentifier: "BarI",
+			},
+			"BarI",
 		},
 		{
 			&ResourceInterfaceType{
 				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooI",
+				QualifiedIdentifier: "BarI",
 			},
-			"S.test.FooI",
+			"S.test.BarI",
 		},
 		{
 			(&RestrictedType{}).WithID("S.test.Foo{S.test.FooI}"),
 			"S.test.Foo{S.test.FooI}",
+		},
+		{
+			&EventType{
+				QualifiedIdentifier: "Event",
+			},
+			"Event",
+		},
+		{
+			&EventType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Event",
+			},
+			"S.test.Event",
+		},
+		{
+			&EnumType{
+				QualifiedIdentifier: "Enum",
+			},
+			"Enum",
+		},
+		{
+			&EnumType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Enum",
+			},
+			"S.test.Enum",
+		},
+		{
+			&ContractType{
+				QualifiedIdentifier: "Contract",
+			},
+			"Contract",
+		},
+		{
+			&ContractType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Contract",
+			},
+			"S.test.Contract",
+		},
+		{
+			&ContractInterfaceType{
+				QualifiedIdentifier: "ContractI",
+			},
+			"ContractI",
+		},
+		{
+			&ContractInterfaceType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "ContractI",
+			},
+			"S.test.ContractI",
 		},
 	}
 
