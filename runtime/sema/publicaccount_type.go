@@ -118,6 +118,12 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountForEachPublicFunctionType,
 			publicAccountForEachPublicDocString,
 		),
+		NewUnmeteredPublicConstantFieldMember(
+			publicAccountType,
+			AccountTypeCapabilitiesFieldName,
+			PublicAccountCapabilitiesType,
+			accountTypeCapabilitiesFieldDocString,
+		),
 	}
 
 	publicAccountType.Members = GetMembersAsMap(members)

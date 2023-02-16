@@ -53,6 +53,7 @@ const AuthAccountTypeStoragePathsFieldName = "storagePaths"
 const AuthAccountTypeInboxPublishFunctionName = "publish"
 const AuthAccountTypeInboxUnpublishFunctionName = "unpublish"
 const AuthAccountTypeInboxClaimFunctionName = "claim"
+const AccountTypeCapabilitiesFieldName = "capabilities"
 
 var AuthAccountTypeLinkAccountFunctionType *FunctionType
 
@@ -254,6 +255,12 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountTypeForEachStoredFunctionName,
 			AuthAccountForEachStoredFunctionType,
 			authAccountForEachStoredDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AccountTypeCapabilitiesFieldName,
+			AuthAccountCapabilitiesType,
+			accountTypeCapabilitiesFieldDocString,
 		),
 	}
 
@@ -850,6 +857,10 @@ The order of iteration is undefined.
 
 const accountKeysTypeCountFieldDocString = `
 The number of keys associated with this account.
+`
+
+const accountTypeCapabilitiesFieldDocString = `
+The capabilities associated with the account.
 `
 
 const authAccountTypeInboxPublishFunctionDocString = `

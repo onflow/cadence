@@ -20,7 +20,7 @@ package sema
 
 import "github.com/onflow/cadence/runtime/common"
 
-var AuthAccountCapabilitiesTypeName = "Capabilities"
+var accountCapabilitiesTypeName = "Capabilities"
 
 var AuthAccountCapabilitiesType = fix(func(authAccountCapabilitiesType *CompositeType) CompositeType {
 	members := []*Member{
@@ -69,7 +69,7 @@ var AuthAccountCapabilitiesType = fix(func(authAccountCapabilitiesType *Composit
 	}
 
 	return CompositeType{
-		Identifier: AuthAccountCapabilitiesTypeName,
+		Identifier: accountCapabilitiesTypeName,
 		Kind:       common.CompositeKindStructure,
 		importable: false,
 		Members:    GetMembersAsMap(members),

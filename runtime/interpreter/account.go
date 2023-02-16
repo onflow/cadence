@@ -79,6 +79,7 @@ func NewAuthAccountValue(
 	var linkAccountFunction *HostFunctionValue
 	var unlinkFunction *HostFunctionValue
 	var getLinkTargetFunction *HostFunctionValue
+	var capabilities Value
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -203,6 +204,11 @@ func NewAuthAccountValue(
 			}
 			return getLinkTargetFunction
 
+		case sema.AccountTypeCapabilitiesFieldName:
+			if capabilities == nil {
+				capabilities = NewAuthAccountCapabilitiesValue(inter, address)
+			}
+			return capabilities
 		}
 
 		return nil
@@ -267,6 +273,7 @@ func NewPublicAccountValue(
 	var contracts Value
 	var forEachPublicFunction *HostFunctionValue
 	var getLinkTargetFunction *HostFunctionValue
+	var capabilities Value
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -312,6 +319,12 @@ func NewPublicAccountValue(
 				getLinkTargetFunction = inter.accountGetLinkTargetFunction(address)
 			}
 			return getLinkTargetFunction
+
+		case sema.AccountTypeCapabilitiesFieldName:
+			if capabilities == nil {
+				capabilities = NewPublicAccountCapabilitiesValue(inter, address)
+			}
+			return capabilities
 		}
 
 		return nil
