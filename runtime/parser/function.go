@@ -360,10 +360,14 @@ func parseFunctionParameterListAndRest(
 	functionBlock *ast.FunctionBlock,
 	err error,
 ) {
+	// Parameter list
+
 	parameterList, err = parseParameterList(p)
 	if err != nil {
 		return
 	}
+
+	// Optional return type
 
 	current := p.current
 	cursor := p.tokens.Cursor()
@@ -379,23 +383,9 @@ func parseFunctionParameterListAndRest(
 	} else {
 		p.tokens.Revert(cursor)
 		p.current = current
-
-		positionBeforeMissingReturnType := parameterList.EndPos
-		returnType := ast.NewNominalType(
-			p.memoryGauge,
-			ast.NewEmptyIdentifier(
-				p.memoryGauge,
-				positionBeforeMissingReturnType,
-			),
-			nil,
-		)
-		returnTypeAnnotation = ast.NewTypeAnnotation(
-			p.memoryGauge,
-			false,
-			returnType,
-			positionBeforeMissingReturnType,
-		)
 	}
+
+	// (Potentially optional) block
 
 	if functionBlockIsOptional {
 		current = p.current

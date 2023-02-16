@@ -8661,10 +8661,10 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 func newPanicFunctionValue(gauge common.MemoryGauge) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		stdlib.PanicFunction.Type.(*sema.FunctionType),
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
-		stdlib.PanicFunction.Type.(*sema.FunctionType),
 	)
 }
 
