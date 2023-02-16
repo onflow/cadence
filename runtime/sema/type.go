@@ -6234,7 +6234,12 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 }
 
 const capabilityTypeBorrowFunctionDocString = `
-Returns a reference to the object targeted by the capability, provided it can be borrowed using the given type
+Returns a reference to the object targeted by the capability.
+
+If no object is stored at the target path, the function returns nil.
+
+If there is an object stored, a reference is returned as an optional, provided it can be borrowed using the given type.
+If the stored object cannot be borrowed using the given type, the function panics.
 `
 
 const capabilityTypeCheckFunctionDocString = `
