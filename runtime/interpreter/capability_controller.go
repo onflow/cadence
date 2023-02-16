@@ -37,9 +37,9 @@ func NewCapabilityControllerValue(
 	gauge common.MemoryGauge,
 	issueHeight uint64,
 	capabilityID uint64,
-	targetPath PathValue,
 	borrowType StaticType,
 	delete func() error,
+	getTarget func() (PathValue, error),
 	retarget func(newPath PathValue) error,
 ) Value {
 
@@ -58,7 +58,12 @@ func NewCapabilityControllerValue(
 		switch name {
 		case sema.CapabilityControllerTypeTargetFunctionName:
 			return NewHostFunctionValue(gauge, func(invocation Invocation) Value {
-				return targetPath
+				target, err := getTarget()
+				if err != nil {
+					panic(err)
+				}
+
+				return target
 			}, sema.CapabilityControllerTypeTargetFunctionType)
 
 		case sema.CapabilityControllerTypeDeleteFunctionName:
@@ -83,7 +88,6 @@ func NewCapabilityControllerValue(
 					panic(err)
 				}
 
-				targetPath = newTarget
 				return Void
 			}, sema.CapabilityControllerTypeRetargetFunctionType)
 		}
@@ -96,7 +100,6 @@ func NewCapabilityControllerValue(
 		if str == "" {
 			common.UseMemory(memoryGauge, common.CapabilityControllerStringMemoryUsage)
 
-			// "Type<T>()"
 			borrowTypeStr := borrowTypeValue.MeteredString(gauge, seenReferences)
 
 			memoryUsage := common.NewStringMemoryUsage(OverEstimateUintStringLength(uint(capabilityID)))
