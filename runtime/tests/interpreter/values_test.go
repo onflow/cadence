@@ -1088,7 +1088,7 @@ func newCompositeValue(
 }
 
 func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (totalSize int, slabCounts int) {
-	slabs, err := storage.Encode()
+	slabs, err := storage.Encode(nil)
 	require.NoError(t, err)
 
 	for id, slab := range slabs {

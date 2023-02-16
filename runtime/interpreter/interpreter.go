@@ -220,6 +220,7 @@ type Interpreter struct {
 }
 
 var _ common.MemoryGauge = &Interpreter{}
+var _ atree.Callback = &Interpreter{}
 var _ ast.DeclarationVisitor[StatementResult] = &Interpreter{}
 var _ ast.StatementVisitor[StatementResult] = &Interpreter{}
 var _ ast.ExpressionVisitor[Value] = &Interpreter{}
@@ -4595,6 +4596,11 @@ func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 	config := interpreter.SharedState.Config
 	common.UseMemory(config.MemoryGauge, usage)
 	return nil
+}
+
+func (interpreter *Interpreter) BeforeEncodeSlab(size uint32) error {
+	usage := common.NewBytesMemoryUsage(int(size))
+	return interpreter.MeterMemory(usage)
 }
 
 func (interpreter *Interpreter) DecodeStorable(

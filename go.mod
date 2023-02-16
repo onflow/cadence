@@ -11,10 +11,10 @@ require (
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/leanovate/gopter v0.2.9
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
-	github.com/onflow/atree v0.4.0
+	github.com/onflow/atree v0.4.1-0.20230217210622-1ca0edf9d31f
 	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a
 	github.com/schollz/progressbar/v3 v3.8.3
-	github.com/stretchr/testify v1.7.3
+	github.com/stretchr/testify v1.8.1
 	github.com/tidwall/pretty v1.2.1
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
 	go.opentelemetry.io/otel v1.8.0

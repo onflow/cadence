@@ -31,6 +31,8 @@ type MemoryUsage struct {
 	Amount uint64
 }
 
+// MemoryGauge may be used in parallel. e.g: During value encoding.
+// Hence, any implementation of this interface must be thread-safe.
 type MemoryGauge interface {
 	MeterMemory(usage MemoryUsage) error
 }
