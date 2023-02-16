@@ -67,7 +67,7 @@ func NewCapabilityControllerValue(
 				return targetPath
 			}, sema.CapabilityControllerTypeTargetFunctionType)
 
-		case sema.CapabilityControllerTypeRevokeFunctionName:
+		case sema.CapabilityControllerTypeDeleteFunctionName:
 			return NewHostFunctionValue(gauge, func(invocation Invocation) Value {
 				err := revoke()
 				if err != nil {
@@ -76,7 +76,7 @@ func NewCapabilityControllerValue(
 
 				isRevoked = true
 				return Void
-			}, sema.CapabilityControllerTypeRevokeFunctionType)
+			}, sema.CapabilityControllerTypeDeleteFunctionType)
 
 		case sema.CapabilityControllerTypeRetargetFunctionName:
 			return NewHostFunctionValue(gauge, func(invocation Invocation) Value {
