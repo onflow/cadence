@@ -4599,6 +4599,8 @@ func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 }
 
 func (interpreter *Interpreter) BeforeEncodeSlab(size uint32) error {
+	interpreter.ReportComputation(common.ComputationKindEncodeValue, uint(size))
+
 	usage := common.NewBytesMemoryUsage(int(size))
 	return interpreter.MeterMemory(usage)
 }

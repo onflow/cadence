@@ -109,7 +109,7 @@ const (
 	_
 	_
 	_
-	_
+	ComputationKindEncodeValue
 	_
 	_
 	_
