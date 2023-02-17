@@ -218,9 +218,9 @@ const (
 	transactionTypeMask
 	anyResourceAttachmentMask
 	anyStructAttachmentMask
+	capabilityControllerTypeMask
 
 	invalidTypeMask
-	capabilityControllerTypeMask
 )
 
 var (
