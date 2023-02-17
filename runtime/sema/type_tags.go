@@ -216,9 +216,9 @@ const (
 	capabilityTypeMask uint64 = 1 << iota
 	restrictedTypeMask
 	transactionTypeMask
+	capabilityControllerTypeMask
 
 	invalidTypeMask
-	capabilityControllerTypeMask
 )
 
 var (
