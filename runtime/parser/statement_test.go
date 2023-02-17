@@ -967,16 +967,6 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
 					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "",
-								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
-							},
-						},
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
 							Range: ast.Range{
@@ -1009,16 +999,6 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 								StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
 								EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 							},
-						},
-						ReturnTypeAnnotation: &ast.TypeAnnotation{
-							IsResource: false,
-							Type: &ast.NominalType{
-								Identifier: ast.Identifier{
-									Identifier: "",
-									Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
-								},
-							},
-							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
 						},
 						FunctionBlock: &ast.FunctionBlock{
 							Block: &ast.Block{
@@ -1058,16 +1038,6 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
 						},
 					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "",
-								Pos:        ast.Position{Line: 1, Column: 13, Offset: 13},
-							},
-						},
-						StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
-					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
 							Range: ast.Range{
@@ -1099,16 +1069,6 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 								StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 								EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 							},
-						},
-						ReturnTypeAnnotation: &ast.TypeAnnotation{
-							IsResource: false,
-							Type: &ast.NominalType{
-								Identifier: ast.Identifier{
-									Identifier: "",
-									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
-								},
-							},
-							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
 						FunctionBlock: &ast.FunctionBlock{
 							Block: &ast.Block{
@@ -1424,15 +1384,6 @@ func TestParseIfStatementInFunctionDeclaration(t *testing.T) {
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -1634,15 +1585,6 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -1688,15 +1630,6 @@ func TestParseIfStatementNoElse(t *testing.T) {
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -1769,15 +1702,6 @@ func TestParseWhileStatementInFunctionDeclaration(t *testing.T) {
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -1859,15 +1783,6 @@ func TestParseForStatementInFunctionDeclaration(t *testing.T) {
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -1929,15 +1844,6 @@ func TestParseAssignment(t *testing.T) {
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -2002,15 +1908,6 @@ func TestParseAccessAssignment(t *testing.T) {
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -2125,15 +2022,6 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -2235,16 +2123,6 @@ func TestParseMoveStatement(t *testing.T) {
 						EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
-						},
-					},
-					StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -2307,16 +2185,6 @@ func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpre
 						EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-						},
-					},
-					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -2355,16 +2223,6 @@ func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpre
 												StartPos: ast.Position{Offset: 65, Line: 4, Column: 15},
 												EndPos:   ast.Position{Offset: 66, Line: 4, Column: 16},
 											},
-										},
-										ReturnTypeAnnotation: &ast.TypeAnnotation{
-											IsResource: false,
-											Type: &ast.NominalType{
-												Identifier: ast.Identifier{
-													Identifier: "",
-													Pos:        ast.Position{Offset: 66, Line: 4, Column: 16},
-												},
-											},
-											StartPos: ast.Position{Offset: 66, Line: 4, Column: 16},
 										},
 										FunctionBlock: &ast.FunctionBlock{
 											Block: &ast.Block{
@@ -2429,16 +2287,6 @@ func TestParseExpressionStatementAfterReturnStatement(t *testing.T) {
 						EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-						},
-					},
-					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -2498,16 +2346,6 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 						EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-						},
-					},
-					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{

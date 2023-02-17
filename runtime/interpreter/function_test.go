@@ -51,8 +51,8 @@ func TestFunctionStaticType(t *testing.T) {
 
 		hostFunctionValue := NewHostFunctionValue(
 			inter,
-			hostFunction,
 			hostFunctionType,
+			hostFunction,
 		)
 
 		staticType := hostFunctionValue.StaticType(inter)
@@ -77,8 +77,8 @@ func TestFunctionStaticType(t *testing.T) {
 
 		hostFunctionValue := NewHostFunctionValue(
 			inter,
-			hostFunction,
 			hostFunctionType,
+			hostFunction,
 		)
 
 		compositeValue := NewCompositeValue(
