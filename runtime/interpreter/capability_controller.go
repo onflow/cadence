@@ -57,39 +57,51 @@ func NewCapabilityControllerValue(
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
 		case sema.CapabilityControllerTypeTargetFunctionName:
-			return NewHostFunctionValue(gauge, func(invocation Invocation) Value {
-				target, err := getTarget()
-				if err != nil {
-					panic(err)
-				}
+			return NewHostFunctionValue(
+				gauge,
+				sema.CapabilityControllerTypeTargetFunctionType,
+				func(invocation Invocation) Value {
+					target, err := getTarget()
+					if err != nil {
+						panic(err)
+					}
 
-				return target
-			}, sema.CapabilityControllerTypeTargetFunctionType)
+					return target
+				},
+			)
 
 		case sema.CapabilityControllerTypeDeleteFunctionName:
-			return NewHostFunctionValue(gauge, func(invocation Invocation) Value {
-				err := delete()
-				if err != nil {
-					panic(err)
-				}
+			return NewHostFunctionValue(
+				gauge,
+				sema.CapabilityControllerTypeDeleteFunctionType,
+				func(invocation Invocation) Value {
+					err := delete()
+					if err != nil {
+						panic(err)
+					}
 
-				return Void
-			}, sema.CapabilityControllerTypeDeleteFunctionType)
+					return Void
+				},
+			)
 
 		case sema.CapabilityControllerTypeRetargetFunctionName:
-			return NewHostFunctionValue(gauge, func(invocation Invocation) Value {
-				newTarget, ok := invocation.Arguments[0].(PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+			return NewHostFunctionValue(
+				gauge,
+				sema.CapabilityControllerTypeRetargetFunctionType,
+				func(invocation Invocation) Value {
+					newTarget, ok := invocation.Arguments[0].(PathValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
 
-				err := retarget(newTarget)
-				if !ok {
-					panic(err)
-				}
+					err := retarget(newTarget)
+					if !ok {
+						panic(err)
+					}
 
-				return Void
-			}, sema.CapabilityControllerTypeRetargetFunctionType)
+					return Void
+				},
+			)
 		}
 
 		return nil
