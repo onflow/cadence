@@ -360,48 +360,47 @@ func parseFunctionParameterListAndRest(
 	functionBlock *ast.FunctionBlock,
 	err error,
 ) {
+	// Parameter list
+
 	parameterList, err = parseParameterList(p)
 	if err != nil {
 		return
 	}
 
+	// Optional return type
+
+	current := p.current
+	cursor := p.tokens.Cursor()
 	p.skipSpaceAndComments()
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
 		p.nextSemanticToken()
+
 		returnTypeAnnotation, err = parseTypeAnnotation(p)
 		if err != nil {
 			return
 		}
-
-		p.skipSpaceAndComments()
 	} else {
-		positionBeforeMissingReturnType := parameterList.EndPos
-		returnType := ast.NewNominalType(
-			p.memoryGauge,
-			ast.NewEmptyIdentifier(
-				p.memoryGauge,
-				positionBeforeMissingReturnType,
-			),
-			nil,
-		)
-		returnTypeAnnotation = ast.NewTypeAnnotation(
-			p.memoryGauge,
-			false,
-			returnType,
-			positionBeforeMissingReturnType,
-		)
+		p.tokens.Revert(cursor)
+		p.current = current
 	}
 
-	p.skipSpaceAndComments()
+	// (Potentially optional) block
 
-	if !functionBlockIsOptional ||
-		p.current.Is(lexer.TokenBraceOpen) {
-
-		functionBlock, err = parseFunctionBlock(p)
-		if err != nil {
+	if functionBlockIsOptional {
+		current = p.current
+		cursor := p.tokens.Cursor()
+		p.skipSpaceAndComments()
+		if !p.current.Is(lexer.TokenBraceOpen) {
+			p.tokens.Revert(cursor)
+			p.current = current
 			return
 		}
+	}
+
+	functionBlock, err = parseFunctionBlock(p)
+	if err != nil {
+		return
 	}
 
 	return

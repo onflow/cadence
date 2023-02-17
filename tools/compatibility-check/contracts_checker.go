@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"reflect"
 	"strings"
 
@@ -38,21 +37,21 @@ import (
 const LoadMode = analysis.NeedTypes
 
 type ContractsChecker struct {
-	Codes      map[common.Location][]byte
-	outputFile *os.File
+	Codes        map[common.Location][]byte
+	outputWriter io.StringWriter
 }
 
-func NewContractChecker(outputFile *os.File) *ContractsChecker {
+func NewContractChecker(outputWriter io.StringWriter) *ContractsChecker {
 	checker := &ContractsChecker{
-		Codes:      map[common.Location][]byte{},
-		outputFile: outputFile,
+		Codes:        map[common.Location][]byte{},
+		outputWriter: outputWriter,
 	}
 
 	return checker
 }
 
-func (c *ContractsChecker) CheckCSV(csvFile *os.File) {
-	locations, contractNames := c.readCSV(csvFile)
+func (c *ContractsChecker) CheckCSV(csvReader io.Reader) {
+	locations, contractNames := c.readCSV(csvReader)
 	analysisConfig := analysis.NewSimpleConfig(
 		LoadMode,
 		c.Codes,
@@ -177,7 +176,7 @@ func (c *ContractsChecker) printError(err ast.HasPosition, location common.Locat
 }
 
 func (c *ContractsChecker) print(errorString string) {
-	_, printErr := c.outputFile.WriteString(errorString)
+	_, printErr := c.outputWriter.WriteString(errorString)
 	if printErr != nil {
 		panic(printErr)
 	}
