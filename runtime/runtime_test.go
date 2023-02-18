@@ -2835,13 +2835,13 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 				expected: cadence.NewArray([]cadence.Value{
 					cadence.NewArray([]cadence.Value{
 						nil,
-					}).WithType(cadence.VariableSizedArrayType{
-						ElementType: cadence.ReferenceType{
+					}).WithType(&cadence.VariableSizedArrayType{
+						ElementType: &cadence.ReferenceType{
 							Type: cadence.AnyStructType{},
 						},
 					}),
-				}).WithType(cadence.VariableSizedArrayType{
-					ElementType: cadence.ReferenceType{
+				}).WithType(&cadence.VariableSizedArrayType{
+					ElementType: &cadence.ReferenceType{
 						Type: cadence.AnyStructType{},
 					},
 				}),

@@ -1428,7 +1428,7 @@ func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 
 		for typeDescription, ty := range map[string]cadence.Type{
 			"Untyped": nil,
-			"Typed":   cadence.ReferenceType{Authorized: false, Type: cadence.IntType{}},
+			"Typed":   &cadence.ReferenceType{Authorized: false, Type: cadence.IntType{}},
 		} {
 
 			t.Run(fmt.Sprintf("%s %s", domain.Identifier(), typeDescription), func(t *testing.T) {
@@ -1475,17 +1475,17 @@ func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 				value, err := runtime.ReadStored(signer, storagePath, context)
 				require.NoError(t, err)
 
-				require.Equal(t,
-					cadence.StorageCapability{
-						Path: cadence.Path{
-							Domain:     domain.Identifier(),
-							Identifier: "test",
-						},
-						Address:    cadence.Address(signer),
-						BorrowType: ty,
+				expected := cadence.StorageCapability{
+					Path: cadence.Path{
+						Domain:     domain.Identifier(),
+						Identifier: "test",
 					},
-					value,
-				)
+					Address:    cadence.Address(signer),
+					BorrowType: ty,
+				}
+
+				actual := cadence.ValueWithCachedTypeID(value)
+				require.Equal(t, expected, actual)
 			})
 		}
 	}
