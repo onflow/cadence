@@ -355,6 +355,16 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	}
 }
 
+func (checker *Checker) declareEntitlementType(_ *ast.EntitlementDeclaration) *EntitlementType {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (checker *Checker) declareEntitlementMembers(_ *ast.EntitlementDeclaration) {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (checker *Checker) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) struct{} {
 	// TODO
 	panic(errors.NewUnreachableError())

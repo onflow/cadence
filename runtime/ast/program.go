@@ -82,6 +82,10 @@ func (p *Program) InterfaceDeclarations() []*InterfaceDeclaration {
 	return p.indices.interfaceDeclarations(p.declarations)
 }
 
+func (p *Program) EntitlementDeclarations() []*EntitlementDeclaration {
+	return p.indices.entitlementDeclarations(p.declarations)
+}
+
 func (p *Program) CompositeDeclarations() []*CompositeDeclaration {
 	return p.indices.compositeDeclarations(p.declarations)
 }

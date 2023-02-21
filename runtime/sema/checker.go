@@ -349,6 +349,15 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 		VisitThisAndNested(interfaceType, registerInElaboration)
 	}
 
+	for _, declaration := range program.EntitlementDeclarations() {
+		entitlementType := checker.declareEntitlementType(declaration)
+
+		// NOTE: register types in elaboration
+		// *after* the full container chain is fully set up
+
+		VisitThisAndNested(entitlementType, registerInElaboration)
+	}
+
 	for _, declaration := range program.CompositeDeclarations() {
 		compositeType := checker.declareCompositeType(declaration)
 
@@ -362,6 +371,10 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	for _, declaration := range program.InterfaceDeclarations() {
 		checker.declareInterfaceMembers(declaration)
+	}
+
+	for _, declaration := range program.EntitlementDeclarations() {
+		checker.declareEntitlementMembers(declaration)
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
