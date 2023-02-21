@@ -10382,8 +10382,31 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
+		inter, _ := testAccount(t,
+			interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+			true,
+			`
+              struct interface SI {}
 
+              struct S: SI {}
+
+              fun getRef(): &{SI}  {
+                  account.save(S(), to: /storage/s)
+                  return account.borrow<&S>(from: /storage/s)!
+              }
+
+              fun test(): &S {
+                  let ref = getRef()
+                  return (ref as AnyStruct) as! &S
+              }
+            `,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
 
 	t.Run("account reference", func(t *testing.T) {
