@@ -1744,10 +1744,21 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			)
 
 		case *StorageReferenceValue:
-			// TODO
+			return NewStorageReferenceValue(
+				interpreter,
+				ref.Authorized,
+				ref.TargetStorageAddress,
+				ref.TargetPath,
+				unwrappedTargetType.Type,
+			)
 
 		case *AccountReferenceValue:
-			// TODO:
+			return NewAccountReferenceValue(
+				interpreter,
+				ref.Address,
+				ref.Path,
+				unwrappedTargetType.Type,
+			)
 
 		default:
 			panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
