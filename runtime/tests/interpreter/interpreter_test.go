@@ -10288,7 +10288,13 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		name, code string
+		name     string
+		typeName string
+		code     string
+	}
+
+	checkerConfig := sema.Config{
+		AccountLinkingEnabled: true,
 	}
 
 	testFunctionReturn := func(tc testCase) {
@@ -10302,23 +10308,22 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 				true,
 				fmt.Sprintf(
 					`
-                      struct interface SI {}
+                      struct S {}
 
-                      struct S: SI {}
-
-                      fun getRef(): &{SI}  {
-                         %s
-                         return sRef
+                      fun getRef(): &AnyStruct  {
+                         %[2]s
+                         return ref
                       }
 
-                      fun test(): &S {
-                          let ref = getRef()
-                          return (ref as AnyStruct) as! &S
+                      fun test(): &%[1]s {
+                          let ref2 = getRef()
+                          return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
+					tc.typeName,
 					tc.code,
 				),
-				sema.Config{},
+				checkerConfig,
 			)
 
 			_, err := inter.Invoke("test")
@@ -10340,19 +10345,18 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 				true,
 				fmt.Sprintf(
 					`
-                      struct interface SI {}
+                      struct S {}
 
-                      struct S: SI {}
-
-                      fun test(): &S {
-                          %s
-                          let ref: &{SI} = sRef
-                          return (ref as AnyStruct) as! &S
+                      fun test(): &%[1]s {
+                          %[2]s
+                          let ref2: &AnyStruct = ref
+                          return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
+					tc.typeName,
 					tc.code,
 				),
-				sema.Config{},
+				checkerConfig,
 			)
 
 			_, err := inter.Invoke("test")
@@ -10365,18 +10369,28 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name: "ephemeral reference",
+			name:     "ephemeral reference",
+			typeName: "S",
 			code: `
               var s = S()
-              let sRef = &s as &S
+              let ref = &s as &S
             `,
 		},
 		{
-			name: "storage reference",
+			name:     "storage reference",
+			typeName: "S",
 			code: `
               account.save(S(), to: /storage/s)
-              let sRef = account.borrow<&S>(from: /storage/s)!
+              let ref = account.borrow<&S>(from: /storage/s)!
             `,
+		},
+		{
+			name:     "account reference",
+			typeName: "AuthAccount",
+			code: `
+		     let cap = account.linkAccount(/private/test)!
+		     let ref = cap.borrow()!
+		   `,
 		},
 	}
 
