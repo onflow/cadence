@@ -396,15 +396,23 @@ func (checker *Checker) declareEntitlementMembers(declaration *ast.EntitlementDe
 	fields := declaration.Members.Fields()
 	functions := declaration.Members.Functions()
 
-	// Enum cases are invalid
-	enumCases := declaration.Members.EnumCases()
-	if len(enumCases) > 0 {
+	reportInvalidDeclaration := func(nestedDeclarationKind common.DeclarationKind, identifier ast.Identifier) {
 		checker.report(
-			&InvalidEnumCaseError{
-				ContainerDeclarationKind: common.DeclarationKindEntitlement,
-				Range:                    ast.NewRangeFromPositioned(checker.memoryGauge, enumCases[0]),
+			&InvalidEntitlementNestedDeclarationError{
+				NestedDeclarationKind: nestedDeclarationKind,
+				Range:                 ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
 			},
 		)
+	}
+
+	// reject all non-field or function declarations
+	for _, nestedDecl := range declaration.Members.Declarations() {
+		switch nestedDecl.(type) {
+		case *ast.FieldDeclaration, *ast.FunctionDeclaration:
+			break
+		default:
+			reportInvalidDeclaration(nestedDecl.DeclarationKind(), *nestedDecl.DeclarationIdentifier())
+		}
 	}
 
 	members := &StringMemberOrderedMap{}

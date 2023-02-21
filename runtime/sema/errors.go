@@ -3933,3 +3933,20 @@ func (*InvalidEntitlementFunctionDeclaration) IsUserError() {}
 func (e *InvalidEntitlementFunctionDeclaration) Error() string {
 	return "entitlement functions may not have implementations"
 }
+
+// InvalidEntitlementNestedDeclarationError
+type InvalidEntitlementNestedDeclarationError struct {
+	NestedDeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+var _ SemanticError = &InvalidEntitlementNestedDeclarationError{}
+var _ errors.UserError = &InvalidEntitlementNestedDeclarationError{}
+
+func (*InvalidEntitlementNestedDeclarationError) isSemanticError() {}
+
+func (*InvalidEntitlementNestedDeclarationError) IsUserError() {}
+
+func (e *InvalidEntitlementNestedDeclarationError) Error() string {
+	return fmt.Sprintf("%s may not be declared inside an entitlement", e.NestedDeclarationKind.Name())
+}

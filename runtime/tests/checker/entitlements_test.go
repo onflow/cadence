@@ -140,6 +140,45 @@ func TestCheckBasicEntitlementDeclaration(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidEnumCaseError{}, errs[0])
+		require.IsType(t, &sema.InvalidEntitlementNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("no nested resource", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				resource R {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("no nested struct interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				struct interface R {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("no nested entitlement", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				entitlement F {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementNestedDeclarationError{}, errs[0])
 	})
 }
