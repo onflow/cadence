@@ -3899,3 +3899,37 @@ func (e *InvalidatedResourceReferenceError) ErrorNotes() []errors.ErrorNote {
 		newPreviousResourceInvalidationNote(invalidation),
 	}
 }
+
+// InvalidEntitlementMemberAccessDeclaration
+
+type InvalidEntitlementMemberAccessDeclaration struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidEntitlementMemberAccessDeclaration{}
+var _ errors.UserError = &InvalidEntitlementMemberAccessDeclaration{}
+
+func (*InvalidEntitlementMemberAccessDeclaration) isSemanticError() {}
+
+func (*InvalidEntitlementMemberAccessDeclaration) IsUserError() {}
+
+func (e *InvalidEntitlementMemberAccessDeclaration) Error() string {
+	return "cannot declare an entitlement member with an access modifier"
+}
+
+// InvalidEntitlementFunctionDeclaration
+
+type InvalidEntitlementFunctionDeclaration struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidEntitlementFunctionDeclaration{}
+var _ errors.UserError = &InvalidEntitlementFunctionDeclaration{}
+
+func (*InvalidEntitlementFunctionDeclaration) isSemanticError() {}
+
+func (*InvalidEntitlementFunctionDeclaration) IsUserError() {}
+
+func (e *InvalidEntitlementFunctionDeclaration) Error() string {
+	return "entitlement functions may not have implementations"
+}

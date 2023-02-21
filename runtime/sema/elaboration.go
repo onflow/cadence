@@ -104,11 +104,13 @@ type CastingExpressionTypes struct {
 type Elaboration struct {
 	fixedPointExpressionTypes           map[*ast.FixedPointExpression]Type
 	interfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
+	entitlementTypeDeclarations         map[*EntitlementType]*ast.EntitlementDeclaration
 	swapStatementTypes                  map[*ast.SwapStatement]SwapStatementTypes
 	assignmentStatementTypes            map[*ast.AssignmentStatement]AssignmentStatementTypes
 	compositeDeclarationTypes           map[*ast.CompositeDeclaration]*CompositeType
 	compositeTypeDeclarations           map[*CompositeType]*ast.CompositeDeclaration
 	interfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
+	entitlementDeclarationTypes         map[*ast.EntitlementDeclaration]*EntitlementType
 	transactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
 	constructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*FunctionType
 	functionExpressionFunctionTypes     map[*ast.FunctionExpression]*FunctionType
@@ -132,6 +134,7 @@ type Elaboration struct {
 	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
 	compositeTypes                      map[TypeID]*CompositeType
 	interfaceTypes                      map[TypeID]*InterfaceType
+	entitlementTypes                    map[TypeID]*EntitlementType
 	identifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	importDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
 	globalValues                        *StringVariableOrderedMap
@@ -294,6 +297,23 @@ func (e *Elaboration) SetInterfaceDeclarationType(
 	e.interfaceDeclarationTypes[declaration] = interfaceType
 }
 
+func (e *Elaboration) EntitlementDeclarationType(declaration *ast.EntitlementDeclaration) *EntitlementType {
+	if e.entitlementDeclarationTypes == nil {
+		return nil
+	}
+	return e.entitlementDeclarationTypes[declaration]
+}
+
+func (e *Elaboration) SetEntitlementDeclarationType(
+	declaration *ast.EntitlementDeclaration,
+	entitlementType *EntitlementType,
+) {
+	if e.entitlementDeclarationTypes == nil {
+		e.entitlementDeclarationTypes = map[*ast.EntitlementDeclaration]*EntitlementType{}
+	}
+	e.entitlementDeclarationTypes[declaration] = entitlementType
+}
+
 func (e *Elaboration) InterfaceTypeDeclaration(interfaceType *InterfaceType) *ast.InterfaceDeclaration {
 	if e.interfaceTypeDeclarations == nil {
 		return nil
@@ -309,6 +329,23 @@ func (e *Elaboration) SetInterfaceTypeDeclaration(
 		e.interfaceTypeDeclarations = map[*InterfaceType]*ast.InterfaceDeclaration{}
 	}
 	e.interfaceTypeDeclarations[interfaceType] = declaration
+}
+
+func (e *Elaboration) EntitlementTypeDeclaration(entitlementType *EntitlementType) *ast.EntitlementDeclaration {
+	if e.entitlementTypeDeclarations == nil {
+		return nil
+	}
+	return e.entitlementTypeDeclarations[entitlementType]
+}
+
+func (e *Elaboration) SetEntitlementTypeDeclaration(
+	entitlementType *EntitlementType,
+	declaration *ast.EntitlementDeclaration,
+) {
+	if e.entitlementTypeDeclarations == nil {
+		e.entitlementTypeDeclarations = map[*EntitlementType]*ast.EntitlementDeclaration{}
+	}
+	e.entitlementTypeDeclarations[entitlementType] = declaration
 }
 
 func (e *Elaboration) ConstructorFunctionType(initializer *ast.SpecialFunctionDeclaration) *FunctionType {
@@ -703,6 +740,20 @@ func (e *Elaboration) SetCompositeType(typeID TypeID, ty *CompositeType) {
 		e.compositeTypes = map[TypeID]*CompositeType{}
 	}
 	e.compositeTypes[typeID] = ty
+}
+
+func (e *Elaboration) EntitlementType(typeID common.TypeID) *EntitlementType {
+	if e.entitlementTypes == nil {
+		return nil
+	}
+	return e.entitlementTypes[typeID]
+}
+
+func (e *Elaboration) SetEntitlementType(typeID TypeID, ty *EntitlementType) {
+	if e.entitlementTypes == nil {
+		e.entitlementTypes = map[TypeID]*EntitlementType{}
+	}
+	e.entitlementTypes[typeID] = ty
 }
 
 func (e *Elaboration) InterfaceType(typeID common.TypeID) *InterfaceType {

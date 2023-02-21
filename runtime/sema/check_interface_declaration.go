@@ -355,17 +355,132 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	}
 }
 
-func (checker *Checker) declareEntitlementType(_ *ast.EntitlementDeclaration) *EntitlementType {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDeclaration) *EntitlementType {
+	identifier := declaration.Identifier
+
+	entitlementType := &EntitlementType{
+		Location:   checker.Location,
+		Identifier: identifier.Identifier,
+		Members:    &StringMemberOrderedMap{},
+	}
+
+	variable, err := checker.typeActivations.declareType(typeDeclaration{
+		identifier:               identifier,
+		ty:                       entitlementType,
+		declarationKind:          declaration.DeclarationKind(),
+		access:                   declaration.Access,
+		docString:                declaration.DocString,
+		allowOuterScopeShadowing: false,
+	})
+
+	checker.report(err)
+	if checker.PositionInfo != nil && variable != nil {
+		checker.recordVariableDeclarationOccurrence(
+			identifier.Identifier,
+			variable,
+		)
+	}
+
+	checker.Elaboration.SetEntitlementDeclarationType(declaration, entitlementType)
+	checker.Elaboration.SetEntitlementTypeDeclaration(entitlementType, declaration)
+
+	return entitlementType
 }
 
-func (checker *Checker) declareEntitlementMembers(_ *ast.EntitlementDeclaration) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (checker *Checker) declareEntitlementMembers(declaration *ast.EntitlementDeclaration) {
+	entitlementType := checker.Elaboration.EntitlementDeclarationType(declaration)
+	if entitlementType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	fields := declaration.Members.Fields()
+	functions := declaration.Members.Functions()
+
+	// Enum cases are invalid
+	enumCases := declaration.Members.EnumCases()
+	if len(enumCases) > 0 {
+		checker.report(
+			&InvalidEnumCaseError{
+				ContainerDeclarationKind: common.DeclarationKindEntitlement,
+				Range:                    ast.NewRangeFromPositioned(checker.memoryGauge, enumCases[0]),
+			},
+		)
+	}
+
+	members := &StringMemberOrderedMap{}
+	// declare a member for each field
+	for _, field := range fields {
+		identifier := field.Identifier.Identifier
+		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
+		checker.checkTypeAnnotation(fieldTypeAnnotation, field.TypeAnnotation)
+		const declarationKind = common.DeclarationKindField
+		if field.Access != ast.AccessNotSpecified {
+			checker.report(
+				&InvalidEntitlementMemberAccessDeclaration{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, field),
+				},
+			)
+		}
+
+		checker.checkStaticModifier(field.IsStatic(), field.Identifier)
+		checker.checkNativeModifier(field.IsNative(), field.Identifier)
+
+		members.Set(
+			identifier,
+			&Member{
+				ContainerType:   entitlementType,
+				Access:          field.Access,
+				Identifier:      field.Identifier,
+				DeclarationKind: declarationKind,
+				TypeAnnotation:  fieldTypeAnnotation,
+				VariableKind:    field.VariableKind,
+				DocString:       field.DocString,
+			})
+	}
+
+	// declare a member for each function
+	for _, function := range functions {
+		identifier := function.Identifier.Identifier
+		functionType := checker.functionType(function.Purity, function.ParameterList, function.ReturnTypeAnnotation)
+		argumentLabels := function.ParameterList.EffectiveArgumentLabels()
+		fieldTypeAnnotation := NewTypeAnnotation(functionType)
+		const declarationKind = common.DeclarationKindFunction
+
+		if function.Access != ast.AccessNotSpecified {
+			checker.report(
+				&InvalidEntitlementMemberAccessDeclaration{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, function),
+				},
+			)
+		}
+
+		if function.FunctionBlock != nil {
+			checker.report(
+				&InvalidEntitlementFunctionDeclaration{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, function),
+				},
+			)
+		}
+
+		members.Set(
+			identifier,
+			&Member{
+				ContainerType:     entitlementType,
+				Access:            function.Access,
+				Identifier:        function.Identifier,
+				DeclarationKind:   declarationKind,
+				TypeAnnotation:    fieldTypeAnnotation,
+				VariableKind:      ast.VariableKindConstant,
+				ArgumentLabels:    argumentLabels,
+				DocString:         function.DocString,
+				HasImplementation: false,
+			})
+	}
+
+	entitlementType.Members = members
 }
 
-func (checker *Checker) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) struct{} {
+func (checker *Checker) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) (_ struct{}) {
 	// TODO
-	panic(errors.NewUnreachableError())
+	return
 }

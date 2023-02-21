@@ -335,6 +335,8 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 			checker.Elaboration.SetInterfaceType(typedType.ID(), typedType)
 		case *CompositeType:
 			checker.Elaboration.SetCompositeType(typedType.ID(), typedType)
+		case *EntitlementType:
+			checker.Elaboration.SetEntitlementType(typedType.ID(), typedType)
 		default:
 			panic(errors.NewUnreachableError())
 		}
