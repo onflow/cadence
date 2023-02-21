@@ -101,6 +101,11 @@ type CastingExpressionTypes struct {
 	TargetType      Type
 }
 
+type ExpressionTypes struct {
+	ActualType   Type
+	ExpectedType Type
+}
+
 type Elaboration struct {
 	fixedPointExpressionTypes           map[*ast.FixedPointExpression]Type
 	interfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
@@ -142,6 +147,7 @@ type Elaboration struct {
 	indexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
 	forceExpressionTypes                map[*ast.ForceExpression]Type
 	staticCastTypes                     map[*ast.CastingExpression]CastTypes
+	expressionTypes                     map[ast.Expression]ExpressionTypes
 	TransactionTypes                    []*TransactionType
 	isChecking                          bool
 }
@@ -843,4 +849,19 @@ func (e *Elaboration) SetNumberConversionArgumentTypes(
 		e.numberConversionArgumentTypes = map[ast.Expression]NumberConversionArgumentTypes{}
 	}
 	e.numberConversionArgumentTypes[expression] = types
+}
+
+func (e *Elaboration) SetExpressionTypes(expression ast.Expression, types ExpressionTypes) {
+	if e.expressionTypes == nil {
+		e.expressionTypes = map[ast.Expression]ExpressionTypes{}
+	}
+	e.expressionTypes[expression] = types
+}
+
+func (e *Elaboration) ExpressionTypes(expression ast.Expression) ExpressionTypes {
+	return e.expressionTypes[expression]
+}
+
+func (e *Elaboration) AllExpressionTypes() map[ast.Expression]ExpressionTypes {
+	return e.expressionTypes
 }

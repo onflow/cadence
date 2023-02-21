@@ -2247,6 +2247,16 @@ func (checker *Checker) visitExpressionWithForceType(
 
 	actualType = ast.AcceptExpression[Type](expr, checker)
 
+	if checker.Config.ExtendedElaborationEnabled {
+		checker.Elaboration.SetExpressionTypes(
+			expr,
+			ExpressionTypes{
+				ActualType:   actualType,
+				ExpectedType: expectedType,
+			},
+		)
+	}
+
 	if forceType &&
 		expectedType != nil &&
 		!expectedType.IsInvalidType() &&
