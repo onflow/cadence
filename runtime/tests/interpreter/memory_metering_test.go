@@ -6705,7 +6705,7 @@ func TestInterpretEphemeralReferenceValueMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindEphemeralReferenceValue))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindEphemeralReferenceValue))
 	})
 
 	t.Run("creation, optional", func(t *testing.T) {
@@ -6727,7 +6727,7 @@ func TestInterpretEphemeralReferenceValueMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindEphemeralReferenceValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindEphemeralReferenceValue))
 	})
 }
 

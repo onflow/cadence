@@ -10282,3 +10282,51 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 
 	})
 }
+
+func TestInterpretReferenceUpAndDowncast(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("ephemeral reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+          struct interface SI {}
+
+          struct S: SI {}
+
+          fun getRef(): &{SI}  {
+              var s = S()
+              return &s as &S
+          }
+
+          fun test(): &S {
+              let ref = getRef()
+              return (ref as AnyStruct) as! &S
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	})
+
+	t.Run("storage reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		// TODO:
+
+	})
+
+	t.Run("account reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		// TODO:
+
+	})
+}

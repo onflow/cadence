@@ -1727,10 +1727,30 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		}
 	}
 
-	switch unwrappedTargetType.(type) {
+	switch unwrappedTargetType := unwrappedTargetType.(type) {
 	case *sema.AddressType:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertAddress(interpreter, value, locationRange)
+		}
+
+	case *sema.ReferenceType:
+		switch ref := value.(type) {
+		case *EphemeralReferenceValue:
+			return NewEphemeralReferenceValue(
+				interpreter,
+				ref.Authorized,
+				ref.Value,
+				unwrappedTargetType.Type,
+			)
+
+		case *StorageReferenceValue:
+			// TODO
+
+		case *AccountReferenceValue:
+			// TODO:
+
+		default:
+			panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
 		}
 	}
 
