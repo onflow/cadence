@@ -10351,69 +10351,101 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("ephemeral reference", func(t *testing.T) {
+	type testCase struct {
+		name, code string
+	}
 
-		t.Parallel()
+	testFunctionReturn := func(tc testCase) {
 
-		inter := parseCheckAndInterpret(t, `
+		t.Run(fmt.Sprintf("function return: %s", tc.name), func(t *testing.T) {
 
-          struct interface SI {}
+			t.Parallel()
 
-          struct S: SI {}
+			inter, _ := testAccount(t,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				true,
+				fmt.Sprintf(
+					`
+                      struct interface SI {}
 
-          fun getRef(): &{SI}  {
+                      struct S: SI {}
+
+                      fun getRef(): &{SI}  {
+                         %s
+                         return sRef
+                      }
+
+                      fun test(): &S {
+                          let ref = getRef()
+                          return (ref as AnyStruct) as! &S
+                      }
+                    `,
+					tc.code,
+				),
+				sema.Config{},
+			)
+
+			_, err := inter.Invoke("test")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+
+		})
+	}
+
+	testVariableDeclaration := func(tc testCase) {
+
+		t.Run(fmt.Sprintf("variable declaration: %s", tc.name), func(t *testing.T) {
+
+			t.Parallel()
+
+			inter, _ := testAccount(t,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				true,
+				fmt.Sprintf(
+					`
+                      struct interface SI {}
+
+                      struct S: SI {}
+
+                      fun test(): &S {
+                          %s
+                          let ref: &{SI} = sRef
+                          return (ref as AnyStruct) as! &S
+                      }
+                    `,
+					tc.code,
+				),
+				sema.Config{},
+			)
+
+			_, err := inter.Invoke("test")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+
+		})
+	}
+
+	testCases := []testCase{
+		{
+			name: "ephemeral reference",
+			code: `
               var s = S()
-              return &s as &S
-          }
-
-          fun test(): &S {
-              let ref = getRef()
-              return (ref as AnyStruct) as! &S
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-
-		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
-	})
-
-	t.Run("storage reference", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter, _ := testAccount(t,
-			interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-			true,
-			`
-              struct interface SI {}
-
-              struct S: SI {}
-
-              fun getRef(): &{SI}  {
-                  account.save(S(), to: /storage/s)
-                  return account.borrow<&S>(from: /storage/s)!
-              }
-
-              fun test(): &S {
-                  let ref = getRef()
-                  return (ref as AnyStruct) as! &S
-              }
+              let sRef = &s as &S
             `,
-			sema.Config{},
-		)
+		},
+		{
+			name: "storage reference",
+			code: `
+              account.save(S(), to: /storage/s)
+              let sRef = account.borrow<&S>(from: /storage/s)!
+            `,
+		},
+	}
 
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-
-		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
-	})
-
-	t.Run("account reference", func(t *testing.T) {
-
-		t.Parallel()
-
-		// TODO:
-
-	})
+	for _, tc := range testCases {
+		testFunctionReturn(tc)
+		testVariableDeclaration(tc)
+	}
 }
