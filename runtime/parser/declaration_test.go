@@ -7459,13 +7459,13 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		// since it doesn't make sense for an entitlement to have these
 		result, errs := testParseDeclarations(`
           entitlement LongNameX {
-              pub(set) var foo: Int
+                       var foo: Int
 
               init(foo: Int)
 
-              pub fun getFoo(): Int
+                  fun getFoo(): Int
 
-              pub fun getBar(): Int {}
+                  fun getBar(): Int {}
 
               destroy() {}
           }
@@ -7484,7 +7484,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
-								Access:       ast.AccessPublicSettable,
+								Access:       ast.AccessNotSpecified,
 								VariableKind: ast.VariableKindVariable,
 								Identifier: ast.Identifier{
 									Identifier: "foo",
@@ -7501,7 +7501,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 									StartPos: ast.Position{Offset: 67, Line: 3, Column: 32},
 								},
 								Range: ast.Range{
-									StartPos: ast.Position{Offset: 49, Line: 3, Column: 14},
+									StartPos: ast.Position{Offset: 58, Line: 3, Column: 23},
 									EndPos:   ast.Position{Offset: 69, Line: 3, Column: 34},
 								},
 							},
@@ -7543,7 +7543,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 								},
 							},
 							&ast.FunctionDeclaration{
-								Access: ast.AccessPublic,
+								Access: ast.AccessNotSpecified,
 								Identifier: ast.Identifier{
 									Identifier: "getFoo",
 									Pos:        ast.Position{Offset: 124, Line: 7, Column: 22},
@@ -7564,10 +7564,10 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 									},
 									StartPos: ast.Position{Offset: 134, Line: 7, Column: 32},
 								},
-								StartPos: ast.Position{Offset: 116, Line: 7, Column: 14},
+								StartPos: ast.Position{Offset: 120, Line: 7, Column: 18},
 							},
 							&ast.FunctionDeclaration{
-								Access: ast.AccessPublic,
+								Access: ast.AccessNotSpecified,
 								Identifier: ast.Identifier{
 									Identifier: "getBar",
 									Pos:        ast.Position{Offset: 161, Line: 9, Column: 22},
@@ -7596,7 +7596,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 										},
 									},
 								},
-								StartPos: ast.Position{Offset: 153, Line: 9, Column: 14},
+								StartPos: ast.Position{Offset: 157, Line: 9, Column: 18},
 							},
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindDestructor,
