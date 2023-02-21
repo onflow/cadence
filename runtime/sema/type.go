@@ -6687,3 +6687,134 @@ func isNumericSuperType(typ Type) bool {
 
 	return false
 }
+
+// EntitlementType
+
+type EntitlementType struct {
+	Location            common.Location
+	containerType       Type
+	memberResolvers     map[string]MemberResolver
+	Members             *StringMemberOrderedMap
+	memberResolversOnce sync.Once
+	Identifier          string
+	Fields              []string
+}
+
+var _ Type = &EntitlementType{}
+var _ ContainedType = &EntitlementType{}
+var _ LocatedType = &EntitlementType{}
+
+func (*EntitlementType) IsType() {}
+
+func (t *EntitlementType) Tag() TypeTag {
+	return InvalidTypeTag // entitlement types may never appear as types, and thus cannot have a computed supertype
+}
+
+func (t *EntitlementType) String() string {
+	return t.Identifier
+}
+
+func (t *EntitlementType) QualifiedString() string {
+	return t.QualifiedIdentifier()
+}
+
+func (t *EntitlementType) GetContainerType() Type {
+	return t.containerType
+}
+
+func (t *EntitlementType) SetContainerType(containerType Type) {
+	t.containerType = containerType
+}
+
+func (t *EntitlementType) GetLocation() common.Location {
+	return t.Location
+}
+
+func (t *EntitlementType) QualifiedIdentifier() string {
+	return qualifiedIdentifier(t.Identifier, t.containerType)
+}
+
+func (t *EntitlementType) ID() TypeID {
+	identifier := t.QualifiedIdentifier()
+	if t.Location == nil {
+		return TypeID(identifier)
+	} else {
+		return t.Location.TypeID(nil, identifier)
+	}
+}
+
+func (t *EntitlementType) Equal(other Type) bool {
+	otherEntitlement, ok := other.(*EntitlementType)
+	if !ok {
+		return false
+	}
+
+	return otherEntitlement.ID() == t.ID()
+}
+
+func (t *EntitlementType) MemberMap() *StringMemberOrderedMap {
+	return t.Members
+}
+
+func (t *EntitlementType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *EntitlementType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		members := make(map[string]MemberResolver, t.Members.Len())
+		t.Members.Foreach(func(name string, loopMember *Member) {
+			// NOTE: don't capture loop variable
+			member := loopMember
+			members[name] = MemberResolver{
+				Kind: member.DeclarationKind,
+				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
+					return member
+				},
+			}
+		})
+
+		t.memberResolvers = members
+	})
+}
+
+func (t *EntitlementType) IsInvalidType() bool {
+	return false
+}
+
+func (t *EntitlementType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *EntitlementType) IsExportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *EntitlementType) IsImportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*EntitlementType) IsEquatable() bool {
+	return false
+}
+
+func (*EntitlementType) IsResourceType() bool {
+	return false
+}
+
+func (*EntitlementType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateDirectEntitlementTypeAnnotation
+}
+
+func (t *EntitlementType) RewriteWithRestrictedTypes() (Type, bool) {
+	return t, false
+}
+
+func (*EntitlementType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *EntitlementType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+	return t
+}
