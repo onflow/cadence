@@ -95,9 +95,10 @@ func TestCheckBasicEntitlementDeclaration(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.InvalidEntitlementFunctionDeclaration{}, errs[0])
+		require.IsType(t, &sema.InvalidImplementationError{}, errs[1])
 	})
 
 	t.Run("basic, with postcondition", func(t *testing.T) {
@@ -107,6 +108,24 @@ func TestCheckBasicEntitlementDeclaration(t *testing.T) {
 				fun foo() {
 					post {
 
+					}
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.InvalidEntitlementFunctionDeclaration{}, errs[0])
+		require.IsType(t, &sema.InvalidImplementationError{}, errs[1])
+	})
+
+	t.Run("basic, with postconditions", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo() {
+					post {
+						1 == 2: "beep"
 					}
 				}
 			}
@@ -125,9 +144,11 @@ func TestCheckBasicEntitlementDeclaration(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.InvalidEntitlementFunctionDeclaration{}, errs[0])
+		require.IsType(t, &sema.InvalidImplementationError{}, errs[1])
+
 	})
 
 	t.Run("basic, enum case", func(t *testing.T) {
@@ -180,5 +201,96 @@ func TestCheckBasicEntitlementDeclaration(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidEntitlementNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("no destroy", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				destroy()
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("no special function", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				x()
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("priv access", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			priv entitlement E {
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+	})
+
+	t.Run("duped members", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				let x: Int
+				fun x() 
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.RedeclarationError{}, errs[0])
+	})
+
+	t.Run("invalid resource annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				let x: @Int
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+	})
+
+	t.Run("invalid destroy name", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				let destroy: String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNameError{}, errs[0])
+	})
+
+	t.Run("invalid init name", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				let init: String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNameError{}, errs[0])
 	})
 }

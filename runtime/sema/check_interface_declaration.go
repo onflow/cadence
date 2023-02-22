@@ -488,7 +488,27 @@ func (checker *Checker) declareEntitlementMembers(declaration *ast.EntitlementDe
 	entitlementType.Members = members
 }
 
-func (checker *Checker) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) (_ struct{}) {
-	// TODO
+func (checker *Checker) VisitEntitlementDeclaration(declaration *ast.EntitlementDeclaration) (_ struct{}) {
+	entitlementType := checker.Elaboration.EntitlementDeclarationType(declaration)
+	if entitlementType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	checker.checkDeclarationAccessModifier(
+		declaration.Access,
+		declaration.DeclarationKind(),
+		declaration.StartPos,
+		true,
+	)
+
+	checker.checkNestedIdentifiers(declaration.Members)
+
+	checker.checkInterfaceFunctions(
+		declaration.Members.Functions(),
+		entitlementType,
+		declaration.DeclarationKind(),
+		declaration.DeclarationDocString(),
+	)
+
 	return
 }
