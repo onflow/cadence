@@ -626,12 +626,35 @@ func TestInterpretGetType(t *testing.T) {
 			// wrapping the ephemeral reference in an optional
 			// ensures getType doesn't dereference the value,
 			// i.e. EphemeralReferenceValue.StaticType is tested
-			name: "optional ephemeral reference",
+			name: "optional ephemeral reference, auth to unauth",
 			code: `
               fun test(): Type {
                   let value = 1
                   let ref = &value as auth &Int
                   let optRef: &Int? = ref
+                  return optRef.getType()
+              }
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.OptionalStaticType{
+					Type: interpreter.ReferenceStaticType{
+						// Reference was converted from authorized to unauthorized
+						Authorized:   false,
+						BorrowedType: interpreter.PrimitiveStaticTypeInt,
+					},
+				},
+			},
+		},
+		{
+			// wrapping the ephemeral reference in an optional
+			// ensures getType doesn't dereference the value,
+			// i.e. EphemeralReferenceValue.StaticType is tested
+			name: "optional ephemeral reference, auth to auth",
+			code: `
+              fun test(): Type {
+                  let value = 1
+                  let ref = &value as auth &Int
+                  let optRef: auth &Int? = ref
                   return optRef.getType()
               }
             `,
@@ -648,11 +671,33 @@ func TestInterpretGetType(t *testing.T) {
 			// wrapping the storage reference in an optional
 			// ensures getType doesn't dereference the value,
 			// i.e. StorageReferenceValue.StaticType is tested
-			name: "optional storage reference",
+			name: "optional storage reference, auth to unauth",
 			code: `
               fun test(): Type {
                   let ref = getStorageReference()
                   let optRef: &Int? = ref
+                  return optRef.getType()
+              }
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.OptionalStaticType{
+					Type: interpreter.ReferenceStaticType{
+						// Reference was converted from authorized to unauthorized
+						Authorized:   false,
+						BorrowedType: interpreter.PrimitiveStaticTypeInt,
+					},
+				},
+			},
+		},
+		{
+			// wrapping the storage reference in an optional
+			// ensures getType doesn't dereference the value,
+			// i.e. StorageReferenceValue.StaticType is tested
+			name: "optional storage reference, auth to auth",
+			code: `
+              fun test(): Type {
+                  let ref = getStorageReference()
+                  let optRef: auth &Int? = ref
                   return optRef.getType()
               }
             `,
