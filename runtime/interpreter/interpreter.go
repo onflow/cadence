@@ -1739,7 +1739,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *EphemeralReferenceValue:
 				return NewEphemeralReferenceValue(
 					interpreter,
-					ref.Authorized,
+					unwrappedTargetType.Authorized,
 					ref.Value,
 					unwrappedTargetType.Type,
 				)
@@ -1747,7 +1747,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *StorageReferenceValue:
 				return NewStorageReferenceValue(
 					interpreter,
-					ref.Authorized,
+					unwrappedTargetType.Authorized,
 					ref.TargetStorageAddress,
 					ref.TargetPath,
 					unwrappedTargetType.Type,

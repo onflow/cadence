@@ -10394,7 +10394,6 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
-
 		})
 	}
 
@@ -10427,35 +10426,50 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
-
 		})
 	}
 
 	testCases := []testCase{
 		{
-			name:     "ephemeral reference",
-			typeName: "S",
-			code: `
-              var s = S()
-              let ref = &s as &S
-            `,
-		},
-		{
-			name:     "storage reference",
-			typeName: "S",
-			code: `
-              account.save(S(), to: /storage/s)
-              let ref = account.borrow<&S>(from: /storage/s)!
-            `,
-		},
-		{
 			name:     "account reference",
 			typeName: "AuthAccount",
 			code: `
-		     let cap = account.linkAccount(/private/test)!
-		     let ref = cap.borrow()!
-		   `,
+		         let cap = account.linkAccount(/private/test)!
+		         let ref = cap.borrow()!
+		       `,
 		},
+	}
+
+	for _, authorized := range []bool{true, false} {
+
+		var authKeyword, testNameSuffix string
+		if authorized {
+			authKeyword = "auth"
+			testNameSuffix = ", auth"
+		}
+
+		testCases = append(testCases,
+			testCase{
+				name:     fmt.Sprintf("ephemeral reference%s", testNameSuffix),
+				typeName: "S",
+				code: fmt.Sprintf(`
+                      var s = S()
+                      let ref = &s as %s &S
+                    `,
+					authKeyword,
+				),
+			},
+			testCase{
+				name:     fmt.Sprintf("storage reference%s", testNameSuffix),
+				typeName: "S",
+				code: fmt.Sprintf(`
+                      account.save(S(), to: /storage/s)
+                      let ref = account.borrow<%s &S>(from: /storage/s)!
+                    `,
+					authKeyword,
+				),
+			},
+		)
 	}
 
 	for _, tc := range testCases {
