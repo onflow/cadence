@@ -10282,3 +10282,134 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 
 	})
 }
+
+func TestInterpretReferenceUpAndDowncast(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		typeName string
+		code     string
+	}
+
+	checkerConfig := sema.Config{
+		AccountLinkingEnabled: true,
+	}
+
+	testFunctionReturn := func(tc testCase) {
+
+		t.Run(fmt.Sprintf("function return: %s", tc.name), func(t *testing.T) {
+
+			t.Parallel()
+
+			inter, _ := testAccount(t,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				true,
+				fmt.Sprintf(
+					`
+                      struct S {}
+
+                      fun getRef(): &AnyStruct  {
+                         %[2]s
+                         return ref
+                      }
+
+                      fun test(): &%[1]s {
+                          let ref2 = getRef()
+                          return (ref2 as AnyStruct) as! &%[1]s
+                      }
+                    `,
+					tc.typeName,
+					tc.code,
+				),
+				checkerConfig,
+			)
+
+			_, err := inter.Invoke("test")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		})
+	}
+
+	testVariableDeclaration := func(tc testCase) {
+
+		t.Run(fmt.Sprintf("variable declaration: %s", tc.name), func(t *testing.T) {
+
+			t.Parallel()
+
+			inter, _ := testAccount(t,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				true,
+				fmt.Sprintf(
+					`
+                      struct S {}
+
+                      fun test(): &%[1]s {
+                          %[2]s
+                          let ref2: &AnyStruct = ref
+                          return (ref2 as AnyStruct) as! &%[1]s
+                      }
+                    `,
+					tc.typeName,
+					tc.code,
+				),
+				checkerConfig,
+			)
+
+			_, err := inter.Invoke("test")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		})
+	}
+
+	testCases := []testCase{
+		{
+			name:     "account reference",
+			typeName: "AuthAccount",
+			code: `
+		         let cap = account.linkAccount(/private/test)!
+		         let ref = cap.borrow()!
+		       `,
+		},
+	}
+
+	for _, authorized := range []bool{true, false} {
+
+		var authKeyword, testNameSuffix string
+		if authorized {
+			authKeyword = "auth"
+			testNameSuffix = ", auth"
+		}
+
+		testCases = append(testCases,
+			testCase{
+				name:     fmt.Sprintf("ephemeral reference%s", testNameSuffix),
+				typeName: "S",
+				code: fmt.Sprintf(`
+                      var s = S()
+                      let ref = &s as %s &S
+                    `,
+					authKeyword,
+				),
+			},
+			testCase{
+				name:     fmt.Sprintf("storage reference%s", testNameSuffix),
+				typeName: "S",
+				code: fmt.Sprintf(`
+                      account.save(S(), to: /storage/s)
+                      let ref = account.borrow<%s &S>(from: /storage/s)!
+                    `,
+					authKeyword,
+				),
+			},
+		)
+	}
+
+	for _, tc := range testCases {
+		testFunctionReturn(tc)
+		testVariableDeclaration(tc)
+	}
+}
