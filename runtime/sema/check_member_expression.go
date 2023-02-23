@@ -335,7 +335,7 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 			}
 		}
 	case EntitlementAccess:
-		// TODO: fill this out
+		// ENTITLEMENTTODO: fill this out
 		panic(errors.NewUnreachableError())
 	}
 
