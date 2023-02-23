@@ -44,7 +44,7 @@ func TestExportRecursiveType(t *testing.T) {
 
 	ty.Members.Set("foo", &sema.Member{
 		ContainerType: ty,
-		Access:        ast.AccessNotSpecified,
+		Access:        sema.PrimitiveAccess(ast.AccessNotSpecified),
 		Identifier:    ast.Identifier{Identifier: "foo"},
 		// NOTE: recursive type
 		TypeAnnotation:  sema.NewTypeAnnotation(ty),
@@ -99,7 +99,7 @@ func BenchmarkExportType(b *testing.B) {
 
 		ty.Members.Set("foo", &sema.Member{
 			ContainerType: ty,
-			Access:        ast.AccessNotSpecified,
+			Access:        sema.PrimitiveAccess(ast.AccessNotSpecified),
 			Identifier:    ast.Identifier{Identifier: "foo"},
 			// NOTE: recursive type
 			TypeAnnotation:  sema.NewTypeAnnotation(ty),

@@ -25,6 +25,7 @@ import (
 type Access interface {
 	isAccess()
 	IsLessPermissiveThan(Access) bool
+	IsMorePermissiveThan(Access) bool
 	Access() ast.Access
 }
 
@@ -67,6 +68,13 @@ func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
 	return e.subset(other.(EntitlementAccess))
 }
 
+func (e EntitlementAccess) IsMorePermissiveThan(other Access) bool {
+	if primitive, isPrimitive := other.(PrimitiveAccess); isPrimitive {
+		return ast.PrimitiveAccess(primitive) == ast.AccessPrivate
+	}
+	return other.(EntitlementAccess).subset(e)
+}
+
 type PrimitiveAccess ast.PrimitiveAccess
 
 func (PrimitiveAccess) isAccess() {}
@@ -77,8 +85,16 @@ func (a PrimitiveAccess) Access() ast.Access {
 
 func (a PrimitiveAccess) IsLessPermissiveThan(otherAccess Access) bool {
 	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
-		return ast.PrimitiveAccess(a) <= ast.PrimitiveAccess(otherPrimitive)
+		return ast.PrimitiveAccess(a) < ast.PrimitiveAccess(otherPrimitive)
 	}
 	// only private access is guaranteed to be less permissive than entitlement-based access
 	return ast.PrimitiveAccess(a) == ast.AccessPrivate
+}
+
+func (a PrimitiveAccess) IsMorePermissiveThan(otherAccess Access) bool {
+	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
+		return ast.PrimitiveAccess(a) >= ast.PrimitiveAccess(otherPrimitive)
+	}
+	// only public access is guaranteed to be less permissive than entitlement-based access
+	return ast.PrimitiveAccess(a) == ast.AccessPublicSettable || ast.PrimitiveAccess(a) == ast.AccessPublic
 }

@@ -177,6 +177,19 @@ func TestCheckBasicEntitlementDeclaration(t *testing.T) {
 		require.IsType(t, &sema.InvalidEntitlementNestedDeclarationError{}, errs[0])
 	})
 
+	t.Run("no nested event", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				event Foo()
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementNestedDeclarationError{}, errs[0])
+	})
+
 	t.Run("no nested struct interface", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -392,7 +405,9 @@ func TestCheckBasicEntitlementAccess(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-			entitlement E {}
+			entitlement E {
+				let foo: String
+			}
 			struct interface S {
 				access(E) let foo: String
 			}
@@ -404,9 +419,16 @@ func TestCheckBasicEntitlementAccess(t *testing.T) {
 	t.Run("multiple entitlements", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-			entitlement A {}
-			entitlement B {}
-			entitlement C {}
+			entitlement A {
+				let foo: String
+			}
+			entitlement B {
+				let foo: String
+				fun bar()
+			}
+			entitlement C {
+				fun bar()
+			}
 			resource interface R {
 				access(A, B) let foo: String
 				access(B, C) fun bar()
@@ -420,7 +442,9 @@ func TestCheckBasicEntitlementAccess(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			contract C {
-				entitlement E {}
+				entitlement E {
+					let foo: String
+				}
 				struct interface S {
 					access(E) let foo: String
 				}
@@ -434,13 +458,16 @@ func TestCheckBasicEntitlementAccess(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			contract C {
-				entitlement E {}
+				entitlement E {
+					let foo: String
+					fun bar()
+				}
 				struct interface S {
 					access(E) let foo: String
 				}
 			}
 			resource R {
-				access(C.E) fun foo() {}
+				access(C.E) fun bar() {}
 			}
 		`)
 
@@ -455,7 +482,9 @@ func TestCheckInvalidEntitlementAccess(t *testing.T) {
 	t.Run("invalid variable decl", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-			entitlement E {}
+			entitlement E {
+				var x: String
+			}
 			access(E) var x: String = ""
 		`)
 
@@ -467,7 +496,9 @@ func TestCheckInvalidEntitlementAccess(t *testing.T) {
 	t.Run("invalid fun decl", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-			entitlement E {}
+			entitlement E {
+				fun foo()
+			}
 			access(E) fun foo() {}
 		`)
 
@@ -479,7 +510,9 @@ func TestCheckInvalidEntitlementAccess(t *testing.T) {
 	t.Run("invalid contract field", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-			entitlement E {}
+			entitlement E {
+				fun foo()
+			}
 			contract C {
 				access(E) fun foo() {}
 			}
@@ -493,7 +526,9 @@ func TestCheckInvalidEntitlementAccess(t *testing.T) {
 	t.Run("invalid contract interface field", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-			entitlement E {}
+			entitlement E {
+				fun foo()
+			}
 			contract interface C {
 				access(E) fun foo()
 			}
@@ -668,6 +703,140 @@ func TestCheckNonEntitlementAccess(t *testing.T) {
 			enum E: UInt8 {}
 			resource R {
 				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+}
+
+func TestCheckEntitlementConformance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("unimplemented method", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+				fun bar()
+			}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("unimplemented field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+				let x: String
+			}
+			resource interface R {
+				access(E) fun foo() 
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("missing method", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+			}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("missing field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+			}
+			resource interface R {
+				access(E) let x: String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("multiple entitlements", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			entitlement F {
+				fun foo()
+			}
+			resource R {
+				access(E, F) fun foo() {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("multiple entitlements mismatch", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			entitlement F {
+				fun foo(): String
+			}
+			resource R {
+				access(E, F) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("multiple entitlements field mismatch", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				let x: String
+			}
+			entitlement F {
+				let x: UInt8
+			}
+			resource interface R {
+				let x: String
 			}
 		`)
 
