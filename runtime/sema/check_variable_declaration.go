@@ -194,7 +194,7 @@ func (checker *Checker) declareVariableDeclaration(declaration *ast.VariableDecl
 		identifier:               identifier,
 		ty:                       declarationType,
 		docString:                declaration.DocString,
-		access:                   declaration.Access,
+		access:                   checker.accessFromAstAccess(declaration.Access),
 		kind:                     declaration.DeclarationKind(),
 		pos:                      declaration.Identifier.Pos,
 		isConstant:               declaration.IsConstant,

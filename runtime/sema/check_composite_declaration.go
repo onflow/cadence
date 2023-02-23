@@ -244,7 +244,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 			identifier:               *identifier,
 			ty:                       nestedType,
 			declarationKind:          nestedDeclaration.DeclarationKind(),
-			access:                   nestedDeclaration.DeclarationAccess(),
+			access:                   checker.accessFromAstAccess(nestedDeclaration.DeclarationAccess()),
 			docString:                nestedDeclaration.DeclarationDocString(),
 			allowOuterScopeShadowing: true,
 		})
@@ -298,10 +298,12 @@ func (checker *Checker) declareNestedDeclarations(
 	containerDeclarationKind common.DeclarationKind,
 	nestedCompositeDeclarations []*ast.CompositeDeclaration,
 	nestedInterfaceDeclarations []*ast.InterfaceDeclaration,
+	nestedEntitlementDeclarations []*ast.EntitlementDeclaration,
 ) (
 	nestedDeclarations map[string]ast.Declaration,
 	nestedInterfaceTypes []*InterfaceType,
 	nestedCompositeTypes []*CompositeType,
+	nestedEntitlementTypes []*EntitlementType,
 ) {
 	nestedDeclarations = map[string]ast.Declaration{}
 
@@ -334,6 +336,14 @@ func (checker *Checker) declareNestedDeclarations(
 			reportInvalidNesting(
 				firstNestedInterfaceDeclaration.DeclarationKind(),
 				firstNestedInterfaceDeclaration.Identifier,
+			)
+		} else if len(nestedEntitlementDeclarations) > 0 {
+
+			firstNestedEntitlementDeclaration := nestedEntitlementDeclarations[0]
+
+			reportInvalidNesting(
+				firstNestedEntitlementDeclaration.DeclarationKind(),
+				firstNestedEntitlementDeclaration.Identifier,
 			)
 		}
 
@@ -408,6 +418,17 @@ func (checker *Checker) declareNestedDeclarations(
 		nestedCompositeTypes = append(nestedCompositeTypes, nestedCompositeType)
 	}
 
+	// Declare nested entitlements
+
+	for _, nestedDeclaration := range nestedEntitlementDeclarations {
+		if _, exists := nestedDeclarations[nestedDeclaration.Identifier.Identifier]; !exists {
+			nestedDeclarations[nestedDeclaration.Identifier.Identifier] = nestedDeclaration
+		}
+
+		nestedEntitlementType := checker.declareEntitlementType(nestedDeclaration)
+		nestedEntitlementTypes = append(nestedEntitlementTypes, nestedEntitlementType)
+	}
+
 	return
 }
 
@@ -435,7 +456,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		identifier:               identifier,
 		ty:                       compositeType,
 		declarationKind:          declaration.DeclarationKind(),
-		access:                   declaration.Access,
+		access:                   checker.accessFromAstAccess(declaration.Access),
 		docString:                declaration.DocString,
 		allowOuterScopeShadowing: false,
 	})
@@ -472,12 +493,13 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 
 	// Check and declare nested types
 
-	nestedDeclarations, nestedInterfaceTypes, nestedCompositeTypes :=
+	nestedDeclarations, nestedInterfaceTypes, nestedCompositeTypes, nestedEntitlementTypes :=
 		checker.declareNestedDeclarations(
 			declaration.CompositeKind,
 			declaration.DeclarationKind(),
 			declaration.Members.Composites(),
 			declaration.Members.Interfaces(),
+			declaration.Members.Entitlements(),
 		)
 
 	checker.Elaboration.SetCompositeNestedDeclarations(declaration, nestedDeclarations)
@@ -490,6 +512,11 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	for _, nestedCompositeType := range nestedCompositeTypes {
 		compositeType.NestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
 		nestedCompositeType.SetContainerType(compositeType)
+	}
+
+	for _, nestedEntitlementType := range nestedEntitlementTypes {
+		compositeType.NestedTypes.Set(nestedEntitlementType.Identifier, nestedEntitlementType)
+		nestedEntitlementType.SetContainerType(compositeType)
 	}
 
 	return compositeType
@@ -565,7 +592,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				nestedCompositeDeclarationVariable.Identifier,
 				&Member{
 					Identifier:            identifier,
-					Access:                nestedCompositeDeclaration.Access,
+					Access:                checker.accessFromAstAccess(nestedCompositeDeclaration.Access),
 					ContainerType:         compositeType,
 					TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
 					DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
@@ -760,7 +787,7 @@ func (checker *Checker) declareCompositeConstructor(
 		identifier:               declaration.Identifier.Identifier,
 		ty:                       constructorType,
 		docString:                declaration.DocString,
-		access:                   declaration.Access,
+		access:                   checker.accessFromAstAccess(declaration.Access),
 		kind:                     declaration.DeclarationKind(),
 		pos:                      declaration.Identifier.Pos,
 		isConstant:               true,
@@ -787,7 +814,7 @@ func (checker *Checker) declareContractValue(
 			ty:         compositeType,
 			docString:  declaration.DocString,
 			// NOTE: contracts are always public
-			access:     ast.AccessPublic,
+			access:     PrimitiveAccess(ast.AccessPublic),
 			kind:       common.DeclarationKindContract,
 			pos:        declaration.Identifier.Pos,
 			isConstant: true,
@@ -832,7 +859,7 @@ func (checker *Checker) declareEnumConstructor(
 			&Member{
 				ContainerType: constructorType,
 				// enum cases are always public
-				Access:          ast.AccessPublic,
+				Access:          PrimitiveAccess(ast.AccessPublic),
 				Identifier:      enumCase.Identifier,
 				TypeAnnotation:  memberCaseTypeAnnotation,
 				DeclarationKind: common.DeclarationKindField,
@@ -859,7 +886,7 @@ func (checker *Checker) declareEnumConstructor(
 		ty:         constructorType,
 		docString:  declaration.DocString,
 		// NOTE: enums are always public
-		access:         ast.AccessPublic,
+		access:         PrimitiveAccess(ast.AccessPublic),
 		kind:           common.DeclarationKindEnum,
 		pos:            declaration.Identifier.Pos,
 		isConstant:     true,
@@ -1575,10 +1602,11 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		const declarationKind = common.DeclarationKindField
 
-		effectiveAccess := checker.effectiveMemberAccess(field.Access, containerKind)
+		fieldAccess := checker.accessFromAstAccess(field.Access)
+		effectiveAccess := checker.effectiveMemberAccess(fieldAccess, containerKind)
 
 		if requireNonPrivateMemberAccess &&
-			effectiveAccess == ast.AccessPrivate {
+			effectiveAccess.Access() == ast.AccessPrivate {
 
 			checker.report(
 				&InvalidAccessModifierError{
@@ -1597,7 +1625,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			identifier,
 			&Member{
 				ContainerType:   containerType,
-				Access:          field.Access,
+				Access:          fieldAccess,
 				Identifier:      field.Identifier,
 				DeclarationKind: declarationKind,
 				TypeAnnotation:  fieldTypeAnnotation,
@@ -1642,10 +1670,11 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		const declarationKind = common.DeclarationKindFunction
 
-		effectiveAccess := checker.effectiveMemberAccess(function.Access, containerKind)
+		functionAccess := checker.accessFromAstAccess(function.Access)
+		effectiveAccess := checker.effectiveMemberAccess(functionAccess, containerKind)
 
 		if requireNonPrivateMemberAccess &&
-			effectiveAccess == ast.AccessPrivate {
+			effectiveAccess.Access() == ast.AccessPrivate {
 
 			checker.report(
 				&InvalidAccessModifierError{
@@ -1663,7 +1692,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			identifier,
 			&Member{
 				ContainerType:     containerType,
-				Access:            function.Access,
+				Access:            functionAccess,
 				Identifier:        function.Identifier,
 				DeclarationKind:   declarationKind,
 				TypeAnnotation:    fieldTypeAnnotation,
@@ -1708,7 +1737,7 @@ func (checker *Checker) eventMembersAndOrigins(
 			identifier.Identifier,
 			&Member{
 				ContainerType:   containerType,
-				Access:          ast.AccessPublic,
+				Access:          PrimitiveAccess(ast.AccessPublic),
 				Identifier:      identifier,
 				DeclarationKind: common.DeclarationKindField,
 				TypeAnnotation:  typeAnnotation,
@@ -1759,7 +1788,7 @@ func (checker *Checker) enumMembersAndOrigins(
 
 		// Enum cases must be effectively public
 
-		if checker.effectiveCompositeMemberAccess(enumCase.Access) != ast.AccessPublic {
+		if checker.effectiveCompositeMemberAccess(checker.accessFromAstAccess(enumCase.Access)).Access() != ast.AccessPublic {
 			checker.report(
 				&InvalidAccessModifierError{
 					DeclarationKind: enumCase.DeclarationKind(),
@@ -1780,7 +1809,7 @@ func (checker *Checker) enumMembersAndOrigins(
 		EnumRawValueFieldName,
 		&Member{
 			ContainerType: containerType,
-			Access:        ast.AccessPublic,
+			Access:        PrimitiveAccess(ast.AccessPublic),
 			Identifier: ast.NewIdentifier(
 				checker.memoryGauge,
 				EnumRawValueFieldName,
@@ -1982,7 +2011,7 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 
 	self := &Variable{
 		Identifier:      SelfIdentifier,
-		Access:          ast.AccessPublic,
+		Access:          PrimitiveAccess(ast.AccessPublic),
 		DeclarationKind: common.DeclarationKindSelf,
 		Type:            selfType,
 		IsConstant:      true,

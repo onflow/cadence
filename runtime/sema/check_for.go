@@ -83,7 +83,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 		isConstant:               true,
 		argumentLabels:           nil,
 		allowOuterScopeShadowing: false,
-		access:                   ast.AccessNotSpecified,
+		access:                   PrimitiveAccess(ast.AccessNotSpecified),
 	})
 	checker.report(err)
 	if checker.PositionInfo != nil && variable != nil {
@@ -100,7 +100,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 			isConstant:               true,
 			argumentLabels:           nil,
 			allowOuterScopeShadowing: false,
-			access:                   ast.AccessNotSpecified,
+			access:                   PrimitiveAccess(ast.AccessNotSpecified),
 		})
 		checker.report(err)
 		if checker.PositionInfo != nil && indexVariable != nil {

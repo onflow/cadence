@@ -64,6 +64,10 @@ func (m *Members) Interfaces() []*InterfaceDeclaration {
 	return m.indices.Interfaces(m.declarations)
 }
 
+func (m *Members) Entitlements() []*EntitlementDeclaration {
+	return m.indices.Entitlements(m.declarations)
+}
+
 func (m *Members) Composites() []*CompositeDeclaration {
 	return m.indices.Composites(m.declarations)
 }

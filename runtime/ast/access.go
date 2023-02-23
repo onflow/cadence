@@ -33,7 +33,6 @@ type Access interface {
 	Description() string
 	String() string
 	MarshalJSON() ([]byte, error)
-	IsLessPermissiveThan(Access) bool
 }
 
 type EntitlementAccess struct {
@@ -115,14 +114,6 @@ func PrimitiveAccessCount() int {
 }
 
 func (PrimitiveAccess) isAccess() {}
-
-func (a PrimitiveAccess) IsLessPermissiveThan(otherAccess Access) bool {
-	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
-		return a < otherPrimitive
-	}
-	// only private access is guaranteed to be less permissive than entitlement-based access
-	return a == AccessPrivate
-}
 
 // TODO: remove.
 //   only used by tests which are not updated yet

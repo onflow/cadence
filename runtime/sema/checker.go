@@ -1848,19 +1848,44 @@ func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) 
 	)
 }
 
-func (checker *Checker) isReadableAccess(access ast.Access) bool {
+func (checker *Checker) accessFromAstAccess(access ast.Access) Access {
+	switch access := access.(type) {
+	case ast.PrimitiveAccess:
+		return PrimitiveAccess(access)
+	case ast.EntitlementAccess:
+		entitlements := make([]*EntitlementType, 0, len(access.Entitlements))
+		for _, entitlement := range access.Entitlements {
+			nominalType := checker.convertNominalType(entitlement)
+			entitlementType, ok := nominalType.(*EntitlementType)
+			if !ok {
+				// don't duplicate errors when the type here is invalid, as this will have triggered an error before
+				if nominalType != InvalidType {
+					checker.report(
+						&InvalidNonEntitlementAccessError{
+							Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
+						},
+					)
+				}
+				return PrimitiveAccess(ast.AccessNotSpecified)
+			}
+			entitlements = append(entitlements, entitlementType)
+		}
+		return NewEntitlementAccess(entitlements)
+	}
+	panic(errors.NewUnreachableError())
+}
+
+func (checker *Checker) isReadableAccess(access Access) bool {
 	switch checker.Config.AccessCheckMode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
-		return access == ast.AccessPublic ||
-			access == ast.AccessPublicSettable
+		return PrimitiveAccess(ast.AccessPublic).IsLessPermissiveThan(access)
 
 	case AccessCheckModeNotSpecifiedUnrestricted:
 
-		return access == ast.AccessNotSpecified ||
-			access == ast.AccessPublic ||
-			access == ast.AccessPublicSettable
+		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
+			PrimitiveAccess(ast.AccessPublic).IsLessPermissiveThan(access)
 
 	case AccessCheckModeNone:
 		return true
@@ -1870,17 +1895,17 @@ func (checker *Checker) isReadableAccess(access ast.Access) bool {
 	}
 }
 
-func (checker *Checker) isWriteableAccess(access ast.Access) bool {
+func (checker *Checker) isWriteableAccess(access Access) bool {
 	switch checker.Config.AccessCheckMode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
-		return access == ast.AccessPublicSettable
+		return PrimitiveAccess(ast.AccessPublicSettable).IsLessPermissiveThan(access)
 
 	case AccessCheckModeNotSpecifiedUnrestricted:
 
-		return access == ast.AccessNotSpecified ||
-			access == ast.AccessPublicSettable
+		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
+			PrimitiveAccess(ast.AccessPublicSettable).IsLessPermissiveThan(access)
 
 	case AccessCheckModeNone:
 		return true
@@ -1924,13 +1949,13 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		identifier string,
 		fieldType Type,
 		declarationKind common.DeclarationKind,
-		access ast.Access,
+		access ast.PrimitiveAccess,
 		ignoreInSerialization bool,
 		docString string,
 	) {
 		predeclaredMembers = append(predeclaredMembers, &Member{
 			ContainerType:         containerType,
-			Access:                access,
+			Access:                PrimitiveAccess(access),
 			Identifier:            ast.NewIdentifier(checker.memoryGauge, identifier, ast.EmptyPosition),
 			DeclarationKind:       declarationKind,
 			VariableKind:          ast.VariableKindConstant,
@@ -2158,7 +2183,7 @@ func (checker *Checker) TypeActivationDepth() int {
 	return checker.typeActivations.Depth()
 }
 
-func (checker *Checker) effectiveMemberAccess(access ast.Access, containerKind ContainerKind) ast.Access {
+func (checker *Checker) effectiveMemberAccess(access Access, containerKind ContainerKind) Access {
 	switch containerKind {
 	case ContainerKindComposite:
 		return checker.effectiveCompositeMemberAccess(access)
@@ -2169,25 +2194,25 @@ func (checker *Checker) effectiveMemberAccess(access ast.Access, containerKind C
 	}
 }
 
-func (checker *Checker) effectiveInterfaceMemberAccess(access ast.Access) ast.Access {
-	if access == ast.AccessNotSpecified {
-		return ast.AccessPublic
+func (checker *Checker) effectiveInterfaceMemberAccess(access Access) Access {
+	if access.Access() == ast.AccessNotSpecified {
+		return PrimitiveAccess(ast.AccessPublic)
 	} else {
 		return access
 	}
 }
 
-func (checker *Checker) effectiveCompositeMemberAccess(access ast.Access) ast.Access {
-	if access != ast.AccessNotSpecified {
+func (checker *Checker) effectiveCompositeMemberAccess(access Access) Access {
+	if access.Access() != ast.AccessNotSpecified {
 		return access
 	}
 
 	switch checker.Config.AccessCheckMode {
 	case AccessCheckModeStrict, AccessCheckModeNotSpecifiedRestricted:
-		return ast.AccessPrivate
+		return PrimitiveAccess(ast.AccessPrivate)
 
 	case AccessCheckModeNotSpecifiedUnrestricted, AccessCheckModeNone:
-		return ast.AccessPublic
+		return PrimitiveAccess(ast.AccessPublic)
 
 	default:
 		panic(errors.NewUnreachableError())

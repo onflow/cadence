@@ -156,7 +156,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 			identifier:               *identifier,
 			ty:                       nestedType,
 			declarationKind:          nestedDeclaration.DeclarationKind(),
-			access:                   nestedDeclaration.DeclarationAccess(),
+			access:                   checker.accessFromAstAccess(nestedDeclaration.DeclarationAccess()),
 			docString:                nestedDeclaration.DeclarationDocString(),
 			allowOuterScopeShadowing: false,
 		})
@@ -239,7 +239,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		identifier:               identifier,
 		ty:                       interfaceType,
 		declarationKind:          declaration.DeclarationKind(),
-		access:                   declaration.Access,
+		access:                   checker.accessFromAstAccess(declaration.Access),
 		docString:                declaration.DocString,
 		allowOuterScopeShadowing: false,
 	})
@@ -273,12 +273,13 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 
 	// Check and declare nested types
 
-	nestedDeclarations, nestedInterfaceTypes, nestedCompositeTypes :=
+	nestedDeclarations, nestedInterfaceTypes, nestedCompositeTypes, nestedEntitlementTypes :=
 		checker.declareNestedDeclarations(
 			declaration.CompositeKind,
 			declaration.DeclarationKind(),
 			declaration.Members.Composites(),
 			declaration.Members.Interfaces(),
+			declaration.Members.Entitlements(),
 		)
 
 	checker.Elaboration.SetInterfaceNestedDeclarations(declaration, nestedDeclarations)
@@ -291,6 +292,11 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	for _, nestedCompositeType := range nestedCompositeTypes {
 		interfaceType.NestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
 		nestedCompositeType.SetContainerType(interfaceType)
+	}
+
+	for _, nestedEntitlementType := range nestedEntitlementTypes {
+		interfaceType.NestedTypes.Set(nestedEntitlementType.Identifier, nestedEntitlementType)
+		nestedEntitlementType.SetContainerType(interfaceType)
 	}
 
 	return interfaceType
@@ -372,7 +378,7 @@ func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDecla
 		identifier:               identifier,
 		ty:                       entitlementType,
 		declarationKind:          declaration.DeclarationKind(),
-		access:                   declaration.Access,
+		access:                   checker.accessFromAstAccess(declaration.Access),
 		docString:                declaration.DocString,
 		allowOuterScopeShadowing: false,
 	})
@@ -441,7 +447,7 @@ func (checker *Checker) declareEntitlementMembers(declaration *ast.EntitlementDe
 			identifier,
 			&Member{
 				ContainerType:   entitlementType,
-				Access:          field.Access,
+				Access:          checker.accessFromAstAccess(field.Access),
 				Identifier:      field.Identifier,
 				DeclarationKind: declarationKind,
 				TypeAnnotation:  fieldTypeAnnotation,
@@ -478,7 +484,7 @@ func (checker *Checker) declareEntitlementMembers(declaration *ast.EntitlementDe
 			identifier,
 			&Member{
 				ContainerType:     entitlementType,
-				Access:            function.Access,
+				Access:            checker.accessFromAstAccess(function.Access),
 				Identifier:        function.Identifier,
 				DeclarationKind:   declarationKind,
 				TypeAnnotation:    fieldTypeAnnotation,

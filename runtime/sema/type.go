@@ -3186,7 +3186,7 @@ func baseTypeVariable(name string, ty Type) *Variable {
 		Type:            ty,
 		DeclarationKind: common.DeclarationKindType,
 		IsConstant:      true,
-		Access:          ast.AccessPublic,
+		Access:          PrimitiveAccess(ast.AccessPublic),
 	}
 }
 
@@ -3406,7 +3406,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
 		Type:            ty,
-		Access:          ast.AccessPublic,
+		Access:          PrimitiveAccess(ast.AccessPublic),
 		DocString:       docString,
 	}
 }
@@ -3967,7 +3967,7 @@ type Member struct {
 	DocString      string
 	ArgumentLabels []string
 	Identifier     ast.Identifier
-	Access         ast.Access
+	Access         Access
 	// TODO: replace with dedicated MemberKind enum
 	DeclarationKind common.DeclarationKind
 	VariableKind    ast.VariableKind
@@ -4003,7 +4003,7 @@ func NewPublicFunctionMember(
 
 	return &Member{
 		ContainerType: containerType,
-		Access:        ast.AccessPublic,
+		Access:        PrimitiveAccess(ast.AccessPublic),
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
@@ -4041,7 +4041,7 @@ func NewPublicConstantFieldMember(
 ) *Member {
 	return &Member{
 		ContainerType: containerType,
-		Access:        ast.AccessPublic,
+		Access:        PrimitiveAccess(ast.AccessPublic),
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,

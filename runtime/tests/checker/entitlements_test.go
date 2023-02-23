@@ -295,7 +295,163 @@ func TestCheckBasicEntitlementDeclaration(t *testing.T) {
 	})
 }
 
+func TestCheckEntitlementDeclarationNesting(t *testing.T) {
+	t.Parallel()
+	t.Run("in contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			contract C {
+				entitlement E {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("in contract interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			contract interface C {
+				entitlement E {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("in resource", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			resource R {
+				entitlement E {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("in resource interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			resource interface R {
+				entitlement E {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("in struct", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			struct S {
+				entitlement E {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("in struct", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			struct interface S {
+				entitlement E {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("in enum", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			enum X: UInt8 {
+				entitlement E {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEnumCaseError{}, errs[1])
+	})
+}
+
+func TestCheckBasicEntitlementAccess(t *testing.T) {
+
+	t.Parallel()
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			struct interface S {
+				access(E) let foo: String
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("multiple entitlements", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement A {}
+			entitlement B {}
+			entitlement C {}
+			resource interface R {
+				access(A, B) let foo: String
+				access(B, C) fun bar()
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("valid in contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			contract C {
+				entitlement E {}
+				struct interface S {
+					access(E) let foo: String
+				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("qualified", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			contract C {
+				entitlement E {}
+				struct interface S {
+					access(E) let foo: String
+				}
+			}
+			resource R {
+				access(C.E) fun foo() {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+}
+
 func TestCheckInvalidEntitlementAccess(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("invalid variable decl", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -352,20 +508,6 @@ func TestCheckInvalidEntitlementAccess(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E {}
-			contract interface I {
-				access(E) event Foo()
-			}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
-	})
-
-	t.Run("invalid event", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-			entitlement E {}
 			resource I {
 				access(E) event Foo()
 			}
@@ -401,7 +543,7 @@ func TestCheckInvalidEntitlementAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidNameError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
 	t.Run("missing entitlement declaration field", func(t *testing.T) {
@@ -414,6 +556,123 @@ func TestCheckInvalidEntitlementAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidNameError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+}
+
+func TestCheckNonEntitlementAccess(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			resource E {}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("resource interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			resource interface E {}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("struct", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			struct E {}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("struct interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			resource E {}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("event", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			event E()
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			contract E {}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("contract interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			contract interface E {}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("enum", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			enum E: UInt8 {}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
 	})
 }

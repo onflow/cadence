@@ -182,7 +182,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		checker.report(
 			&InvalidAccessError{
 				Name:              identifier.Identifier,
-				RestrictingAccess: invalidAccessedElement.Access,
+				RestrictingAccess: invalidAccessedElement.Access.Access(),
 				DeclarationKind:   invalidAccessedElement.DeclarationKind,
 				Range:             ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
 			},
@@ -246,7 +246,7 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 		)
 
 		// NOTE: declare constant variable with invalid type to silence rest of program
-		const access = ast.AccessPrivate
+		const access = PrimitiveAccess(ast.AccessPrivate)
 
 		_, err := checker.valueActivations.declare(variableDeclaration{
 			identifier:               identifier.Identifier,

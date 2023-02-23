@@ -121,7 +121,7 @@ func (checker *Checker) declareFunctionDeclaration(
 		identifier:               declaration.Identifier.Identifier,
 		ty:                       functionType,
 		docString:                declaration.DocString,
-		access:                   declaration.Access,
+		access:                   checker.accessFromAstAccess(declaration.Access),
 		kind:                     common.DeclarationKindFunction,
 		pos:                      declaration.Identifier.Pos,
 		isConstant:               true,
@@ -305,7 +305,7 @@ func (checker *Checker) declareParameters(
 
 		variable := &Variable{
 			Identifier:      identifier.Identifier,
-			Access:          ast.AccessPublic,
+			Access:          PrimitiveAccess(ast.AccessPublic),
 			DeclarationKind: common.DeclarationKindParameter,
 			IsConstant:      true,
 			Type:            parameterType,

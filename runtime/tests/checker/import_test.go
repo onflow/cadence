@@ -697,7 +697,7 @@ func TestCheckImportVirtual(t *testing.T) {
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,
-		Access:          ast.AccessPublic,
+		Access:          sema.PrimitiveAccess(ast.AccessPublic),
 		Type:            fooType,
 	})
 

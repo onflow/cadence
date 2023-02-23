@@ -3974,3 +3974,19 @@ func (e *InvalidEntitlementAccessError) StartPosition() ast.Position {
 func (e *InvalidEntitlementAccessError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
+
+// InvalidNonEntitlementAccessError
+type InvalidNonEntitlementAccessError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementAccessError{}
+var _ errors.UserError = &InvalidNonEntitlementAccessError{}
+
+func (*InvalidNonEntitlementAccessError) isSemanticError() {}
+
+func (*InvalidNonEntitlementAccessError) IsUserError() {}
+
+func (e *InvalidNonEntitlementAccessError) Error() string {
+	return "only entitlements may be used in access modifiers"
+}
