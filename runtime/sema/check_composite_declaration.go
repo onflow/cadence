@@ -54,12 +54,13 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,
 		declaration.DeclarationKind(),
+		nil,
 		declaration.StartPos,
 		true,
 	)
 
 	// NOTE: functions are checked separately
-	checker.checkFieldsAccessModifier(declaration.Members.Fields())
+	checker.checkFieldsAccessModifier(declaration.Members.Fields(), &declaration.CompositeKind)
 
 	checker.checkNestedIdentifiers(declaration.Members)
 
@@ -125,6 +126,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 			declaration.Members.Functions(),
 			compositeType,
 			declaration.DeclarationKind(),
+			&declaration.CompositeKind,
 			declaration.DocString,
 		)
 
@@ -1957,6 +1959,7 @@ func (checker *Checker) checkCompositeFunctions(
 					declareFunction:   false,
 					checkResourceLoss: true,
 				},
+				&selfType.Kind,
 			)
 		}()
 

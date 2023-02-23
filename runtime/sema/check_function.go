@@ -39,6 +39,7 @@ func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclar
 			declareFunction:   true,
 			checkResourceLoss: true,
 		},
+		nil,
 	)
 
 	return
@@ -65,11 +66,13 @@ type functionDeclarationOptions struct {
 func (checker *Checker) visitFunctionDeclaration(
 	declaration *ast.FunctionDeclaration,
 	options functionDeclarationOptions,
+	containerKind *common.CompositeKind,
 ) {
 
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,
 		declaration.DeclarationKind(),
+		containerKind,
 		declaration.StartPos,
 		true,
 	)

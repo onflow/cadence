@@ -47,12 +47,13 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,
 		declaration.DeclarationKind(),
+		nil,
 		declaration.StartPos,
 		true,
 	)
 
 	// NOTE: functions are checked separately
-	checker.checkFieldsAccessModifier(declaration.Members.Fields())
+	checker.checkFieldsAccessModifier(declaration.Members.Fields(), &declaration.CompositeKind)
 
 	checker.checkNestedIdentifiers(declaration.Members)
 
@@ -86,6 +87,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		declaration.Members.Functions(),
 		interfaceType,
 		declaration.DeclarationKind(),
+		&declaration.CompositeKind,
 		declaration.DeclarationDocString(),
 	)
 
@@ -166,6 +168,7 @@ func (checker *Checker) checkInterfaceFunctions(
 	functions []*ast.FunctionDeclaration,
 	selfType NominalType,
 	declarationKind common.DeclarationKind,
+	compositeKind *common.CompositeKind,
 	selfDocString string,
 ) {
 	for _, function := range functions {
@@ -206,6 +209,7 @@ func (checker *Checker) checkInterfaceFunctions(
 					declareFunction:   false,
 					checkResourceLoss: checkResourceLoss,
 				},
+				compositeKind,
 			)
 		}()
 	}
@@ -497,6 +501,7 @@ func (checker *Checker) VisitEntitlementDeclaration(declaration *ast.Entitlement
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,
 		declaration.DeclarationKind(),
+		nil,
 		declaration.StartPos,
 		true,
 	)
@@ -507,6 +512,7 @@ func (checker *Checker) VisitEntitlementDeclaration(declaration *ast.Entitlement
 		declaration.Members.Functions(),
 		entitlementType,
 		declaration.DeclarationKind(),
+		nil,
 		declaration.DeclarationDocString(),
 	)
 

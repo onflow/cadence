@@ -35,6 +35,7 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,
 		declaration.DeclarationKind(),
+		nil,
 		declaration.StartPos,
 		declaration.IsConstant,
 	)

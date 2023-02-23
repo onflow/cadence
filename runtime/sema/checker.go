@@ -1702,6 +1702,7 @@ const invalidTypeDeclarationAccessModifierExplanation = "type declarations must 
 func (checker *Checker) checkDeclarationAccessModifier(
 	access ast.Access,
 	declarationKind common.DeclarationKind,
+	containerKind *common.CompositeKind,
 	startPos ast.Position,
 	isConstant bool,
 ) {
@@ -1721,84 +1722,96 @@ func (checker *Checker) checkDeclarationAccessModifier(
 
 		isTypeDeclaration := declarationKind.IsTypeDeclaration()
 
-		switch access {
-		case ast.AccessPublicSettable:
-			// Public settable access for a constant is not sensible
-			// and type declarations must be public for now
+		switch access := access.(type) {
+		case ast.PrimitiveAccess:
+			switch access {
+			case ast.AccessPublicSettable:
+				// Public settable access for a constant is not sensible
+				// and type declarations must be public for now
 
-			if isConstant || isTypeDeclaration {
-				var explanation string
-				switch {
-				case isConstant:
-					explanation = "constants can never be set"
-				case isTypeDeclaration:
-					explanation = invalidTypeDeclarationAccessModifierExplanation
+				if isConstant || isTypeDeclaration {
+					var explanation string
+					switch {
+					case isConstant:
+						explanation = "constants can never be set"
+					case isTypeDeclaration:
+						explanation = invalidTypeDeclarationAccessModifierExplanation
+					}
+
+					checker.report(
+						&InvalidAccessModifierError{
+							Access:          access,
+							Explanation:     explanation,
+							DeclarationKind: declarationKind,
+							Pos:             startPos,
+						},
+					)
 				}
 
-				checker.report(
-					&InvalidAccessModifierError{
-						Access:          access,
-						Explanation:     explanation,
-						DeclarationKind: declarationKind,
-						Pos:             startPos,
-					},
-				)
+			case ast.AccessPrivate:
+				// Type declarations must be public for now
+
+				if isTypeDeclaration {
+
+					checker.report(
+						&InvalidAccessModifierError{
+							Access:          access,
+							Explanation:     invalidTypeDeclarationAccessModifierExplanation,
+							DeclarationKind: declarationKind,
+							Pos:             startPos,
+						},
+					)
+				}
+
+			case ast.AccessContract,
+				ast.AccessAccount:
+
+				// Type declarations must be public for now
+
+				if isTypeDeclaration {
+					checker.report(
+						&InvalidAccessModifierError{
+							Access:          access,
+							Explanation:     invalidTypeDeclarationAccessModifierExplanation,
+							DeclarationKind: declarationKind,
+							Pos:             startPos,
+						},
+					)
+				}
+
+			case ast.AccessNotSpecified:
+
+				// Type declarations cannot be effectively private for now
+
+				if isTypeDeclaration &&
+					checker.Config.AccessCheckMode == AccessCheckModeNotSpecifiedRestricted {
+
+					checker.report(
+						&MissingAccessModifierError{
+							DeclarationKind: declarationKind,
+							Explanation:     invalidTypeDeclarationAccessModifierExplanation,
+							Pos:             startPos,
+						},
+					)
+				}
+
+				// In strict mode, access modifiers must be given
+
+				if checker.Config.AccessCheckMode == AccessCheckModeStrict {
+					checker.report(
+						&MissingAccessModifierError{
+							DeclarationKind: declarationKind,
+							Pos:             startPos,
+						},
+					)
+				}
 			}
-
-		case ast.AccessPrivate:
-			// Type declarations must be public for now
-
-			if isTypeDeclaration {
-
+		case ast.EntitlementAccess:
+			if containerKind == nil ||
+				(*containerKind != common.CompositeKindResource && *containerKind != common.CompositeKindStructure) {
 				checker.report(
-					&InvalidAccessModifierError{
-						Access:          access,
-						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
-						DeclarationKind: declarationKind,
-						Pos:             startPos,
-					},
-				)
-			}
-
-		case ast.AccessContract,
-			ast.AccessAccount:
-
-			// Type declarations must be public for now
-
-			if isTypeDeclaration {
-				checker.report(
-					&InvalidAccessModifierError{
-						Access:          access,
-						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
-						DeclarationKind: declarationKind,
-						Pos:             startPos,
-					},
-				)
-			}
-
-		case ast.AccessNotSpecified:
-
-			// Type declarations cannot be effectively private for now
-
-			if isTypeDeclaration &&
-				checker.Config.AccessCheckMode == AccessCheckModeNotSpecifiedRestricted {
-
-				checker.report(
-					&MissingAccessModifierError{
-						DeclarationKind: declarationKind,
-						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
-						Pos:             startPos,
-					},
-				)
-			}
-
-			// In strict mode, access modifiers must be given
-
-			if checker.Config.AccessCheckMode == AccessCheckModeStrict {
-				checker.report(
-					&MissingAccessModifierError{
-						DeclarationKind: declarationKind,
-						Pos:             startPos,
+					&InvalidEntitlementAccessError{
+						Pos: startPos,
 					},
 				)
 			}
@@ -1806,13 +1819,14 @@ func (checker *Checker) checkDeclarationAccessModifier(
 	}
 }
 
-func (checker *Checker) checkFieldsAccessModifier(fields []*ast.FieldDeclaration) {
+func (checker *Checker) checkFieldsAccessModifier(fields []*ast.FieldDeclaration, containerKind *common.CompositeKind) {
 	for _, field := range fields {
 		isConstant := field.VariableKind == ast.VariableKindConstant
 
 		checker.checkDeclarationAccessModifier(
 			field.Access,
 			field.DeclarationKind(),
+			containerKind,
 			field.StartPos,
 			isConstant,
 		)

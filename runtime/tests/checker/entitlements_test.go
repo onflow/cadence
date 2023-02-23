@@ -294,3 +294,126 @@ func TestCheckBasicEntitlementDeclaration(t *testing.T) {
 		require.IsType(t, &sema.InvalidNameError{}, errs[0])
 	})
 }
+
+func TestCheckInvalidEntitlementAccess(t *testing.T) {
+	t.Run("invalid variable decl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			access(E) var x: String = ""
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("invalid fun decl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			access(E) fun foo() {}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("invalid contract field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			contract C {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("invalid contract interface field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			contract interface C {
+				access(E) fun foo()
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("invalid event", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			contract interface I {
+				access(E) event Foo()
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("invalid event", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			resource I {
+				access(E) event Foo()
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[1])
+	})
+
+	t.Run("invalid enum case", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			enum X: UInt8 {
+				access(E) case red
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+	})
+
+	t.Run("missing entitlement declaration fun", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNameError{}, errs[0])
+	})
+
+	t.Run("missing entitlement declaration field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			struct interface S {
+				access(E) let foo: String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNameError{}, errs[0])
+	})
+}

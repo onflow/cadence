@@ -3950,3 +3950,27 @@ func (*InvalidEntitlementNestedDeclarationError) IsUserError() {}
 func (e *InvalidEntitlementNestedDeclarationError) Error() string {
 	return fmt.Sprintf("%s may not be declared inside an entitlement", e.NestedDeclarationKind.Name())
 }
+
+// InvalidEntitlementAccessError
+type InvalidEntitlementAccessError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidEntitlementAccessError{}
+var _ errors.UserError = &InvalidEntitlementAccessError{}
+
+func (*InvalidEntitlementAccessError) isSemanticError() {}
+
+func (*InvalidEntitlementAccessError) IsUserError() {}
+
+func (e *InvalidEntitlementAccessError) Error() string {
+	return "only struct or resource members may be declared with entitlement access"
+}
+
+func (e *InvalidEntitlementAccessError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidEntitlementAccessError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
