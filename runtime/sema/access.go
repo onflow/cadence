@@ -24,7 +24,9 @@ import (
 
 type Access interface {
 	isAccess()
+	// returns whether receiver access < argument access
 	IsLessPermissiveThan(Access) bool
+	// returns whether receiver access >= argument access
 	IsMorePermissiveThan(Access) bool
 	Access() ast.Access
 }
@@ -61,18 +63,20 @@ func (e EntitlementAccess) subset(other EntitlementAccess) bool {
 	return true
 }
 
-func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
-	if primitive, isPrimitive := other.(PrimitiveAccess); isPrimitive {
-		return ast.PrimitiveAccess(primitive) == ast.AccessPublic || ast.PrimitiveAccess(primitive) == ast.AccessPublicSettable
+func (e EntitlementAccess) IsMorePermissiveThan(other Access) bool {
+	if _, isPrimitive := other.(PrimitiveAccess); isPrimitive {
+		return true
 	}
+	// e >= other if e is a subset of other, as entitlement sets are unions rather than intersections
 	return e.subset(other.(EntitlementAccess))
 }
 
-func (e EntitlementAccess) IsMorePermissiveThan(other Access) bool {
+func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
 	if primitive, isPrimitive := other.(PrimitiveAccess); isPrimitive {
-		return ast.PrimitiveAccess(primitive) == ast.AccessPrivate
+		return ast.PrimitiveAccess(primitive) != ast.AccessPrivate
 	}
-	return other.(EntitlementAccess).subset(e)
+	// subset check returns true on equality, and we want this function to be false on equality, so invert the >= check
+	return !other.IsMorePermissiveThan(e)
 }
 
 type PrimitiveAccess ast.PrimitiveAccess
@@ -87,14 +91,14 @@ func (a PrimitiveAccess) IsLessPermissiveThan(otherAccess Access) bool {
 	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
 		return ast.PrimitiveAccess(a) < ast.PrimitiveAccess(otherPrimitive)
 	}
-	// only private access is guaranteed to be less permissive than entitlement-based access
-	return ast.PrimitiveAccess(a) == ast.AccessPrivate
+	// primitive and entitlement access should never mix in interface conformance checks
+	return true
 }
 
 func (a PrimitiveAccess) IsMorePermissiveThan(otherAccess Access) bool {
 	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
 		return ast.PrimitiveAccess(a) >= ast.PrimitiveAccess(otherPrimitive)
 	}
-	// only public access is guaranteed to be less permissive than entitlement-based access
-	return ast.PrimitiveAccess(a) == ast.AccessPublicSettable || ast.PrimitiveAccess(a) == ast.AccessPublic
+	// only priv access is guaranteed to be less permissive than entitlement-based access, but cannot appear in interfaces
+	return ast.PrimitiveAccess(a) != ast.AccessPrivate
 }

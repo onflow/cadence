@@ -712,6 +712,277 @@ func TestCheckNonEntitlementAccess(t *testing.T) {
 	})
 }
 
+func TestCheckEntitlementInheritance(t *testing.T) {
+
+	t.Parallel()
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct S {
+				access(E) fun foo() {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("pub subtyping invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			struct interface I {
+				pub fun foo() 
+			}
+			struct S: I {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("pub(set) subtyping invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			struct interface I {
+				pub(set) var x: String
+			}
+			struct S: I {
+				access(E) var x: String
+				init() {
+					self.x = ""
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("pub supertying invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct S: I {
+				pub fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("pub(set) supertyping invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			struct interface I {
+				access(E) var x: String
+			}
+			struct S: I {
+				pub(set) var x: String
+				init() {
+					self.x = ""
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("access contract subtyping invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			struct interface I {
+				access(contract) fun foo() 
+			}
+			struct S: I {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("access account subtyping invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			struct interface I {
+				access(account) fun foo() 
+			}
+			struct S: I {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("access account supertying invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct S: I {
+				access(account) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("access contract supertying invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct S: I {
+				access(contract) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("priv supertying invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct S: I {
+				priv fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("expanded entitlements valid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			entitlement F {
+				fun foo()
+			}
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct interface J {
+				access(F) fun foo() 
+			}
+			struct S: I, J {
+				access(E, F) fun foo() {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("expanded entitlements invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			entitlement F {
+				fun foo()
+			}
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct interface J {
+				access(F) fun foo() 
+			}
+			struct S: I, J {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("expanded entitlements also invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			entitlement F {
+				fun foo()
+			}
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct interface J {
+				access(E, F) fun foo() 
+			}
+			struct S: I, J {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+}
+
 func TestCheckEntitlementConformance(t *testing.T) {
 
 	t.Parallel()
