@@ -981,6 +981,56 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
+
+	t.Run("different entitlements invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			entitlement F {
+				fun foo()
+			}
+			entitlement G {
+				fun foo()
+			}
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct interface J {
+				access(F) fun foo() 
+			}
+			struct S: I, J {
+				access(E, G) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("fewer entitlements invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo()
+			}
+			entitlement F {
+				fun foo()
+			}
+			struct interface I {
+				access(E, F) fun foo() 
+			}
+			struct S: I {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
 }
 
 func TestCheckEntitlementConformance(t *testing.T) {
