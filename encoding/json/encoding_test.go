@@ -714,6 +714,8 @@ func TestEncodeArray(t *testing.T) {
         `,
 	}
 
+	fooResourceType := newFooResourceType()
+
 	resourceArray := encodeTest{
 		"Resources",
 		cadence.NewArray([]cadence.Value{
@@ -952,6 +954,8 @@ func TestEncodeDictionary(t *testing.T) {
           }
         `,
 	}
+
+	fooResourceType := newFooResourceType()
 
 	resourceDict := encodeTest{
 		"Resources",
@@ -1323,6 +1327,8 @@ func TestEncodeStruct(t *testing.T) {
         `,
 	}
 
+	fooResourceType := newFooResourceType()
+
 	resourceStructType := &cadence.StructType{
 		Location:            utils.TestLocation,
 		QualifiedIdentifier: "FooStruct",
@@ -1445,6 +1451,8 @@ func TestEncodeEvent(t *testing.T) {
         `,
 	}
 
+	fooResourceType := newFooResourceType()
+
 	resourceEventType := &cadence.EventType{
 		Location:            utils.TestLocation,
 		QualifiedIdentifier: "FooEvent",
@@ -1566,6 +1574,8 @@ func TestEncodeContract(t *testing.T) {
           }
         `,
 	}
+
+	fooResourceType := newFooResourceType()
 
 	resourceContractType := &cadence.ContractType{
 		Location:            utils.TestLocation,
@@ -2995,15 +3005,17 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, opti
 	)
 }
 
-var fooResourceType = &cadence.ResourceType{
-	Location:            utils.TestLocation,
-	QualifiedIdentifier: "Foo",
-	Fields: []cadence.Field{
-		{
-			Identifier: "bar",
-			Type:       cadence.IntType{},
+func newFooResourceType() *cadence.ResourceType {
+	return &cadence.ResourceType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "bar",
+				Type:       cadence.IntType{},
+			},
 		},
-	},
+	}
 }
 
 func TestNonUTF8StringEncoding(t *testing.T) {

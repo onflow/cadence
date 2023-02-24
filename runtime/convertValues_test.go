@@ -81,42 +81,48 @@ func TestExportValue(t *testing.T) {
 		})
 	}
 
-	signatureAlgorithmType := &cadence.EnumType{
-		QualifiedIdentifier: "SignatureAlgorithm",
-		RawType:             cadence.UInt8Type{},
-		Fields: []cadence.Field{
-			{
-				Identifier: "rawValue",
-				Type:       cadence.UInt8Type{},
-			},
-		},
-	}
-
-	publicKeyType := &cadence.StructType{
-		QualifiedIdentifier: "PublicKey",
-		Fields: []cadence.Field{
-			{
-				Identifier: "publicKey",
-				Type: &cadence.VariableSizedArrayType{
-					ElementType: cadence.UInt8Type{},
+	newSignatureAlgorithmType := func() *cadence.EnumType {
+		return &cadence.EnumType{
+			QualifiedIdentifier: "SignatureAlgorithm",
+			RawType:             cadence.UInt8Type{},
+			Fields: []cadence.Field{
+				{
+					Identifier: "rawValue",
+					Type:       cadence.UInt8Type{},
 				},
 			},
-			{
-				Identifier: "signatureAlgorithm",
-				Type:       signatureAlgorithmType,
-			},
-		},
+		}
 	}
 
-	hashAlgorithmType := &cadence.EnumType{
-		QualifiedIdentifier: "HashAlgorithm",
-		RawType:             cadence.UInt8Type{},
-		Fields: []cadence.Field{
-			{
-				Identifier: "rawValue",
-				Type:       cadence.UInt8Type{},
+	newPublicKeyType := func(signatureAlgorithmType cadence.Type) *cadence.StructType {
+		return &cadence.StructType{
+			QualifiedIdentifier: "PublicKey",
+			Fields: []cadence.Field{
+				{
+					Identifier: "publicKey",
+					Type: &cadence.VariableSizedArrayType{
+						ElementType: cadence.UInt8Type{},
+					},
+				},
+				{
+					Identifier: "signatureAlgorithm",
+					Type:       signatureAlgorithmType,
+				},
 			},
-		},
+		}
+	}
+
+	newHashAlgorithmType := func() *cadence.EnumType {
+		return &cadence.EnumType{
+			QualifiedIdentifier: "HashAlgorithm",
+			RawType:             cadence.UInt8Type{},
+			Fields: []cadence.Field{
+				{
+					Identifier: "rawValue",
+					Type:       cadence.UInt8Type{},
+				},
+			},
+		}
 	}
 
 	testCharacter, _ := cadence.NewCharacter("a")
@@ -425,62 +431,69 @@ func TestExportValue(t *testing.T) {
 					false,
 				)
 			},
-			expected: cadence.Struct{
-				StructType: &cadence.StructType{
-					QualifiedIdentifier: "AccountKey",
-					Fields: []cadence.Field{
-						{
-							Identifier: "keyIndex",
-							Type:       cadence.IntType{},
-						},
-						{
-							Identifier: "publicKey",
-							Type:       publicKeyType,
-						},
-						{
-							Identifier: "hashAlgorithm",
-							Type:       hashAlgorithmType,
-						},
-						{
-							Identifier: "weight",
-							Type:       cadence.UFix64Type{},
-						},
-						{
-							Identifier: "isRevoked",
-							Type:       cadence.BoolType{},
-						},
-					},
-				},
-				Fields: []cadence.Value{
-					cadence.NewInt(1),
-					cadence.Struct{
-						StructType: publicKeyType,
-						Fields: []cadence.Value{
-							cadence.NewArray([]cadence.Value{
-								cadence.NewUInt8(1),
-								cadence.NewUInt8(2),
-								cadence.NewUInt8(3),
-							}).WithType(&cadence.VariableSizedArrayType{
-								ElementType: cadence.UInt8Type{},
-							}),
-							cadence.Enum{
-								EnumType: signatureAlgorithmType,
-								Fields: []cadence.Value{
-									cadence.UInt8(2),
-								},
+			expected: func() cadence.Value {
+
+				signatureAlgorithmType := newSignatureAlgorithmType()
+				publicKeyType := newPublicKeyType(signatureAlgorithmType)
+				hashAlgorithmType := newHashAlgorithmType()
+
+				return cadence.Struct{
+					StructType: &cadence.StructType{
+						QualifiedIdentifier: "AccountKey",
+						Fields: []cadence.Field{
+							{
+								Identifier: "keyIndex",
+								Type:       cadence.IntType{},
+							},
+							{
+								Identifier: "publicKey",
+								Type:       publicKeyType,
+							},
+							{
+								Identifier: "hashAlgorithm",
+								Type:       hashAlgorithmType,
+							},
+							{
+								Identifier: "weight",
+								Type:       cadence.UFix64Type{},
+							},
+							{
+								Identifier: "isRevoked",
+								Type:       cadence.BoolType{},
 							},
 						},
 					},
-					cadence.Enum{
-						EnumType: hashAlgorithmType,
-						Fields: []cadence.Value{
-							cadence.UInt8(1),
+					Fields: []cadence.Value{
+						cadence.NewInt(1),
+						cadence.Struct{
+							StructType: publicKeyType,
+							Fields: []cadence.Value{
+								cadence.NewArray([]cadence.Value{
+									cadence.NewUInt8(1),
+									cadence.NewUInt8(2),
+									cadence.NewUInt8(3),
+								}).WithType(&cadence.VariableSizedArrayType{
+									ElementType: cadence.UInt8Type{},
+								}),
+								cadence.Enum{
+									EnumType: signatureAlgorithmType,
+									Fields: []cadence.Value{
+										cadence.UInt8(2),
+									},
+								},
+							},
 						},
+						cadence.Enum{
+							EnumType: hashAlgorithmType,
+							Fields: []cadence.Value{
+								cadence.UInt8(1),
+							},
+						},
+						cadence.UFix64(10_00000000),
+						cadence.Bool(false),
 					},
-					cadence.UFix64(10_00000000),
-					cadence.Bool(false),
-				},
-			},
+				}
+			}(),
 		},
 		{
 			label: "Deployed contract (invalid)",
@@ -1386,8 +1399,15 @@ func TestExportStructValue(t *testing.T) {
         }
     `
 
+	fooStructType := &cadence.StructType{
+		Location:            common.ScriptLocation{},
+		QualifiedIdentifier: "Foo",
+		Fields:              fooFields,
+	}
+
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{cadence.NewInt(42)}).WithType(fooStructType)
+	expected := cadence.NewStruct([]cadence.Value{cadence.NewInt(42)}).
+		WithType(fooStructType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1415,7 +1435,7 @@ func TestExportResourceValue(t *testing.T) {
 		cadence.NewResource([]cadence.Value{
 			cadence.NewUInt64(0),
 			cadence.NewInt(42),
-		}).WithType(fooResourceType)
+		}).WithType(newFooResourceType())
 
 	assert.Equal(t, expected, actual)
 }
@@ -1437,6 +1457,8 @@ func TestExportResourceArrayValue(t *testing.T) {
             return <- [<- create Foo(bar: 1), <- create Foo(bar: 2)]
         }
     `
+
+	fooResourceType := newFooResourceType()
 
 	actual := exportValueFromScript(t, script)
 	expected := cadence.NewArray([]cadence.Value{
@@ -1488,6 +1510,8 @@ func TestExportResourceDictionaryValue(t *testing.T) {
             }
         }
     `
+
+	fooResourceType := newFooResourceType()
 
 	actual := exportValueFromScript(t, script)
 	expected := cadence.NewDictionary([]cadence.KeyValuePair{
@@ -1610,8 +1634,15 @@ func TestExportEventValue(t *testing.T) {
         }
     `
 
+	fooEventType := &cadence.EventType{
+		Location:            common.ScriptLocation{},
+		QualifiedIdentifier: "Foo",
+		Fields:              fooFields,
+	}
+
 	actual := exportEventFromScript(t, script)
-	expected := cadence.NewEvent([]cadence.Value{cadence.NewInt(42)}).WithType(fooEventType)
+	expected := cadence.NewEvent([]cadence.Value{cadence.NewInt(42)}).
+		WithType(fooEventType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -2178,22 +2209,12 @@ var fooResourceFields = []cadence.Field{
 	},
 }
 
-var fooStructType = &cadence.StructType{
-	Location:            common.ScriptLocation{},
-	QualifiedIdentifier: "Foo",
-	Fields:              fooFields,
-}
-
-var fooResourceType = &cadence.ResourceType{
-	Location:            common.ScriptLocation{},
-	QualifiedIdentifier: "Foo",
-	Fields:              fooResourceFields,
-}
-
-var fooEventType = &cadence.EventType{
-	Location:            common.ScriptLocation{},
-	QualifiedIdentifier: "Foo",
-	Fields:              fooFields,
+func newFooResourceType() *cadence.ResourceType {
+	return &cadence.ResourceType{
+		Location:            common.ScriptLocation{},
+		QualifiedIdentifier: "Foo",
+		Fields:              fooResourceFields,
+	}
 }
 
 func TestRuntimeEnumValue(t *testing.T) {
@@ -4814,7 +4835,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	t.Run("export", func(t *testing.T) {
 
-		t.Parallel()
+		// NOTE: cannot be parallel, due to type's ID being cached (potential data race)
 
 		actual, err := exportValueWithInterpreter(
 			internalCompositeValue,
@@ -4832,7 +4853,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	t.Run("import", func(t *testing.T) {
 
-		t.Parallel()
+		// NOTE: cannot be parallel, due to type's ID being cached (potential data race)
 
 		program := interpreter.Program{
 			Elaboration: sema.NewElaboration(nil),
