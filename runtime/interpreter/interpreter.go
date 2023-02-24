@@ -1620,150 +1620,94 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
 
+	if valueType.Equal(unwrappedTargetType) {
+		return value
+	}
+
 	switch unwrappedTargetType {
 	case sema.IntType:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt(interpreter, value, locationRange)
-		}
-
+		return ConvertInt(interpreter, value, locationRange)
 	case sema.UIntType:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt(interpreter, value, locationRange)
-		}
+		return ConvertUInt(interpreter, value, locationRange)
 
 	// Int*
 	case sema.Int8Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt8(interpreter, value, locationRange)
-		}
-
+		return ConvertInt8(interpreter, value, locationRange)
 	case sema.Int16Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt16(interpreter, value, locationRange)
-		}
-
+		return ConvertInt16(interpreter, value, locationRange)
 	case sema.Int32Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt32(interpreter, value, locationRange)
-		}
-
+		return ConvertInt32(interpreter, value, locationRange)
 	case sema.Int64Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt64(interpreter, value, locationRange)
-		}
-
+		return ConvertInt64(interpreter, value, locationRange)
 	case sema.Int128Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt128(interpreter, value, locationRange)
-		}
-
+		return ConvertInt128(interpreter, value, locationRange)
 	case sema.Int256Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt256(interpreter, value, locationRange)
-		}
+		return ConvertInt256(interpreter, value, locationRange)
 
 	// UInt*
 	case sema.UInt8Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt8(interpreter, value, locationRange)
-		}
-
+		return ConvertUInt8(interpreter, value, locationRange)
 	case sema.UInt16Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt16(interpreter, value, locationRange)
-		}
-
+		return ConvertUInt16(interpreter, value, locationRange)
 	case sema.UInt32Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt32(interpreter, value, locationRange)
-		}
-
+		return ConvertUInt32(interpreter, value, locationRange)
 	case sema.UInt64Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt64(interpreter, value, locationRange)
-		}
-
+		return ConvertUInt64(interpreter, value, locationRange)
 	case sema.UInt128Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt128(interpreter, value, locationRange)
-		}
-
+		return ConvertUInt128(interpreter, value, locationRange)
 	case sema.UInt256Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt256(interpreter, value, locationRange)
-		}
+		return ConvertUInt256(interpreter, value, locationRange)
 
 	// Word*
 	case sema.Word8Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord8(interpreter, value, locationRange)
-		}
-
+		return ConvertWord8(interpreter, value, locationRange)
 	case sema.Word16Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord16(interpreter, value, locationRange)
-		}
-
+		return ConvertWord16(interpreter, value, locationRange)
 	case sema.Word32Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord32(interpreter, value, locationRange)
-		}
-
+		return ConvertWord32(interpreter, value, locationRange)
 	case sema.Word64Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord64(interpreter, value, locationRange)
-		}
+		return ConvertWord64(interpreter, value, locationRange)
 
 	// Fix*
-
 	case sema.Fix64Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertFix64(interpreter, value, locationRange)
-		}
-
+		return ConvertFix64(interpreter, value, locationRange)
 	case sema.UFix64Type:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUFix64(interpreter, value, locationRange)
-		}
+		return ConvertUFix64(interpreter, value, locationRange)
 	}
 
 	switch unwrappedTargetType := unwrappedTargetType.(type) {
 	case *sema.AddressType:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertAddress(interpreter, value, locationRange)
-		}
+		return ConvertAddress(interpreter, value, locationRange)
 
 	case *sema.ReferenceType:
-		if !valueType.Equal(unwrappedTargetType) {
-			switch ref := value.(type) {
-			case *EphemeralReferenceValue:
-				return NewEphemeralReferenceValue(
-					interpreter,
-					unwrappedTargetType.Authorized,
-					ref.Value,
-					unwrappedTargetType.Type,
-				)
+		switch ref := value.(type) {
+		case *EphemeralReferenceValue:
+			return NewEphemeralReferenceValue(
+				interpreter,
+				unwrappedTargetType.Authorized,
+				ref.Value,
+				unwrappedTargetType.Type,
+			)
 
-			case *StorageReferenceValue:
-				return NewStorageReferenceValue(
-					interpreter,
-					unwrappedTargetType.Authorized,
-					ref.TargetStorageAddress,
-					ref.TargetPath,
-					unwrappedTargetType.Type,
-				)
+		case *StorageReferenceValue:
+			return NewStorageReferenceValue(
+				interpreter,
+				unwrappedTargetType.Authorized,
+				ref.TargetStorageAddress,
+				ref.TargetPath,
+				unwrappedTargetType.Type,
+			)
 
-			case *AccountReferenceValue:
-				return NewAccountReferenceValue(
-					interpreter,
-					ref.Address,
-					ref.Path,
-					unwrappedTargetType.Type,
-				)
+		case *AccountReferenceValue:
+			return NewAccountReferenceValue(
+				interpreter,
+				ref.Address,
+				ref.Path,
+				unwrappedTargetType.Type,
+			)
 
-			default:
-				panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
-			}
+		default:
+			panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
 		}
 	}
 
