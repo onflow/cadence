@@ -1620,7 +1620,17 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
 
-	if valueType.Equal(unwrappedTargetType) {
+	// Check whether the target and the source types are equal.
+	// Skip the type equality check for the types that doesn't need a conversion.
+	switch unwrappedTargetType.(type) {
+	case *sema.AddressType,
+		sema.IntegerRangedType,
+		*sema.ReferenceType:
+		if valueType.Equal(unwrappedTargetType) {
+			return value
+		}
+		// else break
+	default:
 		return value
 	}
 
