@@ -9,61 +9,61 @@ Every account can be accessed through two types, `PublicAccount` and `AuthAccoun
 **Public Account** objects have the type `PublicAccount`,
 which represents the publicly available portion of an account.
 
-  ```cadence
-  struct PublicAccount {
+```cadence
+struct PublicAccount {
 
-      let address: Address
-      // The FLOW balance of the default vault of this account
-      let balance: UFix64
-      // The FLOW balance of the default vault of this account that is available to be moved
-      let availableBalance: UFix64
-      // Amount of storage used by the account, in bytes
-      let storageUsed: UInt64
-      // storage capacity of the account, in bytes
-      let storageCapacity: UInt64
+    let address: Address
+    // The FLOW balance of the default vault of this account
+    let balance: UFix64
+    // The FLOW balance of the default vault of this account that is available to be moved
+    let availableBalance: UFix64
+    // Amount of storage used by the account, in bytes
+    let storageUsed: UInt64
+    // storage capacity of the account, in bytes
+    let storageCapacity: UInt64
 
-      // Contracts deployed to the account
-      let contracts: PublicAccount.Contracts
+    // Contracts deployed to the account
+    let contracts: PublicAccount.Contracts
 
-      // Keys assigned to the account
-      let keys: PublicAccount.Keys
+    // Keys assigned to the account
+    let keys: PublicAccount.Keys
 
-      // The public paths associated with this account
-      let publicPaths: [PublicPath]
+    // The public paths associated with this account
+    let publicPaths: [PublicPath]
 
-      // Storage operations
+    // Storage operations
 
-      fun getCapability<T>(_ path: PublicPath): Capability<T>
-      fun getLinkTarget(_ path: CapabilityPath): Path?
+    fun getCapability<T>(_ path: PublicPath): Capability<T>
+    fun getLinkTarget(_ path: CapabilityPath): Path?
 
-      // Storage iteration  
-      fun forEachPublic(_ function: ((PublicPath, Type): Bool))
+    // Storage iteration  
+    fun forEachPublic(_ function: ((PublicPath, Type): Bool))
 
-      struct Contracts {
+    struct Contracts {
 
-          let names: [String]
+        let names: [String]
 
-          fun get(name: String): DeployedContract?
+        fun get(name: String): DeployedContract?
 
-          fun borrow<T: &Any>(name: String): T?
-      }
+        fun borrow<T: &Any>(name: String): T?
+    }
 
-      struct Keys {
-          // Returns the key at the given index, if it exists.
-          // Revoked keys are always returned, but they have \`isRevoked\` field set to true.
-          fun get(keyIndex: Int): AccountKey?
+    struct Keys {
+        // Returns the key at the given index, if it exists.
+        // Revoked keys are always returned, but they have \`isRevoked\` field set to true.
+        fun get(keyIndex: Int): AccountKey?
 
-          // Iterate over all unrevoked keys in this account,
-          // passing each key in turn to the provided function.
-          // Iteration is stopped early if the function returns `false`.
-          // The order of iteration is undefined.
-          fun forEach(function: ((AccountKey): Bool)): Void
+        // Iterate over all unrevoked keys in this account,
+        // passing each key in turn to the provided function.
+        // Iteration is stopped early if the function returns `false`.
+        // The order of iteration is undefined.
+        fun forEach(function: ((AccountKey): Bool)): Void
 
-          // The total number of unrevoked keys in this account.
-          let count: UInt64
-      }
-  }
-  ```
+        // The total number of unrevoked keys in this account.
+        let count: UInt64
+    }
+}
+```
 
   Any code can get the `PublicAccount` for an account address
   using the built-in `getAccount` function:
