@@ -3990,3 +3990,57 @@ func (*InvalidNonEntitlementAccessError) IsUserError() {}
 func (e *InvalidNonEntitlementAccessError) Error() string {
 	return "only entitlements may be used in access modifiers"
 }
+
+// EntitlementConformanceError
+type EntitlementConformanceError struct {
+	EntitlementType *EntitlementType
+	MemberContainer CompositeKindedType
+	Member          *Member
+	ast.Range
+}
+
+var _ SemanticError = &EntitlementConformanceError{}
+var _ errors.UserError = &EntitlementConformanceError{}
+
+func (*EntitlementConformanceError) isSemanticError() {}
+
+func (*EntitlementConformanceError) IsUserError() {}
+
+func (e *EntitlementConformanceError) Error() string {
+	return fmt.Sprintf(
+		"%s `%s` may not be declared with `%s` access in `%s` because `%s` does not match its declaration in `%s`",
+		e.Member.DeclarationKind.Name(),
+		e.Member.Identifier.Identifier,
+		e.EntitlementType.QualifiedString(),
+		e.MemberContainer.QualifiedString(),
+		e.Member.Identifier.Identifier,
+		e.EntitlementType.QualifiedString(),
+	)
+}
+
+// EntitlementMemberNotDeclaredError
+type EntitlementMemberNotDeclaredError struct {
+	EntitlementType *EntitlementType
+	MemberContainer CompositeKindedType
+	Member          *Member
+	ast.Range
+}
+
+var _ SemanticError = &EntitlementMemberNotDeclaredError{}
+var _ errors.UserError = &EntitlementMemberNotDeclaredError{}
+
+func (*EntitlementMemberNotDeclaredError) isSemanticError() {}
+
+func (*EntitlementMemberNotDeclaredError) IsUserError() {}
+
+func (e *EntitlementMemberNotDeclaredError) Error() string {
+	return fmt.Sprintf(
+		"%s `%s` may not be declared with `%s` access in `%s` because `%s` is not declared in `%s`",
+		e.Member.DeclarationKind.Name(),
+		e.Member.Identifier.Identifier,
+		e.EntitlementType.QualifiedString(),
+		e.MemberContainer.QualifiedString(),
+		e.Member.Identifier.Identifier,
+		e.EntitlementType.QualifiedString(),
+	)
+}

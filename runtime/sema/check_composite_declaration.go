@@ -196,8 +196,12 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		)
 	})
 
-	// NOTE: visit interfaces first
+	// NOTE: visit entitlements, then interfaces, then composites
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
+
+	for _, nestedEntitlement := range declaration.Members.Entitlements() {
+		ast.AcceptDeclaration[struct{}](nestedEntitlement, checker)
+	}
 
 	for _, nestedInterface := range declaration.Members.Interfaces() {
 		ast.AcceptDeclaration[struct{}](nestedInterface, checker)
@@ -206,6 +210,12 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	for _, nestedComposite := range declaration.Members.Composites() {
 		ast.AcceptDeclaration[struct{}](nestedComposite, checker)
 	}
+
+	// check that members conform to their entitlement declarations, where applicable
+
+	compositeType.Members.Foreach(func(name string, member *Member) {
+		checker.checkMemberEntitlementConformance(compositeType, member)
+	})
 }
 
 // declareCompositeNestedTypes declares the types nested in a composite,
@@ -562,6 +572,10 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			checker.declareInterfaceMembers(nestedInterfaceDeclaration)
+		}
+
+		for _, nestedEntitlementDeclaration := range declaration.Members.Entitlements() {
+			checker.declareEntitlementMembers(nestedEntitlementDeclaration)
 		}
 
 		// If this composite declaration has nested composite declaration,

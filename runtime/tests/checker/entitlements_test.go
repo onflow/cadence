@@ -454,6 +454,22 @@ func TestCheckBasicEntitlementAccess(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("valid in contract interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			contract interface C {
+				entitlement E {
+					let foo: String
+				}
+				struct interface S {
+					access(E) let foo: String
+				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("qualified", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -755,7 +771,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E {
-				fun foo()
+				var x: String
 			}
 			struct interface I {
 				pub(set) var x: String
@@ -796,7 +812,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E {
-				fun foo()
+				var x: String
 			}
 			struct interface I {
 				access(E) var x: String
@@ -1093,7 +1109,7 @@ func TestCheckEntitlementConformance(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+		require.IsType(t, &sema.EntitlementMemberNotDeclaredError{}, errs[0])
 	})
 
 	t.Run("missing field", func(t *testing.T) {
@@ -1108,7 +1124,7 @@ func TestCheckEntitlementConformance(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+		require.IsType(t, &sema.EntitlementMemberNotDeclaredError{}, errs[0])
 	})
 
 	t.Run("multiple entitlements", func(t *testing.T) {
@@ -1144,7 +1160,7 @@ func TestCheckEntitlementConformance(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+		require.IsType(t, &sema.EntitlementConformanceError{}, errs[0])
 	})
 
 	t.Run("multiple entitlements field mismatch", func(t *testing.T) {
@@ -1157,12 +1173,12 @@ func TestCheckEntitlementConformance(t *testing.T) {
 				let x: UInt8
 			}
 			resource interface R {
-				let x: String
+				access(E, F) let x: String
 			}
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+		require.IsType(t, &sema.EntitlementConformanceError{}, errs[0])
 	})
 }

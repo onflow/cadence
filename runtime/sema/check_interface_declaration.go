@@ -111,8 +111,18 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		kind,
 	)
 
-	// NOTE: visit interfaces first
+	// check that members conform to their entitlement declarations, where applicable
+
+	interfaceType.Members.Foreach(func(name string, member *Member) {
+		checker.checkMemberEntitlementConformance(interfaceType, member)
+	})
+
+	// NOTE: visit entitlements, then interfaces, then composites
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
+
+	for _, nestedEntitlement := range declaration.Members.Entitlements() {
+		ast.AcceptDeclaration[struct{}](nestedEntitlement, checker)
+	}
 
 	for _, nestedInterface := range declaration.Members.Interfaces() {
 		ast.AcceptDeclaration[struct{}](nestedInterface, checker)
@@ -356,6 +366,10 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	// Declare nested declarations' members
 
+	for _, nestedEntitlementDeclaration := range declaration.Members.Entitlements() {
+		checker.declareEntitlementMembers(nestedEntitlementDeclaration)
+	}
+
 	for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 		checker.declareInterfaceMembers(nestedInterfaceDeclaration)
 	}
@@ -496,6 +510,38 @@ func (checker *Checker) declareEntitlementMembers(declaration *ast.EntitlementDe
 	}
 
 	entitlementType.Members = members
+}
+
+func (checker *Checker) checkMemberEntitlementConformance(memberContainer CompositeKindedType, member *Member) {
+	entitlementAccess, hasEntitlements := member.Access.(EntitlementAccess)
+	if !hasEntitlements {
+		return
+	}
+	entitlements := entitlementAccess.Entitlements
+
+	for _, entitlement := range entitlements {
+		entitlementMember, memberPresent := entitlement.Members.Get(member.Identifier.Identifier)
+		if !memberPresent {
+			checker.report(&EntitlementMemberNotDeclaredError{
+				EntitlementType: entitlement,
+				MemberContainer: memberContainer,
+				Member:          member,
+				Range:           ast.NewRangeFromPositioned(checker.memoryGauge, member.Identifier),
+			})
+			continue
+		}
+		if !entitlementMember.TypeAnnotation.Type.Equal(member.TypeAnnotation.Type) ||
+			(entitlementMember.VariableKind != ast.VariableKindNotSpecified &&
+				member.VariableKind != entitlementMember.VariableKind) {
+			checker.report(&EntitlementConformanceError{
+				EntitlementType: entitlement,
+				MemberContainer: memberContainer,
+				Member:          member,
+				Range:           ast.NewRangeFromPositioned(checker.memoryGauge, member.Identifier),
+			})
+		}
+
+	}
 }
 
 func (checker *Checker) VisitEntitlementDeclaration(declaration *ast.EntitlementDeclaration) (_ struct{}) {
