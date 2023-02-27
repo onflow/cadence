@@ -2153,6 +2153,13 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)
+
+	case TypeAnnotationStateDirectEntitlementTypeAnnotation:
+		checker.report(
+			&DirectEntitlementAnnotationError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
+			},
+		)
 	}
 
 	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)

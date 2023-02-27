@@ -1258,3 +1258,199 @@ func TestCheckEntitlementConformance(t *testing.T) {
 		require.IsType(t, &sema.EntitlementConformanceError{}, errs[0])
 	})
 }
+
+func TestCheckEntitlementTypeAnnotation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("invalid local annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			let x: E = ""
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("invalid param annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			pub fun foo(e: E) {}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+	})
+
+	t.Run("invalid return annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			resource interface I {
+				pub fun foo(): E 
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+	})
+
+	t.Run("invalid field annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			resource interface I {
+				let e: E
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+	})
+
+	t.Run("invalid conformance annotation", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			resource R: E {}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidConformanceError{}, errs[0])
+	})
+
+	t.Run("invalid array annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			resource interface I {
+				let e: [E]
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+	})
+
+	t.Run("invalid fun annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			resource interface I {
+				let e: (fun (E): Void)
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+	})
+
+	t.Run("invalid enum conformance", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			enum X: E {}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[0])
+	})
+
+	t.Run("invalid dict annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			resource interface I {
+				let e: {E: E}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		// key
+		require.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
+		// value
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[1])
+	})
+
+	t.Run("invalid fun annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			resource interface I {
+				let e: (fun (E): Void)
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+	})
+
+	t.Run("runtype type", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {}
+			let e = Type<E>()
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+	})
+
+	t.Run("type arg", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+			entitlement E {}
+			let e = authAccount.load<E>(from: /storage/foo)
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+		// entitlements are not storable either
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("restricted", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+			entitlement E {}
+			resource interface I {
+				let e: E{E}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.InvalidRestrictionTypeError{}, errs[0])
+		require.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[1])
+	})
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+			entitlement E {}
+			resource interface I {
+				let e: &E
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+	})
+}

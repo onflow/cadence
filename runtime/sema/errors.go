@@ -3991,6 +3991,22 @@ func (e *InvalidNonEntitlementAccessError) Error() string {
 	return "only entitlements may be used in access modifiers"
 }
 
+// DirectEntitlementAnnotationError
+type DirectEntitlementAnnotationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &DirectEntitlementAnnotationError{}
+var _ errors.UserError = &DirectEntitlementAnnotationError{}
+
+func (*DirectEntitlementAnnotationError) isSemanticError() {}
+
+func (*DirectEntitlementAnnotationError) IsUserError() {}
+
+func (e *DirectEntitlementAnnotationError) Error() string {
+	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
+}
+
 // EntitlementConformanceError
 type EntitlementConformanceError struct {
 	EntitlementType *EntitlementType

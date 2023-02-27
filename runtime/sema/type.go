@@ -4900,7 +4900,10 @@ func (*ReferenceType) IsEquatable() bool {
 	return true
 }
 
-func (*ReferenceType) TypeAnnotationState() TypeAnnotationState {
+func (r *ReferenceType) TypeAnnotationState() TypeAnnotationState {
+	if r.Type.TypeAnnotationState() == TypeAnnotationStateDirectEntitlementTypeAnnotation {
+		return TypeAnnotationStateDirectEntitlementTypeAnnotation
+	}
 	return TypeAnnotationStateValid
 }
 
