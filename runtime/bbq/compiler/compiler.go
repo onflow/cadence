@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/bbq/constantkind"
 	"github.com/onflow/cadence/runtime/bbq/leb128"
 	"github.com/onflow/cadence/runtime/bbq/opcode"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -40,6 +41,8 @@ type Compiler struct {
 	globals         map[string]*global
 	loops           []*loop
 	currentLoop     *loop
+
+	currentCompositeType *sema.CompositeType
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler{}
@@ -81,7 +84,7 @@ func (c *Compiler) addFunction(name string, parameterCount uint16) *function {
 	return function
 }
 
-func (c *Compiler) addConstant(kind constantkind.Constant, data []byte) *constant {
+func (c *Compiler) addConstant(kind constantkind.ConstantKind, data []byte) *constant {
 	count := len(c.constants)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid constant declaration"))
@@ -93,6 +96,12 @@ func (c *Compiler) addConstant(kind constantkind.Constant, data []byte) *constan
 	}
 	c.constants = append(c.constants, constant)
 	return constant
+}
+
+func (c *Compiler) stringConstLoad(str string) {
+	constant := c.addConstant(constantkind.String, []byte(str))
+	first, second := encodeUint16(constant.index)
+	c.emit(opcode.GetConstant, first, second)
 }
 
 func (c *Compiler) emit(opcode opcode.Opcode, args ...byte) int {
@@ -325,9 +334,10 @@ func (c *Compiler) VisitSwapStatement(_ *ast.SwapStatement) (_ struct{}) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitExpressionStatement(_ *ast.ExpressionStatement) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
+	c.compileExpression(statement.Expression)
+	c.emit(opcode.Pop)
+	return
 }
 
 func (c *Compiler) VisitVoidExpression(_ *ast.VoidExpression) (_ struct{}) {
@@ -449,9 +459,9 @@ func (c *Compiler) VisitFunctionExpression(_ *ast.FunctionExpression) (_ struct{
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitStringExpression(_ *ast.StringExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitStringExpression(expression *ast.StringExpression) (_ struct{}) {
+	c.stringConstLoad(expression.Value)
+	return
 }
 
 func (c *Compiler) VisitCastingExpression(_ *ast.CastingExpression) (_ struct{}) {
@@ -485,7 +495,51 @@ func (c *Compiler) VisitPathExpression(_ *ast.PathExpression) (_ struct{}) {
 }
 
 func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) (_ struct{}) {
-	return c.VisitFunctionDeclaration(declaration.FunctionDeclaration)
+	enclosingCompositeTypeName := c.currentCompositeType.Identifier
+
+	var functionName string
+	kind := declaration.DeclarationKind()
+	switch kind {
+	case common.DeclarationKindInitializer:
+		functionName = enclosingCompositeTypeName
+	default:
+		// TODO: support other special functions
+		panic(errors.NewUnreachableError())
+	}
+
+	parameter := declaration.FunctionDeclaration.ParameterList.Parameters
+	parameterCount := len(parameter)
+	if parameterCount > math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid parameter count"))
+	}
+
+	function := c.addFunction(functionName, uint16(parameterCount))
+
+	// TODO: pass location
+	c.stringConstLoad(enclosingCompositeTypeName)
+
+	// Declare `self`
+	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
+	selfFirst, selfSecond := encodeUint16(self.index)
+
+	for _, parameter := range parameter {
+		parameterName := parameter.Identifier.Identifier
+		function.declareLocal(parameterName)
+	}
+
+	// Initialize an empty struct and assign to `self`.
+	// i.e: `self = New()`
+	c.emit(opcode.New)
+	c.emit(opcode.SetLocal, selfFirst, selfSecond)
+
+	// Emit for the statements in `init()` body.
+	c.compileFunctionBlock(declaration.FunctionDeclaration.FunctionBlock)
+
+	// Constructor should return the created the struct. i.e: return `self`
+	c.emit(opcode.GetLocal, selfFirst, selfSecond)
+	c.emit(opcode.ReturnValue)
+
+	return
 }
 
 func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
@@ -505,9 +559,20 @@ func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration
 	return
 }
 
-func (c *Compiler) VisitCompositeDeclaration(_ *ast.CompositeDeclaration) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
+	prevCompositeType := c.currentCompositeType
+	c.currentCompositeType = c.Elaboration.CompositeDeclarationTypes[declaration]
+	defer func() {
+		c.currentCompositeType = prevCompositeType
+	}()
+
+	for _, specialFunc := range declaration.Members.SpecialFunctions() {
+		c.compileDeclaration(specialFunc)
+	}
+
+	// TODO:
+
+	return
 }
 
 func (c *Compiler) VisitInterfaceDeclaration(_ *ast.InterfaceDeclaration) (_ struct{}) {

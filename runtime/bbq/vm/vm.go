@@ -246,6 +246,22 @@ func opCall(vm *VM) {
 	vm.dropN(parameterCount)
 }
 
+func opPop(vm *VM) {
+	_ = vm.pop()
+}
+
+func opNew(vm *VM) {
+	stackHeight := len(vm.stack)
+	const parameterCount = 1
+	arguments := vm.stack[stackHeight-parameterCount:]
+
+	// TODO: get location
+	name := arguments[0].(StringValue)
+
+	value := StructValue{Name: string(name.string)}
+	vm.push(value)
+}
+
 func (vm *VM) run() {
 	for {
 
@@ -289,6 +305,10 @@ func (vm *VM) run() {
 			opGetGlobal(vm)
 		case opcode.Call:
 			opCall(vm)
+		case opcode.Pop:
+			opPop(vm)
+		case opcode.New:
+			opNew(vm)
 		default:
 			panic(errors.NewUnreachableError())
 		}
@@ -305,6 +325,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 		// TODO:
 		smallInt, _, _ := leb128.ReadInt64(constant.Data)
 		value = IntValue{smallInt}
+	case constantkind.String:
+		value = StringValue{constant.Data}
 	default:
 		// TODO:
 		panic(errors.NewUnreachableError())

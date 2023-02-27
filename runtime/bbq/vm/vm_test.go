@@ -197,3 +197,68 @@ func TestContinue(t *testing.T) {
 
 	require.Equal(t, IntValue{3}, result)
 }
+
+func TestNewStruct(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      struct Foo {
+          init() {}
+      }
+
+      fun test(count: Int): Int {
+          var i = 0
+          while i < count {
+              i = i + 1
+              Foo()
+          }
+          return i
+      }
+  `)
+	require.NoError(t, err)
+
+	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+	program := comp.Compile()
+
+	vm := NewVM(program)
+
+	result, err := vm.Invoke("test", IntValue{10})
+	require.NoError(t, err)
+
+	require.Equal(t, IntValue{10}, result)
+}
+
+func BenchmarkNewStruct(b *testing.B) {
+
+	checker, err := ParseAndCheck(b, `
+      struct Foo {
+          init() {}
+      }
+
+      fun test(count: Int): Int {
+          var i = 0
+          while i < count {
+              i = i + 1
+              Foo()
+          }
+          return i
+      }
+  `)
+	require.NoError(b, err)
+
+	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+	program := comp.Compile()
+
+	vm := NewVM(program)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	var value Value = IntValue{7}
+
+	for i := 0; i < b.N; i++ {
+		_, err := vm.Invoke("test", value)
+		require.NoError(b, err)
+	}
+}

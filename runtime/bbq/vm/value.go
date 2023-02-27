@@ -72,3 +72,19 @@ type FunctionValue struct {
 var _ Value = FunctionValue{}
 
 func (FunctionValue) isValue() {}
+
+type StringValue struct {
+	string []byte
+}
+
+var _ Value = StringValue{}
+
+func (StringValue) isValue() {}
+
+type StructValue struct {
+	Name string
+}
+
+var _ Value = StructValue{}
+
+func (StructValue) isValue() {}

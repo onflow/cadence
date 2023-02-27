@@ -23,10 +23,12 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type Constant uint8
+//go:generate go run golang.org/x/tools/cmd/stringer -type=ConstantKind
+
+type ConstantKind uint8
 
 const (
-	Unknown Constant = iota
+	Unknown ConstantKind = iota
 	String
 
 	// Int*
@@ -79,7 +81,7 @@ const (
 	_ // future: UFix256
 )
 
-func FromSemaType(ty sema.Type) Constant {
+func FromSemaType(ty sema.Type) ConstantKind {
 	switch ty {
 	// Int*
 	case sema.IntType:

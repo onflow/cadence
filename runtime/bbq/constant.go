@@ -22,5 +22,5 @@ import "github.com/onflow/cadence/runtime/bbq/constantkind"
 
 type Constant struct {
 	Data []byte
-	Kind constantkind.Constant
+	Kind constantkind.ConstantKind
 }

@@ -51,4 +51,7 @@ const (
 	GetGlobal
 
 	Call
+
+	New
+	Pop
 )
