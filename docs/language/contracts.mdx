@@ -414,15 +414,15 @@ let contract: &TestInterface = signer.contracts.borrow<&TestInterface>(name: "Te
 
 A deployed contract can be removed from an account using the `remove` function:
 
-  ```cadence
-  fun remove(name: String): DeployedContract?
-  ```
+```cadence
+fun remove(name: String): DeployedContract?
+```
 
-  Removes the contract/contract interface from the account which has the given name, if any.
+ Removes the contract/contract interface from the account which has the given name, if any.
 
-  Returns the removed [deployed contract](#deployed-contracts), if any.
+ Returns the removed [deployed contract](#deployed-contracts), if any.
 
-  Returns `nil` if no contract/contract interface with the given name exist in the account.
+ Returns `nil` if no contract/contract interface with the given name exist in the account.
 
 For example, assuming that a contract named `Test` is deployed to an account, the contract can be removed as follows:
 
