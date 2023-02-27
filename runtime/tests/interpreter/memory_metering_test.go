@@ -7048,11 +7048,14 @@ func TestInterpretAccountLinkValueMetering(t *testing.T) {
 	t.Run("creation", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-            pub fun main(account: AuthAccount) {
-                account.linkAccount(/public/capo)
-            }
+		const script = `
+          #allowAccountLinking
+
+          pub fun main(account: AuthAccount) {
+              account.linkAccount(/public/capo)
+          }
         `
+
 		meter := newTestMemoryGauge()
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
