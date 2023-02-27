@@ -158,53 +158,62 @@ let b = x + 1000000000000000000000000
 
 Integers have multiple built-in functions you can use.
 
-- `cadence•fun toString(): String`
+-
+    ```cadence
+    fun toString(): String
+    ```
 
-  Returns the string representation of the integer.
+    Returns the string representation of the integer.
 
-  ```cadence
-  let answer = 42
+    ```cadence
+    let answer = 42
 
-  answer.toString()  // is "42"
-  ```
+    answer.toString()  // is "42"
+    ```
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
+-
+    ```cadence
+    fun toBigEndianBytes(): [UInt8]
+    ```
 
-  Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
+    Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
 
-  ```cadence
-  let largeNumber = 1234567890
+    ```cadence
+    let largeNumber = 1234567890
 
-  largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
-  ```
+    largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
+    ```
 
 All integer types support the following functions:
 
-- `cadence•fun T.fromString(_ input: String): T?`
+-
+    ```cadence
+    fun T.fromString(_ input: String): T?
+    ```
 
-  Attempts to parse an integer value from a base-10 encoded string, returning `nil` if the string is invalid.
+    Attempts to parse an integer value from a base-10 encoded string, returning `nil` if the string is invalid.
 
-  For a given integer `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an [optional](#optionals).
+    For a given integer `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an [optional](#optionals).
 
-  Strings are invalid if:
-    - they contain non-digit characters
-    - they don't fit in the target type
-  
-  For signed integer types like `Int64`, and `Int`, the string may optionally begin with `+` or `-` sign prefix.
+    Strings are invalid if:
+      - they contain non-digit characters
+      - they don't fit in the target type
 
-  For unsigned integer types like `Word64`, `UInt64`, and `UInt`, sign prefices are not allowed.
+    For signed integer types like `Int64`, and `Int`, the string may optionally begin with `+` or `-` sign prefix.
 
-  Examples:
+    For unsigned integer types like `Word64`, `UInt64`, and `UInt`, sign prefices are not allowed.
 
-  ```cadence
-  let fortyTwo: Int64? = Int64.fromString("42") // ok
+    Examples:
 
-  let twenty: UInt? = UInt.fromString("20") // ok
+    ```cadence
+    let fortyTwo: Int64? = Int64.fromString("42") // ok
 
-  let nilWord: Word8? = Word8.fromString("1024") // nil, out of bounds
+    let twenty: UInt? = UInt.fromString("20") // ok
 
-  let negTwenty: Int? = Int.fromString("-20") // ok
-  ```
+    let nilWord: Word8? = Word8.fromString("1024") // nil, out of bounds
+
+    let negTwenty: Int? = Int.fromString("-20") // ok
+    ```
 
 ## Fixed-Point Numbers
 
@@ -240,58 +249,66 @@ have the following factors, and can represent values in the following ranges:
 
 Fixed-Point numbers have multiple built-in functions you can use.
 
-- `cadence•fun toString(): String`
+-
+    ```cadence
+    fun toString(): String
+    ```
 
-  Returns the string representation of the fixed-point number.
+    Returns the string representation of the fixed-point number.
 
-  ```cadence
-  let fix = 1.23
+    ```cadence
+    let fix = 1.23
 
-  fix.toString()  // is "1.23000000"
-  ```
+    fix.toString()  // is "1.23000000"
+    ```
+-
+    ```cadence
+    fun toBigEndianBytes(): [UInt8]
+    ```
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
+    Returns the byte array representation (`[UInt8]`) in big-endian order of the fixed-point number.
 
-  Returns the byte array representation (`[UInt8]`) in big-endian order of the fixed-point number.
+    ```cadence
+    let fix = 1.23
 
-  ```cadence
-  let fix = 1.23
-
-  fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
-  ```
+    fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
+    ```
 
 All fixed-point types support the following functions:
 
-- `cadence•fun T.fromString(_ input: String): T?`
+-
+    ```cadence
+    fun T.fromString(_ input: String): T?
+    ```
 
-  Attempts to parse a fixed-point value from a base-10 encoded string, returning `nil` if the string is invalid.
+    Attempts to parse a fixed-point value from a base-10 encoded string, returning `nil` if the string is invalid.
 
-  For a given fixed-point numeral `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an `optional`.
+    For a given fixed-point numeral `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an `optional`.
 
-  Strings are invalid if:
-    - they contain non-digit characters.
-    - they don't fit in the target type.
-    - they're missing a decimal or fractional component. For example, both "0." and ".1" are invalid strings, but "0.1" is accepted.
+    Strings are invalid if:
+      - they contain non-digit characters.
+      - they don't fit in the target type.
+      - they're missing a decimal or fractional component. For example, both "0." and ".1" are invalid strings, but "0.1" is accepted.
 
-  For signed types like `Fix64`, the string may optionally begin with `+` or `-` sign prefix.
+    For signed types like `Fix64`, the string may optionally begin with `+` or `-` sign prefix.
 
-  For unsigned types like `UFix64`, sign prefices are not allowed.
+    For unsigned types like `UFix64`, sign prefices are not allowed.
 
-  Examples:
+    Examples:
 
-  ```cadence
-  let nil1: UFix64? = UFix64.fromString("0.") // nil, fractional part is required
+    ```cadence
+    let nil1: UFix64? = UFix64.fromString("0.") // nil, fractional part is required
 
-  let nil2: UFix64? = UFix64.fromString(".1") // nil, decimal part is required
+    let nil2: UFix64? = UFix64.fromString(".1") // nil, decimal part is required
 
-  let smol: UFix64? = UFix64.fromString("0.1") // ok
+    let smol: UFix64? = UFix64.fromString("0.1") // ok
 
-  let smolString: String = "-0.1"
+    let smolString: String = "-0.1"
 
-  let nil3: UFix64? = UFix64.fromString(smolString) // nil, unsigned types don't allow a sign prefix
+    let nil3: UFix64? = UFix64.fromString(smolString) // nil, unsigned types don't allow a sign prefix
 
-  let smolFix64: Fix64? = Fix64.fromString(smolString) // ok
-  ```
+    let smolFix64: Fix64? = Fix64.fromString(smolString) // ok
+    ```
 
 ## Minimum and maximum values
 
@@ -392,28 +409,34 @@ let aNumber = 0x436164656E636521
 
 Addresses have multiple built-in functions you can use.
 
-- `cadence•fun toString(): String`
+-
+    ```cadence
+    fun toString(): String
+    ```
 
-  Returns the string representation of the address.
-  The result has a `0x` prefix and is zero-padded.
+    Returns the string representation of the address.
+    The result has a `0x` prefix and is zero-padded.
 
-  ```cadence
-  let someAddress: Address = 0x436164656E636521
-  someAddress.toString()   // is "0x436164656E636521"
+    ```cadence
+    let someAddress: Address = 0x436164656E636521
+    someAddress.toString()   // is "0x436164656E636521"
 
-  let shortAddress: Address = 0x1
-  shortAddress.toString()  // is "0x0000000000000001"
-  ```
+    let shortAddress: Address = 0x1
+    shortAddress.toString()  // is "0x0000000000000001"
+    ```
 
-- `cadence•fun toBytes(): [UInt8]`
+-
+    ```cadence
+    fun toBytes(): [UInt8]
+    ```
 
-  Returns the byte array representation (`[UInt8]`) of the address.
+    Returns the byte array representation (`[UInt8]`) of the address.
 
-  ```cadence
-  let someAddress: Address = 0x436164656E636521
+    ```cadence
+    let someAddress: Address = 0x436164656E636521
 
-  someAddress.toBytes()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
-  ```
+    someAddress.toBytes()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+    ```
 
 ## AnyStruct and AnyResource
 

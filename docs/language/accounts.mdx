@@ -479,15 +479,18 @@ Both `StoragePath` and `CapabilityPath` are subtypes of `Path`.
 
 #### Path Functions
 
-- `cadence•fun toString(): String`
+ 
+    ```cadence
+    fun toString(): String
+    ````
 
-  Returns the string representation of the path.
+    Returns the string representation of the path.
 
-  ```cadence
-  let storagePath = /storage/path
+    ```cadence
+    let storagePath = /storage/path
 
-  storagePath.toString()  // is "/storage/path"
-  ```
+    storagePath.toString()  // is "/storage/path"
+    ```
 
 There are also utilities to produce paths from strings:
 
@@ -510,61 +513,73 @@ Account storage is accessed through the following functions of `AuthAccount`.
 This means that any code that has access to the authorized account has access
 to all its stored objects.
 
-- `cadence•fun save<T>(_ value: T, to: StoragePath)`
+ 
+    ```cadence
+    fun save<T>(_ value: T, to: StoragePath)
+    ```
 
-  Saves an object to account storage.
-  Resources are moved into storage, and structures are copied.
+    Saves an object to account storage.
+    Resources are moved into storage, and structures are copied.
 
-  `T` is the type parameter for the object type.
-  It can be inferred from the argument's type.
+    `T` is the type parameter for the object type.
+    It can be inferred from the argument's type.
 
-  If there is already an object stored under the given path, the program aborts.
+    If there is already an object stored under the given path, the program aborts.
 
-  The path must be a storage path, i.e., only the domain `storage` is allowed.
+    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
-- `cadence•fun type(at path: StoragePath): Type?`
+ 
+    ```cadence
+    fun type(at path: StoragePath): Type?
+    ```
 
-  Reads the type of an object from the account's storage which is stored under the given path, or nil if no object is stored under the given path.
+    Reads the type of an object from the account's storage which is stored under the given path, or nil if no object is stored under the given path.
 
-  If there is an object stored, the type of the object is returned without modifying the stored object.
+    If there is an object stored, the type of the object is returned without modifying the stored object.
 
-  The path must be a storage path, i.e., only the domain `storage` is allowed
+    The path must be a storage path, i.e., only the domain `storage` is allowed
 
-- `cadence•fun load<T>(from: StoragePath): T?`
+ 
+    ```cadence
+    fun load<T>(from: StoragePath): T?
+    ```
 
-  Loads an object from account storage.
-  If no object is stored under the given path, the function returns `nil`.
-  If there is an object stored, the stored resource or structure is moved
-  out of storage and returned as an optional.
-  When the function returns, the storage no longer contains an object
-  under the given path.
+    Loads an object from account storage.
+    If no object is stored under the given path, the function returns `nil`.
+    If there is an object stored, the stored resource or structure is moved
+    out of storage and returned as an optional.
+    When the function returns, the storage no longer contains an object
+    under the given path.
 
-  `T` is the type parameter for the object type.
-  A type argument for the parameter must be provided explicitly.
+    `T` is the type parameter for the object type.
+    A type argument for the parameter must be provided explicitly.
 
-  The type `T` must be a supertype of the type of the loaded object.
-  If it is not, execution will abort with an error.
-  The given type does not necessarily need to be exactly the same as the type of the loaded object.
+    The type `T` must be a supertype of the type of the loaded object.
+    If it is not, execution will abort with an error.
+    The given type does not necessarily need to be exactly the same as the type of the loaded object.
 
-  The path must be a storage path, i.e., only the domain `storage` is allowed.
+    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
-- `cadence•fun copy<T: AnyStruct>(from: StoragePath): T?`
+ 
+    ```cadence
+    fun copy<T: AnyStruct>(from: StoragePath): T?
+    ```
 
-  Returns a copy of a structure stored in account storage, without removing it from storage.
+    Returns a copy of a structure stored in account storage, without removing it from storage.
 
-  If no structure is stored under the given path, the function returns `nil`.
-  If there is a structure stored, it is copied.
-  The structure stays stored in storage after the function returns.
+    If no structure is stored under the given path, the function returns `nil`.
+    If there is a structure stored, it is copied.
+    The structure stays stored in storage after the function returns.
 
-  `T` is the type parameter for the structure type.
-  A type argument for the parameter must be provided explicitly.
+    `T` is the type parameter for the structure type.
+    A type argument for the parameter must be provided explicitly.
 
-  The type `T` must be a supertype of the type of the copied structure.
-  If it is not, execution will abort with an error.
-  The given type does not necessarily need to be exactly the same as
-  the type of the copied structure.
+    The type `T` must be a supertype of the type of the copied structure.
+    If it is not, execution will abort with an error.
+    The given type does not necessarily need to be exactly the same as
+    the type of the copied structure.
 
-  The path must be a storage path, i.e., only the domain `storage` is allowed.
+    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 ```cadence
 // Declare a resource named `Counter`.
@@ -655,20 +670,23 @@ as it is necessary for resources,
 it is also possible to create references to objects in storage:
 This is possible using the `borrow` function of an `AuthAccount`:
 
-- `cadence•fun borrow<T: &Any>(from: StoragePath): T?`
+ 
+    ```cadence
+    fun borrow<T: &Any>(from: StoragePath): T?
+    ```
 
-  Returns a reference to an object in storage without removing it from storage.
-  If no object is stored under the given path, the function returns `nil`.
-  If there is an object stored, a reference is returned as an optional.
+    Returns a reference to an object in storage without removing it from storage.
+    If no object is stored under the given path, the function returns `nil`.
+    If there is an object stored, a reference is returned as an optional.
 
-  `T` is the type parameter for the object type.
-  A type argument for the parameter must be provided explicitly.
-  The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
-  It must be possible to create the given reference type `T` for the stored /  borrowed object.
-  If it is not, execution will abort with an error.
-  The given type does not necessarily need to be exactly the same as the type of the borrowed object.
+    `T` is the type parameter for the object type.
+    A type argument for the parameter must be provided explicitly.
+    The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
+    It must be possible to create the given reference type `T` for the stored /  borrowed object.
+    If it is not, execution will abort with an error.
+    The given type does not necessarily need to be exactly the same as the type of the borrowed object.
 
-  The path must be a storage path, i.e., only the domain `storage` is allowed.
+    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 ```cadence
 // Declare a resource interface named `HasCount`, that has a field `count`
