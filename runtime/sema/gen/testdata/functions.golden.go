@@ -32,7 +32,8 @@ var TestTypeNothingFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeNothingFunctionDocString = `This is a test function.
+const TestTypeNothingFunctionDocString = `
+This is a test function.
 `
 
 const TestTypeParamsFunctionName = "params"
@@ -51,7 +52,8 @@ var TestTypeParamsFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeParamsFunctionDocString = `This is a test function with parameters.
+const TestTypeParamsFunctionDocString = `
+This is a test function with parameters.
 `
 
 const TestTypeReturnFunctionName = "return"
@@ -62,7 +64,8 @@ var TestTypeReturnFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeReturnFunctionDocString = `This is a test function with a return type.
+const TestTypeReturnFunctionDocString = `
+This is a test function with a return type.
 `
 
 const TestTypeParamsAndReturnFunctionName = "paramsAndReturn"
@@ -81,7 +84,8 @@ var TestTypeParamsAndReturnFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeParamsAndReturnFunctionDocString = `This is a test function with parameters and a return type.
+const TestTypeParamsAndReturnFunctionDocString = `
+This is a test function with parameters and a return type.
 `
 
 const TestTypeTypeParamFunctionName = "typeParam"
@@ -99,7 +103,8 @@ var TestTypeTypeParamFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeTypeParamFunctionDocString = `This is a test function with a type parameter.
+const TestTypeTypeParamFunctionDocString = `
+This is a test function with a type parameter.
 `
 
 const TestTypeTypeParamWithBoundFunctionName = "typeParamWithBound"
@@ -120,7 +125,8 @@ var TestTypeTypeParamWithBoundFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeTypeParamWithBoundFunctionDocString = `This is a test function with a type parameter and a type bound.
+const TestTypeTypeParamWithBoundFunctionDocString = `
+This is a test function with a type parameter and a type bound.
 `
 
 const TestTypeTypeParamWithBoundAndParamFunctionName = "typeParamWithBoundAndParam"
@@ -145,7 +151,8 @@ var TestTypeTypeParamWithBoundAndParamFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeTypeParamWithBoundAndParamFunctionDocString = `This is a test function with a type parameter and a parameter using it.
+const TestTypeTypeParamWithBoundAndParamFunctionDocString = `
+This is a test function with a type parameter and a parameter using it.
 `
 
 const TestTypeName = "Test"

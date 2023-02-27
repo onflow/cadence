@@ -434,7 +434,7 @@ func exportReferenceType(
 	gauge common.MemoryGauge,
 	t *sema.ReferenceType,
 	results map[sema.TypeID]cadence.Type,
-) cadence.ReferenceType {
+) *cadence.ReferenceType {
 	convertedType := ExportMeteredType(gauge, t.Type, results)
 
 	return cadence.NewMeteredReferenceType(
@@ -470,7 +470,7 @@ func exportCapabilityType(
 	gauge common.MemoryGauge,
 	t *sema.CapabilityType,
 	results map[sema.TypeID]cadence.Type,
-) cadence.CapabilityType {
+) *cadence.CapabilityType {
 
 	var borrowType cadence.Type
 	if t.BorrowType != nil {
@@ -508,7 +508,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAnyStruct)
 	case cadence.AnyResourceType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAnyResource)
-	case cadence.OptionalType:
+	case *cadence.OptionalType:
 		return interpreter.NewOptionalStaticType(memoryGauge, ImportType(memoryGauge, t.Type))
 	case cadence.MetaType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeMetaType)
@@ -576,15 +576,15 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeFix64)
 	case cadence.UFix64Type:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUFix64)
-	case cadence.VariableSizedArrayType:
+	case *cadence.VariableSizedArrayType:
 		return interpreter.NewVariableSizedStaticType(memoryGauge, ImportType(memoryGauge, t.ElementType))
-	case cadence.ConstantSizedArrayType:
+	case *cadence.ConstantSizedArrayType:
 		return interpreter.NewConstantSizedStaticType(
 			memoryGauge,
 			ImportType(memoryGauge, t.ElementType),
 			int64(t.Size),
 		)
-	case cadence.DictionaryType:
+	case *cadence.DictionaryType:
 		return interpreter.NewDictionaryStaticType(
 			memoryGauge,
 			ImportType(memoryGauge, t.KeyType),
@@ -600,7 +600,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		*cadence.ResourceInterfaceType,
 		*cadence.ContractInterfaceType:
 		return importInterfaceType(memoryGauge, t.(cadence.InterfaceType))
-	case cadence.ReferenceType:
+	case *cadence.ReferenceType:
 		return interpreter.NewReferenceStaticType(
 			memoryGauge,
 			t.Authorized,
@@ -631,7 +631,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicPath)
 	case cadence.PrivatePathType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePrivatePath)
-	case cadence.CapabilityType:
+	case *cadence.CapabilityType:
 		return interpreter.NewCapabilityStaticType(memoryGauge, ImportType(memoryGauge, t.BorrowType))
 	case cadence.AccountKeyType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccountKey)

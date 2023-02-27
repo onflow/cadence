@@ -191,8 +191,8 @@ func (f *HostFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ Seen
 }
 
 func NewUnmeteredHostFunctionValue(
-	function HostFunction,
 	funcType *sema.FunctionType,
+	function HostFunction,
 ) *HostFunctionValue {
 	// Host functions can be passed by value,
 	// so for the interpreter value transfer check to work,
@@ -209,13 +209,13 @@ func NewUnmeteredHostFunctionValue(
 
 func NewHostFunctionValue(
 	gauge common.MemoryGauge,
-	function HostFunction,
 	funcType *sema.FunctionType,
+	function HostFunction,
 ) *HostFunctionValue {
 
 	common.UseMemory(gauge, common.HostFunctionValueMemoryUsage)
 
-	return NewUnmeteredHostFunctionValue(function, funcType)
+	return NewUnmeteredHostFunctionValue(funcType, function)
 }
 
 var _ Value = &HostFunctionValue{}

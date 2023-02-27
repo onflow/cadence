@@ -95,11 +95,11 @@ func TestInterpretVirtualImport(t *testing.T) {
 					value.Functions = map[string]interpreter.FunctionValue{
 						"bar": interpreter.NewHostFunctionValue(
 							inter,
-							func(invocation interpreter.Invocation) interpreter.Value {
-								return interpreter.NewUnmeteredUInt64Value(42)
-							},
 							&sema.FunctionType{
 								ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UIntType),
+							},
+							func(invocation interpreter.Invocation) interpreter.Value {
+								return interpreter.NewUnmeteredUInt64Value(42)
 							},
 						),
 					}

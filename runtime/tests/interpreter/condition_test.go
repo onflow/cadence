@@ -1109,6 +1109,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 		Type: checkFunctionType,
 		Value: interpreter.NewHostFunctionValue(
 			nil,
+			checkFunctionType,
 			func(invocation interpreter.Invocation) interpreter.Value {
 				checkCalled = true
 
@@ -1117,7 +1118,6 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 
 				return interpreter.Void
 			},
-			checkFunctionType,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
