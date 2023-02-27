@@ -1181,4 +1181,80 @@ func TestCheckEntitlementConformance(t *testing.T) {
 
 		require.IsType(t, &sema.EntitlementConformanceError{}, errs[0])
 	})
+
+	t.Run("multiple entitlements mismatch", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				let x: Bool
+			}
+			entitlement F {
+				let x: UInt8
+			}
+			resource interface R {
+				access(E, F) let x: String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.EntitlementConformanceError{}, errs[0])
+		require.IsType(t, &sema.EntitlementConformanceError{}, errs[1])
+	})
+
+	t.Run("one missing one mismatch", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				let x: Bool
+			}
+			entitlement F {
+			}
+			resource interface R {
+				access(E, F) let x: String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.EntitlementConformanceError{}, errs[0])
+		require.IsType(t, &sema.EntitlementMemberNotDeclaredError{}, errs[1])
+	})
+
+	t.Run("field does not match function", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				let foo: (fun ():Void)
+			}
+			resource interface R {
+				access(E) fun foo()
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.EntitlementConformanceError{}, errs[0])
+	})
+
+	t.Run("subtype invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E {
+				fun foo(): @{I}
+			}
+			resource interface I {
+				access(E) fun foo(): @{I}
+			}
+			resource R {
+				access(E) fun foo(): @R {
+					return <-create R()
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.EntitlementConformanceError{}, errs[0])
+	})
 }

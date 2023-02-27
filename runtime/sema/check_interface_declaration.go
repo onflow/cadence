@@ -522,6 +522,7 @@ func (checker *Checker) checkMemberEntitlementConformance(memberContainer Compos
 	for _, entitlement := range entitlements {
 		entitlementMember, memberPresent := entitlement.Members.Get(member.Identifier.Identifier)
 		if !memberPresent {
+
 			checker.report(&EntitlementMemberNotDeclaredError{
 				EntitlementType: entitlement,
 				MemberContainer: memberContainer,
@@ -530,9 +531,13 @@ func (checker *Checker) checkMemberEntitlementConformance(memberContainer Compos
 			})
 			continue
 		}
+
+		// a member's declaration in a composite or interface must exactly match its declaration in an entitlement
 		if !entitlementMember.TypeAnnotation.Type.Equal(member.TypeAnnotation.Type) ||
+			entitlementMember.DeclarationKind != member.DeclarationKind ||
 			(entitlementMember.VariableKind != ast.VariableKindNotSpecified &&
 				member.VariableKind != entitlementMember.VariableKind) {
+
 			checker.report(&EntitlementConformanceError{
 				EntitlementType: entitlement,
 				MemberContainer: memberContainer,
