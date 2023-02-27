@@ -112,6 +112,7 @@ type Checker struct {
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
+	allowAccountLinking                bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -329,7 +330,31 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	checker.checkTopLevelDeclarationValidity(declarations)
 
+	var rejectAllowAccountLinkingPragma bool
+
 	for _, declaration := range declarations {
+
+		// A pragma declaration #allowAccountLinking determines
+		// if the program is allowed to use the account linking.
+		//
+		// It must appear as a top-level declaration (i.e. not nested in the program),
+		// and must appear before all other declarations (i.e. at the top of the program).
+		//
+		// This is a temporary feature, which is planned to get replaced
+		// by capability controllers, a new Account type, and account entitlements.
+
+		if pragmaDeclaration, isPragma := declaration.(*ast.PragmaDeclaration); isPragma {
+			if IsAllowAccountLinkingPragma(pragmaDeclaration) {
+				if rejectAllowAccountLinkingPragma {
+					checker.reportInvalidNonHeaderPragma(pragmaDeclaration)
+				} else {
+					checker.allowAccountLinking = true
+				}
+				continue
+			}
+		}
+
+		rejectAllowAccountLinkingPragma = true
 
 		// Skip import declarations, they are already handled above
 		if _, isImport := declaration.(*ast.ImportDeclaration); isImport {
@@ -360,6 +385,10 @@ func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Decl
 	}
 
 	for _, declaration := range declarations {
+		if _, ok := declaration.(*ast.PragmaDeclaration); ok {
+			continue
+		}
+
 		isValid := validDeclarationKinds[declaration.DeclarationKind()]
 		if isValid {
 			continue
@@ -2404,11 +2433,11 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 }
 
 func (checker *Checker) isAvailableMember(expressionType Type, identifier string) bool {
-	if !checker.Config.AccountLinkingEnabled &&
-		expressionType == AuthAccountType &&
+	if expressionType == AuthAccountType &&
 		identifier == AuthAccountTypeLinkAccountFunctionName {
 
-		return false
+		return checker.Config.AccountLinkingEnabled &&
+			checker.allowAccountLinking
 	}
 
 	return true

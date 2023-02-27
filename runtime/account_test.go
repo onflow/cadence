@@ -2453,7 +2453,7 @@ func TestRuntimeAccountLink(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("disabled", func(t *testing.T) {
+	t.Run("disabled, missing pragma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2524,7 +2524,78 @@ func TestRuntimeAccountLink(t *testing.T) {
 		assert.ErrorContains(t, err, "value of type `AuthAccount` has no member `linkAccount`")
 	})
 
-	t.Run("enabled", func(t *testing.T) {
+	t.Run("enabled, missing pragma", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime(Config{
+			AtreeValidationEnabled: true,
+			AccountLinkingEnabled:  true,
+		})
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		accountCodes := map[Location][]byte{}
+		var logs []string
+
+		signerAccount := address
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location] = code
+				return nil
+			},
+			log: func(message string) {
+				logs = append(logs, message)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Set up account
+
+		setupTransaction := []byte(`
+          transaction {
+              prepare(acct: AuthAccount) {
+                  acct.linkAccount(/public/foo)
+              }
+          }
+        `)
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: setupTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.Error(t, err)
+
+		assert.ErrorContains(t, err, "value of type `AuthAccount` has no member `linkAccount`")
+	})
+
+	t.Run("enabled, pragma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2575,6 +2646,8 @@ func TestRuntimeAccountLink(t *testing.T) {
 		// Set up account
 
 		setupTransaction := []byte(`
+          #allowAccountLinking
+
           transaction {
               prepare(acct: AuthAccount) {
                   acct.linkAccount(/public/foo)
@@ -2683,6 +2756,8 @@ func TestRuntimeAccountLink(t *testing.T) {
 		// Set up account
 
 		setupTransaction := []byte(`
+          #allowAccountLinking
+
           transaction {
               prepare(acct: AuthAccount) {
                   let cap = acct.linkAccount(/private/foo)!

@@ -85,13 +85,18 @@ type InvalidPragmaError struct {
 
 var _ SemanticError = &InvalidPragmaError{}
 var _ errors.UserError = &InvalidPragmaError{}
+var _ errors.SecondaryError = &InvalidPragmaError{}
 
 func (*InvalidPragmaError) isSemanticError() {}
 
 func (*InvalidPragmaError) IsUserError() {}
 
 func (e *InvalidPragmaError) Error() string {
-	return fmt.Sprintf("invalid pragma %s", e.Message)
+	return "invalid pragma"
+}
+
+func (e *InvalidPragmaError) SecondaryError() string {
+	return e.Message
 }
 
 // CheckerError

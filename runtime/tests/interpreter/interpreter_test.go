@@ -10372,6 +10372,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 				true,
 				fmt.Sprintf(
 					`
+                      #allowAccountLinking
+
                       struct S {}
 
                       fun getRef(): &AnyStruct  {
@@ -10408,6 +10410,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 				true,
 				fmt.Sprintf(
 					`
+                      #allowAccountLinking
+
                       struct S {}
 
                       fun test(): &%[1]s {
@@ -10434,9 +10438,9 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 			name:     "account reference",
 			typeName: "AuthAccount",
 			code: `
-		         let cap = account.linkAccount(/private/test)!
-		         let ref = cap.borrow()!
-		       `,
+		      let cap = account.linkAccount(/private/test)!
+		      let ref = cap.borrow()!
+		    `,
 		},
 	}
 
