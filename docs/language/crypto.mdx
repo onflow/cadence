@@ -261,7 +261,9 @@ The PoP can only be verified using the `PublicKey` method `verifyPoP`.
 
 ### BLS signature aggregation
 
-`cadence•fun aggregateSignatures(_ signatures: [[UInt8]]): [UInt8]?`
+```cadence
+fun aggregateSignatures(_ signatures: [[UInt8]]): [UInt8]?
+```
 
 Aggregates multiple BLS signatures into one. 
 Signatures could be generated from the same or distinct messages, they
@@ -276,7 +278,9 @@ verfiy multiple signatures of the same message.
 
 ### BLS public key aggregation
 
-`cadence•fun aggregatePublicKeys(_ publicKeys: [PublicKey]): PublicKey?`
+```cadence
+fun aggregatePublicKeys(_ publicKeys: [PublicKey]): PublicKey?
+```
 
 Aggregates multiple BLS public keys into one.
 
