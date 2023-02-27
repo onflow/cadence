@@ -1453,4 +1453,33 @@ func TestCheckEntitlementTypeAnnotation(t *testing.T) {
 
 		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
 	})
+
+	t.Run("capability", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+			entitlement E {}
+			resource interface I {
+				let e: Capability<&E>
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[1])
+	})
+
+	t.Run("optional", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+			entitlement E {}
+			resource interface I {
+				let e: E?
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
+	})
 }
