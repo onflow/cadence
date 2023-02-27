@@ -668,23 +668,22 @@ as it is necessary for resources,
 it is also possible to create references to objects in storage:
 This is possible using the `borrow` function of an `AuthAccount`:
 
- 
-    ```cadence
-    fun borrow<T: &Any>(from: StoragePath): T?
-    ```
+```cadence
+fun borrow<T: &Any>(from: StoragePath): T?
+```
 
-    Returns a reference to an object in storage without removing it from storage.
-    If no object is stored under the given path, the function returns `nil`.
-    If there is an object stored, a reference is returned as an optional.
+Returns a reference to an object in storage without removing it from storage.
+If no object is stored under the given path, the function returns `nil`.
+If there is an object stored, a reference is returned as an optional.
 
-    `T` is the type parameter for the object type.
-    A type argument for the parameter must be provided explicitly.
-    The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
-    It must be possible to create the given reference type `T` for the stored /  borrowed object.
-    If it is not, execution will abort with an error.
-    The given type does not necessarily need to be exactly the same as the type of the borrowed object.
+`T` is the type parameter for the object type.
+A type argument for the parameter must be provided explicitly.
+The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
+It must be possible to create the given reference type `T` for the stored /  borrowed object.
+If it is not, execution will abort with an error.
+The given type does not necessarily need to be exactly the same as the type of the borrowed object.
 
-    The path must be a storage path, i.e., only the domain `storage` is allowed.
+The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 ```cadence
 // Declare a resource interface named `HasCount`, that has a field `count`
