@@ -713,101 +713,121 @@ let canadianFlag: Character = "\u{1F1E8}\u{1F1E6}"
 
 Strings have multiple built-in functions you can use:
 
-- `cadence•let length: Int`
+-
+    ```cadence
+    let length: Int
+    ```
 
-  Returns the number of characters in the string as an integer.
+    Returns the number of characters in the string as an integer.
 
-  ```cadence
-  let example = "hello"
+    ```cadence
+    let example = "hello"
 
-  // Find the number of elements of the string.
-  let length = example.length
-  // `length` is `5`
-  ```
+    // Find the number of elements of the string.
+    let length = example.length
+    // `length` is `5`
+    ```
+-
+    ```cadence
+    let utf8: [UInt8]
+    ```
 
-- `cadence•let utf8: [UInt8]`
+    The byte array of the UTF-8 encoding
 
-  The byte array of the UTF-8 encoding
+    ```cadence
+    let flowers = "Flowers \u{1F490}"
+    let bytes = flowers.utf8
+    // `bytes` is `[70, 108, 111, 119, 101, 114, 115, 32, 240, 159, 146, 144]`
+    ```
 
-  ```cadence
-  let flowers = "Flowers \u{1F490}"
-  let bytes = flowers.utf8
-  // `bytes` is `[70, 108, 111, 119, 101, 114, 115, 32, 240, 159, 146, 144]`
-  ```
+-
+    ```cadence
+    fun concat(_ other: String): String
+    ```
 
-- `cadence•fun concat(_ other: String): String`
+    Concatenates the string `other` to the end of the original string,
+    but does not modify the original string.
+    This function creates a new string whose length is the sum of the lengths
+    of the string the function is called on and the string given as a parameter.
 
-  Concatenates the string `other` to the end of the original string,
-  but does not modify the original string.
-  This function creates a new string whose length is the sum of the lengths
-  of the string the function is called on and the string given as a parameter.
+    ```cadence
+    let example = "hello"
+    let new = "world"
 
-  ```cadence
-  let example = "hello"
-  let new = "world"
+    // Concatenate the new string onto the example string and return the new string.
+    let helloWorld = example.concat(new)
+    // `helloWorld` is now `"helloworld"`
+    ```
 
-  // Concatenate the new string onto the example string and return the new string.
-  let helloWorld = example.concat(new)
-  // `helloWorld` is now `"helloworld"`
-  ```
+-
+    ```cadence
+    fun slice(from: Int, upTo: Int): String
+    ```
 
-- `cadence•fun slice(from: Int, upTo: Int): String`
+    Returns a string slice of the characters
+    in the given string from start index `from` up to,
+    but not including, the end index `upTo`.
+    This function creates a new string whose length is `upTo - from`.
+    It does not modify the original string.
+    If either of the parameters are out of the bounds of the string,
+    or the indices are invalid (`from > upTo`), then the function will fail.
 
-  Returns a string slice of the characters
-  in the given string from start index `from` up to,
-  but not including, the end index `upTo`.
-  This function creates a new string whose length is `upTo - from`.
-  It does not modify the original string.
-  If either of the parameters are out of the bounds of the string,
-  or the indices are invalid (`from > upTo`), then the function will fail.
+    ```cadence
+    let example = "helloworld"
 
-  ```cadence
-  let example = "helloworld"
+    // Create a new slice of part of the original string.
+    let slice = example.slice(from: 3, upTo: 6)
+    // `slice` is now `"low"`
 
-  // Create a new slice of part of the original string.
-  let slice = example.slice(from: 3, upTo: 6)
-  // `slice` is now `"low"`
+    // Run-time error: Out of bounds index, the program aborts.
+    let outOfBounds = example.slice(from: 2, upTo: 10)
 
-  // Run-time error: Out of bounds index, the program aborts.
-  let outOfBounds = example.slice(from: 2, upTo: 10)
+    // Run-time error: Invalid indices, the program aborts.
+    let invalidIndices = example.slice(from: 2, upTo: 1)
+    ```
+-
+    ```cadence
+    fun decodeHex(): [UInt8]
+    ```
 
-  // Run-time error: Invalid indices, the program aborts.
-  let invalidIndices = example.slice(from: 2, upTo: 1)
-  ```
+    Returns an array containing the bytes represented by the given hexadecimal string.
 
-- `cadence•fun decodeHex(): [UInt8]`
+    The given string must only contain hexadecimal characters and must have an even length.
+    If the string is malformed, the program aborts
 
-  Returns an array containing the bytes represented by the given hexadecimal string.
+    ```cadence
+    let example = "436164656e636521"
 
-  The given string must only contain hexadecimal characters and must have an even length.
-  If the string is malformed, the program aborts
+    example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+    ```
 
-  ```cadence
-  let example = "436164656e636521"
+-
+    ```cadence
+    fun toLower(): String
+    ```
 
-  example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
-  ```
+    Returns a string where all upper case letters are replaced with lowercase characters
 
-- `cadence•fun toLower(): String`
-  Returns a string where all upper case letters are replaced with lowercase characters
+    ```cadence
+    let example = "Flowers"
 
-  ```cadence
-  let example = "Flowers"
-
-  example.toLower()  // is `flowers`
-  ```
+    example.toLower()  // is `flowers`
+    ```
 
 The `String` type also provides the following functions:
 
-- `cadence•fun String.encodeHex(_ data: [UInt8]): String`
+-
+    ```cadence
+    fun String.encodeHex(_ data: [UInt8]): String
+    ```
 
-  Returns a hexadecimal string for the given byte array
+    Returns a hexadecimal string for the given byte array
 
-  ```cadence
-  let data = [1 as UInt8, 2, 3, 0xCA, 0xDE]
+    ```cadence
+    let data = [1 as UInt8, 2, 3, 0xCA, 0xDE]
 
-  String.encodeHex(data)  // is `"010203cade"`
-  ```
+    String.encodeHex(data)  // is `"010203cade"`
+    ```
 
 `String`s are also indexable, returning a `Character` value.
 
@@ -816,35 +836,44 @@ let str = "abc"
 let c = str[0] // is the Character "a"
 ```
 
-- `cadence•fun String.fromUTF8(_ input: [UInt8]): String?`
+-
+    ```cadence
+    fun String.fromUTF8(_ input: [UInt8]): String?
+    ```
 
-  Attempts to convert a UTF-8 encoded byte array into a `String`. This function returns `nil` if the byte array contains invalid UTF-8,
-  such as incomplete codepoint sequences or undefined graphemes.
+    Attempts to convert a UTF-8 encoded byte array into a `String`. This function returns `nil` if the byte array contains invalid UTF-8,
+    such as incomplete codepoint sequences or undefined graphemes.
 
-  For a given string `s`, `String.fromUTF8(s.utf8)` is equivalent to wrapping `s` up in an [optional](#optionals).
+    For a given string `s`, `String.fromUTF8(s.utf8)` is equivalent to wrapping `s` up in an [optional](#optionals).
 
 ### Character Fields and Functions
 
 `Character` values can be converted into `String` values using the `toString` function:
 
-- `cadence•fun toString(): String`
+-
+    ```cadence
+    fun toString(): String`
+    ```
 
-  Returns the string representation of the character.
+    Returns the string representation of the character.
 
-  ```cadence
-  let c: Character = "x"
+    ```cadence
+    let c: Character = "x"
 
-  c.toString()  // is "x"
-  ```
+    c.toString()  // is "x"
+    ```
 
-- `cadence•fun String.fromCharacters(_ characters: [Character]): String`
+-
+    ```cadence
+    fun String.fromCharacters(_ characters: [Character]): String
+    ```
 
-  Builds a new `String` value from an array of `Character`s. Because `String`s are immutable, this operation makes a copy of the input array.
+    Builds a new `String` value from an array of `Character`s. Because `String`s are immutable, this operation makes a copy of the input array.
 
-  ```cadence
-  let rawUwU: [Character] = ["U", "w", "U"]
-  let uwu: String = String.fromCharacters(rawUwU) // "UwU"
-  ```
+    ```cadence
+    let rawUwU: [Character] = ["U", "w", "U"]
+    let uwu: String = String.fromCharacters(rawUwU) // "UwU"
+    ```
 
 ## Arrays
 
@@ -977,259 +1006,293 @@ that can be used to get information about and manipulate the contents of the arr
 The field `length`, and the functions `concat`, and `contains`
 are available for both variable-sized and fixed-sized or variable-sized arrays.
 
-- `cadence•let length: Int`
+-
+    ```cadence
+    let length: Int
+    ```
 
-  The number of elements in the array.
+    The number of elements in the array.
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31, 12]
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23, 31, 12]
 
-  // Find the number of elements of the array.
-  let length = numbers.length
+    // Find the number of elements of the array.
+    let length = numbers.length
 
-  // `length` is `4`
-  ```
+    // `length` is `4`
+    ```
 
-- `cadence•fun concat(_ array: T): T`
 
-  Concatenates the parameter `array` to the end
-  of the array the function is called on,
-  but does not modify that array.
+-
+    ```cadence
+    fun concat(_ array: T): T
+    ```
 
-  Both arrays must be the same type `T`.
+    Concatenates the parameter `array` to the end
+    of the array the function is called on,
+    but does not modify that array.
 
-  This function creates a new array whose length is the sum of the length of the array
-  the function is called on and the length of the array given as the parameter.
+    Both arrays must be the same type `T`.
 
-  ```cadence
-  // Declare two arrays of integers.
-  let numbers = [42, 23, 31, 12]
-  let moreNumbers = [11, 27]
+    This function creates a new array whose length is the sum of the length of the array
+    the function is called on and the length of the array given as the parameter.
 
-  // Concatenate the array `moreNumbers` to the array `numbers`
-  // and declare a new variable for the result.
-  //
-  let allNumbers = numbers.concat(moreNumbers)
+    ```cadence
+    // Declare two arrays of integers.
+    let numbers = [42, 23, 31, 12]
+    let moreNumbers = [11, 27]
 
-  // `allNumbers` is `[42, 23, 31, 12, 11, 27]`
-  // `numbers` is still `[42, 23, 31, 12]`
-  // `moreNumbers` is still `[11, 27]`
-  ```
+    // Concatenate the array `moreNumbers` to the array `numbers`
+    // and declare a new variable for the result.
+    //
+    let allNumbers = numbers.concat(moreNumbers)
 
-- `cadence•fun contains(_ element: T): Bool`
+    // `allNumbers` is `[42, 23, 31, 12, 11, 27]`
+    // `numbers` is still `[42, 23, 31, 12]`
+    // `moreNumbers` is still `[11, 27]`
+    ```
 
-  Returns true if the given element of type `T` is in the array.
+-
+    ```cadence
+    fun contains(_ element: T): Bool
+    ```
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31, 12]
+    Returns true if the given element of type `T` is in the array.
 
-  // Check if the array contains 11.
-  let containsEleven = numbers.contains(11)
-  // `containsEleven` is `false`
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23, 31, 12]
 
-  // Check if the array contains 12.
-  let containsTwelve = numbers.contains(12)
-  // `containsTwelve` is `true`
+    // Check if the array contains 11.
+    let containsEleven = numbers.contains(11)
+    // `containsEleven` is `false`
 
-  // Invalid: Check if the array contains the string "Kitty".
-  // This results in a type error, as the array only contains integers.
-  //
-  let containsKitty = numbers.contains("Kitty")
-  ```
+    // Check if the array contains 12.
+    let containsTwelve = numbers.contains(12)
+    // `containsTwelve` is `true`
 
-- `cadence•fun firstIndex(of: T): Int?`
-  Returns the index of the first element matching the given object in the array, nil if no match.
-  Available if `T` is not resource-kinded and equatable.
+    // Invalid: Check if the array contains the string "Kitty".
+    // This results in a type error, as the array only contains integers.
+    //
+    let containsKitty = numbers.contains("Kitty")
+    ```
 
-```cadence
- // Declare an array of integers.
- let numbers = [42, 23, 31, 12]
+-
+    ```cadence
+    fun firstIndex(of: T): Int?
+    ```
 
- // Check if the array contains 31
- let index = numbers.firstIndex(of: 31)
- // `index` is 2
+    Returns the index of the first element matching the given object in the array, nil if no match.
+    Available if `T` is not resource-kinded and equatable.
 
- // Check if the array contains 22
- let index = numbers.firstIndex(of: 22)
- // `index` is nil
-```
+    ```cadence
+     // Declare an array of integers.
+     let numbers = [42, 23, 31, 12]
 
-- `cadence•fun slice(from: Int, upTo: Int): [T]`
+     // Check if the array contains 31
+     let index = numbers.firstIndex(of: 31)
+     // `index` is 2
 
-  Returns an array slice of the elements
-  in the given array from start index `from` up to,
-  but not including, the end index `upTo`.
-  This function creates a new array whose length is `upTo - from`.
-  It does not modify the original array.
-  If either of the parameters are out of the bounds of the array,
-  or the indices are invalid (`from > upTo`), then the function will fail.
+     // Check if the array contains 22
+     let index = numbers.firstIndex(of: 22)
+     // `index` is nil
+    ```
 
-  ```cadence
-  let example = [1, 2, 3, 4]
+-
+    ```cadence
+    fun slice(from: Int, upTo: Int): [T]
+    ```
 
-  // Create a new slice of part of the original array.
-  let slice = example.slice(from: 1, upTo: 3)
-  // `slice` is now `[2, 3]`
+    Returns an array slice of the elements
+    in the given array from start index `from` up to,
+    but not including, the end index `upTo`.
+    This function creates a new array whose length is `upTo - from`.
+    It does not modify the original array.
+    If either of the parameters are out of the bounds of the array,
+    or the indices are invalid (`from > upTo`), then the function will fail.
 
-  // Run-time error: Out of bounds index, the program aborts.
-  let outOfBounds = example.slice(from: 2, upTo: 10)
+    ```cadence
+    let example = [1, 2, 3, 4]
 
-  // Run-time error: Invalid indices, the program aborts.
-  let invalidIndices = example.slice(from: 2, upTo: 1)
-  ```
+    // Create a new slice of part of the original array.
+    let slice = example.slice(from: 1, upTo: 3)
+    // `slice` is now `[2, 3]`
+
+    // Run-time error: Out of bounds index, the program aborts.
+    let outOfBounds = example.slice(from: 2, upTo: 10)
+
+    // Run-time error: Invalid indices, the program aborts.
+    let invalidIndices = example.slice(from: 2, upTo: 1)
+    ```
 
 #### Variable-size Array Functions
 
 The following functions can only be used on variable-sized arrays.
 It is invalid to use one of these functions on a fixed-sized array.
 
-- `cadence•fun append(_ element: T): Void`
+-
+    ```cadence
+    fun append(_ element: T): Void
+    ```
 
-  Adds the new element `element` of type `T` to the end of the array.
+    Adds the new element `element` of type `T` to the end of the array.
 
-  The new element must be the same type as all the other elements in the array.
+    The new element must be the same type as all the other elements in the array.
 
-  This function [mutates](access-control) the array.
+    This function [mutates](access-control) the array.
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31, 12]
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23, 31, 12]
 
-  // Add a new element to the array.
-  numbers.append(20)
-  // `numbers` is now `[42, 23, 31, 12, 20]`
+    // Add a new element to the array.
+    numbers.append(20)
+    // `numbers` is now `[42, 23, 31, 12, 20]`
 
-  // Invalid: The parameter has the wrong type `String`.
-  numbers.append("SneakyString")
-  ```
+    // Invalid: The parameter has the wrong type `String`.
+    numbers.append("SneakyString")
+    ```
 
-- `cadence•fun appendAll(_ array: T): Void`
+-
+    ```cadence
+    fun appendAll(_ array: T): Void
+    ```
 
-  Adds all the elements from `array` to the end of the array
-  the function is called on.
+    Adds all the elements from `array` to the end of the array
+    the function is called on.
 
-  Both arrays must be the same type `T`.
+    Both arrays must be the same type `T`.
 
-  This function [mutates](access-control) the array.
+    This function [mutates](access-control) the array.
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23]
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23]
 
-  // Add new elements to the array.
-  numbers.appendAll([31, 12, 20])
-  // `numbers` is now `[42, 23, 31, 12, 20]`
+    // Add new elements to the array.
+    numbers.appendAll([31, 12, 20])
+    // `numbers` is now `[42, 23, 31, 12, 20]`
 
-  // Invalid: The parameter has the wrong type `[String]`.
-  numbers.appendAll(["Sneaky", "String"])
-  ```
+    // Invalid: The parameter has the wrong type `[String]`.
+    numbers.appendAll(["Sneaky", "String"])
+    ```
 
-- `cadence•fun insert(at index: Int, _ element: T): Void`
+-
+    ```cadence
+    fun insert(at index: Int, _ element: T): Void
+    ```
 
-  Inserts the new element `element` of type `T`
-  at the given `index` of the array.
+    Inserts the new element `element` of type `T`
+    at the given `index` of the array.
 
-  The new element must be of the same type as the other elements in the array.
+    The new element must be of the same type as the other elements in the array.
 
-  The `index` must be within the bounds of the array.
-  If the index is outside the bounds, the program aborts.
+    The `index` must be within the bounds of the array.
+    If the index is outside the bounds, the program aborts.
 
-  The existing element at the supplied index is not overwritten.
+    The existing element at the supplied index is not overwritten.
 
-  All the elements after the new inserted element
-  are shifted to the right by one.
+    All the elements after the new inserted element
+    are shifted to the right by one.
 
-  This function [mutates](access-control) the array.
+    This function [mutates](access-control) the array.
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31, 12]
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23, 31, 12]
 
-  // Insert a new element at position 1 of the array.
-  numbers.insert(at: 1, 20)
-  // `numbers` is now `[42, 20, 23, 31, 12]`
+    // Insert a new element at position 1 of the array.
+    numbers.insert(at: 1, 20)
+    // `numbers` is now `[42, 20, 23, 31, 12]`
 
-  // Run-time error: Out of bounds index, the program aborts.
-  numbers.insert(at: 12, 39)
-  ```
+    // Run-time error: Out of bounds index, the program aborts.
+    numbers.insert(at: 12, 39)
+    ```
+-
+    ```cadence
+    fun remove(at index: Int): T
+    ```
 
-- `cadence•fun remove(at index: Int): T`
+    Removes the element at the given `index` from the array and returns it.
 
-  Removes the element at the given `index` from the array and returns it.
+    The `index` must be within the bounds of the array.
+    If the index is outside the bounds, the program aborts.
 
-  The `index` must be within the bounds of the array.
-  If the index is outside the bounds, the program aborts.
+    This function [mutates](access-control) the array.
 
-  This function [mutates](access-control) the array.
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23, 31]
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31]
+    // Remove element at position 1 of the array.
+    let twentyThree = numbers.remove(at: 1)
+    // `numbers` is now `[42, 31]`
+    // `twentyThree` is `23`
 
-  // Remove element at position 1 of the array.
-  let twentyThree = numbers.remove(at: 1)
-  // `numbers` is now `[42, 31]`
-  // `twentyThree` is `23`
+    // Run-time error: Out of bounds index, the program aborts.
+    numbers.remove(at: 19)
+    ```
 
-  // Run-time error: Out of bounds index, the program aborts.
-  numbers.remove(at: 19)
-  ```
+-
+    ```cadence
+    fun removeFirst(): T
+    ```
 
-- `cadence•fun removeFirst(): T`
+    Removes the first element from the array and returns it.
 
-  Removes the first element from the array and returns it.
+    The array must not be empty.
+    If the array is empty, the program aborts.
 
-  The array must not be empty.
-  If the array is empty, the program aborts.
+    This function [mutates](access-control) the array.
 
-  This function [mutates](access-control) the array.
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23]
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23]
+    // Remove the first element of the array.
+    let fortytwo = numbers.removeFirst()
+    // `numbers` is now `[23]`
+    // `fortywo` is `42`
 
-  // Remove the first element of the array.
-  let fortytwo = numbers.removeFirst()
-  // `numbers` is now `[23]`
-  // `fortywo` is `42`
+    // Remove the first element of the array.
+    let twentyThree = numbers.removeFirst()
+    // `numbers` is now `[]`
+    // `twentyThree` is `23`
 
-  // Remove the first element of the array.
-  let twentyThree = numbers.removeFirst()
-  // `numbers` is now `[]`
-  // `twentyThree` is `23`
+    // Run-time error: The array is empty, the program aborts.
+    numbers.removeFirst()
+    ```
 
-  // Run-time error: The array is empty, the program aborts.
-  numbers.removeFirst()
-  ```
+-
+    ```cadence
+    fun removeLast(): T
+    ```
 
-- `cadence•fun removeLast(): T`
+    Removes the last element from the array and returns it.
 
-  Removes the last element from the array and returns it.
+    The array must not be empty.
+    If the array is empty, the program aborts.
 
-  The array must not be empty.
-  If the array is empty, the program aborts.
+    This function [mutates](access-control) the array.
 
-  This function [mutates](access-control) the array.
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23]
 
-  ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23]
+    // Remove the last element of the array.
+    let twentyThree = numbers.removeLast()
+    // `numbers` is now `[42]`
+    // `twentyThree` is `23`
 
-  // Remove the last element of the array.
-  let twentyThree = numbers.removeLast()
-  // `numbers` is now `[42]`
-  // `twentyThree` is `23`
+    // Remove the last element of the array.
+    let fortyTwo = numbers.removeLast()
+    // `numbers` is now `[]`
+    // `fortyTwo` is `42`
 
-  // Remove the last element of the array.
-  let fortyTwo = numbers.removeLast()
-  // `numbers` is now `[]`
-  // `fortyTwo` is `42`
-
-  // Run-time error: The array is empty, the program aborts.
-  numbers.removeLast()
-  ```
+    // Run-time error: The array is empty, the program aborts.
+    numbers.removeLast()
+    ```
 
 ## Dictionaries
 
@@ -1365,161 +1428,184 @@ booleans[0] = true
 
 ### Dictionary Fields and Functions
 
-- `cadence•let length: Int`
 
-  The number of entries in the dictionary.
+-
+    ```cadence
+    let length: Int
+    ```
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+    The number of entries in the dictionary.
 
-  // Find the number of entries of the dictionary.
-  let length = numbers.length
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"fortyTwo": 42, "twentyThree": 23}
 
-  // `length` is `2`
-  ```
+    // Find the number of entries of the dictionary.
+    let length = numbers.length
 
-- `cadence•fun insert(key: K, _ value: V): V?`
+    // `length` is `2`
+    ```
 
-  Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
-  
-  The inserted key must have the same type as the dictionary's key type, and the inserted value must have the same type as the dictionary's value type.
+-
+    ```cadence
+    fun insert(key: K, _ value: V): V?
+    ```
 
-  Returns the previous value as an optional
-  if the dictionary contained the key,
-  otherwise `nil`.
-  
-  Updates the value if the dictionary already contained the key.
+    Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
 
-  This function [mutates](access-control) the dictionary.
+    The inserted key must have the same type as the dictionary's key type, and the inserted value must have the same type as the dictionary's value type.
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"twentyThree": 23}
+    Returns the previous value as an optional
+    if the dictionary contained the key,
+    otherwise `nil`.
 
-  // Insert the key `"fortyTwo"` with the value `42` into the dictionary.
-  // The key did not previously exist in the dictionary,
-  // so the result is `nil`
-  //
-  let old = numbers.insert(key: "fortyTwo", 42)
+    Updates the value if the dictionary already contained the key.
 
-  // `old` is `nil`
-  // `numbers` is `{"twentyThree": 23, "fortyTwo": 42}`
-  ```
+    This function [mutates](access-control) the dictionary.
 
-- `cadence•fun remove(key: K): V?`
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"twentyThree": 23}
 
-  Removes the value for the given `key` of type `K` from the dictionary.
+    // Insert the key `"fortyTwo"` with the value `42` into the dictionary.
+    // The key did not previously exist in the dictionary,
+    // so the result is `nil`
+    //
+    let old = numbers.insert(key: "fortyTwo", 42)
 
-  Returns the value of type `V` as an optional
-  if the dictionary contained the key,
-  otherwise `nil`.
+    // `old` is `nil`
+    // `numbers` is `{"twentyThree": 23, "fortyTwo": 42}`
+    ```
 
-  This function [mutates](access-control) the dictionary.
+-
+    ```cadence
+    fun remove(key: K): V?
+    ```
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+    Removes the value for the given `key` of type `K` from the dictionary.
 
-  // Remove the key `"fortyTwo"` from the dictionary.
-  // The key exists in the dictionary,
-  // so the value associated with the key is returned.
-  //
-  let fortyTwo = numbers.remove(key: "fortyTwo")
+    Returns the value of type `V` as an optional
+    if the dictionary contained the key,
+    otherwise `nil`.
 
-  // `fortyTwo` is `42`
-  // `numbers` is `{"twentyThree": 23}`
+    This function [mutates](access-control) the dictionary.
 
-  // Remove the key `"oneHundred"` from the dictionary.
-  // The key does not exist in the dictionary, so `nil` is returned.
-  //
-  let oneHundred = numbers.remove(key: "oneHundred")
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"fortyTwo": 42, "twentyThree": 23}
 
-  // `oneHundred` is `nil`
-  // `numbers` is `{"twentyThree": 23}`
-  ```
+    // Remove the key `"fortyTwo"` from the dictionary.
+    // The key exists in the dictionary,
+    // so the value associated with the key is returned.
+    //
+    let fortyTwo = numbers.remove(key: "fortyTwo")
 
-- `cadence•let keys: [K]`
+    // `fortyTwo` is `42`
+    // `numbers` is `{"twentyThree": 23}`
 
-  Returns an array of the keys of type `K` in the dictionary. This does not
-  modify the dictionary, just returns a copy of the keys as an array.
-  If the dictionary is empty, this returns an empty array. The ordering of the keys is undefined.
+    // Remove the key `"oneHundred"` from the dictionary.
+    // The key does not exist in the dictionary, so `nil` is returned.
+    //
+    let oneHundred = numbers.remove(key: "oneHundred")
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+    // `oneHundred` is `nil`
+    // `numbers` is `{"twentyThree": 23}`
+    ```
 
-  // Find the keys of the dictionary.
-  let keys = numbers.keys
+-
+    ```cadence
+    let keys: [K]
+    ```
 
-  // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
-  ```
+    Returns an array of the keys of type `K` in the dictionary. This does not
+    modify the dictionary, just returns a copy of the keys as an array.
+    If the dictionary is empty, this returns an empty array. The ordering of the keys is undefined.
 
-- `cadence•let values: [V]`
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"fortyTwo": 42, "twentyThree": 23}
 
-  Returns an array of the values of type `V` in the dictionary. This does not
-  modify the dictionary, just returns a copy of the values as an array.
-  If the dictionary is empty, this returns an empty array.
+    // Find the keys of the dictionary.
+    let keys = numbers.keys
 
-  This field is not available if `V` is a resource type.
+    // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
+    ```
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+-
+    ```cadence
+    let values: [V]
+    ```
 
-  // Find the values of the dictionary.
-  let values = numbers.values
+    Returns an array of the values of type `V` in the dictionary. This does not
+    modify the dictionary, just returns a copy of the values as an array.
+    If the dictionary is empty, this returns an empty array.
 
-  // `values` has type [Int] and is `[42, 23]`
-  ```
+    This field is not available if `V` is a resource type.
 
-- `cadence•fun containsKey(key: K): Bool`
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"fortyTwo": 42, "twentyThree": 23}
 
-  Returns true if the given key of type `K` is in the dictionary.
+    // Find the values of the dictionary.
+    let values = numbers.values
 
-  ```cadence
-  // Declare a dictionary mapping strings to integers.
-  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+    // `values` has type [Int] and is `[42, 23]`
+    ```
 
-  // Check if the dictionary contains the key "twentyFive".
-  let containsKeyTwentyFive = numbers.containsKey("twentyFive")
-  // `containsKeyTwentyFive` is `false`
+-
+    ```cadence
+    fun containsKey(key: K): Bool
+    ```
 
-  // Check if the dictionary contains the key "fortyTwo".
-  let containsKeyFortyTwo = numbers.containsKey("fortyTwo")
-  // `containsKeyFortyTwo` is `true`
+    Returns true if the given key of type `K` is in the dictionary.
 
-  // Invalid: Check if the dictionary contains the key 42.
-  // This results in a type error, as the key type of the dictionary is `String`.
-  //
-  let containsKey42 = numbers.containsKey(42)
-  ```
-- `cadence•fun forEachKey(_ function: ((K): Bool)): Void`
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"fortyTwo": 42, "twentyThree": 23}
 
-  Iterate through all the keys in the dictionary, exiting early if the passed function returns false.
-  This is more efficient than calling `.keys` and iterating over the resulting array, since an intermediate allocation is avoided.
-  The order of key iteration is undefined, similar to `.keys`.
+    // Check if the dictionary contains the key "twentyFive".
+    let containsKeyTwentyFive = numbers.containsKey("twentyFive")
+    // `containsKeyTwentyFive` is `false`
 
-  ```cadence
-  // Take in a targetKey to look for, and a dictionary to iterate through.
-  fun myContainsKey(targetKey: String, dictionary: {String: Int}) {
-    // Declare an accumulator that we'll capture inside a closure.
-    var found = false
+    // Check if the dictionary contains the key "fortyTwo".
+    let containsKeyFortyTwo = numbers.containsKey("fortyTwo")
+    // `containsKeyFortyTwo` is `true`
 
-    // At each step, `key` will be bound to another key from `dictionary`.
-    dictionary.forEachKey(fun (key: String): Bool {
-      found = key == targetKey
+    // Invalid: Check if the dictionary contains the key 42.
+    // This results in a type error, as the key type of the dictionary is `String`.
+    //
+    let containsKey42 = numbers.containsKey(42)
+    ```
 
-      // The returned boolean value, signals whether to continue iterating. 
-      // This allows for control flow during the iteration process:
-      //  true = `continue`
-      //  false = `break`
-      return !found
-    })
+-
+    ```cadence
+    fun forEachKey(_ function: ((K): Bool)): Void
+    ```
 
-    return found
-  }
-  ```
+    Iterate through all the keys in the dictionary, exiting early if the passed function returns false.
+    This is more efficient than calling `.keys` and iterating over the resulting array, since an intermediate allocation is avoided.
+    The order of key iteration is undefined, similar to `.keys`.
+
+    ```cadence
+    // Take in a targetKey to look for, and a dictionary to iterate through.
+    fun myContainsKey(targetKey: String, dictionary: {String: Int}) {
+      // Declare an accumulator that we'll capture inside a closure.
+      var found = false
+
+      // At each step, `key` will be bound to another key from `dictionary`.
+      dictionary.forEachKey(fun (key: String): Bool {
+        found = key == targetKey
+
+        // The returned boolean value, signals whether to continue iterating. 
+        // This allows for control flow during the iteration process:
+        //  true = `continue`
+        //  false = `break`
+        return !found
+      })
+
+      return found
+    }
+    ```
 
 
 ### Dictionary Keys
