@@ -718,23 +718,23 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonSimpleType{
 			Kind: typ.ID(),
 		}
-	case cadence.OptionalType:
+	case *cadence.OptionalType:
 		return jsonUnaryType{
 			Kind: "Optional",
 			Type: prepareType(typ.Type, results),
 		}
-	case cadence.VariableSizedArrayType:
+	case *cadence.VariableSizedArrayType:
 		return jsonUnaryType{
 			Kind: "VariableSizedArray",
 			Type: prepareType(typ.ElementType, results),
 		}
-	case cadence.ConstantSizedArrayType:
+	case *cadence.ConstantSizedArrayType:
 		return jsonConstantSizedArrayType{
 			Kind: "ConstantSizedArray",
 			Type: prepareType(typ.ElementType, results),
 			Size: typ.Size,
 		}
-	case cadence.DictionaryType:
+	case *cadence.DictionaryType:
 		return jsonDictionaryType{
 			Kind:      "Dictionary",
 			KeyType:   prepareType(typ.KeyType, results),
@@ -803,7 +803,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Return:     prepareType(typ.ReturnType, results),
 			Parameters: prepareParameters(typ.Parameters, results),
 		}
-	case cadence.ReferenceType:
+	case *cadence.ReferenceType:
 		return jsonReferenceType{
 			Kind:       "Reference",
 			Authorized: typ.Authorized,
@@ -820,7 +820,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Type:         prepareType(typ.Type, results),
 			Restrictions: restrictions,
 		}
-	case cadence.CapabilityType:
+	case *cadence.CapabilityType:
 		return jsonUnaryType{
 			Kind: "Capability",
 			Type: prepareType(typ.BorrowType, results),

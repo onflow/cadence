@@ -224,6 +224,7 @@ func newPublicKeyVerifySignatureFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.PublicKeyVerifyFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -294,7 +295,6 @@ func newPublicKeyVerifySignatureFunction(
 
 			return interpreter.AsBoolValue(valid)
 		},
-		sema.PublicKeyVerifyFunctionType,
 	)
 }
 
@@ -309,6 +309,7 @@ func newPublicKeyVerifyPoPFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.PublicKeyVerifyPoPFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -346,6 +347,5 @@ func newPublicKeyVerifyPoPFunction(
 			}
 			return interpreter.AsBoolValue(valid)
 		},
-		sema.PublicKeyVerifyPoPFunctionType,
 	)
 }

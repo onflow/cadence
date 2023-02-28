@@ -264,6 +264,7 @@ func NewPublicAccountValue(
 	var keys Value
 	var contracts Value
 	var forEachPublicFunction *HostFunctionValue
+	var getLinkTargetFunction *HostFunctionValue
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -305,7 +306,6 @@ func NewPublicAccountValue(
 			return storageCapacityGet(inter)
 
 		case sema.PublicAccountTypeGetTargetLinkFieldName:
-			var getLinkTargetFunction *HostFunctionValue
 			if getLinkTargetFunction == nil {
 				getLinkTargetFunction = inter.accountGetLinkTargetFunction(address)
 			}

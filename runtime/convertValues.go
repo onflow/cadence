@@ -578,7 +578,7 @@ func exportDictionaryValue(
 		return cadence.Dictionary{}, err
 	}
 
-	exportType := ExportType(v.SemaType(inter), map[sema.TypeID]cadence.Type{}).(cadence.DictionaryType)
+	exportType := ExportType(v.SemaType(inter), map[sema.TypeID]cadence.Type{}).(*cadence.DictionaryType)
 
 	return dictionary.WithType(exportType), err
 }
@@ -1067,7 +1067,7 @@ func (i valueImporter) importStorageCapability(
 	*interpreter.StorageCapabilityValue,
 	error,
 ) {
-	_, ok := borrowType.(cadence.ReferenceType)
+	_, ok := borrowType.(*cadence.ReferenceType)
 	if !ok {
 		return nil, errors.NewDefaultUserError(
 			"cannot import capability: expected reference, got '%s'",

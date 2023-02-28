@@ -444,7 +444,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 					Identifier: "foobarrington",
 				},
 				Address: cadence.Address{},
-				BorrowType: cadence.ReferenceType{
+				BorrowType: &cadence.ReferenceType{
 					Authorized: true,
 					Type:       cadence.AnyType{},
 				},
@@ -460,7 +460,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 					Identifier: "foobarrington",
 				},
 				Address: cadence.Address{},
-				BorrowType: cadence.ReferenceType{
+				BorrowType: &cadence.ReferenceType{
 					Authorized: true,
 					Type:       cadence.AnyType{},
 				},
@@ -476,7 +476,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 					Identifier: "foobarrington",
 				},
 				Address: cadence.Address{},
-				BorrowType: cadence.ReferenceType{
+				BorrowType: &cadence.ReferenceType{
 					Authorized: true,
 					Type:       cadence.AnyType{},
 				},

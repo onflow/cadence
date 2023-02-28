@@ -1007,7 +1007,13 @@ var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType).(*cadence.En
 var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType).(*cadence.EnumType)
 
 func ExportedBuiltinType(internalType sema.Type) cadence.Type {
-	return ExportType(internalType, map[sema.TypeID]cadence.Type{})
+	typ := ExportType(internalType, map[sema.TypeID]cadence.Type{})
+
+	// These types are re-used across tests.
+	// Hence, cache the ID always to avoid any non-determinism.
+	typ = cadence.TypeWithCachedTypeID(typ)
+
+	return typ
 }
 
 func newBytesValue(bytes []byte) cadence.Array {
@@ -1016,7 +1022,7 @@ func newBytesValue(bytes []byte) cadence.Array {
 		result[index] = cadence.NewUInt8(value)
 	}
 	return cadence.NewArray(result).
-		WithType(cadence.VariableSizedArrayType{
+		WithType(&cadence.VariableSizedArrayType{
 			ElementType: cadence.UInt8Type{},
 		})
 }
@@ -1041,7 +1047,7 @@ func accountKeyExportedValue(
 		panic(err)
 	}
 
-	return cadence.Struct{
+	value := cadence.Struct{
 		StructType: AccountKeyType,
 		Fields: []cadence.Value{
 			// Key index
@@ -1071,6 +1077,8 @@ func accountKeyExportedValue(
 			cadence.NewBool(isRevoked),
 		},
 	}
+
+	return cadence.ValueWithCachedTypeID(value)
 }
 
 func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRuntimeInterface {
@@ -1232,6 +1240,11 @@ func (test accountKeyTestCase) executeScript(
 			Location:  common.ScriptLocation{},
 		},
 	)
+
+	if err == nil {
+		value = cadence.ValueWithCachedTypeID(value)
+	}
+
 	return value, err
 }
 
@@ -1258,7 +1271,7 @@ func TestRuntimePublicKey(t *testing.T) {
 	executeScript := func(code string, runtimeInterface Interface) (cadence.Value, error) {
 		rt := newTestInterpreterRuntime()
 
-		return rt.ExecuteScript(
+		value, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(code),
 			},
@@ -1267,6 +1280,12 @@ func TestRuntimePublicKey(t *testing.T) {
 				Location:  common.ScriptLocation{},
 			},
 		)
+
+		if err == nil {
+			value = cadence.ValueWithCachedTypeID(value)
+		}
+
+		return value, err
 	}
 
 	t.Run("Constructor", func(t *testing.T) {
@@ -1304,6 +1323,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			},
 		}
 
+		expected = cadence.ValueWithCachedTypeID(expected)
 		assert.Equal(t, expected, value)
 	})
 
@@ -1597,6 +1617,8 @@ func TestRuntimePublicKey(t *testing.T) {
 				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
 			},
 		}
+
+		expected = cadence.ValueWithCachedTypeID(expected)
 		assert.Equal(t, expected, value)
 	})
 
@@ -2103,7 +2125,7 @@ func TestPublicAccountContracts(t *testing.T) {
 					cadence.UInt8(1),
 					cadence.UInt8(2),
 				},
-			}.WithType(cadence.VariableSizedArrayType{
+			}.WithType(&cadence.VariableSizedArrayType{
 				ElementType: cadence.UInt8Type{},
 			}),
 			array.Values[1],
