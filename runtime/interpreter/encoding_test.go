@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"bytes"
 	"math"
 	"math/big"
 	"strings"
@@ -80,7 +79,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		}
 
 		var err error
-		encoded, err = encode(test.storable, CBOREncMode)
+		encoded, err = atree.Encode(test.storable, CBOREncMode)
 		require.NoError(t, err)
 
 		if test.encoded != nil {
@@ -123,23 +122,6 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 			test.check(decodedValue)
 		}
 	}
-}
-
-func encode(slab atree.Storable, encMode cbor.EncMode) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := atree.NewEncoder(&buf, encMode)
-
-	err := slab.Encode(enc)
-	if err != nil {
-		return nil, err
-	}
-
-	err = enc.CBOR.Flush()
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
 }
 
 func TestEncodeDecodeNilValue(t *testing.T) {

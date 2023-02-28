@@ -232,8 +232,16 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 	deltas := s.PersistentSlabStorage.DeltasWithoutTempAddresses()
 	common.UseMemory(s.memoryGauge, common.NewAtreeEncodedSlabMemoryUsage(deltas))
 
+	size := s.PersistentSlabStorage.DeltasSizeWithoutTempAddresses()
+	if size > 0 {
+		inter.ReportComputation(common.ComputationKindEncodeValue, uint(size))
+
+		usage := common.NewBytesMemoryUsage(int(size))
+		common.UseMemory(s.memoryGauge, usage)
+	}
+
 	// TODO: report encoding metric for all encoded slabs
-	return s.PersistentSlabStorage.FastCommit(runtime.NumCPU(), inter)
+	return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
 }
 
 func (s *Storage) commitNewStorageMaps() error {

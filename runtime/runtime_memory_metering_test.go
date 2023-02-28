@@ -21,7 +21,6 @@ package runtime
 import (
 	"fmt"
 	"math/big"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,7 +36,6 @@ import (
 
 type testMemoryGauge struct {
 	meter map[common.MemoryKind]uint64
-	lock  sync.RWMutex
 }
 
 func newTestMemoryGauge() *testMemoryGauge {
@@ -47,17 +45,11 @@ func newTestMemoryGauge() *testMemoryGauge {
 }
 
 func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
-	g.lock.Lock()
-	defer g.lock.Unlock()
-
 	g.meter[usage.Kind] += usage.Amount
 	return nil
 }
 
 func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
-	g.lock.RLock()
-	defer g.lock.RUnlock()
-
 	return g.meter[kind]
 }
 
@@ -1173,7 +1165,7 @@ func TestMeterEncoding(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, 62847, int(meter.getMemory(common.MemoryKindBytes)))
+		assert.Equal(t, 62787, int(meter.getMemory(common.MemoryKindBytes)))
 	})
 
 	t.Run("composite", func(t *testing.T) {
@@ -1223,6 +1215,6 @@ func TestMeterEncoding(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, 77972, int(meter.getMemory(common.MemoryKindBytes)))
+		assert.Equal(t, 76941, int(meter.getMemory(common.MemoryKindBytes)))
 	})
 }
