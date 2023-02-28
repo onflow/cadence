@@ -4015,5 +4015,5 @@ func (*AttachmentsNotEnabledError) isSemanticError() {}
 func (*AttachmentsNotEnabledError) IsUserError() {}
 
 func (e *AttachmentsNotEnabledError) Error() string {
-	return "the attachments feature is not yet enabled and cannot be used"
+	return "attachments are not enabled and cannot be used in this environment"
 }

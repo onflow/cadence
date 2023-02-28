@@ -26,7 +26,9 @@ import (
 func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ struct{}) {
 
 	if !checker.Config.AttachmentsEnabled {
-		checker.report(&AttachmentsNotEnabledError{})
+		checker.report(&AttachmentsNotEnabledError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement),
+		})
 	}
 
 	nominalType := checker.convertNominalType(statement.Attachment)

@@ -337,7 +337,9 @@ func (checker *Checker) checkTypeIndexingExpression(
 ) Type {
 
 	if !checker.Config.AttachmentsEnabled {
-		checker.report(&AttachmentsNotEnabledError{})
+		checker.report(&AttachmentsNotEnabledError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression),
+		})
 	}
 
 	expressionType := ast.ExpressionAsType(indexExpression.IndexingExpression)
