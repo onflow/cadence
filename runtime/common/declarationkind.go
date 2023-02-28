@@ -20,6 +20,7 @@ package common
 
 import (
 	"encoding/json"
+	"math"
 
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -189,4 +190,27 @@ func (k DeclarationKind) Keywords() string {
 
 func (k DeclarationKind) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.String())
+}
+
+type DeclarationKindSet uint64
+
+const (
+	EmptyDeclarationKindSet DeclarationKindSet = 0
+	AllDeclarationKindsSet  DeclarationKindSet = math.MaxUint64
+)
+
+func NewDeclarationKindSet(declarationKinds ...DeclarationKind) DeclarationKindSet {
+	var set DeclarationKindSet
+	for _, declarationKind := range declarationKinds {
+		set = set.With(declarationKind)
+	}
+	return set
+}
+
+func (s DeclarationKindSet) With(kind DeclarationKind) DeclarationKindSet {
+	return s | DeclarationKindSet(1<<kind)
+}
+
+func (s DeclarationKindSet) Has(kind DeclarationKind) bool {
+	return s&(1<<kind) != 0
 }

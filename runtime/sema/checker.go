@@ -65,7 +65,7 @@ var beforeType = func() *FunctionType {
 	}
 }()
 
-type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) []common.DeclarationKind
+type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) common.DeclarationKindSet
 
 type CheckHandlerFunc func(checker *Checker, check func())
 
@@ -328,7 +328,7 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	declarations := program.Declarations()
 
-	checker.checkTopLevelDeclarationValidity(declarations)
+	checker.checkTopLevelDeclarationsValidity(declarations)
 
 	var rejectAllowAccountLinkingPragma bool
 
@@ -366,55 +366,50 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	}
 }
 
-func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Declaration) {
+func (checker *Checker) checkTopLevelDeclarationsValidity(declarations []ast.Declaration) {
 	validTopLevelDeclarationsHandler := checker.Config.ValidTopLevelDeclarationsHandler
 
 	if validTopLevelDeclarationsHandler == nil {
 		return
 	}
 
-	validDeclarationKinds := map[common.DeclarationKind]bool{}
-
 	validTopLevelDeclarations := validTopLevelDeclarationsHandler(checker.Location)
-	if validTopLevelDeclarations == nil {
+
+	for _, declaration := range declarations {
+		checker.checkTopLevelDeclarationValidity(declaration, validTopLevelDeclarations)
+	}
+}
+
+func (checker *Checker) checkTopLevelDeclarationValidity(
+	declaration ast.Declaration,
+	validTopLevelDeclarations common.DeclarationKindSet,
+) {
+	declarationKind := declaration.DeclarationKind()
+
+	if validTopLevelDeclarations.Has(declarationKind) {
 		return
 	}
 
-	for _, declarationKind := range validTopLevelDeclarations {
-		validDeclarationKinds[declarationKind] = true
-	}
+	var errorRange ast.Range
 
-	for _, declaration := range declarations {
-		if _, ok := declaration.(*ast.PragmaDeclaration); ok {
-			continue
-		}
-
-		isValid := validDeclarationKinds[declaration.DeclarationKind()]
-		if isValid {
-			continue
-		}
-
-		var errorRange ast.Range
-
-		identifier := declaration.DeclarationIdentifier()
-		if identifier == nil {
-			position := declaration.StartPosition()
-			errorRange = ast.NewRange(
-				checker.memoryGauge,
-				position,
-				position,
-			)
-		} else {
-			errorRange = ast.NewRangeFromPositioned(checker.memoryGauge, identifier)
-		}
-
-		checker.report(
-			&InvalidTopLevelDeclarationError{
-				DeclarationKind: declaration.DeclarationKind(),
-				Range:           errorRange,
-			},
+	identifier := declaration.DeclarationIdentifier()
+	if identifier == nil {
+		position := declaration.StartPosition()
+		errorRange = ast.NewRange(
+			checker.memoryGauge,
+			position,
+			position,
 		)
+	} else {
+		errorRange = ast.NewRangeFromPositioned(checker.memoryGauge, identifier)
 	}
+
+	checker.report(
+		&InvalidTopLevelDeclarationError{
+			DeclarationKind: declarationKind,
+			Range:           errorRange,
+		},
+	)
 }
 
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
