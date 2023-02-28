@@ -1684,3 +1684,131 @@ func TestInterpretAttachmentsRuntimeType(t *testing.T) {
 		require.Equal(t, "S.test.A", a.(interpreter.TypeValue).Type.String())
 	})
 }
+
+func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reference attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndInterpretWithOptions(t, `
+        struct S {}
+        attachment A for S {}
+        fun test() {
+            var s = S()
+            var ref = &s as &S
+            ref = attach A() to ref
+        }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(_ error) {},
+		})
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+	})
+
+	t.Run("reference remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndInterpretWithOptions(t, `
+        struct S {}
+        attachment A for S {}
+        fun test() {
+            var s = S()
+            var ref = &s as &S
+            remove A from S
+        }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(_ error) {},
+		})
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+	})
+
+	t.Run("array attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndInterpretWithOptions(t, `
+        struct S {}
+        attachment A for S {}
+        fun test() {
+            var s = S()
+            var a = attach A() to [s]
+        }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(_ error) {},
+		})
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+	})
+
+	t.Run("array remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndInterpretWithOptions(t, `
+        struct S {}
+        attachment A for S {}
+        fun test() {
+            var s = S()
+            remove A from [s]
+        }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(_ error) {},
+		})
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+	})
+
+	t.Run("enum attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndInterpretWithOptions(t, `
+        struct S {}
+        attachment A for S {}
+        enum E: UInt8 {
+            case a
+        }
+        fun test() {
+            var s = S()
+            var e: E = E.a
+            ref = attach A() to e
+        }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(_ error) {},
+		})
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+	})
+
+	t.Run("enum remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndInterpretWithOptions(t, `
+        struct S {}
+        attachment A for S {}
+        enum E: UInt8 {
+            case a
+        }
+        fun test() {
+            var s = S()
+            var e: E = E.a
+            remove A from e
+        }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(_ error) {},
+		})
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+	})
+}
