@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCheckStorable(t *testing.T) {
@@ -36,7 +37,18 @@ func TestCheckStorable(t *testing.T) {
 
 	test := func(t *testing.T, code string, errorTypes ...error) {
 
-		_, err := ParseAndCheckWithPanic(t, code)
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(stdlib.PanicFunction)
+
+		_, err := ParseAndCheckWithOptions(t,
+			code,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+					AttachmentsEnabled:  true,
+				},
+			},
+		)
 
 		if len(errorTypes) == 0 {
 			require.NoError(t, err)

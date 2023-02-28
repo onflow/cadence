@@ -24,6 +24,11 @@ import (
 )
 
 func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ struct{}) {
+
+	if !checker.Config.AttachmentsEnabled {
+		checker.report(&AttachmentsNotEnabledError{})
+	}
+
 	nominalType := checker.convertNominalType(statement.Attachment)
 	base := checker.VisitExpression(statement.Value, nil)
 

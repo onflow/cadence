@@ -336,6 +336,10 @@ func (checker *Checker) checkTypeIndexingExpression(
 	indexExpression *ast.IndexExpression,
 ) Type {
 
+	if !checker.Config.AttachmentsEnabled {
+		checker.report(&AttachmentsNotEnabledError{})
+	}
+
 	expressionType := ast.ExpressionAsType(indexExpression.IndexingExpression)
 	if expressionType == nil {
 		return InvalidType

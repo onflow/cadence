@@ -1287,7 +1287,9 @@ func TestInterpretAttachmentStorage(t *testing.T) {
                 destroy r3
                 return i
             }
-        `, sema.Config{},
+        `, sema.Config{
+			AttachmentsEnabled: true,
+		},
 		)
 
 		value, err := inter.Invoke("test")
@@ -1315,7 +1317,9 @@ func TestInterpretAttachmentStorage(t *testing.T) {
                 let i = r3[A]?.foo()!
                 return i
             }
-        `, sema.Config{},
+        `, sema.Config{
+			AttachmentsEnabled: true,
+		},
 		)
 
 		value, err := inter.Invoke("test")
@@ -1344,7 +1348,9 @@ func TestInterpretAttachmentStorage(t *testing.T) {
                 let i = cap.borrow()![A]?.foo()!
                 return i
             }
-        `, sema.Config{},
+        `, sema.Config{
+			AttachmentsEnabled: true,
+		},
 		)
 
 		value, err := inter.Invoke("test")
@@ -1374,7 +1380,9 @@ func TestInterpretAttachmentStorage(t *testing.T) {
                 let i = cap.borrow()![A]?.foo()!
                 return i
             }
-        `, sema.Config{},
+        `, sema.Config{
+			AttachmentsEnabled: true,
+		},
 		)
 
 		value, err := inter.Invoke("test")
@@ -1600,7 +1608,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 authAccount.save(<-r2, to: /storage/foo)
                 let i = a.foo()
             }
-        `, sema.Config{},
+        `, sema.Config{
+			AttachmentsEnabled: true,
+		},
 		)
 
 		// TODO: in the stable cadence branch, with the new resource reference invalidation,
@@ -1636,7 +1646,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 let i = a.foo()
             }
         
-        `, sema.Config{},
+        `, sema.Config{
+			AttachmentsEnabled: true,
+		},
 		)
 
 		// TODO: in the stable cadence branch, with the new resource reference invalidation,

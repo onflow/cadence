@@ -159,6 +159,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
 		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
+		AttachmentsEnabled:               e.config.AttachmentsEnabled,
 	}
 }
 
