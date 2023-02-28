@@ -113,7 +113,7 @@ func TestCheckAllowAccountLinkingPragma(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("top-level, before other declarations", func(t *testing.T) {
+	t.Run("top-level, after other declarations", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
