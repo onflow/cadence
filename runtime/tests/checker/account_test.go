@@ -1117,42 +1117,67 @@ func TestCheckAccount_linkAccount(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(domain common.PathDomain, enabled bool) {
+	type testCase struct {
+		domain  common.PathDomain
+		enabled bool
+		allowed bool
+	}
 
-		testName := fmt.Sprintf("%s, %v", domain.Identifier(), enabled)
+	test := func(tc testCase) {
+
+		testName := fmt.Sprintf(
+			"%s, enabled=%v, allowed=%v",
+			tc.domain.Identifier(),
+			tc.enabled,
+			tc.allowed,
+		)
 
 		t.Run(testName, func(t *testing.T) {
 
 			t.Parallel()
 
+			var pragma string
+			if tc.allowed {
+				pragma = "#allowAccountLinking"
+			}
+
 			code := fmt.Sprintf(`
+                  %s
+
                   resource R {}
 
                   fun test(authAccount: AuthAccount): Capability<&AuthAccount>? {
                       return authAccount.linkAccount(/%s/r)
                   }
                 `,
-				domain.Identifier(),
+				pragma,
+				tc.domain.Identifier(),
 			)
 
 			_, err := ParseAndCheckWithOptions(t,
 				code,
 				ParseAndCheckOptions{
 					Config: &sema.Config{
-						AccountLinkingEnabled: enabled,
+						AccountLinkingEnabled: tc.enabled,
 					},
 				},
 			)
 
-			if enabled {
-				switch domain {
-				case common.PathDomainPrivate, common.PathDomainPublic:
-					require.NoError(t, err)
+			if tc.enabled {
+				if tc.allowed {
+					switch tc.domain {
+					case common.PathDomainPrivate, common.PathDomainPublic:
+						require.NoError(t, err)
 
-				default:
+					default:
+						errs := RequireCheckerErrors(t, err, 1)
+
+						require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					}
+				} else {
 					errs := RequireCheckerErrors(t, err, 1)
 
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 				}
 			} else {
 				errs := RequireCheckerErrors(t, err, 1)
@@ -1162,9 +1187,17 @@ func TestCheckAccount_linkAccount(t *testing.T) {
 		})
 	}
 
-	for _, enabled := range []bool{true, false} {
-		for _, domain := range common.AllPathDomainsByIdentifier {
-			test(domain, enabled)
+	options := []bool{true, false}
+
+	for _, enabled := range options {
+		for _, allowed := range options {
+			for _, domain := range common.AllPathDomainsByIdentifier {
+				test(testCase{
+					domain:  domain,
+					enabled: enabled,
+					allowed: allowed,
+				})
+			}
 		}
 	}
 }
