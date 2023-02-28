@@ -30,16 +30,18 @@ type function struct {
 	name       string
 	localCount uint16
 	// TODO: use byte.Buffer?
-	code           []byte
-	locals         *activations.Activations[*local]
-	parameterCount uint16
+	code                []byte
+	locals              *activations.Activations[*local]
+	parameterCount      uint16
+	isCompositeFunction bool
 }
 
-func newFunction(name string, parameterCount uint16) *function {
+func newFunction(name string, parameterCount uint16, isCompositeFunction bool) *function {
 	return &function{
-		name:           name,
-		parameterCount: parameterCount,
-		locals:         activations.NewActivations[*local](nil),
+		name:                name,
+		parameterCount:      parameterCount,
+		locals:              activations.NewActivations[*local](nil),
+		isCompositeFunction: isCompositeFunction,
 	}
 }
 

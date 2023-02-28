@@ -23,4 +23,6 @@ type Function struct {
 	Code           []byte
 	ParameterCount uint16
 	LocalCount     uint16
+
+	IsCompositeFunction bool
 }

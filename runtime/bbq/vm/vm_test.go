@@ -204,16 +204,22 @@ func TestNewStruct(t *testing.T) {
 
 	checker, err := ParseAndCheck(t, `
       struct Foo {
-          init() {}
+          var id : Int
+
+          init(_ id: Int) {
+              self.id = id
+          }
       }
 
-      fun test(count: Int): Int {
+      fun test(count: Int): Foo {
           var i = 0
+          var r = Foo(0)
           while i < count {
               i = i + 1
-              Foo()
+              r = Foo(i)
+              r.id = r.id + 2
           }
-          return i
+          return r
       }
   `)
 	require.NoError(t, err)
@@ -226,23 +232,37 @@ func TestNewStruct(t *testing.T) {
 	result, err := vm.Invoke("test", IntValue{10})
 	require.NoError(t, err)
 
-	require.Equal(t, IntValue{10}, result)
+	require.Equal(
+		t,
+		StructValue{
+			Name: "Foo",
+			Fields: map[string]Value{
+				"id": IntValue{12},
+			},
+		},
+		result,
+	)
 }
 
 func BenchmarkNewStruct(b *testing.B) {
 
 	checker, err := ParseAndCheck(b, `
       struct Foo {
-          init() {}
+          var id : Int
+
+          init(_ id: Int) {
+              self.id = id
+          }
       }
 
-      fun test(count: Int): Int {
+      fun test(count: Int): Foo {
           var i = 0
+          var r = Foo(0)
           while i < count {
               i = i + 1
-              Foo()
+              r = Foo(i)
           }
-          return i
+          return r
       }
   `)
 	require.NoError(b, err)

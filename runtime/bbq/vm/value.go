@@ -82,7 +82,15 @@ var _ Value = StringValue{}
 func (StringValue) isValue() {}
 
 type StructValue struct {
-	Name string
+	Name   string
+	Fields map[string]Value
+}
+
+func NewStructValue(name string) StructValue {
+	return StructValue{
+		Name:   name,
+		Fields: map[string]Value{},
+	}
 }
 
 var _ Value = StructValue{}

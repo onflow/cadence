@@ -78,7 +78,10 @@ func (c *Compiler) addGlobal(name string) *global {
 
 func (c *Compiler) addFunction(name string, parameterCount uint16) *function {
 	c.addGlobal(name)
-	function := newFunction(name, parameterCount)
+
+	isCompositeFunction := c.currentCompositeType != nil
+
+	function := newFunction(name, parameterCount, isCompositeFunction)
 	c.functions = append(c.functions, function)
 	c.currentFunction = function
 	return function
@@ -198,10 +201,11 @@ func (c *Compiler) exportFunctions() []*bbq.Function {
 		functions = append(
 			functions,
 			&bbq.Function{
-				Name:           function.name,
-				Code:           function.code,
-				LocalCount:     function.localCount,
-				ParameterCount: function.parameterCount,
+				Name:                function.name,
+				Code:                function.code,
+				LocalCount:          function.localCount,
+				ParameterCount:      function.parameterCount,
+				IsCompositeFunction: function.isCompositeFunction,
 			},
 		)
 	}
@@ -322,6 +326,10 @@ func (c *Compiler) VisitAssignmentStatement(statement *ast.AssignmentStatement) 
 		local := c.currentFunction.findLocal(target.Identifier.Identifier)
 		first, second := encodeUint16(local.index)
 		c.emit(opcode.SetLocal, first, second)
+	case *ast.MemberExpression:
+		c.compileExpression(target.Expression)
+		c.stringConstLoad(target.Identifier.Identifier)
+		c.emit(opcode.SetField)
 	default:
 		// TODO:
 		panic(errors.NewUnreachableError())
@@ -412,9 +420,11 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 	return
 }
 
-func (c *Compiler) VisitMemberExpression(_ *ast.MemberExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
+	c.compileExpression(expression.Expression)
+	c.stringConstLoad(expression.Identifier.Identifier)
+	c.emit(opcode.GetField)
+	return
 }
 
 func (c *Compiler) VisitIndexExpression(_ *ast.IndexExpression) (_ struct{}) {

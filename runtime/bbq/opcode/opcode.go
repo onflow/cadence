@@ -49,6 +49,8 @@ const (
 	GetLocal
 	SetLocal
 	GetGlobal
+	GetField
+	SetField
 
 	Call
 

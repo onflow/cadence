@@ -93,9 +93,15 @@ func (vm *VM) replaceTop(value Value) {
 
 func (vm *VM) pushCallFrame(function *bbq.Function, arguments []Value) {
 
+	// Preserve local index zero for `self`.
+	localOffset := 0
+	if function.IsCompositeFunction {
+		localOffset = 1
+	}
+
 	locals := make([]Value, function.LocalCount)
 	for i, argument := range arguments {
-		locals[i] = argument
+		locals[i+localOffset] = argument
 	}
 
 	callFrame := &callFrame{
@@ -251,15 +257,33 @@ func opPop(vm *VM) {
 }
 
 func opNew(vm *VM) {
-	stackHeight := len(vm.stack)
-	const parameterCount = 1
-	arguments := vm.stack[stackHeight-parameterCount:]
-
 	// TODO: get location
-	name := arguments[0].(StringValue)
-
-	value := StructValue{Name: string(name.string)}
+	name := vm.pop().(StringValue)
+	value := NewStructValue(string(name.string))
 	vm.push(value)
+}
+
+func opSetField(vm *VM) {
+	fieldName := vm.pop().(StringValue)
+	fieldNameStr := string(fieldName.string)
+
+	// TODO: support all container types
+	structValue := vm.pop().(StructValue)
+
+	fieldValue := vm.pop()
+
+	structValue.Fields[fieldNameStr] = fieldValue
+}
+
+func opGetField(vm *VM) {
+	fieldName := vm.pop().(StringValue)
+	fieldNameStr := string(fieldName.string)
+
+	// TODO: support all container types
+	structValue := vm.pop().(StructValue)
+
+	fieldValue := structValue.Fields[fieldNameStr]
+	vm.push(fieldValue)
 }
 
 func (vm *VM) run() {
@@ -309,6 +333,10 @@ func (vm *VM) run() {
 			opPop(vm)
 		case opcode.New:
 			opNew(vm)
+		case opcode.SetField:
+			opSetField(vm)
+		case opcode.GetField:
+			opGetField(vm)
 		default:
 			panic(errors.NewUnreachableError())
 		}
