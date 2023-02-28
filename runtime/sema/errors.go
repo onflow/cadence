@@ -247,6 +247,7 @@ type AssignmentToConstantError struct {
 
 var _ SemanticError = &AssignmentToConstantError{}
 var _ errors.UserError = &AssignmentToConstantError{}
+var _ errors.SecondaryError = &AssignmentToConstantError{}
 
 func (*AssignmentToConstantError) isSemanticError() {}
 
@@ -536,8 +537,8 @@ type InvalidBinaryOperandError struct {
 }
 
 var _ SemanticError = &InvalidBinaryOperandError{}
-var _ errors.SecondaryError = &InvalidBinaryOperandError{}
 var _ errors.UserError = &InvalidBinaryOperandError{}
+var _ errors.SecondaryError = &InvalidBinaryOperandError{}
 
 func (*InvalidBinaryOperandError) isSemanticError() {}
 
@@ -616,8 +617,9 @@ type ControlStatementError struct {
 	ast.Range
 }
 
-var _ errors.UserError = &ControlStatementError{}
 var _ SemanticError = &ControlStatementError{}
+var _ errors.UserError = &ControlStatementError{}
+var _ errors.SecondaryError = &ControlStatementError{}
 
 func (*ControlStatementError) isSemanticError() {}
 
@@ -1050,6 +1052,7 @@ type FieldTypeNotStorableError struct {
 
 var _ SemanticError = &FieldTypeNotStorableError{}
 var _ errors.UserError = &FieldTypeNotStorableError{}
+var _ errors.SecondaryError = &FieldTypeNotStorableError{}
 
 func (*FieldTypeNotStorableError) isSemanticError() {}
 
@@ -1182,6 +1185,7 @@ type InvalidEnumRawTypeError struct {
 
 var _ SemanticError = &InvalidEnumRawTypeError{}
 var _ errors.UserError = &InvalidEnumRawTypeError{}
+var _ errors.SecondaryError = &InvalidEnumRawTypeError{}
 
 func (*InvalidEnumRawTypeError) isSemanticError() {}
 
@@ -1267,6 +1271,7 @@ type ConformanceError struct {
 
 var _ SemanticError = &ConformanceError{}
 var _ errors.UserError = &ConformanceError{}
+var _ errors.SecondaryError = &ConformanceError{}
 
 func (*ConformanceError) isSemanticError() {}
 
@@ -2323,6 +2328,7 @@ type InvalidResourceAssignmentError struct {
 
 var _ SemanticError = &InvalidResourceAssignmentError{}
 var _ errors.UserError = &InvalidResourceAssignmentError{}
+var _ errors.SecondaryError = &InvalidResourceAssignmentError{}
 
 func (*InvalidResourceAssignmentError) isSemanticError() {}
 
@@ -2481,6 +2487,7 @@ type UnreachableStatementError struct {
 
 var _ SemanticError = &UnreachableStatementError{}
 var _ errors.UserError = &UnreachableStatementError{}
+var _ errors.SecondaryError = &UnreachableStatementError{}
 
 func (*UnreachableStatementError) isSemanticError() {}
 
@@ -3487,6 +3494,7 @@ type InvalidPathIdentifierError struct {
 
 var _ SemanticError = &InvalidPathDomainError{}
 var _ errors.UserError = &InvalidPathDomainError{}
+var _ errors.SecondaryError = &InvalidPathDomainError{}
 
 func (*InvalidPathDomainError) isSemanticError() {}
 
@@ -3649,6 +3657,7 @@ type TypeParameterTypeMismatchError struct {
 
 var _ SemanticError = &TypeParameterTypeMismatchError{}
 var _ errors.UserError = &TypeParameterTypeMismatchError{}
+var _ errors.SecondaryError = &TypeParameterTypeMismatchError{}
 
 func (*TypeParameterTypeMismatchError) isSemanticError() {}
 
@@ -3832,6 +3841,7 @@ type ExternalMutationError struct {
 
 var _ SemanticError = &ExternalMutationError{}
 var _ errors.UserError = &ExternalMutationError{}
+var _ errors.SecondaryError = &ExternalMutationError{}
 
 func (*ExternalMutationError) isSemanticError() {}
 

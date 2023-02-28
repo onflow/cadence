@@ -246,6 +246,7 @@ type DereferenceError struct {
 }
 
 var _ errors.UserError = DereferenceError{}
+var _ errors.SecondaryError = DereferenceError{}
 
 func (DereferenceError) IsUserError() {}
 
