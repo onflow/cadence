@@ -163,6 +163,7 @@ type Runtime interface {
 type ImportResolver = func(location Location) (program *ast.Program, e error)
 
 var validTopLevelDeclarationsInTransaction = []common.DeclarationKind{
+	common.DeclarationKindPragma,
 	common.DeclarationKindImport,
 	common.DeclarationKindFunction,
 	common.DeclarationKindTransaction,
