@@ -32,8 +32,8 @@ func TestCheckPragmaInvalidExpr(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-	  #"string"
-	`)
+      #"string"
+    `)
 
 	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.InvalidPragmaError{}, errs[0])
@@ -43,8 +43,8 @@ func TestCheckPragmaValidIdentifierExpr(t *testing.T) {
 
 	t.Parallel()
 	_, err := ParseAndCheck(t, `
-		#pedantic
-	`)
+        #pedantic
+    `)
 
 	require.NoError(t, err)
 }
@@ -54,8 +54,8 @@ func TestCheckPragmaValidInvocationExpr(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		#version("1.0")
-	`)
+        #version("1.0")
+    `)
 
 	require.NoError(t, err)
 }
@@ -65,10 +65,10 @@ func TestCheckPragmaInvalidLocation(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-	  fun test() {
-		  #version
-	  }
-	`)
+      fun test() {
+          #version
+      }
+    `)
 
 	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
@@ -79,11 +79,11 @@ func TestCheckPragmaInvalidInvocationExprNonStringExprArgument(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		#version(y)
-	`)
+      #version(y)
+    `)
 
 	errs := RequireCheckerErrors(t, err, 1)
-	assert.IsType(t, &sema.InvalidPragmaError{Message: "invalid arguments"}, errs[0])
+	assert.IsType(t, &sema.InvalidPragmaError{}, errs[0])
 }
 
 func TestCheckPragmaInvalidInvocationExprTypeArgs(t *testing.T) {
@@ -91,9 +91,51 @@ func TestCheckPragmaInvalidInvocationExprTypeArgs(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		#version<X>()
-	`)
+      #version<X>()
+    `)
 
 	errs := RequireCheckerErrors(t, err, 1)
-	assert.IsType(t, &sema.InvalidPragmaError{Message: "type arguments not supported"}, errs[0])
+	assert.IsType(t, &sema.InvalidPragmaError{}, errs[0])
+}
+
+func TestCheckAllowAccountLinkingPragma(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("top-level, before other declarations", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          #allowAccountLinking
+
+          let x = 1
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("top-level, after other declarations", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let x = 1
+
+          #allowAccountLinking
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidPragmaError{}, errs[0])
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test() {
+              #allowAccountLinking
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+	})
 }

@@ -162,20 +162,21 @@ type Runtime interface {
 
 type ImportResolver = func(location Location) (program *ast.Program, e error)
 
-var validTopLevelDeclarationsInTransaction = []common.DeclarationKind{
+var validTopLevelDeclarationsInTransaction = common.NewDeclarationKindSet(
+	common.DeclarationKindPragma,
 	common.DeclarationKindImport,
 	common.DeclarationKindFunction,
 	common.DeclarationKindTransaction,
-}
+)
 
-var validTopLevelDeclarationsInAccountCode = []common.DeclarationKind{
+var validTopLevelDeclarationsInAccountCode = common.NewDeclarationKindSet(
 	common.DeclarationKindPragma,
 	common.DeclarationKindImport,
 	common.DeclarationKindContract,
 	common.DeclarationKindContractInterface,
-}
+)
 
-func validTopLevelDeclarations(location Location) []common.DeclarationKind {
+func validTopLevelDeclarations(location Location) common.DeclarationKindSet {
 	switch location.(type) {
 	case common.TransactionLocation:
 		return validTopLevelDeclarationsInTransaction
@@ -183,7 +184,7 @@ func validTopLevelDeclarations(location Location) []common.DeclarationKind {
 		return validTopLevelDeclarationsInAccountCode
 	}
 
-	return nil
+	return common.AllDeclarationKindsSet
 }
 
 func reportMetric(
