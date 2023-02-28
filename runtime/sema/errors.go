@@ -21,10 +21,10 @@ package sema
 import (
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 
 	"github.com/texttheater/golang-levenshtein/levenshtein"
-	"golang.org/x/exp/maps"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -252,6 +252,7 @@ type AssignmentToConstantError struct {
 
 var _ SemanticError = &AssignmentToConstantError{}
 var _ errors.UserError = &AssignmentToConstantError{}
+var _ errors.SecondaryError = &AssignmentToConstantError{}
 
 func (*AssignmentToConstantError) isSemanticError() {}
 
@@ -541,8 +542,8 @@ type InvalidBinaryOperandError struct {
 }
 
 var _ SemanticError = &InvalidBinaryOperandError{}
-var _ errors.SecondaryError = &InvalidBinaryOperandError{}
 var _ errors.UserError = &InvalidBinaryOperandError{}
+var _ errors.SecondaryError = &InvalidBinaryOperandError{}
 
 func (*InvalidBinaryOperandError) isSemanticError() {}
 
@@ -621,8 +622,9 @@ type ControlStatementError struct {
 	ast.Range
 }
 
-var _ errors.UserError = &ControlStatementError{}
 var _ SemanticError = &ControlStatementError{}
+var _ errors.UserError = &ControlStatementError{}
+var _ errors.SecondaryError = &ControlStatementError{}
 
 func (*ControlStatementError) isSemanticError() {}
 
@@ -948,13 +950,27 @@ func (e *NotDeclaredMemberError) findClosestMember() (closestMember string) {
 		return
 	}
 
+	nameRunes := []rune(e.Name)
+
 	closestDistance := len(e.Name)
-	for _, member := range maps.Keys(e.Type.GetMembers()) {
-		distance := levenshtein.DistanceForStrings([]rune(e.Name), []rune(member), levenshtein.DefaultOptions)
-		// don't update the closest member if the distance is greater than one already found, or if the edits
-		// required would involve a complete replacement of the member's text
-		if distance < closestDistance && distance < len(member) {
-			closestMember = member
+
+	var sortedMemberNames []string
+	for memberName := range e.Type.GetMembers() { //nolint:maprange
+		sortedMemberNames = append(sortedMemberNames, memberName)
+	}
+	sort.Strings(sortedMemberNames)
+
+	for _, memberName := range sortedMemberNames {
+		distance := levenshtein.DistanceForStrings(
+			nameRunes,
+			[]rune(memberName),
+			levenshtein.DefaultOptions,
+		)
+
+		// Don't update the closest member if the distance is greater than one already found,
+		// or if the edits required would involve a complete replacement of the member's text
+		if distance < closestDistance && distance < len(memberName) {
+			closestMember = memberName
 			closestDistance = distance
 		}
 	}
@@ -1055,6 +1071,7 @@ type FieldTypeNotStorableError struct {
 
 var _ SemanticError = &FieldTypeNotStorableError{}
 var _ errors.UserError = &FieldTypeNotStorableError{}
+var _ errors.SecondaryError = &FieldTypeNotStorableError{}
 
 func (*FieldTypeNotStorableError) isSemanticError() {}
 
@@ -1187,6 +1204,7 @@ type InvalidEnumRawTypeError struct {
 
 var _ SemanticError = &InvalidEnumRawTypeError{}
 var _ errors.UserError = &InvalidEnumRawTypeError{}
+var _ errors.SecondaryError = &InvalidEnumRawTypeError{}
 
 func (*InvalidEnumRawTypeError) isSemanticError() {}
 
@@ -1272,6 +1290,7 @@ type ConformanceError struct {
 
 var _ SemanticError = &ConformanceError{}
 var _ errors.UserError = &ConformanceError{}
+var _ errors.SecondaryError = &ConformanceError{}
 
 func (*ConformanceError) isSemanticError() {}
 
@@ -2328,6 +2347,7 @@ type InvalidResourceAssignmentError struct {
 
 var _ SemanticError = &InvalidResourceAssignmentError{}
 var _ errors.UserError = &InvalidResourceAssignmentError{}
+var _ errors.SecondaryError = &InvalidResourceAssignmentError{}
 
 func (*InvalidResourceAssignmentError) isSemanticError() {}
 
@@ -2486,6 +2506,7 @@ type UnreachableStatementError struct {
 
 var _ SemanticError = &UnreachableStatementError{}
 var _ errors.UserError = &UnreachableStatementError{}
+var _ errors.SecondaryError = &UnreachableStatementError{}
 
 func (*UnreachableStatementError) isSemanticError() {}
 
@@ -3492,6 +3513,7 @@ type InvalidPathIdentifierError struct {
 
 var _ SemanticError = &InvalidPathDomainError{}
 var _ errors.UserError = &InvalidPathDomainError{}
+var _ errors.SecondaryError = &InvalidPathDomainError{}
 
 func (*InvalidPathDomainError) isSemanticError() {}
 
@@ -3654,6 +3676,7 @@ type TypeParameterTypeMismatchError struct {
 
 var _ SemanticError = &TypeParameterTypeMismatchError{}
 var _ errors.UserError = &TypeParameterTypeMismatchError{}
+var _ errors.SecondaryError = &TypeParameterTypeMismatchError{}
 
 func (*TypeParameterTypeMismatchError) isSemanticError() {}
 
@@ -3837,6 +3860,7 @@ type ExternalMutationError struct {
 
 var _ SemanticError = &ExternalMutationError{}
 var _ errors.UserError = &ExternalMutationError{}
+var _ errors.SecondaryError = &ExternalMutationError{}
 
 func (*ExternalMutationError) isSemanticError() {}
 
