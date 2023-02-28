@@ -21,6 +21,7 @@ package sema
 import (
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 
 	"github.com/texttheater/golang-levenshtein/levenshtein"
@@ -947,7 +948,14 @@ func (e *NotDeclaredMemberError) findClosestMember() (closestMember string) {
 	nameRunes := []rune(e.Name)
 
 	closestDistance := len(e.Name)
-	for memberName := range e.Type.GetMembers() {
+
+	var sortedMemberNames []string
+	for memberName := range e.Type.GetMembers() { //nolint:maprange
+		sortedMemberNames = append(sortedMemberNames, memberName)
+	}
+	sort.Strings(sortedMemberNames)
+
+	for _, memberName := range sortedMemberNames {
 		distance := levenshtein.DistanceForStrings(
 			nameRunes,
 			[]rune(memberName),
