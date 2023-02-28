@@ -929,3 +929,20 @@ func (e AttachmentIterationMutationError) Error() string {
 		e.Value.QualifiedIdentifier,
 	)
 }
+
+// InvalidAttachmentOperationTargetError
+type InvalidAttachmentOperationTargetError struct {
+	Value Value
+	LocationRange
+}
+
+var _ errors.InternalError = InvalidAttachmentOperationTargetError{}
+
+func (InvalidAttachmentOperationTargetError) IsInternalError() {}
+
+func (e InvalidAttachmentOperationTargetError) Error() string {
+	return fmt.Sprintf(
+		"cannot add or remove attachment with non-owned value %s",
+		e.Value.String(),
+	)
+}

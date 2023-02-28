@@ -1217,15 +1217,20 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 
 func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.AttachExpression) Value {
 
-	base, ok := interpreter.evalExpression(attachExpression.Base).(*CompositeValue)
-	// we enforce this in the checker
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: attachExpression,
+	}
+
+	attachTarget := interpreter.evalExpression(attachExpression.Base)
+	base, ok := attachTarget.(*CompositeValue)
+
+	// we enforce this in the checker, but check defensively anyways
+	if !ok || !base.Kind.SupportsAttachments() {
+		panic(InvalidAttachmentOperationTargetError{
+			Value:         attachTarget,
+			LocationRange: locationRange,
+		})
 	}
 
 	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
