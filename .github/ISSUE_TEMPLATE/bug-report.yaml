@@ -1,7 +1,7 @@
 name: Reporting a Problem/Bug
 description: Reporting a Problem/Bug
 labels: [Bug, Feedback]
-assignees: turbolent, SupunS, dsainati1
+assignees: turbolent, SupunS, dsainati1, dreamsmasher
 body:
   - type: markdown
     attributes:
