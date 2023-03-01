@@ -942,7 +942,7 @@ func (InvalidAttachmentOperationTargetError) IsInternalError() {}
 
 func (e InvalidAttachmentOperationTargetError) Error() string {
 	return fmt.Sprintf(
-		"cannot add or remove attachment with non-owned value %s",
-		e.Value.String(),
+		"cannot add or remove attachment with non-owned value (%T)",
+		e.Value,
 	)
 }
