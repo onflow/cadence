@@ -25,7 +25,6 @@ import (
 	goRuntime "runtime"
 	"sort"
 	"sync"
-	"unicode/utf8"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/cadence"
@@ -304,6 +303,17 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 //	/ word64-value
 //	/ fix64-value
 //	/ ufix64-value
+//
+// IMPORTANT:
+// "Valid CCF Encoding Requirements" in CCF Specification states:
+//
+//	"Encoders are not required to check for invalid input items
+//	(e.g. invalid UTF-8 strings, duplicate dictionary keys, etc.)
+//	Applications MUST NOT provide invalid items to encoders."
+//
+// cadence.String and cadence.Character must be valid UTF-8
+// and it is the application's responsibility to provide
+// the CCF encoder with valid UTF-8 strings.
 func (e *Encoder) encodeValue(v cadence.Value, staticType cadence.Type, tids ccfTypeIDByCadenceType) error {
 	runtimeType := v.Type()
 
@@ -450,12 +460,7 @@ func (e *Encoder) encodeCharacter(v cadence.Character) error {
 // encodeString encodes cadence.String as
 // language=CDDL
 // string-value = tstr
-// NOTE: cadence.String must be valid UTF-8.
 func (e *Encoder) encodeString(v cadence.String) error {
-	s := string(v)
-	if !utf8.ValidString(s) {
-		return fmt.Errorf("invalid UTF-8 in string: %s", s)
-	}
 	return e.enc.EncodeString(string(v))
 }
 
