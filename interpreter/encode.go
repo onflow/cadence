@@ -666,7 +666,7 @@ const (
 	encodedAddressLocationLength = 2
 )
 
-func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
+func EncodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 	if l == nil {
 		return e.EncodeNil()
 	}
@@ -1033,7 +1033,7 @@ func (t *CompositeStaticType) Encode(e *cbor.StreamEncoder) error {
 	}
 
 	// Encode location at array index encodedCompositeStaticTypeLocationFieldKey
-	err = encodeLocation(e, t.Location)
+	err = EncodeLocation(e, t.Location)
 	if err != nil {
 		return err
 	}
@@ -1076,7 +1076,7 @@ func (t *InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
 	}
 
 	// Encode location at array index encodedInterfaceStaticTypeLocationFieldKey
-	err = encodeLocation(e, t.Location)
+	err = EncodeLocation(e, t.Location)
 	if err != nil {
 		return err
 	}
@@ -1450,7 +1450,7 @@ func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 
-	err = encodeLocation(e, c.location)
+	err = EncodeLocation(e, c.location)
 	if err != nil {
 		return err
 	}
