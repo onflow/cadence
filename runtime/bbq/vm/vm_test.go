@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/bbq/compiler"
+	"github.com/onflow/cadence/runtime/bbq/vm/values"
 	. "github.com/onflow/cadence/runtime/tests/checker"
 )
 
@@ -50,10 +51,10 @@ func TestRecursionFib(t *testing.T) {
 
 	result, err := vm.Invoke(
 		"fib",
-		IntValue{7},
+		values.IntValue{SmallInt: 7},
 	)
 	require.NoError(t, err)
-	require.Equal(t, IntValue{13}, result)
+	require.Equal(t, values.IntValue{SmallInt: 13}, result)
 }
 
 func BenchmarkRecursionFib(b *testing.B) {
@@ -69,13 +70,13 @@ func BenchmarkRecursionFib(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	expected := IntValue{377}
+	expected := values.IntValue{SmallInt: 377}
 
 	for i := 0; i < b.N; i++ {
 
 		result, err := vm.Invoke(
 			"fib",
-			IntValue{14},
+			values.IntValue{SmallInt: 14},
 		)
 		require.NoError(b, err)
 		require.Equal(b, expected, result)
@@ -112,10 +113,10 @@ func TestImperativeFib(t *testing.T) {
 
 	result, err := vm.Invoke(
 		"fib",
-		IntValue{7},
+		values.IntValue{SmallInt: 7},
 	)
 	require.NoError(t, err)
-	require.Equal(t, IntValue{13}, result)
+	require.Equal(t, values.IntValue{SmallInt: 13}, result)
 }
 
 func BenchmarkImperativeFib(b *testing.B) {
@@ -131,7 +132,7 @@ func BenchmarkImperativeFib(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var value Value = IntValue{14}
+	var value values.Value = values.IntValue{SmallInt: 14}
 
 	for i := 0; i < b.N; i++ {
 		_, err := vm.Invoke("fib", value)
@@ -165,7 +166,7 @@ func TestBreak(t *testing.T) {
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t, IntValue{4}, result)
+	require.Equal(t, values.IntValue{SmallInt: 4}, result)
 }
 
 func TestContinue(t *testing.T) {
@@ -195,7 +196,7 @@ func TestContinue(t *testing.T) {
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t, IntValue{3}, result)
+	require.Equal(t, values.IntValue{SmallInt: 3}, result)
 }
 
 func TestNewStruct(t *testing.T) {
@@ -229,18 +230,17 @@ func TestNewStruct(t *testing.T) {
 
 	vm := NewVM(program)
 
-	result, err := vm.Invoke("test", IntValue{10})
+	result, err := vm.Invoke("test", values.IntValue{SmallInt: 10})
 	require.NoError(t, err)
 
+	require.IsType(t, values.StructValue{}, result)
+	structValue := result.(values.StructValue)
+
+	require.Equal(t, "Foo", structValue.QualifiedIdentifier)
 	require.Equal(
 		t,
-		StructValue{
-			Name: "Foo",
-			Fields: map[string]Value{
-				"id": IntValue{12},
-			},
-		},
-		result,
+		values.IntValue{SmallInt: 12},
+		structValue.GetMember(vm.context, "id"),
 	)
 }
 
@@ -275,7 +275,7 @@ func BenchmarkNewStruct(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var value Value = IntValue{7}
+	var value values.Value = values.IntValue{SmallInt: 7}
 
 	for i := 0; i < b.N; i++ {
 		_, err := vm.Invoke("test", value)

@@ -19,37 +19,48 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
+
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/bbq/constantkind"
 	"github.com/onflow/cadence/runtime/bbq/leb128"
 	"github.com/onflow/cadence/runtime/bbq/opcode"
-	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/bbq/vm/context"
+	"github.com/onflow/cadence/runtime/bbq/vm/values"
 )
 
 type VM struct {
 	Program   *bbq.Program
-	globals   []Value
-	constants []Value
+	globals   []values.Value
+	constants []values.Value
 	functions map[string]*bbq.Function
 	callFrame *callFrame
-	stack     []Value
+	stack     []values.Value
+	context   context.Context
 }
 
 func NewVM(program *bbq.Program) *VM {
 	functions := indexFunctions(program.Functions)
 
 	// TODO: include non-function globals
-	globals := make([]Value, 0, len(functions))
+	globals := make([]values.Value, 0, len(functions))
 	for _, function := range functions {
 		// TODO:
-		globals = append(globals, FunctionValue{Function: function})
+		globals = append(globals, values.FunctionValue{Function: function})
 	}
+
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	return &VM{
 		Program:   program,
 		globals:   globals,
 		functions: functions,
-		constants: make([]Value, len(program.Constants)),
+		constants: make([]values.Value, len(program.Constants)),
+		context: context.Context{
+			Storage: storage,
+		},
 	}
 }
 
@@ -61,11 +72,11 @@ func indexFunctions(functions []*bbq.Function) map[string]*bbq.Function {
 	return indexedFunctions
 }
 
-func (vm *VM) push(value Value) {
+func (vm *VM) push(value values.Value) {
 	vm.stack = append(vm.stack, value)
 }
 
-func (vm *VM) pop() Value {
+func (vm *VM) pop() values.Value {
 	lastIndex := len(vm.stack) - 1
 	value := vm.stack[lastIndex]
 	vm.stack[lastIndex] = nil
@@ -81,25 +92,24 @@ func (vm *VM) dropN(count int) {
 	vm.stack = vm.stack[:stackHeight-count]
 }
 
-func (vm *VM) peekPop() (Value, Value) {
+func (vm *VM) peekPop() (values.Value, values.Value) {
 	lastIndex := len(vm.stack) - 1
 	return vm.stack[lastIndex-1], vm.pop()
 }
 
-func (vm *VM) replaceTop(value Value) {
+func (vm *VM) replaceTop(value values.Value) {
 	lastIndex := len(vm.stack) - 1
 	vm.stack[lastIndex] = value
 }
 
-func (vm *VM) pushCallFrame(function *bbq.Function, arguments []Value) {
-
+func (vm *VM) pushCallFrame(function *bbq.Function, arguments []values.Value) {
 	// Preserve local index zero for `self`.
 	localOffset := 0
 	if function.IsCompositeFunction {
 		localOffset = 1
 	}
 
-	locals := make([]Value, function.LocalCount)
+	locals := make([]values.Value, function.LocalCount)
 	for i, argument := range arguments {
 		locals[i+localOffset] = argument
 	}
@@ -116,7 +126,7 @@ func (vm *VM) popCallFrame() {
 	vm.callFrame = vm.callFrame.parent
 }
 
-func (vm *VM) Invoke(name string, arguments ...Value) (Value, error) {
+func (vm *VM) Invoke(name string, arguments ...values.Value) (values.Value, error) {
 	function, ok := vm.functions[name]
 	if !ok {
 		return nil, errors.NewDefaultUserError("unknown function")
@@ -171,7 +181,7 @@ func opJump(vm *VM) {
 func opJumpIfFalse(vm *VM) {
 	callFrame := vm.callFrame
 	target := callFrame.getUint16()
-	value := vm.pop().(BoolValue)
+	value := vm.pop().(values.BoolValue)
 	if !value {
 		callFrame.ip = target
 	}
@@ -179,38 +189,38 @@ func opJumpIfFalse(vm *VM) {
 
 func opBinaryIntAdd(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
+	leftNumber := left.(values.IntValue)
+	rightNumber := right.(values.IntValue)
 	vm.replaceTop(leftNumber.Add(rightNumber))
 }
 
 func opBinaryIntSubtract(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
+	leftNumber := left.(values.IntValue)
+	rightNumber := right.(values.IntValue)
 	vm.replaceTop(leftNumber.Subtract(rightNumber))
 }
 
 func opBinaryIntLess(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
+	leftNumber := left.(values.IntValue)
+	rightNumber := right.(values.IntValue)
 	vm.replaceTop(leftNumber.Less(rightNumber))
 }
 
 func opBinaryIntGreater(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
+	leftNumber := left.(values.IntValue)
+	rightNumber := right.(values.IntValue)
 	vm.replaceTop(leftNumber.Greater(rightNumber))
 }
 
 func opTrue(vm *VM) {
-	vm.push(trueValue)
+	vm.push(values.TrueValue)
 }
 
 func opFalse(vm *VM) {
-	vm.push(falseValue)
+	vm.push(values.FalseValue)
 }
 
 func opGetConstant(vm *VM) {
@@ -244,7 +254,7 @@ func opGetGlobal(vm *VM) {
 
 func opCall(vm *VM) {
 	// TODO: support any function value
-	value := vm.pop().(FunctionValue)
+	value := vm.pop().(values.FunctionValue)
 	stackHeight := len(vm.stack)
 	parameterCount := int(value.Function.ParameterCount)
 	arguments := vm.stack[stackHeight-parameterCount:]
@@ -257,32 +267,37 @@ func opPop(vm *VM) {
 }
 
 func opNew(vm *VM) {
-	// TODO: get location
-	name := vm.pop().(StringValue)
-	value := NewStructValue(string(name.string))
+	name := vm.pop().(values.StringValue)
+	value := values.NewStructValue(
+		// TODO: get location
+		nil,
+		string(name.String),
+		common.Address{},
+		vm.context.Storage,
+	)
 	vm.push(value)
 }
 
 func opSetField(vm *VM) {
-	fieldName := vm.pop().(StringValue)
-	fieldNameStr := string(fieldName.string)
+	fieldName := vm.pop().(values.StringValue)
+	fieldNameStr := string(fieldName.String)
 
 	// TODO: support all container types
-	structValue := vm.pop().(StructValue)
+	structValue := vm.pop().(values.StructValue)
 
 	fieldValue := vm.pop()
 
-	structValue.Fields[fieldNameStr] = fieldValue
+	structValue.SetMember(vm.context, fieldNameStr, fieldValue)
 }
 
 func opGetField(vm *VM) {
-	fieldName := vm.pop().(StringValue)
-	fieldNameStr := string(fieldName.string)
+	fieldName := vm.pop().(values.StringValue)
+	fieldNameStr := string(fieldName.String)
 
 	// TODO: support all container types
-	structValue := vm.pop().(StructValue)
+	structValue := vm.pop().(values.StructValue)
 
-	fieldValue := structValue.Fields[fieldNameStr]
+	fieldValue := structValue.GetMember(vm.context, fieldNameStr)
 	vm.push(fieldValue)
 }
 
@@ -346,15 +361,15 @@ func (vm *VM) run() {
 	}
 }
 
-func (vm *VM) initializeConstant(index uint16) (value Value) {
+func (vm *VM) initializeConstant(index uint16) (value values.Value) {
 	constant := vm.Program.Constants[index]
 	switch constant.Kind {
 	case constantkind.Int:
 		// TODO:
 		smallInt, _, _ := leb128.ReadInt64(constant.Data)
-		value = IntValue{smallInt}
+		value = values.IntValue{SmallInt: smallInt}
 	case constantkind.String:
-		value = StringValue{constant.Data}
+		value = values.StringValue{String: constant.Data}
 	default:
 		// TODO:
 		panic(errors.NewUnreachableError())

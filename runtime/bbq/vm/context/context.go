@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,31 @@
  * limitations under the License.
  */
 
-package vm
+package context
 
 import (
-	"github.com/onflow/cadence/runtime/bbq"
-	"github.com/onflow/cadence/runtime/bbq/vm/values"
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
-type callFrame struct {
-	parent   *callFrame
-	locals   []values.Value
-	function *bbq.Function
-	ip       uint16
+type Context struct {
+	Storage Storage
 }
 
-func (f *callFrame) getUint16() uint16 {
-	first := f.function.Code[f.ip]
-	last := f.function.Code[f.ip+1]
-	f.ip += 2
-	return uint16(first)<<8 | uint16(last)
+type Storage interface {
+	atree.SlabStorage
+}
+
+func RemoveReferencedSlab(storage Storage, storable atree.Storable) {
+	storageIDStorable, ok := storable.(atree.StorageIDStorable)
+	if !ok {
+		return
+	}
+
+	storageID := atree.StorageID(storageIDStorable)
+	err := storage.Remove(storageID)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
 }

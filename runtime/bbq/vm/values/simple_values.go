@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package vm
+package values
 
 import (
 	"github.com/onflow/cadence/runtime/bbq"
@@ -26,8 +26,8 @@ type Value interface {
 	isValue()
 }
 
-var trueValue Value = BoolValue(true)
-var falseValue Value = BoolValue(false)
+var TrueValue Value = BoolValue(true)
+var FalseValue Value = BoolValue(false)
 
 type BoolValue bool
 
@@ -36,7 +36,7 @@ var _ Value = BoolValue(true)
 func (BoolValue) isValue() {}
 
 type IntValue struct {
-	smallInt int64
+	SmallInt int64
 }
 
 var _ Value = IntValue{}
@@ -44,25 +44,25 @@ var _ Value = IntValue{}
 func (IntValue) isValue() {}
 
 func (v IntValue) Add(other IntValue) Value {
-	return IntValue{v.smallInt + other.smallInt}
+	return IntValue{v.SmallInt + other.SmallInt}
 }
 
 func (v IntValue) Subtract(other IntValue) Value {
-	return IntValue{v.smallInt - other.smallInt}
+	return IntValue{v.SmallInt - other.SmallInt}
 }
 
 func (v IntValue) Less(other IntValue) Value {
-	if v.smallInt < other.smallInt {
-		return trueValue
+	if v.SmallInt < other.SmallInt {
+		return TrueValue
 	}
-	return falseValue
+	return FalseValue
 }
 
 func (v IntValue) Greater(other IntValue) Value {
-	if v.smallInt > other.smallInt {
-		return trueValue
+	if v.SmallInt > other.SmallInt {
+		return TrueValue
 	}
-	return falseValue
+	return FalseValue
 }
 
 type FunctionValue struct {
@@ -74,25 +74,9 @@ var _ Value = FunctionValue{}
 func (FunctionValue) isValue() {}
 
 type StringValue struct {
-	string []byte
+	String []byte
 }
 
 var _ Value = StringValue{}
 
 func (StringValue) isValue() {}
-
-type StructValue struct {
-	Name   string
-	Fields map[string]Value
-}
-
-func NewStructValue(name string) StructValue {
-	return StructValue{
-		Name:   name,
-		Fields: map[string]Value{},
-	}
-}
-
-var _ Value = StructValue{}
-
-func (StructValue) isValue() {}
