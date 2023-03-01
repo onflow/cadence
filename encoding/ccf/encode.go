@@ -20,6 +20,7 @@ package ccf
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	goRuntime "runtime"
@@ -334,6 +335,11 @@ func (e *Encoder) encodeValue(
 ) error {
 
 	runtimeType := v.Type()
+
+	// CCF requires value to have non-nil type.
+	if runtimeType == nil {
+		panic(errors.New("value has nil type"))
+	}
 
 	if needToEncodeRuntimeType(staticType, runtimeType) {
 		// Encode ccf-type-and-value-message.
