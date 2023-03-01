@@ -94,6 +94,7 @@ func (e RLPDecodeStringError) Error() string {
 }
 
 var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
+	rlpDecodeStringFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -126,7 +127,6 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 		}
 		return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
 	},
-	rlpDecodeStringFunctionType,
 )
 
 const rlpDecodeListFunctionDocString = `
@@ -165,6 +165,7 @@ func (e RLPDecodeListError) Error() string {
 }
 
 var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
+	rlpDecodeListFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -215,7 +216,6 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 			values...,
 		)
 	},
-	rlpDecodeListFunctionType,
 )
 
 var rlpContractFields = map[string]interpreter.Value{

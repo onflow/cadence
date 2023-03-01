@@ -46,8 +46,14 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
+      # Unify the version to the format `v0.1.0`.
+      # This is to support both version formats: `0.1.0` and `v0.1.0`.
+      - name: Cleanup version
+        id: version-gen
+        run: echo "version=v`(echo "${{ github.event.inputs.version }}" | sed -Ee 's/^v//')`" >> $GITHUB_OUTPUT
+
       - name: Bump Version
-        run: make release bump=${{ github.event.inputs.version }}
+        run: make release bump=${{ steps.version-gen.outputs.version }}
 
       - name: Run Tests
         run: |
@@ -62,14 +68,14 @@ jobs:
       - name: Open Pull Request
         uses: peter-evans/create-pull-request@v4
         with:
-          branch: release/v${{ github.event.inputs.version }}
-          title: 'Merge `release/v${{ github.event.inputs.version }}` to `${{ inputs.base }}`'
-          commit-message: v${{ github.event.inputs.version }}
+          branch: release/${{ steps.version-gen.outputs.version }}
+          title: 'Merge `release/${{ steps.version-gen.outputs.version }}` to `${{ inputs.base }}`'
+          commit-message: ${{ steps.version-gen.outputs.version }}
           body: |
-            Merge `release/v${{ github.event.inputs.version }}` branch to `${{ inputs.base }}`
+            Merge `release/${{ steps.version-gen.outputs.version }}` branch to `${{ inputs.base }}`
 
       - name: Tag and Push
         run: |
-          git checkout release/v${{ github.event.inputs.version }}
-          git tag v${{ github.event.inputs.version }}
-          git push origin v${{ github.event.inputs.version }}
+          git checkout release/${{ steps.version-gen.outputs.version }}
+          git tag ${{ steps.version-gen.outputs.version }}
+          git push origin ${{ steps.version-gen.outputs.version }}

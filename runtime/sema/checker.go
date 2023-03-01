@@ -1289,8 +1289,11 @@ func (checker *Checker) functionType(
 ) *FunctionType {
 	convertedParameters := checker.parameters(parameterList)
 
-	convertedReturnTypeAnnotation :=
-		checker.ConvertTypeAnnotation(returnTypeAnnotation)
+	convertedReturnTypeAnnotation := VoidTypeAnnotation
+	if returnTypeAnnotation != nil {
+		convertedReturnTypeAnnotation =
+			checker.ConvertTypeAnnotation(returnTypeAnnotation)
+	}
 
 	return &FunctionType{
 		Purity:               PurityFromAnnotation(purity),

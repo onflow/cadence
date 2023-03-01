@@ -634,12 +634,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 						break
 					}
 
-					isCommaOrFrom, err := isNextTokenCommaOrFrom(p)
-					if err != nil {
-						return err
-					}
-
-					if !isCommaOrFrom {
+					if !isNextTokenCommaOrFrom(p) {
 						return p.syntaxError(
 							"expected %s, got keyword %q",
 							lexer.TokenIdentifier,
@@ -763,10 +758,12 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 }
 
 // isNextTokenCommaOrFrom check whether the token to follow is a comma or a from token.
-func isNextTokenCommaOrFrom(p *parser) (b bool, err error) {
-	p.startBuffering()
+func isNextTokenCommaOrFrom(p *parser) bool {
+	current := p.current
+	cursor := p.tokens.Cursor()
 	defer func() {
-		err = p.replayBuffered()
+		p.current = current
+		p.tokens.Revert(cursor)
 	}()
 
 	// skip the current token
@@ -775,13 +772,13 @@ func isNextTokenCommaOrFrom(p *parser) (b bool, err error) {
 	// Lookahead the next token
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
-		isFrom := string(p.currentTokenSource()) == KeywordFrom
-		return isFrom, nil
+		return string(p.currentTokenSource()) == KeywordFrom
+
 	case lexer.TokenComma:
-		return true, nil
-	default:
-		return false, nil
+		return true
 	}
+
+	return false
 }
 
 func parseHexadecimalLocation(p *parser) common.AddressLocation {
@@ -1473,6 +1470,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				staticPos,
 				nativePos,
 				identifier,
+				docString,
 			)
 		}
 
@@ -1560,29 +1558,15 @@ func parseSpecialFunctionDeclaration(
 	staticPos *ast.Position,
 	nativePos *ast.Position,
 	identifier ast.Identifier,
+	docString string,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
 	startPos := ast.EarliestPosition(identifier.Pos, accessPos, purityPos, staticPos, nativePos)
 
-	// TODO: switch to parseFunctionParameterListAndRest once old parser is deprecated:
-	//   allow a return type annotation while parsing, but reject later.
-
-	parameterList, err := parseParameterList(p)
+	parameterList, returnTypeAnnotation, functionBlock, err :=
+		parseFunctionParameterListAndRest(p, functionBlockIsOptional)
 	if err != nil {
 		return nil, err
-	}
-
-	p.skipSpaceAndComments()
-
-	var functionBlock *ast.FunctionBlock
-
-	if !functionBlockIsOptional ||
-		p.current.Is(lexer.TokenBraceOpen) {
-
-		functionBlock, err = parseFunctionBlock(p)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	declarationKind := common.DeclarationKindUnknown
@@ -1600,6 +1584,21 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindPrepare
 	}
 
+	if returnTypeAnnotation != nil {
+		var kindDescription string
+		if declarationKind != common.DeclarationKindUnknown {
+			kindDescription = declarationKind.Name()
+		} else {
+			kindDescription = "special function"
+		}
+
+		p.report(NewSyntaxError(
+			returnTypeAnnotation.StartPos,
+			"invalid return type for %s",
+			kindDescription,
+		))
+	}
+
 	return ast.NewSpecialFunctionDeclaration(
 		p.memoryGauge,
 		declarationKind,
@@ -1615,7 +1614,7 @@ func parseSpecialFunctionDeclaration(
 			nil,
 			functionBlock,
 			startPos,
-			"",
+			docString,
 		),
 	), nil
 }

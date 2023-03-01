@@ -32,7 +32,8 @@ var TestTypeNothingFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeNothingFunctionDocString = `This is a test function.
+const TestTypeNothingFunctionDocString = `
+This is a test function.
 `
 
 const TestTypeParamsFunctionName = "params"
@@ -51,7 +52,8 @@ var TestTypeParamsFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeParamsFunctionDocString = `This is a test function with parameters.
+const TestTypeParamsFunctionDocString = `
+This is a test function with parameters.
 `
 
 const TestTypeReturnBoolFunctionName = "returnBool"
@@ -62,7 +64,8 @@ var TestTypeReturnBoolFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeReturnBoolFunctionDocString = `This is a test function with a return type.
+const TestTypeReturnBoolFunctionDocString = `
+This is a test function with a return type.
 `
 
 const TestTypeParamsAndReturnFunctionName = "paramsAndReturn"
@@ -81,7 +84,75 @@ var TestTypeParamsAndReturnFunctionType = &FunctionType{
 	),
 }
 
-const TestTypeParamsAndReturnFunctionDocString = `This is a test function with parameters and a return type.
+const TestTypeParamsAndReturnFunctionDocString = `
+This is a test function with parameters and a return type.
+`
+
+const TestTypeTypeParamFunctionName = "typeParam"
+
+var TestTypeTypeParamFunctionTypeParameterT = &TypeParameter{
+	Name: "T",
+}
+
+var TestTypeTypeParamFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		TestTypeTypeParamFunctionTypeParameterT,
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const TestTypeTypeParamFunctionDocString = `
+This is a test function with a type parameter.
+`
+
+const TestTypeTypeParamWithBoundFunctionName = "typeParamWithBound"
+
+var TestTypeTypeParamWithBoundFunctionTypeParameterT = &TypeParameter{
+	Name: "T",
+	TypeBound: &ReferenceType{
+		Type: AnyType,
+	},
+}
+
+var TestTypeTypeParamWithBoundFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		TestTypeTypeParamWithBoundFunctionTypeParameterT,
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const TestTypeTypeParamWithBoundFunctionDocString = `
+This is a test function with a type parameter and a type bound.
+`
+
+const TestTypeTypeParamWithBoundAndParamFunctionName = "typeParamWithBoundAndParam"
+
+var TestTypeTypeParamWithBoundAndParamFunctionTypeParameterT = &TypeParameter{
+	Name: "T",
+}
+
+var TestTypeTypeParamWithBoundAndParamFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		TestTypeTypeParamWithBoundAndParamFunctionTypeParameterT,
+	},
+	Parameters: []Parameter{
+		{
+			TypeAnnotation: NewTypeAnnotation(&GenericType{
+				TypeParameter: TestTypeTypeParamWithBoundAndParamFunctionTypeParameterT,
+			}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const TestTypeTypeParamWithBoundAndParamFunctionDocString = `
+This is a test function with a type parameter and a parameter using it.
 `
 
 const TestTypeName = "Test"
@@ -159,6 +230,54 @@ var TestType = &SimpleType{
 						identifier,
 						TestTypeParamsAndReturnFunctionType,
 						TestTypeParamsAndReturnFunctionDocString,
+					)
+				},
+			},
+			TestTypeTypeParamFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeTypeParamFunctionType,
+						TestTypeTypeParamFunctionDocString,
+					)
+				},
+			},
+			TestTypeTypeParamWithBoundFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeTypeParamWithBoundFunctionType,
+						TestTypeTypeParamWithBoundFunctionDocString,
+					)
+				},
+			},
+			TestTypeTypeParamWithBoundAndParamFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error)) *Member {
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						TestTypeTypeParamWithBoundAndParamFunctionType,
+						TestTypeTypeParamWithBoundAndParamFunctionDocString,
 					)
 				},
 			},
