@@ -21,4 +21,5 @@ package bbq
 type Program struct {
 	Functions []*Function
 	Constants []*Constant
+	Types     [][]byte
 }

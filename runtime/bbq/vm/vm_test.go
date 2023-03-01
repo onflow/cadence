@@ -19,13 +19,19 @@
 package vm
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/bbq/compiler"
-	"github.com/onflow/cadence/runtime/bbq/vm/values"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/tests/checker"
+
+	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/runtime/bbq/compiler"
+	"github.com/onflow/cadence/runtime/bbq/vm/context"
+	"github.com/onflow/cadence/runtime/bbq/vm/values"
 )
 
 const recursiveFib = `
@@ -233,8 +239,8 @@ func TestNewStruct(t *testing.T) {
 	result, err := vm.Invoke("test", values.IntValue{SmallInt: 10})
 	require.NoError(t, err)
 
-	require.IsType(t, values.StructValue{}, result)
-	structValue := result.(values.StructValue)
+	require.IsType(t, &values.StructValue{}, result)
+	structValue := result.(*values.StructValue)
 
 	require.Equal(t, "Foo", structValue.QualifiedIdentifier)
 	require.Equal(
@@ -275,10 +281,34 @@ func BenchmarkNewStruct(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var value values.Value = values.IntValue{SmallInt: 7}
+	value := values.IntValue{SmallInt: 7}
 
 	for i := 0; i < b.N; i++ {
 		_, err := vm.Invoke("test", value)
 		require.NoError(b, err)
 	}
+}
+
+func BenchmarkNewStructRaw(b *testing.B) {
+
+	storage := interpreter.NewInMemoryStorage(nil)
+	ctx := context.Context{
+		Storage: storage,
+	}
+
+	fieldValue := values.IntValue{SmallInt: 7}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 7; j++ {
+			structValue := values.NewStructValue(nil, "Foo", common.Address{}, storage.BasicSlabStorage)
+			structValue.SetMember(ctx, "id", fieldValue)
+		}
+	}
+}
+
+func printProgram(program *bbq.Program) {
+	byteCodePrinter := &bbq.BytecodePrinter{}
+	fmt.Println(byteCodePrinter.PrintProgram(program))
 }

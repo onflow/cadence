@@ -62,7 +62,8 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 			opcode.SetLocal,
 			opcode.GetGlobal,
 			opcode.Jump,
-			opcode.JumpIfFalse:
+			opcode.JumpIfFalse,
+			opcode.CheckType:
 
 			first := codes[i+1]
 			last := codes[i+2]

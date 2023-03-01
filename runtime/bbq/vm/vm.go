@@ -19,26 +19,27 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/bbq/constantkind"
 	"github.com/onflow/cadence/runtime/bbq/leb128"
 	"github.com/onflow/cadence/runtime/bbq/opcode"
 	"github.com/onflow/cadence/runtime/bbq/vm/context"
+	"github.com/onflow/cadence/runtime/bbq/vm/types"
 	"github.com/onflow/cadence/runtime/bbq/vm/values"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 type VM struct {
-	Program   *bbq.Program
-	globals   []values.Value
-	constants []values.Value
-	functions map[string]*bbq.Function
-	callFrame *callFrame
-	stack     []values.Value
-	context   context.Context
+	Program     *bbq.Program
+	globals     []values.Value
+	constants   []values.Value
+	staticTypes []types.StaticType
+	functions   map[string]*bbq.Function
+	callFrame   *callFrame
+	stack       []values.Value
+	context     context.Context
 }
 
 func NewVM(program *bbq.Program) *VM {
@@ -56,10 +57,11 @@ func NewVM(program *bbq.Program) *VM {
 	storage := interpreter.NewInMemoryStorage(nil)
 
 	return &VM{
-		Program:   program,
-		globals:   globals,
-		functions: functions,
-		constants: make([]values.Value, len(program.Constants)),
+		Program:     program,
+		globals:     globals,
+		functions:   functions,
+		constants:   make([]values.Value, len(program.Constants)),
+		staticTypes: make([]types.StaticType, len(program.Types)),
 		context: context.Context{
 			Storage: storage,
 		},
@@ -84,6 +86,11 @@ func (vm *VM) pop() values.Value {
 	vm.stack[lastIndex] = nil
 	vm.stack = vm.stack[:lastIndex]
 	return value
+}
+
+func (vm *VM) peek() values.Value {
+	lastIndex := len(vm.stack) - 1
+	return vm.stack[lastIndex]
 }
 
 func (vm *VM) dropN(count int) {
@@ -272,7 +279,7 @@ func opNew(vm *VM) {
 	name := vm.pop().(values.StringValue)
 	value := values.NewStructValue(
 		// TODO: get location
-		nil,
+		common.StringLocation("test"),
 		string(name.String),
 		common.Address{},
 		vm.context.Storage,
@@ -285,7 +292,7 @@ func opSetField(vm *VM) {
 	fieldNameStr := string(fieldName.String)
 
 	// TODO: support all container types
-	structValue := vm.pop().(values.StructValue)
+	structValue := vm.pop().(*values.StructValue)
 
 	fieldValue := vm.pop()
 
@@ -297,10 +304,18 @@ func opGetField(vm *VM) {
 	fieldNameStr := string(fieldName.String)
 
 	// TODO: support all container types
-	structValue := vm.pop().(values.StructValue)
+	structValue := vm.pop().(*values.StructValue)
 
 	fieldValue := structValue.GetMember(vm.context, fieldNameStr)
 	vm.push(fieldValue)
+}
+
+func opCheckType(vm *VM) {
+	targetType := vm.loadType()
+	valueType := vm.peek().StaticType(vm.context.MemoryGauge)
+	if !types.IsSubType(valueType, targetType) {
+		panic("invalid transfer")
+	}
 }
 
 func (vm *VM) run() {
@@ -354,6 +369,8 @@ func (vm *VM) run() {
 			opSetField(vm)
 		case opcode.GetField:
 			opGetField(vm)
+		case opcode.CheckType:
+			opCheckType(vm)
 		default:
 			panic(errors.NewUnreachableError())
 		}
@@ -378,4 +395,26 @@ func (vm *VM) initializeConstant(index uint16) (value values.Value) {
 	}
 	vm.constants[index] = value
 	return value
+}
+
+func (vm *VM) loadType() types.StaticType {
+	index := vm.callFrame.getUint16()
+	staticType := vm.staticTypes[index]
+	if staticType == nil {
+		staticType = vm.initializeType(index)
+	}
+
+	return staticType
+}
+
+func (vm *VM) initializeType(index uint16) interpreter.StaticType {
+	typeBytes := vm.Program.Types[index]
+	dec := interpreter.CBORDecMode.NewByteStreamDecoder(typeBytes)
+	staticType, err := interpreter.NewTypeDecoder(dec, nil).DecodeStaticType()
+	if err != nil {
+		panic(err)
+	}
+
+	vm.staticTypes[index] = staticType
+	return staticType
 }
