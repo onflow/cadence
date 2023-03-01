@@ -105,7 +105,7 @@ func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
 	}
 
 	// Decode fields after all high-level type definitions are resolved.
-	for id, raw := range rawFields {
+	for id, raw := range rawFields { //nolint:maprange
 		typ, ok := types[id]
 		if !ok {
 			return nil, fmt.Errorf("composite fields' CCF type ID %d not found in composite-typedef", id)
@@ -366,7 +366,7 @@ func (d *Decoder) decodeCompositeFields(types cadenceTypeByCCFTypeID, decodeType
 
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceField,
-		Amount: uint64(fieldCount),
+		Amount: fieldCount,
 	})
 
 	for i := 0; i < int(fieldCount); i++ {

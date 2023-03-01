@@ -46,7 +46,7 @@ func newBytewiseFieldSorter(types []cadence.Field) bytewiseFieldSorter {
 	for i := 0; i < len(indexes); i++ {
 		indexes[i] = i
 	}
-	return bytewiseFieldSorter{types, indexes}
+	return bytewiseFieldSorter{fields: types, indexes: indexes}
 }
 
 func (x bytewiseFieldSorter) Len() int {
@@ -92,7 +92,7 @@ func newBytewiseParameterSorter(parameters []cadence.Parameter) bytewiseParamete
 	for i := 0; i < len(indexes); i++ {
 		indexes[i] = i
 	}
-	return bytewiseParameterSorter{parameters, indexes}
+	return bytewiseParameterSorter{parameters: parameters, indexes: indexes}
 }
 
 func (x bytewiseParameterSorter) Len() int {
@@ -175,7 +175,7 @@ func newBytewiseCadenceTypeSorter(types []cadence.Type) bytewiseCadenceTypeSorte
 	for i := 0; i < len(indexes); i++ {
 		indexes[i] = i
 	}
-	return bytewiseCadenceTypeSorter{types, indexes}
+	return bytewiseCadenceTypeSorter{types: types, indexes: indexes}
 }
 
 func (t bytewiseCadenceTypeSorter) Len() int {

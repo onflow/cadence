@@ -243,7 +243,9 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 		return err
 	}
 
-	for _, typ := range types {
+	for i := 0; i < len(types); i++ {
+		typ := types[i]
+
 		switch x := typ.(type) {
 		case cadence.CompositeType:
 			// Encode struct-type, resource-type, contract-type, event-type, or enum-type.
@@ -686,9 +688,9 @@ func (e *Encoder) encodeArray(v cadence.Array, tids ccfTypeIDByCadenceType) erro
 		return err
 	}
 
-	for _, value := range v.Values {
+	for i := 0; i < len(v.Values); i++ {
 		// Encode element as value.
-		err = e.encodeValue(value, staticElementType, tids)
+		err = e.encodeValue(v.Values[i], staticElementType, tids)
 		if err != nil {
 			return err
 		}
@@ -719,7 +721,9 @@ func (e *Encoder) encodeDictionary(v cadence.Dictionary, tids ccfTypeIDByCadence
 		return err
 	}
 
-	for _, pair := range v.Pairs {
+	for i := 0; i < len(v.Pairs); i++ {
+		pair := v.Pairs[i]
+
 		// Encode dictionary key as value.
 		err = e.encodeValue(pair.Key, staticKeyType, tids)
 		if err != nil {
@@ -791,7 +795,9 @@ func encodeAndSortKeyValuePairs(
 
 	e := NewEncoder(buf)
 
-	for i, pair := range v.Pairs {
+	for i := 0; i < len(v.Pairs); i++ {
+		pair := v.Pairs[i]
+
 		off := buf.Len()
 
 		// Encode dictionary key as value.
@@ -902,7 +908,9 @@ func (e *Encoder) encodeComposite(
 
 	sortedIndexes := getSortedFieldIndex(typ)
 
-	for _, index := range sortedIndexes {
+	for i := 0; i < len(sortedIndexes); i++ {
+		index := sortedIndexes[i]
+
 		// Encode sorted field as value.
 		err = e.encodeValue(fields[index], staticFieldTypes[index].Type, tids)
 		if err != nil {
@@ -1527,7 +1535,9 @@ func (e *Encoder) encodeFieldTypeValues(fieldTypes []cadence.Field, visited ccfT
 	sort.Sort(sorter)
 
 	// Encode sorted field types.
-	for _, index := range sorter.indexes {
+	for i := 0; i < len(sorter.indexes); i++ {
+		index := sorter.indexes[i]
+
 		err = e.encodeFieldTypeValue(fieldTypes[index], visited)
 		if err != nil {
 			return err
@@ -1584,7 +1594,9 @@ func (e *Encoder) encodeInitializerTypeValues(initializerTypes [][]cadence.Param
 	}
 
 	// Encode initializers.
-	for _, params := range initializerTypes {
+	for i := 0; i < len(initializerTypes); i++ {
+		params := initializerTypes[i]
+
 		err = e.encodeParameterTypeValues(params, visited)
 		if err != nil {
 			return err
@@ -1628,7 +1640,9 @@ func (e *Encoder) encodeParameterTypeValues(parameterTypes []cadence.Parameter, 
 	sort.Sort(sorter)
 
 	// Encode sorted parameter types.
-	for _, index := range sorter.indexes {
+	for i := 0; i < len(sorter.indexes); i++ {
+		index := sorter.indexes[i]
+
 		err = e.encodeParameterTypeValue(parameterTypes[index], visited)
 		if err != nil {
 			return err

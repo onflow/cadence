@@ -1619,44 +1619,51 @@ func (d *Decoder) decodeCompositeTypeValue(
 //	]
 //
 // ]
-func (d *Decoder) _decodeCompositeTypeValue(visited cadenceTypeByCCFTypeID) (compositeTypeValue, error) {
+func (d *Decoder) _decodeCompositeTypeValue(visited cadenceTypeByCCFTypeID) (*compositeTypeValue, error) {
 	// Decode array of length 5
 	err := decodeCBORArrayWithKnownSize(d.dec, 5)
 	if err != nil {
-		return compositeTypeValue{}, err
+		return nil, err
 	}
 
 	// element 0: id (used to lookup repeated or recursive types)
 	ccfID, err := d.decodeCCFTypeID()
 	if err != nil {
-		return compositeTypeValue{}, err
+		return nil, err
 	}
 
 	// element 1: cadence-type-id
 	_, location, identifier, err := d.decodeCadenceTypeID()
 	if err != nil {
-		return compositeTypeValue{}, err
+		return nil, err
 	}
 
 	// element 2: type (only used by enum type value)
 	typ, err := d._decodeTypeValue(visited)
 	if err != nil {
-		return compositeTypeValue{}, err
+		return nil, err
 	}
 
 	// element 3: fields
 	rawField, err := d.dec.DecodeRawBytes()
 	if err != nil {
-		return compositeTypeValue{}, err
+		return nil, err
 	}
 
 	// element 4: initializers
 	initializerTypes, err := d.decodeInitializerTypeValues(visited)
 	if err != nil {
-		return compositeTypeValue{}, err
+		return nil, err
 	}
 
-	return compositeTypeValue{ccfID, location, identifier, typ, rawField, initializerTypes}, nil
+	return &compositeTypeValue{
+		ccfID:            ccfID,
+		location:         location,
+		identifier:       identifier,
+		typ:              typ,
+		rawField:         rawField,
+		initializerTypes: initializerTypes,
+	}, nil
 }
 
 // decodeInitializerTypeValues decodes composite initializers as
@@ -1714,7 +1721,7 @@ func (d *Decoder) decodeParameterTypeValues(visited cadenceTypeByCCFTypeID) ([]c
 
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceParameter,
-		Amount: uint64(count),
+		Amount: count,
 	})
 
 	for i := 0; i < int(count); i++ {

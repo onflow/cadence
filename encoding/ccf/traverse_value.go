@@ -54,8 +54,8 @@ func compositeTypesFromValue(v cadence.Value) ([]cadence.Type, ccfTypeIDByCadenc
 	sort.Sort(bytewiseCadenceTypeInPlaceSorter(ct.types))
 
 	// Assign sorted array index as local ccf ID.
-	for i, t := range ct.types {
-		ct.ids[t.ID()] = ccfTypeID(i)
+	for i := 0; i < len(ct.types); i++ {
+		ct.ids[ct.types[i].ID()] = ccfTypeID(i)
 	}
 
 	return ct.types, ct.ids
@@ -142,8 +142,8 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 
 	case *cadence.RestrictedType:
 		check := ct.traverseType(t.Type)
-		for _, restriction := range t.Restrictions {
-			checkRestriction := ct.traverseType(restriction)
+		for i := 0; i < len(t.Restrictions); i++ {
+			checkRestriction := ct.traverseType(t.Restrictions[i])
 			check = check || checkRestriction
 		}
 		return check
@@ -154,8 +154,8 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		newType := ct.add(t)
 		if newType {
 			fields := t.CompositeFields()
-			for _, f := range fields {
-				checkField := ct.traverseType(f.Type)
+			for i := 0; i < len(fields); i++ {
+				checkField := ct.traverseType(fields[i].Type)
 				check = check || checkField
 			}
 

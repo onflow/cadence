@@ -147,7 +147,9 @@ func (e *Encoder) encodeCompositeTypeFields(typ cadence.CompositeType, tids ccfT
 	//   "composite-type.fields MUST be sorted by name"
 	sortedIndexes := getSortedFieldIndex(typ)
 
-	for _, index := range sortedIndexes {
+	for i := 0; i < len(sortedIndexes); i++ {
+		index := sortedIndexes[i]
+
 		// Encode field
 		err = e.encodeCompositeTypeField(fieldTypes[index], tids)
 		if err != nil {
