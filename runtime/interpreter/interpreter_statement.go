@@ -402,15 +402,21 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 }
 
 func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.RemoveStatement) StatementResult {
-	base, ok := interpreter.evalExpression(removeStatement.Value).(*CompositeValue)
-	// we enforce this in the checker
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
 
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: removeStatement,
+	}
+
+	removeTarget := interpreter.evalExpression(removeStatement.Value)
+	base, ok := removeTarget.(*CompositeValue)
+
+	// we enforce this in the checker, but check defensively anyways
+	if !ok || !base.Kind.SupportsAttachments() {
+		panic(InvalidAttachmentOperationTargetError{
+			Value:         removeTarget,
+			LocationRange: locationRange,
+		})
 	}
 
 	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
