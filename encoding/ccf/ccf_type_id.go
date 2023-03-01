@@ -52,7 +52,7 @@ type ccfTypeIDByCadenceType map[string]ccfTypeID
 func (types ccfTypeIDByCadenceType) id(t cadence.Type) (ccfTypeID, error) {
 	id, ok := types[t.ID()]
 	if !ok {
-		return 0, fmt.Errorf("failed to get ccf id for cadence type %s", t.ID())
+		return 0, fmt.Errorf("CCF type ID not found for type %s", t.ID())
 	}
 	return id, nil
 }
@@ -71,7 +71,7 @@ func (ids cadenceTypeByCCFTypeID) add(id ccfTypeID, typ cadence.Type) bool {
 func (ids cadenceTypeByCCFTypeID) typ(id ccfTypeID) (cadence.Type, error) {
 	t, ok := ids[id]
 	if !ok {
-		return nil, fmt.Errorf("failed to get cadence type for ccf id %d", id)
+		return nil, fmt.Errorf("type not found for CCF type ID %d", id)
 	}
 	return t, nil
 }

@@ -93,6 +93,7 @@ func NewEncoder(w io.Writer) *Encoder {
 func (e *Encoder) Encode(value cadence.Value) (err error) {
 	// capture panics
 	defer func() {
+		// Recover panic error if there is any.
 		if r := recover(); r != nil {
 			// don't recover Go errors
 			goErr, ok := r.(goRuntime.Error)
@@ -105,7 +106,17 @@ func (e *Encoder) Encode(value cadence.Value) (err error) {
 				panic(r)
 			}
 
-			err = fmt.Errorf("failed to encode value: %w", panicErr)
+			err = panicErr
+		}
+
+		// Add context to error if there is any.
+		if err != nil {
+			err = fmt.Errorf(
+				"ccf: failed to encode value %q (type %q): %s",
+				value.String(),
+				value.Type().ID(),
+				err,
+			)
 		}
 	}()
 
@@ -239,14 +250,16 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 			if err != nil {
 				return err
 			}
+
 		case cadence.InterfaceType:
 			// Encode struct-interface-type, resource-interface-type, or contract-interface-type.
 			err = e.encodeInterfaceType(x, tids)
 			if err != nil {
 				return err
 			}
+
 		default:
-			return fmt.Errorf("failed to encode %s in type definition", typ)
+			panic(fmt.Errorf("unexpected type %s in type definition", typ.ID()))
 		}
 	}
 
@@ -314,7 +327,12 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 // cadence.String and cadence.Character must be valid UTF-8
 // and it is the application's responsibility to provide
 // the CCF encoder with valid UTF-8 strings.
-func (e *Encoder) encodeValue(v cadence.Value, staticType cadence.Type, tids ccfTypeIDByCadenceType) error {
+func (e *Encoder) encodeValue(
+	v cadence.Value,
+	staticType cadence.Type,
+	tids ccfTypeIDByCadenceType,
+) error {
+
 	runtimeType := v.Type()
 
 	if needToEncodeRuntimeType(staticType, runtimeType) {
@@ -343,80 +361,117 @@ func (e *Encoder) encodeValue(v cadence.Value, staticType cadence.Type, tids ccf
 	switch x := v.(type) {
 	case cadence.Void:
 		return e.encodeVoid(x)
+
 	case cadence.Optional:
 		return e.encodeOptional(x, tids)
+
 	case cadence.Bool:
 		return e.encodeBool(x)
+
 	case cadence.Character:
 		return e.encodeCharacter(x)
+
 	case cadence.String:
 		return e.encodeString(x)
+
 	case cadence.Address:
 		return e.encodeAddress(x)
+
 	case cadence.Int:
 		return e.encodeInt(x)
+
 	case cadence.Int8:
 		return e.encodeInt8(x)
+
 	case cadence.Int16:
 		return e.encodeInt16(x)
+
 	case cadence.Int32:
 		return e.encodeInt32(x)
+
 	case cadence.Int64:
 		return e.encodeInt64(x)
+
 	case cadence.Int128:
 		return e.encodeInt128(x)
+
 	case cadence.Int256:
 		return e.encodeInt256(x)
+
 	case cadence.UInt:
 		return e.encodeUInt(x)
+
 	case cadence.UInt8:
 		return e.encodeUInt8(x)
+
 	case cadence.UInt16:
 		return e.encodeUInt16(x)
+
 	case cadence.UInt32:
 		return e.encodeUInt32(x)
+
 	case cadence.UInt64:
 		return e.encodeUInt64(x)
+
 	case cadence.UInt128:
 		return e.encodeUInt128(x)
+
 	case cadence.UInt256:
 		return e.encodeUInt256(x)
+
 	case cadence.Word8:
 		return e.encodeWord8(x)
+
 	case cadence.Word16:
 		return e.encodeWord16(x)
+
 	case cadence.Word32:
 		return e.encodeWord32(x)
+
 	case cadence.Word64:
 		return e.encodeWord64(x)
+
 	case cadence.Fix64:
 		return e.encodeFix64(x)
+
 	case cadence.UFix64:
 		return e.encodeUFix64(x)
+
 	case cadence.Array:
 		return e.encodeArray(x, tids)
+
 	case cadence.Dictionary:
 		return e.encodeDictionary(x, tids)
+
 	case cadence.Struct:
 		return e.encodeStruct(x, tids)
+
 	case cadence.Resource:
 		return e.encodeResource(x, tids)
+
 	case cadence.Event:
 		return e.encodeEvent(x, tids)
+
 	case cadence.Contract:
 		return e.encodeContract(x, tids)
+
 	case cadence.Path:
 		return e.encodePath(x)
+
 	case cadence.TypeValue:
 		return e.encodeTypeValue(x.StaticType, ccfTypeIDByCadenceType{})
+
 	case cadence.StorageCapability:
 		return e.encodeCapability(x)
+
 	case cadence.Enum:
 		return e.encodeEnum(x, tids)
+
 	case cadence.Function:
 		return e.encodeFunction(x.FunctionType, ccfTypeIDByCadenceType{})
+
 	default:
-		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
+		panic(fmt.Errorf("unsupported value %s (%T)", v, v))
 	}
 }
 
@@ -434,8 +489,10 @@ func (e *Encoder) encodeOptional(v cadence.Optional, tids ccfTypeIDByCadenceType
 	switch innerValue := v.Value.(type) {
 	case cadence.Optional:
 		return e.encodeOptional(innerValue, tids)
+
 	case nil:
 		return e.enc.EncodeNil()
+
 	default:
 		// Use innerValue.Type() as static type to avoid encoding type
 		// because OptionalType is already encoded.
@@ -644,7 +701,7 @@ func (e *Encoder) encodeDictionary(v cadence.Dictionary, tids ccfTypeIDByCadence
 
 	dictionaryType := v.DictionaryType.(*cadence.DictionaryType)
 	if dictionaryType == nil {
-		return fmt.Errorf("failed to retrieve DictionaryType from cadence.Dictionary")
+		return fmt.Errorf("unexpected dictionary type %s", v.DictionaryType.ID())
 	}
 
 	staticKeyType := dictionaryType.KeyType
@@ -718,7 +775,7 @@ func encodeAndSortKeyValuePairs(
 ) {
 	dictionaryType := v.DictionaryType.(*cadence.DictionaryType)
 	if dictionaryType == nil {
-		return nil, fmt.Errorf("failed to retrieve DictionaryType from cadence.Dictionary")
+		return nil, fmt.Errorf("expected dictionary type %s", v.DictionaryType.ID())
 	}
 
 	staticKeyType := dictionaryType.KeyType
@@ -764,7 +821,7 @@ func encodeAndSortKeyValuePairs(
 	}
 	if off != len(b) {
 		// Sanity check
-		return nil, fmt.Errorf("failed to encode and sort dictionary pairs: off %d, len(b) %d", off, len(b))
+		panic(fmt.Errorf("encoded dictionary pairs' offset %d doesn't match buffer length %d", off, len(b)))
 	}
 
 	sort.Sort(bytewiseKeyValuePairSorter(encodedPairs))
@@ -815,13 +872,12 @@ func (e *Encoder) encodeComposite(
 	fields []cadence.Value,
 	tids ccfTypeIDByCadenceType,
 ) error {
-	id := typ.ID()
 	staticFieldTypes := typ.CompositeFields()
 
 	if len(staticFieldTypes) != len(fields) {
 		panic(fmt.Errorf(
-			"%s field count (%d) does not match declared type (%d)",
-			id,
+			"%s field count %d doesn't match declared field type count %d",
+			typ.ID(),
 			len(fields),
 			len(staticFieldTypes),
 		))
@@ -1049,7 +1105,7 @@ func (e *Encoder) encodeTypeValue(typ cadence.Type, visited ccfTypeIDByCadenceTy
 		return e.encodeNilTypeValue()
 
 	default:
-		panic(fmt.Errorf("unsupported type: %T, %v", typ, typ))
+		panic(fmt.Errorf("unsupported type value %s (%T)", typ.ID(), typ))
 	}
 }
 
@@ -1383,7 +1439,7 @@ func (e *Encoder) encodeCompositeTypeValue(
 ) error {
 	ccfID, ok := visited[cadenceTypeID]
 	if !ok {
-		return fmt.Errorf("failed to get ccf type id for cadence type %s", cadenceTypeID)
+		return fmt.Errorf("CCF type ID not found for composite type value %s", cadenceTypeID)
 	}
 
 	// Encode given tag number indicating cadence type value.
@@ -1664,6 +1720,7 @@ func isOptionalNeverType(t cadence.Type) bool {
 				return true
 			}
 			t = ot.Type
+
 		default:
 			return false
 		}

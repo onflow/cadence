@@ -82,7 +82,7 @@ func (e *Encoder) encodeInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType
 		return e.encodeSimpleType(TypeFunction)
 
 	default:
-		panic(fmt.Errorf("unsupported type: %T, %v", typ, typ))
+		panic(fmt.Errorf("unsupported type %s (%T)", typ.ID(), typ))
 	}
 }
 

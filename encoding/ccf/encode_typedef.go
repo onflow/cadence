@@ -66,7 +66,7 @@ import (
 func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDByCadenceType) error {
 	ccfID, err := tids.id(typ)
 	if err != nil {
-		return fmt.Errorf("failed to find CCF type ID for composite type %v (%T)", typ, typ)
+		return fmt.Errorf("CCF type ID not found for composite type %s (%T)", typ.ID(), typ)
 	}
 
 	var cborTagNum uint64
@@ -74,16 +74,21 @@ func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDB
 	switch t := typ.(type) {
 	case *cadence.StructType:
 		cborTagNum = CBORTagStructType
+
 	case *cadence.ResourceType:
 		cborTagNum = CBORTagResourceType
+
 	case *cadence.EventType:
 		cborTagNum = CBORTagEventType
+
 	case *cadence.ContractType:
 		cborTagNum = CBORTagContractType
+
 	case *cadence.EnumType:
 		cborTagNum = CBORTagEnumType
+
 	default:
-		return fmt.Errorf("unsupported type in type definition: %T, %v", t, t)
+		panic(fmt.Errorf("unexpected composite type %s (%T)", t.ID(), t))
 	}
 
 	// Encode tag number indicating composite type.
@@ -203,7 +208,7 @@ func (e *Encoder) encodeCompositeTypeField(typ cadence.Field, tids ccfTypeIDByCa
 func (e *Encoder) encodeInterfaceType(typ cadence.InterfaceType, tids ccfTypeIDByCadenceType) error {
 	ccfID, err := tids.id(typ)
 	if err != nil {
-		return fmt.Errorf("failed to find CCF type ID for interface type %v (%T)", typ, typ)
+		return fmt.Errorf("CCF type ID not found for interface type %s (%T)", typ.ID(), typ)
 	}
 
 	var cborTagNum uint64
@@ -211,12 +216,15 @@ func (e *Encoder) encodeInterfaceType(typ cadence.InterfaceType, tids ccfTypeIDB
 	switch t := typ.(type) {
 	case *cadence.StructInterfaceType:
 		cborTagNum = CBORTagStructInterfaceType
+
 	case *cadence.ResourceInterfaceType:
 		cborTagNum = CBORTagResourceInterfaceType
+
 	case *cadence.ContractInterfaceType:
 		cborTagNum = CBORTagContractInterfaceType
+
 	default:
-		return fmt.Errorf("unsupported type in type definition: %T, %v", t, t)
+		panic(fmt.Errorf("unexpected interface type %s (%T)", t.ID(), t))
 	}
 
 	// Encode tag number indicating interface type.
