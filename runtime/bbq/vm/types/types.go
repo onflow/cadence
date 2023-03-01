@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,45 +16,23 @@
  * limitations under the License.
  */
 
-package opcode
+package types
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=Opcode
+import "github.com/onflow/cadence/runtime/interpreter"
 
-type Opcode byte
+type StaticType = interpreter.StaticType
 
-const (
-	Unknown Opcode = iota
+func IsSubType(sourceType, targetType StaticType) bool {
+	if targetType == interpreter.PrimitiveStaticTypeAny {
+		return true
+	}
 
-	Return
-	ReturnValue
-	Jump
-	JumpIfFalse
+	// Optimization: If the static types are equal, then no need to check further.
+	if sourceType.Equal(targetType) {
+		return true
+	}
 
-	IntAdd
-	IntSubtract
-	IntMultiply
-	IntDivide
-	IntMod
-	IntEqual
-	IntNotEqual
-	IntLess
-	IntGreater
-	IntLessOrEqual
-	IntGreaterOrEqual
+	// TODO: Add the remaining subType rules
 
-	GetConstant
-	True
-	False
-
-	GetLocal
-	SetLocal
-	GetGlobal
-	GetField
-	SetField
-
-	Call
-
-	New
-	Pop
-	CheckType
-)
+	return false
+}

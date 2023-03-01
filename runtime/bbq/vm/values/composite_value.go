@@ -21,26 +21,30 @@ package values
 import (
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/runtime/bbq/vm/context"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+
+	"github.com/onflow/cadence/runtime/bbq/vm/context"
+	"github.com/onflow/cadence/runtime/bbq/vm/types"
 )
 
 type StructValue struct {
 	dictionary          *atree.OrderedMap
 	Location            common.Location
 	QualifiedIdentifier string
+	typeID              common.TypeID
+	staticType          types.StaticType
 }
 
-var _ Value = StructValue{}
+var _ Value = &StructValue{}
 
 func NewStructValue(
 	location common.Location,
 	qualifiedIdentifier string,
 	address common.Address,
 	storage atree.SlabStorage,
-) StructValue {
+) *StructValue {
 
 	const kind = common.CompositeKindStructure
 
@@ -60,16 +64,30 @@ func NewStructValue(
 		panic(errors.NewExternalError(err))
 	}
 
-	return StructValue{
+	return &StructValue{
 		QualifiedIdentifier: qualifiedIdentifier,
 		Location:            location,
 		dictionary:          dictionary,
 	}
 }
 
-func (StructValue) isValue() {}
+func (*StructValue) isValue() {}
 
-func (v StructValue) GetMember(context context.Context, name string) Value {
+func (v *StructValue) StaticType(memoryGauge common.MemoryGauge) types.StaticType {
+	if v.staticType == nil {
+		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
+		// use the TypeID accessor, which may return an already computed type ID
+		v.staticType = interpreter.NewCompositeStaticType(
+			memoryGauge,
+			v.Location,
+			v.QualifiedIdentifier,
+			v.TypeID(),
+		)
+	}
+	return v.staticType
+}
+
+func (v *StructValue) GetMember(ctx context.Context, name string) Value {
 	storable, err := v.dictionary.Get(
 		interpreter.StringAtreeComparator,
 		interpreter.StringAtreeHashInput,
@@ -82,7 +100,7 @@ func (v StructValue) GetMember(context context.Context, name string) Value {
 	}
 
 	if storable != nil {
-		interpreterValue := interpreter.StoredValue(nil, storable, context.Storage)
+		interpreterValue := interpreter.StoredValue(ctx.MemoryGauge, storable, ctx.Storage)
 		// TODO: Temp conversion
 		return InterpreterValueToVMValue(interpreterValue)
 	}
@@ -90,7 +108,7 @@ func (v StructValue) GetMember(context context.Context, name string) Value {
 	return nil
 }
 
-func (v StructValue) SetMember(ctx context.Context, name string, value Value) {
+func (v *StructValue) SetMember(ctx context.Context, name string, value Value) {
 
 	// TODO:
 	//address := v.StorageID().Address
@@ -107,7 +125,7 @@ func (v StructValue) SetMember(ctx context.Context, name string, value Value) {
 	existingStorable, err := v.dictionary.Set(
 		interpreter.StringAtreeComparator,
 		interpreter.StringAtreeHashInput,
-		interpreter.NewStringAtreeValue(nil, name),
+		interpreter.NewStringAtreeValue(ctx.MemoryGauge, name),
 		interpreterValue,
 	)
 
@@ -124,6 +142,20 @@ func (v StructValue) SetMember(ctx context.Context, name string, value Value) {
 	}
 }
 
-func (v StructValue) StorageID() atree.StorageID {
+func (v *StructValue) StorageID() atree.StorageID {
 	return v.dictionary.StorageID()
+}
+
+func (v *StructValue) TypeID() common.TypeID {
+	if v.typeID == "" {
+		location := v.Location
+		qualifiedIdentifier := v.QualifiedIdentifier
+		if location == nil {
+			return common.TypeID(qualifiedIdentifier)
+		}
+
+		// TODO: TypeID metering
+		v.typeID = location.TypeID(nil, qualifiedIdentifier)
+	}
+	return v.typeID
 }

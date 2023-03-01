@@ -20,10 +20,15 @@ package values
 
 import (
 	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/runtime/bbq/vm/types"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 type Value interface {
 	isValue()
+	StaticType(common.MemoryGauge) types.StaticType
 }
 
 var TrueValue Value = BoolValue(true)
@@ -35,6 +40,10 @@ var _ Value = BoolValue(true)
 
 func (BoolValue) isValue() {}
 
+func (BoolValue) StaticType(common.MemoryGauge) types.StaticType {
+	return interpreter.PrimitiveStaticTypeBool
+}
+
 type IntValue struct {
 	SmallInt int64
 }
@@ -42,6 +51,10 @@ type IntValue struct {
 var _ Value = IntValue{}
 
 func (IntValue) isValue() {}
+
+func (IntValue) StaticType(common.MemoryGauge) types.StaticType {
+	return interpreter.PrimitiveStaticTypeInt
+}
 
 func (v IntValue) Add(other IntValue) Value {
 	return IntValue{v.SmallInt + other.SmallInt}
@@ -73,6 +86,10 @@ var _ Value = FunctionValue{}
 
 func (FunctionValue) isValue() {}
 
+func (FunctionValue) StaticType(common.MemoryGauge) types.StaticType {
+	panic(errors.NewUnreachableError())
+}
+
 type StringValue struct {
 	String []byte
 }
@@ -80,3 +97,7 @@ type StringValue struct {
 var _ Value = StringValue{}
 
 func (StringValue) isValue() {}
+
+func (StringValue) StaticType(common.MemoryGauge) types.StaticType {
+	return interpreter.PrimitiveStaticTypeString
+}

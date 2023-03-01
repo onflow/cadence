@@ -21,11 +21,13 @@ package context
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
 type Context struct {
-	Storage Storage
+	Storage
+	common.MemoryGauge
 }
 
 type Storage interface {

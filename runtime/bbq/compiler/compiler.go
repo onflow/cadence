@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/bbq/opcode"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -42,7 +43,13 @@ type Compiler struct {
 	loops           []*loop
 	currentLoop     *loop
 
+	staticTypes [][]byte
+	typesInPool map[sema.Type]uint16
+
 	currentCompositeType *sema.CompositeType
+
+	// TODO: initialize
+	memoryGauge common.MemoryGauge
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler{}
@@ -57,6 +64,7 @@ func NewCompiler(
 		Program:     program,
 		Elaboration: elaboration,
 		globals:     map[string]*global{},
+		typesInPool: map[sema.Type]uint16{},
 	}
 }
 
@@ -174,10 +182,12 @@ func (c *Compiler) Compile() *bbq.Program {
 
 	functions := c.exportFunctions()
 	constants := c.exportConstants()
+	types := c.exportTypes()
 
 	return &bbq.Program{
 		Functions: functions,
 		Constants: constants,
+		Types:     types,
 	}
 }
 
@@ -193,6 +203,14 @@ func (c *Compiler) exportConstants() []*bbq.Constant {
 		)
 	}
 	return constants
+}
+
+func (c *Compiler) exportTypes() [][]byte {
+	types := make([][]byte, len(c.staticTypes))
+	for index, typeBytes := range c.staticTypes {
+		types[index] = typeBytes
+	}
+	return types
 }
 
 func (c *Compiler) exportFunctions() []*bbq.Function {
@@ -321,6 +339,10 @@ func (c *Compiler) VisitVariableDeclaration(declaration *ast.VariableDeclaration
 
 func (c *Compiler) VisitAssignmentStatement(statement *ast.AssignmentStatement) (_ struct{}) {
 	c.compileExpression(statement.Value)
+
+	assignmentTypes := c.Elaboration.AssignmentStatementTypes[statement]
+	c.emitCheckType(assignmentTypes.TargetType)
+
 	switch target := statement.Target.(type) {
 	case *ast.IdentifierExpression:
 		local := c.currentFunction.findLocal(target.Identifier.Identifier)
@@ -412,8 +434,11 @@ func (c *Compiler) VisitIdentifierExpression(expression *ast.IdentifierExpressio
 
 func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
 	// TODO: copy
-	for _, argument := range expression.Arguments {
+
+	invocationTypes := c.Elaboration.InvocationExpressionTypes[expression]
+	for index, argument := range expression.Arguments {
 		c.compileExpression(argument.Expression)
+		c.emitCheckType(invocationTypes.ArgumentTypes[index])
 	}
 	c.compileExpression(expression.InvokedExpression)
 	c.emit(opcode.Call)
@@ -619,4 +644,31 @@ func (c *Compiler) patchLoop(l *loop) {
 	for _, breakOffset := range l.breaks {
 		c.patchJump(breakOffset)
 	}
+}
+
+func (c *Compiler) emitCheckType(targetType sema.Type) {
+	// Optimization: Re-use types in the pool.
+	index, ok := c.typesInPool[targetType]
+	if !ok {
+		staticType := interpreter.ConvertSemaToStaticType(c.memoryGauge, targetType)
+		bytes, err := interpreter.StaticTypeToBytes(staticType)
+		if err != nil {
+			panic(err)
+		}
+		index = c.addType(bytes)
+		c.typesInPool[targetType] = index
+	}
+
+	first, second := encodeUint16(index)
+	c.emit(opcode.CheckType, first, second)
+}
+
+func (c *Compiler) addType(data []byte) uint16 {
+	count := len(c.staticTypes)
+	if count >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid type declaration"))
+	}
+
+	c.staticTypes = append(c.staticTypes, data)
+	return uint16(count)
 }
