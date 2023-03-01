@@ -56,7 +56,9 @@ type Encoder struct {
 // This function returns an error if the Cadence value cannot be represented in CCF.
 func Encode(value cadence.Value) ([]byte, error) {
 	var w bytes.Buffer
+
 	enc := NewEncoder(&w)
+	defer enc.enc.Close()
 
 	err := enc.Encode(value)
 	if err != nil {
@@ -91,8 +93,6 @@ func NewEncoder(w io.Writer) *Encoder {
 func (e *Encoder) Encode(value cadence.Value) (err error) {
 	// capture panics
 	defer func() {
-		e.enc.Close()
-
 		if r := recover(); r != nil {
 			// don't recover Go errors
 			goErr, ok := r.(goRuntime.Error)
