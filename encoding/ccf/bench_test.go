@@ -138,7 +138,7 @@ func BenchmarkEncodeBatchEventsJSON(b *testing.B) {
 	}
 	require.NoError(b, err)
 
-	//fmt.Printf("Batch events encoded in JSON are %d bytes\n", encodedSize)
+	// fmt.Printf("Batch events encoded in JSON are %d bytes\n", encodedSize)
 }
 
 func BenchmarkDecodeBatchEventsJSON(b *testing.B) {
@@ -183,7 +183,7 @@ func BenchmarkEncodeBatchEventsCCF(b *testing.B) {
 	}
 	require.NoError(b, err)
 
-	//fmt.Printf("Batch events encoded in CCF are %d bytes\n", encodedSize)
+	// fmt.Printf("Batch events encoded in CCF are %d bytes\n", encodedSize)
 }
 
 func BenchmarkDecodeBatchEventsCCF(b *testing.B) {

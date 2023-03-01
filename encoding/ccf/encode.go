@@ -95,7 +95,7 @@ func (e *Encoder) Encode(value cadence.Value) (err error) {
 	defer func() {
 		// Recover panic error if there is any.
 		if r := recover(); r != nil {
-			// don't recover Go errors
+			// Don't recover Go errors.
 			goErr, ok := r.(goRuntime.Error)
 			if ok {
 				panic(goErr)
@@ -1682,7 +1682,7 @@ func (e *Encoder) encodeFunctionTypeValue(typ *cadence.FunctionType, visited ccf
 		return err
 	}
 
-	//Encode function-value.
+	// Encode function-value.
 	return e.encodeFunction(typ, visited)
 }
 

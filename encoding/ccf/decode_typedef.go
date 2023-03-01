@@ -48,7 +48,7 @@ func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
 	}
 
 	if count == 0 {
-		return nil, errors.New("expect one or more type defintions in composite-typedef, got 0")
+		return nil, errors.New("found 0 type definition in composite-typedef (expected at least 1 type definition)")
 	}
 
 	types := make(map[ccfTypeID]cadence.Type, count)
@@ -74,7 +74,7 @@ func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
 		//   "composite-type.cadence-type-id MUST be unique in
 		//    ccf-typedef-message or ccf-typedef-and-value-message."
 		if _, ok := cadenceTypeIDs[cadenceID]; ok {
-			return nil, fmt.Errorf("found duplicated cadence type id %s in type definition", cadenceID)
+			return nil, fmt.Errorf("found duplicate Cadence type ID %s in composite-typedef", cadenceID)
 		}
 
 		// "Deterministic CCF Encoding Requirements" in CCF specs:
@@ -83,7 +83,9 @@ func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
 		//    be identical to its zero-based index in composite-typedef."
 		if !ccfID.Equal(newCCFTypeIDFromUint64(i)) {
 			return nil, fmt.Errorf(
-				"encoded id is not the same as composite-typedef index",
+				"CCF type ID %d doesn't match composite-typedef index %d in composite-typedef",
+				ccfID,
+				i,
 			)
 		}
 
@@ -92,7 +94,9 @@ func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
 		//   "Type definitions MUST be sorted by cadence-type-id in composite-typedef."
 		if !stringsAreSortedBytewise(string(previousCadenceID), string(cadenceID)) {
 			return nil, fmt.Errorf(
-				"encoded cadence type ID in type definition isn't sorted using bytewise lexicographic order",
+				"Cadence type ID (%s, %s) isn't sorted in composite-typedef",
+				string(previousCadenceID),
+				string(cadenceID),
 			)
 		}
 
@@ -104,7 +108,7 @@ func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
 	for id, raw := range rawFields {
 		typ, ok := types[id]
 		if !ok {
-			return nil, fmt.Errorf("failed to decode type definition field, type with ccf id %d not found", id)
+			return nil, fmt.Errorf("composite fields' CCF type ID %d not found in composite-typedef", id)
 		}
 
 		dec := NewDecoder(d.gauge, raw)
@@ -116,8 +120,9 @@ func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
 		switch t := typ.(type) {
 		case cadence.CompositeType:
 			t.SetCompositeFields(fields)
+
 		default:
-			return nil, fmt.Errorf("found encoded fields in type definition for non-composite type %T", t)
+			return nil, fmt.Errorf("unsupported type %s (%T) in composite-typedef", t.ID(), t)
 		}
 	}
 
@@ -277,10 +282,9 @@ func (d *Decoder) decodeTypeDef(
 		return d.decodeInterfaceType(types, ctr)
 
 	default:
-		return ccfTypeID(0), cadenceTypeID(""), fmt.Errorf(
-			"failed to decode type definition: got tag number %d",
-			tagNum,
-		)
+		return ccfTypeID(0),
+			cadenceTypeID(""),
+			fmt.Errorf("unsupported type definition with CBOR tag number %d", tagNum)
 	}
 }
 
@@ -320,7 +324,7 @@ func (d *Decoder) decodeCompositeType(
 	//
 	//   "composite-type.id MUST be unique in ccf-typedef-message or ccf-typedef-and-value-message."
 	if _, ok := types[ccfID]; ok {
-		return ccfTypeID(0), cadenceTypeID(""), fmt.Errorf("found duplicated ccf type id %d in type definition", ccfID)
+		return ccfTypeID(0), cadenceTypeID(""), fmt.Errorf("found duplicate CCF type ID %d in composite-type", ccfID)
 	}
 
 	// element 1: cadence-type-id
@@ -376,7 +380,7 @@ func (d *Decoder) decodeCompositeFields(types cadenceTypeByCCFTypeID, decodeType
 		//   "field-name MUST be unique in composite-type."
 		//   "name MUST be unique in composite-type-value.fields."
 		if _, ok := fieldNames[field.Identifier]; ok {
-			return nil, fmt.Errorf("found duplicate field name in %s type definition", field.Identifier)
+			return nil, fmt.Errorf("found duplicate field name %s in composite-type", field.Identifier)
 		}
 
 		// "Deterministic CCF Encoding Requirements" in CCF specs:
@@ -384,7 +388,7 @@ func (d *Decoder) decodeCompositeFields(types cadenceTypeByCCFTypeID, decodeType
 		//   "composite-type.fields MUST be sorted by name"
 		//   "composite-type-value.fields MUST be sorted by name."
 		if !stringsAreSortedBytewise(previousFieldName, field.Identifier) {
-			return nil, fmt.Errorf("field names are not sorted in type definition")
+			return nil, fmt.Errorf("field names are not sorted in composite-type (%s, %s)", previousFieldName, field.Identifier)
 		}
 
 		fieldNames[field.Identifier] = struct{}{}
@@ -455,7 +459,7 @@ func (d *Decoder) decodeInterfaceType(
 	//
 	//   "composite-type.id MUST be unique in ccf-typedef-message or ccf-typedef-and-value-message."
 	if _, ok := types[ccfID]; ok {
-		return ccfTypeID(0), cadenceTypeID(""), fmt.Errorf("found duplicated ccf type id %d in type definition", ccfID)
+		return ccfTypeID(0), cadenceTypeID(""), fmt.Errorf("found duplicate CCF type ID %d in interface-type", ccfID)
 	}
 
 	// element 1: cadence-type-id

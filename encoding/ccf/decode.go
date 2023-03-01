@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	goRuntime "runtime"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/cadence"
@@ -86,13 +87,25 @@ func NewDecoder(gauge common.MemoryGauge, b []byte) *Decoder {
 func (d *Decoder) Decode() (value cadence.Value, err error) {
 	// Capture panics that occur during decoding.
 	defer func() {
+		// Recover panic error if there is any.
 		if r := recover(); r != nil {
+			// Don't recover Go errors.
+			goErr, ok := r.(goRuntime.Error)
+			if ok {
+				panic(goErr)
+			}
+
 			panicErr, isError := r.(error)
 			if !isError {
 				panic(r)
 			}
 
-			err = errors.NewDefaultUserError("failed to decode value: %w", panicErr)
+			err = panicErr
+		}
+
+		// Add context to error if there is any.
+		if err != nil {
+			err = errors.NewDefaultUserError("ccf: failed to decode: %s", err)
 		}
 	}()
 
@@ -113,9 +126,7 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 
 	default:
 		return nil, fmt.Errorf(
-			"failed to decode top level message: expect CBOR tag num %d or %d, got %d",
-			CBORTagTypeDefAndValue,
-			CBORTagTypeAndValue,
+			"unsupported top level CCF message with CBOR tag number %d",
 			tagNum,
 		)
 	}
@@ -353,8 +364,9 @@ func (d *Decoder) decodeValue(t cadence.Type, types cadenceTypeByCCFTypeID) (cad
 	default:
 		err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode value of type %s %T: %w", typ, typ, err)
+			return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %s", typ.ID(), typ, err.Error())
 		}
+
 		// Decode ccf-type-and-value-message.
 		return d.decodeTypeAndValue(types)
 	}
@@ -426,7 +438,7 @@ func (d *Decoder) decodeAddress() (cadence.Value, error) {
 		return nil, err
 	}
 	if len(b) != 8 {
-		return nil, fmt.Errorf("failed to decode address-value: expect 8 bytes, got %d bytes", len(b))
+		return nil, fmt.Errorf("encoded address-value has length %d (expected 8 bytes)", len(b))
 	}
 	return cadence.BytesToMeteredAddress(d.gauge, b), nil
 }
@@ -461,7 +473,7 @@ func (d *Decoder) decodeInt8() (cadence.Value, error) {
 	}
 	if i < math.MinInt8 || i > math.MaxInt8 {
 		return nil, fmt.Errorf(
-			"failed to decode int8-value: %d is outside range of Int8 [%d, %d]",
+			"encoded int8-value %d is outside range of Int8 [%d, %d]",
 			i,
 			math.MaxInt8,
 			math.MaxInt8,
@@ -480,7 +492,7 @@ func (d *Decoder) decodeInt16() (cadence.Value, error) {
 	}
 	if i < math.MinInt16 || i > math.MaxInt16 {
 		return nil, fmt.Errorf(
-			"failed to decode int16-value: %d is outside range of Int16 [%d, %d]",
+			"encoded int16-value %d is outside range of Int16 [%d, %d]",
 			i,
 			math.MinInt16,
 			math.MaxInt16,
@@ -499,7 +511,7 @@ func (d *Decoder) decodeInt32() (cadence.Value, error) {
 	}
 	if i < math.MinInt32 || i > math.MaxInt32 {
 		return nil, fmt.Errorf(
-			"failed to decode int32-value: %d is outside range of Int32 [%d, %d]",
+			"encoded int32-value %d is outside range of Int32 [%d, %d]",
 			i,
 			math.MinInt32,
 			math.MaxInt32,
@@ -561,7 +573,7 @@ func (d *Decoder) decodeUInt() (cadence.Value, error) {
 	}
 	if bigInt.Sign() < 0 {
 		return nil, fmt.Errorf(
-			"failed to decode uint-value: %s is negative",
+			"encoded uint-value %s is negative",
 			bigInt.String(),
 		)
 	}
@@ -586,7 +598,7 @@ func (d *Decoder) decodeUInt8() (cadence.Value, error) {
 	}
 	if i > math.MaxUint8 {
 		return nil, fmt.Errorf(
-			"failed to decode uint8-value: %d is outside range of Uint8 [0, %d]",
+			"encoded uint8-value %d is outside range of Uint8 [0, %d]",
 			i,
 			math.MaxUint8,
 		)
@@ -604,7 +616,7 @@ func (d *Decoder) decodeUInt16() (cadence.Value, error) {
 	}
 	if i > math.MaxUint16 {
 		return nil, fmt.Errorf(
-			"failed to decode uint16-value: %d is outside range of Uint16 [0, %d]",
+			"encoded uint16-value %d is outside range of Uint16 [0, %d]",
 			i,
 			math.MaxUint16,
 		)
@@ -622,7 +634,7 @@ func (d *Decoder) decodeUInt32() (cadence.Value, error) {
 	}
 	if i > math.MaxUint32 {
 		return nil, fmt.Errorf(
-			"failed to decode uint32-value: %d is outside range of Uint32 [0, %d]",
+			"encoded uint32-value %d is outside range of Uint32 [0, %d]",
 			i,
 			math.MaxUint32,
 		)
@@ -651,7 +663,7 @@ func (d *Decoder) decodeUInt128() (cadence.Value, error) {
 	}
 	if bigInt.Sign() < 0 {
 		return nil, fmt.Errorf(
-			"failed to decode uint128-value: %s is negative",
+			"encoded uint128-value %s is negative",
 			bigInt.String(),
 		)
 	}
@@ -673,7 +685,7 @@ func (d *Decoder) decodeUInt256() (cadence.Value, error) {
 	}
 	if bigInt.Sign() < 0 {
 		return nil, fmt.Errorf(
-			"failed to decode uint256-value: %s is negative",
+			"encoded uint256-value %s is negative",
 			bigInt.String(),
 		)
 	}
@@ -695,7 +707,7 @@ func (d *Decoder) decodeWord8() (cadence.Value, error) {
 	}
 	if i > math.MaxUint8 {
 		return nil, fmt.Errorf(
-			"failed to decode word8-value: %d is outside range of Word8 [0, %d]",
+			"encoded word8-value %d is outside range of Word8 [0, %d]",
 			i,
 			math.MaxUint8,
 		)
@@ -713,7 +725,7 @@ func (d *Decoder) decodeWord16() (cadence.Value, error) {
 	}
 	if i > math.MaxUint16 {
 		return nil, fmt.Errorf(
-			"failed to decode word16-value: %d is outside range of Word16 [0, %d]",
+			"encoded word16-value %d is outside range of Word16 [0, %d]",
 			i,
 			math.MaxUint16,
 		)
@@ -731,7 +743,7 @@ func (d *Decoder) decodeWord32() (cadence.Value, error) {
 	}
 	if i > math.MaxUint32 {
 		return nil, fmt.Errorf(
-			"failed to decode word32-value: %d is outside range of Word32 [0, %d]",
+			"encoded word32-value %d is outside range of Word32 [0, %d]",
 			i,
 			math.MaxUint32,
 		)
@@ -813,9 +825,9 @@ func (d *Decoder) decodeArray(typ cadence.ArrayType, hasKnownSize bool, knownSiz
 
 	if hasKnownSize && uint64(knownSize) != n {
 		return nil, fmt.Errorf(
-			"failed to decode array-value: expect %d elements, got %d elements",
-			knownSize,
+			"encoded array-value has %d elements (expected %d elements)",
 			n,
+			knownSize,
 		)
 	}
 
@@ -857,7 +869,10 @@ func (d *Decoder) decodeDictionary(typ *cadence.DictionaryType, types cadenceTyp
 
 	// Check if number of elements is even.
 	if n%2 != 0 {
-		return nil, fmt.Errorf("failed to decode dictionary, expect even number of elements, got %d elements", n)
+		return nil, fmt.Errorf(
+			"encoded dict-value has %d elements (expected even number of elements)",
+			n,
+		)
 	}
 
 	// previousKeyRawBytes is used to determine if dictionary keys are sorted
@@ -878,7 +893,7 @@ func (d *Decoder) decodeDictionary(typ *cadence.DictionaryType, types cadenceTyp
 		//
 		//   "dict-value key-value pairs MUST be sorted by key."
 		if !bytesAreSortedBytewise(previousKeyRawBytes, keyRawBytes) {
-			return nil, fmt.Errorf("dictionary keys are not sorted")
+			return nil, fmt.Errorf("encoded dict-value keys are not sorted")
 		}
 
 		previousKeyRawBytes = keyRawBytes
@@ -1103,7 +1118,7 @@ func (d *Decoder) decodePath() (cadence.Value, error) {
 		Amount: uint64(len(domain)),
 	})
 
-	// Decode identifer
+	// Decode identifier.
 	identifier, err := d.dec.DecodeString()
 	if err != nil {
 		return nil, err
@@ -1254,7 +1269,7 @@ func (d *Decoder) _decodeTypeValue(visited cadenceTypeByCCFTypeID) (cadence.Type
 		return d.decodeContractInterfaceTypeValue(visited)
 
 	default:
-		return nil, fmt.Errorf("failed to decode type value: unexpected CBOR tag number %d", tagNum)
+		return nil, fmt.Errorf("unsupported type-value with CBOR tag number %d", tagNum)
 	}
 }
 
@@ -1273,7 +1288,7 @@ func (d *Decoder) decodeStructTypeValue(visited cadenceTypeByCCFTypeID) (cadence
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
-				"failed to decode struct type value, expect nil type, got %s type",
+				"encoded struct-type-value has type %s (expected nil type)",
 				typ.ID(),
 			)
 		}
@@ -1304,7 +1319,7 @@ func (d *Decoder) decodeResourceTypeValue(visited cadenceTypeByCCFTypeID) (caden
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
-				"failed to decode resource type value, expect nil type, got %s type",
+				"encoded resource-type-value has type %s (expected nil type)",
 				typ.ID(),
 			)
 		}
@@ -1335,13 +1350,13 @@ func (d *Decoder) decodeEventTypeValue(visited cadenceTypeByCCFTypeID) (cadence.
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
-				"failed to decode event type value, expect nil type, got %s type",
+				"encoded event-type-value has type %s (expected nil type)",
 				typ.ID(),
 			)
 		}
 		if len(inits) != 1 {
 			return nil, fmt.Errorf(
-				"failed to decode event type value, expect 0 or 1 initialization, got %d",
+				"encoded event-type-value has %d initializations (expected 1 initialization)",
 				len(inits),
 			)
 		}
@@ -1372,7 +1387,7 @@ func (d *Decoder) decodeContractTypeValue(visited cadenceTypeByCCFTypeID) (caden
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
-				"failed to decode contract type value, expect nil type, got %s type",
+				"encoded contract-type-value has type %s (expected nil type)",
 				typ.ID(),
 			)
 		}
@@ -1429,7 +1444,7 @@ func (d *Decoder) decodeStructInterfaceTypeValue(visited cadenceTypeByCCFTypeID)
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
-				"failed to decode struct interface type value, expect nil type, got %s type",
+				"encoded struct-interface-type-value has type %s (expected nil type)",
 				typ.ID(),
 			)
 		}
@@ -1460,7 +1475,7 @@ func (d *Decoder) decodeResourceInterfaceTypeValue(visited cadenceTypeByCCFTypeI
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
-				"failed to decode resource interface type value, expect nil type, got %s type",
+				"encoded resource-interface-type-value has type %s (expected nil type)",
 				typ.ID(),
 			)
 		}
@@ -1491,7 +1506,7 @@ func (d *Decoder) decodeContractInterfaceTypeValue(visited cadenceTypeByCCFTypeI
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
-				"failed to decode contract interface type value, expect nil type, got %s type",
+				"encoded contract-interface-type-value has type %s (expected nil type)",
 				typ.ID(),
 			)
 		}
@@ -1548,7 +1563,7 @@ func (d *Decoder) decodeCompositeTypeValue(
 	//   "composite-type-value.id MUST be identical to the zero-based encoding order type-value."
 	if compTypeValue.ccfID != newCCFTypeIDFromUint64(uint64(len(visited))) {
 		return nil, fmt.Errorf(
-			"ccf id %d in encoded composite type value isn't identical to the zero-based encoding order type-value",
+			"encoded composite-type-value's CCF type ID %d doesn't match zero-based encoding order composite-type-value",
 			compTypeValue.ccfID,
 		)
 	}
@@ -1558,7 +1573,7 @@ func (d *Decoder) decodeCompositeTypeValue(
 		// "Valid CCF Encoding Requirements" in CCF specs:
 		//
 		//   "composite-type-value.id MUST be unique in the same composite-type-value data item."
-		return nil, fmt.Errorf("duplicate ccf id %d in encoded composite type value", compTypeValue.ccfID)
+		return nil, fmt.Errorf("found duplicate CCF type ID %d in encoded composite-type-value", compTypeValue.ccfID)
 	}
 
 	// Decode fields after type is resolved to handle recursive types.
@@ -1571,6 +1586,7 @@ func (d *Decoder) decodeCompositeTypeValue(
 	switch compositeType := compositeType.(type) {
 	case cadence.CompositeType:
 		compositeType.SetCompositeFields(fields)
+
 	case cadence.InterfaceType:
 		compositeType.SetInterfaceFields(fields)
 	}
@@ -1685,7 +1701,7 @@ func (d *Decoder) decodeInitializerTypeValues(visited cadenceTypeByCCFTypeID) ([
 //	    ]
 //	]
 func (d *Decoder) decodeParameterTypeValues(visited cadenceTypeByCCFTypeID) ([]cadence.Parameter, error) {
-	// Decode number of paramaters
+	// Decode number of parameters.
 	count, err := d.dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
@@ -1723,7 +1739,11 @@ func (d *Decoder) decodeParameterTypeValues(visited cadenceTypeByCCFTypeID) ([]c
 		//
 		// "composite-type-value.initializers MUST be sorted by identifier."
 		if !stringsAreSortedBytewise(previousParameterIdentifier, param.Identifier) {
-			return nil, fmt.Errorf("parameter identifiers are not sorted")
+			return nil, fmt.Errorf(
+				"parameter identifiers are not sorted (%s, %s)",
+				previousParameterIdentifier,
+				param.Identifier,
+			)
 		}
 
 		parameterLabels[param.Label] = struct{}{}
@@ -1828,7 +1848,7 @@ func decodeCBORArrayWithKnownSize(dec *cbor.StreamDecoder, n uint64) error {
 		return err
 	}
 	if c != n {
-		return fmt.Errorf("failed to decode CBOR array of known length, expect length %d, got length %d", n, c)
+		return fmt.Errorf("CBOR array has %d elements (expected %d elements)", c, n)
 	}
 	return nil
 }
@@ -1839,7 +1859,7 @@ func decodeCBORTagWithKnownNumber(dec *cbor.StreamDecoder, n uint64) error {
 		return err
 	}
 	if tagNum != n {
-		return fmt.Errorf("failed to decode CBOR tag of known tag number, expect %d, got %d", n, tagNum)
+		return fmt.Errorf("CBOR tag number is %d (expected %d)", tagNum, n)
 	}
 	return nil
 }

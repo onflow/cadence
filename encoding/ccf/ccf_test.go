@@ -3121,7 +3121,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 	checker, err := checker.ParseAndCheck(t, code)
 	require.NoError(t, err)
 
-	var uuid uint64 = 0
+	var uuid uint64
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -6445,7 +6445,7 @@ func TestDecodeInvalidType(t *testing.T) {
 		}
 		_, err := ccf.Decode(nil, encodedData)
 		require.Error(t, err)
-		assert.Equal(t, "invalid type ID for built-in: ``", err.Error())
+		assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: ``", err.Error())
 	})
 
 	t.Run("undefined type", func(t *testing.T) {
@@ -6498,7 +6498,7 @@ func TestDecodeInvalidType(t *testing.T) {
 		}
 		_, err := ccf.Decode(nil, encodedData)
 		require.Error(t, err)
-		assert.Equal(t, "invalid type ID `I.Foo`: invalid identifier location type ID: missing qualified identifier", err.Error())
+		assert.Equal(t, "ccf: failed to decode: invalid type ID `I.Foo`: invalid identifier location type ID: missing qualified identifier", err.Error())
 	})
 
 	t.Run("unknown location prefix", func(t *testing.T) {
@@ -6551,7 +6551,7 @@ func TestDecodeInvalidType(t *testing.T) {
 		}
 		_, err := ccf.Decode(nil, encodedData)
 		require.Error(t, err)
-		assert.Equal(t, "invalid type ID for built-in: `N.PublicKey`", err.Error())
+		assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: `N.PublicKey`", err.Error())
 	})
 }
 

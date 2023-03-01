@@ -81,7 +81,7 @@ func (d *Decoder) decodeInlineType(types cadenceTypeByCCFTypeID) (cadence.Type, 
 		return d.decodeTypeRef(types)
 
 	default:
-		return nil, fmt.Errorf("faild to decode inline type %d", tagNum)
+		return nil, fmt.Errorf("unsupported encoded inline type with CBOR tag number %d", tagNum)
 	}
 }
 
@@ -96,108 +96,159 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 	switch simpleTypeID {
 	case TypeBool:
 		return cadence.TheBoolType, nil
+
 	case TypeString:
 		return cadence.TheStringType, nil
+
 	case TypeCharacter:
 		return cadence.TheCharacterType, nil
+
 	case TypeAddress:
 		return cadence.TheAddressType, nil
+
 	case TypeInt:
 		return cadence.TheIntType, nil
+
 	case TypeInt8:
 		return cadence.TheInt8Type, nil
+
 	case TypeInt16:
 		return cadence.TheInt16Type, nil
+
 	case TypeInt32:
 		return cadence.TheInt32Type, nil
+
 	case TypeInt64:
 		return cadence.TheInt64Type, nil
+
 	case TypeInt128:
 		return cadence.TheInt128Type, nil
+
 	case TypeInt256:
 		return cadence.TheInt256Type, nil
+
 	case TypeUInt:
 		return cadence.TheUIntType, nil
+
 	case TypeUInt8:
 		return cadence.TheUInt8Type, nil
+
 	case TypeUInt16:
 		return cadence.TheUInt16Type, nil
+
 	case TypeUInt32:
 		return cadence.TheUInt32Type, nil
+
 	case TypeUInt64:
 		return cadence.TheUInt64Type, nil
+
 	case TypeUInt128:
 		return cadence.TheUInt128Type, nil
+
 	case TypeUInt256:
 		return cadence.TheUInt256Type, nil
+
 	case TypeWord8:
 		return cadence.TheWord8Type, nil
+
 	case TypeWord16:
 		return cadence.TheWord16Type, nil
+
 	case TypeWord32:
 		return cadence.TheWord32Type, nil
+
 	case TypeWord64:
 		return cadence.TheWord64Type, nil
+
 	case TypeFix64:
 		return cadence.TheFix64Type, nil
+
 	case TypeUFix64:
 		return cadence.TheUFix64Type, nil
+
 	case TypePath:
 		return cadence.ThePathType, nil
+
 	case TypeCapabilityPath:
 		return cadence.TheCapabilityPathType, nil
+
 	case TypeStoragePath:
 		return cadence.TheStoragePathType, nil
+
 	case TypePublicPath:
 		return cadence.ThePublicPathType, nil
+
 	case TypePrivatePath:
 		return cadence.ThePrivatePathType, nil
+
 	case TypeAuthAccount:
 		return cadence.TheAuthAccountType, nil
+
 	case TypePublicAccount:
 		return cadence.ThePublicAccountType, nil
+
 	case TypeAuthAccountKeys:
 		return cadence.TheAuthAccountKeysType, nil
+
 	case TypePublicAccountKeys:
 		return cadence.ThePublicAccountKeysType, nil
+
 	case TypeAuthAccountContracts:
 		return cadence.TheAuthAccountContractsType, nil
+
 	case TypePublicAccountContracts:
 		return cadence.ThePublicAccountContractsType, nil
+
 	case TypeDeployedContract:
 		return cadence.TheDeployedContractType, nil
+
 	case TypeAccountKey:
 		return cadence.TheAccountKeyType, nil
+
 	case TypeBlock:
 		return cadence.TheBlockType, nil
+
 	case TypeAny:
 		return cadence.TheAnyType, nil
+
 	case TypeAnyStruct:
 		return cadence.TheAnyStructType, nil
+
 	case TypeAnyResource:
 		return cadence.TheAnyResourceType, nil
+
 	case TypeMetaType:
 		return cadence.TheMetaType, nil
+
 	case TypeNever:
 		return cadence.TheNeverType, nil
+
 	case TypeNumber:
 		return cadence.TheNumberType, nil
+
 	case TypeSignedNumber:
 		return cadence.TheSignedNumberType, nil
+
 	case TypeInteger:
 		return cadence.TheIntegerType, nil
+
 	case TypeSignedInteger:
 		return cadence.TheSignedIntegerType, nil
+
 	case TypeFixedPoint:
 		return cadence.TheFixedPointType, nil
+
 	case TypeSignedFixedPoint:
 		return cadence.TheSignedFixedPointType, nil
+
 	case TypeBytes:
 		return cadence.TheBytesType, nil
+
 	case TypeVoid:
 		return cadence.TheVoidType, nil
+
 	default:
-		return nil, fmt.Errorf("failed to decode simple type: unexpected id %d", simpleTypeID)
+		return nil, fmt.Errorf("unsupported encoded simple type ID %d", simpleTypeID)
 	}
 }
 
@@ -214,7 +265,10 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 //	#6.186(type-value)
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
-func (d *Decoder) decodeOptionalType(types cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) (cadence.Type, error) {
+func (d *Decoder) decodeOptionalType(
+	types cadenceTypeByCCFTypeID,
+	decodeTypeFn decodeTypeFn,
+) (cadence.Type, error) {
 	// Decode inline-type or type-value.
 	elementType, err := decodeTypeFn(types)
 	if err != nil {
@@ -236,7 +290,10 @@ func (d *Decoder) decodeOptionalType(types cadenceTypeByCCFTypeID, decodeTypeFn 
 //	#6.187(type-value)
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
-func (d *Decoder) decodeVarSizedArrayType(types cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) (cadence.Type, error) {
+func (d *Decoder) decodeVarSizedArrayType(
+	types cadenceTypeByCCFTypeID,
+	decodeTypeFn decodeTypeFn,
+) (cadence.Type, error) {
 	// Decode inline-type or type-value.
 	elementType, err := decodeTypeFn(types)
 	if err != nil {
@@ -264,7 +321,10 @@ func (d *Decoder) decodeVarSizedArrayType(types cadenceTypeByCCFTypeID, decodeTy
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
-func (d *Decoder) decodeConstantSizedArrayType(types cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) (cadence.Type, error) {
+func (d *Decoder) decodeConstantSizedArrayType(
+	types cadenceTypeByCCFTypeID,
+	decodeTypeFn decodeTypeFn,
+) (cadence.Type, error) {
 	// Decode array head of length 2.
 	err := decodeCBORArrayWithKnownSize(d.dec, 2)
 	if err != nil {
@@ -305,7 +365,10 @@ func (d *Decoder) decodeConstantSizedArrayType(types cadenceTypeByCCFTypeID, dec
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
-func (d *Decoder) decodeDictType(types cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) (cadence.Type, error) {
+func (d *Decoder) decodeDictType(
+	types cadenceTypeByCCFTypeID,
+	decodeTypeFn decodeTypeFn,
+) (cadence.Type, error) {
 	// Decode array head of length 2.
 	err := decodeCBORArrayWithKnownSize(d.dec, 2)
 	if err != nil {
@@ -348,7 +411,10 @@ func (d *Decoder) decodeDictType(types cadenceTypeByCCFTypeID, decodeTypeFn deco
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
-func (d *Decoder) decodeCapabilityType(types cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) (cadence.Type, error) {
+func (d *Decoder) decodeCapabilityType(
+	types cadenceTypeByCCFTypeID,
+	decodeTypeFn decodeTypeFn,
+) (cadence.Type, error) {
 	// Decode array head of length 1
 	err := decodeCBORArrayWithKnownSize(d.dec, 1)
 	if err != nil {
@@ -383,7 +449,10 @@ func (d *Decoder) decodeCapabilityType(types cadenceTypeByCCFTypeID, decodeTypeF
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
-func (d *Decoder) decodeReferenceType(types cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) (cadence.Type, error) {
+func (d *Decoder) decodeReferenceType(
+	types cadenceTypeByCCFTypeID,
+	decodeTypeFn decodeTypeFn,
+) (cadence.Type, error) {
 	// Decode array head of length 2
 	err := decodeCBORArrayWithKnownSize(d.dec, 2)
 	if err != nil {
@@ -426,7 +495,10 @@ func (d *Decoder) decodeReferenceType(types cadenceTypeByCCFTypeID, decodeTypeFn
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
-func (d *Decoder) decodeRestrictedType(types cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) (cadence.Type, error) {
+func (d *Decoder) decodeRestrictedType(
+	types cadenceTypeByCCFTypeID,
+	decodeTypeFn decodeTypeFn,
+) (cadence.Type, error) {
 	// Decode array of length 3.
 	err := decodeCBORArrayWithKnownSize(d.dec, 3)
 	if err != nil {
@@ -474,7 +546,7 @@ func (d *Decoder) decodeRestrictedType(types cadenceTypeByCCFTypeID, decodeTypeF
 		//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
 		//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
 		if !stringsAreSortedBytewise(previousRestrictedTypeID, restrictedType.ID()) {
-			return nil, fmt.Errorf("restricted types are not sorted")
+			return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousRestrictedTypeID, restrictedType.ID())
 		}
 
 		restrictionTypeIDs[restrictedType.ID()] = struct{}{}
