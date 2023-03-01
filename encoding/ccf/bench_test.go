@@ -21,10 +21,11 @@ package ccf_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/ccf"
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/stretchr/testify/require"
 )
 
 var encoded []byte

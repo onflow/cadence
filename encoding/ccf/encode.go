@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	"github.com/fxamacker/cbor/v2"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 )
