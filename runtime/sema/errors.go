@@ -4001,3 +4001,19 @@ func (e *InvalidTypeIndexingError) Error() string {
 		e.IndexingExpression.String(),
 	)
 }
+
+// AttachmentsNotEnabledError
+type AttachmentsNotEnabledError struct {
+	ast.Range
+}
+
+var _ SemanticError = &AttachmentsNotEnabledError{}
+var _ errors.UserError = &AttachmentsNotEnabledError{}
+
+func (*AttachmentsNotEnabledError) isSemanticError() {}
+
+func (*AttachmentsNotEnabledError) IsUserError() {}
+
+func (e *AttachmentsNotEnabledError) Error() string {
+	return "attachments are not enabled and cannot be used in this environment"
+}

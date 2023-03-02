@@ -66,6 +66,13 @@ func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDe
 }
 
 func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDeclaration, kind ContainerKind) (_ struct{}) {
+
+	if !checker.Config.AttachmentsEnabled {
+		checker.report(&AttachmentsNotEnabledError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, declaration),
+		})
+	}
+
 	checker.visitCompositeLikeDeclaration(declaration, kind)
 	attachmentType := checker.Elaboration.CompositeDeclarationType(declaration)
 	checker.checkAttachmentBaseType(attachmentType)

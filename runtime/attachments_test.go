@@ -28,11 +28,17 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
+func newTestInterpreterRuntimeWithAttachments() testInterpreterRuntime {
+	rt := newTestInterpreterRuntime()
+	rt.interpreterRuntime.defaultConfig.AttachmentsEnabled = true
+	return rt
+}
+
 func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	rt := newTestInterpreterRuntimeWithAttachments()
 
 	logs := make([]string, 0)
 	events := make([]string, 0)
@@ -151,7 +157,7 @@ func TestAccountAttachmentExport(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	rt := newTestInterpreterRuntimeWithAttachments()
 
 	logs := make([]string, 0)
 	events := make([]string, 0)
@@ -242,7 +248,7 @@ func TestAccountAttachedExport(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	rt := newTestInterpreterRuntimeWithAttachments()
 
 	logs := make([]string, 0)
 	events := make([]string, 0)
@@ -331,7 +337,7 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	rt := newTestInterpreterRuntimeWithAttachments()
 
 	logs := make([]string, 0)
 	events := make([]string, 0)
@@ -453,7 +459,7 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	rt := newTestInterpreterRuntimeWithAttachments()
 
 	logs := make([]string, 0)
 	events := make([]string, 0)
