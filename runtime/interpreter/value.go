@@ -17110,7 +17110,7 @@ func (v *StorageReferenceValue) mustReferencedValue(
 
 	self := *referencedValue
 
-	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
 
 	return self
 }
