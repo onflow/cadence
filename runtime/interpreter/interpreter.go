@@ -4403,17 +4403,6 @@ func (interpreter *Interpreter) checkContainerMutation(
 	}
 }
 
-func (interpreter *Interpreter) checkReferencedResourceNotDestroyed(value Value, locationRange LocationRange) {
-	resourceKindedValue, ok := value.(ResourceKindedValue)
-	if !ok || !resourceKindedValue.IsDestroyed() {
-		return
-	}
-
-	panic(DestroyedResourceError{
-		LocationRange: locationRange,
-	})
-}
-
 func (interpreter *Interpreter) checkReferencedResourceNotMovedOrDestroyed(
 	referencedValue Value,
 	locationRange LocationRange,

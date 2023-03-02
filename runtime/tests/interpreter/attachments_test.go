@@ -831,10 +831,8 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 	            }
 	    `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("return from function", func(t *testing.T) {
@@ -994,10 +992,8 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 	            }
 	    `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("return from function", func(t *testing.T) {
@@ -1588,10 +1584,35 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		},
 		)
 
-		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` should be invalidated after the save
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("destroyed", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+            resource R {}
+            attachment A for R {
+                fun foo(): Int { return 3 }
+            }
+            fun test() {
+                let r <- create R()
+                let r2 <- attach A() to <-r
+                let a = r2[A]!
+                destroy r2
+                let i = a.foo()
+            }
+        `, sema.Config{
+			AttachmentsEnabled: true,
+		},
+		)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 	})
 
 	t.Run("nested", func(t *testing.T) {
@@ -1626,10 +1647,44 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		},
 		)
 
-		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` should be invalidated after the save
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested destroyed", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+            resource R {}
+            resource R2 {
+                let r: @R 
+                init(r: @R) {
+                    self.r <- r
+                }
+                destroy() {
+                    destroy self.r
+                }
+            }
+            attachment A for R {
+                fun foo(): Int { return 3 }
+            }
+            fun test() {
+                let r2 <- create R2(r: <-attach A() to <-create R())
+                let a = r2.r[A]!
+                destroy r2
+                let i = a.foo()
+            }
+        
+        `, sema.Config{
+			AttachmentsEnabled: true,
+		},
+		)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 	})
 }
 

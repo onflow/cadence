@@ -25,6 +25,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -228,7 +229,7 @@ func TestAccountAttachmentExport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	v, err := rt.ExecuteScript(
+	_, err = rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
@@ -237,11 +238,8 @@ func TestAccountAttachmentExport(t *testing.T) {
 			Location:  nextScriptLocation(),
 		},
 	)
-	require.NoError(t, err)
-
-	require.IsType(t, cadence.Optional{}, v)
-	require.IsType(t, cadence.Attachment{}, v.(cadence.Optional).Value)
-	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Optional).Value.String())
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
 
 func TestAccountAttachedExport(t *testing.T) {

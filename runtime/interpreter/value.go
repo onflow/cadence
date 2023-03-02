@@ -14238,8 +14238,8 @@ func (v *CompositeValue) checkInvalidatedResourceUse(interpreter *Interpreter, l
 	}
 }
 
-func (v *CompositeValue) IsStaleResource(*Interpreter) bool {
-	return v.dictionary == nil && v.Kind == common.CompositeKindResource
+func (v *CompositeValue) IsStaleResource(inter *Interpreter) bool {
+	return v.dictionary == nil && v.IsResourceKinded(inter)
 }
 
 func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
@@ -15139,6 +15139,10 @@ func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRa
 }
 
 func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange LocationRange) []*CompositeValue {
+	if interpreter.SharedState.Config.InvalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
+	}
+
 	var attachments []*CompositeValue
 	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
 		attachments = append(attachments, attachment)
@@ -15202,6 +15206,8 @@ func (v *CompositeValue) GetTypeKey(
 	}
 	// dynamically set the attachment's base to this composite
 	attachment.setBaseValue(interpreter, v)
+
+	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
 	return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, false, attachment, ty))
 }
 
@@ -17104,7 +17110,7 @@ func (v *StorageReferenceValue) mustReferencedValue(
 
 	self := *referencedValue
 
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
 
 	return self
 }
