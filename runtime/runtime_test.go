@@ -246,7 +246,7 @@ func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
 	return i.getCode(location)
 }
 
-func (i *testRuntimeInterface) GetAndSetProgram(
+func (i *testRuntimeInterface) GetOrLoadProgram(
 	location Location,
 	load func() (*interpreter.Program, error),
 ) (
