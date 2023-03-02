@@ -95,6 +95,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	checker.checkResourceFieldNesting(
 		interfaceType.Members,
 		interfaceType.CompositeKind,
+		nil,
 		fieldPositionGetter,
 	)
 
@@ -119,7 +120,13 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		// Composite declarations nested in interface declarations are type requirements,
 		// i.e. they should be checked like interfaces
 
-		checker.visitCompositeDeclaration(nestedComposite, kind)
+		checker.visitCompositeLikeDeclaration(nestedComposite, kind)
+	}
+
+	for _, nestedAttachments := range declaration.Members.Attachments() {
+		// Attachment declarations nested in interface declarations are type requirements,
+		// i.e. they should be checked like interfaces
+		checker.visitAttachmentDeclaration(nestedAttachments, kind)
 	}
 
 	return
@@ -274,6 +281,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 			declaration.CompositeKind,
 			declaration.DeclarationKind(),
 			declaration.Members.Composites(),
+			declaration.Members.Attachments(),
 			declaration.Members.Interfaces(),
 		)
 
@@ -349,6 +357,10 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	}
 
 	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-		checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
+		checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
+	}
+
+	for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
+		checker.declareAttachmentMembersAndValue(nestedAttachmentDeclaration, ContainerKindInterface)
 	}
 }

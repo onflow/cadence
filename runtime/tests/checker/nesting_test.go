@@ -46,6 +46,10 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 						continue
 					}
 
+					if outerIsInterface && !outerComposite.SupportsInterfaces() {
+						continue
+					}
+
 					outer := outerComposite.DeclarationKind(outerIsInterface)
 					inner := innerComposite.DeclarationKind(innerIsInterface)
 
@@ -63,16 +67,28 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 							innerConformances = ": Int"
 						}
 
+						var innerBaseType string
+						if innerComposite == common.CompositeKindAttachment {
+							innerBaseType = "for AnyStruct"
+						}
+
+						var outerBaseType string
+						if outerComposite == common.CompositeKindAttachment {
+							outerBaseType = "for AnyStruct"
+						}
+
 						code := fmt.Sprintf(
 							`
-                              %[1]s Outer {
-                                  %[2]s Inner%[3]s %[4]s
+                              %[1]s Outer %[5]s {
+                                  %[2]s Inner %[6]s %[3]s %[4]s
                               }
                             `,
 							outer.Keywords(),
 							inner.Keywords(),
 							innerConformances,
 							innerBody,
+							outerBaseType,
+							innerBaseType,
 						)
 						_, err := ParseAndCheck(t,
 							code,
@@ -90,6 +106,7 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 							case common.CompositeKindResource,
 								common.CompositeKindStructure,
 								common.CompositeKindEvent,
+								common.CompositeKindAttachment,
 								common.CompositeKindEnum:
 
 								require.NoError(t, err)
@@ -99,6 +116,7 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 							}
 
 						case common.CompositeKindResource,
+							common.CompositeKindAttachment,
 							common.CompositeKindStructure:
 
 							errs := RequireCheckerErrors(t, err, 1)

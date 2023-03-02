@@ -87,6 +87,26 @@ func (t AnyStructType) Equal(other Type) bool {
 	return t == other
 }
 
+// AnyStructAttachmentType
+
+type AnyStructAttachmentType struct{}
+
+var TheAnyStructAttachmentType = AnyStructAttachmentType{}
+
+func NewAnyStructAttachmentType() AnyStructAttachmentType {
+	return TheAnyStructAttachmentType
+}
+
+func (AnyStructAttachmentType) isType() {}
+
+func (AnyStructAttachmentType) ID() string {
+	return "AnyStructAttachment"
+}
+
+func (t AnyStructAttachmentType) Equal(other Type) bool {
+	return t == other
+}
+
 // AnyResourceType
 
 type AnyResourceType struct{}
@@ -104,6 +124,26 @@ func (AnyResourceType) ID() string {
 }
 
 func (t AnyResourceType) Equal(other Type) bool {
+	return t == other
+}
+
+// AnyResourceAttachmentType
+
+type AnyResourceAttachmentType struct{}
+
+var TheAnyResourceAttachmentType = AnyResourceAttachmentType{}
+
+func NewAnyResourceAttachmentType() AnyResourceAttachmentType {
+	return TheAnyResourceAttachmentType
+}
+
+func (AnyResourceAttachmentType) isType() {}
+
+func (AnyResourceAttachmentType) ID() string {
+	return "AnyResourceAttachment"
+}
+
+func (t AnyResourceAttachmentType) Equal(other Type) bool {
 	return t == other
 }
 
@@ -1169,6 +1209,89 @@ func (t *ResourceType) CompositeInitializers() [][]Parameter {
 
 func (t *ResourceType) Equal(other Type) bool {
 	otherType, ok := other.(*ResourceType)
+	if !ok {
+		return false
+	}
+
+	return t.Location == otherType.Location &&
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
+}
+
+// AttachmentType
+type AttachmentType struct {
+	Location            common.Location
+	BaseType            Type
+	QualifiedIdentifier string
+	Fields              []Field
+	Initializers        [][]Parameter
+}
+
+func NewAttachmentType(
+	location common.Location,
+	baseType Type,
+	qualifiedIdentifier string,
+	fields []Field,
+	initializers [][]Parameter,
+) *AttachmentType {
+	return &AttachmentType{
+		Location:            location,
+		BaseType:            baseType,
+		QualifiedIdentifier: qualifiedIdentifier,
+		Fields:              fields,
+		Initializers:        initializers,
+	}
+}
+
+func NewMeteredAttachmentType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	baseType Type,
+	qualifiedIdentifer string,
+	fields []Field,
+	initializers [][]Parameter,
+) *AttachmentType {
+	common.UseMemory(gauge, common.CadenceStructTypeMemoryUsage)
+	return NewAttachmentType(location, baseType, qualifiedIdentifer, fields, initializers)
+}
+
+func (*AttachmentType) isType() {}
+
+func (t *AttachmentType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+}
+
+func (*AttachmentType) isCompositeType() {}
+
+func (t *AttachmentType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *AttachmentType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
+}
+
+func (t *AttachmentType) CompositeFields() []Field {
+	return t.Fields
+}
+
+func (t *AttachmentType) SetCompositeFields(fields []Field) {
+	t.Fields = fields
+}
+
+func (t *AttachmentType) CompositeInitializers() [][]Parameter {
+	return t.Initializers
+}
+
+func (t *AttachmentType) Base() Type {
+	return t.BaseType
+}
+
+func (t *AttachmentType) Equal(other Type) bool {
+	otherType, ok := other.(*AttachmentType)
 	if !ok {
 		return false
 	}

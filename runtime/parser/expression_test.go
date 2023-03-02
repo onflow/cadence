@@ -2787,6 +2787,134 @@ func TestParseDestroy(t *testing.T) {
 	})
 }
 
+func TestParseAttach(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("attach E() to r")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.AttachExpression{
+				Base: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "r",
+						Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+					},
+				},
+				Attachment: &ast.InvocationExpression{
+					InvokedExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "E",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					ArgumentsStartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					EndPos:            ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("non-invocation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach A to E")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '('",
+					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("attach A() to attach B() to r")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.AttachExpression{
+				Base: &ast.AttachExpression{
+					Base: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "r",
+							Pos:        ast.Position{Line: 1, Column: 28, Offset: 28},
+						},
+					},
+					Attachment: &ast.InvocationExpression{
+						InvokedExpression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "B",
+								Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+							},
+						},
+						ArgumentsStartPos: ast.Position{Line: 1, Column: 22, Offset: 22},
+						EndPos:            ast.Position{Line: 1, Column: 23, Offset: 23},
+					},
+					StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+				},
+				Attachment: &ast.InvocationExpression{
+					InvokedExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "A",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					ArgumentsStartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					EndPos:            ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("missing to", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach A()")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected 'to', got EOF",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach E() to")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected end of program",
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+	})
+}
+
 func TestParseLineComment(t *testing.T) {
 
 	t.Parallel()

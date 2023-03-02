@@ -1120,8 +1120,12 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return cadence.TheAnyType
 	case "AnyStruct":
 		return cadence.TheAnyStructType
+	case "AnyStructAttachment":
+		return cadence.TheAnyStructAttachmentType
 	case "AnyResource":
 		return cadence.TheAnyResourceType
+	case "AnyResourceAttachment":
+		return cadence.TheAnyResourceAttachmentType
 	case "Type":
 		return cadence.TheMetaType
 	case "Void":

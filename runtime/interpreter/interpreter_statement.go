@@ -401,6 +401,55 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 	return nil
 }
 
+func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.RemoveStatement) StatementResult {
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: removeStatement,
+	}
+
+	removeTarget := interpreter.evalExpression(removeStatement.Value)
+	base, ok := removeTarget.(*CompositeValue)
+
+	// we enforce this in the checker, but check defensively anyways
+	if !ok || !base.Kind.SupportsAttachments() {
+		panic(InvalidAttachmentOperationTargetError{
+			Value:         removeTarget,
+			LocationRange: locationRange,
+		})
+	}
+
+	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
+		panic(AttachmentIterationMutationError{
+			Value:         base,
+			LocationRange: locationRange,
+		})
+	}
+
+	nominalType := interpreter.Program.Elaboration.AttachmentRemoveTypes(removeStatement)
+
+	removed := base.RemoveTypeKey(interpreter, locationRange, nominalType)
+
+	// attachment not present on this base
+	if removed == nil {
+		return nil
+	}
+
+	attachment, ok := removed.(*CompositeValue)
+	// we enforce this in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if attachment.IsResourceKinded(interpreter) {
+		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
+		attachment.setBaseValue(interpreter, base)
+		attachment.Destroy(interpreter, locationRange)
+	}
+
+	return nil
+}
+
 func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) StatementResult {
 	return nil
 }

@@ -561,10 +561,16 @@ func TestCheckInvalidLocalDeclarations(t *testing.T) {
 				body = "()"
 			}
 
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			tests[name] = fmt.Sprintf(
-				`%s %s Test %s`,
+				`%s %s Test %s %s`,
 				kind.Keyword(),
 				interfaceKeyword,
+				baseType,
 				body,
 			)
 		}

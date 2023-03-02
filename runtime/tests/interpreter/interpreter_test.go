@@ -51,7 +51,12 @@ type ParseCheckAndInterpretOptions struct {
 }
 
 func parseCheckAndInterpret(t testing.TB, code string) *interpreter.Interpreter {
-	inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
+	inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
+		// attachments should be on by default in tests
+		CheckerConfig: &sema.Config{
+			AttachmentsEnabled: true,
+		},
+	})
 	require.NoError(t, err)
 	return inter
 }
@@ -2104,7 +2109,8 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 		switch compositeKind {
 		case common.CompositeKindContract,
 			common.CompositeKindEvent,
-			common.CompositeKindEnum:
+			common.CompositeKindEnum,
+			common.CompositeKindAttachment:
 
 			continue
 		}
@@ -3728,7 +3734,7 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
-		if compositeKind == common.CompositeKindEvent {
+		if compositeKind == common.CompositeKindEvent || compositeKind == common.CompositeKindAttachment {
 			continue
 		}
 
