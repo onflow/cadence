@@ -42,14 +42,16 @@ type VM struct {
 }
 
 func NewVM(program *bbq.Program) *VM {
-	functions := indexFunctions(program.Functions)
-
 	// TODO: include non-function globals
-	globals := make([]values.Value, 0, len(functions))
-	for _, function := range functions {
+	// Iterate through `program.Functions` to be deterministic.
+	// Order of globals must be same as index set at `Compiler.addGlobal()`.
+	globals := make([]values.Value, 0, len(program.Functions))
+	for _, function := range program.Functions {
 		// TODO:
 		globals = append(globals, values.FunctionValue{Function: function})
 	}
+
+	functions := indexFunctions(program.Functions)
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
