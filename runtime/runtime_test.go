@@ -7573,13 +7573,13 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			intensity: 6,
 		},
 		{
-			name: "statement + (functionInvocation x 2) + encoding",
+			name: "statement + functionInvocation + encoding",
 			code: `
-          acc.save("A quick brown fox jumps over the lazy dog", to:StoragePath(identifier: "some_path")!)
+          acc.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
         `,
 			ok:        true,
-			hits:      4,
-			intensity: 89,
+			hits:      3,
+			intensity: 88,
 		},
 	}
 

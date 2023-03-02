@@ -1092,7 +1092,6 @@ func TestMeterEncoding(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			log:         func(message string) {},
 			meterMemory: meter.MeterMemory,
 		}
 
@@ -1104,7 +1103,7 @@ func TestMeterEncoding(t *testing.T) {
                 transaction() {
                     prepare(acc: AuthAccount) {
                         var s = "%s"
-                        acc.save(s, to:StoragePath(identifier: "some_path")!)
+                        acc.save(s, to:/storage/some_path)
                     }
                 }`,
 					text,
@@ -1136,7 +1135,6 @@ func TestMeterEncoding(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			log:         func(message string) {},
 			meterMemory: meter.MeterMemory,
 		}
 
@@ -1150,7 +1148,8 @@ func TestMeterEncoding(t *testing.T) {
                         var i = 0
                         var s = "%s"
                         while i<1000 {
-                            acc.save(s, to:StoragePath(identifier: "i".concat(i.toString()))!)
+                            let path = StoragePath(identifier: "i".concat(i.toString()))!
+                            acc.save(s, to: path)
                             i=i+1
                         }
                     }
@@ -1184,7 +1183,6 @@ func TestMeterEncoding(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			log:         func(message string) {},
 			meterMemory: meter.MeterMemory,
 		}
 
@@ -1196,7 +1194,8 @@ func TestMeterEncoding(t *testing.T) {
                     var i = 0
                     var f = Foo()
                     while i<1000 {
-                        acc.save(f, to:StoragePath(identifier: "i".concat(i.toString()))!)
+                        let path = StoragePath(identifier: "i".concat(i.toString()))!
+                        acc.save(f, to: path)
                         i=i+1
                     }
                 }
