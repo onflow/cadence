@@ -87,6 +87,26 @@ func (t AnyStructType) Equal(other Type) bool {
 	return t == other
 }
 
+// AnyStructAttachmentType
+
+type AnyStructAttachmentType struct{}
+
+var TheAnyStructAttachmentType = AnyStructAttachmentType{}
+
+func NewAnyStructAttachmentType() AnyStructAttachmentType {
+	return TheAnyStructAttachmentType
+}
+
+func (AnyStructAttachmentType) isType() {}
+
+func (AnyStructAttachmentType) ID() string {
+	return "AnyStructAttachment"
+}
+
+func (t AnyStructAttachmentType) Equal(other Type) bool {
+	return t == other
+}
+
 // AnyResourceType
 
 type AnyResourceType struct{}
@@ -107,29 +127,55 @@ func (t AnyResourceType) Equal(other Type) bool {
 	return t == other
 }
 
+// AnyResourceAttachmentType
+
+type AnyResourceAttachmentType struct{}
+
+var TheAnyResourceAttachmentType = AnyResourceAttachmentType{}
+
+func NewAnyResourceAttachmentType() AnyResourceAttachmentType {
+	return TheAnyResourceAttachmentType
+}
+
+func (AnyResourceAttachmentType) isType() {}
+
+func (AnyResourceAttachmentType) ID() string {
+	return "AnyResourceAttachment"
+}
+
+func (t AnyResourceAttachmentType) Equal(other Type) bool {
+	return t == other
+}
+
 // OptionalType
 
 type OptionalType struct {
-	Type Type
+	Type   Type
+	typeID string
 }
 
-func NewOptionalType(typ Type) OptionalType {
-	return OptionalType{Type: typ}
+var _ Type = &OptionalType{}
+
+func NewOptionalType(typ Type) *OptionalType {
+	return &OptionalType{Type: typ}
 }
 
-func NewMeteredOptionalType(gauge common.MemoryGauge, typ Type) OptionalType {
+func NewMeteredOptionalType(gauge common.MemoryGauge, typ Type) *OptionalType {
 	common.UseMemory(gauge, common.CadenceOptionalTypeMemoryUsage)
 	return NewOptionalType(typ)
 }
 
-func (OptionalType) isType() {}
+func (*OptionalType) isType() {}
 
-func (t OptionalType) ID() string {
-	return fmt.Sprintf("%s?", t.Type.ID())
+func (t *OptionalType) ID() string {
+	if len(t.typeID) == 0 {
+		t.typeID = fmt.Sprintf("%s?", t.Type.ID())
+	}
+	return t.typeID
 }
 
-func (t OptionalType) Equal(other Type) bool {
-	otherOptional, ok := other.(OptionalType)
+func (t *OptionalType) Equal(other Type) bool {
+	otherOptional, ok := other.(*OptionalType)
 	if !ok {
 		return false
 	}
@@ -826,34 +872,40 @@ type ArrayType interface {
 
 type VariableSizedArrayType struct {
 	ElementType Type
+	typeID      string
 }
+
+var _ Type = &VariableSizedArrayType{}
 
 func NewVariableSizedArrayType(
 	elementType Type,
-) VariableSizedArrayType {
-	return VariableSizedArrayType{ElementType: elementType}
+) *VariableSizedArrayType {
+	return &VariableSizedArrayType{ElementType: elementType}
 }
 
 func NewMeteredVariableSizedArrayType(
 	gauge common.MemoryGauge,
 	elementType Type,
-) VariableSizedArrayType {
+) *VariableSizedArrayType {
 	common.UseMemory(gauge, common.CadenceVariableSizedArrayTypeMemoryUsage)
 	return NewVariableSizedArrayType(elementType)
 }
 
-func (VariableSizedArrayType) isType() {}
+func (*VariableSizedArrayType) isType() {}
 
-func (t VariableSizedArrayType) ID() string {
-	return fmt.Sprintf("[%s]", t.ElementType.ID())
+func (t *VariableSizedArrayType) ID() string {
+	if len(t.typeID) == 0 {
+		t.typeID = fmt.Sprintf("[%s]", t.ElementType.ID())
+	}
+	return t.typeID
 }
 
-func (t VariableSizedArrayType) Element() Type {
+func (t *VariableSizedArrayType) Element() Type {
 	return t.ElementType
 }
 
-func (t VariableSizedArrayType) Equal(other Type) bool {
-	otherType, ok := other.(VariableSizedArrayType)
+func (t *VariableSizedArrayType) Equal(other Type) bool {
+	otherType, ok := other.(*VariableSizedArrayType)
 	if !ok {
 		return false
 	}
@@ -866,13 +918,16 @@ func (t VariableSizedArrayType) Equal(other Type) bool {
 type ConstantSizedArrayType struct {
 	ElementType Type
 	Size        uint
+	typeID      string
 }
+
+var _ Type = &ConstantSizedArrayType{}
 
 func NewConstantSizedArrayType(
 	size uint,
 	elementType Type,
-) ConstantSizedArrayType {
-	return ConstantSizedArrayType{
+) *ConstantSizedArrayType {
+	return &ConstantSizedArrayType{
 		Size:        size,
 		ElementType: elementType,
 	}
@@ -882,23 +937,26 @@ func NewMeteredConstantSizedArrayType(
 	gauge common.MemoryGauge,
 	size uint,
 	elementType Type,
-) ConstantSizedArrayType {
+) *ConstantSizedArrayType {
 	common.UseMemory(gauge, common.CadenceConstantSizedArrayTypeMemoryUsage)
 	return NewConstantSizedArrayType(size, elementType)
 }
 
-func (ConstantSizedArrayType) isType() {}
+func (*ConstantSizedArrayType) isType() {}
 
-func (t ConstantSizedArrayType) ID() string {
-	return fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
+func (t *ConstantSizedArrayType) ID() string {
+	if len(t.typeID) == 0 {
+		t.typeID = fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
+	}
+	return t.typeID
 }
 
-func (t ConstantSizedArrayType) Element() Type {
+func (t *ConstantSizedArrayType) Element() Type {
 	return t.ElementType
 }
 
-func (t ConstantSizedArrayType) Equal(other Type) bool {
-	otherType, ok := other.(ConstantSizedArrayType)
+func (t *ConstantSizedArrayType) Equal(other Type) bool {
+	otherType, ok := other.(*ConstantSizedArrayType)
 	if !ok {
 		return false
 	}
@@ -912,13 +970,16 @@ func (t ConstantSizedArrayType) Equal(other Type) bool {
 type DictionaryType struct {
 	KeyType     Type
 	ElementType Type
+	typeID      string
 }
+
+var _ Type = &DictionaryType{}
 
 func NewDictionaryType(
 	keyType Type,
 	elementType Type,
-) DictionaryType {
-	return DictionaryType{
+) *DictionaryType {
+	return &DictionaryType{
 		KeyType:     keyType,
 		ElementType: elementType,
 	}
@@ -928,23 +989,26 @@ func NewMeteredDictionaryType(
 	gauge common.MemoryGauge,
 	keyType Type,
 	elementType Type,
-) DictionaryType {
+) *DictionaryType {
 	common.UseMemory(gauge, common.CadenceDictionaryTypeMemoryUsage)
 	return NewDictionaryType(keyType, elementType)
 }
 
-func (DictionaryType) isType() {}
+func (*DictionaryType) isType() {}
 
-func (t DictionaryType) ID() string {
-	return fmt.Sprintf(
-		"{%s:%s}",
-		t.KeyType.ID(),
-		t.ElementType.ID(),
-	)
+func (t *DictionaryType) ID() string {
+	if len(t.typeID) == 0 {
+		t.typeID = fmt.Sprintf(
+			"{%s:%s}",
+			t.KeyType.ID(),
+			t.ElementType.ID(),
+		)
+	}
+	return t.typeID
 }
 
-func (t DictionaryType) Equal(other Type) bool {
-	otherType, ok := other.(DictionaryType)
+func (t *DictionaryType) Equal(other Type) bool {
+	otherType, ok := other.(*DictionaryType)
 	if !ok {
 		return false
 	}
@@ -1008,6 +1072,7 @@ type StructType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewStructType(
@@ -1038,11 +1103,10 @@ func NewMeteredStructType(
 func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*StructType) isCompositeType() {}
@@ -1084,6 +1148,7 @@ type ResourceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewResourceType(
@@ -1114,11 +1179,10 @@ func NewMeteredResourceType(
 func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*ResourceType) isCompositeType() {}
@@ -1153,6 +1217,89 @@ func (t *ResourceType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+// AttachmentType
+type AttachmentType struct {
+	Location            common.Location
+	BaseType            Type
+	QualifiedIdentifier string
+	Fields              []Field
+	Initializers        [][]Parameter
+}
+
+func NewAttachmentType(
+	location common.Location,
+	baseType Type,
+	qualifiedIdentifier string,
+	fields []Field,
+	initializers [][]Parameter,
+) *AttachmentType {
+	return &AttachmentType{
+		Location:            location,
+		BaseType:            baseType,
+		QualifiedIdentifier: qualifiedIdentifier,
+		Fields:              fields,
+		Initializers:        initializers,
+	}
+}
+
+func NewMeteredAttachmentType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	baseType Type,
+	qualifiedIdentifer string,
+	fields []Field,
+	initializers [][]Parameter,
+) *AttachmentType {
+	common.UseMemory(gauge, common.CadenceStructTypeMemoryUsage)
+	return NewAttachmentType(location, baseType, qualifiedIdentifer, fields, initializers)
+}
+
+func (*AttachmentType) isType() {}
+
+func (t *AttachmentType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+}
+
+func (*AttachmentType) isCompositeType() {}
+
+func (t *AttachmentType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *AttachmentType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
+}
+
+func (t *AttachmentType) CompositeFields() []Field {
+	return t.Fields
+}
+
+func (t *AttachmentType) SetCompositeFields(fields []Field) {
+	t.Fields = fields
+}
+
+func (t *AttachmentType) CompositeInitializers() [][]Parameter {
+	return t.Initializers
+}
+
+func (t *AttachmentType) Base() Type {
+	return t.BaseType
+}
+
+func (t *AttachmentType) Equal(other Type) bool {
+	otherType, ok := other.(*AttachmentType)
+	if !ok {
+		return false
+	}
+
+	return t.Location == otherType.Location &&
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
+}
+
 // EventType
 
 type EventType struct {
@@ -1160,6 +1307,7 @@ type EventType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializer         []Parameter
+	typeID              string
 }
 
 func NewEventType(
@@ -1190,11 +1338,10 @@ func NewMeteredEventType(
 func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*EventType) isCompositeType() {}
@@ -1236,6 +1383,7 @@ type ContractType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewContractType(
@@ -1266,11 +1414,10 @@ func NewMeteredContractType(
 func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*ContractType) isCompositeType() {}
@@ -1324,6 +1471,7 @@ type StructInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewStructInterfaceType(
@@ -1354,11 +1502,10 @@ func NewMeteredStructInterfaceType(
 func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*StructInterfaceType) isInterfaceType() {}
@@ -1400,6 +1547,7 @@ type ResourceInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewResourceInterfaceType(
@@ -1430,11 +1578,10 @@ func NewMeteredResourceInterfaceType(
 func (*ResourceInterfaceType) isType() {}
 
 func (t *ResourceInterfaceType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*ResourceInterfaceType) isInterfaceType() {}
@@ -1476,6 +1623,7 @@ type ContractInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewContractInterfaceType(
@@ -1506,11 +1654,10 @@ func NewMeteredContractInterfaceType(
 func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*ContractInterfaceType) isInterfaceType() {}
@@ -1623,13 +1770,16 @@ func (t *FunctionType) Equal(other Type) bool {
 type ReferenceType struct {
 	Type       Type
 	Authorized bool
+	typeID     string
 }
+
+var _ Type = &ReferenceType{}
 
 func NewReferenceType(
 	authorized bool,
 	typ Type,
-) ReferenceType {
-	return ReferenceType{
+) *ReferenceType {
+	return &ReferenceType{
 		Authorized: authorized,
 		Type:       typ,
 	}
@@ -1639,22 +1789,25 @@ func NewMeteredReferenceType(
 	gauge common.MemoryGauge,
 	authorized bool,
 	typ Type,
-) ReferenceType {
+) *ReferenceType {
 	common.UseMemory(gauge, common.CadenceReferenceTypeMemoryUsage)
 	return NewReferenceType(authorized, typ)
 }
 
-func (ReferenceType) isType() {}
+func (*ReferenceType) isType() {}
 
-func (t ReferenceType) ID() string {
-	id := fmt.Sprintf("&%s", t.Type.ID())
-	if t.Authorized {
-		id = "auth" + id
+func (t *ReferenceType) ID() string {
+	if len(t.typeID) == 0 {
+		var prefix string
+		if t.Authorized {
+			prefix = "auth"
+		}
+		t.typeID = fmt.Sprintf("%s&%s", prefix, t.Type.ID())
 	}
-	return id
+	return t.typeID
 }
 
-func (t ReferenceType) Equal(other Type) bool {
+func (t *ReferenceType) Equal(other Type) bool {
 	otherType, ok := other.(*ReferenceType)
 	if !ok {
 		return false
@@ -1869,31 +2022,38 @@ func (t PrivatePathType) Equal(other Type) bool {
 
 type CapabilityType struct {
 	BorrowType Type
+	typeID     string
 }
 
-func NewCapabilityType(borrowType Type) CapabilityType {
-	return CapabilityType{BorrowType: borrowType}
+var _ Type = &CapabilityType{}
+
+func NewCapabilityType(borrowType Type) *CapabilityType {
+	return &CapabilityType{BorrowType: borrowType}
 }
 
 func NewMeteredCapabilityType(
 	gauge common.MemoryGauge,
 	borrowType Type,
-) CapabilityType {
+) *CapabilityType {
 	common.UseMemory(gauge, common.CadenceCapabilityTypeMemoryUsage)
 	return NewCapabilityType(borrowType)
 }
 
-func (CapabilityType) isType() {}
+func (*CapabilityType) isType() {}
 
-func (t CapabilityType) ID() string {
-	if t.BorrowType != nil {
-		return fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
+func (t *CapabilityType) ID() string {
+	if len(t.typeID) == 0 {
+		if t.BorrowType != nil {
+			t.typeID = fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
+		} else {
+			t.typeID = "Capability"
+		}
 	}
-	return "Capability"
+	return t.typeID
 }
 
-func (t CapabilityType) Equal(other Type) bool {
-	otherType, ok := other.(CapabilityType)
+func (t *CapabilityType) Equal(other Type) bool {
+	otherType, ok := other.(*CapabilityType)
 	if !ok {
 		return false
 	}
@@ -1912,6 +2072,7 @@ type EnumType struct {
 	RawType             Type
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewEnumType(
@@ -1945,11 +2106,10 @@ func NewMeteredEnumType(
 func (*EnumType) isType() {}
 
 func (t *EnumType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*EnumType) isCompositeType() {}
@@ -2135,4 +2295,42 @@ func (AccountKeyType) ID() string {
 
 func (t AccountKeyType) Equal(other Type) bool {
 	return t == other
+}
+
+func generateTypeID(location common.Location, identifier string) string {
+	if location == nil {
+		return identifier
+	}
+
+	return string(location.TypeID(nil, identifier))
+}
+
+// TypeWithCachedTypeID recursively caches type ID of type t.
+// This is needed because each type ID is lazily cached on
+// its first use in ID() to avoid performance penalty.
+func TypeWithCachedTypeID(t Type) Type {
+	if t == nil {
+		return t
+	}
+
+	// Cache type ID by calling ID()
+	t.ID()
+
+	switch t := t.(type) {
+
+	case CompositeType:
+		fields := t.CompositeFields()
+		for _, f := range fields {
+			TypeWithCachedTypeID(f.Type)
+		}
+
+		initializers := t.CompositeInitializers()
+		for _, params := range initializers {
+			for _, p := range params {
+				TypeWithCachedTypeID(p.Type)
+			}
+		}
+	}
+
+	return t
 }

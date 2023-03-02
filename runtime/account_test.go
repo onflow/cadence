@@ -883,7 +883,13 @@ var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType).(*cadence.En
 var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType).(*cadence.EnumType)
 
 func ExportedBuiltinType(internalType sema.Type) cadence.Type {
-	return ExportType(internalType, map[sema.TypeID]cadence.Type{})
+	typ := ExportType(internalType, map[sema.TypeID]cadence.Type{})
+
+	// These types are re-used across tests.
+	// Hence, cache the ID always to avoid any non-determinism.
+	typ = cadence.TypeWithCachedTypeID(typ)
+
+	return typ
 }
 
 func newBytesValue(bytes []byte) cadence.Array {
@@ -892,7 +898,7 @@ func newBytesValue(bytes []byte) cadence.Array {
 		result[index] = cadence.NewUInt8(value)
 	}
 	return cadence.NewArray(result).
-		WithType(cadence.VariableSizedArrayType{
+		WithType(&cadence.VariableSizedArrayType{
 			ElementType: cadence.UInt8Type{},
 		})
 }
@@ -917,7 +923,7 @@ func accountKeyExportedValue(
 		panic(err)
 	}
 
-	return cadence.Struct{
+	value := cadence.Struct{
 		StructType: AccountKeyType,
 		Fields: []cadence.Value{
 			// Key index
@@ -947,6 +953,8 @@ func accountKeyExportedValue(
 			cadence.NewBool(isRevoked),
 		},
 	}
+
+	return cadence.ValueWithCachedTypeID(value)
 }
 
 func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRuntimeInterface {
@@ -1108,6 +1116,11 @@ func (test accountKeyTestCase) executeScript(
 			Location:  common.ScriptLocation{},
 		},
 	)
+
+	if err == nil {
+		value = cadence.ValueWithCachedTypeID(value)
+	}
+
 	return value, err
 }
 
@@ -1134,7 +1147,7 @@ func TestRuntimePublicKey(t *testing.T) {
 	executeScript := func(code string, runtimeInterface Interface) (cadence.Value, error) {
 		rt := newTestInterpreterRuntime()
 
-		return rt.ExecuteScript(
+		value, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(code),
 			},
@@ -1143,6 +1156,12 @@ func TestRuntimePublicKey(t *testing.T) {
 				Location:  common.ScriptLocation{},
 			},
 		)
+
+		if err == nil {
+			value = cadence.ValueWithCachedTypeID(value)
+		}
+
+		return value, err
 	}
 
 	t.Run("Constructor", func(t *testing.T) {
@@ -1180,6 +1199,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			},
 		}
 
+		expected = cadence.ValueWithCachedTypeID(expected)
 		assert.Equal(t, expected, value)
 	})
 
@@ -1473,6 +1493,8 @@ func TestRuntimePublicKey(t *testing.T) {
 				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
 			},
 		}
+
+		expected = cadence.ValueWithCachedTypeID(expected)
 		assert.Equal(t, expected, value)
 	})
 
@@ -1979,7 +2001,7 @@ func TestPublicAccountContracts(t *testing.T) {
 					cadence.UInt8(1),
 					cadence.UInt8(2),
 				},
-			}.WithType(cadence.VariableSizedArrayType{
+			}.WithType(&cadence.VariableSizedArrayType{
 				ElementType: cadence.UInt8Type{},
 			}),
 			array.Values[1],
@@ -2307,7 +2329,7 @@ func TestRuntimeAccountLink(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("disabled", func(t *testing.T) {
+	t.Run("disabled, missing pragma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2378,7 +2400,78 @@ func TestRuntimeAccountLink(t *testing.T) {
 		assert.ErrorContains(t, err, "value of type `AuthAccount` has no member `linkAccount`")
 	})
 
-	t.Run("enabled", func(t *testing.T) {
+	t.Run("enabled, missing pragma", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime(Config{
+			AtreeValidationEnabled: true,
+			AccountLinkingEnabled:  true,
+		})
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		accountCodes := map[Location][]byte{}
+		var logs []string
+
+		signerAccount := address
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location] = code
+				return nil
+			},
+			log: func(message string) {
+				logs = append(logs, message)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Set up account
+
+		setupTransaction := []byte(`
+          transaction {
+              prepare(acct: AuthAccount) {
+                  acct.linkAccount(/public/foo)
+              }
+          }
+        `)
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: setupTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.Error(t, err)
+
+		assert.ErrorContains(t, err, "value of type `AuthAccount` has no member `linkAccount`")
+	})
+
+	t.Run("enabled, pragma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2429,6 +2522,8 @@ func TestRuntimeAccountLink(t *testing.T) {
 		// Set up account
 
 		setupTransaction := []byte(`
+          #allowAccountLinking
+
           transaction {
               prepare(acct: AuthAccount) {
                   acct.linkAccount(/public/foo)
@@ -2537,6 +2632,8 @@ func TestRuntimeAccountLink(t *testing.T) {
 		// Set up account
 
 		setupTransaction := []byte(`
+          #allowAccountLinking
+
           transaction {
               prepare(acct: AuthAccount) {
                   let cap = acct.linkAccount(/private/foo)!

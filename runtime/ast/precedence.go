@@ -90,5 +90,6 @@ const (
 	// - IdentifierExpression
 	// - FunctionExpression
 	// - PathExpression
+	// - AttachExpression
 	precedenceLiteral
 )

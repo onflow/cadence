@@ -68,6 +68,10 @@ func (m *Members) Composites() []*CompositeDeclaration {
 	return m.indices.Composites(m.declarations)
 }
 
+func (m *Members) Attachments() []*AttachmentDeclaration {
+	return m.indices.Attachments(m.declarations)
+}
+
 func (m *Members) EnumCases() []*EnumCaseDeclaration {
 	return m.indices.EnumCases(m.declarations)
 }
@@ -82,6 +86,10 @@ func (m *Members) FunctionsByIdentifier() map[string]*FunctionDeclaration {
 
 func (m *Members) CompositesByIdentifier() map[string]*CompositeDeclaration {
 	return m.indices.CompositesByIdentifier(m.declarations)
+}
+
+func (m *Members) AttachmentsByIdentifier() map[string]*AttachmentDeclaration {
+	return m.indices.AttachmentsByIdentifier(m.declarations)
 }
 
 func (m *Members) InterfacesByIdentifier() map[string]*InterfaceDeclaration {

@@ -91,7 +91,9 @@ const (
 	MemoryKindCadenceStructValueBase
 	MemoryKindCadenceStructValueSize
 	MemoryKindCadenceResourceValueBase
+	MemoryKindCadenceAttachmentValueBase
 	MemoryKindCadenceResourceValueSize
+	MemoryKindCadenceAttachmentValueSize
 	MemoryKindCadenceEventValueBase
 	MemoryKindCadenceEventValueSize
 	MemoryKindCadenceContractValueBase
@@ -113,6 +115,7 @@ const (
 	MemoryKindCadenceParameter
 	MemoryKindCadenceStructType
 	MemoryKindCadenceResourceType
+	MemoryKindCadenceAttachmentType
 	MemoryKindCadenceEventType
 	MemoryKindCadenceContractType
 	MemoryKindCadenceStructInterfaceType
@@ -160,6 +163,7 @@ const (
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
+	MemoryKindAttachmentDeclaration
 	MemoryKindInterfaceDeclaration
 	MemoryKindEnumCaseDeclaration
 	MemoryKindFieldDeclaration
@@ -180,6 +184,7 @@ const (
 	MemoryKindSwapStatement
 	MemoryKindSwitchStatement
 	MemoryKindWhileStatement
+	MemoryKindRemoveStatement
 
 	MemoryKindBooleanExpression
 	MemoryKindVoidExpression
@@ -203,6 +208,7 @@ const (
 	MemoryKindReferenceExpression
 	MemoryKindForceExpression
 	MemoryKindPathExpression
+	MemoryKindAttachExpression
 
 	MemoryKindConstantSizedType
 	MemoryKindDictionaryType

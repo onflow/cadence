@@ -856,7 +856,7 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -876,7 +876,7 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
 	t.Run("non-composite", func(t *testing.T) {

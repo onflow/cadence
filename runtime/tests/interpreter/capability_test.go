@@ -471,6 +471,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			address,
 			true,
 			`
+              #allowAccountLinking
+
               fun link() {
                   account.linkAccount(/public/acct)
               }
@@ -918,6 +920,8 @@ func TestInterpretCapability_check(t *testing.T) {
 			address,
 			true,
 			`
+              #allowAccountLinking
+
               fun link() {
                   account.linkAccount(/public/acct)
               }

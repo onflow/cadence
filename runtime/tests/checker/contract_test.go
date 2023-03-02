@@ -660,11 +660,20 @@ func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
 		for _, isInterface := range []bool{true, false} {
 			keywords := kind.Keyword()
 
+			if isInterface && kind == common.CompositeKindAttachment {
+				continue
+			}
+
 			if isInterface {
 				keywords += " interface"
 			}
 
-			code := fmt.Sprintf(`%s Test {}`, keywords)
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
+			code := fmt.Sprintf(`%s Test %s {}`, keywords, baseType)
 
 			tests = append(tests, test{
 				name:        keywords,
