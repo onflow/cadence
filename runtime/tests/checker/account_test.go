@@ -1163,27 +1163,29 @@ func TestCheckAccount_linkAccount(t *testing.T) {
 				},
 			)
 
-			if tc.enabled {
-				if tc.allowed {
-					switch tc.domain {
-					case common.PathDomainPrivate, common.PathDomainPublic:
-						require.NoError(t, err)
-
-					default:
-						errs := RequireCheckerErrors(t, err, 1)
-
-						require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					}
-				} else {
-					errs := RequireCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
-				}
-			} else {
+			if !tc.enabled {
 				errs := RequireCheckerErrors(t, err, 1)
 
 				require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+				return
 			}
+
+			if !tc.allowed {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+
+				return
+			}
+
+			if tc.domain != common.PathDomainPrivate {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				return
+			}
+
+			require.NoError(t, err)
 		})
 	}
 
