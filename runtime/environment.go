@@ -127,6 +127,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		MemoryGauge:                          e,
 		BaseActivation:                       e.baseActivation,
 		OnEventEmitted:                       e.newOnEventEmittedHandler(),
+		OnAccountLinked:                      e.newOnAccountLinkedHandler(),
 		InjectedCompositeFieldsHandler:       e.newInjectedCompositeFieldsHandler(),
 		UUIDHandler:                          e.newUUIDHandler(),
 		ContractValueHandler:                 e.newContractValueHandler(),
@@ -272,17 +273,11 @@ func (e *interpreterEnvironment) EmitEvent(
 	values []interpreter.Value,
 	locationRange interpreter.LocationRange,
 ) {
-	eventFields := make([]exportableValue, 0, len(values))
-
-	for _, value := range values {
-		eventFields = append(eventFields, newExportableValue(value, inter))
-	}
-
 	emitEventFields(
 		inter,
 		locationRange,
 		eventType,
-		eventFields,
+		newExportableValues(inter, values),
 		e.runtimeInterface.EmitEvent,
 	)
 }
@@ -764,6 +759,26 @@ func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventE
 			e.runtimeInterface.EmitEvent,
 		)
 
+		return nil
+	}
+}
+
+func (e *interpreterEnvironment) newOnAccountLinkedHandler() interpreter.OnAccountLinkedFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		addressValue interpreter.AddressValue,
+		pathValue interpreter.PathValue,
+	) error {
+		e.EmitEvent(
+			inter,
+			stdlib.AccountLinkedEventType,
+			[]interpreter.Value{
+				addressValue,
+				pathValue,
+			},
+			locationRange,
+		)
 		return nil
 	}
 }
