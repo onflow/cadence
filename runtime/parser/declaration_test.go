@@ -3572,6 +3572,74 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("entitlement access", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`pub attachment E for S {
+			access(X) var foo: Int
+		}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.AttachmentDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+					BaseType: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "S",
+							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+						},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.FieldDeclaration{
+								Access: ast.EntitlementAccess{
+									Entitlements: []*ast.NominalType{
+										{
+											Identifier: ast.Identifier{
+												Identifier: "X",
+												Pos:        ast.Position{Offset: 35, Line: 2, Column: 10},
+											},
+										},
+									},
+								},
+								VariableKind: ast.VariableKindVariable,
+								Identifier: ast.Identifier{
+									Identifier: "foo",
+									Pos:        ast.Position{Offset: 42, Line: 2, Column: 17},
+								},
+								TypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 47, Line: 2, Column: 22},
+										},
+									},
+									StartPos: ast.Position{Offset: 47, Line: 2, Column: 22},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 28, Line: 2, Column: 3},
+									EndPos:   ast.Position{Offset: 49, Line: 2, Column: 24},
+								},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 53},
+					},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseInterfaceDeclaration(t *testing.T) {
