@@ -246,7 +246,7 @@ func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
 	return i.getCode(location)
 }
 
-func (i *testRuntimeInterface) GetAndSetProgram(
+func (i *testRuntimeInterface) GetOrLoadProgram(
 	location Location,
 	load func() (*interpreter.Program, error),
 ) (
@@ -2836,13 +2836,13 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 				expected: cadence.NewArray([]cadence.Value{
 					cadence.NewArray([]cadence.Value{
 						nil,
-					}).WithType(cadence.VariableSizedArrayType{
-						ElementType: cadence.ReferenceType{
+					}).WithType(&cadence.VariableSizedArrayType{
+						ElementType: &cadence.ReferenceType{
 							Type: cadence.AnyStructType{},
 						},
 					}),
-				}).WithType(cadence.VariableSizedArrayType{
-					ElementType: cadence.ReferenceType{
+				}).WithType(&cadence.VariableSizedArrayType{
+					ElementType: &cadence.ReferenceType{
 						Type: cadence.AnyStructType{},
 					},
 				}),

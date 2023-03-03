@@ -156,6 +156,13 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
+			case keywordAttachment:
+				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindAttachment)
+				if err != nil {
+					return nil, err
+				}
+				return parseAttachmentDeclaration(p, access, accessPos, docString)
+
 			case KeywordContract:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindContract)
 				if err != nil {
@@ -950,6 +957,31 @@ func parseFieldWithVariableKind(
 	), nil
 }
 
+func parseConformances(p *parser) ([]*ast.NominalType, error) {
+	var conformances []*ast.NominalType
+	var err error
+
+	if p.current.Is(lexer.TokenColon) {
+		// Skip the colon
+		p.next()
+
+		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(conformances) < 1 {
+			return nil, p.syntaxError(
+				"expected at least one conformance after %s",
+				lexer.TokenColon,
+			)
+		}
+	}
+
+	p.skipSpaceAndComments()
+	return conformances, nil
+}
+
 // parseCompositeOrInterfaceDeclaration parses an event declaration.
 //
 //	conformances : ':' nominalType ( ',' nominalType )*
@@ -1018,27 +1050,10 @@ func parseCompositeOrInterfaceDeclaration(
 
 	p.skipSpaceAndComments()
 
-	var conformances []*ast.NominalType
-	var err error
-
-	if p.current.Is(lexer.TokenColon) {
-		// Skip the colon
-		p.next()
-
-		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(conformances) < 1 {
-			return nil, p.syntaxError(
-				"expected at least one conformance after %s",
-				lexer.TokenColon,
-			)
-		}
+	conformances, err := parseConformances(p)
+	if err != nil {
+		return nil, err
 	}
-
-	p.skipSpaceAndComments()
 
 	_, err = p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
@@ -1091,6 +1106,97 @@ func parseCompositeOrInterfaceDeclaration(
 			declarationRange,
 		), nil
 	}
+}
+
+func parseAttachmentDeclaration(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	docString string,
+) (ast.Declaration, error) {
+	startPos := p.current.StartPos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
+
+	// Skip the `attachment` keyword
+	p.nextSemanticToken()
+
+	identifier, err := p.mustIdentifier()
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpaceAndComments()
+
+	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFor) {
+		return nil, p.syntaxError(
+			"expected 'for', got %s",
+			p.current.Type,
+		)
+	}
+
+	// skip the `for` keyword
+	p.nextSemanticToken()
+
+	if !p.current.Is(lexer.TokenIdentifier) {
+		return nil, p.syntaxError(
+			"expected %s, got %s",
+			lexer.TokenIdentifier,
+			p.current.Type,
+		)
+	}
+
+	baseType, err := parseType(p, lowestBindingPower)
+	baseNominalType, ok := baseType.(*ast.NominalType)
+	if !ok {
+		p.reportSyntaxError(
+			"expected nominal type, got %s",
+			baseType,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	conformances, err := parseConformances(p)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.mustOne(lexer.TokenBraceOpen)
+	if err != nil {
+		return nil, err
+	}
+
+	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpaceAndComments()
+
+	endToken, err := p.mustOne(lexer.TokenBraceClose)
+	if err != nil {
+		return nil, err
+	}
+
+	declarationRange := ast.NewRange(
+		p.memoryGauge,
+		startPos,
+		endToken.EndPos,
+	)
+
+	return ast.NewAttachmentDeclaration(
+		p.memoryGauge,
+		access,
+		identifier,
+		baseNominalType,
+		conformances,
+		members,
+		docString,
+		declarationRange,
+	), nil
 }
 
 // parseMembersAndNestedDeclarations parses composite or interface members,
@@ -1262,6 +1368,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 					return nil, err
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+
+			case keywordAttachment:
+				return parseAttachmentDeclaration(p, access, accessPos, docString)
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {

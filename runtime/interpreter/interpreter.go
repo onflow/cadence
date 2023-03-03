@@ -417,14 +417,17 @@ func (interpreter *Interpreter) InvokeExternally(
 	}
 
 	var self *MemberAccessibleValue
+	var base *EphemeralReferenceValue
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.Self
+		base = boundFunc.Base
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := NewInvocation(
 		interpreter,
 		self,
+		base,
 		preparedArguments,
 		nil,
 		nil,
@@ -537,6 +540,10 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.AttachmentDeclarations() {
 		interpreter.visitGlobalDeclaration(declaration)
 	}
 
@@ -857,6 +864,23 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 	return nil
 }
 
+func (interpreter *Interpreter) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) StatementResult {
+	// lexical scope: variables in functions are bound to what is visible at declaration time
+	lexicalScope := interpreter.activations.CurrentOrNew()
+	_, _ = interpreter.declareAttachmentValue(declaration, lexicalScope)
+	return nil
+}
+
+func (interpreter *Interpreter) declareAttachmentValue(
+	declaration *ast.AttachmentDeclaration,
+	lexicalScope *VariableActivation,
+) (
+	scope *VariableActivation,
+	variable *Variable,
+) {
+	return interpreter.declareCompositeValue(declaration, lexicalScope)
+}
+
 // declareCompositeValue creates and declares the value for
 // the composite declaration.
 //
@@ -874,27 +898,27 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 //
 // For all other composite kinds the constructor function is declared.
 func (interpreter *Interpreter) declareCompositeValue(
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
 	variable *Variable,
 ) {
-	if declaration.CompositeKind == common.CompositeKindEnum {
-		return interpreter.declareEnumConstructor(declaration, lexicalScope)
+	if declaration.Kind() == common.CompositeKindEnum {
+		return interpreter.declareEnumConstructor(declaration.(*ast.CompositeDeclaration), lexicalScope)
 	} else {
 		return interpreter.declareNonEnumCompositeValue(declaration, lexicalScope)
 	}
 }
 
 func (interpreter *Interpreter) declareNonEnumCompositeValue(
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
 	variable *Variable,
 ) {
-	identifier := declaration.Identifier.Identifier
+	identifier := declaration.DeclarationIdentifier().Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable = interpreter.findOrDeclareVariable(identifier)
 
@@ -919,19 +943,25 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			)
 		}
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
+		members := declaration.DeclarationMembers()
+
+		for _, nestedInterfaceDeclaration := range members.Interfaces() {
 			predeclare(nestedInterfaceDeclaration.Identifier)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		for _, nestedCompositeDeclaration := range members.Composites() {
 			predeclare(nestedCompositeDeclaration.Identifier)
 		}
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
+		for _, nestedAttachmentDeclaration := range members.Attachments() {
+			predeclare(nestedAttachmentDeclaration.Identifier)
+		}
+
+		for _, nestedInterfaceDeclaration := range members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		for _, nestedCompositeDeclaration := range members.Composites() {
 
 			// Pass the lexical scope, which has the containing composite's value declared,
 			// to the nested declarations so they can refer to it, and update the lexical scope
@@ -945,6 +975,23 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
+			nestedVariables[memberIdentifier] = nestedVariable
+		}
+
+		for _, nestedAttachmentDeclaration := range members.Attachments() {
+
+			// Pass the lexical scope, which has the containing composite's value declared,
+			// to the nested declarations so they can refer to it, and update the lexical scope
+			// so the container's functions can refer to the nested composite's value
+
+			var nestedVariable *Variable
+			lexicalScope, nestedVariable =
+				interpreter.declareAttachmentValue(
+					nestedAttachmentDeclaration,
+					lexicalScope,
+				)
+
+			memberIdentifier := nestedAttachmentDeclaration.Identifier.Identifier
 			nestedVariables[memberIdentifier] = nestedVariable
 		}
 	})()
@@ -961,7 +1008,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	}
 
 	var initializerFunction FunctionValue
-	if declaration.CompositeKind == common.CompositeKindEvent {
+	if declaration.Kind() == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
 			interpreter,
 			constructorType,
@@ -1106,13 +1153,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 						interpreter,
 						location,
 						qualifiedIdentifier,
-						declaration.CompositeKind,
+						declaration.Kind(),
 					)
 				}
 
 				var fields []CompositeField
 
-				if declaration.CompositeKind == common.CompositeKindResource {
+				if declaration.Kind() == common.CompositeKindResource {
 
 					uuidHandler := config.UUIDHandler
 					if uuidHandler == nil {
@@ -1146,7 +1193,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					locationRange,
 					location,
 					qualifiedIdentifier,
-					declaration.CompositeKind,
+					declaration.Kind(),
 					fields,
 					address,
 				)
@@ -1156,9 +1203,19 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				value.Destructor = destructorFunction
 
 				var self MemberAccessibleValue = value
+				if declaration.Kind() == common.CompositeKindAttachment {
+					self = NewEphemeralReferenceValue(interpreter, false, value, interpreter.MustSemaTypeOfValue(value))
+					// set the base to the implicitly provided value, and remove this implicit argument from the list
+					implicitArgumentPos := len(invocation.Arguments) - 1
+					invocation.Base = invocation.Arguments[implicitArgumentPos].(*EphemeralReferenceValue)
+					invocation.Arguments[implicitArgumentPos] = nil
+					invocation.Arguments = invocation.Arguments[:implicitArgumentPos]
+					invocation.ArgumentTypes[implicitArgumentPos] = nil
+					invocation.ArgumentTypes = invocation.ArgumentTypes[:implicitArgumentPos]
+				}
 				invocation.Self = &self
 
-				if declaration.CompositeKind == common.CompositeKindContract {
+				if declaration.Kind() == common.CompositeKindContract {
 					// NOTE: set the variable value immediately, as the contract value
 					// needs to be available for nested declarations
 
@@ -1183,9 +1240,9 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	// Contract declarations declare a value / instance (singleton),
 	// for all other composite kinds, the constructor is declared
 
-	if declaration.CompositeKind == common.CompositeKindContract {
+	if declaration.Kind() == common.CompositeKindContract {
 		variable.getter = func() Value {
-			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
+			positioned := ast.NewRangeFromPositioned(interpreter, declaration.DeclarationIdentifier())
 
 			contractValue := config.ContractValueHandler(
 				interpreter,
@@ -1341,13 +1398,13 @@ func EnumConstructorFunction(
 }
 
 func (interpreter *Interpreter) compositeInitializerFunction(
-	compositeDeclaration *ast.CompositeDeclaration,
+	compositeDeclaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
 	// TODO: support multiple overloaded initializers
 
-	initializers := compositeDeclaration.Members.Initializers()
+	initializers := compositeDeclaration.DeclarationMembers().Initializers()
 	var initializer *ast.SpecialFunctionDeclaration
 	if len(initializers) == 0 {
 		return nil
@@ -1390,11 +1447,11 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 }
 
 func (interpreter *Interpreter) compositeDestructorFunction(
-	compositeDeclaration *ast.CompositeDeclaration,
+	compositeDeclaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
-	destructor := compositeDeclaration.Members.Destructor()
+	destructor := compositeDeclaration.DeclarationMembers().Destructor()
 	if destructor == nil {
 		return nil
 	}
@@ -1462,13 +1519,13 @@ func (interpreter *Interpreter) defaultFunctions(
 }
 
 func (interpreter *Interpreter) compositeFunctions(
-	compositeDeclaration *ast.CompositeDeclaration,
+	compositeDeclaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) map[string]FunctionValue {
 
 	functions := map[string]FunctionValue{}
 
-	for _, functionDeclaration := range compositeDeclaration.Members.Functions() {
+	for _, functionDeclaration := range compositeDeclaration.DeclarationMembers().Functions() {
 		name := functionDeclaration.Identifier.Identifier
 		functions[name] =
 			interpreter.compositeFunction(
@@ -1727,10 +1784,43 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		}
 	}
 
-	switch unwrappedTargetType.(type) {
+	switch unwrappedTargetType := unwrappedTargetType.(type) {
 	case *sema.AddressType:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertAddress(interpreter, value, locationRange)
+		}
+
+	case *sema.ReferenceType:
+		if !valueType.Equal(unwrappedTargetType) {
+			switch ref := value.(type) {
+			case *EphemeralReferenceValue:
+				return NewEphemeralReferenceValue(
+					interpreter,
+					unwrappedTargetType.Authorized,
+					ref.Value,
+					unwrappedTargetType.Type,
+				)
+
+			case *StorageReferenceValue:
+				return NewStorageReferenceValue(
+					interpreter,
+					unwrappedTargetType.Authorized,
+					ref.TargetStorageAddress,
+					ref.TargetPath,
+					unwrappedTargetType.Type,
+				)
+
+			case *AccountReferenceValue:
+				return NewAccountReferenceValue(
+					interpreter,
+					ref.Address,
+					ref.Path,
+					unwrappedTargetType.Type,
+				)
+
+			default:
+				panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
+			}
 		}
 	}
 
@@ -1956,6 +2046,9 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 
 				if invocation.Self != nil {
 					interpreter.declareVariable(sema.SelfIdentifier, *invocation.Self)
+				}
+				if invocation.Base != nil {
+					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
 				}
 
 				// NOTE: The `inner` function might be nil.
@@ -3301,6 +3394,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 				subInvocation := NewInvocation(
 					inter,
 					nil,
+					nil,
 					[]Value{pathValue, runtimeType},
 					invocationTypeParams,
 					nil,
@@ -4041,6 +4135,10 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 	)
 }
 
+func (interpreter *Interpreter) MustSemaTypeOfValue(value Value) sema.Type {
+	return interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+}
+
 func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticType) sema.Type {
 	semaType, err := interpreter.ConvertStaticToSemaType(staticType)
 	if err != nil {
@@ -4269,8 +4367,8 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	)
 }
 
-func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) {
-	self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
+func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) bool {
+	return self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
 }
 
 func (interpreter *Interpreter) ExpectType(
@@ -4299,7 +4397,7 @@ func (interpreter *Interpreter) checkContainerMutation(
 	if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
 		panic(ContainerMutationError{
 			ExpectedType:  interpreter.MustConvertStaticToSemaType(elementType),
-			ActualType:    interpreter.MustConvertStaticToSemaType(element.StaticType(interpreter)),
+			ActualType:    interpreter.MustSemaTypeOfValue(element),
 			LocationRange: locationRange,
 		})
 	}

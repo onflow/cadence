@@ -246,6 +246,7 @@ type DereferenceError struct {
 }
 
 var _ errors.UserError = DereferenceError{}
+var _ errors.SecondaryError = DereferenceError{}
 
 func (DereferenceError) IsUserError() {}
 
@@ -906,4 +907,57 @@ func (InvalidatedResourceReferenceError) IsUserError() {}
 
 func (e InvalidatedResourceReferenceError) Error() string {
 	return "referenced resource has been moved or destroyed after taking the reference"
+}
+
+// DuplicateAttachmentError
+type DuplicateAttachmentError struct {
+	AttachmentType sema.Type
+	Value          *CompositeValue
+	LocationRange
+}
+
+var _ errors.UserError = DuplicateAttachmentError{}
+
+func (DuplicateAttachmentError) IsUserError() {}
+
+func (e DuplicateAttachmentError) Error() string {
+	return fmt.Sprintf(
+		"cannot attach %s to %s, as it already exists on that value",
+		e.AttachmentType.QualifiedString(),
+		e.Value.QualifiedIdentifier,
+	)
+}
+
+// AttachmentIterationMutationError
+type AttachmentIterationMutationError struct {
+	Value *CompositeValue
+	LocationRange
+}
+
+var _ errors.UserError = AttachmentIterationMutationError{}
+
+func (AttachmentIterationMutationError) IsUserError() {}
+
+func (e AttachmentIterationMutationError) Error() string {
+	return fmt.Sprintf(
+		"cannot modify %s's attachments while iterating over them",
+		e.Value.QualifiedIdentifier,
+	)
+}
+
+// InvalidAttachmentOperationTargetError
+type InvalidAttachmentOperationTargetError struct {
+	Value Value
+	LocationRange
+}
+
+var _ errors.InternalError = InvalidAttachmentOperationTargetError{}
+
+func (InvalidAttachmentOperationTargetError) IsInternalError() {}
+
+func (e InvalidAttachmentOperationTargetError) Error() string {
+	return fmt.Sprintf(
+		"cannot add or remove attachment with non-owned value (%T)",
+		e.Value,
+	)
 }

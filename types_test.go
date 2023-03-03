@@ -81,40 +81,46 @@ func TestType_ID(t *testing.T) {
 		{BlockType{}, "Block"},
 		{MetaType{}, "Type"},
 		{
-			CapabilityType{},
+			&CapabilityType{},
 			"Capability",
 		},
 		{
-			CapabilityType{
+			&CapabilityType{
 				BorrowType: IntType{},
 			},
 			"Capability<Int>",
 		},
 		{
-			OptionalType{
+			&OptionalType{
 				Type: StringType{},
 			},
 			"String?",
 		},
 		{
-			VariableSizedArrayType{
+			&VariableSizedArrayType{
 				ElementType: StringType{},
 			},
 			"[String]",
 		},
 		{
-			ConstantSizedArrayType{
+			&ConstantSizedArrayType{
 				ElementType: StringType{},
 				Size:        2,
 			},
 			"[String;2]",
 		},
 		{
-			DictionaryType{
+			&DictionaryType{
 				KeyType:     StringType{},
 				ElementType: IntType{},
 			},
 			"{String:Int}",
+		},
+		{
+			&StructType{
+				QualifiedIdentifier: "Foo",
+			},
+			"Foo",
 		},
 		{
 			&StructType{
@@ -125,6 +131,12 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&StructInterfaceType{
+				QualifiedIdentifier: "FooI",
+			},
+			"FooI",
+		},
+		{
+			&StructInterfaceType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooI",
 			},
@@ -132,21 +144,85 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&ResourceType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "Foo",
+				QualifiedIdentifier: "Bar",
 			},
-			"S.test.Foo",
+			"Bar",
+		},
+		{
+			&ResourceType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Bar",
+			},
+			"S.test.Bar",
+		},
+		{
+			&ResourceInterfaceType{
+				QualifiedIdentifier: "BarI",
+			},
+			"BarI",
 		},
 		{
 			&ResourceInterfaceType{
 				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooI",
+				QualifiedIdentifier: "BarI",
 			},
-			"S.test.FooI",
+			"S.test.BarI",
 		},
 		{
 			(&RestrictedType{}).WithID("S.test.Foo{S.test.FooI}"),
 			"S.test.Foo{S.test.FooI}",
+		},
+		{
+			&EventType{
+				QualifiedIdentifier: "Event",
+			},
+			"Event",
+		},
+		{
+			&EventType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Event",
+			},
+			"S.test.Event",
+		},
+		{
+			&EnumType{
+				QualifiedIdentifier: "Enum",
+			},
+			"Enum",
+		},
+		{
+			&EnumType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Enum",
+			},
+			"S.test.Enum",
+		},
+		{
+			&ContractType{
+				QualifiedIdentifier: "Contract",
+			},
+			"Contract",
+		},
+		{
+			&ContractType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Contract",
+			},
+			"S.test.Contract",
+		},
+		{
+			&ContractInterfaceType{
+				QualifiedIdentifier: "ContractI",
+			},
+			"ContractI",
+		},
+		{
+			&ContractInterfaceType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "ContractI",
+			},
+			"S.test.ContractI",
 		},
 	}
 
@@ -264,10 +340,10 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("equal with borrow type", func(t *testing.T) {
 			t.Parallel()
 
-			source := CapabilityType{
+			source := &CapabilityType{
 				BorrowType: IntType{},
 			}
-			target := CapabilityType{
+			target := &CapabilityType{
 				BorrowType: IntType{},
 			}
 			assert.True(t, source.Equal(target))
@@ -276,18 +352,18 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("equal without borrow type", func(t *testing.T) {
 			t.Parallel()
 
-			source := CapabilityType{}
-			target := CapabilityType{}
+			source := &CapabilityType{}
+			target := &CapabilityType{}
 			assert.True(t, source.Equal(target))
 		})
 
 		t.Run("not equal", func(t *testing.T) {
 			t.Parallel()
 
-			source := CapabilityType{
+			source := &CapabilityType{
 				BorrowType: IntType{},
 			}
-			target := CapabilityType{
+			target := &CapabilityType{
 				BorrowType: StringType{},
 			}
 			assert.False(t, source.Equal(target))
@@ -296,8 +372,8 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("source missing borrow type", func(t *testing.T) {
 			t.Parallel()
 
-			source := CapabilityType{}
-			target := CapabilityType{
+			source := &CapabilityType{}
+			target := &CapabilityType{
 				BorrowType: StringType{},
 			}
 			assert.False(t, source.Equal(target))
@@ -306,17 +382,17 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("target missing borrow type", func(t *testing.T) {
 			t.Parallel()
 
-			source := CapabilityType{
+			source := &CapabilityType{
 				BorrowType: IntType{},
 			}
-			target := CapabilityType{}
+			target := &CapabilityType{}
 			assert.False(t, source.Equal(target))
 		})
 
 		t.Run("different type", func(t *testing.T) {
 			t.Parallel()
 
-			source := CapabilityType{
+			source := &CapabilityType{
 				BorrowType: IntType{},
 			}
 			target := AnyType{}
@@ -330,10 +406,10 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("equal", func(t *testing.T) {
 			t.Parallel()
 
-			source := OptionalType{
+			source := &OptionalType{
 				Type: IntType{},
 			}
-			target := OptionalType{
+			target := &OptionalType{
 				Type: IntType{},
 			}
 			assert.True(t, source.Equal(target))
@@ -342,10 +418,10 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("not equal", func(t *testing.T) {
 			t.Parallel()
 
-			source := OptionalType{
+			source := &OptionalType{
 				Type: IntType{},
 			}
-			target := OptionalType{
+			target := &OptionalType{
 				Type: StringType{},
 			}
 			assert.False(t, source.Equal(target))
@@ -354,7 +430,7 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different type", func(t *testing.T) {
 			t.Parallel()
 
-			source := OptionalType{
+			source := &OptionalType{
 				Type: IntType{},
 			}
 			target := AnyType{}
@@ -368,10 +444,10 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("equal", func(t *testing.T) {
 			t.Parallel()
 
-			source := VariableSizedArrayType{
+			source := &VariableSizedArrayType{
 				ElementType: IntType{},
 			}
-			target := VariableSizedArrayType{
+			target := &VariableSizedArrayType{
 				ElementType: IntType{},
 			}
 			assert.True(t, source.Equal(target))
@@ -380,10 +456,10 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("not equal", func(t *testing.T) {
 			t.Parallel()
 
-			source := VariableSizedArrayType{
+			source := &VariableSizedArrayType{
 				ElementType: IntType{},
 			}
-			target := VariableSizedArrayType{
+			target := &VariableSizedArrayType{
 				ElementType: StringType{},
 			}
 			assert.False(t, source.Equal(target))
@@ -392,7 +468,7 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different type", func(t *testing.T) {
 			t.Parallel()
 
-			source := VariableSizedArrayType{
+			source := &VariableSizedArrayType{
 				ElementType: IntType{},
 			}
 			target := AnyType{}
@@ -406,11 +482,11 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("equal", func(t *testing.T) {
 			t.Parallel()
 
-			source := ConstantSizedArrayType{
+			source := &ConstantSizedArrayType{
 				ElementType: IntType{},
 				Size:        3,
 			}
-			target := ConstantSizedArrayType{
+			target := &ConstantSizedArrayType{
 				ElementType: IntType{},
 				Size:        3,
 			}
@@ -420,11 +496,11 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different inner types", func(t *testing.T) {
 			t.Parallel()
 
-			source := ConstantSizedArrayType{
+			source := &ConstantSizedArrayType{
 				ElementType: IntType{},
 				Size:        3,
 			}
-			target := ConstantSizedArrayType{
+			target := &ConstantSizedArrayType{
 				ElementType: StringType{},
 				Size:        3,
 			}
@@ -434,11 +510,11 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different sizes", func(t *testing.T) {
 			t.Parallel()
 
-			source := ConstantSizedArrayType{
+			source := &ConstantSizedArrayType{
 				ElementType: IntType{},
 				Size:        3,
 			}
-			target := ConstantSizedArrayType{
+			target := &ConstantSizedArrayType{
 				ElementType: IntType{},
 				Size:        4,
 			}
@@ -448,7 +524,7 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different type", func(t *testing.T) {
 			t.Parallel()
 
-			source := ConstantSizedArrayType{
+			source := &ConstantSizedArrayType{
 				ElementType: IntType{},
 				Size:        3,
 			}
@@ -463,11 +539,11 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("equal", func(t *testing.T) {
 			t.Parallel()
 
-			source := DictionaryType{
+			source := &DictionaryType{
 				KeyType:     IntType{},
 				ElementType: BoolType{},
 			}
-			target := DictionaryType{
+			target := &DictionaryType{
 				KeyType:     IntType{},
 				ElementType: BoolType{},
 			}
@@ -477,11 +553,11 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different key types", func(t *testing.T) {
 			t.Parallel()
 
-			source := DictionaryType{
+			source := &DictionaryType{
 				KeyType:     IntType{},
 				ElementType: BoolType{},
 			}
-			target := DictionaryType{
+			target := &DictionaryType{
 				KeyType:     UIntType{},
 				ElementType: BoolType{},
 			}
@@ -491,11 +567,11 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different element types", func(t *testing.T) {
 			t.Parallel()
 
-			source := DictionaryType{
+			source := &DictionaryType{
 				KeyType:     IntType{},
 				ElementType: BoolType{},
 			}
-			target := DictionaryType{
+			target := &DictionaryType{
 				KeyType:     IntType{},
 				ElementType: StringType{},
 			}
@@ -505,11 +581,11 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different key and element types", func(t *testing.T) {
 			t.Parallel()
 
-			source := DictionaryType{
+			source := &DictionaryType{
 				KeyType:     IntType{},
 				ElementType: BoolType{},
 			}
-			target := DictionaryType{
+			target := &DictionaryType{
 				KeyType:     UIntType{},
 				ElementType: StringType{},
 			}
@@ -519,7 +595,7 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different type", func(t *testing.T) {
 			t.Parallel()
 
-			source := DictionaryType{
+			source := &DictionaryType{
 				KeyType:     IntType{},
 				ElementType: BoolType{},
 			}

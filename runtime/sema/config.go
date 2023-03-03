@@ -55,4 +55,6 @@ type Config struct {
 	AllowStaticDeclarations bool
 	// AccountLinkingEnabled determines if account linking is enabled
 	AccountLinkingEnabled bool
+	// AttachmentsEnabled determines if attachments are enabled
+	AttachmentsEnabled bool
 }

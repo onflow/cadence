@@ -127,6 +127,7 @@ type InvalidIntegerLiteralError struct {
 
 var _ ParseError = &InvalidIntegerLiteralError{}
 var _ errors.UserError = &InvalidIntegerLiteralError{}
+var _ errors.SecondaryError = &InvalidIntegerLiteralError{}
 
 func (*InvalidIntegerLiteralError) isParseError() {}
 
