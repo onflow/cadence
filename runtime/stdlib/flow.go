@@ -276,7 +276,9 @@ var AccountLinkedEventType = newFlowEventType(
 	"AccountLinked",
 	AccountEventAddressParameter,
 	sema.Parameter{
-		Identifier:     "path",
-		TypeAnnotation: sema.NewTypeAnnotation(sema.PrivatePathType),
+		Identifier: "path",
+		TypeAnnotation: sema.NewTypeAnnotation(
+			sema.AuthAccountTypeLinkAccountFunctionTypePathParameterType,
+		),
 	},
 )
