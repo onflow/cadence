@@ -67,6 +67,10 @@ const (
 	KeywordDefault     = "default"
 	KeywordEnum        = "enum"
 	KeywordView        = "view"
+	keywordAttachment  = "attachment"
+	keywordAttach      = "attach"
+	keywordRemove      = "remove"
+	keywordTo          = "to"
 	KeywordStatic      = "static"
 	KeywordNative      = "native"
 	// NOTE: ensure to update allKeywords when adding a new keyword

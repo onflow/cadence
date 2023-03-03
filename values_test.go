@@ -492,7 +492,7 @@ func TestOptional_Type(t *testing.T) {
 	t.Run("none", func(t *testing.T) {
 
 		require.Equal(t,
-			OptionalType{
+			&OptionalType{
 				Type: NeverType{},
 			},
 			Optional{}.Type(),
@@ -502,7 +502,7 @@ func TestOptional_Type(t *testing.T) {
 	t.Run("some", func(t *testing.T) {
 
 		require.Equal(t,
-			OptionalType{
+			&OptionalType{
 				Type: Int8Type{},
 			},
 			Optional{

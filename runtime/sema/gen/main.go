@@ -382,6 +382,10 @@ func (*generator) VisitInterfaceDeclaration(_ *ast.InterfaceDeclaration) struct{
 	panic("interface declarations are not supported")
 }
 
+func (*generator) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) struct{} {
+	panic("attachment declarations are not supported")
+}
+
 func (*generator) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) struct{} {
 	panic("transaction declarations are not supported")
 }

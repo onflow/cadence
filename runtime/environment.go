@@ -159,6 +159,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
 		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
+		AttachmentsEnabled:               e.config.AttachmentsEnabled,
 	}
 }
 
@@ -543,7 +544,7 @@ func (e *interpreterEnvironment) getProgram(
 	}
 
 	errors.WrapPanic(func() {
-		program, err = e.runtimeInterface.GetAndSetProgram(location, func() (program *interpreter.Program, err error) {
+		program, err = e.runtimeInterface.GetOrLoadProgram(location, func() (program *interpreter.Program, err error) {
 			// Loading is done by Cadence.
 			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
 			// then do not treat it as an external error (the load callback is called by the embedder)

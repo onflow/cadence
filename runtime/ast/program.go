@@ -90,6 +90,10 @@ func (p *Program) CompositeDeclarations() []*CompositeDeclaration {
 	return p.indices.compositeDeclarations(p.declarations)
 }
 
+func (p *Program) AttachmentDeclarations() []*AttachmentDeclaration {
+	return p.indices.attachmentDeclarations(p.declarations)
+}
+
 func (p *Program) FunctionDeclarations() []*FunctionDeclaration {
 	return p.indices.functionDeclarations(p.declarations)
 }
@@ -134,7 +138,8 @@ func (p *Program) SoleContractInterfaceDeclaration() *InterfaceDeclaration {
 	if len(interfaceDeclarations) != 1 ||
 		len(p.TransactionDeclarations()) > 0 ||
 		len(p.FunctionDeclarations()) > 0 ||
-		len(p.CompositeDeclarations()) > 0 {
+		len(p.CompositeDeclarations()) > 0 ||
+		len(p.AttachmentDeclarations()) > 0 {
 
 		return nil
 	}
@@ -157,7 +162,8 @@ func (p *Program) SoleTransactionDeclaration() *TransactionDeclaration {
 	if len(transactionDeclarations) != 1 ||
 		len(p.CompositeDeclarations()) > 0 ||
 		len(p.InterfaceDeclarations()) > 0 ||
-		len(p.FunctionDeclarations()) > 0 {
+		len(p.FunctionDeclarations()) > 0 ||
+		len(p.AttachmentDeclarations()) > 0 {
 
 		return nil
 	}

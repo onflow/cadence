@@ -29,18 +29,20 @@ func _() {
 	_ = x[DeclarationKindEntitlement-18]
 	_ = x[DeclarationKindImport-19]
 	_ = x[DeclarationKindSelf-20]
-	_ = x[DeclarationKindTransaction-21]
-	_ = x[DeclarationKindPrepare-22]
-	_ = x[DeclarationKindExecute-23]
-	_ = x[DeclarationKindTypeParameter-24]
-	_ = x[DeclarationKindPragma-25]
-	_ = x[DeclarationKindEnum-26]
-	_ = x[DeclarationKindEnumCase-27]
+	_ = x[DeclarationKindBase-21]
+	_ = x[DeclarationKindTransaction-22]
+	_ = x[DeclarationKindPrepare-23]
+	_ = x[DeclarationKindExecute-24]
+	_ = x[DeclarationKindTypeParameter-25]
+	_ = x[DeclarationKindPragma-26]
+	_ = x[DeclarationKindEnum-27]
+	_ = x[DeclarationKindEnumCase-28]
+	_ = x[DeclarationKindAttachment-29]
 }
 
-const _DeclarationKind_name = "DeclarationKindUnknownDeclarationKindValueDeclarationKindFunctionDeclarationKindVariableDeclarationKindConstantDeclarationKindTypeDeclarationKindParameterDeclarationKindArgumentLabelDeclarationKindStructureDeclarationKindResourceDeclarationKindContractDeclarationKindEventDeclarationKindFieldDeclarationKindInitializerDeclarationKindDestructorDeclarationKindStructureInterfaceDeclarationKindResourceInterfaceDeclarationKindContractInterfaceDeclarationKindEntitlementDeclarationKindImportDeclarationKindSelfDeclarationKindTransactionDeclarationKindPrepareDeclarationKindExecuteDeclarationKindTypeParameterDeclarationKindPragmaDeclarationKindEnumDeclarationKindEnumCase"
+const _DeclarationKind_name = "DeclarationKindUnknownDeclarationKindValueDeclarationKindFunctionDeclarationKindVariableDeclarationKindConstantDeclarationKindTypeDeclarationKindParameterDeclarationKindArgumentLabelDeclarationKindStructureDeclarationKindResourceDeclarationKindContractDeclarationKindEventDeclarationKindFieldDeclarationKindInitializerDeclarationKindDestructorDeclarationKindStructureInterfaceDeclarationKindResourceInterfaceDeclarationKindContractInterfaceDeclarationKindEntitlementDeclarationKindImportDeclarationKindSelfDeclarationKindBaseDeclarationKindTransactionDeclarationKindPrepareDeclarationKindExecuteDeclarationKindTypeParameterDeclarationKindPragmaDeclarationKindEnumDeclarationKindEnumCaseDeclarationKindAttachment"
 
-var _DeclarationKind_index = [...]uint16{0, 22, 42, 65, 88, 111, 130, 154, 182, 206, 229, 252, 272, 292, 318, 343, 376, 408, 440, 466, 487, 506, 532, 554, 576, 604, 625, 644, 667}
+var _DeclarationKind_index = [...]uint16{0, 22, 42, 65, 88, 111, 130, 154, 182, 206, 229, 252, 272, 292, 318, 343, 376, 408, 440, 466, 487, 506, 525, 551, 573, 595, 623, 644, 663, 686, 711}
 
 func (i DeclarationKind) String() string {
 	if i >= DeclarationKind(len(_DeclarationKind_index)-1) {

@@ -26,17 +26,26 @@ import (
 func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) Type {
 	ty := checker.checkInvocationExpression(invocationExpression)
 
-	// Events cannot be invoked without an emit statement
+	if compositeType, ok := ty.(*CompositeType); ok {
+		switch compositeType.Kind {
+		// Events cannot be invoked without an emit statement
+		case common.CompositeKindEvent:
+			checker.report(
+				&InvalidEventUsageError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
+				},
+			)
+			return InvalidType
 
-	if compositeType, ok := ty.(*CompositeType); ok &&
-		compositeType.Kind == common.CompositeKindEvent {
-
-		checker.report(
-			&InvalidEventUsageError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
-			},
-		)
-		return InvalidType
+		// Attachments cannot be constructed without an attach statement
+		case common.CompositeKindAttachment:
+			checker.report(
+				&InvalidAttachmentUsageError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
+				},
+			)
+			return InvalidType
+		}
 	}
 
 	return ty

@@ -33,6 +33,7 @@ type StatementDeclarationVisitor[T any] interface {
 	VisitFunctionDeclaration(*FunctionDeclaration) T
 	VisitSpecialFunctionDeclaration(*SpecialFunctionDeclaration) T
 	VisitCompositeDeclaration(*CompositeDeclaration) T
+	VisitAttachmentDeclaration(*AttachmentDeclaration) T
 	VisitInterfaceDeclaration(*InterfaceDeclaration) T
 	VisitEntitlementDeclaration(*EntitlementDeclaration) T
 	VisitTransactionDeclaration(*TransactionDeclaration) T
@@ -74,6 +75,9 @@ func AcceptDeclaration[T any](declaration Declaration, visitor DeclarationVisito
 	case ElementTypeCompositeDeclaration:
 		return visitor.VisitCompositeDeclaration(declaration.(*CompositeDeclaration))
 
+	case ElementTypeAttachmentDeclaration:
+		return visitor.VisitAttachmentDeclaration(declaration.(*AttachmentDeclaration))
+
 	case ElementTypeInterfaceDeclaration:
 		return visitor.VisitInterfaceDeclaration(declaration.(*InterfaceDeclaration))
 
@@ -100,6 +104,7 @@ type StatementVisitor[T any] interface {
 	VisitSwitchStatement(*SwitchStatement) T
 	VisitEmitStatement(*EmitStatement) T
 	VisitExpressionStatement(*ExpressionStatement) T
+	VisitRemoveStatement(*RemoveStatement) T
 }
 
 func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_ T) {
@@ -150,6 +155,9 @@ func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_
 	case ElementTypeCompositeDeclaration:
 		return visitor.VisitCompositeDeclaration(statement.(*CompositeDeclaration))
 
+	case ElementTypeAttachmentDeclaration:
+		return visitor.VisitAttachmentDeclaration(statement.(*AttachmentDeclaration))
+
 	case ElementTypeInterfaceDeclaration:
 		return visitor.VisitInterfaceDeclaration(statement.(*InterfaceDeclaration))
 
@@ -158,6 +166,9 @@ func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_
 
 	case ElementTypeEntitlementDeclaration:
 		return visitor.VisitEntitlementDeclaration(statement.(*EntitlementDeclaration))
+
+	case ElementTypeRemoveStatement:
+		return visitor.VisitRemoveStatement(statement.(*RemoveStatement))
 	}
 
 	panic(errors.NewUnreachableError())
@@ -186,6 +197,7 @@ type ExpressionVisitor[T any] interface {
 	VisitCastingExpression(*CastingExpression) T
 	VisitBinaryExpression(*BinaryExpression) T
 	VisitConditionalExpression(*ConditionalExpression) T
+	VisitAttachExpression(*AttachExpression) T
 }
 
 func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]) (_ T) {
@@ -256,6 +268,9 @@ func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]
 
 	case ElementTypeConditionalExpression:
 		return visitor.VisitConditionalExpression(expression.(*ConditionalExpression))
+
+	case ElementTypeAttachExpression:
+		return visitor.VisitAttachExpression(expression.(*AttachExpression))
 	}
 
 	panic(errors.NewUnreachableError())

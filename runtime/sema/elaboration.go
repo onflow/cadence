@@ -101,14 +101,19 @@ type CastingExpressionTypes struct {
 	TargetType      Type
 }
 
+type ExpressionTypes struct {
+	ActualType   Type
+	ExpectedType Type
+}
+
 type Elaboration struct {
 	fixedPointExpressionTypes           map[*ast.FixedPointExpression]Type
 	interfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
 	entitlementTypeDeclarations         map[*EntitlementType]*ast.EntitlementDeclaration
 	swapStatementTypes                  map[*ast.SwapStatement]SwapStatementTypes
 	assignmentStatementTypes            map[*ast.AssignmentStatement]AssignmentStatementTypes
-	compositeDeclarationTypes           map[*ast.CompositeDeclaration]*CompositeType
-	compositeTypeDeclarations           map[*CompositeType]*ast.CompositeDeclaration
+	compositeDeclarationTypes           map[ast.CompositeLikeDeclaration]*CompositeType
+	compositeTypeDeclarations           map[*CompositeType]ast.CompositeLikeDeclaration
 	interfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
 	entitlementDeclarationTypes         map[*ast.EntitlementDeclaration]*EntitlementType
 	transactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
@@ -128,7 +133,7 @@ type Elaboration struct {
 	functionDeclarationFunctionTypes    map[*ast.FunctionDeclaration]*FunctionType
 	variableDeclarationTypes            map[*ast.VariableDeclaration]VariableDeclarationTypes
 	nestedResourceMoveExpressions       map[ast.Expression]struct{}
-	compositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
+	compositeNestedDeclarations         map[ast.CompositeLikeDeclaration]map[string]ast.Declaration
 	interfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
 	postConditionsRewrites              map[*ast.Conditions]PostConditionsRewrite
 	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
@@ -143,8 +148,11 @@ type Elaboration struct {
 	runtimeCastTypes                    map[*ast.CastingExpression]RuntimeCastTypes
 	referenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
 	indexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
+	attachmentAccessTypes               map[*ast.IndexExpression]Type
+	attachmentRemoveTypes               map[*ast.RemoveStatement]Type
 	forceExpressionTypes                map[*ast.ForceExpression]Type
 	staticCastTypes                     map[*ast.CastingExpression]CastTypes
+	expressionTypes                     map[ast.Expression]ExpressionTypes
 	TransactionTypes                    []*TransactionType
 	isChecking                          bool
 }
@@ -246,7 +254,7 @@ func (e *Elaboration) SetAssignmentStatementTypes(
 	e.assignmentStatementTypes[assignment] = types
 }
 
-func (e *Elaboration) CompositeDeclarationType(declaration *ast.CompositeDeclaration) *CompositeType {
+func (e *Elaboration) CompositeDeclarationType(declaration ast.CompositeLikeDeclaration) *CompositeType {
 	if e.compositeDeclarationTypes == nil {
 		return nil
 	}
@@ -254,28 +262,29 @@ func (e *Elaboration) CompositeDeclarationType(declaration *ast.CompositeDeclara
 }
 
 func (e *Elaboration) SetCompositeDeclarationType(
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 	compositeType *CompositeType,
 ) {
 	if e.compositeDeclarationTypes == nil {
-		e.compositeDeclarationTypes = map[*ast.CompositeDeclaration]*CompositeType{}
+		e.compositeDeclarationTypes = map[ast.CompositeLikeDeclaration]*CompositeType{}
 	}
 	e.compositeDeclarationTypes[declaration] = compositeType
 }
 
-func (e *Elaboration) CompositeTypeDeclaration(compositeType *CompositeType) *ast.CompositeDeclaration {
+func (e *Elaboration) CompositeTypeDeclaration(compositeType *CompositeType) (decl ast.CompositeLikeDeclaration, ok bool) {
 	if e.compositeTypeDeclarations == nil {
-		return nil
+		return
 	}
-	return e.compositeTypeDeclarations[compositeType]
+	decl, ok = e.compositeTypeDeclarations[compositeType]
+	return
 }
 
 func (e *Elaboration) SetCompositeTypeDeclaration(
 	compositeType *CompositeType,
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 ) {
 	if e.compositeTypeDeclarations == nil {
-		e.compositeTypeDeclarations = map[*CompositeType]*ast.CompositeDeclaration{}
+		e.compositeTypeDeclarations = map[*CompositeType]ast.CompositeLikeDeclaration{}
 	}
 	e.compositeTypeDeclarations[compositeType] = declaration
 }
@@ -666,7 +675,7 @@ func (e *Elaboration) SwapStatementTypes(statement *ast.SwapStatement) (types Sw
 	return e.swapStatementTypes[statement]
 }
 
-func (e *Elaboration) CompositeNestedDeclarations(declaration *ast.CompositeDeclaration) map[string]ast.Declaration {
+func (e *Elaboration) CompositeNestedDeclarations(declaration ast.CompositeLikeDeclaration) map[string]ast.Declaration {
 	if e.compositeNestedDeclarations == nil {
 		return nil
 	}
@@ -674,11 +683,11 @@ func (e *Elaboration) CompositeNestedDeclarations(declaration *ast.CompositeDecl
 }
 
 func (e *Elaboration) SetCompositeNestedDeclarations(
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 	nestedDeclaration map[string]ast.Declaration,
 ) {
 	if e.compositeNestedDeclarations == nil {
-		e.compositeNestedDeclarations = map[*ast.CompositeDeclaration]map[string]ast.Declaration{}
+		e.compositeNestedDeclarations = map[ast.CompositeLikeDeclaration]map[string]ast.Declaration{}
 	}
 	e.compositeNestedDeclarations[declaration] = nestedDeclaration
 }
@@ -894,4 +903,62 @@ func (e *Elaboration) SetNumberConversionArgumentTypes(
 		e.numberConversionArgumentTypes = map[ast.Expression]NumberConversionArgumentTypes{}
 	}
 	e.numberConversionArgumentTypes[expression] = types
+}
+
+func (e *Elaboration) AttachmentAccessTypes(
+	expression *ast.IndexExpression,
+) (
+	ty Type, ok bool,
+) {
+	if e.attachmentAccessTypes == nil {
+		return
+	}
+	ty, ok = e.attachmentAccessTypes[expression]
+	return
+}
+
+func (e *Elaboration) SetAttachmentAccessTypes(
+	expression *ast.IndexExpression,
+	ty Type,
+) {
+	if e.attachmentAccessTypes == nil {
+		e.attachmentAccessTypes = map[*ast.IndexExpression]Type{}
+	}
+	e.attachmentAccessTypes[expression] = ty
+}
+
+func (e *Elaboration) AttachmentRemoveTypes(
+	stmt *ast.RemoveStatement,
+) (
+	ty Type,
+) {
+	if e.attachmentRemoveTypes == nil {
+		return
+	}
+	return e.attachmentRemoveTypes[stmt]
+}
+
+func (e *Elaboration) SetAttachmentRemoveTypes(
+	stmt *ast.RemoveStatement,
+	ty Type,
+) {
+	if e.attachmentRemoveTypes == nil {
+		e.attachmentRemoveTypes = map[*ast.RemoveStatement]Type{}
+	}
+	e.attachmentRemoveTypes[stmt] = ty
+}
+
+func (e *Elaboration) SetExpressionTypes(expression ast.Expression, types ExpressionTypes) {
+	if e.expressionTypes == nil {
+		e.expressionTypes = map[ast.Expression]ExpressionTypes{}
+	}
+	e.expressionTypes[expression] = types
+}
+
+func (e *Elaboration) ExpressionTypes(expression ast.Expression) ExpressionTypes {
+	return e.expressionTypes[expression]
+}
+
+func (e *Elaboration) AllExpressionTypes() map[ast.Expression]ExpressionTypes {
+	return e.expressionTypes
 }

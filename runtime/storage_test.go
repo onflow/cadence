@@ -1428,7 +1428,7 @@ func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 
 		for typeDescription, ty := range map[string]cadence.Type{
 			"Untyped": nil,
-			"Typed":   cadence.ReferenceType{Authorized: false, Type: cadence.IntType{}},
+			"Typed":   &cadence.ReferenceType{Authorized: false, Type: cadence.IntType{}},
 		} {
 
 			t.Run(fmt.Sprintf("%s %s", domain.Identifier(), typeDescription), func(t *testing.T) {
@@ -1475,17 +1475,17 @@ func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 				value, err := runtime.ReadStored(signer, storagePath, context)
 				require.NoError(t, err)
 
-				require.Equal(t,
-					cadence.StorageCapability{
-						Path: cadence.Path{
-							Domain:     domain.Identifier(),
-							Identifier: "test",
-						},
-						Address:    cadence.Address(signer),
-						BorrowType: ty,
+				expected := cadence.StorageCapability{
+					Path: cadence.Path{
+						Domain:     domain.Identifier(),
+						Identifier: "test",
 					},
-					value,
-				)
+					Address:    cadence.Address(signer),
+					BorrowType: ty,
+				}
+
+				actual := cadence.ValueWithCachedTypeID(value)
+				require.Equal(t, expected, actual)
 			})
 		}
 	}
@@ -3422,8 +3422,11 @@ func TestRuntimeStorageIteration(t *testing.T) {
             }
         `))
 
-		newRuntimeInterface := func() Interface {
-			return &testRuntimeInterface{
+		newRuntimeInterface := func() (Interface, *[]Location) {
+
+			var programStack []Location
+
+			runtimeInterface := &testRuntimeInterface{
 				storage: ledger,
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
@@ -3455,11 +3458,13 @@ func TestRuntimeStorageIteration(t *testing.T) {
 					return nil
 				},
 			}
+
+			return runtimeInterface, &programStack
 		}
 
 		// Deploy contract
 
-		runtimeInterface := newRuntimeInterface()
+		runtimeInterface, _ := newRuntimeInterface()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -3474,7 +3479,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Store value
 
-		runtimeInterface = newRuntimeInterface()
+		runtimeInterface, _ = newRuntimeInterface()
 
 		err = runtime.ExecuteTransaction(
 			Script{
@@ -3503,7 +3508,9 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
 		contractIsBroken = true
 
-		runtimeInterface = newRuntimeInterface()
+		var programStack *[]Location
+
+		runtimeInterface, programStack = newRuntimeInterface()
 
 		// Read value
 		err = runtime.ExecuteTransaction(
@@ -3531,6 +3538,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+
+		require.Empty(t, *programStack)
 	})
 
 	t.Run("broken contract, parsing problem", func(t *testing.T) {
@@ -3746,7 +3755,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Script{
 				Source: []byte(`
                     import Test from 0x1
-
                     transaction {
                         prepare(signer: AuthAccount) {
                             signer.save("Hello, World!", to: /storage/first)
@@ -3755,7 +3763,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
                             signer.save(1, to: /storage/fourth)
                             signer.save(Test.Foo(), to: /storage/fifth)
                             signer.save("two", to: /storage/sixth)
-
                             signer.link<&String>(/private/a, target:/storage/first)
                             signer.link<&[String]>(/private/b, target:/storage/second)
                             signer.link<&Test.Foo>(/private/c, target:/storage/third)
@@ -3790,7 +3797,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
                                 total = total + 1
                                 return true
                             })
-
                             // Total values iterated should be 4.
                             // The two broken values must be skipped.
                             assert(total == 4)

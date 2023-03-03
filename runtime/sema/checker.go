@@ -34,6 +34,7 @@ import (
 
 const ArgumentLabelNotRequired = "_"
 const SelfIdentifier = "self"
+const BaseIdentifier = "base"
 const BeforeIdentifier = "before"
 const ResultIdentifier = "result"
 
@@ -66,7 +67,7 @@ var beforeType = func() *FunctionType {
 	}
 }()
 
-type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) []common.DeclarationKind
+type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) common.DeclarationKindSet
 
 type CheckHandlerFunc func(checker *Checker, check func())
 
@@ -120,6 +121,7 @@ type Checker struct {
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
+	allowAccountLinking                bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -369,6 +371,15 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 		VisitThisAndNested(compositeType, registerInElaboration)
 	}
 
+	for _, declaration := range program.AttachmentDeclarations() {
+		compositeType := checker.declareAttachmentType(declaration)
+
+		// NOTE: register types in elaboration
+		// *after* the full container chain is fully set up
+
+		VisitThisAndNested(compositeType, registerInElaboration)
+	}
+
 	// Declare interfaces' and composites' members
 
 	for _, declaration := range program.EntitlementDeclarations() {
@@ -380,7 +391,11 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
-		checker.declareCompositeMembersAndValue(declaration, ContainerKindComposite)
+		checker.declareCompositeLikeMembersAndValue(declaration, ContainerKindComposite)
+	}
+
+	for _, declaration := range program.AttachmentDeclarations() {
+		checker.declareAttachmentMembersAndValue(declaration, ContainerKindComposite)
 	}
 
 	// Declare events, functions, and transactions
@@ -397,9 +412,33 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	declarations := program.Declarations()
 
-	checker.checkTopLevelDeclarationValidity(declarations)
+	checker.checkTopLevelDeclarationsValidity(declarations)
+
+	var rejectAllowAccountLinkingPragma bool
 
 	for _, declaration := range declarations {
+
+		// A pragma declaration #allowAccountLinking determines
+		// if the program is allowed to use the account linking.
+		//
+		// It must appear as a top-level declaration (i.e. not nested in the program),
+		// and must appear before all other declarations (i.e. at the top of the program).
+		//
+		// This is a temporary feature, which is planned to get replaced
+		// by capability controllers, a new Account type, and account entitlements.
+
+		if pragmaDeclaration, isPragma := declaration.(*ast.PragmaDeclaration); isPragma {
+			if IsAllowAccountLinkingPragma(pragmaDeclaration) {
+				if rejectAllowAccountLinkingPragma {
+					checker.reportInvalidNonHeaderPragma(pragmaDeclaration)
+				} else {
+					checker.allowAccountLinking = true
+				}
+				continue
+			}
+		}
+
+		rejectAllowAccountLinkingPragma = true
 
 		// Skip import declarations, they are already handled above
 		if _, isImport := declaration.(*ast.ImportDeclaration); isImport {
@@ -411,51 +450,50 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	}
 }
 
-func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Declaration) {
+func (checker *Checker) checkTopLevelDeclarationsValidity(declarations []ast.Declaration) {
 	validTopLevelDeclarationsHandler := checker.Config.ValidTopLevelDeclarationsHandler
 
 	if validTopLevelDeclarationsHandler == nil {
 		return
 	}
 
-	validDeclarationKinds := map[common.DeclarationKind]bool{}
-
 	validTopLevelDeclarations := validTopLevelDeclarationsHandler(checker.Location)
-	if validTopLevelDeclarations == nil {
+
+	for _, declaration := range declarations {
+		checker.checkTopLevelDeclarationValidity(declaration, validTopLevelDeclarations)
+	}
+}
+
+func (checker *Checker) checkTopLevelDeclarationValidity(
+	declaration ast.Declaration,
+	validTopLevelDeclarations common.DeclarationKindSet,
+) {
+	declarationKind := declaration.DeclarationKind()
+
+	if validTopLevelDeclarations.Has(declarationKind) {
 		return
 	}
 
-	for _, declarationKind := range validTopLevelDeclarations {
-		validDeclarationKinds[declarationKind] = true
-	}
+	var errorRange ast.Range
 
-	for _, declaration := range declarations {
-		isValid := validDeclarationKinds[declaration.DeclarationKind()]
-		if isValid {
-			continue
-		}
-
-		var errorRange ast.Range
-
-		identifier := declaration.DeclarationIdentifier()
-		if identifier == nil {
-			position := declaration.StartPosition()
-			errorRange = ast.NewRange(
-				checker.memoryGauge,
-				position,
-				position,
-			)
-		} else {
-			errorRange = ast.NewRangeFromPositioned(checker.memoryGauge, identifier)
-		}
-
-		checker.report(
-			&InvalidTopLevelDeclarationError{
-				DeclarationKind: declaration.DeclarationKind(),
-				Range:           errorRange,
-			},
+	identifier := declaration.DeclarationIdentifier()
+	if identifier == nil {
+		position := declaration.StartPosition()
+		errorRange = ast.NewRange(
+			checker.memoryGauge,
+			position,
+			position,
 		)
+	} else {
+		errorRange = ast.NewRangeFromPositioned(checker.memoryGauge, identifier)
 	}
+
+	checker.report(
+		&InvalidTopLevelDeclarationError{
+			DeclarationKind: declarationKind,
+			Range:           errorRange,
+		},
+	)
 }
 
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
@@ -1613,6 +1651,7 @@ func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, e
 func (checker *Checker) checkResourceFieldNesting(
 	members *StringMemberOrderedMap,
 	compositeKind common.CompositeKind,
+	baseType Type,
 	fieldPositionGetter func(name string) ast.Position,
 ) {
 	// Resource fields are only allowed in resources and contracts
@@ -1622,6 +1661,10 @@ func (checker *Checker) checkResourceFieldNesting(
 		common.CompositeKindContract:
 
 		return
+	case common.CompositeKindAttachment:
+		if baseType != nil && baseType.IsResourceType() {
+			return
+		}
 	}
 
 	// The field is not a resource or contract.
@@ -1878,46 +1921,6 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) Access {
 	panic(errors.NewUnreachableError())
 }
 
-func (checker *Checker) isReadableAccess(access Access) bool {
-	switch checker.Config.AccessCheckMode {
-	case AccessCheckModeStrict,
-		AccessCheckModeNotSpecifiedRestricted:
-
-		return access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublic))
-
-	case AccessCheckModeNotSpecifiedUnrestricted:
-
-		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
-			access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublic))
-
-	case AccessCheckModeNone:
-		return true
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
-func (checker *Checker) isWriteableAccess(access Access) bool {
-	switch checker.Config.AccessCheckMode {
-	case AccessCheckModeStrict,
-		AccessCheckModeNotSpecifiedRestricted:
-
-		return access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublicSettable))
-
-	case AccessCheckModeNotSpecifiedUnrestricted:
-
-		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
-			access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublicSettable))
-
-	case AccessCheckModeNone:
-		return true
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
 func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 	allowSelfResourceFieldInvalidation := checker.allowSelfResourceFieldInvalidation
 	checker.allowSelfResourceFieldInvalidation = true
@@ -2163,6 +2166,14 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)
+
+	case TypeAnnotationStateDirectAttachmentTypeAnnotation:
+		checker.report(
+			&InvalidAttachmentAnnotationError{
+
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
+			},
+		)
 	}
 
 	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
@@ -2372,6 +2383,16 @@ func (checker *Checker) visitExpressionWithForceType(
 
 	actualType = ast.AcceptExpression[Type](expr, checker)
 
+	if checker.Config.ExtendedElaborationEnabled {
+		checker.Elaboration.SetExpressionTypes(
+			expr,
+			ExpressionTypes{
+				ActualType:   actualType,
+				ExpectedType: expectedType,
+			},
+		)
+	}
+
 	if forceType &&
 		expectedType != nil &&
 		!expectedType.IsInvalidType() &&
@@ -2519,11 +2540,11 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 }
 
 func (checker *Checker) isAvailableMember(expressionType Type, identifier string) bool {
-	if !checker.Config.AccountLinkingEnabled &&
-		expressionType == AuthAccountType &&
+	if expressionType == AuthAccountType &&
 		identifier == AuthAccountTypeLinkAccountFunctionName {
 
-		return false
+		return checker.Config.AccountLinkingEnabled &&
+			checker.allowAccountLinking
 	}
 
 	return true

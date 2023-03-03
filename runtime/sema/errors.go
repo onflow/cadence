@@ -21,10 +21,10 @@ package sema
 import (
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 
 	"github.com/texttheater/golang-levenshtein/levenshtein"
-	"golang.org/x/exp/maps"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -85,13 +85,18 @@ type InvalidPragmaError struct {
 
 var _ SemanticError = &InvalidPragmaError{}
 var _ errors.UserError = &InvalidPragmaError{}
+var _ errors.SecondaryError = &InvalidPragmaError{}
 
 func (*InvalidPragmaError) isSemanticError() {}
 
 func (*InvalidPragmaError) IsUserError() {}
 
 func (e *InvalidPragmaError) Error() string {
-	return fmt.Sprintf("invalid pragma %s", e.Message)
+	return "invalid pragma"
+}
+
+func (e *InvalidPragmaError) SecondaryError() string {
+	return e.Message
 }
 
 // CheckerError
@@ -247,6 +252,7 @@ type AssignmentToConstantError struct {
 
 var _ SemanticError = &AssignmentToConstantError{}
 var _ errors.UserError = &AssignmentToConstantError{}
+var _ errors.SecondaryError = &AssignmentToConstantError{}
 
 func (*AssignmentToConstantError) isSemanticError() {}
 
@@ -536,8 +542,8 @@ type InvalidBinaryOperandError struct {
 }
 
 var _ SemanticError = &InvalidBinaryOperandError{}
-var _ errors.SecondaryError = &InvalidBinaryOperandError{}
 var _ errors.UserError = &InvalidBinaryOperandError{}
+var _ errors.SecondaryError = &InvalidBinaryOperandError{}
 
 func (*InvalidBinaryOperandError) isSemanticError() {}
 
@@ -616,8 +622,9 @@ type ControlStatementError struct {
 	ast.Range
 }
 
-var _ errors.UserError = &ControlStatementError{}
 var _ SemanticError = &ControlStatementError{}
+var _ errors.UserError = &ControlStatementError{}
+var _ errors.SecondaryError = &ControlStatementError{}
 
 func (*ControlStatementError) isSemanticError() {}
 
@@ -943,13 +950,27 @@ func (e *NotDeclaredMemberError) findClosestMember() (closestMember string) {
 		return
 	}
 
+	nameRunes := []rune(e.Name)
+
 	closestDistance := len(e.Name)
-	for _, member := range maps.Keys(e.Type.GetMembers()) {
-		distance := levenshtein.DistanceForStrings([]rune(e.Name), []rune(member), levenshtein.DefaultOptions)
-		// don't update the closest member if the distance is greater than one already found, or if the edits
-		// required would involve a complete replacement of the member's text
-		if distance < closestDistance && distance < len(member) {
-			closestMember = member
+
+	var sortedMemberNames []string
+	for memberName := range e.Type.GetMembers() { //nolint:maprange
+		sortedMemberNames = append(sortedMemberNames, memberName)
+	}
+	sort.Strings(sortedMemberNames)
+
+	for _, memberName := range sortedMemberNames {
+		distance := levenshtein.DistanceForStrings(
+			nameRunes,
+			[]rune(memberName),
+			levenshtein.DefaultOptions,
+		)
+
+		// Don't update the closest member if the distance is greater than one already found,
+		// or if the edits required would involve a complete replacement of the member's text
+		if distance < closestDistance && distance < len(memberName) {
+			closestMember = memberName
 			closestDistance = distance
 		}
 	}
@@ -1050,6 +1071,7 @@ type FieldTypeNotStorableError struct {
 
 var _ SemanticError = &FieldTypeNotStorableError{}
 var _ errors.UserError = &FieldTypeNotStorableError{}
+var _ errors.SecondaryError = &FieldTypeNotStorableError{}
 
 func (*FieldTypeNotStorableError) isSemanticError() {}
 
@@ -1182,6 +1204,7 @@ type InvalidEnumRawTypeError struct {
 
 var _ SemanticError = &InvalidEnumRawTypeError{}
 var _ errors.UserError = &InvalidEnumRawTypeError{}
+var _ errors.SecondaryError = &InvalidEnumRawTypeError{}
 
 func (*InvalidEnumRawTypeError) isSemanticError() {}
 
@@ -1256,7 +1279,7 @@ type InitializerMismatch struct {
 	InterfaceParameters []Parameter
 }
 type ConformanceError struct {
-	CompositeDeclaration           *ast.CompositeDeclaration
+	CompositeDeclaration           ast.CompositeLikeDeclaration
 	CompositeType                  *CompositeType
 	InterfaceType                  *InterfaceType
 	InitializerMismatch            *InitializerMismatch
@@ -1269,6 +1292,7 @@ type ConformanceError struct {
 
 var _ SemanticError = &ConformanceError{}
 var _ errors.UserError = &ConformanceError{}
+var _ errors.SecondaryError = &ConformanceError{}
 
 func (*ConformanceError) isSemanticError() {}
 
@@ -1343,10 +1367,10 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 		})
 	}
 
-	if e.InitializerMismatch != nil && len(e.CompositeDeclaration.Members.Initializers()) > 0 {
+	if e.InitializerMismatch != nil && len(e.CompositeDeclaration.DeclarationMembers().Initializers()) > 0 {
 		compositeMemberIdentifierRange :=
 			//	right now we only support a single initializer
-			ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.Members.Initializers()[0].FunctionDeclaration.Identifier)
+			ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.DeclarationMembers().Initializers()[0].FunctionDeclaration.Identifier)
 
 		notes = append(notes, &MemberMismatchNote{
 			Range: compositeMemberIdentifierRange,
@@ -2329,6 +2353,7 @@ type InvalidResourceAssignmentError struct {
 
 var _ SemanticError = &InvalidResourceAssignmentError{}
 var _ errors.UserError = &InvalidResourceAssignmentError{}
+var _ errors.SecondaryError = &InvalidResourceAssignmentError{}
 
 func (*InvalidResourceAssignmentError) isSemanticError() {}
 
@@ -2487,6 +2512,7 @@ type UnreachableStatementError struct {
 
 var _ SemanticError = &UnreachableStatementError{}
 var _ errors.UserError = &UnreachableStatementError{}
+var _ errors.SecondaryError = &UnreachableStatementError{}
 
 func (*UnreachableStatementError) isSemanticError() {}
 
@@ -3493,6 +3519,7 @@ type InvalidPathIdentifierError struct {
 
 var _ SemanticError = &InvalidPathDomainError{}
 var _ errors.UserError = &InvalidPathDomainError{}
+var _ errors.SecondaryError = &InvalidPathDomainError{}
 
 func (*InvalidPathDomainError) isSemanticError() {}
 
@@ -3655,6 +3682,7 @@ type TypeParameterTypeMismatchError struct {
 
 var _ SemanticError = &TypeParameterTypeMismatchError{}
 var _ errors.UserError = &TypeParameterTypeMismatchError{}
+var _ errors.SecondaryError = &TypeParameterTypeMismatchError{}
 
 func (*TypeParameterTypeMismatchError) isSemanticError() {}
 
@@ -3838,6 +3866,7 @@ type ExternalMutationError struct {
 
 var _ SemanticError = &ExternalMutationError{}
 var _ errors.UserError = &ExternalMutationError{}
+var _ errors.SecondaryError = &ExternalMutationError{}
 
 func (*ExternalMutationError) isSemanticError() {}
 
@@ -4059,4 +4088,168 @@ func (e *EntitlementMemberNotDeclaredError) Error() string {
 		e.Member.Identifier.Identifier,
 		e.EntitlementType.QualifiedString(),
 	)
+}
+
+// InvalidBaseTypeError
+
+type InvalidBaseTypeError struct {
+	BaseType   Type
+	Attachment *CompositeType
+	ast.Range
+}
+
+var _ SemanticError = &InvalidBaseTypeError{}
+var _ errors.UserError = &InvalidBaseTypeError{}
+
+func (*InvalidBaseTypeError) isSemanticError() {}
+
+func (*InvalidBaseTypeError) IsUserError() {}
+
+func (e *InvalidBaseTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot use `%s` as the base type for attachment `%s`",
+		e.BaseType.QualifiedString(),
+		e.Attachment.QualifiedString(),
+	)
+}
+
+// InvalidAttachmentAnnotationError
+
+type InvalidAttachmentAnnotationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidAttachmentAnnotationError{}
+var _ errors.UserError = &InvalidAttachmentAnnotationError{}
+
+func (*InvalidAttachmentAnnotationError) isSemanticError() {}
+
+func (*InvalidAttachmentAnnotationError) IsUserError() {}
+
+func (e *InvalidAttachmentAnnotationError) Error() string {
+	return "cannot refer directly to attachment type"
+}
+
+// InvalidAttachmentConstructorError
+
+type InvalidAttachmentUsageError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidAttachmentUsageError{}
+var _ errors.UserError = &InvalidAttachmentUsageError{}
+
+func (*InvalidAttachmentUsageError) isSemanticError() {}
+
+func (*InvalidAttachmentUsageError) IsUserError() {}
+
+func (*InvalidAttachmentUsageError) Error() string {
+	return "cannot construct attachment outside of an `attach` expression"
+}
+
+// AttachNonAttachmentError
+
+type AttachNonAttachmentError struct {
+	Type Type
+	ast.Range
+}
+
+var _ SemanticError = &AttachNonAttachmentError{}
+var _ errors.UserError = &AttachNonAttachmentError{}
+
+func (*AttachNonAttachmentError) isSemanticError() {}
+
+func (*AttachNonAttachmentError) IsUserError() {}
+
+func (e *AttachNonAttachmentError) Error() string {
+	return fmt.Sprintf(
+		"cannot attach non-attachment type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
+// AttachToInvalidTypeError
+type AttachToInvalidTypeError struct {
+	Type Type
+	ast.Range
+}
+
+var _ SemanticError = &AttachToInvalidTypeError{}
+var _ errors.UserError = &AttachToInvalidTypeError{}
+
+func (*AttachToInvalidTypeError) isSemanticError() {}
+
+func (*AttachToInvalidTypeError) IsUserError() {}
+
+func (e *AttachToInvalidTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot attach attachment to type `%s`, as it is not valid for this base type",
+		e.Type.QualifiedString(),
+	)
+}
+
+// InvalidAttachmentRemoveError
+type InvalidAttachmentRemoveError struct {
+	Attachment Type
+	BaseType   Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidAttachmentRemoveError{}
+var _ errors.UserError = &InvalidAttachmentRemoveError{}
+
+func (*InvalidAttachmentRemoveError) isSemanticError() {}
+
+func (*InvalidAttachmentRemoveError) IsUserError() {}
+
+func (e *InvalidAttachmentRemoveError) Error() string {
+	if e.BaseType == nil {
+		return fmt.Sprintf(
+			"cannot remove `%s`, as it is not an attachment type",
+			e.Attachment.QualifiedString(),
+		)
+	}
+	return fmt.Sprintf(
+		"cannot remove `%s` from type `%s`, as this attachment cannot exist on this base type",
+		e.Attachment.QualifiedString(),
+		e.BaseType.QualifiedString(),
+	)
+}
+
+// InvalidTypeIndexingError
+type InvalidTypeIndexingError struct {
+	IndexingExpression ast.Expression
+	BaseType           Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidTypeIndexingError{}
+var _ errors.UserError = &InvalidTypeIndexingError{}
+
+func (*InvalidTypeIndexingError) isSemanticError() {}
+
+func (*InvalidTypeIndexingError) IsUserError() {}
+
+func (e *InvalidTypeIndexingError) Error() string {
+	return fmt.Sprintf(
+		"cannot index `%s` with `%s`, as it is not an valid type index for this type",
+		e.BaseType.QualifiedString(),
+		e.IndexingExpression.String(),
+	)
+}
+
+// AttachmentsNotEnabledError
+type AttachmentsNotEnabledError struct {
+	ast.Range
+}
+
+var _ SemanticError = &AttachmentsNotEnabledError{}
+var _ errors.UserError = &AttachmentsNotEnabledError{}
+
+func (*AttachmentsNotEnabledError) isSemanticError() {}
+
+func (*AttachmentsNotEnabledError) IsUserError() {}
+
+func (e *AttachmentsNotEnabledError) Error() string {
+	return "attachments are not enabled and cannot be used in this environment"
 }

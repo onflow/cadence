@@ -18,6 +18,11 @@
 
 package sema
 
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
+)
+
 //go:generate go run golang.org/x/tools/cmd/stringer -type=AccessCheckMode
 
 type AccessCheckMode uint
@@ -43,4 +48,44 @@ var AccessCheckModes = []AccessCheckMode{
 	AccessCheckModeNotSpecifiedRestricted,
 	AccessCheckModeNotSpecifiedUnrestricted,
 	AccessCheckModeNone,
+}
+
+func (mode AccessCheckMode) IsReadableAccess(access Access) bool {
+	switch mode {
+	case AccessCheckModeStrict,
+		AccessCheckModeNotSpecifiedRestricted:
+
+		return access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublic))
+
+	case AccessCheckModeNotSpecifiedUnrestricted:
+
+		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
+			access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublic))
+
+	case AccessCheckModeNone:
+		return true
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (mode AccessCheckMode) IsWriteableAccess(access Access) bool {
+	switch mode {
+	case AccessCheckModeStrict,
+		AccessCheckModeNotSpecifiedRestricted:
+
+		return access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublicSettable))
+
+	case AccessCheckModeNotSpecifiedUnrestricted:
+
+		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
+			access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublicSettable))
+
+	case AccessCheckModeNone:
+		return true
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }

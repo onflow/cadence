@@ -411,7 +411,8 @@ If there is an object stored, the stored resource or structure is moved out of s
 When the function returns, the storage no longer contains an object under the given path.
 
 The given type must be a supertype of the type of the loaded object.
-If it is not, the function returns nil.
+If it is not, the function panics.
+
 The given type must not necessarily be exactly the same as the type of the loaded object.
 
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
@@ -453,7 +454,8 @@ If there is a structure stored, it is copied.
 The structure stays stored in storage after the function returns.
 
 The given type must be a supertype of the type of the copied structure.
-If it is not, the function returns nil.
+If it is not, the function panics.
+
 The given type must not necessarily be exactly the same as the type of the copied structure.
 
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
@@ -494,11 +496,8 @@ const authAccountTypeBorrowFunctionDocString = `
 Returns a reference to an object in storage without removing it from storage.
 
 If no object is stored under the given path, the function returns nil.
-If there is an object stored, a reference is returned as an optional.
-
-The given type must be a reference type.
-It must be possible to create the given reference type for the borrowed object.
-If it is not, the function returns nil.
+If there is an object stored, a reference is returned as an optional, provided it can be borrowed using the given type.
+If the stored object cannot be borrowed using the given type, the function panics.
 
 The given type must not necessarily be exactly the same as the type of the borrowed object.
 

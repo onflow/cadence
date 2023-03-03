@@ -35,6 +35,8 @@ type programIndices struct {
 	_entitlementDeclarations []*EntitlementDeclaration
 	// Use `compositeDeclarations` instead
 	_compositeDeclarations []*CompositeDeclaration
+	// Use `attachmentDeclarations` instead
+	_attachmentDeclarations []*AttachmentDeclaration
 	// Use `functionDeclarations()` instead
 	_functionDeclarations []*FunctionDeclaration
 	// Use `transactionDeclarations()` instead
@@ -68,6 +70,11 @@ func (i *programIndices) compositeDeclarations(declarations []Declaration) []*Co
 	return i._compositeDeclarations
 }
 
+func (i *programIndices) attachmentDeclarations(declarations []Declaration) []*AttachmentDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._attachmentDeclarations
+}
+
 func (i *programIndices) functionDeclarations(declarations []Declaration) []*FunctionDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._functionDeclarations
@@ -96,6 +103,7 @@ func (i *programIndices) init(declarations []Declaration) {
 	i._pragmaDeclarations = make([]*PragmaDeclaration, 0)
 	i._importDeclarations = make([]*ImportDeclaration, 0)
 	i._compositeDeclarations = make([]*CompositeDeclaration, 0)
+	i._attachmentDeclarations = make([]*AttachmentDeclaration, 0)
 	i._interfaceDeclarations = make([]*InterfaceDeclaration, 0)
 	i._entitlementDeclarations = make([]*EntitlementDeclaration, 0)
 	i._functionDeclarations = make([]*FunctionDeclaration, 0)
@@ -112,6 +120,9 @@ func (i *programIndices) init(declarations []Declaration) {
 
 		case *CompositeDeclaration:
 			i._compositeDeclarations = append(i._compositeDeclarations, declaration)
+
+		case *AttachmentDeclaration:
+			i._attachmentDeclarations = append(i._attachmentDeclarations, declaration)
 
 		case *InterfaceDeclaration:
 			i._interfaceDeclarations = append(i._interfaceDeclarations, declaration)

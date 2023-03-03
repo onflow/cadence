@@ -61,6 +61,7 @@ var (
 
 	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
 	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
+	AttachmentDeclarationMemoryUsage      = NewConstantMemoryUsage(MemoryKindAttachmentDeclaration)
 	InterfaceDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
 	EntitlementDeclarationMemoryUsage     = NewConstantMemoryUsage(MemoryKindEntitlementDeclaration)
 	ImportDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindImportDeclaration)
@@ -84,6 +85,7 @@ var (
 	SwapStatementMemoryUsage       = NewConstantMemoryUsage(MemoryKindSwapStatement)
 	SwitchStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindSwitchStatement)
 	WhileStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindWhileStatement)
+	RemoveStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindRemoveStatement)
 
 	// AST Expressions
 
@@ -107,6 +109,7 @@ var (
 	ReferenceExpressionMemoryUsage   = NewConstantMemoryUsage(MemoryKindReferenceExpression)
 	ForceExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindForceExpression)
 	PathExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindPathExpression)
+	AttachExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindAttachExpression)
 
 	// AST Types
 
@@ -189,6 +192,7 @@ var (
 	CadenceArrayValueBaseMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceArrayValueBase)
 	CadenceStructValueBaseMemoryUsage        = NewConstantMemoryUsage(MemoryKindCadenceStructValueBase)
 	CadenceResourceValueBaseMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceResourceValueBase)
+	CadenceAttachmentValueBaseMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceAttachmentValueBase)
 	CadenceEventValueBaseMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceEventValueBase)
 	CadenceContractValueBaseMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceContractValueBase)
 	CadenceEnumValueBaseMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadenceEnumValueBase)
@@ -221,6 +225,7 @@ var (
 	CadenceRestrictedTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceRestrictedType)
 	CadenceStructInterfaceTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceStructInterfaceType)
 	CadenceStructTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceStructType)
+	CadenceAttachmentTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceAttachmentType)
 
 	// Following are the known memory usage amounts for string representation of interpreter values.
 	// Same as `len(format.X)`. However, values are hard-coded to avoid the circular dependency.
@@ -467,6 +472,13 @@ func NewCadenceStructMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
 func NewCadenceResourceMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
 	return CadenceResourceValueBaseMemoryUsage, MemoryUsage{
 		Kind:   MemoryKindCadenceResourceValueSize,
+		Amount: uint64(fields),
+	}
+}
+
+func NewCadenceAttachmentMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return CadenceAttachmentValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindCadenceAttachmentValueSize,
 		Amount: uint64(fields),
 	}
 }

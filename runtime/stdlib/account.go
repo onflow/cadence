@@ -606,6 +606,7 @@ func newAccountKeysForEachFunction(
 				return interpreter.NewInvocation(
 					inter,
 					nil,
+					nil,
 					[]interpreter.Value{key},
 					accountKeysForEachCallbackTypeParams,
 					nil,

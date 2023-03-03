@@ -13,11 +13,12 @@ func _() {
 	_ = x[TypeAnnotationStateInvalidResourceAnnotation-2]
 	_ = x[TypeAnnotationStateMissingResourceAnnotation-3]
 	_ = x[TypeAnnotationStateDirectEntitlementTypeAnnotation-4]
+	_ = x[TypeAnnotationStateDirectAttachmentTypeAnnotation-5]
 }
 
-const _TypeAnnotationState_name = "TypeAnnotationStateUnknownTypeAnnotationStateValidTypeAnnotationStateInvalidResourceAnnotationTypeAnnotationStateMissingResourceAnnotationTypeAnnotationStateDirectEntitlementTypeAnnotation"
+const _TypeAnnotationState_name = "TypeAnnotationStateUnknownTypeAnnotationStateValidTypeAnnotationStateInvalidResourceAnnotationTypeAnnotationStateMissingResourceAnnotationTypeAnnotationStateDirectEntitlementTypeAnnotationTypeAnnotationStateDirectAttachmentTypeAnnotation"
 
-var _TypeAnnotationState_index = [...]uint8{0, 26, 50, 94, 138, 188}
+var _TypeAnnotationState_index = [...]uint8{0, 26, 50, 94, 138, 188, 237}
 
 func (i TypeAnnotationState) String() string {
 	if i >= TypeAnnotationState(len(_TypeAnnotationState_index)-1) {

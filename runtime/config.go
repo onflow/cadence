@@ -37,4 +37,6 @@ type Config struct {
 	CoverageReportingEnabled bool
 	// AccountLinkingEnabled specifies if account linking is enabled
 	AccountLinkingEnabled bool
+	// AttachmentsEnabled specifies if attachments are enabled
+	AttachmentsEnabled bool
 }
