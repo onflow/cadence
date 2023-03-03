@@ -255,6 +255,45 @@ func TestNewStruct(t *testing.T) {
 func BenchmarkNewStruct(b *testing.B) {
 
 	checker, err := ParseAndCheck(b, `
+      struct Foo {
+          var id : Int
+
+          init(_ id: Int) {
+              self.id = id
+          }
+      }
+
+      fun test(count: Int): Foo {
+          var i = 0
+          var r = Foo(0)
+          while i < count {
+              i = i + 1
+              r = Foo(i)
+          }
+          return r
+      }
+  `)
+	require.NoError(b, err)
+
+	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+	program := comp.Compile()
+
+	vm := NewVM(program)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	value := values.IntValue{SmallInt: 7}
+
+	for i := 0; i < b.N; i++ {
+		_, err := vm.Invoke("test", value)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkNewResource(b *testing.B) {
+
+	checker, err := ParseAndCheck(b, `
       resource Foo {
           var id : Int
 

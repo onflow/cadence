@@ -14664,7 +14664,7 @@ func (v *CompositeValue) Transfer(
 		})
 	}
 
-	if needsStoreTo {
+	if needsStoreTo || !isResourceKinded {
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))
