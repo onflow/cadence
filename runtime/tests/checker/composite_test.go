@@ -51,6 +51,11 @@ func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
 			conformances = ": Int"
 		}
 
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
+
 		kindKeyword := kind.Keyword()
 
 		t.Run(kindKeyword, func(t *testing.T) {
@@ -60,11 +65,12 @@ func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s String%[2]s %[3]s
+                      %[1]s String %[4]s %[2]s %[3]s
                     `,
 					kindKeyword,
 					conformances,
 					body,
+					baseType,
 				),
 			)
 
@@ -88,6 +94,11 @@ func TestCheckComposite(t *testing.T) {
 
 		kindKeyword := kind.Keyword()
 
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
+
 		t.Run(kindKeyword, func(t *testing.T) {
 
 			t.Parallel()
@@ -95,7 +106,7 @@ func TestCheckComposite(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           pub(set) var foo: Int
 
                           init(foo: Int) {
@@ -108,6 +119,7 @@ func TestCheckComposite(t *testing.T) {
                       }
                     `,
 					kindKeyword,
+					baseType,
 				),
 			)
 
@@ -124,6 +136,11 @@ func TestCheckInitializerName(t *testing.T) {
 
 		kindKeyword := kind.Keyword()
 
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
+
 		t.Run(kindKeyword, func(t *testing.T) {
 
 			t.Parallel()
@@ -131,11 +148,12 @@ func TestCheckInitializerName(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           init() {}
                       }
                     `,
 					kindKeyword,
+					baseType,
 				),
 			)
 
@@ -149,16 +167,23 @@ func TestCheckDestructor(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyResource"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           destroy() {}
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -168,7 +193,7 @@ func TestCheckDestructor(t *testing.T) {
 
 				assert.IsType(t, &sema.InvalidDestructorError{}, errs[0])
 
-			case common.CompositeKindResource:
+			case common.CompositeKindResource, common.CompositeKindAttachment:
 				require.NoError(t, err)
 
 			default:
@@ -188,8 +213,13 @@ func TestCheckInvalidUnknownSpecialFunction(t *testing.T) {
 		for _, isInterface := range interfacePossibilities {
 
 			interfaceKeyword := ""
-			if isInterface {
+			if isInterface && kind != common.CompositeKindAttachment {
 				interfaceKeyword = "interface"
+			}
+
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
 			}
 
 			testName := fmt.Sprintf("%s_%s", kind.Keyword(), interfaceKeyword)
@@ -199,12 +229,13 @@ func TestCheckInvalidUnknownSpecialFunction(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          %[1]s %[2]s Test {
+                          %[1]s %[2]s Test %[3]s {
                               initializer() {}
                           }
                         `,
 						kind.Keyword(),
 						interfaceKeyword,
+						baseType,
 					),
 				)
 
@@ -225,9 +256,18 @@ func TestCheckInvalidCompositeFieldNames(t *testing.T) {
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
 		for _, isInterface := range interfacePossibilities {
 
+			if isInterface && kind == common.CompositeKindAttachment {
+				continue
+			}
+
 			interfaceKeyword := ""
 			if isInterface {
 				interfaceKeyword = "interface"
+			}
+
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
 			}
 
 			testName := fmt.Sprintf("%s_%s", kind.Keyword(), interfaceKeyword)
@@ -237,13 +277,14 @@ func TestCheckInvalidCompositeFieldNames(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          %[1]s %[2]s Test {
+                          %[1]s %[2]s Test %[3]s {
                               let init: Int
                               let destroy: Bool
                           }
                         `,
 						kind.Keyword(),
 						interfaceKeyword,
+						baseType,
 					),
 				)
 
@@ -289,13 +330,19 @@ func TestCheckInvalidCompositeRedeclaringFields(t *testing.T) {
                 `
 			}
 
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s Test %[2]s
+                      %[1]s Test %[3]s %[2]s
                     `,
 					kind.Keyword(),
 					body,
+					baseType,
 				),
 			)
 
@@ -327,17 +374,24 @@ func TestCheckInvalidCompositeRedeclaringFunctions(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           fun x() {}
                           fun x() {}
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -353,17 +407,22 @@ func TestCheckInvalidCompositeRedeclaringFieldsAndFunctions(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           let x: Int
                           fun x() {}
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -380,12 +439,16 @@ func TestCheckCompositeFieldsAndFunctions(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           let x: Int
 
                           init() {
@@ -396,6 +459,7 @@ func TestCheckCompositeFieldsAndFunctions(t *testing.T) {
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -412,6 +476,11 @@ func TestCheckInvalidCompositeFieldType(t *testing.T) {
 
 		if kind == common.CompositeKindEnum {
 			continue
+		}
+
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
 		}
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -432,11 +501,12 @@ func TestCheckInvalidCompositeFieldType(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          %s Test {
+                          %s Test %s {
                               let x: X
                           }
                         `,
 						kind.Keyword(),
+						baseType,
 					),
 				)
 
@@ -454,16 +524,23 @@ func TestCheckInvalidCompositeInitializerParameterType(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           init(x: X) {}
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -479,16 +556,21 @@ func TestCheckInvalidCompositeInitializerParameters(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           init(x: Int, x: Int) {}
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -504,17 +586,22 @@ func TestCheckInvalidCompositeSpecialFunction(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyResource"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           init() { X }
                           destroy() { Y }
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -525,7 +612,7 @@ func TestCheckInvalidCompositeSpecialFunction(t *testing.T) {
 				assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 				assert.IsType(t, &sema.InvalidDestructorError{}, errs[1])
 
-			case common.CompositeKindResource:
+			case common.CompositeKindResource, common.CompositeKindAttachment:
 
 				errs := RequireCheckerErrors(t, err, 2)
 
@@ -544,16 +631,21 @@ func TestCheckInvalidCompositeFunction(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           fun test() { X }
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -569,22 +661,27 @@ func TestCheckCompositeInitializerSelfUse(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           init() { self }
                           destroy() { self }
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
 			switch kind {
-			case common.CompositeKindStructure, common.CompositeKindContract:
+			case common.CompositeKindStructure, common.CompositeKindContract, common.CompositeKindAttachment:
 				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidDestructorError{}, errs[0])
@@ -609,21 +706,26 @@ func TestCheckCompositeFunctionSelfUse(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           fun test() { self }
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
 			switch kind {
-			case common.CompositeKindStructure, common.CompositeKindContract:
+			case common.CompositeKindStructure, common.CompositeKindContract, common.CompositeKindAttachment:
 				require.NoError(t, err)
 
 			case common.CompositeKindResource:
@@ -646,16 +748,21 @@ func TestCheckInvalidCompositeMissingInitializer(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                       %s Test {
+                       %s Test %s {
                            let foo: Int
                        }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -773,12 +880,16 @@ func TestCheckCompositeFieldAccess(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           let foo: Int
 
                           init() {
@@ -791,6 +902,7 @@ func TestCheckCompositeFieldAccess(t *testing.T) {
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -804,12 +916,17 @@ func TestCheckInvalidCompositeFieldAccess(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           init() {
                               self.foo
                           }
@@ -820,6 +937,7 @@ func TestCheckInvalidCompositeFieldAccess(t *testing.T) {
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -853,12 +971,18 @@ func TestCheckCompositeFieldAssignment(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s Test {
+                      %[1]s Test %[3]s {
                           var foo: Int
 
                           init() {
@@ -876,11 +1000,12 @@ func TestCheckCompositeFieldAssignment(t *testing.T) {
                     `,
 					kind.Keyword(),
 					kind.TransferOperator(),
+					baseType,
 				),
 			)
 
 			switch kind {
-			case common.CompositeKindStructure:
+			case common.CompositeKindStructure, common.CompositeKindAttachment:
 				require.NoError(t, err)
 
 			case common.CompositeKindContract:
@@ -916,6 +1041,14 @@ func TestCheckInvalidCompositeSelfAssignment(t *testing.T) {
 			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[1])
 		},
+		common.CompositeKindAttachment: func(err error) {
+			errs := RequireCheckerErrors(t, err, 4)
+
+			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
+			assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
+			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[2])
+			assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[3])
+		},
 		common.CompositeKindResource: func(err error) {
 			errs := RequireCheckerErrors(t, err, 4)
 
@@ -936,12 +1069,17 @@ func TestCheckInvalidCompositeSelfAssignment(t *testing.T) {
 
 	for compositeKind, check := range tests {
 
+		var baseType string
+		if compositeKind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
+
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s Test {
+                      %[1]s Test %[5]s {
                           init() {
                               self %[2]s %[3]s Test%[4]s
                           }
@@ -955,6 +1093,7 @@ func TestCheckInvalidCompositeSelfAssignment(t *testing.T) {
 					compositeKind.TransferOperator(),
 					compositeKind.ConstructionKeyword(),
 					constructorArguments(compositeKind),
+					baseType,
 				),
 			)
 
@@ -968,12 +1107,16 @@ func TestCheckInvalidCompositeFieldAssignment(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           init() {
                               self.foo = 1
                           }
@@ -984,6 +1127,7 @@ func TestCheckInvalidCompositeFieldAssignment(t *testing.T) {
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -1009,12 +1153,16 @@ func TestCheckInvalidCompositeFieldAssignmentWrongType(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           var foo: Int
 
                           init() {
@@ -1027,6 +1175,7 @@ func TestCheckInvalidCompositeFieldAssignmentWrongType(t *testing.T) {
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -1043,12 +1192,16 @@ func TestCheckInvalidCompositeFieldConstantAssignment(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           let foo: Int
 
                           init() {
@@ -1063,6 +1216,7 @@ func TestCheckInvalidCompositeFieldConstantAssignment(t *testing.T) {
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -1078,12 +1232,16 @@ func TestCheckCompositeFunctionCall(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           fun foo() {}
 
                           fun bar() {
@@ -1092,6 +1250,7 @@ func TestCheckCompositeFunctionCall(t *testing.T) {
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -1105,12 +1264,16 @@ func TestCheckInvalidCompositeFunctionCall(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           fun foo() {}
 
                           fun bar() {
@@ -1119,6 +1282,7 @@ func TestCheckInvalidCompositeFunctionCall(t *testing.T) {
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -1134,12 +1298,16 @@ func TestCheckInvalidCompositeFunctionAssignment(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           fun foo() {}
 
                           fun bar() {
@@ -1148,6 +1316,7 @@ func TestCheckInvalidCompositeFunctionAssignment(t *testing.T) {
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -1168,7 +1337,7 @@ func TestCheckCompositeInstantiation(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		if compositeKind == common.CompositeKindContract {
 			// Contracts cannot be instantiated
@@ -1224,6 +1393,11 @@ func TestCheckInvalidSameCompositeRedeclaration(t *testing.T) {
 			conformances = ": Int"
 		}
 
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -1232,12 +1406,13 @@ func TestCheckInvalidSameCompositeRedeclaration(t *testing.T) {
 				fmt.Sprintf(
 					`
                       let x = 1
-                      %[1]s Foo%[2]s %[3]s
-                      %[1]s Foo%[2]s %[3]s
+                      %[1]s Foo %[4]s %[2]s %[3]s
+                      %[1]s Foo %[4]s %[2]s %[3]s
                     `,
 					kind.Keyword(),
 					conformances,
 					body,
+					baseType,
 				),
 			)
 
@@ -1278,6 +1453,11 @@ func TestCheckInvalidDifferentCompositeRedeclaration(t *testing.T) {
 				firstConformances = ": Int"
 			}
 
+			var firstBaseType string
+			if firstKind == common.CompositeKindAttachment {
+				firstBaseType = "for AnyStruct"
+			}
+
 			secondBody := "{}"
 			if secondKind == common.CompositeKindEvent {
 				secondBody = "()"
@@ -1286,6 +1466,11 @@ func TestCheckInvalidDifferentCompositeRedeclaration(t *testing.T) {
 			secondConformances := ""
 			if secondKind == common.CompositeKindEnum {
 				secondConformances = ": Int"
+			}
+
+			var secondBaseType string
+			if secondKind == common.CompositeKindAttachment {
+				secondBaseType = "for AnyStruct"
 			}
 
 			testName := fmt.Sprintf(
@@ -1300,8 +1485,8 @@ func TestCheckInvalidDifferentCompositeRedeclaration(t *testing.T) {
 					fmt.Sprintf(
 						`
                           let x = 1
-                          %[1]s Foo%[2]s %[3]s
-                          %[4]s Foo%[5]s %[6]s
+                          %[1]s Foo %[7]s %[2]s %[3]s
+                          %[4]s Foo %[8]s %[5]s %[6]s
                         `,
 						firstKind.Keyword(),
 						firstConformances,
@@ -1309,6 +1494,8 @@ func TestCheckInvalidDifferentCompositeRedeclaration(t *testing.T) {
 						secondKind.Keyword(),
 						secondConformances,
 						secondBody,
+						firstBaseType,
+						secondBaseType,
 					),
 				)
 
@@ -1345,8 +1532,8 @@ func TestCheckInvalidIncompatibleSameCompositeTypes(t *testing.T) {
 	// tests that composite typing is nominal, not structural,
 	// and composite kind is considered
 
-	for _, firstKind := range common.CompositeKindsWithFieldsAndFunctions {
-		for _, secondKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, firstKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
+		for _, secondKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 			if firstKind == common.CompositeKindContract ||
 				secondKind == common.CompositeKindContract {
@@ -1396,7 +1583,7 @@ func TestCheckCompositeInitializesConstant(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		var setupCode string
 
@@ -1438,7 +1625,7 @@ func TestCheckCompositeInitializerWithArgumentLabel(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		if compositeKind == common.CompositeKindContract {
 			// Contracts cannot be instantiated
@@ -1472,7 +1659,7 @@ func TestCheckInvalidCompositeInitializerCallWithMissingArgumentLabel(t *testing
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		if compositeKind == common.CompositeKindContract {
 			// Contracts cannot be instantiated
@@ -1508,7 +1695,7 @@ func TestCheckCompositeFunctionWithArgumentLabel(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		var setupCode, identifier string
 
@@ -1552,7 +1739,7 @@ func TestCheckInvalidCompositeFunctionCallWithMissingArgumentLabel(t *testing.T)
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		var setupCode, identifier string
 
@@ -1598,7 +1785,7 @@ func TestCheckCompositeConstructorUseInInitializerAndFunction(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		if compositeKind == common.CompositeKindContract {
 			continue
@@ -1673,12 +1860,16 @@ func TestCheckInvalidCompositeFieldMissingVariableKind(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s X {
+                      %s X %s {
                           x: Int
 
                           init(x: Int) {
@@ -1687,6 +1878,7 @@ func TestCheckInvalidCompositeFieldMissingVariableKind(t *testing.T) {
                       }
                     `,
 					kind.Keyword(),
+					baseType,
 				),
 			)
 
@@ -1702,12 +1894,16 @@ func TestCheckCompositeFunction(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s X {
+                      %[1]s X %[4]s {
                           fun foo(): %[2]sX {
                               return %[3]s self.bar()
                           }
@@ -1720,13 +1916,20 @@ func TestCheckCompositeFunction(t *testing.T) {
 					kind.Keyword(),
 					kind.Annotation(),
 					kind.MoveOperator(),
+					baseType,
 				),
 			)
 
 			switch kind {
 			case common.CompositeKindStructure:
 				require.NoError(t, err)
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 4)
 
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[2])
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
 			case common.CompositeKindContract:
 				errs := RequireCheckerErrors(t, err, 1)
 
@@ -1748,7 +1951,7 @@ func TestCheckCompositeReferenceBeforeDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		if compositeKind == common.CompositeKindContract {
 			continue
@@ -2035,9 +2238,9 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 
 	interfacePossibilities := []bool{true, false}
 
-	for _, firstKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, firstKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		for _, firstIsInterface := range interfacePossibilities {
-			for _, secondKind := range common.CompositeKindsWithFieldsAndFunctions {
+			for _, secondKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 				for _, secondIsInterface := range interfacePossibilities {
 
 					firstInterfaceKeyword := ""
@@ -2119,6 +2322,11 @@ func TestCheckCompositeFieldOrder(t *testing.T) {
 	test := func(t *testing.T, kind common.CompositeKind) {
 		kindKeyword := kind.Keyword()
 
+		var baseType string
+		if kind == common.CompositeKindAttachment {
+			baseType = "for AnyStruct"
+		}
+
 		t.Run(kindKeyword, func(t *testing.T) {
 
 			t.Parallel()
@@ -2126,7 +2334,7 @@ func TestCheckCompositeFieldOrder(t *testing.T) {
 			checker, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s Test {
+                      %s Test %s {
                           let b: Int
                           let a: Int
 
@@ -2137,6 +2345,7 @@ func TestCheckCompositeFieldOrder(t *testing.T) {
                       }
                     `,
 					kindKeyword,
+					baseType,
 				),
 			)
 

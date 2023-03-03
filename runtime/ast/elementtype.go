@@ -36,6 +36,7 @@ const (
 	ElementTypeCompositeDeclaration
 	ElementTypeInterfaceDeclaration
 	ElementTypeEntitlementDeclaration
+	ElementTypeAttachmentDeclaration
 	ElementTypeFieldDeclaration
 	ElementTypeEnumCaseDeclaration
 	ElementTypePragmaDeclaration
@@ -56,6 +57,7 @@ const (
 	ElementTypeAssignmentStatement
 	ElementTypeSwapStatement
 	ElementTypeExpressionStatement
+	ElementTypeRemoveStatement
 
 	// Expressions
 
@@ -81,4 +83,5 @@ const (
 	ElementTypeReferenceExpression
 	ElementTypeForceExpression
 	ElementTypePathExpression
+	ElementTypeAttachExpression
 )

@@ -155,10 +155,10 @@ func (v *AccountReferenceValue) SetMember(
 	locationRange LocationRange,
 	name string,
 	value Value,
-) {
+) bool {
 	v.checkLink(interpreter, locationRange)
 	self := v.authAccount(interpreter)
-	interpreter.setMember(self, locationRange, name, value)
+	return interpreter.setMember(self, locationRange, name, value)
 }
 
 func (v *AccountReferenceValue) GetKey(

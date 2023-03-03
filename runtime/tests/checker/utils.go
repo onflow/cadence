@@ -40,7 +40,12 @@ func init() {
 }
 
 func ParseAndCheck(t testing.TB, code string) (*sema.Checker, error) {
-	return ParseAndCheckWithOptions(t, code, ParseAndCheckOptions{})
+	return ParseAndCheckWithOptions(t, code, ParseAndCheckOptions{
+		// allow attachments is on by default for testing purposes
+		Config: &sema.Config{
+			AttachmentsEnabled: true,
+		},
+	})
 }
 
 type ParseAndCheckOptions struct {

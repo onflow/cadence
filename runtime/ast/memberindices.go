@@ -47,12 +47,16 @@ type memberIndices struct {
 	_functionsByIdentifier map[string]*FunctionDeclaration
 	// Use `CompositesByIdentifier()` instead
 	_compositesByIdentifier map[string]*CompositeDeclaration
+	// Use `AttachmentsByIdentifier()` instead
+	_attachmentsByIdentifier map[string]*AttachmentDeclaration
 	// Use `InterfacesByIdentifier()` instead
 	_interfacesByIdentifier map[string]*InterfaceDeclaration
 	// Use `Interfaces()` instead
 	_interfaces []*InterfaceDeclaration
 	// Use `Composites()` instead
 	_composites []*CompositeDeclaration
+	// Use `Attachments()` instead
+	_attachments []*AttachmentDeclaration
 	// Use `EnumCases()` instead
 	_enumCases []*EnumCaseDeclaration
 }
@@ -70,6 +74,11 @@ func (i *memberIndices) FunctionsByIdentifier(declarations []Declaration) map[st
 func (i *memberIndices) CompositesByIdentifier(declarations []Declaration) map[string]*CompositeDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._compositesByIdentifier
+}
+
+func (i *memberIndices) AttachmentsByIdentifier(declarations []Declaration) map[string]*AttachmentDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._attachmentsByIdentifier
 }
 
 func (i *memberIndices) InterfacesByIdentifier(declarations []Declaration) map[string]*InterfaceDeclaration {
@@ -112,6 +121,11 @@ func (i *memberIndices) Composites(declarations []Declaration) []*CompositeDecla
 	return i._composites
 }
 
+func (i *memberIndices) Attachments(declarations []Declaration) []*AttachmentDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._attachments
+}
+
 func (i *memberIndices) EnumCases(declarations []Declaration) []*EnumCaseDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._enumCases
@@ -138,6 +152,9 @@ func (i *memberIndices) init(declarations []Declaration) {
 
 	i._composites = make([]*CompositeDeclaration, 0)
 	i._compositesByIdentifier = make(map[string]*CompositeDeclaration)
+
+	i._attachments = make([]*AttachmentDeclaration, 0)
+	i._attachmentsByIdentifier = make(map[string]*AttachmentDeclaration)
 
 	i._interfaces = make([]*InterfaceDeclaration, 0)
 	i._interfacesByIdentifier = make(map[string]*InterfaceDeclaration)
@@ -171,6 +188,10 @@ func (i *memberIndices) init(declarations []Declaration) {
 		case *CompositeDeclaration:
 			i._composites = append(i._composites, declaration)
 			i._compositesByIdentifier[declaration.Identifier.Identifier] = declaration
+
+		case *AttachmentDeclaration:
+			i._attachments = append(i._attachments, declaration)
+			i._attachmentsByIdentifier[declaration.Identifier.Identifier] = declaration
 
 		case *EnumCaseDeclaration:
 			i._enumCases = append(i._enumCases, declaration)

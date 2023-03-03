@@ -1460,7 +1460,7 @@ func (v Dictionary) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Dictionary) WithType(dictionaryType DictionaryType) Dictionary {
+func (v Dictionary) WithType(dictionaryType *DictionaryType) Dictionary {
 	v.DictionaryType = dictionaryType
 	return v
 }
@@ -1643,6 +1643,63 @@ func (v Resource) ToGoValue() any {
 
 func (v Resource) String() string {
 	return formatComposite(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
+}
+
+// Attachment
+
+type Attachment struct {
+	AttachmentType *AttachmentType
+	Fields         []Value
+}
+
+var _ Value = Attachment{}
+
+func NewAttachment(fields []Value) Attachment {
+	return Attachment{Fields: fields}
+}
+
+func NewMeteredAttachment(
+	gauge common.MemoryGauge,
+	numberOfFields int,
+	constructor func() ([]Value, error),
+) (Attachment, error) {
+	baseUsage, sizeUsage := common.NewCadenceAttachmentMemoryUsages(numberOfFields)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, sizeUsage)
+	fields, err := constructor()
+	if err != nil {
+		return Attachment{}, err
+	}
+	return NewAttachment(fields), nil
+}
+
+func (Attachment) isValue() {}
+
+func (v Attachment) Type() Type {
+	return v.AttachmentType
+}
+
+func (v Attachment) MeteredType(_ common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v Attachment) WithType(typ *AttachmentType) Attachment {
+	v.AttachmentType = typ
+	return v
+}
+
+func (v Attachment) ToGoValue() any {
+	ret := make([]any, len(v.Fields))
+
+	for i, field := range v.Fields {
+		ret[i] = field.ToGoValue()
+	}
+
+	return ret
+}
+
+func (v Attachment) String() string {
+	return formatComposite(v.AttachmentType.ID(), v.AttachmentType.Fields, v.Fields)
 }
 
 // Event
@@ -1973,4 +2030,64 @@ func (Function) ToGoValue() any {
 func (v Function) String() string {
 	// TODO: include function type
 	return format.Function("(...)")
+}
+
+// ValueWithCachedTypeID recursively caches type ID of value v's type.
+// This is needed because each type ID is lazily cached on
+// its first use in ID() to avoid performance penalty.
+func ValueWithCachedTypeID[T Value](value T) T {
+	var v Value = value
+
+	if v == nil {
+		return value
+	}
+
+	TypeWithCachedTypeID(value.Type())
+
+	switch v := v.(type) {
+
+	case TypeValue:
+		TypeWithCachedTypeID(v.StaticType)
+
+	case Optional:
+		ValueWithCachedTypeID(v.Value)
+
+	case Array:
+		for _, v := range v.Values {
+			ValueWithCachedTypeID(v)
+		}
+
+	case Dictionary:
+		for _, p := range v.Pairs {
+			ValueWithCachedTypeID(p.Key)
+			ValueWithCachedTypeID(p.Value)
+		}
+
+	case Struct:
+		for _, f := range v.Fields {
+			ValueWithCachedTypeID(f)
+		}
+
+	case Resource:
+		for _, f := range v.Fields {
+			ValueWithCachedTypeID(f)
+		}
+
+	case Event:
+		for _, f := range v.Fields {
+			ValueWithCachedTypeID(f)
+		}
+
+	case Contract:
+		for _, f := range v.Fields {
+			ValueWithCachedTypeID(f)
+		}
+
+	case Enum:
+		for _, f := range v.Fields {
+			ValueWithCachedTypeID(f)
+		}
+	}
+
+	return value
 }

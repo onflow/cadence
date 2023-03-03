@@ -36,7 +36,7 @@ type Interface interface {
 	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// GetCode returns the code at a given location
 	GetCode(location Location) ([]byte, error)
-	// GetAndSetProgram returns the program for the given location, if available,
+	// GetOrLoadProgram returns the program for the given location, if available,
 	// or sets the program by calling the given load function.
 	//
 	// For implementations:
@@ -52,7 +52,7 @@ type Interface interface {
 	//   *EVEN IF loading failed* (program is nil / error is non-nil),
 	//   and it may NOT return something different
 	// - Do NOT implement this as a cache!
-	GetAndSetProgram(
+	GetOrLoadProgram(
 		location Location,
 		load func() (*interpreter.Program, error),
 	) (*interpreter.Program, error)

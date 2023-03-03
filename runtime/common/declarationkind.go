@@ -20,6 +20,7 @@ package common
 
 import (
 	"encoding/json"
+	"math"
 
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -50,6 +51,7 @@ const (
 	DeclarationKindEntitlement
 	DeclarationKindImport
 	DeclarationKindSelf
+	DeclarationKindBase
 	DeclarationKindTransaction
 	DeclarationKindPrepare
 	DeclarationKindExecute
@@ -57,6 +59,7 @@ const (
 	DeclarationKindPragma
 	DeclarationKindEnum
 	DeclarationKindEnumCase
+	DeclarationKindAttachment
 )
 
 func DeclarationKindCount() int {
@@ -73,7 +76,8 @@ func (k DeclarationKind) IsTypeDeclaration() bool {
 		DeclarationKindResourceInterface,
 		DeclarationKindContractInterface,
 		DeclarationKindTypeParameter,
-		DeclarationKindEnum:
+		DeclarationKindEnum,
+		DeclarationKindAttachment:
 
 		return true
 
@@ -112,6 +116,8 @@ func (k DeclarationKind) Name() string {
 		return "initializer"
 	case DeclarationKindDestructor:
 		return "destructor"
+	case DeclarationKindAttachment:
+		return "attachment"
 	case DeclarationKindStructureInterface:
 		return "structure interface"
 	case DeclarationKindResourceInterface:
@@ -124,6 +130,8 @@ func (k DeclarationKind) Name() string {
 		return "import"
 	case DeclarationKindSelf:
 		return "self"
+	case DeclarationKindBase:
+		return "base"
 	case DeclarationKindTransaction:
 		return "transaction"
 	case DeclarationKindPrepare:
@@ -165,6 +173,8 @@ func (k DeclarationKind) Keywords() string {
 		return "init"
 	case DeclarationKindDestructor:
 		return "destroy"
+	case DeclarationKindAttachment:
+		return "attachment"
 	case DeclarationKindStructureInterface:
 		return "struct interface"
 	case DeclarationKindResourceInterface:
@@ -177,6 +187,8 @@ func (k DeclarationKind) Keywords() string {
 		return "import"
 	case DeclarationKindSelf:
 		return "self"
+	case DeclarationKindBase:
+		return "base"
 	case DeclarationKindTransaction:
 		return "transaction"
 	case DeclarationKindPrepare:
@@ -194,4 +206,27 @@ func (k DeclarationKind) Keywords() string {
 
 func (k DeclarationKind) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.String())
+}
+
+type DeclarationKindSet uint64
+
+const (
+	EmptyDeclarationKindSet DeclarationKindSet = 0
+	AllDeclarationKindsSet  DeclarationKindSet = math.MaxUint64
+)
+
+func NewDeclarationKindSet(declarationKinds ...DeclarationKind) DeclarationKindSet {
+	var set DeclarationKindSet
+	for _, declarationKind := range declarationKinds {
+		set = set.With(declarationKind)
+	}
+	return set
+}
+
+func (s DeclarationKindSet) With(kind DeclarationKind) DeclarationKindSet {
+	return s | DeclarationKindSet(1<<kind)
+}
+
+func (s DeclarationKindSet) Has(kind DeclarationKind) bool {
+	return s&(1<<kind) != 0
 }

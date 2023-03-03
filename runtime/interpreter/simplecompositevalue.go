@@ -127,8 +127,10 @@ func (*SimpleCompositeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ str
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ LocationRange, name string, value Value) {
+func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ LocationRange, name string, value Value) bool {
+	_, hasField := v.Fields[name]
 	v.Fields[name] = value
+	return hasField
 }
 
 func (v *SimpleCompositeValue) String() string {

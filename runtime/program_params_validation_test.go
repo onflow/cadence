@@ -54,21 +54,25 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		assert.IsType(t, expectedError, runtimeErr.Err)
 	}
 
-	fooStruct := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Foo",
-			Fields:              []cadence.Field{},
-		},
-		Fields: []cadence.Value{},
+	newFooStruct := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Foo",
+				Fields:              []cadence.Field{},
+			},
+			Fields: []cadence.Value{},
+		}
 	}
 
-	publicAccountKeys := cadence.Struct{
-		StructType: &cadence.StructType{
-			QualifiedIdentifier: "PublicAccount.Keys",
-			Fields:              []cadence.Field{},
-		},
-		Fields: []cadence.Value{},
+	newPublicAccountKeys := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				QualifiedIdentifier: "PublicAccount.Keys",
+				Fields:              []cadence.Field{},
+			},
+			Fields: []cadence.Value{},
+		}
 	}
 
 	executeScript := func(t *testing.T, script string, arg cadence.Value) (err error) {
@@ -116,7 +120,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeScript(t, script, fooStruct)
+		err := executeScript(t, script, newFooStruct())
 		assert.NoError(t, err)
 	})
 
@@ -166,7 +170,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeScript(t, script, fooStruct)
+		err := executeScript(t, script, newFooStruct())
 		assert.NoError(t, err)
 	})
 
@@ -436,7 +440,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
                 }
             `
 
-		err := executeScript(t, script, fooStruct)
+		err := executeScript(t, script, newFooStruct())
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
@@ -456,7 +460,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
                 }
             `
 
-		err := executeScript(t, script, fooStruct)
+		err := executeScript(t, script, newFooStruct())
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
@@ -468,7 +472,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
                 }
             `
 
-		err := executeScript(t, script, publicAccountKeys)
+		err := executeScript(t, script, newPublicAccountKeys())
 		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
@@ -486,7 +490,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			t,
 			script,
 			cadence.NewArray([]cadence.Value{
-				publicAccountKeys,
+				newPublicAccountKeys(),
 			}),
 		)
 		RequireError(t, err)
@@ -560,24 +564,28 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		assert.IsType(t, expectedError, runtimeErr.Err)
 	}
 
-	fooStruct := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location: common.AddressLocation{
-				Address: common.MustBytesToAddress([]byte{0x1}),
-				Name:    "C",
+	newFooStruct := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location: common.AddressLocation{
+					Address: common.MustBytesToAddress([]byte{0x1}),
+					Name:    "C",
+				},
+				QualifiedIdentifier: "C.Foo",
+				Fields:              []cadence.Field{},
 			},
-			QualifiedIdentifier: "C.Foo",
-			Fields:              []cadence.Field{},
-		},
-		Fields: []cadence.Value{},
+			Fields: []cadence.Value{},
+		}
 	}
 
-	publicAccountKeys := cadence.Struct{
-		StructType: &cadence.StructType{
-			QualifiedIdentifier: "PublicAccount.Keys",
-			Fields:              []cadence.Field{},
-		},
-		Fields: []cadence.Value{},
+	newPublicAccountKeys := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				QualifiedIdentifier: "PublicAccount.Keys",
+				Fields:              []cadence.Field{},
+			},
+			Fields: []cadence.Value{},
+		}
 	}
 
 	executeTransaction := func(
@@ -645,7 +653,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
           transaction(arg: C.Foo) {}
         `
 
-		err := executeTransaction(t, script, contracts, fooStruct)
+		err := executeTransaction(t, script, contracts, newFooStruct())
 		assert.NoError(t, err)
 	})
 
@@ -715,7 +723,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
           transaction(arg: {C.Bar}) {}
         `
 
-		err := executeTransaction(t, script, contracts, fooStruct)
+		err := executeTransaction(t, script, contracts, newFooStruct())
 		assert.NoError(t, err)
 	})
 
@@ -1030,7 +1038,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
           transaction(arg: AnyStruct?) {}
         `
 
-		err := executeTransaction(t, script, contracts, cadence.NewOptional(fooStruct))
+		err := executeTransaction(t, script, contracts, cadence.NewOptional(newFooStruct()))
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
@@ -1061,7 +1069,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
           transaction(arg: {C.Bar}?) {}
         `
 
-		err := executeTransaction(t, script, contracts, cadence.NewOptional(fooStruct))
+		err := executeTransaction(t, script, contracts, cadence.NewOptional(newFooStruct()))
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
@@ -1072,7 +1080,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
           transaction(arg: AnyStruct) {}
         `
 
-		err := executeTransaction(t, script, nil, publicAccountKeys)
+		err := executeTransaction(t, script, nil, newPublicAccountKeys())
 		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
@@ -1089,7 +1097,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			script,
 			nil,
 			cadence.NewArray([]cadence.Value{
-				publicAccountKeys,
+				newPublicAccountKeys(),
 			}),
 		)
 		RequireError(t, err)
