@@ -13913,9 +13913,9 @@ func newCompositeValueFromOrderedMap(
 ) *CompositeValue {
 	return &CompositeValue{
 		dictionary:          dict,
-		Location:            typeInfo.location,
-		QualifiedIdentifier: typeInfo.qualifiedIdentifier,
-		Kind:                typeInfo.kind,
+		Location:            typeInfo.Location,
+		QualifiedIdentifier: typeInfo.QualifiedIdentifier,
+		Kind:                typeInfo.Kind,
 	}
 }
 
@@ -14664,7 +14664,7 @@ func (v *CompositeValue) Transfer(
 		})
 	}
 
-	if needsStoreTo || !isResourceKinded {
+	if needsStoreTo {
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))

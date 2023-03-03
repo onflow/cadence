@@ -234,13 +234,15 @@ func TestNewStruct(t *testing.T) {
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
+	printProgram(program)
+
 	vm := NewVM(program)
 
 	result, err := vm.Invoke("test", values.IntValue{SmallInt: 10})
 	require.NoError(t, err)
 
-	require.IsType(t, &values.StructValue{}, result)
-	structValue := result.(*values.StructValue)
+	require.IsType(t, &values.CompositeValue{}, result)
+	structValue := result.(*values.CompositeValue)
 
 	require.Equal(t, "Foo", structValue.QualifiedIdentifier)
 	require.Equal(
@@ -253,7 +255,7 @@ func TestNewStruct(t *testing.T) {
 func BenchmarkNewStruct(b *testing.B) {
 
 	checker, err := ParseAndCheck(b, `
-      struct Foo {
+      resource Foo {
           var id : Int
 
           init(_ id: Int) {
@@ -261,14 +263,14 @@ func BenchmarkNewStruct(b *testing.B) {
           }
       }
 
-      fun test(count: Int): Foo {
+      fun test(count: Int): @Foo {
           var i = 0
-          var r = Foo(0)
+          var r <- create Foo(0)
           while i < count {
               i = i + 1
-              r = Foo(i)
+              destroy create Foo(i)
           }
-          return r
+          return <- r
       }
   `)
 	require.NoError(b, err)
@@ -292,7 +294,7 @@ func BenchmarkNewStruct(b *testing.B) {
 func BenchmarkNewStructRaw(b *testing.B) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
-	ctx := context.Context{
+	ctx := &context.Context{
 		Storage: storage,
 	}
 
@@ -301,8 +303,14 @@ func BenchmarkNewStructRaw(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for j := 0; j < 7; j++ {
-			structValue := values.NewStructValue(nil, "Foo", common.Address{}, storage.BasicSlabStorage)
+		for j := 0; j < 8; j++ {
+			structValue := values.NewCompositeValue(
+				nil,
+				"Foo",
+				common.CompositeKindStructure,
+				common.Address{},
+				storage.BasicSlabStorage,
+			)
 			structValue.SetMember(ctx, "id", fieldValue)
 		}
 	}

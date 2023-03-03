@@ -64,13 +64,18 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 			opcode.Jump,
 			opcode.JumpIfFalse,
 			opcode.CheckType:
-
-			first := codes[i+1]
-			last := codes[i+2]
-			i += 2
-
-			operand := int(uint16(first)<<8 | uint16(last))
+			var operand int
+			operand, i = p.getIntOperand(codes, i)
 			p.stringBuilder.WriteString(" " + fmt.Sprint(operand))
+
+		case opcode.New:
+			var kind int
+			kind, i = p.getIntOperand(codes, i)
+
+			var typeName string
+			typeName, i = p.getStringOperand(codes, i)
+
+			p.stringBuilder.WriteString(" " + fmt.Sprint(kind) + " " + typeName)
 
 		// opcodes with no operands
 		default:
@@ -79,6 +84,19 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 
 		p.stringBuilder.WriteRune('\n')
 	}
+}
+
+func (*BytecodePrinter) getIntOperand(codes []byte, i int) (operand int, endIndex int) {
+	first := codes[i+1]
+	last := codes[i+2]
+	operand = int(uint16(first)<<8 | uint16(last))
+	return operand, i + 2
+}
+
+func (p *BytecodePrinter) getStringOperand(codes []byte, i int) (operand string, endIndex int) {
+	strLen, i := p.getIntOperand(codes, i)
+	operand = string(codes[i+1 : i+1+strLen])
+	return operand, i + strLen
 }
 
 func (p *BytecodePrinter) printConstantPool(constants []*Constant) {

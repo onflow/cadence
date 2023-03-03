@@ -55,6 +55,7 @@ const (
 	Call
 
 	New
+	Destroy
 	Pop
 	CheckType
 )

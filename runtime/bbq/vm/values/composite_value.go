@@ -29,24 +29,25 @@ import (
 	"github.com/onflow/cadence/runtime/bbq/vm/types"
 )
 
-type StructValue struct {
+type CompositeValue struct {
 	dictionary          *atree.OrderedMap
 	Location            common.Location
 	QualifiedIdentifier string
 	typeID              common.TypeID
 	staticType          types.StaticType
+	Kind                common.CompositeKind
 }
 
-var _ Value = &StructValue{}
 
-func NewStructValue(
+var _ Value = &CompositeValue{}
+
+func NewCompositeValue(
 	location common.Location,
 	qualifiedIdentifier string,
+	kind common.CompositeKind,
 	address common.Address,
 	storage atree.SlabStorage,
-) *StructValue {
-
-	const kind = common.CompositeKindStructure
+) *CompositeValue {
 
 	dictionary, err := atree.NewMap(
 		storage,
@@ -64,16 +65,17 @@ func NewStructValue(
 		panic(errors.NewExternalError(err))
 	}
 
-	return &StructValue{
+	return &CompositeValue{
 		QualifiedIdentifier: qualifiedIdentifier,
 		Location:            location,
 		dictionary:          dictionary,
+		Kind:                kind,
 	}
 }
 
-func (*StructValue) isValue() {}
+func (*CompositeValue) isValue() {}
 
-func (v *StructValue) StaticType(memoryGauge common.MemoryGauge) types.StaticType {
+func (v *CompositeValue) StaticType(memoryGauge common.MemoryGauge) types.StaticType {
 	if v.staticType == nil {
 		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
 		// use the TypeID accessor, which may return an already computed type ID
@@ -87,7 +89,7 @@ func (v *StructValue) StaticType(memoryGauge common.MemoryGauge) types.StaticTyp
 	return v.staticType
 }
 
-func (v *StructValue) GetMember(ctx context.Context, name string) Value {
+func (v *CompositeValue) GetMember(ctx *context.Context, name string) Value {
 	storable, err := v.dictionary.Get(
 		interpreter.StringAtreeComparator,
 		interpreter.StringAtreeHashInput,
@@ -108,7 +110,7 @@ func (v *StructValue) GetMember(ctx context.Context, name string) Value {
 	return nil
 }
 
-func (v *StructValue) SetMember(ctx context.Context, name string, value Value) {
+func (v *CompositeValue) SetMember(ctx *context.Context, name string, value Value) {
 
 	// TODO:
 	//address := v.StorageID().Address
@@ -142,11 +144,11 @@ func (v *StructValue) SetMember(ctx context.Context, name string, value Value) {
 	}
 }
 
-func (v *StructValue) StorageID() atree.StorageID {
+func (v *CompositeValue) StorageID() atree.StorageID {
 	return v.dictionary.StorageID()
 }
 
-func (v *StructValue) TypeID() common.TypeID {
+func (v *CompositeValue) TypeID() common.TypeID {
 	if v.typeID == "" {
 		location := v.Location
 		qualifiedIdentifier := v.QualifiedIdentifier
@@ -158,4 +160,264 @@ func (v *StructValue) TypeID() common.TypeID {
 		v.typeID = location.TypeID(nil, qualifiedIdentifier)
 	}
 	return v.typeID
+}
+
+func (v *CompositeValue) IsResourceKinded() bool {
+	return v.Kind == common.CompositeKindResource
+}
+
+func (v *CompositeValue) Transfer(
+	ctx *context.Context,
+	address atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+
+	//baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
+	//common.UseMemory(interpreter, baseUse)
+	//common.UseMemory(interpreter, elementOverhead)
+	//common.UseMemory(interpreter, dataUse)
+	//common.UseMemory(interpreter, metaDataUse)
+	//
+	//interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
+
+	//if interpreter.Config.InvalidatedResourceValidationEnabled {
+	//	v.checkInvalidatedResourceUse(locationRange)
+	//}
+
+	//if interpreter.Config.TracingEnabled {
+	//	startTime := time.Now()
+	//
+	//	owner := v.GetOwner().String()
+	//	typeID := string(v.TypeID())
+	//	kind := v.Kind.String()
+	//
+	//	defer func() {
+	//		interpreter.reportCompositeValueTransferTrace(
+	//			owner,
+	//			typeID,
+	//			kind,
+	//			time.Since(startTime),
+	//		)
+	//	}()
+	//}
+
+	currentStorageID := v.StorageID()
+	currentAddress := currentStorageID.Address
+
+	dictionary := v.dictionary
+
+	needsStoreTo := address != currentAddress
+	isResourceKinded := v.IsResourceKinded()
+
+	if needsStoreTo && v.Kind == common.CompositeKindContract {
+		panic(interpreter.NonTransferableValueError{
+			Value: VMValueToInterpreterValue(v),
+		})
+	}
+
+	if needsStoreTo || !isResourceKinded {
+		iterator, err := v.dictionary.Iterator()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+
+		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
+		common.UseMemory(ctx.MemoryGauge, elementMemoryUse)
+
+		dictionary, err = atree.NewMapFromBatchData(
+			ctx.Storage,
+			address,
+			atree.NewDefaultDigesterBuilder(),
+			v.dictionary.Type(),
+			interpreter.StringAtreeComparator,
+			interpreter.StringAtreeHashInput,
+			v.dictionary.Seed(),
+			func() (atree.Value, atree.Value, error) {
+
+				atreeKey, atreeValue, err := iterator.Next()
+				if err != nil {
+					return nil, nil, err
+				}
+				if atreeKey == nil || atreeValue == nil {
+					return nil, nil, nil
+				}
+
+				// NOTE: key is stringAtreeValue
+				// and does not need to be converted or copied
+
+				value := interpreter.MustConvertStoredValue(ctx.MemoryGauge, atreeValue)
+
+				vmValue := InterpreterValueToVMValue(value)
+				vmValue.Transfer(ctx, address, remove, nil)
+
+				return atreeKey, value, nil
+			},
+		)
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+
+		if remove {
+			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
+				context.RemoveReferencedSlab(ctx.Storage, nameStorable)
+				context.RemoveReferencedSlab(ctx.Storage, valueStorable)
+			})
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+			//interpreter.maybeValidateAtreeValue(v.dictionary)
+
+			context.RemoveReferencedSlab(ctx.Storage, storable)
+		}
+	}
+
+	var res *CompositeValue
+
+	if isResourceKinded {
+		// Update the resource in-place,
+		// and also update all values that are referencing the same value
+		// (but currently point to an outdated Go instance of the value)
+
+		// If checking of transfers of invalidated resource is enabled,
+		// then mark the resource as invalidated, by unsetting the backing dictionary.
+		// This allows raising an error when the resource is attempted
+		// to be transferred/moved again (see beginning of this function)
+
+		//if interpreter.Config.InvalidatedResourceValidationEnabled {
+		//	v.dictionary = nil
+		//} else {
+		//	v.dictionary = dictionary
+		//	res = v
+		//}
+
+		//newStorageID := dictionary.StorageID()
+		//
+		//interpreter.updateReferencedResource(
+		//	currentStorageID,
+		//	newStorageID,
+		//	func(value ReferenceTrackedResourceKindedValue) {
+		//		compositeValue, ok := value.(*CompositeValue)
+		//		if !ok {
+		//			panic(errors.NewUnreachableError())
+		//		}
+		//		compositeValue.dictionary = dictionary
+		//	},
+		//)
+	}
+
+	if res == nil {
+		typeInfo := interpreter.NewCompositeTypeInfo(
+			ctx.MemoryGauge,
+			v.Location,
+			v.QualifiedIdentifier,
+			v.Kind,
+		)
+		res = &CompositeValue{
+			dictionary:          dictionary,
+			Location:            typeInfo.Location,
+			QualifiedIdentifier: typeInfo.QualifiedIdentifier,
+			Kind:                typeInfo.Kind,
+			typeID:              v.typeID,
+			staticType:          v.staticType,
+		}
+
+		//res.InjectedFields = v.InjectedFields
+		//res.ComputedFields = v.ComputedFields
+		//res.NestedVariables = v.NestedVariables
+		//res.Functions = v.Functions
+		//res.Destructor = v.Destructor
+		//res.Stringer = v.Stringer
+		//res.isDestroyed = v.isDestroyed
+	}
+
+	//onResourceOwnerChange := interpreter.Config.OnResourceOwnerChange
+	//
+	//if needsStoreTo &&
+	//	res.Kind == common.CompositeKindResource &&
+	//	onResourceOwnerChange != nil {
+	//
+	//	onResourceOwnerChange(
+	//		interpreter,
+	//		res,
+	//		common.Address(currentAddress),
+	//		common.Address(address),
+	//	)
+	//}
+
+	return res
+}
+
+func (v *CompositeValue) Destroy(*context.Context) {
+
+	//interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
+	//
+	//if interpreter.Config.InvalidatedResourceValidationEnabled {
+	//	v.checkInvalidatedResourceUse(locationRange)
+	//}
+	//
+	//storageID := v.StorageID()
+	//
+	//if interpreter.Config.TracingEnabled {
+	//	startTime := time.Now()
+	//
+	//	owner := v.GetOwner().String()
+	//	typeID := string(v.TypeID())
+	//	kind := v.Kind.String()
+	//
+	//	defer func() {
+	//
+	//		interpreter.reportCompositeValueDestroyTrace(
+	//			owner,
+	//			typeID,
+	//			kind,
+	//			time.Since(startTime),
+	//		)
+	//	}()
+	//}
+
+	//interpreter = v.getInterpreter(interpreter)
+
+	//// if composite was deserialized, dynamically link in the destructor
+	//if v.Destructor == nil {
+	//	v.Destructor = interpreter.sharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+	//}
+	//
+	//destructor := v.Destructor
+	//
+	//if destructor != nil {
+	//	invocation := NewInvocation(
+	//		interpreter,
+	//		v,
+	//		nil,
+	//		nil,
+	//		nil,
+	//		locationRange,
+	//	)
+	//
+	//	destructor.invoke(invocation)
+	//}
+
+	//v.isDestroyed = true
+
+	//if interpreter.Config.InvalidatedResourceValidationEnabled {
+	//	v.dictionary = nil
+	//}
+
+	//interpreter.updateReferencedResource(
+	//	storageID,
+	//	storageID,
+	//	func(value ReferenceTrackedResourceKindedValue) {
+	//		compositeValue, ok := value.(*CompositeValue)
+	//		if !ok {
+	//			panic(errors.NewUnreachableError())
+	//		}
+	//
+	//		compositeValue.isDestroyed = true
+	//
+	//		if interpreter.Config.InvalidatedResourceValidationEnabled {
+	//			compositeValue.dictionary = nil
+	//		}
+	//	},
+	//)
 }

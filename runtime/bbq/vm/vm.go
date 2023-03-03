@@ -19,6 +19,7 @@
 package vm
 
 import (
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/bbq/constantkind"
 	"github.com/onflow/cadence/runtime/bbq/leb128"
@@ -39,7 +40,7 @@ type VM struct {
 	functions   map[string]*bbq.Function
 	callFrame   *callFrame
 	stack       []values.Value
-	context     context.Context
+	context     *context.Context
 }
 
 func NewVM(program *bbq.Program) *VM {
@@ -54,7 +55,9 @@ func NewVM(program *bbq.Program) *VM {
 
 	functions := indexFunctions(program.Functions)
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	ctx := &context.Context{
+		Storage: interpreter.NewInMemoryStorage(nil),
+	}
 
 	return &VM{
 		Program:     program,
@@ -62,9 +65,7 @@ func NewVM(program *bbq.Program) *VM {
 		functions:   functions,
 		constants:   make([]values.Value, len(program.Constants)),
 		staticTypes: make([]types.StaticType, len(program.Types)),
-		context: context.Context{
-			Storage: storage,
-		},
+		context:     ctx,
 	}
 }
 
@@ -276,11 +277,16 @@ func opPop(vm *VM) {
 }
 
 func opNew(vm *VM) {
-	name := vm.pop().(values.StringValue)
-	value := values.NewStructValue(
+	kind := vm.callFrame.getUint16()
+	compositeKind := common.CompositeKind(kind)
+
+	typeName := vm.callFrame.getString()
+
+	value := values.NewCompositeValue(
 		// TODO: get location
 		common.StringLocation("test"),
-		string(name.String),
+		typeName,
+		compositeKind,
 		common.Address{},
 		vm.context.Storage,
 	)
@@ -292,7 +298,7 @@ func opSetField(vm *VM) {
 	fieldNameStr := string(fieldName.String)
 
 	// TODO: support all container types
-	structValue := vm.pop().(*values.StructValue)
+	structValue := vm.pop().(*values.CompositeValue)
 
 	fieldValue := vm.pop()
 
@@ -304,7 +310,7 @@ func opGetField(vm *VM) {
 	fieldNameStr := string(fieldName.String)
 
 	// TODO: support all container types
-	structValue := vm.pop().(*values.StructValue)
+	structValue := vm.pop().(*values.CompositeValue)
 
 	fieldValue := structValue.GetMember(vm.context, fieldNameStr)
 	vm.push(fieldValue)
@@ -312,10 +318,26 @@ func opGetField(vm *VM) {
 
 func opCheckType(vm *VM) {
 	targetType := vm.loadType()
-	valueType := vm.peek().StaticType(vm.context.MemoryGauge)
+
+	value := vm.peek()
+
+	transferredValue := value.Transfer(
+		vm.context,
+		atree.Address{},
+		false, nil,
+	)
+
+	valueType := transferredValue.StaticType(vm.context.MemoryGauge)
 	if !types.IsSubType(valueType, targetType) {
 		panic("invalid transfer")
 	}
+
+	vm.replaceTop(transferredValue)
+}
+
+func opDestroy(vm *VM) {
+	value := vm.peek().(*values.CompositeValue)
+	value.Destroy(vm.context)
 }
 
 func (vm *VM) run() {
@@ -371,6 +393,8 @@ func (vm *VM) run() {
 			opGetField(vm)
 		case opcode.CheckType:
 			opCheckType(vm)
+		case opcode.Destroy:
+			opDestroy(vm)
 		default:
 			panic(errors.NewUnreachableError())
 		}

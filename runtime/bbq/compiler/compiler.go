@@ -462,9 +462,16 @@ func (c *Compiler) VisitConditionalExpression(_ *ast.ConditionalExpression) (_ s
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitUnaryExpression(_ *ast.UnaryExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitUnaryExpression(expression *ast.UnaryExpression) (_ struct{}) {
+	switch expression.Operation {
+	case ast.OperationMove:
+		c.compileExpression(expression.Expression)
+	default:
+		// TODO
+		panic(errors.NewUnreachableError())
+	}
+
+	return
 }
 
 func (c *Compiler) VisitBinaryExpression(expression *ast.BinaryExpression) (_ struct{}) {
@@ -504,14 +511,15 @@ func (c *Compiler) VisitCastingExpression(_ *ast.CastingExpression) (_ struct{})
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitCreateExpression(_ *ast.CreateExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitCreateExpression(expression *ast.CreateExpression) (_ struct{}) {
+	c.compileExpression(expression.InvocationExpression)
+	return
 }
 
-func (c *Compiler) VisitDestroyExpression(_ *ast.DestroyExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitDestroyExpression(expression *ast.DestroyExpression) (_ struct{}) {
+	c.compileExpression(expression.Expression)
+	c.emit(opcode.Destroy)
+	return
 }
 
 func (c *Compiler) VisitReferenceExpression(_ *ast.ReferenceExpression) (_ struct{}) {
@@ -550,9 +558,6 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 
 	function := c.addFunction(functionName, uint16(parameterCount))
 
-	// TODO: pass location
-	c.stringConstLoad(enclosingCompositeTypeName)
-
 	// Declare `self`
 	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
 	selfFirst, selfSecond := encodeUint16(self.index)
@@ -564,7 +569,17 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 
 	// Initialize an empty struct and assign to `self`.
 	// i.e: `self = New()`
-	c.emit(opcode.New)
+
+	// TODO: pass location
+
+	// TODO: unsafe conversion
+	kindFirst, kindSecond := encodeUint16(uint16(c.currentCompositeType.Kind))
+	nameLen := len(enclosingCompositeTypeName)
+	// TODO: unsafe conversion
+	lenFirst, lenSecond := encodeUint16(uint16(nameLen))
+	args := []byte{kindFirst, kindSecond, lenFirst, lenSecond}
+	args = append(args, enclosingCompositeTypeName...)
+	c.emit(opcode.New, args...)
 	c.emit(opcode.SetLocal, selfFirst, selfSecond)
 
 	// Emit for the statements in `init()` body.

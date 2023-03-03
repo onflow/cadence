@@ -19,7 +19,10 @@
 package values
 
 import (
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/runtime/bbq/vm/context"
 	"github.com/onflow/cadence/runtime/bbq/vm/types"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -29,6 +32,12 @@ import (
 type Value interface {
 	isValue()
 	StaticType(common.MemoryGauge) types.StaticType
+	Transfer(
+		ctx *context.Context,
+		address atree.Address,
+		remove bool,
+		storable atree.Storable,
+	) Value
 }
 
 var TrueValue Value = BoolValue(true)
@@ -44,6 +53,10 @@ func (BoolValue) StaticType(common.MemoryGauge) types.StaticType {
 	return interpreter.PrimitiveStaticTypeBool
 }
 
+func (v BoolValue) Transfer(*context.Context, atree.Address, bool, atree.Storable) Value {
+	return v
+}
+
 type IntValue struct {
 	SmallInt int64
 }
@@ -54,6 +67,10 @@ func (IntValue) isValue() {}
 
 func (IntValue) StaticType(common.MemoryGauge) types.StaticType {
 	return interpreter.PrimitiveStaticTypeInt
+}
+
+func (v IntValue) Transfer(*context.Context, atree.Address, bool, atree.Storable) Value {
+	return v
 }
 
 func (v IntValue) Add(other IntValue) Value {
@@ -90,6 +107,10 @@ func (FunctionValue) StaticType(common.MemoryGauge) types.StaticType {
 	panic(errors.NewUnreachableError())
 }
 
+func (v FunctionValue) Transfer(*context.Context, atree.Address, bool, atree.Storable) Value {
+	return v
+}
+
 type StringValue struct {
 	String []byte
 }
@@ -100,4 +121,8 @@ func (StringValue) isValue() {}
 
 func (StringValue) StaticType(common.MemoryGauge) types.StaticType {
 	return interpreter.PrimitiveStaticTypeString
+}
+
+func (v StringValue) Transfer(*context.Context, atree.Address, bool, atree.Storable) Value {
+	return v
 }
