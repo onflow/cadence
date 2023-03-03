@@ -56,6 +56,8 @@ const AuthAccountTypeInboxClaimFunctionName = "claim"
 
 var AuthAccountTypeLinkAccountFunctionType *FunctionType
 
+var AuthAccountTypeLinkAccountFunctionTypePathParameterType = PrivatePathType
+
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
 // Only signed transactions can get the AuthAccount for an account.
@@ -78,9 +80,11 @@ var AuthAccountType = func() *CompositeType {
 	AuthAccountTypeLinkAccountFunctionType = &FunctionType{
 		Parameters: []Parameter{
 			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "newCapabilityPath",
-				TypeAnnotation: NewTypeAnnotation(PrivatePathType),
+				Label:      ArgumentLabelNotRequired,
+				Identifier: "newCapabilityPath",
+				TypeAnnotation: NewTypeAnnotation(
+					AuthAccountTypeLinkAccountFunctionTypePathParameterType,
+				),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
