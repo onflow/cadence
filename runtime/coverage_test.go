@@ -64,6 +64,8 @@ func TestLocationCoverageAddLineHit(t *testing.T) {
 	lineHits := map[int]int{3: 0, 4: 0, 5: 0, 7: 0, 9: 0, 11: 0}
 	locationCoverage := NewLocationCoverage(lineHits)
 
+	// Lines below 1 are dropped.
+	locationCoverage.AddLineHit(0)
 	locationCoverage.AddLineHit(3)
 	locationCoverage.AddLineHit(3)
 	locationCoverage.AddLineHit(7)

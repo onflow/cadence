@@ -38,6 +38,10 @@ type LocationCoverage struct {
 
 // AddLineHit increments the hit count for the given line.
 func (c *LocationCoverage) AddLineHit(line int) {
+	// Lines below 1 are dropped.
+	if line < 1 {
+		return
+	}
 	c.LineHits[line]++
 }
 
