@@ -334,6 +334,23 @@ func TestRuntimeCoverage(t *testing.T) {
 
 	    return "Enormous"
 	  }
+
+	  pub fun factorial(_ n: Int): Int {
+	    pre {
+	      n >= 0:
+	        "factorial is only defined for integers greater than or equal to zero"
+	    }
+	    post {
+	      result >= 1:
+	        "the result must be greater than or equal to 1"
+	    }
+
+	    if n < 1 {
+	      return 1
+	    }
+
+	    return n * factorial(n - 1)
+	  }
 	`)
 
 	script := []byte(`
@@ -359,6 +376,9 @@ func TestRuntimeCoverage(t *testing.T) {
 
 	    addSpecialNumber(78557, "Sierpinski")
 	    assert("Sierpinski" == getIntegerTrait(78557))
+
+	    factorial(5)
+	    factorial(0)
 
 	    return 42
 	  }
@@ -412,10 +432,15 @@ func TestRuntimeCoverage(t *testing.T) {
 	          "25": 5,
 	          "26": 4,
 	          "29": 1,
+	          "34": 7,
+	          "38": 7,
+	          "42": 7,
+	          "43": 2,
+	          "46": 5,
 	          "9": 1
 	        },
 	        "missed_lines": [],
-	        "statements": 14,
+	        "statements": 19,
 	        "percentage": "100.0%"
 	      },
 	      "s.0000000000000000000000000000000000000000000000000000000000000000": {
@@ -426,10 +451,12 @@ func TestRuntimeCoverage(t *testing.T) {
 	          "22": 1,
 	          "23": 1,
 	          "25": 1,
+	          "26": 1,
+	          "28": 1,
 	          "5": 1
 	        },
 	        "missed_lines": [],
-	        "statements": 7,
+	        "statements": 9,
 	        "percentage": "100.0%"
 	      }
 	    }
