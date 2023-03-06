@@ -1996,17 +1996,20 @@ func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) P
 			}
 
 			for _, extractedExpression := range extractedExpressions {
+				expression := extractedExpression.Expression
+				startPos := expression.StartPosition()
 
 				// NOTE: no need to check the before statements or update elaboration here:
 				// The before statements are visited/checked later
 				variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
+				variableDeclaration.StartPos = startPos
 				variableDeclaration.Identifier = extractedExpression.Identifier
 				variableDeclaration.Transfer = ast.NewTransfer(
 					checker.memoryGauge,
 					ast.TransferOperationCopy,
-					ast.EmptyPosition,
+					startPos,
 				)
-				variableDeclaration.Value = extractedExpression.Expression
+				variableDeclaration.Value = expression
 
 				beforeStatements = append(beforeStatements,
 					variableDeclaration,
