@@ -80,7 +80,7 @@ var AuthAccountType = func() *CompositeType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "newCapabilityPath",
-				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
+				TypeAnnotation: NewTypeAnnotation(PrivatePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
