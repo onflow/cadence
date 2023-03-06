@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -518,4 +519,40 @@ func TestCheckConditionCreateBefore(t *testing.T) {
 	var notCallableErr *sema.NotCallableError
 	require.ErrorAs(t, errs[0], &notCallableErr)
 	require.Equal(t, sema.IntType, notCallableErr.Type)
+}
+
+func TestCheckRewrittenPostConditions(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(x: Int) {
+          post {
+              before(x) == 0
+          }
+      }
+    `)
+	require.NoError(t, err)
+
+	declarations := checker.Program.Declarations()
+	require.Len(t, declarations, 1)
+	firstDeclaration := declarations[0]
+
+	require.IsType(t, &ast.FunctionDeclaration{}, firstDeclaration)
+	functionDeclaration := firstDeclaration.(*ast.FunctionDeclaration)
+
+	postConditions := functionDeclaration.FunctionBlock.PostConditions
+	postConditionsRewrite := checker.Elaboration.PostConditionsRewrite(postConditions)
+
+	require.Len(t, postConditionsRewrite.RewrittenPostConditions, 1)
+	require.Len(t, postConditionsRewrite.BeforeStatements, 1)
+
+	beforeStatement := postConditionsRewrite.BeforeStatements[0]
+
+	ast.Inspect(beforeStatement, func(element ast.Element) bool {
+		if element != nil {
+			assert.Positive(t, element.StartPosition().Line)
+		}
+		return true
+	})
 }
