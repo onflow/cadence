@@ -529,9 +529,8 @@ func (checker *Checker) checkMemberEntitlementConformance(memberContainer Compos
 	if !hasEntitlements {
 		return
 	}
-	entitlements := entitlementAccess.Entitlements
 
-	for _, entitlement := range entitlements {
+	entitlementAccess.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 		entitlementMember, memberPresent := entitlement.Members.Get(member.Identifier.Identifier)
 		if !memberPresent {
 
@@ -541,7 +540,7 @@ func (checker *Checker) checkMemberEntitlementConformance(memberContainer Compos
 				Member:          member,
 				Range:           ast.NewRangeFromPositioned(checker.memoryGauge, member.Identifier),
 			})
-			continue
+			return
 		}
 
 		// a member's declaration in a composite or interface must exactly match its declaration in an entitlement
@@ -558,7 +557,7 @@ func (checker *Checker) checkMemberEntitlementConformance(memberContainer Compos
 			})
 		}
 
-	}
+	})
 }
 
 func (checker *Checker) VisitEntitlementDeclaration(declaration *ast.EntitlementDeclaration) (_ struct{}) {

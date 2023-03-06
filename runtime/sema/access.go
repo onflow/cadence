@@ -20,6 +20,7 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 type Access interface {
@@ -33,13 +34,17 @@ type Access interface {
 
 type EntitlementAccess struct {
 	astAccess    ast.EntitlementAccess
-	Entitlements []*EntitlementType
+	Entitlements *EntitlementOrderedSet
 }
 
 var _ Access = EntitlementAccess{}
 
 func NewEntitlementAccess(entitlements []*EntitlementType) EntitlementAccess {
-	return EntitlementAccess{Entitlements: entitlements}
+	set := orderedmap.New[EntitlementOrderedSet](len(entitlements))
+	for _, entitlement := range entitlements {
+		set.Set(entitlement, struct{}{})
+	}
+	return EntitlementAccess{Entitlements: set}
 }
 
 func (EntitlementAccess) isAccess() {}
@@ -48,27 +53,12 @@ func (a EntitlementAccess) Access() ast.Access {
 	return a.astAccess
 }
 
-func (e EntitlementAccess) subset(other EntitlementAccess) bool {
-	otherSet := make(map[*EntitlementType]struct{})
-	for _, entitlement := range other.Entitlements {
-		otherSet[entitlement] = struct{}{}
-	}
-
-	for _, entitlement := range e.Entitlements {
-		if _, found := otherSet[entitlement]; !found {
-			return false
-		}
-	}
-
-	return true
-}
-
 func (e EntitlementAccess) IsMorePermissiveThan(other Access) bool {
 	if _, isPrimitive := other.(PrimitiveAccess); isPrimitive {
 		return true
 	}
 	// e >= other if e is a subset of other, as entitlement sets are unions rather than intersections
-	return e.subset(other.(EntitlementAccess))
+	return e.Entitlements.KeysetIsSubsetOf(other.(EntitlementAccess).Entitlements)
 }
 
 func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {

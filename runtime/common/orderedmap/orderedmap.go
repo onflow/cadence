@@ -190,6 +190,16 @@ func (om *OrderedMap[K, V]) ForeachWithError(f func(key K, value V) error) error
 	return nil
 }
 
+// IsSubsetOf checks whether the key set of the receiver is a subset of the
+// argument map's key set
+func (om *OrderedMap[K, V]) KeysetIsSubsetOf(other *OrderedMap[K, V]) bool {
+	isSubset := true
+	om.Foreach(func(key K, _ V) {
+		isSubset = isSubset && other.Contains(key)
+	})
+	return isSubset
+}
+
 // Pair is an entry in an OrderedMap
 type Pair[K any, V any] struct {
 	Key   K
