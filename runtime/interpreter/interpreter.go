@@ -112,6 +112,14 @@ type OnMeterComputationFunc func(
 	intensity uint,
 )
 
+// OnAccountLinkedFunc is a function that is triggered when an account is linked by the program.
+type OnAccountLinkedFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	path PathValue,
+) error
+
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 type InjectedCompositeFieldsHandlerFunc func(
 	inter *Interpreter,
@@ -3732,6 +3740,19 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 				newCapabilityIdentifier,
 				accountLinkValue,
 			)
+
+			onAccountLinked := interpreter.SharedState.Config.OnAccountLinked
+			if onAccountLinked != nil {
+				err := onAccountLinked(
+					interpreter,
+					invocation.LocationRange,
+					addressValue,
+					newCapabilityPath,
+				)
+				if err != nil {
+					panic(err)
+				}
+			}
 
 			return NewSomeValueNonCopying(
 				interpreter,

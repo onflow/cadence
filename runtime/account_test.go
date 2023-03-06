@@ -2638,6 +2638,25 @@ func TestRuntimeAccountLink(t *testing.T) {
 		)
 		require.NoError(t, err)
 
+		require.Len(t, events, 2)
+
+		require.Equal(t,
+			string(stdlib.AccountLinkedEventType.ID()),
+			events[0].EventType.ID(),
+		)
+		require.Equal(t,
+			[]cadence.Value{
+				cadence.NewAddress(common.MustBytesToAddress([]byte{0x1})),
+				cadence.NewPath("private", "foo"),
+			},
+			events[0].Fields,
+		)
+
+		require.Equal(t,
+			string(stdlib.AccountInboxPublishedEventType.ID()),
+			events[1].EventType.ID(),
+		)
+
 		// Claim
 
 		accessTransaction := []byte(`
