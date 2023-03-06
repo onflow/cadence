@@ -252,6 +252,43 @@ func TestNewStruct(t *testing.T) {
 	)
 }
 
+func TestStructMethodCall(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      struct Foo {
+          var id : String
+
+          init(_ id: String) {
+              self.id = id
+          }
+
+          fun sayHello(_ id: Int): String {
+              return self.id
+          }
+      }
+
+      fun test(): String {
+          var r = Foo("Hello from Foo!")
+          return r.sayHello(1)
+      }
+  `)
+	require.NoError(t, err)
+
+	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+	program := comp.Compile()
+
+	printProgram(program)
+
+	vm := NewVM(program)
+
+	result, err := vm.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t, values.StringValue{String: []byte("Hello from Foo!")}, result)
+}
+
 func BenchmarkNewStruct(b *testing.B) {
 
 	checker, err := ParseAndCheck(b, `

@@ -113,15 +113,9 @@ func (vm *VM) replaceTop(value values.Value) {
 }
 
 func (vm *VM) pushCallFrame(function *bbq.Function, arguments []values.Value) {
-	// Preserve local index zero for `self`.
-	localOffset := 0
-	if function.IsCompositeFunction {
-		localOffset = 1
-	}
-
 	locals := make([]values.Value, function.LocalCount)
 	for i, argument := range arguments {
-		locals[i+localOffset] = argument
+		locals[i] = argument
 	}
 
 	callFrame := &callFrame{
@@ -160,20 +154,20 @@ func (vm *VM) Invoke(name string, arguments ...values.Value) (values.Value, erro
 type vmOp func(*VM)
 
 var vmOps = [...]vmOp{
-	opcode.ReturnValue: opReturnValue,
-	opcode.Jump:        opJump,
-	opcode.JumpIfFalse: opJumpIfFalse,
-	opcode.IntAdd:      opBinaryIntAdd,
-	opcode.IntSubtract: opBinaryIntSubtract,
-	opcode.IntLess:     opBinaryIntLess,
-	opcode.IntGreater:  opBinaryIntGreater,
-	opcode.True:        opTrue,
-	opcode.False:       opFalse,
-	opcode.GetConstant: opGetConstant,
-	opcode.GetLocal:    opGetLocal,
-	opcode.SetLocal:    opSetLocal,
-	opcode.GetGlobal:   opGetGlobal,
-	opcode.Call:        opCall,
+	opcode.ReturnValue:  opReturnValue,
+	opcode.Jump:         opJump,
+	opcode.JumpIfFalse:  opJumpIfFalse,
+	opcode.IntAdd:       opBinaryIntAdd,
+	opcode.IntSubtract:  opBinaryIntSubtract,
+	opcode.IntLess:      opBinaryIntLess,
+	opcode.IntGreater:   opBinaryIntGreater,
+	opcode.True:         opTrue,
+	opcode.False:        opFalse,
+	opcode.GetConstant:  opGetConstant,
+	opcode.GetLocal:     opGetLocal,
+	opcode.SetLocal:     opSetLocal,
+	opcode.GetGlobal:    opGetGlobal,
+	opcode.InvokeStatic: opInvokeStatic,
 }
 
 func opReturnValue(vm *VM) {
@@ -262,11 +256,24 @@ func opGetGlobal(vm *VM) {
 	vm.push(vm.globals[index])
 }
 
-func opCall(vm *VM) {
+func opInvokeStatic(vm *VM) {
 	// TODO: support any function value
 	value := vm.pop().(values.FunctionValue)
 	stackHeight := len(vm.stack)
 	parameterCount := int(value.Function.ParameterCount)
+	arguments := vm.stack[stackHeight-parameterCount:]
+	vm.pushCallFrame(value.Function, arguments)
+	vm.dropN(parameterCount)
+}
+
+func opInvoke(vm *VM) {
+	// TODO: support any function value
+	value := vm.pop().(values.FunctionValue)
+	stackHeight := len(vm.stack)
+
+	// Add one to account for `self`
+	parameterCount := int(value.Function.ParameterCount) + 1
+
 	arguments := vm.stack[stackHeight-parameterCount:]
 	vm.pushCallFrame(value.Function, arguments)
 	vm.dropN(parameterCount)
@@ -277,14 +284,21 @@ func opPop(vm *VM) {
 }
 
 func opNew(vm *VM) {
-	kind := vm.callFrame.getUint16()
+	callframe := vm.callFrame
+
+	kind := callframe.getUint16()
 	compositeKind := common.CompositeKind(kind)
 
-	typeName := vm.callFrame.getString()
+	// decode location
+	locationLen := callframe.getUint16()
+	locationBytes := callframe.function.Code[callframe.ip : callframe.ip+locationLen]
+	callframe.ip = callframe.ip + locationLen
+	location := decodeLocation(locationBytes)
+
+	typeName := callframe.getString()
 
 	value := values.NewCompositeValue(
-		// TODO: get location
-		common.StringLocation("test"),
+		location,
 		typeName,
 		compositeKind,
 		common.Address{},
@@ -381,8 +395,10 @@ func (vm *VM) run() {
 			opSetLocal(vm)
 		case opcode.GetGlobal:
 			opGetGlobal(vm)
-		case opcode.Call:
-			opCall(vm)
+		case opcode.InvokeStatic:
+			opInvokeStatic(vm)
+		case opcode.Invoke:
+			opInvoke(vm)
 		case opcode.Pop:
 			opPop(vm)
 		case opcode.New:
@@ -441,4 +457,15 @@ func (vm *VM) initializeType(index uint16) interpreter.StaticType {
 
 	vm.staticTypes[index] = staticType
 	return staticType
+}
+
+func decodeLocation(locationBytes []byte) common.Location {
+	// TODO: is it possible to re-use decoders?
+	dec := interpreter.CBORDecMode.NewByteStreamDecoder(locationBytes)
+	locationDecoder := interpreter.NewLocationDecoder(dec, nil)
+	location, err := locationDecoder.DecodeLocation()
+	if err != nil {
+		panic(err)
+	}
+	return location
 }

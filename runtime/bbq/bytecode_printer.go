@@ -25,7 +25,9 @@ import (
 	"github.com/onflow/cadence/runtime/bbq/constantkind"
 	"github.com/onflow/cadence/runtime/bbq/leb128"
 	"github.com/onflow/cadence/runtime/bbq/opcode"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 type BytecodePrinter struct {
@@ -72,10 +74,13 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 			var kind int
 			kind, i = p.getIntOperand(codes, i)
 
+			var location common.Location
+			location, i = p.getLocation(codes, i)
+
 			var typeName string
 			typeName, i = p.getStringOperand(codes, i)
 
-			p.stringBuilder.WriteString(" " + fmt.Sprint(kind) + " " + typeName)
+			p.stringBuilder.WriteString(" " + fmt.Sprint(kind) + " " + string(location.TypeID(nil, typeName)))
 
 		// opcodes with no operands
 		default:
@@ -125,4 +130,18 @@ func (p *BytecodePrinter) printConstantPool(constants []*Constant) {
 	}
 
 	p.stringBuilder.WriteRune('\n')
+}
+
+func (p *BytecodePrinter) getLocation(codes []byte, i int) (location common.Location, endIndex int) {
+	locationLen, i := p.getIntOperand(codes, i)
+	locationBytes := codes[i+1 : i+1+locationLen]
+
+	dec := interpreter.CBORDecMode.NewByteStreamDecoder(locationBytes)
+	locationDecoder := interpreter.NewLocationDecoder(dec, nil)
+	location, err := locationDecoder.DecodeLocation()
+	if err != nil {
+		panic(err)
+	}
+
+	return location, i + locationLen
 }

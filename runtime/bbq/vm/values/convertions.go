@@ -30,6 +30,8 @@ func InterpreterValueToVMValue(value interpreter.Value) Value {
 	switch value := value.(type) {
 	case interpreter.IntValue:
 		return IntValue{value.BigInt.Int64()}
+	case *interpreter.StringValue:
+		return StringValue{String: []byte(value.Str)}
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -39,6 +41,8 @@ func VMValueToInterpreterValue(value Value) interpreter.Value {
 	switch value := value.(type) {
 	case IntValue:
 		return interpreter.NewIntValueFromInt64(nil, value.SmallInt)
+	case StringValue:
+		return interpreter.NewUnmeteredStringValue(string(value.String))
 	default:
 		panic(errors.NewUnreachableError())
 	}

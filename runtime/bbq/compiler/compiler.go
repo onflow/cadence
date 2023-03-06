@@ -19,6 +19,7 @@
 package compiler
 
 import (
+	"bytes"
 	"math"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -36,17 +37,16 @@ type Compiler struct {
 	Program     *ast.Program
 	Elaboration *sema.Elaboration
 
-	currentFunction *function
-	functions       []*function
-	constants       []*constant
-	globals         map[string]*global
-	loops           []*loop
-	currentLoop     *loop
+	currentFunction      *function
+	currentCompositeType *sema.CompositeType
 
+	functions   []*function
+	constants   []*constant
+	globals     map[string]*global
+	loops       []*loop
+	currentLoop *loop
 	staticTypes [][]byte
 	typesInPool map[sema.Type]uint16
-
-	currentCompositeType *sema.CompositeType
 
 	// TODO: initialize
 	memoryGauge common.MemoryGauge
@@ -419,30 +419,58 @@ func (c *Compiler) VisitDictionaryExpression(_ *ast.DictionaryExpression) (_ str
 }
 
 func (c *Compiler) VisitIdentifierExpression(expression *ast.IdentifierExpression) (_ struct{}) {
-	name := expression.Identifier.Identifier
+	c.emitVariableLoad(expression.Identifier.Identifier)
+	return
+}
+
+func (c *Compiler) emitVariableLoad(name string) {
 	local := c.currentFunction.findLocal(name)
 	if local != nil {
 		first, second := encodeUint16(local.index)
 		c.emit(opcode.GetLocal, first, second)
 		return
 	}
+
 	global := c.findGlobal(name)
 	first, second := encodeUint16(global.index)
 	c.emit(opcode.GetGlobal, first, second)
-	return
 }
 
 func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
 	// TODO: copy
 
+	switch invokedExpr := expression.InvokedExpression.(type) {
+	case *ast.IdentifierExpression:
+		// Load arguments
+		c.loadArguments(expression)
+		// Load function value
+		c.emitVariableLoad(invokedExpr.Identifier.Identifier)
+		c.emit(opcode.InvokeStatic)
+	case *ast.MemberExpression:
+		// Receiver is loaded first. So 'self' is always the zero-th argument.
+		// This must be in sync with `compileCompositeFunction`.
+		c.compileExpression(invokedExpr.Expression)
+		// Load arguments
+		c.loadArguments(expression)
+		// Load function value
+		memberInfo := c.Elaboration.MemberExpressionMemberInfos[invokedExpr]
+		typeName := memberInfo.AccessedType.QualifiedString()
+		funcName := compositeFunctionQualifiedName(typeName, invokedExpr.Identifier.Identifier)
+		c.emitVariableLoad(funcName)
+		c.emit(opcode.Invoke)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	return
+}
+
+func (c *Compiler) loadArguments(expression *ast.InvocationExpression) {
 	invocationTypes := c.Elaboration.InvocationExpressionTypes[expression]
 	for index, argument := range expression.Arguments {
 		c.compileExpression(argument.Expression)
 		c.emitCheckType(invocationTypes.ArgumentTypes[index])
 	}
-	c.compileExpression(expression.InvokedExpression)
-	c.emit(opcode.Call)
-	return
 }
 
 func (c *Compiler) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
@@ -550,35 +578,50 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 		panic(errors.NewUnreachableError())
 	}
 
-	parameter := declaration.FunctionDeclaration.ParameterList.Parameters
-	parameterCount := len(parameter)
+	parameters := declaration.FunctionDeclaration.ParameterList.Parameters
+	parameterCount := len(parameters)
 	if parameterCount > math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
 	function := c.addFunction(functionName, uint16(parameterCount))
+	declareParameters(function, parameters)
 
 	// Declare `self`
 	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
 	selfFirst, selfSecond := encodeUint16(self.index)
 
-	for _, parameter := range parameter {
-		parameterName := parameter.Identifier.Identifier
-		function.declareLocal(parameterName)
-	}
-
 	// Initialize an empty struct and assign to `self`.
 	// i.e: `self = New()`
 
-	// TODO: pass location
+	location := c.currentCompositeType.Location
+	locationBytes, err := locationToBytes(location)
+	if err != nil {
+		panic(err)
+	}
 
-	// TODO: unsafe conversion
+	byteSize := 2 + // two bytes for composite kind
+		2 + // 2 bytes for location size
+		len(locationBytes) + // location
+		2 + // 2 bytes for type name size
+		len(enclosingCompositeTypeName) // type name
+
+	args := make([]byte, 0, byteSize)
+
+	// Write composite kind
 	kindFirst, kindSecond := encodeUint16(uint16(c.currentCompositeType.Kind))
-	nameLen := len(enclosingCompositeTypeName)
-	// TODO: unsafe conversion
-	lenFirst, lenSecond := encodeUint16(uint16(nameLen))
-	args := []byte{kindFirst, kindSecond, lenFirst, lenSecond}
+	args = append(args, kindFirst, kindSecond)
+
+	// Write location
+	locationSizeFirst, locationSizeSecond := encodeUint16(uint16(len(locationBytes)))
+	args = append(args, locationSizeFirst, locationSizeSecond)
+	args = append(args, locationBytes...)
+
+	// Write composite name
+	typeNameSizeFirst, typeNameSizeSecond := encodeUint16(uint16(len(enclosingCompositeTypeName)))
+	args = append(args, typeNameSizeFirst, typeNameSizeSecond)
 	args = append(args, enclosingCompositeTypeName...)
+
 	c.emit(opcode.New, args...)
 	c.emit(opcode.SetLocal, selfFirst, selfSecond)
 
@@ -594,19 +637,25 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 
 func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
 	// TODO: handle nested functions
+	function := c.declareFunction(declaration)
+	declareParameters(function, declaration.ParameterList.Parameters)
+	c.compileFunctionBlock(declaration.FunctionBlock)
+	return
+}
+
+func (c *Compiler) declareFunction(declaration *ast.FunctionDeclaration) *function {
 	functionName := declaration.Identifier.Identifier
+	if c.currentCompositeType != nil {
+		functionName = compositeFunctionQualifiedName(c.currentCompositeType.Identifier, functionName)
+	}
+
 	functionType := c.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 	parameterCount := len(functionType.Parameters)
 	if parameterCount > math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
-	function := c.addFunction(functionName, uint16(parameterCount))
-	for _, parameter := range declaration.ParameterList.Parameters {
-		parameterName := parameter.Identifier.Identifier
-		function.declareLocal(parameterName)
-	}
-	c.compileFunctionBlock(declaration.FunctionBlock)
-	return
+
+	return c.addFunction(functionName, uint16(parameterCount))
 }
 
 func (c *Compiler) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
@@ -620,9 +669,21 @@ func (c *Compiler) VisitCompositeDeclaration(declaration *ast.CompositeDeclarati
 		c.compileDeclaration(specialFunc)
 	}
 
+	for _, function := range declaration.Members.Functions() {
+		c.compileCompositeFunction(function)
+	}
+
 	// TODO:
 
 	return
+}
+
+func (c *Compiler) compileCompositeFunction(declaration *ast.FunctionDeclaration) {
+	function := c.declareFunction(declaration)
+	// Declare `self`. Receiver is always at the zero-th index of params.
+	function.declareLocal(sema.SelfIdentifier)
+	declareParameters(function, declaration.ParameterList.Parameters)
+	c.compileFunctionBlock(declaration.FunctionBlock)
 }
 
 func (c *Compiler) VisitInterfaceDeclaration(_ *ast.InterfaceDeclaration) (_ struct{}) {
@@ -686,4 +747,32 @@ func (c *Compiler) addType(data []byte) uint16 {
 
 	c.staticTypes = append(c.staticTypes, data)
 	return uint16(count)
+}
+
+func compositeFunctionQualifiedName(typeName, functionName string) string {
+	return typeName + "." + functionName
+}
+
+func declareParameters(function *function, parameters []*ast.Parameter) {
+	for _, parameter := range parameters {
+		parameterName := parameter.Identifier.Identifier
+		function.declareLocal(parameterName)
+	}
+}
+
+func locationToBytes(location common.Location) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := interpreter.CBOREncMode.NewStreamEncoder(&buf)
+
+	err := interpreter.EncodeLocation(enc, location)
+	if err != nil {
+		return nil, err
+	}
+
+	err = enc.Flush()
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }

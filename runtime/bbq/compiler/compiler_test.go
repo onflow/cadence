@@ -62,13 +62,13 @@ func TestCompileRecursionFib(t *testing.T) {
 			byte(opcode.GetConstant), 0, 1,
 			byte(opcode.IntSubtract),
 			byte(opcode.GetGlobal), 0, 0,
-			byte(opcode.Call),
+			byte(opcode.InvokeStatic),
 			// fib(n - 2)
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.GetConstant), 0, 2,
 			byte(opcode.IntSubtract),
 			byte(opcode.GetGlobal), 0, 0,
-			byte(opcode.Call),
+			byte(opcode.InvokeStatic),
 			// return sum
 			byte(opcode.IntAdd),
 			byte(opcode.ReturnValue),

@@ -52,7 +52,8 @@ const (
 	GetField
 	SetField
 
-	Call
+	InvokeStatic
+	Invoke
 
 	New
 	Destroy

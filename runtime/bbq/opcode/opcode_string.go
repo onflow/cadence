@@ -32,16 +32,17 @@ func _() {
 	_ = x[GetGlobal-21]
 	_ = x[GetField-22]
 	_ = x[SetField-23]
-	_ = x[Call-24]
-	_ = x[New-25]
-	_ = x[Destroy-26]
-	_ = x[Pop-27]
-	_ = x[CheckType-28]
+	_ = x[InvokeStatic-24]
+	_ = x[Invoke-25]
+	_ = x[New-26]
+	_ = x[Destroy-27]
+	_ = x[Pop-28]
+	_ = x[CheckType-29]
 }
 
-const _Opcode_name = "UnknownReturnReturnValueJumpJumpIfFalseIntAddIntSubtractIntMultiplyIntDivideIntModIntEqualIntNotEqualIntLessIntGreaterIntLessOrEqualIntGreaterOrEqualGetConstantTrueFalseGetLocalSetLocalGetGlobalGetFieldSetFieldCallNewDestroyPopCheckType"
+const _Opcode_name = "UnknownReturnReturnValueJumpJumpIfFalseIntAddIntSubtractIntMultiplyIntDivideIntModIntEqualIntNotEqualIntLessIntGreaterIntLessOrEqualIntGreaterOrEqualGetConstantTrueFalseGetLocalSetLocalGetGlobalGetFieldSetFieldInvokeStaticInvokeNewDestroyPopCheckType"
 
-var _Opcode_index = [...]uint8{0, 7, 13, 24, 28, 39, 45, 56, 67, 76, 82, 90, 101, 108, 118, 132, 149, 160, 164, 169, 177, 185, 194, 202, 210, 214, 217, 224, 227, 236}
+var _Opcode_index = [...]uint8{0, 7, 13, 24, 28, 39, 45, 56, 67, 76, 82, 90, 101, 108, 118, 132, 149, 160, 164, 169, 177, 185, 194, 202, 210, 222, 228, 231, 238, 241, 250}
 
 func (i Opcode) String() string {
 	if i >= Opcode(len(_Opcode_index)-1) {
