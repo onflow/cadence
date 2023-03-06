@@ -1071,3 +1071,149 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		assert.ErrorIs(t, err, testMemoryError{})
 	})
 }
+
+func TestMeterEncoding(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("string", func(t *testing.T) {
+
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+		rt.defaultConfig.AtreeValidationEnabled = false
+
+		address := common.MustBytesToAddress([]byte{0x1})
+		storage := newTestLedger(nil, nil)
+		meter := newTestMemoryGauge()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			meterMemory: meter.MeterMemory,
+		}
+
+		text := "A quick brown fox jumps over the lazy dog"
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(fmt.Sprintf(`
+                transaction() {
+                    prepare(acc: AuthAccount) {
+                        var s = "%s"
+                        acc.save(s, to:/storage/some_path)
+                    }
+                }`,
+					text,
+				)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.TransactionLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, 87, int(meter.getMemory(common.MemoryKindBytes)))
+	})
+
+	t.Run("string in loop", func(t *testing.T) {
+
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+		rt.defaultConfig.AtreeValidationEnabled = false
+
+		address := common.MustBytesToAddress([]byte{0x1})
+		storage := newTestLedger(nil, nil)
+		meter := newTestMemoryGauge()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			meterMemory: meter.MeterMemory,
+		}
+
+		text := "A quick brown fox jumps over the lazy dog"
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(fmt.Sprintf(`
+                transaction() {
+                    prepare(acc: AuthAccount) {
+                        var i = 0
+                        var s = "%s"
+                        while i<1000 {
+                            let path = StoragePath(identifier: "i".concat(i.toString()))!
+                            acc.save(s, to: path)
+                            i=i+1
+                        }
+                    }
+                }`,
+					text,
+				)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.TransactionLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, 62787, int(meter.getMemory(common.MemoryKindBytes)))
+	})
+
+	t.Run("composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+		rt.defaultConfig.AtreeValidationEnabled = false
+
+		address := common.MustBytesToAddress([]byte{0x1})
+		storage := newTestLedger(nil, nil)
+		meter := newTestMemoryGauge()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			meterMemory: meter.MeterMemory,
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(`
+                pub fun main() {
+                    let acc = getAuthAccount(0x02)
+                    var i = 0
+                    var f = Foo()
+                    while i<1000 {
+                        let path = StoragePath(identifier: "i".concat(i.toString()))!
+                        acc.save(f, to: path)
+                        i=i+1
+                    }
+                }
+
+                pub struct Foo {
+                    priv var id: Int
+                    init() {
+                        self.id = 123456789
+                    }
+                }`),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, 76941, int(meter.getMemory(common.MemoryKindBytes)))
+	})
+}

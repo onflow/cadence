@@ -7523,10 +7523,11 @@ func TestRuntimeComputationMetring(t *testing.T) {
 	t.Parallel()
 
 	type test struct {
-		name        string
-		code        string
-		ok          bool
-		expCompUsed uint
+		name      string
+		code      string
+		ok        bool
+		hits      uint
+		intensity uint
 	}
 
 	compLimit := uint(6)
@@ -7537,8 +7538,9 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			code: `
           while true {}
         `,
-			ok:          false,
-			expCompUsed: compLimit,
+			ok:        false,
+			hits:      compLimit,
+			intensity: 6,
 		},
 		{
 			name: "Limited while loop",
@@ -7548,24 +7550,36 @@ func TestRuntimeComputationMetring(t *testing.T) {
               i = i + 1
           }
         `,
-			ok:          false,
-			expCompUsed: compLimit,
+			ok:        false,
+			hits:      compLimit,
+			intensity: 6,
 		},
 		{
 			name: "statement + createArray + transferArray + too many for-in loop iterations",
 			code: `
           for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
         `,
-			ok:          false,
-			expCompUsed: compLimit,
+			ok:        false,
+			hits:      compLimit,
+			intensity: 15,
 		},
 		{
-			name: "statement + createArray + transferArray + some for-in loop iterations",
+			name: "statement + createArray + transferArray + two for-in loop iterations",
 			code: `
           for i in [1, 2] {}
         `,
-			ok:          true,
-			expCompUsed: 5,
+			ok:        true,
+			hits:      5,
+			intensity: 6,
+		},
+		{
+			name: "statement + functionInvocation + encoding",
+			code: `
+          acc.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
+        `,
+			ok:        true,
+			hits:      3,
+			intensity: 88,
 		},
 	}
 
@@ -7577,7 +7591,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
 				fmt.Sprintf(
 					`
                   transaction {
-                      prepare() {
+                      prepare(acc: AuthAccount) {
                           %s
                       }
                   }
@@ -7589,19 +7603,22 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			runtime := newTestInterpreterRuntime()
 
 			compErr := errors.New("computation exceeded limit")
-			var compUsed uint
+			var hits, totalIntensity uint
 			meterComputationFunc := func(kind common.ComputationKind, intensity uint) error {
-				compUsed++
-				if compUsed >= compLimit {
+				hits++
+				totalIntensity += intensity
+				if hits >= compLimit {
 					return compErr
 				}
 				return nil
 			}
 
+			address := common.MustBytesToAddress([]byte{0x1})
+
 			runtimeInterface := &testRuntimeInterface{
 				storage: newTestLedger(nil, nil),
 				getSigningAccounts: func() ([]Address, error) {
-					return nil, nil
+					return []Address{address}, nil
 				},
 				meterComputation: meterComputationFunc,
 			}
@@ -7627,7 +7644,8 @@ func TestRuntimeComputationMetring(t *testing.T) {
 				require.ErrorAs(t, err.(Error).Unwrap(), &compErr)
 			}
 
-			require.Equal(t, test.expCompUsed, compUsed)
+			assert.Equal(t, test.hits, hits)
+			assert.Equal(t, test.intensity, totalIntensity)
 		})
 	}
 }
