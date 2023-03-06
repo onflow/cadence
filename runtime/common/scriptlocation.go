@@ -70,6 +70,10 @@ func (l ScriptLocation) Description() string {
 	return fmt.Sprintf("script with ID %s", hex.EncodeToString(l[:]))
 }
 
+func (l ScriptLocation) ID() string {
+	return fmt.Sprintf("%s.%s", ScriptLocationPrefix, l)
+}
+
 func (l ScriptLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type   string

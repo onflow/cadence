@@ -74,6 +74,10 @@ func (l FlowLocation) Description() string {
 	return FlowLocationPrefix
 }
 
+func (l FlowLocation) ID() string {
+	return FlowLocationPrefix
+}
+
 func (l FlowLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type string

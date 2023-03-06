@@ -78,6 +78,19 @@ func TestFlowLocationTypeID(t *testing.T) {
 	)
 }
 
+func TestFlowLocationID(t *testing.T) {
+
+	t.Parallel()
+
+	location, _, err := decodeFlowLocationTypeID("flow.Bar.Baz")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"flow",
+		location.ID(),
+	)
+}
+
 func TestDecodeFlowLocationTypeID(t *testing.T) {
 
 	t.Parallel()

@@ -58,6 +58,22 @@ func TestScriptLocationTypeID(t *testing.T) {
 	)
 }
 
+func TestScriptLocationID(t *testing.T) {
+
+	t.Parallel()
+
+	location, _, err := decodeScriptLocationTypeID(
+		nil,
+		"s.0102000000000000000000000000000000000000000000000000000000000000.Bar.Baz",
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"s.0102000000000000000000000000000000000000000000000000000000000000",
+		location.ID(),
+	)
+}
+
 func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 	t.Parallel()

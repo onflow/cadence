@@ -58,6 +58,22 @@ func TestTransactionLocation_TypeID(t *testing.T) {
 	)
 }
 
+func TestTransactionLocation_ID(t *testing.T) {
+
+	t.Parallel()
+
+	location, _, err := decodeTransactionLocationTypeID(
+		nil,
+		"t.0102000000000000000000000000000000000000000000000000000000000000.Bar.Baz",
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"t.0102000000000000000000000000000000000000000000000000000000000000",
+		location.ID(),
+	)
+}
+
 func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 	t.Parallel()
