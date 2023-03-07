@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 
-	"github.com/onflow/cadence/runtime/bbq/vm/context"
+	"github.com/onflow/cadence/runtime/bbq/vm/config"
 	"github.com/onflow/cadence/runtime/bbq/vm/types"
 )
 
@@ -37,7 +37,6 @@ type CompositeValue struct {
 	staticType          types.StaticType
 	Kind                common.CompositeKind
 }
-
 
 var _ Value = &CompositeValue{}
 
@@ -89,7 +88,7 @@ func (v *CompositeValue) StaticType(memoryGauge common.MemoryGauge) types.Static
 	return v.staticType
 }
 
-func (v *CompositeValue) GetMember(ctx *context.Context, name string) Value {
+func (v *CompositeValue) GetMember(config *config.Config, name string) Value {
 	storable, err := v.dictionary.Get(
 		interpreter.StringAtreeComparator,
 		interpreter.StringAtreeHashInput,
@@ -102,7 +101,7 @@ func (v *CompositeValue) GetMember(ctx *context.Context, name string) Value {
 	}
 
 	if storable != nil {
-		interpreterValue := interpreter.StoredValue(ctx.MemoryGauge, storable, ctx.Storage)
+		interpreterValue := interpreter.StoredValue(config.MemoryGauge, storable, config.Storage)
 		// TODO: Temp conversion
 		return InterpreterValueToVMValue(interpreterValue)
 	}
@@ -110,7 +109,7 @@ func (v *CompositeValue) GetMember(ctx *context.Context, name string) Value {
 	return nil
 }
 
-func (v *CompositeValue) SetMember(ctx *context.Context, name string, value Value) {
+func (v *CompositeValue) SetMember(conf *config.Config, name string, value Value) {
 
 	// TODO:
 	//address := v.StorageID().Address
@@ -127,7 +126,7 @@ func (v *CompositeValue) SetMember(ctx *context.Context, name string, value Valu
 	existingStorable, err := v.dictionary.Set(
 		interpreter.StringAtreeComparator,
 		interpreter.StringAtreeHashInput,
-		interpreter.NewStringAtreeValue(ctx.MemoryGauge, name),
+		interpreter.NewStringAtreeValue(conf.MemoryGauge, name),
 		interpreterValue,
 	)
 
@@ -140,7 +139,7 @@ func (v *CompositeValue) SetMember(ctx *context.Context, name string, value Valu
 		//existingValue := interpreter.StoredValue(nil, existingStorable, context.Storage)
 		//existingValue.DeepRemove(interpreter)
 
-		context.RemoveReferencedSlab(ctx.Storage, existingStorable)
+		config.RemoveReferencedSlab(conf.Storage, existingStorable)
 	}
 }
 
@@ -167,7 +166,7 @@ func (v *CompositeValue) IsResourceKinded() bool {
 }
 
 func (v *CompositeValue) Transfer(
-	ctx *context.Context,
+	conf *config.Config,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -223,10 +222,10 @@ func (v *CompositeValue) Transfer(
 		}
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
-		common.UseMemory(ctx.MemoryGauge, elementMemoryUse)
+		common.UseMemory(conf.MemoryGauge, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
-			ctx.Storage,
+			conf.Storage,
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
@@ -246,10 +245,10 @@ func (v *CompositeValue) Transfer(
 				// NOTE: key is stringAtreeValue
 				// and does not need to be converted or copied
 
-				value := interpreter.MustConvertStoredValue(ctx.MemoryGauge, atreeValue)
+				value := interpreter.MustConvertStoredValue(conf.MemoryGauge, atreeValue)
 
 				vmValue := InterpreterValueToVMValue(value)
-				vmValue.Transfer(ctx, address, remove, nil)
+				vmValue.Transfer(conf, address, remove, nil)
 
 				return atreeKey, value, nil
 			},
@@ -260,15 +259,15 @@ func (v *CompositeValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
-				context.RemoveReferencedSlab(ctx.Storage, nameStorable)
-				context.RemoveReferencedSlab(ctx.Storage, valueStorable)
+				config.RemoveReferencedSlab(conf.Storage, nameStorable)
+				config.RemoveReferencedSlab(conf.Storage, valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 			//interpreter.maybeValidateAtreeValue(v.dictionary)
 
-			context.RemoveReferencedSlab(ctx.Storage, storable)
+			config.RemoveReferencedSlab(conf.Storage, storable)
 		}
 	}
 
@@ -308,7 +307,7 @@ func (v *CompositeValue) Transfer(
 
 	if res == nil {
 		typeInfo := interpreter.NewCompositeTypeInfo(
-			ctx.MemoryGauge,
+			conf.MemoryGauge,
 			v.Location,
 			v.QualifiedIdentifier,
 			v.Kind,
@@ -348,7 +347,7 @@ func (v *CompositeValue) Transfer(
 	return res
 }
 
-func (v *CompositeValue) Destroy(*context.Context) {
+func (v *CompositeValue) Destroy(*config.Config) {
 
 	//interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 	//

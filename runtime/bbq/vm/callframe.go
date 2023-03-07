@@ -25,6 +25,7 @@ import (
 
 type callFrame struct {
 	parent   *callFrame
+	context  *values.Context
 	locals   []values.Value
 	function *bbq.Function
 	ip       uint16

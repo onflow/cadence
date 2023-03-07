@@ -16,33 +16,25 @@
  * limitations under the License.
  */
 
-package context
+package values
 
 import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/runtime/bbq/vm/types"
 )
 
 type Context struct {
-	Storage
-	common.MemoryGauge
+	Program     *bbq.Program
+	Globals     []Value
+	Constants   []Value
+	StaticTypes []types.StaticType
 }
 
-type Storage interface {
-	atree.SlabStorage
-}
-
-func RemoveReferencedSlab(storage Storage, storable atree.Storable) {
-	storageIDStorable, ok := storable.(atree.StorageIDStorable)
-	if !ok {
-		return
-	}
-
-	storageID := atree.StorageID(storageIDStorable)
-	err := storage.Remove(storageID)
-	if err != nil {
-		panic(errors.NewExternalError(err))
+func NewContext(program *bbq.Program, globals []Value) *Context {
+	return &Context{
+		Program:     program,
+		Globals:     globals,
+		Constants:   make([]Value, len(program.Constants)),
+		StaticTypes: make([]types.StaticType, len(program.Types)),
 	}
 }

@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/bbq"
-	"github.com/onflow/cadence/runtime/bbq/vm/context"
+	"github.com/onflow/cadence/runtime/bbq/vm/config"
 	"github.com/onflow/cadence/runtime/bbq/vm/types"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -33,7 +33,7 @@ type Value interface {
 	isValue()
 	StaticType(common.MemoryGauge) types.StaticType
 	Transfer(
-		ctx *context.Context,
+		config *config.Config,
 		address atree.Address,
 		remove bool,
 		storable atree.Storable,
@@ -53,7 +53,7 @@ func (BoolValue) StaticType(common.MemoryGauge) types.StaticType {
 	return interpreter.PrimitiveStaticTypeBool
 }
 
-func (v BoolValue) Transfer(*context.Context, atree.Address, bool, atree.Storable) Value {
+func (v BoolValue) Transfer(*config.Config, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 
@@ -69,7 +69,7 @@ func (IntValue) StaticType(common.MemoryGauge) types.StaticType {
 	return interpreter.PrimitiveStaticTypeInt
 }
 
-func (v IntValue) Transfer(*context.Context, atree.Address, bool, atree.Storable) Value {
+func (v IntValue) Transfer(*config.Config, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 
@@ -97,6 +97,7 @@ func (v IntValue) Greater(other IntValue) Value {
 
 type FunctionValue struct {
 	Function *bbq.Function
+	Context  *Context
 }
 
 var _ Value = FunctionValue{}
@@ -107,7 +108,7 @@ func (FunctionValue) StaticType(common.MemoryGauge) types.StaticType {
 	panic(errors.NewUnreachableError())
 }
 
-func (v FunctionValue) Transfer(*context.Context, atree.Address, bool, atree.Storable) Value {
+func (v FunctionValue) Transfer(*config.Config, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 
@@ -123,6 +124,6 @@ func (StringValue) StaticType(common.MemoryGauge) types.StaticType {
 	return interpreter.PrimitiveStaticTypeString
 }
 
-func (v StringValue) Transfer(*context.Context, atree.Address, bool, atree.Storable) Value {
+func (v StringValue) Transfer(*config.Config, atree.Address, bool, atree.Storable) Value {
 	return v
 }

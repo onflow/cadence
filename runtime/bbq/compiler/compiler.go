@@ -36,6 +36,7 @@ import (
 type Compiler struct {
 	Program     *ast.Program
 	Elaboration *sema.Elaboration
+	Config      *Config
 
 	currentFunction      *function
 	currentCompositeType *sema.CompositeType
@@ -63,6 +64,7 @@ func NewCompiler(
 	return &Compiler{
 		Program:     program,
 		Elaboration: elaboration,
+		Config:      &Config{},
 		globals:     map[string]*global{},
 		typesInPool: map[sema.Type]uint16{},
 	}
@@ -183,11 +185,13 @@ func (c *Compiler) Compile() *bbq.Program {
 	functions := c.exportFunctions()
 	constants := c.exportConstants()
 	types := c.exportTypes()
+	imports := c.exportImports()
 
 	return &bbq.Program{
 		Functions: functions,
 		Constants: constants,
 		Types:     types,
+		Imports:   imports,
 	}
 }
 
@@ -211,6 +215,16 @@ func (c *Compiler) exportTypes() [][]byte {
 		types[index] = typeBytes
 	}
 	return types
+}
+
+func (c *Compiler) exportImports() []common.Location {
+	imports := c.Program.ImportDeclarations()
+	exportedImports := make([]common.Location, len(imports))
+	for index, importDecl := range imports {
+		exportedImports[index] = importDecl.Location
+	}
+
+	return exportedImports
 }
 
 func (c *Compiler) exportFunctions() []*bbq.Function {
@@ -701,9 +715,14 @@ func (c *Compiler) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ struct{})
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitImportDeclaration(_ *ast.ImportDeclaration) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {
+	importedProgram := c.Config.ImportHandler(declaration.Location)
+	for _, function := range importedProgram.Functions {
+		// TODO: Filter-in only public functions
+		c.addGlobal(function.Name)
+	}
+
+	return
 }
 
 func (c *Compiler) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) (_ struct{}) {

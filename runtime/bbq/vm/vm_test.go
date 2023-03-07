@@ -24,13 +24,16 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/bbq/vm/config"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/checker"
+	"github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/bbq/compiler"
-	"github.com/onflow/cadence/runtime/bbq/vm/context"
 	"github.com/onflow/cadence/runtime/bbq/vm/values"
 )
 
@@ -53,7 +56,7 @@ func TestRecursionFib(t *testing.T) {
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
-	vm := NewVM(program)
+	vm := NewVM(program, nil)
 
 	result, err := vm.Invoke(
 		"fib",
@@ -71,7 +74,7 @@ func BenchmarkRecursionFib(b *testing.B) {
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
-	vm := NewVM(program)
+	vm := NewVM(program, nil)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -115,7 +118,7 @@ func TestImperativeFib(t *testing.T) {
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
-	vm := NewVM(program)
+	vm := NewVM(program, nil)
 
 	result, err := vm.Invoke(
 		"fib",
@@ -133,7 +136,7 @@ func BenchmarkImperativeFib(b *testing.B) {
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
-	vm := NewVM(program)
+	vm := NewVM(program, nil)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -167,7 +170,7 @@ func TestBreak(t *testing.T) {
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
-	vm := NewVM(program)
+	vm := NewVM(program, nil)
 
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
@@ -197,7 +200,7 @@ func TestContinue(t *testing.T) {
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
-	vm := NewVM(program)
+	vm := NewVM(program, nil)
 
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
@@ -236,7 +239,7 @@ func TestNewStruct(t *testing.T) {
 
 	printProgram(program)
 
-	vm := NewVM(program)
+	vm := NewVM(program, nil)
 
 	result, err := vm.Invoke("test", values.IntValue{SmallInt: 10})
 	require.NoError(t, err)
@@ -248,7 +251,7 @@ func TestNewStruct(t *testing.T) {
 	require.Equal(
 		t,
 		values.IntValue{SmallInt: 12},
-		structValue.GetMember(vm.context, "id"),
+		structValue.GetMember(vm.config, "id"),
 	)
 }
 
@@ -281,7 +284,7 @@ func TestStructMethodCall(t *testing.T) {
 
 	printProgram(program)
 
-	vm := NewVM(program)
+	vm := NewVM(program, nil)
 
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
@@ -315,7 +318,7 @@ func BenchmarkNewStruct(b *testing.B) {
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
-	vm := NewVM(program)
+	vm := NewVM(program, nil)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -354,7 +357,7 @@ func BenchmarkNewResource(b *testing.B) {
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
-	vm := NewVM(program)
+	vm := NewVM(program, nil)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -370,7 +373,7 @@ func BenchmarkNewResource(b *testing.B) {
 func BenchmarkNewStructRaw(b *testing.B) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
-	ctx := &context.Context{
+	conf := &config.Config{
 		Storage: storage,
 	}
 
@@ -387,7 +390,7 @@ func BenchmarkNewStructRaw(b *testing.B) {
 				common.Address{},
 				storage.BasicSlabStorage,
 			)
-			structValue.SetMember(ctx, "id", fieldValue)
+			structValue.SetMember(conf, "id", fieldValue)
 		}
 	}
 }
@@ -395,4 +398,80 @@ func BenchmarkNewStructRaw(b *testing.B) {
 func printProgram(program *bbq.Program) {
 	byteCodePrinter := &bbq.BytecodePrinter{}
 	fmt.Println(byteCodePrinter.PrintProgram(program))
+}
+
+func TestImport(t *testing.T) {
+
+	t.Parallel()
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+      fun helloText(): String {
+          return "global function of the imported program"
+      }
+
+      struct Foo {
+          var id : String
+
+          init(_ id: String) {
+              self.id = id
+          }
+
+          fun sayHello(_ id: Int): String {
+              self.id
+              return helloText()
+          }
+      }
+
+        `,
+		ParseAndCheckOptions{
+			Location: utils.ImportedLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	subComp := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
+	importedProgram := subComp.Compile()
+	printProgram(importedProgram)
+
+	checker, err := ParseAndCheckWithOptions(t, `
+      import Foo from 0x01
+
+      fun test(): String {
+          var r = Foo("Hello from Foo!")
+          return r.sayHello(1)
+      }
+  `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+	comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
+		return importedProgram
+	}
+
+	program := comp.Compile()
+	printProgram(program)
+
+	vmConfig := &config.Config{
+		ImportHandler: func(location common.Location) *bbq.Program {
+			return importedProgram
+		},
+	}
+
+	vm := NewVM(program, vmConfig)
+
+	result, err := vm.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t, values.StringValue{String: []byte("global function of the imported program")}, result)
 }

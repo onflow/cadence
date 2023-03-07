@@ -20,11 +20,12 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/bbq/constantkind"
 	"github.com/onflow/cadence/runtime/bbq/leb128"
 	"github.com/onflow/cadence/runtime/bbq/opcode"
-	"github.com/onflow/cadence/runtime/bbq/vm/context"
+	"github.com/onflow/cadence/runtime/bbq/vm/config"
 	"github.com/onflow/cadence/runtime/bbq/vm/types"
 	"github.com/onflow/cadence/runtime/bbq/vm/values"
 	"github.com/onflow/cadence/runtime/common"
@@ -33,47 +34,72 @@ import (
 )
 
 type VM struct {
-	Program     *bbq.Program
-	globals     []values.Value
-	constants   []values.Value
-	staticTypes []types.StaticType
-	functions   map[string]*bbq.Function
-	callFrame   *callFrame
-	stack       []values.Value
-	context     *context.Context
+	functions map[string]values.FunctionValue
+	callFrame *callFrame
+	stack     []values.Value
+	config    *config.Config
 }
 
-func NewVM(program *bbq.Program) *VM {
-	// TODO: include non-function globals
+func NewVM(program *bbq.Program, conf *config.Config) *VM {
+	if conf == nil {
+		conf = &config.Config{}
+	}
+	conf.Storage = interpreter.NewInMemoryStorage(nil)
+
+	globals := initializeGlobals(program, conf)
+	functions := indexFunctions(program.Functions, globals)
+
+	return &VM{
+		functions: functions,
+		config:    conf,
+	}
+}
+
+func initializeGlobals(program *bbq.Program, conf *config.Config) []values.Value {
+	// TODO: global variable lookup relies too much on the order.
+	// 	Figure out a better way.
+
+	var importedGlobals []values.Value
+	for _, location := range program.Imports {
+		importedProgram := conf.ImportHandler(location)
+		// TODO: cache imported globals for imported programs.
+		importedProgramGlobals := initializeGlobals(importedProgram, conf)
+		importedGlobals = append(importedGlobals, importedProgramGlobals...)
+	}
+
+	ctx := values.NewContext(program, nil)
+
 	// Iterate through `program.Functions` to be deterministic.
 	// Order of globals must be same as index set at `Compiler.addGlobal()`.
+	// TODO: include non-function globals
+
 	globals := make([]values.Value, 0, len(program.Functions))
 	for _, function := range program.Functions {
 		// TODO:
-		globals = append(globals, values.FunctionValue{Function: function})
+		globals = append(globals, values.FunctionValue{
+			Function: function,
+			Context:  ctx,
+		})
 	}
 
-	functions := indexFunctions(program.Functions)
+	// Imported globals are added first.
+	// This is the same order as they are added in the compiler.
+	ctx.Globals = importedGlobals
+	ctx.Globals = append(ctx.Globals, globals...)
 
-	ctx := &context.Context{
-		Storage: interpreter.NewInMemoryStorage(nil),
-	}
-
-	return &VM{
-		Program:     program,
-		globals:     globals,
-		functions:   functions,
-		constants:   make([]values.Value, len(program.Constants)),
-		staticTypes: make([]types.StaticType, len(program.Types)),
-		context:     ctx,
-	}
+	// Return only the globals defined in the current program.
+	// Because the importer/caller doesn't need to know globals of nested imports.
+	return globals
 }
 
-func indexFunctions(functions []*bbq.Function) map[string]*bbq.Function {
-	indexedFunctions := make(map[string]*bbq.Function, len(functions))
-	for _, function := range functions {
-		indexedFunctions[function.Name] = function
+func indexFunctions(functions []*bbq.Function, globals []values.Value) map[string]values.FunctionValue {
+	// TODO: Filter out non-functions
+	indexedFunctions := make(map[string]values.FunctionValue, len(functions))
+	for _, globalValue := range globals {
+		function := globalValue.(values.FunctionValue)
+		indexedFunctions[function.Function.Name] = function
 	}
+
 	return indexedFunctions
 }
 
@@ -112,7 +138,7 @@ func (vm *VM) replaceTop(value values.Value) {
 	vm.stack[lastIndex] = value
 }
 
-func (vm *VM) pushCallFrame(function *bbq.Function, arguments []values.Value) {
+func (vm *VM) pushCallFrame(ctx *values.Context, function *bbq.Function, arguments []values.Value) {
 	locals := make([]values.Value, function.LocalCount)
 	for i, argument := range arguments {
 		locals[i] = argument
@@ -122,6 +148,7 @@ func (vm *VM) pushCallFrame(function *bbq.Function, arguments []values.Value) {
 		parent:   vm.callFrame,
 		locals:   locals,
 		function: function,
+		context:  ctx,
 	}
 	vm.callFrame = callFrame
 }
@@ -136,11 +163,11 @@ func (vm *VM) Invoke(name string, arguments ...values.Value) (values.Value, erro
 		return nil, errors.NewDefaultUserError("unknown function")
 	}
 
-	if len(arguments) != int(function.ParameterCount) {
+	if len(arguments) != int(function.Function.ParameterCount) {
 		return nil, errors.NewDefaultUserError("wrong number of arguments")
 	}
 
-	vm.pushCallFrame(function, arguments)
+	vm.pushCallFrame(function.Context, function.Function, arguments)
 
 	vm.run()
 
@@ -230,7 +257,7 @@ func opFalse(vm *VM) {
 func opGetConstant(vm *VM) {
 	callFrame := vm.callFrame
 	index := callFrame.getUint16()
-	constant := vm.constants[index]
+	constant := callFrame.context.Constants[index]
 	if constant == nil {
 		constant = vm.initializeConstant(index)
 	}
@@ -253,7 +280,7 @@ func opSetLocal(vm *VM) {
 func opGetGlobal(vm *VM) {
 	callFrame := vm.callFrame
 	index := callFrame.getUint16()
-	vm.push(vm.globals[index])
+	vm.push(callFrame.context.Globals[index])
 }
 
 func opInvokeStatic(vm *VM) {
@@ -262,7 +289,8 @@ func opInvokeStatic(vm *VM) {
 	stackHeight := len(vm.stack)
 	parameterCount := int(value.Function.ParameterCount)
 	arguments := vm.stack[stackHeight-parameterCount:]
-	vm.pushCallFrame(value.Function, arguments)
+
+	vm.pushCallFrame(value.Context, value.Function, arguments)
 	vm.dropN(parameterCount)
 }
 
@@ -275,7 +303,7 @@ func opInvoke(vm *VM) {
 	parameterCount := int(value.Function.ParameterCount) + 1
 
 	arguments := vm.stack[stackHeight-parameterCount:]
-	vm.pushCallFrame(value.Function, arguments)
+	vm.pushCallFrame(value.Context, value.Function, arguments)
 	vm.dropN(parameterCount)
 }
 
@@ -302,7 +330,7 @@ func opNew(vm *VM) {
 		typeName,
 		compositeKind,
 		common.Address{},
-		vm.context.Storage,
+		vm.config.Storage,
 	)
 	vm.push(value)
 }
@@ -316,7 +344,7 @@ func opSetField(vm *VM) {
 
 	fieldValue := vm.pop()
 
-	structValue.SetMember(vm.context, fieldNameStr, fieldValue)
+	structValue.SetMember(vm.config, fieldNameStr, fieldValue)
 }
 
 func opGetField(vm *VM) {
@@ -326,7 +354,7 @@ func opGetField(vm *VM) {
 	// TODO: support all container types
 	structValue := vm.pop().(*values.CompositeValue)
 
-	fieldValue := structValue.GetMember(vm.context, fieldNameStr)
+	fieldValue := structValue.GetMember(vm.config, fieldNameStr)
 	vm.push(fieldValue)
 }
 
@@ -336,12 +364,12 @@ func opCheckType(vm *VM) {
 	value := vm.peek()
 
 	transferredValue := value.Transfer(
-		vm.context,
+		vm.config,
 		atree.Address{},
 		false, nil,
 	)
 
-	valueType := transferredValue.StaticType(vm.context.MemoryGauge)
+	valueType := transferredValue.StaticType(vm.config.MemoryGauge)
 	if !types.IsSubType(valueType, targetType) {
 		panic("invalid transfer")
 	}
@@ -351,7 +379,7 @@ func opCheckType(vm *VM) {
 
 func opDestroy(vm *VM) {
 	value := vm.peek().(*values.CompositeValue)
-	value.Destroy(vm.context)
+	value.Destroy(vm.config)
 }
 
 func (vm *VM) run() {
@@ -421,7 +449,9 @@ func (vm *VM) run() {
 }
 
 func (vm *VM) initializeConstant(index uint16) (value values.Value) {
-	constant := vm.Program.Constants[index]
+	ctx := vm.callFrame.context
+
+	constant := ctx.Program.Constants[index]
 	switch constant.Kind {
 	case constantkind.Int:
 		// TODO:
@@ -433,13 +463,15 @@ func (vm *VM) initializeConstant(index uint16) (value values.Value) {
 		// TODO:
 		panic(errors.NewUnreachableError())
 	}
-	vm.constants[index] = value
+
+	ctx.Constants[index] = value
 	return value
 }
 
 func (vm *VM) loadType() types.StaticType {
-	index := vm.callFrame.getUint16()
-	staticType := vm.staticTypes[index]
+	callframe := vm.callFrame
+	index := callframe.getUint16()
+	staticType := callframe.context.StaticTypes[index]
 	if staticType == nil {
 		staticType = vm.initializeType(index)
 	}
@@ -448,14 +480,15 @@ func (vm *VM) loadType() types.StaticType {
 }
 
 func (vm *VM) initializeType(index uint16) interpreter.StaticType {
-	typeBytes := vm.Program.Types[index]
+	ctx := vm.callFrame.context
+	typeBytes := ctx.Program.Types[index]
 	dec := interpreter.CBORDecMode.NewByteStreamDecoder(typeBytes)
 	staticType, err := interpreter.NewTypeDecoder(dec, nil).DecodeStaticType()
 	if err != nil {
 		panic(err)
 	}
 
-	vm.staticTypes[index] = staticType
+	ctx.StaticTypes[index] = staticType
 	return staticType
 }
 
