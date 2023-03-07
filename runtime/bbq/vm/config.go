@@ -1,7 +1,8 @@
-package config
+package vm
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/bbq/compiler"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -10,8 +11,11 @@ import (
 type Config struct {
 	Storage
 	common.MemoryGauge
-	ImportHandler compiler.ImportHandler
+	compiler.ImportHandler
+	ContractValueHandler
 }
+
+type ContractValueHandler func(conf *Config, location common.Location) *CompositeValue
 
 type Storage interface {
 	atree.SlabStorage

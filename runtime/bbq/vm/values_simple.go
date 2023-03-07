@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 
-package values
+package vm
 
 import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/bbq"
-	"github.com/onflow/cadence/runtime/bbq/vm/config"
-	"github.com/onflow/cadence/runtime/bbq/vm/types"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -31,9 +29,9 @@ import (
 
 type Value interface {
 	isValue()
-	StaticType(common.MemoryGauge) types.StaticType
+	StaticType(common.MemoryGauge) StaticType
 	Transfer(
-		config *config.Config,
+		config *Config,
 		address atree.Address,
 		remove bool,
 		storable atree.Storable,
@@ -49,11 +47,11 @@ var _ Value = BoolValue(true)
 
 func (BoolValue) isValue() {}
 
-func (BoolValue) StaticType(common.MemoryGauge) types.StaticType {
+func (BoolValue) StaticType(common.MemoryGauge) StaticType {
 	return interpreter.PrimitiveStaticTypeBool
 }
 
-func (v BoolValue) Transfer(*config.Config, atree.Address, bool, atree.Storable) Value {
+func (v BoolValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 
@@ -65,11 +63,11 @@ var _ Value = IntValue{}
 
 func (IntValue) isValue() {}
 
-func (IntValue) StaticType(common.MemoryGauge) types.StaticType {
+func (IntValue) StaticType(common.MemoryGauge) StaticType {
 	return interpreter.PrimitiveStaticTypeInt
 }
 
-func (v IntValue) Transfer(*config.Config, atree.Address, bool, atree.Storable) Value {
+func (v IntValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 
@@ -104,11 +102,11 @@ var _ Value = FunctionValue{}
 
 func (FunctionValue) isValue() {}
 
-func (FunctionValue) StaticType(common.MemoryGauge) types.StaticType {
+func (FunctionValue) StaticType(common.MemoryGauge) StaticType {
 	panic(errors.NewUnreachableError())
 }
 
-func (v FunctionValue) Transfer(*config.Config, atree.Address, bool, atree.Storable) Value {
+func (v FunctionValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 
@@ -120,10 +118,10 @@ var _ Value = StringValue{}
 
 func (StringValue) isValue() {}
 
-func (StringValue) StaticType(common.MemoryGauge) types.StaticType {
+func (StringValue) StaticType(common.MemoryGauge) StaticType {
 	return interpreter.PrimitiveStaticTypeString
 }
 
-func (v StringValue) Transfer(*config.Config, atree.Address, bool, atree.Storable) Value {
+func (v StringValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
 	return v
 }

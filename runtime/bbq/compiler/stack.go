@@ -16,23 +16,28 @@
  * limitations under the License.
  */
 
-package types
+package compiler
 
-import "github.com/onflow/cadence/runtime/interpreter"
+type Stack[T any] struct {
+	elements []T
+}
 
-type StaticType = interpreter.StaticType
+func (s *Stack[T]) push(typ T) {
+	s.elements = append(s.elements, typ)
+}
 
-func IsSubType(sourceType, targetType StaticType) bool {
-	if targetType == interpreter.PrimitiveStaticTypeAny {
-		return true
-	}
+func (s *Stack[T]) pop() T {
+	lastIndex := len(s.elements) - 1
+	top := s.elements[lastIndex]
+	s.elements = s.elements[:lastIndex]
+	return top
+}
 
-	// Optimization: If the static types are equal, then no need to check further.
-	if sourceType.Equal(targetType) {
-		return true
-	}
+func (s *Stack[T]) top() T {
+	lastIndex := len(s.elements) - 1
+	return s.elements[lastIndex]
+}
 
-	// TODO: Add the remaining subType rules
-
-	return false
+func (s *Stack[T]) isEmpty() bool {
+	return len(s.elements) == 0
 }

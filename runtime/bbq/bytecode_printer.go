@@ -63,6 +63,7 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 			opcode.GetLocal,
 			opcode.SetLocal,
 			opcode.GetGlobal,
+			opcode.SetGlobal,
 			opcode.Jump,
 			opcode.JumpIfFalse,
 			opcode.CheckType:
@@ -80,7 +81,8 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 			var typeName string
 			typeName, i = p.getStringOperand(codes, i)
 
-			p.stringBuilder.WriteString(" " + fmt.Sprint(kind) + " " + string(location.TypeID(nil, typeName)))
+			p.stringBuilder.WriteString(" " + fmt.Sprint(kind) +
+				" " + string(location.TypeID(nil, typeName)))
 
 		// opcodes with no operands
 		default:

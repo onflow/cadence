@@ -16,18 +16,17 @@
  * limitations under the License.
  */
 
-package values
+package vm
 
 import (
 	"github.com/onflow/cadence/runtime/bbq"
-	"github.com/onflow/cadence/runtime/bbq/vm/types"
 )
 
 type Context struct {
 	Program     *bbq.Program
 	Globals     []Value
 	Constants   []Value
-	StaticTypes []types.StaticType
+	StaticTypes []StaticType
 }
 
 func NewContext(program *bbq.Program, globals []Value) *Context {
@@ -35,6 +34,6 @@ func NewContext(program *bbq.Program, globals []Value) *Context {
 		Program:     program,
 		Globals:     globals,
 		Constants:   make([]Value, len(program.Constants)),
-		StaticTypes: make([]types.StaticType, len(program.Types)),
+		StaticTypes: make([]StaticType, len(program.Types)),
 	}
 }

@@ -16,26 +16,52 @@
  * limitations under the License.
  */
 
-package values
+package vm
 
 import (
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 // Utility methods to convert between old and new values.
 // These are temporary until all parts of the interpreter are migrated to the vm.
 
-func InterpreterValueToVMValue(value interpreter.Value) Value {
+func InterpreterValueToVMValue(config *Config, value interpreter.Value) Value {
 	switch value := value.(type) {
 	case interpreter.IntValue:
 		return IntValue{value.BigInt.Int64()}
 	case *interpreter.StringValue:
 		return StringValue{String: []byte(value.Str)}
+	case *interpreter.CompositeValue:
+		return NewCompositeValue(
+			value.Location,
+			value.QualifiedIdentifier,
+			value.Kind,
+			common.Address{},
+			config.Storage,
+		)
 	default:
 		panic(errors.NewUnreachableError())
 	}
 }
+
+var inter = func() *interpreter.Interpreter {
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage: interpreter.NewInMemoryStorage(nil),
+		},
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return inter
+}()
 
 func VMValueToInterpreterValue(value Value) interpreter.Value {
 	switch value := value.(type) {
@@ -43,6 +69,16 @@ func VMValueToInterpreterValue(value Value) interpreter.Value {
 		return interpreter.NewIntValueFromInt64(nil, value.SmallInt)
 	case StringValue:
 		return interpreter.NewUnmeteredStringValue(string(value.String))
+	case *CompositeValue:
+		return interpreter.NewCompositeValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			value.Location,
+			value.QualifiedIdentifier,
+			value.Kind,
+			nil,
+			common.Address{},
+		)
 	default:
 		panic(errors.NewUnreachableError())
 	}

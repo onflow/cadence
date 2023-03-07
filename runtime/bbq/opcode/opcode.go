@@ -49,14 +49,18 @@ const (
 	GetLocal
 	SetLocal
 	GetGlobal
+	SetGlobal
 	GetField
 	SetField
 
-	InvokeStatic
 	Invoke
+	InvokeStatic
+	InvokeNative
 
 	New
 	Destroy
-	Pop
 	CheckType
+
+	Drop
+	Dup
 )

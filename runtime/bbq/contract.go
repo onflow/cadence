@@ -16,30 +16,9 @@
  * limitations under the License.
  */
 
-package vm
+package bbq
 
-import (
-	"github.com/onflow/cadence/runtime/bbq"
-)
-
-type callFrame struct {
-	parent   *callFrame
-	context  *Context
-	locals   []Value
-	function *bbq.Function
-	ip       uint16
-}
-
-func (f *callFrame) getUint16() uint16 {
-	first := f.function.Code[f.ip]
-	last := f.function.Code[f.ip+1]
-	f.ip += 2
-	return uint16(first)<<8 | uint16(last)
-}
-
-func (f *callFrame) getString() string {
-	strLen := f.getUint16()
-	str := string(f.function.Code[f.ip : f.ip+strLen])
-	f.ip = f.ip + strLen
-	return str
+type Contract struct {
+	Name    string
+	Address []byte
 }

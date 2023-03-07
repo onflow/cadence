@@ -16,17 +16,13 @@
  * limitations under the License.
  */
 
-package values
+package vm
 
 import (
 	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-
-	"github.com/onflow/cadence/runtime/bbq/vm/config"
-	"github.com/onflow/cadence/runtime/bbq/vm/types"
 )
 
 type CompositeValue struct {
@@ -34,7 +30,7 @@ type CompositeValue struct {
 	Location            common.Location
 	QualifiedIdentifier string
 	typeID              common.TypeID
-	staticType          types.StaticType
+	staticType          StaticType
 	Kind                common.CompositeKind
 }
 
@@ -74,7 +70,7 @@ func NewCompositeValue(
 
 func (*CompositeValue) isValue() {}
 
-func (v *CompositeValue) StaticType(memoryGauge common.MemoryGauge) types.StaticType {
+func (v *CompositeValue) StaticType(memoryGauge common.MemoryGauge) StaticType {
 	if v.staticType == nil {
 		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
 		// use the TypeID accessor, which may return an already computed type ID
@@ -88,7 +84,7 @@ func (v *CompositeValue) StaticType(memoryGauge common.MemoryGauge) types.Static
 	return v.staticType
 }
 
-func (v *CompositeValue) GetMember(config *config.Config, name string) Value {
+func (v *CompositeValue) GetMember(config *Config, name string) Value {
 	storable, err := v.dictionary.Get(
 		interpreter.StringAtreeComparator,
 		interpreter.StringAtreeHashInput,
@@ -103,13 +99,13 @@ func (v *CompositeValue) GetMember(config *config.Config, name string) Value {
 	if storable != nil {
 		interpreterValue := interpreter.StoredValue(config.MemoryGauge, storable, config.Storage)
 		// TODO: Temp conversion
-		return InterpreterValueToVMValue(interpreterValue)
+		return InterpreterValueToVMValue(config, interpreterValue)
 	}
 
 	return nil
 }
 
-func (v *CompositeValue) SetMember(conf *config.Config, name string, value Value) {
+func (v *CompositeValue) SetMember(conf *Config, name string, value Value) {
 
 	// TODO:
 	//address := v.StorageID().Address
@@ -139,7 +135,7 @@ func (v *CompositeValue) SetMember(conf *config.Config, name string, value Value
 		//existingValue := interpreter.StoredValue(nil, existingStorable, context.Storage)
 		//existingValue.DeepRemove(interpreter)
 
-		config.RemoveReferencedSlab(conf.Storage, existingStorable)
+		RemoveReferencedSlab(conf.Storage, existingStorable)
 	}
 }
 
@@ -166,7 +162,7 @@ func (v *CompositeValue) IsResourceKinded() bool {
 }
 
 func (v *CompositeValue) Transfer(
-	conf *config.Config,
+	conf *Config,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -247,7 +243,7 @@ func (v *CompositeValue) Transfer(
 
 				value := interpreter.MustConvertStoredValue(conf.MemoryGauge, atreeValue)
 
-				vmValue := InterpreterValueToVMValue(value)
+				vmValue := InterpreterValueToVMValue(nil, value)
 				vmValue.Transfer(conf, address, remove, nil)
 
 				return atreeKey, value, nil
@@ -259,15 +255,15 @@ func (v *CompositeValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
-				config.RemoveReferencedSlab(conf.Storage, nameStorable)
-				config.RemoveReferencedSlab(conf.Storage, valueStorable)
+				RemoveReferencedSlab(conf.Storage, nameStorable)
+				RemoveReferencedSlab(conf.Storage, valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 			//interpreter.maybeValidateAtreeValue(v.dictionary)
 
-			config.RemoveReferencedSlab(conf.Storage, storable)
+			RemoveReferencedSlab(conf.Storage, storable)
 		}
 	}
 
@@ -347,7 +343,7 @@ func (v *CompositeValue) Transfer(
 	return res
 }
 
-func (v *CompositeValue) Destroy(*config.Config) {
+func (v *CompositeValue) Destroy(*Config) {
 
 	//interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 	//

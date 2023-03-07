@@ -21,6 +21,7 @@ package compiler
 import (
 	"bytes"
 	"math"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/bbq"
@@ -38,8 +39,8 @@ type Compiler struct {
 	Elaboration *sema.Elaboration
 	Config      *Config
 
-	currentFunction      *function
-	currentCompositeType *sema.CompositeType
+	currentFunction    *function
+	compositeTypeStack *Stack[*sema.CompositeType]
 
 	functions   []*function
 	constants   []*constant
@@ -67,6 +68,9 @@ func NewCompiler(
 		Config:      &Config{},
 		globals:     map[string]*global{},
 		typesInPool: map[sema.Type]uint16{},
+		compositeTypeStack: &Stack[*sema.CompositeType]{
+			elements: make([]*sema.CompositeType, 0),
+		},
 	}
 }
 
@@ -89,7 +93,7 @@ func (c *Compiler) addGlobal(name string) *global {
 func (c *Compiler) addFunction(name string, parameterCount uint16) *function {
 	c.addGlobal(name)
 
-	isCompositeFunction := c.currentCompositeType != nil
+	isCompositeFunction := !c.compositeTypeStack.isEmpty()
 
 	function := newFunction(name, parameterCount, isCompositeFunction)
 	c.functions = append(c.functions, function)
@@ -186,12 +190,14 @@ func (c *Compiler) Compile() *bbq.Program {
 	constants := c.exportConstants()
 	types := c.exportTypes()
 	imports := c.exportImports()
+	contract := c.exportContract()
 
 	return &bbq.Program{
 		Functions: functions,
 		Constants: constants,
 		Types:     types,
 		Imports:   imports,
+		Contract:  contract,
 	}
 }
 
@@ -242,6 +248,20 @@ func (c *Compiler) exportFunctions() []*bbq.Function {
 		)
 	}
 	return functions
+}
+
+func (c *Compiler) exportContract() *bbq.Contract {
+	contractDecl := c.Program.SoleContractDeclaration()
+	if contractDecl == nil {
+		return nil
+	}
+
+	contractType := c.Elaboration.CompositeDeclarationTypes[contractDecl]
+	addressLocation := contractType.Location.(common.AddressLocation)
+	return &bbq.Contract{
+		Name:    addressLocation.Name,
+		Address: addressLocation.Address[:],
+	}
 }
 
 func (c *Compiler) compileDeclaration(declaration ast.Declaration) {
@@ -380,7 +400,8 @@ func (c *Compiler) VisitSwapStatement(_ *ast.SwapStatement) (_ struct{}) {
 
 func (c *Compiler) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
 	c.compileExpression(statement.Expression)
-	c.emit(opcode.Pop)
+	// Drop the expression evaluation result
+	c.emit(opcode.Drop)
 	return
 }
 
@@ -461,17 +482,28 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 		c.emitVariableLoad(invokedExpr.Identifier.Identifier)
 		c.emit(opcode.InvokeStatic)
 	case *ast.MemberExpression:
-		// Receiver is loaded first. So 'self' is always the zero-th argument.
-		// This must be in sync with `compileCompositeFunction`.
-		c.compileExpression(invokedExpr.Expression)
-		// Load arguments
-		c.loadArguments(expression)
-		// Load function value
 		memberInfo := c.Elaboration.MemberExpressionMemberInfos[invokedExpr]
 		typeName := memberInfo.AccessedType.QualifiedString()
 		funcName := compositeFunctionQualifiedName(typeName, invokedExpr.Identifier.Identifier)
-		c.emitVariableLoad(funcName)
-		c.emit(opcode.Invoke)
+
+		invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
+		if invocationType.IsConstructor {
+			// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
+			// Load arguments
+			c.loadArguments(expression)
+			// Load function value
+			c.emitVariableLoad(funcName)
+			c.emit(opcode.InvokeStatic)
+		} else {
+			// Receiver is loaded first. So 'self' is always the zero-th argument.
+			// This must be in sync with `compileCompositeFunction`.
+			c.compileExpression(invokedExpr.Expression)
+			// Load arguments
+			c.loadArguments(expression)
+			// Load function value
+			c.emitVariableLoad(funcName)
+			c.emit(opcode.Invoke)
+		}
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -580,16 +612,34 @@ func (c *Compiler) VisitPathExpression(_ *ast.PathExpression) (_ struct{}) {
 }
 
 func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) (_ struct{}) {
-	enclosingCompositeTypeName := c.currentCompositeType.Identifier
-
-	var functionName string
 	kind := declaration.DeclarationKind()
 	switch kind {
 	case common.DeclarationKindInitializer:
-		functionName = enclosingCompositeTypeName
+		c.compileInitializer(declaration)
 	default:
 		// TODO: support other special functions
 		panic(errors.NewUnreachableError())
+	}
+	return
+}
+
+func (c *Compiler) compileInitializer(declaration *ast.SpecialFunctionDeclaration) {
+	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
+	enclosingType := c.compositeTypeStack.top()
+
+	var functionName string
+	if enclosingType.Kind == common.CompositeKindContract {
+		// For contracts, add the initializer as `init()`.
+		// A global variable with the same name as contract is separately added.
+		// The VM will load the contract and assign to that global variable during imports resolution.
+		functionName = compositeFunctionQualifiedName(
+			enclosingType.Identifier,
+			declaration.DeclarationIdentifier().Identifier,
+		)
+	} else {
+		// Use the type name as the function name for initializer.
+		// So `x = Foo()` would directly call the init method.
+		functionName = enclosingCompositeTypeName
 	}
 
 	parameters := declaration.FunctionDeclaration.ParameterList.Parameters
@@ -608,7 +658,8 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 	// Initialize an empty struct and assign to `self`.
 	// i.e: `self = New()`
 
-	location := c.currentCompositeType.Location
+	enclosingCompositeType := c.compositeTypeStack.top()
+	location := enclosingCompositeType.Location
 	locationBytes, err := locationToBytes(location)
 	if err != nil {
 		panic(err)
@@ -623,7 +674,7 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 	args := make([]byte, 0, byteSize)
 
 	// Write composite kind
-	kindFirst, kindSecond := encodeUint16(uint16(c.currentCompositeType.Kind))
+	kindFirst, kindSecond := encodeUint16(uint16(enclosingCompositeType.Kind))
 	args = append(args, kindFirst, kindSecond)
 
 	// Write location
@@ -637,6 +688,24 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 	args = append(args, enclosingCompositeTypeName...)
 
 	c.emit(opcode.New, args...)
+
+	if enclosingType.Kind == common.CompositeKindContract {
+		// During contract init, update the global variable with the newly initialized contract value.
+		// So accessing the contract through the global variable while initializing itself, would work.
+		// i.e:
+		// contract Foo {
+		//     init() {
+		//        Foo.something()  // <-- accessing `Foo` while initializing `Foo`
+		//     }
+		// }
+
+		// Duplicate the top of stack and store it in both global variable and in `self`
+		c.emit(opcode.Dup)
+		global := c.findGlobal(enclosingCompositeTypeName)
+		first, second := encodeUint16(global.index)
+		c.emit(opcode.SetGlobal, first, second)
+	}
+
 	c.emit(opcode.SetLocal, selfFirst, selfSecond)
 
 	// Emit for the statements in `init()` body.
@@ -645,8 +714,6 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 	// Constructor should return the created the struct. i.e: return `self`
 	c.emit(opcode.GetLocal, selfFirst, selfSecond)
 	c.emit(opcode.ReturnValue)
-
-	return
 }
 
 func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
@@ -658,10 +725,8 @@ func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration
 }
 
 func (c *Compiler) declareFunction(declaration *ast.FunctionDeclaration) *function {
-	functionName := declaration.Identifier.Identifier
-	if c.currentCompositeType != nil {
-		functionName = compositeFunctionQualifiedName(c.currentCompositeType.Identifier, functionName)
-	}
+	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
+	functionName := compositeFunctionQualifiedName(enclosingCompositeTypeName, declaration.Identifier.Identifier)
 
 	functionType := c.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 	parameterCount := len(functionType.Parameters)
@@ -673,10 +738,13 @@ func (c *Compiler) declareFunction(declaration *ast.FunctionDeclaration) *functi
 }
 
 func (c *Compiler) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
-	prevCompositeType := c.currentCompositeType
-	c.currentCompositeType = c.Elaboration.CompositeDeclarationTypes[declaration]
+	if declaration.DeclarationKind() == common.DeclarationKindContract {
+		c.addGlobal(declaration.Identifier.Identifier)
+	}
+
+	c.compositeTypeStack.push(c.Elaboration.CompositeDeclarationTypes[declaration])
 	defer func() {
-		c.currentCompositeType = prevCompositeType
+		c.compositeTypeStack.pop()
 	}()
 
 	for _, specialFunc := range declaration.Members.SpecialFunctions() {
@@ -685,6 +753,10 @@ func (c *Compiler) VisitCompositeDeclaration(declaration *ast.CompositeDeclarati
 
 	for _, function := range declaration.Members.Functions() {
 		c.compileCompositeFunction(function)
+	}
+
+	for _, nestedTypes := range declaration.Members.Composites() {
+		c.compileDeclaration(nestedTypes)
 	}
 
 	// TODO:
@@ -717,6 +789,13 @@ func (c *Compiler) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ struct{})
 
 func (c *Compiler) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {
 	importedProgram := c.Config.ImportHandler(declaration.Location)
+
+	// Add a global variable for the imported contract value.
+	contractDecl := importedProgram.Contract
+	if contractDecl != nil {
+		c.addGlobal(contractDecl.Name)
+	}
+
 	for _, function := range importedProgram.Functions {
 		// TODO: Filter-in only public functions
 		c.addGlobal(function.Name)
@@ -768,7 +847,27 @@ func (c *Compiler) addType(data []byte) uint16 {
 	return uint16(count)
 }
 
+func (c *Compiler) enclosingCompositeTypeFullyQualifiedName() string {
+	if c.compositeTypeStack.isEmpty() {
+		return ""
+	}
+
+	var sb strings.Builder
+	for i, typ := range c.compositeTypeStack.elements {
+		if i > 0 {
+			sb.WriteRune('.')
+		}
+		sb.WriteString(typ.Identifier)
+	}
+
+	return sb.String()
+}
+
 func compositeFunctionQualifiedName(typeName, functionName string) string {
+	if typeName == "" {
+		return functionName
+	}
+
 	return typeName + "." + functionName
 }
 

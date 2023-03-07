@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,28 +18,21 @@
 
 package vm
 
-import (
-	"github.com/onflow/cadence/runtime/bbq"
-)
+import "github.com/onflow/cadence/runtime/interpreter"
 
-type callFrame struct {
-	parent   *callFrame
-	context  *Context
-	locals   []Value
-	function *bbq.Function
-	ip       uint16
-}
+type StaticType = interpreter.StaticType
 
-func (f *callFrame) getUint16() uint16 {
-	first := f.function.Code[f.ip]
-	last := f.function.Code[f.ip+1]
-	f.ip += 2
-	return uint16(first)<<8 | uint16(last)
-}
+func IsSubType(sourceType, targetType StaticType) bool {
+	if targetType == interpreter.PrimitiveStaticTypeAny {
+		return true
+	}
 
-func (f *callFrame) getString() string {
-	strLen := f.getUint16()
-	str := string(f.function.Code[f.ip : f.ip+strLen])
-	f.ip = f.ip + strLen
-	return str
+	// Optimization: If the static types are equal, then no need to check further.
+	if sourceType.Equal(targetType) {
+		return true
+	}
+
+	// TODO: Add the remaining subType rules
+
+	return false
 }

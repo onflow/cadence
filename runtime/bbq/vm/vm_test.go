@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/bbq/vm/config"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -34,7 +33,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/bbq/compiler"
-	"github.com/onflow/cadence/runtime/bbq/vm/values"
 )
 
 const recursiveFib = `
@@ -60,10 +58,10 @@ func TestRecursionFib(t *testing.T) {
 
 	result, err := vm.Invoke(
 		"fib",
-		values.IntValue{SmallInt: 7},
+		IntValue{SmallInt: 7},
 	)
 	require.NoError(t, err)
-	require.Equal(t, values.IntValue{SmallInt: 13}, result)
+	require.Equal(t, IntValue{SmallInt: 13}, result)
 }
 
 func BenchmarkRecursionFib(b *testing.B) {
@@ -79,13 +77,13 @@ func BenchmarkRecursionFib(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	expected := values.IntValue{SmallInt: 377}
+	expected := IntValue{SmallInt: 377}
 
 	for i := 0; i < b.N; i++ {
 
 		result, err := vm.Invoke(
 			"fib",
-			values.IntValue{SmallInt: 14},
+			IntValue{SmallInt: 14},
 		)
 		require.NoError(b, err)
 		require.Equal(b, expected, result)
@@ -122,10 +120,10 @@ func TestImperativeFib(t *testing.T) {
 
 	result, err := vm.Invoke(
 		"fib",
-		values.IntValue{SmallInt: 7},
+		IntValue{SmallInt: 7},
 	)
 	require.NoError(t, err)
-	require.Equal(t, values.IntValue{SmallInt: 13}, result)
+	require.Equal(t, IntValue{SmallInt: 13}, result)
 }
 
 func BenchmarkImperativeFib(b *testing.B) {
@@ -141,7 +139,7 @@ func BenchmarkImperativeFib(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var value values.Value = values.IntValue{SmallInt: 14}
+	var value Value = IntValue{SmallInt: 14}
 
 	for i := 0; i < b.N; i++ {
 		_, err := vm.Invoke("fib", value)
@@ -175,7 +173,7 @@ func TestBreak(t *testing.T) {
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t, values.IntValue{SmallInt: 4}, result)
+	require.Equal(t, IntValue{SmallInt: 4}, result)
 }
 
 func TestContinue(t *testing.T) {
@@ -205,7 +203,7 @@ func TestContinue(t *testing.T) {
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t, values.IntValue{SmallInt: 3}, result)
+	require.Equal(t, IntValue{SmallInt: 3}, result)
 }
 
 func TestNewStruct(t *testing.T) {
@@ -241,16 +239,16 @@ func TestNewStruct(t *testing.T) {
 
 	vm := NewVM(program, nil)
 
-	result, err := vm.Invoke("test", values.IntValue{SmallInt: 10})
+	result, err := vm.Invoke("test", IntValue{SmallInt: 10})
 	require.NoError(t, err)
 
-	require.IsType(t, &values.CompositeValue{}, result)
-	structValue := result.(*values.CompositeValue)
+	require.IsType(t, &CompositeValue{}, result)
+	structValue := result.(*CompositeValue)
 
 	require.Equal(t, "Foo", structValue.QualifiedIdentifier)
 	require.Equal(
 		t,
-		values.IntValue{SmallInt: 12},
+		IntValue{SmallInt: 12},
 		structValue.GetMember(vm.config, "id"),
 	)
 }
@@ -289,7 +287,7 @@ func TestStructMethodCall(t *testing.T) {
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t, values.StringValue{String: []byte("Hello from Foo!")}, result)
+	require.Equal(t, StringValue{String: []byte("Hello from Foo!")}, result)
 }
 
 func BenchmarkNewStruct(b *testing.B) {
@@ -323,7 +321,7 @@ func BenchmarkNewStruct(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	value := values.IntValue{SmallInt: 7}
+	value := IntValue{SmallInt: 7}
 
 	for i := 0; i < b.N; i++ {
 		_, err := vm.Invoke("test", value)
@@ -362,7 +360,7 @@ func BenchmarkNewResource(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	value := values.IntValue{SmallInt: 7}
+	value := IntValue{SmallInt: 7}
 
 	for i := 0; i < b.N; i++ {
 		_, err := vm.Invoke("test", value)
@@ -373,17 +371,17 @@ func BenchmarkNewResource(b *testing.B) {
 func BenchmarkNewStructRaw(b *testing.B) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
-	conf := &config.Config{
+	conf := &Config{
 		Storage: storage,
 	}
 
-	fieldValue := values.IntValue{SmallInt: 7}
+	fieldValue := IntValue{SmallInt: 7}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 8; j++ {
-			structValue := values.NewCompositeValue(
+			structValue := NewCompositeValue(
 				nil,
 				"Foo",
 				common.CompositeKindStructure,
@@ -454,15 +452,15 @@ func TestImport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-	comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
+	importCompiler := compiler.NewCompiler(checker.Program, checker.Elaboration)
+	importCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program {
 		return importedProgram
 	}
 
-	program := comp.Compile()
+	program := importCompiler.Compile()
 	printProgram(program)
 
-	vmConfig := &config.Config{
+	vmConfig := &Config{
 		ImportHandler: func(location common.Location) *bbq.Program {
 			return importedProgram
 		},
@@ -473,5 +471,190 @@ func TestImport(t *testing.T) {
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t, values.StringValue{String: []byte("global function of the imported program")}, result)
+	require.Equal(t, StringValue{String: []byte("global function of the imported program")}, result)
+}
+
+func TestContractImport(t *testing.T) {
+
+	t.Parallel()
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+
+      contract MyContract {
+
+          fun helloText(): String {
+              return "global function of the imported program"
+          }
+
+          init() {}
+
+          struct Foo {
+              var id : String
+
+              init(_ id: String) {
+                  self.id = id
+              }
+
+              fun sayHello(_ id: Int): String {
+                  self.id
+                  return MyContract.helloText()
+              }
+          }
+      }
+
+        `,
+		ParseAndCheckOptions{
+			Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+		},
+	)
+	require.NoError(t, err)
+
+	importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
+	importedProgram := importCompiler.Compile()
+	printProgram(importedProgram)
+
+	checker, err := ParseAndCheckWithOptions(t, `
+      import MyContract from 0x01
+
+      fun test(): String {
+          var r = MyContract.Foo("Hello from Foo!")
+          return r.sayHello(1)
+      }
+  `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+	comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
+		return importedProgram
+	}
+
+	program := comp.Compile()
+	printProgram(program)
+
+	vmConfig := &Config{
+		ImportHandler: func(location common.Location) *bbq.Program {
+			return importedProgram
+		},
+		ContractValueHandler: func(conf *Config, location common.Location) *CompositeValue {
+			addressLocation := location.(common.AddressLocation)
+			return NewCompositeValue(
+				location,
+				addressLocation.Name,
+				common.CompositeKindContract,
+				addressLocation.Address,
+				conf.Storage,
+			)
+		},
+	}
+
+	vm := NewVM(program, vmConfig)
+
+	result, err := vm.Invoke("test")
+	require.NoError(t, err)
+	require.Equal(t, StringValue{String: []byte("global function of the imported program")}, result)
+}
+
+func BenchmarkContractImport(b *testing.B) {
+
+	importedChecker, err := ParseAndCheckWithOptions(b,
+		`
+      contract MyContract {
+          fun helloText(): String {
+              return "global function of the imported program"
+          }
+
+          init() {}
+
+          struct Foo {
+              var id : String
+
+              init(_ id: String) {
+                  self.id = id
+              }
+
+              fun sayHello(_ id: Int): String {
+                  // return self.id
+                  return MyContract.helloText()
+              }
+          }
+      }
+        `,
+		ParseAndCheckOptions{
+			Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+		},
+	)
+	require.NoError(b, err)
+
+	importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
+	importedProgram := importCompiler.Compile()
+
+	vmConfig := &Config{
+		ImportHandler: func(location common.Location) *bbq.Program {
+			return importedProgram
+		},
+		ContractValueHandler: func(conf *Config, location common.Location) *CompositeValue {
+			addressLocation := location.(common.AddressLocation)
+			return NewCompositeValue(
+				location,
+				addressLocation.Name,
+				common.CompositeKindContract,
+				addressLocation.Address,
+				conf.Storage,
+			)
+		},
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	value := IntValue{SmallInt: 7}
+
+	for i := 0; i < b.N; i++ {
+		checker, err := ParseAndCheckWithOptions(b, `
+      import MyContract from 0x01
+
+      fun test(count: Int): String {
+          var i = 0
+          var r = MyContract.Foo("Hello from Foo!")
+          while i < count {
+              i = i + 1
+              r = MyContract.Foo("Hello from Foo!")
+              r.sayHello(1)
+          }
+          return r.sayHello(1)
+      }
+  `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+		require.NoError(b, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
+			return importedProgram
+		}
+		program := comp.Compile()
+
+		vm := NewVM(program, vmConfig)
+		_, err = vm.Invoke("test", value)
+		require.NoError(b, err)
+	}
 }
