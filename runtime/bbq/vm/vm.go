@@ -82,7 +82,13 @@ func initializeGlobals(program *bbq.Program, conf *Config) []Value {
 			common.MustBytesToAddress(contract.Address),
 			contract.Name,
 		)
-		contractValue := conf.ContractValueHandler(conf, contractLocation)
+
+		var contractValue Value
+		// TODO: remove this check. This shouldn't be nil ideally.
+		if conf.ContractValueHandler != nil {
+			contractValue = conf.ContractValueHandler(conf, contractLocation)
+		}
+
 		globals = append(globals, contractValue)
 	}
 
@@ -108,10 +114,12 @@ func initializeGlobals(program *bbq.Program, conf *Config) []Value {
 }
 
 func indexFunctions(functions []*bbq.Function, globals []Value) map[string]FunctionValue {
-	// TODO: Filter out non-functions
 	indexedFunctions := make(map[string]FunctionValue, len(functions))
 	for _, globalValue := range globals {
-		function := globalValue.(FunctionValue)
+		function, isFunction := globalValue.(FunctionValue)
+		if !isFunction {
+			continue
+		}
 		indexedFunctions[function.Function.Name] = function
 	}
 
@@ -191,6 +199,20 @@ func (vm *VM) Invoke(name string, arguments ...Value) (Value, error) {
 	}
 
 	return vm.pop(), nil
+}
+
+func (vm *VM) InitializeContract(arguments ...Value) (*CompositeValue, error) {
+	value, err := vm.Invoke(InitFunctionName, arguments...)
+	if err != nil {
+		return nil, err
+	}
+
+	contractValue, ok := value.(*CompositeValue)
+	if !ok {
+		return nil, errors.NewUnexpectedError("invalid contract value")
+	}
+
+	return contractValue, nil
 }
 
 type vmOp func(*VM)
@@ -298,6 +320,12 @@ func opGetGlobal(vm *VM) {
 	vm.push(callFrame.context.Globals[index])
 }
 
+func opSetGlobal(vm *VM) {
+	callFrame := vm.callFrame
+	index := callFrame.getUint16()
+	callFrame.context.Globals[index] = vm.pop()
+}
+
 func opInvokeStatic(vm *VM) {
 	value := vm.pop().(FunctionValue)
 	stackHeight := len(vm.stack)
@@ -373,6 +401,12 @@ func opGetField(vm *VM) {
 	structValue := vm.pop().(*CompositeValue)
 
 	fieldValue := structValue.GetMember(vm.config, fieldNameStr)
+	if fieldValue == nil {
+		panic(interpreter.MissingMemberValueError{
+			Name: fieldNameStr,
+		})
+	}
+
 	vm.push(fieldValue)
 }
 
@@ -440,6 +474,8 @@ func (vm *VM) run() {
 			opSetLocal(vm)
 		case opcode.GetGlobal:
 			opGetGlobal(vm)
+		case opcode.SetGlobal:
+			opSetGlobal(vm)
 		case opcode.InvokeStatic:
 			opInvokeStatic(vm)
 		case opcode.Invoke:

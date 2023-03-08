@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -480,7 +481,6 @@ func TestContractImport(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-
       contract MyContract {
 
           fun helloText(): String {
@@ -502,7 +502,6 @@ func TestContractImport(t *testing.T) {
               }
           }
       }
-
         `,
 		ParseAndCheckOptions{
 			Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
@@ -657,4 +656,190 @@ func BenchmarkContractImport(b *testing.B) {
 		_, err = vm.Invoke("test", value)
 		require.NoError(b, err)
 	}
+}
+
+func TestInitializeContract(t *testing.T) {
+
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+      contract MyContract {
+          var status : String
+          init() {
+              self.status = "PENDING"
+          }
+      }
+        `,
+		ParseAndCheckOptions{
+			Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+		},
+	)
+	require.NoError(t, err)
+
+	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+	program := comp.Compile()
+
+	vm := NewVM(program, nil)
+	contractValue, err := vm.InitializeContract()
+	require.NoError(t, err)
+
+	fieldValue := contractValue.GetMember(vm.config, "status")
+	assert.Equal(t, StringValue{String: []byte("PENDING")}, fieldValue)
+}
+
+func TestContractAccessDuringInit(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("using contract name", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheckWithOptions(t, `
+            contract MyContract {
+                var status : String
+
+                pub fun getInitialStatus(): String {
+                    return "PENDING"
+                }
+
+                init() {
+                    self.status = MyContract.getInitialStatus()
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+		printProgram(program)
+
+		vm := NewVM(program, nil)
+		contractValue, err := vm.InitializeContract()
+		require.NoError(t, err)
+
+		fieldValue := contractValue.GetMember(vm.config, "status")
+		assert.Equal(t, StringValue{String: []byte("PENDING")}, fieldValue)
+	})
+
+	t.Run("using self", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheckWithOptions(t, `
+            contract MyContract {
+                var status : String
+
+                pub fun getInitialStatus(): String {
+                    return "PENDING"
+                }
+
+                init() {
+                    self.status = self.getInitialStatus()
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+		printProgram(program)
+
+		vm := NewVM(program, nil)
+		contractValue, err := vm.InitializeContract()
+		require.NoError(t, err)
+
+		fieldValue := contractValue.GetMember(vm.config, "status")
+		assert.Equal(t, StringValue{String: []byte("PENDING")}, fieldValue)
+	})
+}
+
+func TestFunctionOrder(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("top level", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+      fun foo(): Int {
+          return 2
+      }
+
+      fun test(): Int {
+          return foo() + bar()
+      }
+
+      fun bar(): Int {
+          return 3
+      }`)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+
+		vm := NewVM(program, nil)
+
+		result, err := vm.Invoke("test")
+		require.NoError(t, err)
+
+		require.Equal(t, IntValue{SmallInt: 5}, result)
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+      contract MyContract {
+
+          fun helloText(): String {
+              return "global function of the imported program"
+          }
+
+          init() {}
+
+          fun initializeFoo() {
+              MyContract.Foo("one")
+          }
+
+          struct Foo {
+              var id : String
+
+              init(_ id: String) {
+                  self.id = id
+              }
+
+              fun sayHello(_ id: Int): String {
+                  self.id
+                  return MyContract.helloText()
+              }
+          }
+
+          fun initializeFooAgain() {
+              MyContract.Foo("two")
+          }
+      }`
+
+		checker, err := ParseAndCheckWithOptions(
+			t,
+			code,
+			ParseAndCheckOptions{
+				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+
+		vm := NewVM(program, nil)
+
+		result, err := vm.Invoke("init")
+		require.NoError(t, err)
+
+		require.IsType(t, &CompositeValue{}, result)
+	})
 }

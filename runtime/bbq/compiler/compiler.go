@@ -91,8 +91,6 @@ func (c *Compiler) addGlobal(name string) *global {
 }
 
 func (c *Compiler) addFunction(name string, parameterCount uint16) *function {
-	c.addGlobal(name)
-
 	isCompositeFunction := !c.compositeTypeStack.isEmpty()
 
 	function := newFunction(name, parameterCount, isCompositeFunction)
@@ -182,7 +180,23 @@ func (c *Compiler) popLoop() {
 }
 
 func (c *Compiler) Compile() *bbq.Program {
-	for _, declaration := range c.Program.Declarations() {
+
+	for _, declaration := range c.Program.ImportDeclarations() {
+		c.compileDeclaration(declaration)
+	}
+
+	// Reserve globals for functions/types before visiting their implementations.
+	c.reserveGlobalVars(
+		"",
+		c.Program.FunctionDeclarations(),
+		c.Program.CompositeDeclarations(),
+	)
+
+	// Compile declarations
+	for _, declaration := range c.Program.FunctionDeclarations() {
+		c.compileDeclaration(declaration)
+	}
+	for _, declaration := range c.Program.CompositeDeclarations() {
 		c.compileDeclaration(declaration)
 	}
 
@@ -198,6 +212,40 @@ func (c *Compiler) Compile() *bbq.Program {
 		Types:     types,
 		Imports:   imports,
 		Contract:  contract,
+	}
+}
+
+func (c *Compiler) reserveGlobalVars(
+	compositeTypeName string,
+	funcDecls []*ast.FunctionDeclaration,
+	compositeDecls []*ast.CompositeDeclaration,
+) {
+	for _, declaration := range funcDecls {
+		funcName := typeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
+		c.addGlobal(funcName)
+	}
+
+	for _, declaration := range compositeDecls {
+		// TODO: Handle nested composite types. Those name should be `Foo.Bar`.
+		qualifiedTypeName := typeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
+
+		c.addGlobal(qualifiedTypeName)
+
+		// For composite type other than contracts, globals variable
+		// reserved by the type-name will be used for the init method.
+		// For contracts, globals variable reserved by the type-name
+		// will be used for the contract value.
+		// Hence, reserve a separate global var for contract inits.
+		if declaration.CompositeKind == common.CompositeKindContract {
+			c.addGlobal("init")
+		}
+
+		// Define globals for functions before visiting function bodies
+		c.reserveGlobalVars(
+			qualifiedTypeName,
+			declaration.Members.Functions(),
+			declaration.Members.Composites(),
+		)
 	}
 }
 
@@ -484,7 +532,7 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 	case *ast.MemberExpression:
 		memberInfo := c.Elaboration.MemberExpressionMemberInfos[invokedExpr]
 		typeName := memberInfo.AccessedType.QualifiedString()
-		funcName := compositeFunctionQualifiedName(typeName, invokedExpr.Identifier.Identifier)
+		funcName := typeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
 
 		invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 		if invocationType.IsConstructor {
@@ -632,10 +680,7 @@ func (c *Compiler) compileInitializer(declaration *ast.SpecialFunctionDeclaratio
 		// For contracts, add the initializer as `init()`.
 		// A global variable with the same name as contract is separately added.
 		// The VM will load the contract and assign to that global variable during imports resolution.
-		functionName = compositeFunctionQualifiedName(
-			enclosingType.Identifier,
-			declaration.DeclarationIdentifier().Identifier,
-		)
+		functionName = declaration.DeclarationIdentifier().Identifier
 	} else {
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
@@ -726,7 +771,7 @@ func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration
 
 func (c *Compiler) declareFunction(declaration *ast.FunctionDeclaration) *function {
 	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
-	functionName := compositeFunctionQualifiedName(enclosingCompositeTypeName, declaration.Identifier.Identifier)
+	functionName := typeQualifiedName(enclosingCompositeTypeName, declaration.Identifier.Identifier)
 
 	functionType := c.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 	parameterCount := len(functionType.Parameters)
@@ -738,15 +783,13 @@ func (c *Compiler) declareFunction(declaration *ast.FunctionDeclaration) *functi
 }
 
 func (c *Compiler) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
-	if declaration.DeclarationKind() == common.DeclarationKindContract {
-		c.addGlobal(declaration.Identifier.Identifier)
-	}
-
-	c.compositeTypeStack.push(c.Elaboration.CompositeDeclarationTypes[declaration])
+	enclosingCompositeType := c.Elaboration.CompositeDeclarationTypes[declaration]
+	c.compositeTypeStack.push(enclosingCompositeType)
 	defer func() {
 		c.compositeTypeStack.pop()
 	}()
 
+	// Compile members
 	for _, specialFunc := range declaration.Members.SpecialFunctions() {
 		c.compileDeclaration(specialFunc)
 	}
@@ -863,7 +906,7 @@ func (c *Compiler) enclosingCompositeTypeFullyQualifiedName() string {
 	return sb.String()
 }
 
-func compositeFunctionQualifiedName(typeName, functionName string) string {
+func typeQualifiedName(typeName, functionName string) string {
 	if typeName == "" {
 		return functionName
 	}
