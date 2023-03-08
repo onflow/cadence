@@ -7545,3 +7545,110 @@ func TestImportingTestStdlib(t *testing.T) {
 	require.ErrorAs(t, errs[0], &notDeclaredErr)
 	assert.Equal(t, "Test", notDeclaredErr.Name)
 }
+
+func BenchmarkContractFunctionInvocation(b *testing.B) {
+
+	runtime := newTestInterpreterRuntime()
+
+	addressValue := cadence.BytesToAddress([]byte{0x1})
+
+	contract := []byte(`
+      pub contract Test {
+          pub fun helloText(): String {
+              return "global function of the imported program"
+          }
+
+          init() {}
+
+          pub struct Foo {
+              pub var id : String
+
+              init(_ id: String) {
+                  self.id = id
+              }
+
+              pub fun sayHello(_ id: Int): String {
+                  // return self.id
+                  return Test.helloText()
+              }
+          }
+      }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{Address(addressValue)}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(b),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(b, err)
+	assert.NotNil(b, accountCode)
+
+	script := `      
+      import Test from 0x01
+
+      pub fun main(count: Int): String {
+          var i = 0
+          var r = Test.Foo("Hello from Foo!")
+          while i < count {
+              i = i + 1
+              r = Test.Foo("Hello from Foo!")
+              r.sayHello(1)
+          }
+          return r.sayHello(1)
+      }`
+
+	args := encodeArgs([]cadence.Value{cadence.NewInt(7)})
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: args,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(b, err)
+	}
+}

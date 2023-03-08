@@ -66,30 +66,38 @@ func initializeGlobals(program *bbq.Program, conf *Config) []Value {
 		// TODO: cache globals for imported programs.
 
 		importedProgramGlobals := initializeGlobals(importedProgram, conf)
+
+		// Load contract value
+		if importedProgram.Contract != nil {
+			// If the imported program is a contract,
+			// load the contract value and populate the global variable.
+			contract := importedProgram.Contract
+			contractLocation := common.NewAddressLocation(
+				conf.MemoryGauge,
+				common.MustBytesToAddress(contract.Address),
+				contract.Name,
+			)
+
+			// TODO: remove this check. This shouldn't be nil ideally.
+			if conf.ContractValueHandler != nil {
+				// Contract value is always at the zero-th index.
+				importedProgramGlobals[0] = conf.ContractValueHandler(conf, contractLocation)
+			}
+		}
+
 		importedGlobals = append(importedGlobals, importedProgramGlobals...)
 	}
 
 	ctx := NewContext(program, nil)
 
-	globalsCount := len(program.Functions)
-	globals := make([]Value, 0, globalsCount)
+	globals := make([]Value, 0)
 
-	// Load contract value
+	// If the current program is a contract, reserve a global variable for the contract value.
+	// The reserved position is always the zero-th index.
+	// This value will be populated either by the `init` method invocation of the contract,
+	// Or when this program is imported by another (loads the value from storage).
 	if program.Contract != nil {
-		contract := program.Contract
-		contractLocation := common.NewAddressLocation(
-			conf.MemoryGauge,
-			common.MustBytesToAddress(contract.Address),
-			contract.Name,
-		)
-
-		var contractValue Value
-		// TODO: remove this check. This shouldn't be nil ideally.
-		if conf.ContractValueHandler != nil {
-			contractValue = conf.ContractValueHandler(conf, contractLocation)
-		}
-
-		globals = append(globals, contractValue)
+		globals = append(globals, nil)
 	}
 
 	// Iterate through `program.Functions` to be deterministic.
