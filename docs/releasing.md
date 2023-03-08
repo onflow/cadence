@@ -1,6 +1,6 @@
 # Release Process
 
-Assume releasing Cadence version `v0.21.2` from `master` branch. 
+Assume releasing Cadence version `v0.21.2` from `master` branch.
 Also, assume the latest deployed version on the live networks is `v0.21.0`.
 
 ## Using GitHub Actions
@@ -20,10 +20,10 @@ Check for breaking changes can be done using the [BackwardCompatibilityCheck](ht
 github action.
 
 <img src="images/compatibility_check_action_trigger.png" width="800"/>
- 
+
 Run the workflow by providing `master` as the `Current branch/tag` and `v0.21.0` which is the latest deployed version
 on the live networks, as the `Base branch/tag`.
-Since the release would be based on the current master branch, the compatibility check would compare the current `master` 
+Since the release would be based on the current master branch, the compatibility check would compare the current `master`
 branch against `v0.21.0` branch/tag.
 
 <img src="images/compatibility_check_action_params.png" width="300"/>
@@ -129,3 +129,24 @@ If it is deemed that there are no breaking changes, proceed to the [Releasing](#
   ```
 - Finally, open a PR from `release/v0.21.2` branch to the base branch (`master` in this case),
   to include the version bump changes.
+
+
+## Creating a new GitHub release
+
+Once the PR which updates the version got merged, a GitHub release can be created.
+
+Go to the overview of all tags and select "Create release":
+
+<img src="images/release_tag.png" width="800"/>
+
+On the release page, click the "Generate release notes" button:
+
+<img src="images/create_release.png" width="800"/>
+
+Edit the pre-populated description, e.g. by summarizing multiple PRs that contributed to a single feature,
+as readers might not be and should not have to be familiar with the implementation details.
+
+By default, the new release is set as the latest release.
+Usually this is the case, but uncheck this e.g. when releasing a bugfix release for an older version.
+
+Finally, click "Publish release", and you are all done! 🎉
