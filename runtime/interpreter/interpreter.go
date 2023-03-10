@@ -3716,6 +3716,12 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
+			if !interpreter.SharedState.Config.AccountLinkingAllowed {
+				panic(AccountLinkingForbiddenError{
+					LocationRange: invocation.LocationRange,
+				})
+			}
+
 			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -4669,4 +4675,36 @@ func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atr
 
 func (interpreter *Interpreter) Storage() Storage {
 	return interpreter.SharedState.Config.Storage
+}
+
+// ConfigureAccountLinkingAllowed configures if execution is allowed to use account linking,
+// depending on the occurrence of the pragma declaration #allowAccountLinking.
+//
+// The pragma declaration must appear as a top-level declaration (i.e. not nested in the program),
+// and must appear before all other declarations (i.e. at the top of the program).
+//
+// This requirement is also checked statically.
+//
+// This is a temporary feature, which is planned to get replaced by capability controllers,
+// and a new Account type with entitlements.
+func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
+	config := interpreter.SharedState.Config
+
+	config.AccountLinkingAllowed = false
+
+	var rejectAllowAccountLinkingPragma bool
+
+	for _, declaration := range interpreter.Program.Program.Declarations() {
+
+		if pragmaDeclaration, isPragma := declaration.(*ast.PragmaDeclaration); isPragma {
+			if sema.IsAllowAccountLinkingPragma(pragmaDeclaration) {
+				if !rejectAllowAccountLinkingPragma {
+					config.AccountLinkingAllowed = true
+				}
+				continue
+			}
+		}
+
+		rejectAllowAccountLinkingPragma = true
+	}
 }

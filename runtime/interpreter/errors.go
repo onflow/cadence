@@ -875,3 +875,18 @@ func (InvalidHexLengthError) IsUserError() {}
 func (InvalidHexLengthError) Error() string {
 	return "hex string has non-even length"
 }
+
+// AccountLinkingForbiddenError is the error which is reported
+// when a user uses the account link function,
+// but account linking is not allowed
+type AccountLinkingForbiddenError struct {
+	LocationRange
+}
+
+var _ errors.UserError = AccountLinkingForbiddenError{}
+
+func (AccountLinkingForbiddenError) IsUserError() {}
+
+func (e AccountLinkingForbiddenError) Error() string {
+	return "account linking is not allowed"
+}

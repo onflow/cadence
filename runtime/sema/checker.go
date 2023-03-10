@@ -112,7 +112,6 @@ type Checker struct {
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
-	allowAccountLinking                bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -335,20 +334,18 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	for _, declaration := range declarations {
 
 		// A pragma declaration #allowAccountLinking determines
-		// if the program is allowed to use the account linking.
+		// if the program is allowed to use account linking.
 		//
 		// It must appear as a top-level declaration (i.e. not nested in the program),
 		// and must appear before all other declarations (i.e. at the top of the program).
 		//
-		// This is a temporary feature, which is planned to get replaced
-		// by capability controllers, a new Account type, and account entitlements.
+		// This is a temporary feature, which is planned to get replaced by capability controllers,
+		// and a new Account type with entitlements.
 
 		if pragmaDeclaration, isPragma := declaration.(*ast.PragmaDeclaration); isPragma {
 			if IsAllowAccountLinkingPragma(pragmaDeclaration) {
 				if rejectAllowAccountLinkingPragma {
 					checker.reportInvalidNonHeaderPragma(pragmaDeclaration)
-				} else {
-					checker.allowAccountLinking = true
 				}
 				continue
 			}
@@ -2413,8 +2410,7 @@ func (checker *Checker) isAvailableMember(expressionType Type, identifier string
 	if expressionType == AuthAccountType &&
 		identifier == AuthAccountTypeLinkAccountFunctionName {
 
-		return checker.Config.AccountLinkingEnabled &&
-			checker.allowAccountLinking
+		return checker.Config.AccountLinkingEnabled
 	}
 
 	return true
