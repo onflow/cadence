@@ -43,18 +43,30 @@ fast-test:
 	GO111MODULE=on go test -parallel 8 ./...
 
 .PHONY: build
-build:
-	go build -o ./runtime/cmd/parse/parse ./runtime/cmd/parse
-	GOARCH=wasm GOOS=js go build -o ./runtime/cmd/parse/parse.wasm ./runtime/cmd/parse
-	go build -o ./runtime/cmd/check/check ./runtime/cmd/check
-	go build -o ./runtime/cmd/main/main ./runtime/cmd/main
-	make build-tools
+build: build-tools ./runtime/cmd/parse/parse ./runtime/cmd/parse/parse.wasm ./runtime/cmd/check/check ./runtime/cmd/main/main
+
+./runtime/cmd/parse/parse:
+	go build -o $@ ./runtime/cmd/parse
+
+./runtime/cmd/parse/parse.wasm:
+	GOARCH=wasm GOOS=js go build -o $@ ./runtime/cmd/parse
+
+./runtime/cmd/check/check:
+	go build -o $@ ./runtime/cmd/check
+
+./runtime/cmd/main/main:
+	go build -o $@ ./runtime/cmd/main
 
 .PHONY: build-tools
-build-tools:
-	(cd ./tools/analysis && go build . && cd -)
-	(cd ./tools/batch-script && go build . && cd -)
-	(cd ./tools/constructorcheck && make plugin && cd -)
+build-tools: build-analysis build-batch-script
+
+.PHONY: build-analysis
+build-analysis:
+	(cd ./tools/analysis && go build .)
+
+.PHONY: build-batch-script
+build-batch-script:
+	(cd ./tools/batch-script && go build .)
 
 .PHONY: lint-github-actions
 lint-github-actions: build-linter
@@ -63,7 +75,6 @@ lint-github-actions: build-linter
 .PHONY: lint
 lint: build-linter
 	tools/golangci-lint/golangci-lint run $(LINTERS) --timeout=5m -v ./...
-
 
 .PHONY: fix-lint
 fix-lint: build-linter
