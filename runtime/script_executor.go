@@ -228,6 +228,8 @@ func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFu
 			err = internalErr
 		})
 
+		inter.ConfigureAccountLinkingAllowed()
+
 		values, err := validateArgumentParams(
 			inter,
 			executor.environment,
@@ -238,6 +240,7 @@ func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFu
 		if err != nil {
 			return nil, err
 		}
+
 		return inter.Invoke("main", values...)
 	}
 }
