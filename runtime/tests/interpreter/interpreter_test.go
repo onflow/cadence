@@ -158,6 +158,8 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 
 	require.NoError(t, err)
 
+	inter.ConfigureAccountLinkingAllowed()
+
 	err = inter.Interpret()
 
 	if err == nil {
