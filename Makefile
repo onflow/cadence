@@ -73,13 +73,13 @@ fix-lint: build-linter
 build-linter: tools/golangci-lint/golangci-lint tools/maprange/maprange.so tools/unkeyed/unkeyed.so tools/constructorcheck/constructorcheck.so
 
 tools/maprange/maprange.so:
-	(cd tools/maprange && $(MAKE) plugin)
+	(cd tools/maprange && $(MAKE))
 
 tools/unkeyed/unkeyed.so:
-	(cd tools/unkeyed && $(MAKE) plugin)
+	(cd tools/unkeyed && $(MAKE))
 
 tools/constructorcheck/constructorcheck.so:
-	(cd tools/constructorcheck && $(MAKE) plugin)
+	(cd tools/constructorcheck && $(MAKE))
 
 tools/golangci-lint/golangci-lint:
 	(cd tools/golangci-lint && $(MAKE))
