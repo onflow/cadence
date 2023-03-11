@@ -637,6 +637,10 @@ func TestGetType(t *testing.T) {
 			reflect.TypeOf(Struct{}):     {},
 		}
 
+		typelessTypes := map[reflect.Type]struct{}{
+			reflect.TypeOf(PathLink{}): {},
+		}
+
 		var valueInterface Value
 		valueInterfaceType := reflect.TypeOf(&valueInterface).Elem()
 
@@ -655,6 +659,10 @@ func TestGetType(t *testing.T) {
 				valueType = valueType.Elem()
 
 				if _, ok := complexTypes[valueType]; ok {
+					continue
+				}
+
+				if _, ok := typelessTypes[valueType]; ok {
 					continue
 				}
 
