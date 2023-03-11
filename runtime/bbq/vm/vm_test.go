@@ -35,6 +35,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/runtime/bbq/commons"
 	"github.com/onflow/cadence/runtime/bbq/compiler"
 )
 
@@ -238,8 +239,6 @@ func TestNewStruct(t *testing.T) {
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
-	printProgram(program)
-
 	vm := NewVM(program, nil)
 
 	result, err := vm.Invoke("test", IntValue{SmallInt: 10})
@@ -282,8 +281,6 @@ func TestStructMethodCall(t *testing.T) {
 
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
-
-	printProgram(program)
 
 	vm := NewVM(program, nil)
 
@@ -433,7 +430,6 @@ func TestImport(t *testing.T) {
 
 	subComp := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
 	importedProgram := subComp.Compile()
-	printProgram(importedProgram)
 
 	checker, err := ParseAndCheckWithOptions(t, `
       import Foo from 0x01
@@ -461,7 +457,6 @@ func TestImport(t *testing.T) {
 	}
 
 	program := importCompiler.Compile()
-	printProgram(program)
 
 	vmConfig := &Config{
 		ImportHandler: func(location common.Location) *bbq.Program {
@@ -481,8 +476,10 @@ func TestContractImport(t *testing.T) {
 
 	t.Parallel()
 
-	importedChecker, err := ParseAndCheckWithOptions(t,
-		`
+	t.Run("nested type def", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
       contract MyContract {
 
           fun helloText(): String {
@@ -505,17 +502,20 @@ func TestContractImport(t *testing.T) {
           }
       }
         `,
-		ParseAndCheckOptions{
-			Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
-		},
-	)
-	require.NoError(t, err)
+			ParseAndCheckOptions{
+				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+			},
+		)
+		require.NoError(t, err)
 
-	importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
-	importedProgram := importCompiler.Compile()
-	printProgram(importedProgram)
+		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
+		importedProgram := importCompiler.Compile()
 
-	checker, err := ParseAndCheckWithOptions(t, `
+		vm := NewVM(importedProgram, nil)
+		importedContractValue, err := vm.InitializeContract()
+		require.NoError(t, err)
+
+		checker, err := ParseAndCheckWithOptions(t, `
       import MyContract from 0x01
 
       fun test(): String {
@@ -523,47 +523,283 @@ func TestContractImport(t *testing.T) {
           return r.sayHello(1)
       }
   `,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
 				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
 
-	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-	comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
-		return importedProgram
-	}
-
-	program := comp.Compile()
-	printProgram(program)
-
-	vmConfig := &Config{
-		ImportHandler: func(location common.Location) *bbq.Program {
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
 			return importedProgram
-		},
-		ContractValueHandler: func(conf *Config, location common.Location) *CompositeValue {
-			addressLocation := location.(common.AddressLocation)
-			return NewCompositeValue(
-				location,
-				addressLocation.Name,
-				common.CompositeKindContract,
-				addressLocation.Address,
-				conf.Storage,
-			)
-		},
-	}
+		}
 
-	vm := NewVM(program, vmConfig)
+		program := comp.Compile()
 
-	result, err := vm.Invoke("test")
-	require.NoError(t, err)
-	require.Equal(t, StringValue{String: []byte("global function of the imported program")}, result)
+		vmConfig := &Config{
+			ImportHandler: func(location common.Location) *bbq.Program {
+				return importedProgram
+			},
+			ContractValueHandler: func(*Config, common.Location) *CompositeValue {
+				return importedContractValue
+			},
+		}
+
+		vm = NewVM(program, vmConfig)
+
+		result, err := vm.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, StringValue{String: []byte("global function of the imported program")}, result)
+	})
+
+	t.Run("contract function", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+      contract MyContract {
+
+          var s: String
+
+          fun helloText(): String {
+              return self.s
+          }
+
+          init() {
+              self.s = "contract function of the imported program"
+          }
+      }
+        `,
+			ParseAndCheckOptions{
+				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+			},
+		)
+		require.NoError(t, err)
+
+		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
+		importedProgram := importCompiler.Compile()
+
+		vm := NewVM(importedProgram, nil)
+		importedContractValue, err := vm.InitializeContract()
+		require.NoError(t, err)
+
+		checker, err := ParseAndCheckWithOptions(t, `
+      import MyContract from 0x01
+
+      fun test(): String {
+          return MyContract.helloText()
+      }
+  `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
+			return importedProgram
+		}
+
+		program := comp.Compile()
+
+		vmConfig := &Config{
+			ImportHandler: func(location common.Location) *bbq.Program {
+				return importedProgram
+			},
+			ContractValueHandler: func(*Config, common.Location) *CompositeValue {
+				return importedContractValue
+			},
+		}
+
+		vm = NewVM(program, vmConfig)
+
+		result, err := vm.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, StringValue{String: []byte("contract function of the imported program")}, result)
+	})
+
+	t.Run("nested imports", func(t *testing.T) {
+
+		// Initialize Foo
+
+		fooLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			"Foo",
+		)
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+            contract Foo {
+                var s: String
+                init() {
+                    self.s = "Hello from Foo!"
+                }
+                fun sayHello(): String {
+                    return self.s
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: fooLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		fooCompiler := compiler.NewCompiler(fooChecker.Program, fooChecker.Elaboration)
+		fooProgram := fooCompiler.Compile()
+
+		vm := NewVM(fooProgram, nil)
+		fooContractValue, err := vm.InitializeContract()
+		require.NoError(t, err)
+
+		// Initialize Bar
+
+		barLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			"Bar",
+		)
+
+		barChecker, err := ParseAndCheckWithOptions(t, `
+            import Foo from 0x01
+
+            contract Bar {
+                init() {}
+                fun sayHello(): String {
+                    return Foo.sayHello()
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: barLocation,
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, fooLocation, location)
+						return sema.ElaborationImport{
+							Elaboration: fooChecker.Elaboration,
+						}, nil
+					},
+					LocationHandler: singleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		barCompiler := compiler.NewCompiler(barChecker.Program, barChecker.Elaboration)
+		barCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program {
+			require.Equal(t, fooLocation, location)
+			return fooProgram
+		}
+
+		barProgram := barCompiler.Compile()
+
+		vmConfig := &Config{
+			ImportHandler: func(location common.Location) *bbq.Program {
+				require.Equal(t, fooLocation, location)
+				return fooProgram
+			},
+			ContractValueHandler: func(_ *Config, location common.Location) *CompositeValue {
+				require.Equal(t, fooLocation, location)
+				return fooContractValue
+			},
+		}
+
+		vm = NewVM(barProgram, vmConfig)
+		barContractValue, err := vm.InitializeContract()
+		require.NoError(t, err)
+
+		// Compile and run main program
+
+		checker, err := ParseAndCheckWithOptions(t, `
+            import Bar from 0x02
+
+            fun test(): String {
+                return Bar.sayHello()
+            }`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, location)
+						addressLocation := location.(common.AddressLocation)
+						var elaboration *sema.Elaboration
+						switch addressLocation.Address {
+						case fooLocation.Address:
+							elaboration = fooChecker.Elaboration
+						case barLocation.Address:
+							elaboration = barChecker.Elaboration
+						default:
+							assert.FailNow(t, "invalid location")
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: singleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
+		}
+
+		program := comp.Compile()
+
+		vmConfig = &Config{
+			ImportHandler: func(location common.Location) *bbq.Program {
+				switch location {
+				case fooLocation:
+					return fooProgram
+				case barLocation:
+					return barProgram
+				default:
+					assert.FailNow(t, "invalid location")
+					return nil
+				}
+			},
+			ContractValueHandler: func(_ *Config, location common.Location) *CompositeValue {
+				switch location {
+				case fooLocation:
+					return fooContractValue
+				case barLocation:
+					return barContractValue
+				default:
+					assert.FailNow(t, "invalid location")
+					return nil
+				}
+			},
+		}
+
+		vm = NewVM(program, vmConfig)
+
+		result, err := vm.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, StringValue{String: []byte("Hello from Foo!")}, result)
+	})
 }
 
 func BenchmarkContractImport(b *testing.B) {
@@ -571,11 +807,15 @@ func BenchmarkContractImport(b *testing.B) {
 	importedChecker, err := ParseAndCheckWithOptions(b,
 		`
       contract MyContract {
+          var s: String
+
           fun helloText(): String {
-              return "global function of the imported program"
+              return self.s
           }
 
-          init() {}
+          init() {
+              self.s = "contract function of the imported program"
+          }
 
           struct Foo {
               var id : String
@@ -600,19 +840,16 @@ func BenchmarkContractImport(b *testing.B) {
 	importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
 	importedProgram := importCompiler.Compile()
 
+	vm := NewVM(importedProgram, nil)
+	importedContractValue, err := vm.InitializeContract()
+	require.NoError(b, err)
+
 	vmConfig := &Config{
 		ImportHandler: func(location common.Location) *bbq.Program {
 			return importedProgram
 		},
 		ContractValueHandler: func(conf *Config, location common.Location) *CompositeValue {
-			addressLocation := location.(common.AddressLocation)
-			return NewCompositeValue(
-				location,
-				addressLocation.Name,
-				common.CompositeKindContract,
-				addressLocation.Address,
-				conf.Storage,
-			)
+			return importedContractValue
 		},
 	}
 
@@ -715,7 +952,6 @@ func TestContractAccessDuringInit(t *testing.T) {
 
 		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 		program := comp.Compile()
-		printProgram(program)
 
 		vm := NewVM(program, nil)
 		contractValue, err := vm.InitializeContract()
@@ -748,7 +984,6 @@ func TestContractAccessDuringInit(t *testing.T) {
 
 		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 		program := comp.Compile()
-		printProgram(program)
 
 		vm := NewVM(program, nil)
 		contractValue, err := vm.InitializeContract()
@@ -870,7 +1105,6 @@ func TestContractField(t *testing.T) {
 
 		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
 		importedProgram := importCompiler.Compile()
-		printProgram(importedProgram)
 
 		vm := NewVM(importedProgram, nil)
 		importedContractValue, err := vm.InitializeContract()
@@ -901,7 +1135,6 @@ func TestContractField(t *testing.T) {
 		}
 
 		program := comp.Compile()
-		printProgram(program)
 
 		vmConfig := &Config{
 			ImportHandler: func(location common.Location) *bbq.Program {
@@ -938,7 +1171,6 @@ func TestContractField(t *testing.T) {
 
 		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
 		importedProgram := importCompiler.Compile()
-		printProgram(importedProgram)
 
 		vm := NewVM(importedProgram, nil)
 		importedContractValue, err := vm.InitializeContract()
@@ -970,7 +1202,6 @@ func TestContractField(t *testing.T) {
 		}
 
 		program := comp.Compile()
-		printProgram(program)
 
 		vmConfig := &Config{
 			ImportHandler: func(location common.Location) *bbq.Program {
@@ -990,4 +1221,47 @@ func TestContractField(t *testing.T) {
 		fieldValue := importedContractValue.GetMember(vm.config, "status")
 		assert.Equal(t, StringValue{String: []byte("UPDATED")}, fieldValue)
 	})
+}
+
+func TestEvaluationOrder(t *testing.T) {
+	f := Foo{"pending"}
+	f.GetFoo().printArgument(getArg())
+}
+
+type Foo struct {
+	id string
+}
+
+func (f Foo) GetFoo() Foo {
+	fmt.Println("evaluating receiver")
+	return f
+}
+
+func (f Foo) printArgument(s string) {
+	fmt.Println(s)
+}
+
+func getArg() string {
+	fmt.Println("evaluating argument")
+	return "argument"
+}
+
+func singleIdentifierLocationResolver(t testing.TB) func(
+	identifiers []ast.Identifier,
+	location common.Location,
+) ([]commons.ResolvedLocation, error) {
+	return func(identifiers []ast.Identifier, location common.Location) ([]commons.ResolvedLocation, error) {
+		require.Len(t, identifiers, 1)
+		require.IsType(t, common.AddressLocation{}, location)
+
+		return []commons.ResolvedLocation{
+			{
+				Location: common.AddressLocation{
+					Address: location.(common.AddressLocation).Address,
+					Name:    identifiers[0].Identifier,
+				},
+				Identifiers: identifiers,
+			},
+		}, nil
+	}
 }

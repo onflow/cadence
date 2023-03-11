@@ -21,17 +21,19 @@ package vm
 import (
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/runtime/bbq"
-	"github.com/onflow/cadence/runtime/bbq/constantkind"
-	"github.com/onflow/cadence/runtime/bbq/leb128"
-	"github.com/onflow/cadence/runtime/bbq/opcode"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+
+	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/runtime/bbq/commons"
+	"github.com/onflow/cadence/runtime/bbq/constantkind"
+	"github.com/onflow/cadence/runtime/bbq/leb128"
+	"github.com/onflow/cadence/runtime/bbq/opcode"
 )
 
 type VM struct {
-	functions map[string]FunctionValue
+	globals   map[string]Value
 	callFrame *callFrame
 	stack     []Value
 	config    *Config
@@ -46,92 +48,16 @@ func NewVM(program *bbq.Program, conf *Config) *VM {
 		conf.Storage = interpreter.NewInMemoryStorage(nil)
 	}
 
-	globals := initializeGlobals(program, conf)
-	functions := indexFunctions(program.Functions, globals)
+	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
+	linkedGlobalsCache := map[common.Location]LinkedGlobals{}
+
+	// Link global variables and functions.
+	linkedGlobals := LinkGlobals(program, conf, linkedGlobalsCache)
 
 	return &VM{
-		functions: functions,
-		config:    conf,
+		globals: linkedGlobals.indexedGlobals,
+		config:  conf,
 	}
-}
-
-func initializeGlobals(program *bbq.Program, conf *Config) []Value {
-	// TODO: global variable lookup relies too much on the order.
-	// 	Figure out a better way.
-
-	var importedGlobals []Value
-	for _, location := range program.Imports {
-		importedProgram := conf.ImportHandler(location)
-
-		// TODO: cache globals for imported programs.
-
-		importedProgramGlobals := initializeGlobals(importedProgram, conf)
-
-		// Load contract value
-		if importedProgram.Contract != nil {
-			// If the imported program is a contract,
-			// load the contract value and populate the global variable.
-			contract := importedProgram.Contract
-			contractLocation := common.NewAddressLocation(
-				conf.MemoryGauge,
-				common.MustBytesToAddress(contract.Address),
-				contract.Name,
-			)
-
-			// TODO: remove this check. This shouldn't be nil ideally.
-			if conf.ContractValueHandler != nil {
-				// Contract value is always at the zero-th index.
-				importedProgramGlobals[0] = conf.ContractValueHandler(conf, contractLocation)
-			}
-		}
-
-		importedGlobals = append(importedGlobals, importedProgramGlobals...)
-	}
-
-	ctx := NewContext(program, nil)
-
-	globals := make([]Value, 0)
-
-	// If the current program is a contract, reserve a global variable for the contract value.
-	// The reserved position is always the zero-th index.
-	// This value will be populated either by the `init` method invocation of the contract,
-	// Or when this program is imported by another (loads the value from storage).
-	if program.Contract != nil {
-		globals = append(globals, nil)
-	}
-
-	// Iterate through `program.Functions` to be deterministic.
-	// Order of globals must be same as index set at `Compiler.addGlobal()`.
-	// TODO: include non-function globals
-	for _, function := range program.Functions {
-		// TODO:
-		globals = append(globals, FunctionValue{
-			Function: function,
-			Context:  ctx,
-		})
-	}
-
-	// Imported globals are added first.
-	// This is the same order as they are added in the compiler.
-	ctx.Globals = importedGlobals
-	ctx.Globals = append(ctx.Globals, globals...)
-
-	// Return only the globals defined in the current program.
-	// Because the importer/caller doesn't need to know globals of nested imports.
-	return globals
-}
-
-func indexFunctions(functions []*bbq.Function, globals []Value) map[string]FunctionValue {
-	indexedFunctions := make(map[string]FunctionValue, len(functions))
-	for _, globalValue := range globals {
-		function, isFunction := globalValue.(FunctionValue)
-		if !isFunction {
-			continue
-		}
-		indexedFunctions[function.Function.Name] = function
-	}
-
-	return indexedFunctions
 }
 
 func (vm *VM) push(value Value) {
@@ -189,16 +115,25 @@ func (vm *VM) popCallFrame() {
 }
 
 func (vm *VM) Invoke(name string, arguments ...Value) (Value, error) {
-	function, ok := vm.functions[name]
+	function, ok := vm.globals[name]
 	if !ok {
-		return nil, errors.NewDefaultUserError("unknown function")
+		return nil, errors.NewDefaultUserError("unknown function '%s'", name)
 	}
 
-	if len(arguments) != int(function.Function.ParameterCount) {
-		return nil, errors.NewDefaultUserError("wrong number of arguments")
+	functionValue, ok := function.(FunctionValue)
+	if !ok {
+		return nil, errors.NewDefaultUserError("not invocable: %s", name)
 	}
 
-	vm.pushCallFrame(function.Context, function.Function, arguments)
+	if len(arguments) != int(functionValue.Function.ParameterCount) {
+		return nil, errors.NewDefaultUserError(
+			"wrong number of arguments: expected %d, found %d",
+			functionValue.Function.ParameterCount,
+			len(arguments),
+		)
+	}
+
+	vm.pushCallFrame(functionValue.Context, functionValue.Function, arguments)
 
 	vm.run()
 
@@ -210,7 +145,7 @@ func (vm *VM) Invoke(name string, arguments ...Value) (Value, error) {
 }
 
 func (vm *VM) InitializeContract(arguments ...Value) (*CompositeValue, error) {
-	value, err := vm.Invoke(InitFunctionName, arguments...)
+	value, err := vm.Invoke(commons.InitFunctionName, arguments...)
 	if err != nil {
 		return nil, err
 	}
@@ -221,25 +156,6 @@ func (vm *VM) InitializeContract(arguments ...Value) (*CompositeValue, error) {
 	}
 
 	return contractValue, nil
-}
-
-type vmOp func(*VM)
-
-var vmOps = [...]vmOp{
-	opcode.ReturnValue:  opReturnValue,
-	opcode.Jump:         opJump,
-	opcode.JumpIfFalse:  opJumpIfFalse,
-	opcode.IntAdd:       opBinaryIntAdd,
-	opcode.IntSubtract:  opBinaryIntSubtract,
-	opcode.IntLess:      opBinaryIntLess,
-	opcode.IntGreater:   opBinaryIntGreater,
-	opcode.True:         opTrue,
-	opcode.False:        opFalse,
-	opcode.GetConstant:  opGetConstant,
-	opcode.GetLocal:     opGetLocal,
-	opcode.SetLocal:     opSetLocal,
-	opcode.GetGlobal:    opGetGlobal,
-	opcode.InvokeStatic: opInvokeStatic,
 }
 
 func opReturnValue(vm *VM) {

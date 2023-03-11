@@ -18,6 +18,10 @@
 
 package compiler
 
+import "github.com/onflow/cadence/runtime/common"
+
 type global struct {
-	index uint16
+	name     string
+	location common.Location
+	index    uint16
 }

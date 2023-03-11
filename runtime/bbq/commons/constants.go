@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package vm
+package commons
 
 const (
 	InitFunctionName = "init"

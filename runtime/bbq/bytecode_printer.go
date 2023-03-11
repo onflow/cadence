@@ -35,6 +35,7 @@ type BytecodePrinter struct {
 }
 
 func (p *BytecodePrinter) PrintProgram(program *Program) string {
+	p.printImports(program.Imports)
 	p.printConstantPool(program.Constants)
 	for _, function := range program.Functions {
 		p.printFunction(function)
@@ -146,4 +147,15 @@ func (p *BytecodePrinter) getLocation(codes []byte, i int) (location common.Loca
 	}
 
 	return location, i + locationLen
+}
+
+func (p *BytecodePrinter) printImports(imports []*Import) {
+	p.stringBuilder.WriteString("-- Imports --\n")
+	for _, impt := range imports {
+		p.stringBuilder.WriteString(impt.Location.String())
+		p.stringBuilder.WriteRune('.')
+		p.stringBuilder.WriteString(impt.Name)
+		p.stringBuilder.WriteRune('\n')
+	}
+	p.stringBuilder.WriteRune('\n')
 }

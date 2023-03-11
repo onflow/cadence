@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-package compiler
+package bbq
 
-import (
-	"github.com/onflow/cadence/runtime/bbq/commons"
-)
+import "github.com/onflow/cadence/runtime/common"
 
-type Config struct {
-	ImportHandler   commons.ImportHandler
-	LocationHandler commons.LocationHandler
+type Import struct {
+	Location common.Location
+	Name     string
 }

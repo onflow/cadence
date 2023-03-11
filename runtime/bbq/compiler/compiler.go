@@ -24,14 +24,16 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/bbq"
-	"github.com/onflow/cadence/runtime/bbq/constantkind"
-	"github.com/onflow/cadence/runtime/bbq/leb128"
-	"github.com/onflow/cadence/runtime/bbq/opcode"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+
+	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/runtime/bbq/commons"
+	"github.com/onflow/cadence/runtime/bbq/constantkind"
+	"github.com/onflow/cadence/runtime/bbq/leb128"
+	"github.com/onflow/cadence/runtime/bbq/opcode"
 )
 
 type Compiler struct {
@@ -42,13 +44,16 @@ type Compiler struct {
 	currentFunction    *function
 	compositeTypeStack *Stack[*sema.CompositeType]
 
-	functions   []*function
-	constants   []*constant
-	globals     map[string]*global
-	loops       []*loop
-	currentLoop *loop
-	staticTypes [][]byte
-	typesInPool map[sema.Type]uint16
+	functions              []*function
+	constants              []*constant
+	globals                map[string]*global
+	indexedImportedGlobals map[string]*global
+	importedGlobals        []*global
+	loops                  []*loop
+	currentLoop            *loop
+	staticTypes            [][]byte
+	typesInPool            map[sema.Type]uint16
+	exportedImports        []*bbq.Import
 
 	// TODO: initialize
 	memoryGauge common.MemoryGauge
@@ -63,11 +68,13 @@ func NewCompiler(
 	elaboration *sema.Elaboration,
 ) *Compiler {
 	return &Compiler{
-		Program:     program,
-		Elaboration: elaboration,
-		Config:      &Config{},
-		globals:     map[string]*global{},
-		typesInPool: map[sema.Type]uint16{},
+		Program:                program,
+		Elaboration:            elaboration,
+		Config:                 &Config{},
+		globals:                map[string]*global{},
+		indexedImportedGlobals: map[string]*global{},
+		exportedImports:        make([]*bbq.Import, 0),
+		typesInPool:            map[sema.Type]uint16{},
 		compositeTypeStack: &Stack[*sema.CompositeType]{
 			elements: make([]*sema.CompositeType, 0),
 		},
@@ -75,7 +82,28 @@ func NewCompiler(
 }
 
 func (c *Compiler) findGlobal(name string) *global {
-	return c.globals[name]
+	global, ok := c.globals[name]
+	if ok {
+		return global
+	}
+
+	importedGlobal, ok := c.indexedImportedGlobals[name]
+	if !ok {
+		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", name))
+	}
+
+	// Add the 'importedGlobal' to 'globals' when they are used for the first time.
+	// This way, the 'globals' would eventually have only the used imports.
+	//
+	// If a global is found in imported globals, that means the index is not set.
+	// So set an index and add it to the 'globals'.
+	count := len(c.globals)
+	if count >= math.MaxUint16 {
+		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
+	}
+	importedGlobal.index = uint16(count)
+	c.globals[name] = importedGlobal
+	return importedGlobal
 }
 
 func (c *Compiler) addGlobal(name string) *global {
@@ -87,6 +115,17 @@ func (c *Compiler) addGlobal(name string) *global {
 		index: uint16(count),
 	}
 	c.globals[name] = global
+	return global
+}
+
+func (c *Compiler) addImportedGlobal(location common.Location, name string) *global {
+	// Index is not set here. It is set only if this imported global is used.
+	global := &global{
+		location: location,
+		name:     name,
+	}
+	c.importedGlobals = append(c.importedGlobals, global)
+	c.indexedImportedGlobals[name] = global
 	return global
 }
 
@@ -237,7 +276,7 @@ func (c *Compiler) reserveGlobalVars(
 		// will be used for the contract value.
 		// Hence, reserve a separate global var for contract inits.
 		if declaration.CompositeKind == common.CompositeKindContract {
-			c.addGlobal("init")
+			c.addGlobal(commons.InitFunctionName)
 		}
 
 		// Define globals for functions before visiting function bodies
@@ -271,11 +310,23 @@ func (c *Compiler) exportTypes() [][]byte {
 	return types
 }
 
-func (c *Compiler) exportImports() []common.Location {
-	imports := c.Program.ImportDeclarations()
-	exportedImports := make([]common.Location, len(imports))
-	for index, importDecl := range imports {
-		exportedImports[index] = importDecl.Location
+func (c *Compiler) exportImports() []*bbq.Import {
+	exportedImports := make([]*bbq.Import, 0)
+
+	for _, importedGlobal := range c.importedGlobals {
+		name := importedGlobal.name
+
+		// Export only used imports
+		if _, ok := c.globals[name]; !ok {
+			continue
+		}
+
+		bbqImport := &bbq.Import{
+			Location: importedGlobal.location,
+			Name:     name,
+		}
+
+		exportedImports = append(exportedImports, bbqImport)
 	}
 
 	return exportedImports
@@ -307,7 +358,7 @@ func (c *Compiler) exportContract() *bbq.Contract {
 	contractType := c.Elaboration.CompositeDeclarationTypes[contractDecl]
 	addressLocation := contractType.Location.(common.AddressLocation)
 	return &bbq.Contract{
-		Name:    addressLocation.Name,
+		Name:    contractType.Identifier,
 		Address: addressLocation.Address[:],
 	}
 }
@@ -831,17 +882,37 @@ func (c *Compiler) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ struct{})
 }
 
 func (c *Compiler) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {
-	importedProgram := c.Config.ImportHandler(declaration.Location)
-
-	// Add a global variable for the imported contract value.
-	contractDecl := importedProgram.Contract
-	if contractDecl != nil {
-		c.addGlobal(contractDecl.Name)
+	resolvedLocation, err := commons.ResolveLocation(
+		c.Config.LocationHandler,
+		declaration.Identifiers,
+		declaration.Location,
+	)
+	if err != nil {
+		panic(err)
 	}
 
-	for _, function := range importedProgram.Functions {
-		// TODO: Filter-in only public functions
-		c.addGlobal(function.Name)
+	for _, location := range resolvedLocation {
+		importedProgram := c.Config.ImportHandler(location.Location)
+
+		// Add a global variable for the imported contract value.
+		contractDecl := importedProgram.Contract
+		isContract := contractDecl != nil
+		if isContract {
+			c.addImportedGlobal(location.Location, contractDecl.Name)
+		}
+
+		for _, function := range importedProgram.Functions {
+			name := function.Name
+
+			// Skip the contract initializer.
+			// It should never be able to invoked within the code.
+			if isContract && name == commons.InitFunctionName {
+				continue
+			}
+
+			// TODO: Filter-in only public functions
+			c.addImportedGlobal(location.Location, function.Name)
+		}
 	}
 
 	return

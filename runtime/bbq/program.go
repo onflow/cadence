@@ -18,11 +18,9 @@
 
 package bbq
 
-import "github.com/onflow/cadence/runtime/common"
-
 type Program struct {
 	Contract  *Contract
-	Imports   []common.Location
+	Imports   []*Import
 	Functions []*Function
 	Constants []*Constant
 	Types     [][]byte
