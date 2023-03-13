@@ -315,11 +315,11 @@ func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Conte
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
-	_, err = r.NewTransactionExecutor(script, context).Result()
 	location := context.Location
 	if _, ok := location.(common.TransactionLocation); !ok {
 		return errors.NewUnexpectedError("invalid non-transaction location: %s", location)
 	}
+	_, err = r.NewTransactionExecutor(script, context).Result()
 	return err
 }
 
