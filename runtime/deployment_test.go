@@ -161,10 +161,10 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
-			updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+			updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 				accountCode = code
 				return nil
 			},

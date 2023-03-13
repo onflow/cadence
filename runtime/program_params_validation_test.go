@@ -605,11 +605,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		runtimeInterface := &testRuntimeInterface{
 			storage:         storage,
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return contracts[location], nil
 			},
 			meterMemory: func(_ common.MemoryUsage) error {

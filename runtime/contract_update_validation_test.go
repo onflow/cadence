@@ -93,26 +93,14 @@ func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 			return []Address{common.MustBytesToAddress([]byte{0x42})}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		removeAccountContractCode: func(address Address, name string) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		removeAccountContractCode: func(location common.AddressLocation) error {
 			delete(accountCodes, location)
 			return nil
 		},
@@ -2163,26 +2151,14 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 				return []Address{address}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
-			removeAccountContractCode: func(address Address, name string) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			removeAccountContractCode: func(location common.AddressLocation) error {
 				delete(accountCodes, location)
 				return nil
 			},
@@ -2280,26 +2256,14 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 				return []Address{address}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
-			removeAccountContractCode: func(address Address, name string) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			removeAccountContractCode: func(location common.AddressLocation) error {
 				delete(accountCodes, location)
 				return nil
 			},

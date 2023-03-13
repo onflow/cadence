@@ -161,11 +161,10 @@ func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *inte
 }
 
 func (s *Storage) recordContractUpdate(
-	address common.Address,
-	name string,
+	location common.AddressLocation,
 	contractValue *interpreter.CompositeValue,
 ) {
-	key := interpreter.NewStorageKey(s.memoryGauge, address, name)
+	key := interpreter.NewStorageKey(s.memoryGauge, location.Address, location.Name)
 
 	// NOTE: do NOT delete the map entry,
 	// otherwise the removal write is lost

@@ -77,7 +77,7 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 			meterMemory: func(usage common.MemoryUsage) error {
 				return meter.MeterMemory(usage)
 			},
-			getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
 		}
@@ -145,19 +145,11 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 					return []Address{Address(addressValue)}, nil
 				},
 				resolveLocation: singleIdentifierLocationResolver(t),
-				updateAccountContractCode: func(address Address, name string, code []byte) error {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
+				updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 					accountCodes[location] = code
 					return nil
 				},
-				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
+				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 					code = accountCodes[location]
 					return code, nil
 				},
@@ -795,7 +787,7 @@ func TestLogFunctionStringConversionMetering(t *testing.T) {
 			meterMemory: func(usage common.MemoryUsage) error {
 				return meter.MeterMemory(usage)
 			},
-			getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
 			log: func(s string) {
