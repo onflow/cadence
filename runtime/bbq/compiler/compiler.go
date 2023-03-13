@@ -579,7 +579,7 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 		c.loadArguments(expression)
 		// Load function value
 		c.emitVariableLoad(invokedExpr.Identifier.Identifier)
-		c.emit(opcode.InvokeStatic)
+		c.emit(opcode.Invoke)
 	case *ast.MemberExpression:
 		memberInfo := c.Elaboration.MemberExpressionMemberInfos[invokedExpr]
 		typeName := memberInfo.AccessedType.QualifiedString()
@@ -592,7 +592,7 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 			c.loadArguments(expression)
 			// Load function value
 			c.emitVariableLoad(funcName)
-			c.emit(opcode.InvokeStatic)
+			c.emit(opcode.Invoke)
 		} else {
 			// Receiver is loaded first. So 'self' is always the zero-th argument.
 			// This must be in sync with `compileCompositeFunction`.
@@ -745,7 +745,7 @@ func (c *Compiler) compileInitializer(declaration *ast.SpecialFunctionDeclaratio
 	}
 
 	function := c.addFunction(functionName, uint16(parameterCount))
-	declareParameters(function, parameters)
+	c.declareParameters(function, parameters, false)
 
 	// Declare `self`
 	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
@@ -814,20 +814,26 @@ func (c *Compiler) compileInitializer(declaration *ast.SpecialFunctionDeclaratio
 
 func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
 	// TODO: handle nested functions
-	function := c.declareFunction(declaration)
-	declareParameters(function, declaration.ParameterList.Parameters)
+	declareReceiver := !c.compositeTypeStack.isEmpty()
+	function := c.declareFunction(declaration, declareReceiver)
+
+	c.declareParameters(function, declaration.ParameterList.Parameters, declareReceiver)
 	c.compileFunctionBlock(declaration.FunctionBlock)
 	return
 }
 
-func (c *Compiler) declareFunction(declaration *ast.FunctionDeclaration) *function {
+func (c *Compiler) declareFunction(declaration *ast.FunctionDeclaration, declareReceiver bool) *function {
 	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
 	functionName := typeQualifiedName(enclosingCompositeTypeName, declaration.Identifier.Identifier)
 
 	functionType := c.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 	parameterCount := len(functionType.Parameters)
-	if parameterCount > math.MaxUint16 {
+	if parameterCount >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid parameter count"))
+	}
+
+	if declareReceiver {
+		parameterCount++
 	}
 
 	return c.addFunction(functionName, uint16(parameterCount))
@@ -846,7 +852,7 @@ func (c *Compiler) VisitCompositeDeclaration(declaration *ast.CompositeDeclarati
 	}
 
 	for _, function := range declaration.Members.Functions() {
-		c.compileCompositeFunction(function)
+		c.compileDeclaration(function)
 	}
 
 	for _, nestedTypes := range declaration.Members.Composites() {
@@ -856,14 +862,6 @@ func (c *Compiler) VisitCompositeDeclaration(declaration *ast.CompositeDeclarati
 	// TODO:
 
 	return
-}
-
-func (c *Compiler) compileCompositeFunction(declaration *ast.FunctionDeclaration) {
-	function := c.declareFunction(declaration)
-	// Declare `self`. Receiver is always at the zero-th index of params.
-	function.declareLocal(sema.SelfIdentifier)
-	declareParameters(function, declaration.ParameterList.Parameters)
-	c.compileFunctionBlock(declaration.FunctionBlock)
 }
 
 func (c *Compiler) VisitInterfaceDeclaration(_ *ast.InterfaceDeclaration) (_ struct{}) {
@@ -985,7 +983,13 @@ func typeQualifiedName(typeName, functionName string) string {
 	return typeName + "." + functionName
 }
 
-func declareParameters(function *function, parameters []*ast.Parameter) {
+func (c *Compiler) declareParameters(function *function, parameters []*ast.Parameter, declareReceiver bool) {
+	if declareReceiver {
+		// Declare receiver as `self`.
+		// Receiver is always at the zero-th index of params.
+		function.declareLocal(sema.SelfIdentifier)
+	}
+
 	for _, parameter := range parameters {
 		parameterName := parameter.Identifier.Identifier
 		function.declareLocal(parameterName)

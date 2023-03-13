@@ -1223,29 +1223,6 @@ func TestContractField(t *testing.T) {
 	})
 }
 
-func TestEvaluationOrder(t *testing.T) {
-	f := Foo{"pending"}
-	f.GetFoo().printArgument(getArg())
-}
-
-type Foo struct {
-	id string
-}
-
-func (f Foo) GetFoo() Foo {
-	fmt.Println("evaluating receiver")
-	return f
-}
-
-func (f Foo) printArgument(s string) {
-	fmt.Println(s)
-}
-
-func getArg() string {
-	fmt.Println("evaluating argument")
-	return "argument"
-}
-
 func singleIdentifierLocationResolver(t testing.TB) func(
 	identifiers []ast.Identifier,
 	location common.Location,

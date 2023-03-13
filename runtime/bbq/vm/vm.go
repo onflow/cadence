@@ -250,24 +250,12 @@ func opSetGlobal(vm *VM) {
 	callFrame.context.Globals[index] = vm.pop()
 }
 
-func opInvokeStatic(vm *VM) {
+func opInvoke(vm *VM) {
 	value := vm.pop().(FunctionValue)
 	stackHeight := len(vm.stack)
 	parameterCount := int(value.Function.ParameterCount)
 	arguments := vm.stack[stackHeight-parameterCount:]
 
-	vm.pushCallFrame(value.Context, value.Function, arguments)
-	vm.dropN(parameterCount)
-}
-
-func opInvoke(vm *VM) {
-	value := vm.pop().(FunctionValue)
-	stackHeight := len(vm.stack)
-
-	// Add one to account for `self`
-	parameterCount := int(value.Function.ParameterCount) + 1
-
-	arguments := vm.stack[stackHeight-parameterCount:]
 	vm.pushCallFrame(value.Context, value.Function, arguments)
 	vm.dropN(parameterCount)
 }
@@ -400,8 +388,6 @@ func (vm *VM) run() {
 			opGetGlobal(vm)
 		case opcode.SetGlobal:
 			opSetGlobal(vm)
-		case opcode.InvokeStatic:
-			opInvokeStatic(vm)
 		case opcode.Invoke:
 			opInvoke(vm)
 		case opcode.Drop:

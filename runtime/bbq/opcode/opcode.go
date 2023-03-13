@@ -54,7 +54,6 @@ const (
 	SetField
 
 	Invoke
-	InvokeStatic
 	InvokeNative
 
 	New
