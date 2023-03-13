@@ -4755,19 +4755,15 @@ func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
 
 	config.AccountLinkingAllowed = false
 
-	var rejectAllowAccountLinkingPragma bool
-
-	for _, declaration := range interpreter.Program.Program.Declarations() {
-
-		if pragmaDeclaration, isPragma := declaration.(*ast.PragmaDeclaration); isPragma {
-			if sema.IsAllowAccountLinkingPragma(pragmaDeclaration) {
-				if !rejectAllowAccountLinkingPragma {
-					config.AccountLinkingAllowed = true
-				}
-				continue
-			}
-		}
-
-		rejectAllowAccountLinkingPragma = true
+	declarations := interpreter.Program.Program.Declarations()
+	if len(declarations) < 1 {
+		return
 	}
+
+	pragmaDeclaration, isPragma := declarations[0].(*ast.PragmaDeclaration)
+	if !isPragma || !sema.IsAllowAccountLinkingPragma(pragmaDeclaration) {
+		return
+	}
+
+	config.AccountLinkingAllowed = true
 }
