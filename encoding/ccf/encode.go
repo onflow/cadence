@@ -1238,7 +1238,7 @@ func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited c
 //	#6.191([
 //	  cadence-type-id: cadence-type-id,
 //	  type: type-value,
-//	  restrictions: [+ type-value]
+//	  restrictions: [* type-value]
 //	])
 func (e *Encoder) encodeRestrictedTypeValue(typ *cadence.RestrictedType, visited ccfTypeIDByCadenceType) error {
 	rawTagNum := []byte{0xd8, CBORTagRestrictedTypeValue}

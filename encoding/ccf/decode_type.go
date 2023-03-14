@@ -482,7 +482,7 @@ func (d *Decoder) decodeReferenceType(
 //	#6.143([
 //	  cadence-type-id: cadence-type-id,
 //	  type: inline-type,
-//	  restrictions: [+ inline-type]
+//	  restrictions: [* inline-type]
 //	])
 //
 // restricted-type-value =
@@ -491,7 +491,7 @@ func (d *Decoder) decodeReferenceType(
 //	#6.191([
 //	  cadence-type-id: cadence-type-id,
 //	  type: type-value,
-//	  restrictions: [+ type-value]
+//	  restrictions: [* type-value]
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.

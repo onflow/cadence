@@ -349,7 +349,7 @@ func (e *Encoder) encodeReferenceTypeWithRawTag(
 //	#6.143([
 //	  cadence-type-id: cadence-type-id,
 //	  type: inline-type,
-//	  restrictions: [+ inline-type]
+//	  restrictions: [* inline-type]
 //	])
 func (e *Encoder) encodeRestrictedType(typ *cadence.RestrictedType, tids ccfTypeIDByCadenceType) error {
 	rawTagNum := []byte{0xd8, CBORTagRestrictedType}
