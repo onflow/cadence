@@ -416,9 +416,7 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 
 	sort.Sort(sorter)
 
-	for i := 0; i < len(sorter.indexes); i++ {
-		index := sorter.indexes[i]
-
+	for _, index := range sorter.indexes {
 		// Encode restriction type with given encodeTypeFn.
 		err = encodeTypeFn(restrictions[index], tids)
 		if err != nil {

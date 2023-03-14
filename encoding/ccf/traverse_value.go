@@ -54,8 +54,8 @@ func compositeTypesFromValue(v cadence.Value) ([]cadence.Type, ccfTypeIDByCadenc
 	sort.Sort(bytewiseCadenceTypeInPlaceSorter(ct.types))
 
 	// Assign sorted array index as local ccf ID.
-	for i := 0; i < len(ct.types); i++ {
-		ct.ids[ct.types[i].ID()] = ccfTypeID(i)
+	for i, typ := range ct.types {
+		ct.ids[typ.ID()] = ccfTypeID(i)
 	}
 
 	return ct.types, ct.ids
@@ -78,39 +78,39 @@ func (ct *compositeTypes) traverseValue(v cadence.Value) {
 		ct.traverseValue(x.Value)
 
 	case cadence.Array:
-		for i := 0; i < len(x.Values); i++ {
-			ct.traverseValue(x.Values[i])
+		for _, element := range x.Values {
+			ct.traverseValue(element)
 		}
 
 	case cadence.Dictionary:
-		for i := 0; i < len(x.Pairs); i++ {
-			ct.traverseValue(x.Pairs[i].Key)
-			ct.traverseValue(x.Pairs[i].Value)
+		for _, pair := range x.Pairs {
+			ct.traverseValue(pair.Key)
+			ct.traverseValue(pair.Value)
 		}
 
 	case cadence.Struct:
-		for i := 0; i < len(x.Fields); i++ {
-			ct.traverseValue(x.Fields[i])
+		for _, field := range x.Fields {
+			ct.traverseValue(field)
 		}
 
 	case cadence.Resource:
-		for i := 0; i < len(x.Fields); i++ {
-			ct.traverseValue(x.Fields[i])
+		for _, field := range x.Fields {
+			ct.traverseValue(field)
 		}
 
 	case cadence.Event:
-		for i := 0; i < len(x.Fields); i++ {
-			ct.traverseValue(x.Fields[i])
+		for _, field := range x.Fields {
+			ct.traverseValue(field)
 		}
 
 	case cadence.Contract:
-		for i := 0; i < len(x.Fields); i++ {
-			ct.traverseValue(x.Fields[i])
+		for _, field := range x.Fields {
+			ct.traverseValue(field)
 		}
 
 	case cadence.Enum:
-		for i := 0; i < len(x.Fields); i++ {
-			ct.traverseValue(x.Fields[i])
+		for _, field := range x.Fields {
+			ct.traverseValue(field)
 		}
 	}
 }
@@ -142,8 +142,8 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 
 	case *cadence.RestrictedType:
 		check := ct.traverseType(t.Type)
-		for i := 0; i < len(t.Restrictions); i++ {
-			checkRestriction := ct.traverseType(t.Restrictions[i])
+		for _, restriction := range t.Restrictions {
+			checkRestriction := ct.traverseType(restriction)
 			check = check || checkRestriction
 		}
 		return check
@@ -154,8 +154,8 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		newType := ct.add(t)
 		if newType {
 			fields := t.CompositeFields()
-			for i := 0; i < len(fields); i++ {
-				checkField := ct.traverseType(fields[i].Type)
+			for _, field := range fields {
+				checkField := ct.traverseType(field.Type)
 				check = check || checkField
 			}
 
