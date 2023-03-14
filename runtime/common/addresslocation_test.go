@@ -65,6 +65,19 @@ func TestAddressLocationTypeID(t *testing.T) {
 	)
 }
 
+func TestAddressLocationID(t *testing.T) {
+
+	t.Parallel()
+
+	location, _, err := decodeAddressLocationTypeID(nil, "A.0000000000000001.Bar.Baz")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"A.0000000000000001.Bar",
+		location.ID(),
+	)
+}
+
 func TestDecodeAddressLocationTypeID(t *testing.T) {
 
 	t.Parallel()

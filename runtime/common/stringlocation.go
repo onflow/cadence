@@ -20,6 +20,7 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/errors"
@@ -62,6 +63,10 @@ func (l StringLocation) String() string {
 
 func (l StringLocation) Description() string {
 	return string(l)
+}
+
+func (l StringLocation) ID() string {
+	return fmt.Sprintf("%s.%s", StringLocationPrefix, l)
 }
 
 func (l StringLocation) MarshalJSON() ([]byte, error) {

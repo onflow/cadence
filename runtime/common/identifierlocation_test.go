@@ -58,6 +58,19 @@ func TestIdentifierLocation_TypeID(t *testing.T) {
 	)
 }
 
+func TestIdentifierLocation_ID(t *testing.T) {
+
+	t.Parallel()
+
+	location, _, err := decodeIdentifierLocationTypeID(nil, "I.foo.Bar.Baz")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"I.foo",
+		location.ID(),
+	)
+}
+
 func TestDecodeIdentifierLocationTypeID(t *testing.T) {
 
 	t.Parallel()

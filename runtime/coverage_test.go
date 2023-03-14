@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestNewLocationCoverage(t *testing.T) {
@@ -261,6 +262,324 @@ func TestCoverageReportAddLineHit(t *testing.T) {
 	assert.Equal(t, 4, locationCoverage.Statements)
 	assert.Equal(t, "50.0%", locationCoverage.Percentage())
 	assert.Equal(t, 2, locationCoverage.CoveredLines())
+}
+
+func TestCoverageReportWithFlowLocation(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := stdlib.FlowLocation{}
+	coverageReport.InspectProgram(location, program)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "flow": {
+	        "line_hits": {
+	          "3": 0,
+	          "4": 0,
+	          "5": 0,
+	          "7": 0
+	        },
+	        "missed_lines": [3, 4, 5, 7],
+	        "statements": 4,
+	        "percentage": "0.0%"
+	      }
+	    }
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+}
+
+func TestCoverageReportWithREPLLocation(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.REPLLocation{}
+	coverageReport.InspectProgram(location, program)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "REPL": {
+	        "line_hits": {
+	          "3": 0,
+	          "4": 0,
+	          "5": 0,
+	          "7": 0
+	        },
+	        "missed_lines": [3, 4, 5, 7],
+	        "statements": 4,
+	        "percentage": "0.0%"
+	      }
+	    }
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+}
+
+func TestCoverageReportWithScriptLocation(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.ScriptLocation{0x1, 0x2}
+	coverageReport.InspectProgram(location, program)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "s.0102000000000000000000000000000000000000000000000000000000000000": {
+	        "line_hits": {
+	          "3": 0,
+	          "4": 0,
+	          "5": 0,
+	          "7": 0
+	        },
+	        "missed_lines": [3, 4, 5, 7],
+	        "statements": 4,
+	        "percentage": "0.0%"
+	      }
+	    }
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+}
+
+func TestCoverageReportWithStringLocation(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.StringLocation("AnswerScript")
+	coverageReport.InspectProgram(location, program)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "S.AnswerScript": {
+	        "line_hits": {
+	          "3": 0,
+	          "4": 0,
+	          "5": 0,
+	          "7": 0
+	        },
+	        "missed_lines": [3, 4, 5, 7],
+	        "statements": 4,
+	        "percentage": "0.0%"
+	      }
+	    }
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+}
+
+func TestCoverageReportWithIdentifierLocation(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.IdentifierLocation("Answer")
+	coverageReport.InspectProgram(location, program)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "I.Answer": {
+	        "line_hits": {
+	          "3": 0,
+	          "4": 0,
+	          "5": 0,
+	          "7": 0
+	        },
+	        "missed_lines": [3, 4, 5, 7],
+	        "statements": 4,
+	        "percentage": "0.0%"
+	      }
+	    }
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+}
+
+func TestCoverageReportWithTransactionLocation(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.TransactionLocation{0x1, 0x2}
+	coverageReport.InspectProgram(location, program)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "t.0102000000000000000000000000000000000000000000000000000000000000": {
+	        "line_hits": {
+	          "3": 0,
+	          "4": 0,
+	          "5": 0,
+	          "7": 0
+	        },
+	        "missed_lines": [3, 4, 5, 7],
+	        "statements": 4,
+	        "percentage": "0.0%"
+	      }
+	    }
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+}
+
+func TestCoverageReportWithAddressLocation(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.AddressLocation{
+		Address: common.MustBytesToAddress([]byte{1, 2}),
+		Name:    "Answer",
+	}
+	coverageReport.InspectProgram(location, program)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "A.0000000000000102.Answer": {
+	        "line_hits": {
+	          "3": 0,
+	          "4": 0,
+	          "5": 0,
+	          "7": 0
+	        },
+	        "missed_lines": [3, 4, 5, 7],
+	        "statements": 4,
+	        "percentage": "0.0%"
+	      }
+	    }
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
 }
 
 func TestCoverageReportAddLineHitForExcludedLocation(t *testing.T) {

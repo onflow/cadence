@@ -256,9 +256,7 @@ func (r *CoverageReport) MarshalJSON() ([]byte, error) {
 
 	coverage := make(map[string]LC, len(r.Coverage))
 	for location, locationCoverage := range r.Coverage { // nolint:maprange
-		typeID := location.TypeID(nil, "")
-		locationID := typeID[:len(typeID)-1]
-		coverage[string(locationID)] = LC{
+		coverage[location.ID()] = LC{
 			LineHits:    locationCoverage.LineHits,
 			MissedLines: locationCoverage.MissedLines(),
 			Statements:  locationCoverage.Statements,

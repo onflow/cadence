@@ -71,6 +71,10 @@ func (l REPLLocation) Description() string {
 	return REPLLocationPrefix
 }
 
+func (l REPLLocation) ID() string {
+	return REPLLocationPrefix
+}
+
 func (l REPLLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type string
