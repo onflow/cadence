@@ -348,7 +348,7 @@ func (d *Decoder) decodeCompositeType(
 // language=CDDL
 //
 //	fields: [
-//	    + [
+//	    * [
 //	        field-name: tstr,
 //	        field-type: inline-type
 //	    ]

@@ -123,7 +123,7 @@ func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDB
 // language=CDDL
 //
 //	fields: [
-//	    + [
+//	    * [
 //	        field-name: tstr,
 //	        field-type: inline-type
 //	    ]
@@ -137,25 +137,31 @@ func (e *Encoder) encodeCompositeTypeFields(typ cadence.CompositeType, tids ccfT
 		return err
 	}
 
-	if len(fieldTypes) == 1 {
+	switch len(fieldTypes) {
+	case 0:
+		// Short-circuit if there is no field type.
+		return nil
+
+	case 1:
 		// Avoid overhead of sorting if there is only one field.
 		return e.encodeCompositeTypeField(fieldTypes[0], tids)
-	}
 
-	// "Deterministic CCF Encoding Requirements" in CCF specs:
-	//
-	//   "composite-type.fields MUST be sorted by name"
-	sortedIndexes := getSortedFieldIndex(typ)
+	default:
+		// "Deterministic CCF Encoding Requirements" in CCF specs:
+		//
+		//   "composite-type.fields MUST be sorted by name"
+		sortedIndexes := getSortedFieldIndex(typ)
 
-	for _, index := range sortedIndexes {
-		// Encode field
-		err = e.encodeCompositeTypeField(fieldTypes[index], tids)
-		if err != nil {
-			return err
+		for _, index := range sortedIndexes {
+			// Encode field
+			err = e.encodeCompositeTypeField(fieldTypes[index], tids)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return nil
+		return nil
+	}
 }
 
 // encodeCompositeTypeField encodes field type as

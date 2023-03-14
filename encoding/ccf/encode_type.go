@@ -402,29 +402,35 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 		return err
 	}
 
-	if len(restrictions) == 1 {
+	switch len(restrictions) {
+	case 0:
+		// Short-circuit if there is no restriction.
+		return nil
+
+	case 1:
 		// Avoid overhead of sorting if there is only one restriction.
 		// Encode restriction type with given encodeTypeFn.
 		return encodeTypeFn(restrictions[0], tids)
-	}
 
-	// "Deterministic CCF Encoding Requirements" in CCF specs:
-	//
-	//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
-	//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
-	sorter := newBytewiseCadenceTypeSorter(restrictions)
+	default:
+		// "Deterministic CCF Encoding Requirements" in CCF specs:
+		//
+		//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
+		//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
+		sorter := newBytewiseCadenceTypeSorter(restrictions)
 
-	sort.Sort(sorter)
+		sort.Sort(sorter)
 
-	for _, index := range sorter.indexes {
-		// Encode restriction type with given encodeTypeFn.
-		err = encodeTypeFn(restrictions[index], tids)
-		if err != nil {
-			return err
+		for _, index := range sorter.indexes {
+			// Encode restriction type with given encodeTypeFn.
+			err = encodeTypeFn(restrictions[index], tids)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return nil
+		return nil
+	}
 }
 
 // encodeCapabilityType encodes cadence.CapabilityType as

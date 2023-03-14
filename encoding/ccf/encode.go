@@ -899,22 +899,28 @@ func (e *Encoder) encodeComposite(
 		return err
 	}
 
-	if len(fields) == 1 {
+	switch len(fields) {
+	case 0:
+		// Short-circuit if there is no field.
+		return nil
+
+	case 1:
 		// Avoid overhead of sorting if there is only one field.
 		return e.encodeValue(fields[0], staticFieldTypes[0].Type, tids)
-	}
 
-	sortedIndexes := getSortedFieldIndex(typ)
+	default:
+		sortedIndexes := getSortedFieldIndex(typ)
 
-	for _, index := range sortedIndexes {
-		// Encode sorted field as value.
-		err = e.encodeValue(fields[index], staticFieldTypes[index].Type, tids)
-		if err != nil {
-			return err
+		for _, index := range sortedIndexes {
+			// Encode sorted field as value.
+			err = e.encodeValue(fields[index], staticFieldTypes[index].Type, tids)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return nil
+		return nil
+	}
 }
 
 // encodePath encodes cadence.Path as
@@ -1502,7 +1508,7 @@ func (e *Encoder) encodeCompositeTypeValue(
 // language=CDDL
 //
 //	fields: [
-//	    + [
+//	    * [
 //	        name: tstr,
 //	        type: type-value
 //	    ]
@@ -1514,31 +1520,37 @@ func (e *Encoder) encodeFieldTypeValues(fieldTypes []cadence.Field, visited ccfT
 		return err
 	}
 
-	if len(fieldTypes) == 1 {
-		// Avoid overhead of sorting if there is only one field type
+	switch len(fieldTypes) {
+	case 0:
+		// Short-circuit if there is no field type.
+		return nil
+
+	case 1:
+		// Avoid overhead of sorting if there is only one field type.
 		return e.encodeFieldTypeValue(fieldTypes[0], visited)
-	}
 
-	// "Deterministic CCF Encoding Requirements" in CCF specs:
-	//
-	//   "composite-type-value.fields MUST be sorted by name."
+	default:
+		// "Deterministic CCF Encoding Requirements" in CCF specs:
+		//
+		//   "composite-type-value.fields MUST be sorted by name."
 
-	// NOTE: bytewiseFieldIdentifierSorter doesn't sort fieldTypes in place.
-	// bytewiseFieldIdentifierSorter.indexes is used as sorted fieldTypes
-	// index.
-	sorter := newBytewiseFieldSorter(fieldTypes)
+		// NOTE: bytewiseFieldIdentifierSorter doesn't sort fieldTypes in place.
+		// bytewiseFieldIdentifierSorter.indexes is used as sorted fieldTypes
+		// index.
+		sorter := newBytewiseFieldSorter(fieldTypes)
 
-	sort.Sort(sorter)
+		sort.Sort(sorter)
 
-	// Encode sorted field types.
-	for _, index := range sorter.indexes {
-		err = e.encodeFieldTypeValue(fieldTypes[index], visited)
-		if err != nil {
-			return err
+		// Encode sorted field types.
+		for _, index := range sorter.indexes {
+			err = e.encodeFieldTypeValue(fieldTypes[index], visited)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return nil
+		return nil
+	}
 }
 
 // encodeFieldTypeValue encodes one composite field type as
@@ -1615,31 +1627,37 @@ func (e *Encoder) encodeParameterTypeValues(parameterTypes []cadence.Parameter, 
 		return err
 	}
 
-	if len(parameterTypes) == 1 {
+	switch len(parameterTypes) {
+	case 0:
+		// Short-circuit if there is no parameter type.
+		return nil
+
+	case 1:
 		// Avoid overhead of sorting if there is only one parameter type.
 		return e.encodeParameterTypeValue(parameterTypes[0], visited)
-	}
 
-	// "Deterministic CCF Encoding Requirements" in CCF specs:
-	//
-	//   "composite-type-value.initializers MUST be sorted by identifier."
+	default:
+		// "Deterministic CCF Encoding Requirements" in CCF specs:
+		//
+		//   "composite-type-value.initializers MUST be sorted by identifier."
 
-	// NOTE: bytewiseParmaeterSorter doesn't sort parameterTypes in place.
-	// bytewiseParmaeterSorter.indexes is used as sorted parameterTypes
-	// index.
-	sorter := newBytewiseParameterSorter(parameterTypes)
+		// NOTE: bytewiseParmaeterSorter doesn't sort parameterTypes in place.
+		// bytewiseParmaeterSorter.indexes is used as sorted parameterTypes
+		// index.
+		sorter := newBytewiseParameterSorter(parameterTypes)
 
-	sort.Sort(sorter)
+		sort.Sort(sorter)
 
-	// Encode sorted parameter types.
-	for _, index := range sorter.indexes {
-		err = e.encodeParameterTypeValue(parameterTypes[index], visited)
-		if err != nil {
-			return err
+		// Encode sorted parameter types.
+		for _, index := range sorter.indexes {
+			err = e.encodeParameterTypeValue(parameterTypes[index], visited)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return nil
+		return nil
+	}
 }
 
 // encodeParameterTypeValue encodes composite initializer parameter as
