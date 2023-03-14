@@ -97,19 +97,11 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
@@ -196,19 +188,11 @@ func TestAccountAttachmentExport(t *testing.T) {
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
@@ -284,19 +268,11 @@ func TestAccountAttachedExport(t *testing.T) {
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
@@ -399,19 +375,11 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
@@ -523,19 +491,11 @@ func TestAccountAttachmentCapability(t *testing.T) {
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
@@ -554,19 +514,11 @@ func TestAccountAttachmentCapability(t *testing.T) {
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
