@@ -40,7 +40,7 @@ jobs:
           cache: true
 
       - name: Build
-        run: make build
+        run: make -j8 build
 
       - name: Test
         run: make test

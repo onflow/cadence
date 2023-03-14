@@ -36,7 +36,7 @@ type Interface interface {
 	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// GetCode returns the code at a given location
 	GetCode(location Location) ([]byte, error)
-	// GetAndSetProgram returns the program for the given location, if available,
+	// GetOrLoadProgram returns the program for the given location, if available,
 	// or sets the program by calling the given load function.
 	//
 	// For implementations:
@@ -52,7 +52,7 @@ type Interface interface {
 	//   *EVEN IF loading failed* (program is nil / error is non-nil),
 	//   and it may NOT return something different
 	// - Do NOT implement this as a cache!
-	GetAndSetProgram(
+	GetOrLoadProgram(
 		location Location,
 		load func() (*interpreter.Program, error),
 	) (*interpreter.Program, error)
@@ -83,11 +83,11 @@ type Interface interface {
 	// RevokeAccountKey removes a key from an account by index.
 	RevokeAccountKey(address Address, index int) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
-	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
+	UpdateAccountContractCode(location common.AddressLocation, code []byte) (err error)
 	// GetAccountContractCode returns the code associated with an account contract.
-	GetAccountContractCode(address Address, name string) (code []byte, err error)
+	GetAccountContractCode(location common.AddressLocation) (code []byte, err error)
 	// RemoveAccountContractCode removes the code associated with an account contract.
-	RemoveAccountContractCode(address Address, name string) (err error)
+	RemoveAccountContractCode(location common.AddressLocation) (err error)
 	// GetSigningAccounts returns the signing accounts.
 	GetSigningAccounts() ([]Address, error)
 	// ProgramLog logs program logs.

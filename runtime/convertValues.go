@@ -211,6 +211,8 @@ func exportValueWithInterpreter(
 		)
 	case interpreter.AddressValue:
 		return cadence.NewMeteredAddress(inter, v), nil
+	case interpreter.PathLinkValue:
+		return exportPathLinkValue(v, inter), nil
 	case interpreter.PathValue:
 		return exportPathValue(inter, v), nil
 	case interpreter.TypeValue:
@@ -401,6 +403,21 @@ func exportCompositeValue(
 			fields[i] = exportedFieldValue
 		}
 
+		if composite, ok := v.(*interpreter.CompositeValue); ok {
+			for _, attachment := range composite.GetAttachments(inter, locationRange) {
+				exportedAttachmentValue, err := exportValueWithInterpreter(
+					attachment,
+					inter,
+					locationRange,
+					seenReferences,
+				)
+				if err != nil {
+					return nil, err
+				}
+				fields = append(fields, exportedAttachmentValue)
+			}
+		}
+
 		return fields, nil
 	}
 
@@ -434,6 +451,18 @@ func exportCompositeValue(
 			return nil, err
 		}
 		return resource.WithType(t.(*cadence.ResourceType)), nil
+	case common.CompositeKindAttachment:
+		attachment, err := cadence.NewMeteredAttachment(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return attachment.WithType(t.(*cadence.AttachmentType)), nil
 	case common.CompositeKindEvent:
 		event, err := cadence.NewMeteredEvent(
 			inter,
@@ -479,6 +508,7 @@ func exportCompositeValue(
 			[]string{
 				common.CompositeKindStructure.Name(),
 				common.CompositeKindResource.Name(),
+				common.CompositeKindAttachment.Name(),
 				common.CompositeKindEvent.Name(),
 				common.CompositeKindContract.Name(),
 				common.CompositeKindEnum.Name(),
@@ -553,6 +583,12 @@ func exportDictionaryValue(
 	exportType := ExportType(v.SemaType(inter), map[sema.TypeID]cadence.Type{}).(*cadence.DictionaryType)
 
 	return dictionary.WithType(exportType), err
+}
+
+func exportPathLinkValue(v interpreter.PathLinkValue, inter *interpreter.Interpreter) cadence.PathLink {
+	path := exportPathValue(inter, v.TargetPath)
+	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
+	return cadence.NewMeteredLink(inter, path, ty)
 }
 
 func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) cadence.Path {
@@ -774,6 +810,8 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		return nil, errors.NewDefaultUserError("cannot import contract")
 	case cadence.Function:
 		return nil, errors.NewDefaultUserError("cannot import function")
+	case cadence.PathLink:
+		return nil, errors.NewDefaultUserError("cannot import link")
 	default:
 		// This means the implementation has unhandled types.
 		// Hence, return an internal error

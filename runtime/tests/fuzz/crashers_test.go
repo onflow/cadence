@@ -34,13 +34,10 @@ func TestCrashers(t *testing.T) {
 
 	t.Parallel()
 
-	f, err := os.Open(crashersDir)
+	files, err := os.ReadDir(crashersDir)
 	if err != nil {
 		return
 	}
-
-	files, err := f.Readdir(-1)
-	_ = f.Close()
 
 	for _, file := range files {
 

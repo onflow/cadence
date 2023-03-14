@@ -26,10 +26,11 @@ import (
 )
 
 type SharedState struct {
-	typeCodes       TypeCodes
-	Config          *Config
-	allInterpreters map[common.Location]*Interpreter
-	callStack       *CallStack
+	attachmentIterationMap map[*CompositeValue]bool
+	typeCodes              TypeCodes
+	Config                 *Config
+	allInterpreters        map[common.Location]*Interpreter
+	callStack              *CallStack
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues ReferencedResourceKindedValues
 	resourceVariables              map[ResourceKindedValue]*Variable
@@ -52,4 +53,15 @@ func NewSharedState(config *Config) *SharedState {
 		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
 	}
+}
+
+func (s *SharedState) inAttachmentIteration(base *CompositeValue) bool {
+	return s.attachmentIterationMap[base]
+}
+
+func (s *SharedState) setAttachmentIteration(base *CompositeValue, b bool) {
+	if s.attachmentIterationMap == nil {
+		s.attachmentIterationMap = map[*CompositeValue]bool{}
+	}
+	s.attachmentIterationMap[base] = b
 }

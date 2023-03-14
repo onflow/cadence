@@ -253,6 +253,16 @@ func exportCompositeType(
 			nil,
 		)
 
+	case common.CompositeKindAttachment:
+		result = cadence.NewMeteredAttachmentType(
+			gauge,
+			t.Location,
+			ExportMeteredType(gauge, t.GetBaseType(), results),
+			t.QualifiedIdentifier(),
+			fields,
+			nil,
+		)
+
 	case common.CompositeKindEvent:
 		result = cadence.NewMeteredEventType(
 			gauge,

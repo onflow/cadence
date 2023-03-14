@@ -38,6 +38,10 @@ type LocationCoverage struct {
 
 // AddLineHit increments the hit count for the given line.
 func (c *LocationCoverage) AddLineHit(line int) {
+	// Lines below 1 are dropped.
+	if line < 1 {
+		return
+	}
 	c.LineHits[line]++
 }
 
@@ -151,6 +155,10 @@ func (r *CoverageReport) InspectProgram(location Location, program *ast.Program)
 	}
 	r.Programs[location] = program
 	lineHits := make(map[int]int, 0)
+	recordLine := func(hasPosition ast.HasPosition) {
+		line := hasPosition.StartPosition().Line
+		lineHits[line] = 0
+	}
 	var depth int
 
 	inspector := ast.NewInspector(program)
@@ -170,8 +178,22 @@ func (r *CoverageReport) InspectProgram(location Location, program *ast.Program)
 				// However, also track local (i.e. non-top level) variable declarations.
 				if (isStatement && !isDeclaration) ||
 					(isVariableDeclaration && depth > 2) {
-					line := element.StartPosition().Line
-					lineHits[line] = 0
+					recordLine(element)
+				}
+
+				functionBlock, isFunctionBlock := element.(*ast.FunctionBlock)
+				// Track also pre/post conditions defined inside functions.
+				if isFunctionBlock {
+					if functionBlock.PreConditions != nil {
+						for _, condition := range *functionBlock.PreConditions {
+							recordLine(condition.Test)
+						}
+					}
+					if functionBlock.PostConditions != nil {
+						for _, condition := range *functionBlock.PostConditions {
+							recordLine(condition.Test)
+						}
+					}
 				}
 			} else {
 				depth--

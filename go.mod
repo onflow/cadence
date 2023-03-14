@@ -11,10 +11,10 @@ require (
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/leanovate/gopter v0.2.9
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
-	github.com/onflow/atree v0.4.0
+	github.com/onflow/atree v0.5.0
 	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a
 	github.com/schollz/progressbar/v3 v3.8.3
-	github.com/stretchr/testify v1.7.3
+	github.com/stretchr/testify v1.8.1
 	github.com/tidwall/pretty v1.2.1
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
 	go.opentelemetry.io/otel v1.8.0
@@ -45,7 +45,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
-	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/term v0.1.0 // indirect

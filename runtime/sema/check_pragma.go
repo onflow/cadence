@@ -20,38 +20,73 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
-func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) (_ struct{}) {
+func (checker *Checker) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) (_ struct{}) {
 
-	switch e := p.Expression.(type) {
+	switch expression := declaration.Expression.(type) {
 	case *ast.InvocationExpression:
 		// Type arguments are not supported for pragmas
-		if len(e.TypeArguments) > 0 {
+		if len(expression.TypeArguments) > 0 {
 			checker.report(&InvalidPragmaError{
-				Message: "type arguments not supported",
-				Range:   ast.NewRangeFromPositioned(checker.memoryGauge, e),
+				Message: "type arguments are not supported",
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					expression.TypeArguments[0],
+				),
 			})
 		}
 
 		// Ensure arguments are string expressions
-		for _, arg := range e.Arguments {
+		for _, arg := range expression.Arguments {
 			_, ok := arg.Expression.(*ast.StringExpression)
 			if !ok {
 				checker.report(&InvalidPragmaError{
 					Message: "invalid non-string argument",
-					Range:   ast.NewRangeFromPositioned(checker.memoryGauge, e),
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						arg.Expression,
+					),
 				})
 			}
 		}
 
 	case *ast.IdentifierExpression:
-		// valid, NO-OP
+		if IsAllowAccountLinkingPragma(declaration) {
+			checker.reportInvalidNonHeaderPragma(declaration)
+		}
 
 	default:
 		checker.report(&InvalidPragmaError{
 			Message: "pragma must be identifier or invocation expression",
-			Range:   ast.NewRangeFromPositioned(checker.memoryGauge, p.Expression),
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				declaration,
+			),
 		})
 	}
 
 	return
+}
+
+func (checker *Checker) reportInvalidNonHeaderPragma(declaration *ast.PragmaDeclaration) {
+	checker.report(&InvalidPragmaError{
+		Message: "pragma must appear at top-level, before all other declarations",
+		Range: ast.NewRangeFromPositioned(
+			checker.memoryGauge,
+			declaration,
+		),
+	})
+}
+
+// allowAccountLinkingPragmaIdentifier is the identifier that needs to be used in a pragma to allow account linking.
+// This is a temporary feature.
+const allowAccountLinkingPragmaIdentifier = "allowAccountLinking"
+
+func IsAllowAccountLinkingPragma(declaration *ast.PragmaDeclaration) bool {
+	identifierExpression, ok := declaration.Expression.(*ast.IdentifierExpression)
+	if !ok {
+		return false
+	}
+
+	return identifierExpression.Identifier.Identifier ==
+		allowAccountLinkingPragmaIdentifier
 }

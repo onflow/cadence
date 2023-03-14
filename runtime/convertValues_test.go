@@ -818,6 +818,17 @@ func TestImportValue(t *testing.T) {
 			},
 		},
 		{
+			label: "Link (invalid)",
+			value: cadence.PathLink{
+				TargetPath: cadence.Path{
+					Domain:     "storage",
+					Identifier: "test",
+				},
+				BorrowType: "Int",
+			},
+			expected: nil,
+		},
+		{
 			label: "Capability (invalid)",
 			value: cadence.StorageCapability{
 				Path: cadence.Path{
@@ -2081,6 +2092,91 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			Address: cadence.Address{0x1},
+		}
+
+		assert.Equal(t, expected, actual)
+	})
+}
+
+func TestExportPathLinkValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Int", func(t *testing.T) {
+
+		link := interpreter.PathLinkValue{
+			TargetPath: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
+		actual, err := exportValueWithInterpreter(
+			link,
+			newTestInterpreter(t),
+			interpreter.EmptyLocationRange,
+			seenReferences{},
+		)
+		require.NoError(t, err)
+
+		expected := cadence.PathLink{
+			TargetPath: cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+			BorrowType: "Int",
+		}
+
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+
+		const code = `
+          struct S {}
+        `
+		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
+		require.NoError(t, err)
+
+		checker, err := sema.NewChecker(
+			program,
+			TestLocation,
+			nil,
+			&sema.Config{
+				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+			},
+		)
+		require.NoError(t, err)
+
+		err = checker.Check()
+		require.NoError(t, err)
+
+		inter := newTestInterpreter(t)
+		inter.Program = interpreter.ProgramFromChecker(checker)
+
+		capability := interpreter.PathLinkValue{
+			TargetPath: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
+		}
+
+		actual, err := exportValueWithInterpreter(
+			capability,
+			inter,
+			interpreter.EmptyLocationRange,
+			seenReferences{},
+		)
+		require.NoError(t, err)
+
+		expected := cadence.PathLink{
+			TargetPath: cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+			BorrowType: "S.test.S",
 		}
 
 		assert.Equal(t, expected, actual)

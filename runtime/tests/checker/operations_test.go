@@ -467,10 +467,15 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 				conformances = ": Int"
 			}
 
+			var baseType string
+			if compositeKind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s X%[2]s %[3]s
+                      %[1]s X %[7]s %[2]s %[3]s
 
                       %[4]s
 
@@ -482,11 +487,20 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 					preparationCode,
 					firstIdentifier,
 					secondIdentifier,
+					baseType,
 				),
 			)
 
 			if compositeKind == common.CompositeKindEnum {
 				require.NoError(t, err)
+			} else if compositeKind == common.CompositeKindAttachment {
+				errs := RequireCheckerErrors(t, err, 5)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[2])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[3])
+				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[4])
 			} else {
 				errs := RequireCheckerErrors(t, err, 1)
 

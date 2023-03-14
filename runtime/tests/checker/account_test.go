@@ -1117,9 +1117,18 @@ func TestCheckAccount_linkAccount(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(domain common.PathDomain, enabled bool) {
+	type testCase struct {
+		domain  common.PathDomain
+		enabled bool
+	}
 
-		testName := fmt.Sprintf("%s, %v", domain.Identifier(), enabled)
+	test := func(tc testCase) {
+
+		testName := fmt.Sprintf(
+			"%s, enabled=%v",
+			tc.domain.Identifier(),
+			tc.enabled,
+		)
 
 		t.Run(testName, func(t *testing.T) {
 
@@ -1132,39 +1141,42 @@ func TestCheckAccount_linkAccount(t *testing.T) {
                       return authAccount.linkAccount(/%s/r)
                   }
                 `,
-				domain.Identifier(),
+				tc.domain.Identifier(),
 			)
 
 			_, err := ParseAndCheckWithOptions(t,
 				code,
 				ParseAndCheckOptions{
 					Config: &sema.Config{
-						AccountLinkingEnabled: enabled,
+						AccountLinkingEnabled: tc.enabled,
 					},
 				},
 			)
 
-			if enabled {
-				switch domain {
-				case common.PathDomainPrivate, common.PathDomainPublic:
-					require.NoError(t, err)
-
-				default:
-					errs := RequireCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				}
-			} else {
+			if !tc.enabled {
 				errs := RequireCheckerErrors(t, err, 1)
 
 				require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+				return
 			}
+
+			if tc.domain != common.PathDomainPrivate {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				return
+			}
+
+			require.NoError(t, err)
 		})
 	}
 
 	for _, enabled := range []bool{true, false} {
 		for _, domain := range common.AllPathDomainsByIdentifier {
-			test(domain, enabled)
+			test(testCase{
+				domain:  domain,
+				enabled: enabled,
+			})
 		}
 	}
 }

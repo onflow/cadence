@@ -811,6 +811,9 @@ func defineIdentifierExpression() {
 					token.Range.StartPos,
 				), nil
 
+			case keywordAttach:
+				return parseAttachExpressionRemainder(p, token)
+
 			case keywordFun:
 				return parseFunctionExpression(p, token)
 
@@ -923,6 +926,34 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) (*ast.CreateEx
 		invocation,
 		token.StartPos,
 	), nil
+}
+
+func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachExpression, error) {
+	attachment, err := parseNominalTypeInvocationRemainder(p)
+
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpaceAndComments()
+
+	if !p.isToken(p.current, lexer.TokenIdentifier, keywordTo) {
+		return nil, p.syntaxError(
+			"expected 'to', got %s",
+			p.current.Type,
+		)
+	}
+
+	// consume the `to` token
+	p.nextSemanticToken()
+
+	base, err := parseExpression(p, lowestBindingPower)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return ast.NewAttachExpression(p.memoryGauge, base, attachment, token.StartPos), nil
 }
 
 // Invocation Expression Grammar:

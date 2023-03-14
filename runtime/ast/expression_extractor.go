@@ -112,6 +112,10 @@ type PathExtractor interface {
 	ExtractPath(extractor *ExpressionExtractor, expression *PathExpression) ExpressionExtraction
 }
 
+type AttachExtractor interface {
+	ExtractAttach(extractor *ExpressionExtractor, expression *AttachExpression) ExpressionExtraction
+}
+
 type ExpressionExtractor struct {
 	IndexExtractor       IndexExtractor
 	ForceExtractor       ForceExtractor
@@ -123,6 +127,7 @@ type ExpressionExtractor struct {
 	ArrayExtractor       ArrayExtractor
 	DictionaryExtractor  DictionaryExtractor
 	IdentifierExtractor  IdentifierExtractor
+	AttachExtractor      AttachExtractor
 	MemoryGauge          common.MemoryGauge
 	VoidExtractor        VoidExtractor
 	UnaryExtractor       UnaryExtractor
@@ -780,4 +785,36 @@ func (extractor *ExpressionExtractor) VisitPathExpression(expression *PathExpres
 
 func (extractor *ExpressionExtractor) ExtractPath(expression *PathExpression) ExpressionExtraction {
 	return rewriteExpressionAsIs(expression)
+}
+
+func (extractor *ExpressionExtractor) VisitAttachExpression(expression *AttachExpression) ExpressionExtraction {
+
+	// delegate to child extractor, if any,
+	// or call default implementation
+
+	if extractor.AttachExtractor != nil {
+		return extractor.AttachExtractor.ExtractAttach(extractor, expression)
+	}
+	return extractor.ExtractAttach(expression)
+}
+
+func (extractor *ExpressionExtractor) ExtractAttach(expression *AttachExpression) ExpressionExtraction {
+	// copy the expression
+	newExpression := *expression
+
+	// rewrite left and right sub-expression
+
+	rewrittenExpressions, extractedExpressions :=
+		extractor.VisitExpressions([]Expression{
+			newExpression.Attachment,
+			newExpression.Base,
+		})
+
+	newExpression.Attachment = rewrittenExpressions[0].(*InvocationExpression)
+	newExpression.Base = rewrittenExpressions[1]
+
+	return ExpressionExtraction{
+		RewrittenExpression:  &newExpression,
+		ExtractedExpressions: extractedExpressions,
+	}
 }

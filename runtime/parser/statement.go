@@ -94,6 +94,8 @@ func parseStatement(p *parser) (ast.Statement, error) {
 			return parseForStatement(p)
 		case keywordEmit:
 			return parseEmitStatement(p)
+		case keywordRemove:
+			return parseRemoveStatement(p)
 		case keywordFun:
 			// The `fun` keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
@@ -775,4 +777,49 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 			endPos,
 		),
 	}, nil
+}
+
+func parseRemoveStatement(
+	p *parser,
+) (*ast.RemoveStatement, error) {
+
+	startPos := p.current.StartPos
+	p.next()
+	p.skipSpaceAndComments()
+
+	attachment, err := parseType(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+	attachmentNominalType, ok := attachment.(*ast.NominalType)
+
+	if !ok {
+		p.reportSyntaxError(
+			"expected attachment nominal type, got %s",
+			attachment,
+		)
+	}
+
+	p.skipSpaceAndComments()
+
+	// check and skip `from` keyword
+	if !p.isToken(p.current, lexer.TokenIdentifier, keywordFrom) {
+		p.reportSyntaxError(
+			"expected from keyword, got %s",
+			p.current.Type,
+		)
+	}
+	p.nextSemanticToken()
+
+	attached, err := parseExpression(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+
+	return ast.NewRemoveStatement(
+		p.memoryGauge,
+		attachmentNominalType,
+		attached,
+		startPos,
+	), nil
 }

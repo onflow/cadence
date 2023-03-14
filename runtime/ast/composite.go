@@ -31,6 +31,14 @@ import (
 
 // NOTE: For events, only an empty initializer is declared
 
+type CompositeLikeDeclaration interface {
+	Element
+	Declaration
+	Statement
+	Kind() common.CompositeKind
+	ConformanceList() []*NominalType
+}
+
 type CompositeDeclaration struct {
 	Members      *Members
 	DocString    string
@@ -44,6 +52,7 @@ type CompositeDeclaration struct {
 var _ Element = &CompositeDeclaration{}
 var _ Declaration = &CompositeDeclaration{}
 var _ Statement = &CompositeDeclaration{}
+var _ CompositeLikeDeclaration = &CompositeDeclaration{}
 
 func NewCompositeDeclaration(
 	memoryGauge common.MemoryGauge,
@@ -255,6 +264,14 @@ func CompositeDocument(
 	}
 
 	return doc
+}
+
+func (d *CompositeDeclaration) Kind() common.CompositeKind {
+	return d.CompositeKind
+}
+
+func (d *CompositeDeclaration) ConformanceList() []*NominalType {
+	return d.Conformances
 }
 
 // FieldDeclarationFlags

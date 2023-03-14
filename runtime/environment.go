@@ -127,6 +127,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		MemoryGauge:                          e,
 		BaseActivation:                       e.baseActivation,
 		OnEventEmitted:                       e.newOnEventEmittedHandler(),
+		OnAccountLinked:                      e.newOnAccountLinkedHandler(),
 		InjectedCompositeFieldsHandler:       e.newInjectedCompositeFieldsHandler(),
 		UUIDHandler:                          e.newUUIDHandler(),
 		ContractValueHandler:                 e.newContractValueHandler(),
@@ -159,6 +160,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
 		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
+		AttachmentsEnabled:               e.config.AttachmentsEnabled,
 	}
 }
 
@@ -258,8 +260,8 @@ func (e *interpreterEnvironment) GetAccountContractNames(address common.Address)
 	return e.runtimeInterface.GetAccountContractNames(address)
 }
 
-func (e *interpreterEnvironment) GetAccountContractCode(address common.Address, name string) ([]byte, error) {
-	return e.runtimeInterface.GetAccountContractCode(address, name)
+func (e *interpreterEnvironment) GetAccountContractCode(location common.AddressLocation) ([]byte, error) {
+	return e.runtimeInterface.GetAccountContractCode(location)
 }
 
 func (e *interpreterEnvironment) CreateAccount(payer common.Address) (address common.Address, err error) {
@@ -272,17 +274,11 @@ func (e *interpreterEnvironment) EmitEvent(
 	values []interpreter.Value,
 	locationRange interpreter.LocationRange,
 ) {
-	eventFields := make([]exportableValue, 0, len(values))
-
-	for _, value := range values {
-		eventFields = append(eventFields, newExportableValue(value, inter))
-	}
-
 	emitEventFields(
 		inter,
 		locationRange,
 		eventType,
-		eventFields,
+		newExportableValues(inter, values),
 		e.runtimeInterface.EmitEvent,
 	)
 }
@@ -308,24 +304,23 @@ func (e *interpreterEnvironment) RevokeAccountKey(address common.Address, index 
 	return e.runtimeInterface.RevokeAccountKey(address, index)
 }
 
-func (e *interpreterEnvironment) UpdateAccountContractCode(address common.Address, name string, code []byte) error {
-	return e.runtimeInterface.UpdateAccountContractCode(address, name, code)
+func (e *interpreterEnvironment) UpdateAccountContractCode(location common.AddressLocation, code []byte) error {
+	return e.runtimeInterface.UpdateAccountContractCode(location, code)
 }
 
-func (e *interpreterEnvironment) RemoveAccountContractCode(address common.Address, name string) error {
-	return e.runtimeInterface.RemoveAccountContractCode(address, name)
+func (e *interpreterEnvironment) RemoveAccountContractCode(location common.AddressLocation) error {
+	return e.runtimeInterface.RemoveAccountContractCode(location)
 }
 
-func (e *interpreterEnvironment) RecordContractRemoval(address common.Address, name string) {
-	e.storage.recordContractUpdate(address, name, nil)
+func (e *interpreterEnvironment) RecordContractRemoval(location common.AddressLocation) {
+	e.storage.recordContractUpdate(location, nil)
 }
 
 func (e *interpreterEnvironment) RecordContractUpdate(
-	address common.Address,
-	name string,
+	location common.AddressLocation,
 	contractValue *interpreter.CompositeValue,
 ) {
-	e.storage.recordContractUpdate(address, name, contractValue)
+	e.storage.recordContractUpdate(location, contractValue)
 }
 
 func (e *interpreterEnvironment) TemporarilyRecordCode(location common.AddressLocation, code []byte) {
@@ -547,7 +542,7 @@ func (e *interpreterEnvironment) getProgram(
 	}
 
 	errors.WrapPanic(func() {
-		program, err = e.runtimeInterface.GetAndSetProgram(location, func() (program *interpreter.Program, err error) {
+		program, err = e.runtimeInterface.GetOrLoadProgram(location, func() (program *interpreter.Program, err error) {
 			// Loading is done by Cadence.
 			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
 			// then do not treat it as an external error (the load callback is called by the embedder)
@@ -567,10 +562,7 @@ func (e *interpreterEnvironment) getProgram(
 func (e *interpreterEnvironment) getCode(location common.Location) (code []byte, err error) {
 	if addressLocation, ok := location.(common.AddressLocation); ok {
 		errors.WrapPanic(func() {
-			code, err = e.runtimeInterface.GetAccountContractCode(
-				addressLocation.Address,
-				addressLocation.Name,
-			)
+			code, err = e.runtimeInterface.GetAccountContractCode(addressLocation)
 		})
 	} else {
 		errors.WrapPanic(func() {
@@ -764,6 +756,26 @@ func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventE
 			e.runtimeInterface.EmitEvent,
 		)
 
+		return nil
+	}
+}
+
+func (e *interpreterEnvironment) newOnAccountLinkedHandler() interpreter.OnAccountLinkedFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		addressValue interpreter.AddressValue,
+		pathValue interpreter.PathValue,
+	) error {
+		e.EmitEvent(
+			inter,
+			stdlib.AccountLinkedEventType,
+			[]interpreter.Value{
+				addressValue,
+				pathValue,
+			},
+			locationRange,
+		)
 		return nil
 	}
 }

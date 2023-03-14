@@ -6976,7 +6976,7 @@ func TestInterpretStorageCapabilityValueMetering(t *testing.T) {
             pub fun main(account: AuthAccount) {
                 let r <- create R()
                 account.save(<-r, to: /storage/r)
-                let x = account.link<&R>(/public/capo, target: /storage/r)
+                let x = account.link<&R>(/public/cap, target: /storage/r)
             }
         `
 		meter := newTestMemoryGauge()
@@ -7000,7 +7000,7 @@ func TestInterpretStorageCapabilityValueMetering(t *testing.T) {
             pub fun main(account: AuthAccount) {
                 let r <- create R()
                 account.save(<-r, to: /storage/r)
-                let x = account.link<&R>(/public/capo, target: /storage/r)
+                let x = account.link<&R>(/public/cap, target: /storage/r)
 
                 let y = [x]
             }
@@ -7026,7 +7026,7 @@ func TestInterpretPathLinkValueMetering(t *testing.T) {
             resource R {}
 
             pub fun main(account: AuthAccount) {
-                account.link<&R>(/public/capo, target: /private/p)
+                account.link<&R>(/public/cap, target: /private/p)
             }
         `
 		meter := newTestMemoryGauge()
@@ -7048,11 +7048,14 @@ func TestInterpretAccountLinkValueMetering(t *testing.T) {
 	t.Run("creation", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-            pub fun main(account: AuthAccount) {
-                account.linkAccount(/public/capo)
-            }
+		const script = `
+          #allowAccountLinking
+
+          pub fun main(account: AuthAccount) {
+              account.linkAccount(/private/cap)
+          }
         `
+
 		meter := newTestMemoryGauge()
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
@@ -8702,7 +8705,7 @@ func TestInterpretStorageMapMetering(t *testing.T) {
         pub fun main(account: AuthAccount) {
             let r <- create R()
             account.save(<-r, to: /storage/r)
-            account.link<&R>(/public/capo, target: /storage/r)
+            account.link<&R>(/public/cap, target: /storage/r)
             account.borrow<&R>(from: /storage/r)
         }
     `

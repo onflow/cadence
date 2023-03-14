@@ -1655,6 +1655,63 @@ func (v Resource) String() string {
 	return formatComposite(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 }
 
+// Attachment
+
+type Attachment struct {
+	AttachmentType *AttachmentType
+	Fields         []Value
+}
+
+var _ Value = Attachment{}
+
+func NewAttachment(fields []Value) Attachment {
+	return Attachment{Fields: fields}
+}
+
+func NewMeteredAttachment(
+	gauge common.MemoryGauge,
+	numberOfFields int,
+	constructor func() ([]Value, error),
+) (Attachment, error) {
+	baseUsage, sizeUsage := common.NewCadenceAttachmentMemoryUsages(numberOfFields)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, sizeUsage)
+	fields, err := constructor()
+	if err != nil {
+		return Attachment{}, err
+	}
+	return NewAttachment(fields), nil
+}
+
+func (Attachment) isValue() {}
+
+func (v Attachment) Type() Type {
+	return v.AttachmentType
+}
+
+func (v Attachment) MeteredType(_ common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v Attachment) WithType(typ *AttachmentType) Attachment {
+	v.AttachmentType = typ
+	return v
+}
+
+func (v Attachment) ToGoValue() any {
+	ret := make([]any, len(v.Fields))
+
+	for i, field := range v.Fields {
+		ret[i] = field.ToGoValue()
+	}
+
+	return ret
+}
+
+func (v Attachment) String() string {
+	return formatComposite(v.AttachmentType.ID(), v.AttachmentType.Fields, v.Fields)
+}
+
 // Event
 
 type Event struct {
@@ -1766,6 +1823,49 @@ func (v Contract) ToGoValue() any {
 
 func (v Contract) String() string {
 	return formatComposite(v.ContractType.ID(), v.ContractType.Fields, v.Fields)
+}
+
+// PathLink
+
+type PathLink struct {
+	TargetPath Path
+	// TODO: a future version might want to export the whole type
+	BorrowType string
+}
+
+var _ Value = PathLink{}
+
+func NewPathLink(targetPath Path, borrowType string) PathLink {
+	return PathLink{
+		TargetPath: targetPath,
+		BorrowType: borrowType,
+	}
+}
+
+func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) PathLink {
+	common.UseMemory(gauge, common.CadencePathLinkValueMemoryUsage)
+	return NewPathLink(targetPath, borrowType)
+}
+
+func (PathLink) isValue() {}
+
+func (v PathLink) Type() Type {
+	return nil
+}
+
+func (v PathLink) MeteredType(_ common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v PathLink) ToGoValue() any {
+	return nil
+}
+
+func (v PathLink) String() string {
+	return format.PathLink(
+		v.BorrowType,
+		v.TargetPath.String(),
+	)
 }
 
 // Path

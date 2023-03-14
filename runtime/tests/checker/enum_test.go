@@ -41,12 +41,18 @@ func TestCheckInvalidNonEnumCompositeEnumCases(t *testing.T) {
 
 			t.Parallel()
 
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T { case a }
+                      %[1]s T %[2]s { case a }
                     `,
 					kindKeyword,
+					baseType,
 				),
 			)
 

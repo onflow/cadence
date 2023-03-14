@@ -526,19 +526,11 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 			return []Address{signingAddress}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
@@ -765,19 +757,11 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 			return []Address{testAddress}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = string(code)
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = []byte(accountCodes[location])
 			return code, nil
 		},
@@ -868,19 +852,11 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 			return []Address{signerAddress}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = string(code)
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = []byte(accountCodes[location])
 			return code, nil
 		},
@@ -1156,19 +1132,11 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 			return []Address{signerAddress}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = string(code)
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = []byte(accountCodes[location])
 			return code, nil
 		},
@@ -1522,19 +1490,11 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 			return []Address{signerAddress}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
@@ -1827,19 +1787,11 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 			return signers, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
@@ -2241,18 +2193,10 @@ transaction {
 			return []Address{signerAccount}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
@@ -2374,18 +2318,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				return signers, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
@@ -2509,18 +2445,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				return []Address{signerAccount}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
@@ -2650,18 +2578,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				return []Address{signerAccount}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
@@ -2778,18 +2698,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				return []Address{signerAccount}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
@@ -2904,18 +2816,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				return []Address{signerAccount}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
@@ -3042,19 +2946,11 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 			return []Address{address}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
@@ -3268,19 +3164,11 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 				return []Address{address}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				code = accountCodes[location]
 				return code, nil
 			},
@@ -3403,27 +3291,21 @@ func TestRuntimeStorageIteration(t *testing.T) {
             }
         `))
 
-		newRuntimeInterface := func() Interface {
-			return &testRuntimeInterface{
+		newRuntimeInterface := func() (Interface, *[]Location) {
+
+			var programStack []Location
+
+			runtimeInterface := &testRuntimeInterface{
 				storage: ledger,
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
 				},
 				resolveLocation: singleIdentifierLocationResolver(t),
-				updateAccountContractCode: func(address Address, name string, code []byte) error {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
+				updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 					accountCodes[location] = code
 					return nil
 				},
-				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
-
+				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 					if contractIsBroken {
 						// Contract no longer has the type
 						return []byte(`pub contract Test {}`), nil
@@ -3436,11 +3318,13 @@ func TestRuntimeStorageIteration(t *testing.T) {
 					return nil
 				},
 			}
+
+			return runtimeInterface, &programStack
 		}
 
 		// Deploy contract
 
-		runtimeInterface := newRuntimeInterface()
+		runtimeInterface, _ := newRuntimeInterface()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -3455,7 +3339,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Store value
 
-		runtimeInterface = newRuntimeInterface()
+		runtimeInterface, _ = newRuntimeInterface()
 
 		err = runtime.ExecuteTransaction(
 			Script{
@@ -3484,7 +3368,9 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		// Make the `Test` contract broken. i.e: `Test.Foo` type is broken
 		contractIsBroken = true
 
-		runtimeInterface = newRuntimeInterface()
+		var programStack *[]Location
+
+		runtimeInterface, programStack = newRuntimeInterface()
 
 		// Read value
 		err = runtime.ExecuteTransaction(
@@ -3512,6 +3398,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+
+		require.Empty(t, *programStack)
 	})
 
 	t.Run("broken contract, parsing problem", func(t *testing.T) {
@@ -3538,20 +3426,11 @@ func TestRuntimeStorageIteration(t *testing.T) {
 					return []Address{address}, nil
 				},
 				resolveLocation: singleIdentifierLocationResolver(t),
-				updateAccountContractCode: func(address Address, name string, code []byte) error {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
+				updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 					accountCodes[location] = code
 					return nil
 				},
-				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
-
+				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 					if contractIsBroken {
 						// Contract has a syntax problem
 						return []byte(`BROKEN`), nil
@@ -3674,20 +3553,11 @@ func TestRuntimeStorageIteration(t *testing.T) {
 					return []Address{address}, nil
 				},
 				resolveLocation: singleIdentifierLocationResolver(t),
-				updateAccountContractCode: func(address Address, name string, code []byte) error {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
+				updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 					accountCodes[location] = code
 					return nil
 				},
-				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
-
+				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 					if contractIsBroken {
 						// Contract has a semantic error. i.e: cannot find `Bar`
 						return []byte(`pub contract Test {
@@ -3727,7 +3597,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Script{
 				Source: []byte(`
                     import Test from 0x1
-
                     transaction {
                         prepare(signer: AuthAccount) {
                             signer.save("Hello, World!", to: /storage/first)
@@ -3736,7 +3605,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
                             signer.save(1, to: /storage/fourth)
                             signer.save(Test.Foo(), to: /storage/fifth)
                             signer.save("two", to: /storage/sixth)
-
                             signer.link<&String>(/private/a, target:/storage/first)
                             signer.link<&[String]>(/private/b, target:/storage/second)
                             signer.link<&Test.Foo>(/private/c, target:/storage/third)
@@ -3771,7 +3639,6 @@ func TestRuntimeStorageIteration(t *testing.T) {
                                 total = total + 1
                                 return true
                             })
-
                             // Total values iterated should be 4.
                             // The two broken values must be skipped.
                             assert(total == 4)

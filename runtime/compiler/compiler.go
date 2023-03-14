@@ -98,6 +98,11 @@ func (compiler *Compiler) VisitEmitStatement(_ *ast.EmitStatement) ir.Stmt {
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitRemoveStatement(_ *ast.RemoveStatement) ir.Stmt {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitSwitchStatement(_ *ast.SwitchStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
@@ -210,6 +215,11 @@ func (compiler *Compiler) VisitIndexExpression(_ *ast.IndexExpression) ir.Expr {
 }
 
 func (compiler *Compiler) VisitConditionalExpression(_ *ast.ConditionalExpression) ir.Expr {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (compiler *Compiler) VisitAttachExpression(_ *ast.AttachExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
@@ -346,6 +356,11 @@ func (compiler *Compiler) visitBlock(block *ast.Block) ir.Stmt {
 }
 
 func (compiler *Compiler) VisitCompositeDeclaration(_ *ast.CompositeDeclaration) ir.Stmt {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (compiler *Compiler) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }

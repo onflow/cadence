@@ -215,6 +215,8 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeEvent(valueJSON)
 	case contractTypeStr:
 		return d.decodeContract(valueJSON)
+	case linkTypeStr:
+		return d.decodeLink(valueJSON)
 	case pathTypeStr:
 		return d.decodePath(valueJSON)
 	case typeTypeStr:
@@ -821,6 +823,29 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 	))
 }
 
+func (d *Decoder) decodeLink(valueJSON any) cadence.PathLink {
+	obj := toObject(valueJSON)
+
+	targetPath, ok := d.decodeJSON(obj.Get(targetPathKey)).(cadence.Path)
+	if !ok {
+		panic(errors.NewDefaultUserError("invalid link: missing or invalid target path"))
+	}
+
+	borrowType := obj.GetString(borrowTypeKey)
+
+	common.UseMemory(d.gauge, common.MemoryUsage{
+		Kind: common.MemoryKindRawString,
+		// no need to add 1 to account for empty string: string is metered in Link struct
+		Amount: uint64(len(borrowType)),
+	})
+
+	return cadence.NewMeteredLink(
+		d.gauge,
+		targetPath,
+		borrowType,
+	)
+}
+
 func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 	obj := toObject(valueJSON)
 
@@ -1120,8 +1145,12 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return cadence.TheAnyType
 	case "AnyStruct":
 		return cadence.TheAnyStructType
+	case "AnyStructAttachment":
+		return cadence.TheAnyStructAttachmentType
 	case "AnyResource":
 		return cadence.TheAnyResourceType
+	case "AnyResourceAttachment":
+		return cadence.TheAnyResourceAttachmentType
 	case "Type":
 		return cadence.TheMetaType
 	case "Void":
