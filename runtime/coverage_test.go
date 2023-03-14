@@ -580,6 +580,49 @@ func TestCoverageReportWithAddressLocation(t *testing.T) {
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
+
+}
+func TestCoverageReportReset(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.StringLocation("AnswerScript")
+	coverageReport.InspectProgram(location, program)
+	coverageReport.AddLineHit(location, 3)
+	coverageReport.AddLineHit(location, 3)
+	coverageReport.AddLineHit(location, 5)
+
+	excludedLocation := common.StringLocation("XLocation")
+	coverageReport.ExcludeLocation(excludedLocation)
+
+	assert.Equal(t, 1, len(coverageReport.Coverage))
+	assert.Equal(t, 1, len(coverageReport.Programs))
+	assert.Equal(t, 1, len(coverageReport.ExcludedLocations))
+	assert.Equal(t, true, coverageReport.IsProgramInspected(location))
+	assert.Equal(t, true, coverageReport.IsLocationExcluded(excludedLocation))
+
+	coverageReport.Reset()
+
+	assert.Equal(t, 0, len(coverageReport.Coverage))
+	assert.Equal(t, 0, len(coverageReport.Programs))
+	assert.Equal(t, 1, len(coverageReport.ExcludedLocations))
+	assert.Equal(t, false, coverageReport.IsProgramInspected(location))
+	assert.Equal(t, true, coverageReport.IsLocationExcluded(excludedLocation))
 }
 
 func TestCoverageReportAddLineHitForExcludedLocation(t *testing.T) {

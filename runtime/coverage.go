@@ -230,6 +230,17 @@ func (r *CoverageReport) CoveredStatementsPercentage() string {
 	return fmt.Sprintf("Coverage: %v of statements", percentage)
 }
 
+// Reset flushes the collected coverage information for all locations
+// and inspected programs. Excluded locations remain intact.
+func (r *CoverageReport) Reset() {
+	for location := range r.Coverage { // nolint:maprange
+		delete(r.Coverage, location)
+	}
+	for program := range r.Programs { // nolint:maprange
+		delete(r.Programs, program)
+	}
+}
+
 // NewCoverageReport creates and returns a *CoverageReport.
 func NewCoverageReport() *CoverageReport {
 	return &CoverageReport{
