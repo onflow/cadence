@@ -841,42 +841,42 @@ func encodeAndSortKeyValuePairs(
 
 // encodeStruct encodes cadence.Struct as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (e *Encoder) encodeStruct(v cadence.Struct, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(v.StructType, v.Fields, tids)
 }
 
 // encodeResource encodes cadence.Resource as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (e *Encoder) encodeResource(v cadence.Resource, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(v.ResourceType, v.Fields, tids)
 }
 
 // encodeEvent encodes cadence.Event as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (e *Encoder) encodeEvent(v cadence.Event, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(v.EventType, v.Fields, tids)
 }
 
 // encodeContract encodes cadence.Contract as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (e *Encoder) encodeContract(v cadence.Contract, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(v.ContractType, v.Fields, tids)
 }
 
 // encodeEnum encodes cadence.Enum as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (e *Encoder) encodeEnum(v cadence.Enum, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(v.EnumType, v.Fields, tids)
 }
 
 // encodeComposite encodes composite types as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (e *Encoder) encodeComposite(
 	typ cadence.CompositeType,
 	fields []cadence.Value,
@@ -1423,7 +1423,7 @@ func (e *Encoder) encodeContractInterfaceTypeValue(typ *cadence.ContractInterfac
 //	; type is only used by enum type value
 //	type: nil / type-value,
 //	fields: [
-//	    + [
+//	    * [
 //	        name: tstr,
 //	        type: type-value
 //	    ]

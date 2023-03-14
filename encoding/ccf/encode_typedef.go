@@ -56,7 +56,7 @@ import (
 //	id: id,
 //	cadence-type-id: cadence-type-id,
 //	fields: [
-//	    + [
+//	    * [
 //	        field-name: tstr,
 //	        field-type: inline-type
 //	    ]

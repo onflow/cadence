@@ -939,7 +939,7 @@ func (d *Decoder) decodeDictionary(typ *cadence.DictionaryType, types cadenceTyp
 
 // decodeComposite decodes encoded composite-value as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (d *Decoder) decodeComposite(fieldTypes []cadence.Field, types cadenceTypeByCCFTypeID) ([]cadence.Value, error) {
 	fieldCount := len(fieldTypes)
 
@@ -970,7 +970,7 @@ func (d *Decoder) decodeComposite(fieldTypes []cadence.Field, types cadenceTypeB
 
 // decodeStruct decodes encoded composite-value as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (d *Decoder) decodeStruct(typ *cadence.StructType, types cadenceTypeByCCFTypeID) (cadence.Value, error) {
 	fieldValues, err := d.decodeComposite(typ.Fields, types)
 	if err != nil {
@@ -994,7 +994,7 @@ func (d *Decoder) decodeStruct(typ *cadence.StructType, types cadenceTypeByCCFTy
 
 // decodeResource decodes encoded composite-value as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (d *Decoder) decodeResource(typ *cadence.ResourceType, types cadenceTypeByCCFTypeID) (cadence.Value, error) {
 	fieldValues, err := d.decodeComposite(typ.Fields, types)
 	if err != nil {
@@ -1018,7 +1018,7 @@ func (d *Decoder) decodeResource(typ *cadence.ResourceType, types cadenceTypeByC
 
 // decodeEvent decodes encoded composite-value as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (d *Decoder) decodeEvent(typ *cadence.EventType, types cadenceTypeByCCFTypeID) (cadence.Value, error) {
 	fieldValues, err := d.decodeComposite(typ.Fields, types)
 	if err != nil {
@@ -1042,7 +1042,7 @@ func (d *Decoder) decodeEvent(typ *cadence.EventType, types cadenceTypeByCCFType
 
 // decodeContract decodes encoded composite-value as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (d *Decoder) decodeContract(typ *cadence.ContractType, types cadenceTypeByCCFTypeID) (cadence.Value, error) {
 	fieldValues, err := d.decodeComposite(typ.Fields, types)
 	if err != nil {
@@ -1066,7 +1066,7 @@ func (d *Decoder) decodeContract(typ *cadence.ContractType, types cadenceTypeByC
 
 // decodeEnum decodes encoded composite-value as
 // language=CDDL
-// composite-value = [+ (field: value)]
+// composite-value = [* (field: value)]
 func (d *Decoder) decodeEnum(typ *cadence.EnumType, types cadenceTypeByCCFTypeID) (cadence.Value, error) {
 	fieldValues, err := d.decodeComposite(typ.Fields, types)
 	if err != nil {
@@ -1604,7 +1604,7 @@ func (d *Decoder) decodeCompositeTypeValue(
 //	; type is only used by enum type value
 //	type: nil / type-value,
 //	fields: [
-//	    + [
+//	    * [
 //	        name: tstr,
 //	        type: type-value
 //	    ]
