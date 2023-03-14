@@ -16,9 +16,20 @@
  * limitations under the License.
  */
 
-package commons
+package vm
 
-const (
-	InitFunctionName = "init"
-	LogFunctionName  = "log"
-)
+import "github.com/onflow/cadence/runtime/errors"
+
+type LinkerError struct {
+	Message string
+}
+
+var _ error = LinkerError{}
+var _ errors.InternalError = LinkerError{}
+
+func (l LinkerError) IsInternalError() {
+}
+
+func (l LinkerError) Error() string {
+	return l.Message
+}

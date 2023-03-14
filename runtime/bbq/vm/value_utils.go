@@ -16,9 +16,20 @@
  * limitations under the License.
  */
 
-package commons
+package vm
 
-const (
-	InitFunctionName = "init"
-	LogFunctionName  = "log"
-)
+import "github.com/onflow/cadence/runtime/interpreter"
+
+const goIntSize = 32 << (^uint(0) >> 63) // 32 or 64
+const goMaxInt = 1<<(goIntSize-1) - 1
+const goMinInt = -1 << (goIntSize - 1)
+
+func safeAdd(a, b int) int {
+	// INT32-C
+	if (b > 0) && (a > (goMaxInt - b)) {
+		panic(interpreter.OverflowError{})
+	} else if (b < 0) && (a < (goMinInt - b)) {
+		panic(interpreter.UnderflowError{})
+	}
+	return a + b
+}

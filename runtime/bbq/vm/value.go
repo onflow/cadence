@@ -16,9 +16,22 @@
  * limitations under the License.
  */
 
-package commons
+package vm
 
-const (
-	InitFunctionName = "init"
-	LogFunctionName  = "log"
+import (
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/common"
 )
+
+type Value interface {
+	isValue()
+	StaticType(common.MemoryGauge) StaticType
+	Transfer(
+		config *Config,
+		address atree.Address,
+		remove bool,
+		storable atree.Storable,
+	) Value
+	String() string
+}

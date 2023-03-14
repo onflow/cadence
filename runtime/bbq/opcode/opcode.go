@@ -54,11 +54,10 @@ const (
 	SetField
 
 	Invoke
-	InvokeNative
 
 	New
 	Destroy
-	CheckType
+	Transfer
 
 	Drop
 	Dup

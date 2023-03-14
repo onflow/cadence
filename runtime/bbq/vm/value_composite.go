@@ -161,6 +161,11 @@ func (v *CompositeValue) IsResourceKinded() bool {
 	return v.Kind == common.CompositeKindResource
 }
 
+func (v *CompositeValue) String() string {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (v *CompositeValue) Transfer(
 	conf *Config,
 	address atree.Address,

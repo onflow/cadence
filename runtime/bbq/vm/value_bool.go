@@ -16,9 +16,33 @@
  * limitations under the License.
  */
 
-package commons
+package vm
 
-const (
-	InitFunctionName = "init"
-	LogFunctionName  = "log"
+import (
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/format"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
+
+var TrueValue Value = BoolValue(true)
+var FalseValue Value = BoolValue(false)
+
+type BoolValue bool
+
+var _ Value = BoolValue(true)
+
+func (BoolValue) isValue() {}
+
+func (BoolValue) StaticType(common.MemoryGauge) StaticType {
+	return interpreter.PrimitiveStaticTypeBool
+}
+
+func (v BoolValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+	return v
+}
+
+func (v BoolValue) String() string {
+	return format.Bool(bool(v))
+}

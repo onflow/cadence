@@ -72,7 +72,8 @@ func NewCompiler(
 		Elaboration:            elaboration,
 		Config:                 &Config{},
 		globals:                map[string]*global{},
-		indexedImportedGlobals: map[string]*global{},
+		indexedImportedGlobals: indexedNativeFunctions,
+		importedGlobals:        nativeFunctions,
 		exportedImports:        make([]*bbq.Import, 0),
 		typesInPool:            map[sema.Type]uint16{},
 		compositeTypeStack: &Stack[*sema.CompositeType]{
@@ -260,13 +261,13 @@ func (c *Compiler) reserveGlobalVars(
 	compositeDecls []*ast.CompositeDeclaration,
 ) {
 	for _, declaration := range funcDecls {
-		funcName := typeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
+		funcName := commons.TypeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
 		c.addGlobal(funcName)
 	}
 
 	for _, declaration := range compositeDecls {
 		// TODO: Handle nested composite types. Those name should be `Foo.Bar`.
-		qualifiedTypeName := typeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
+		qualifiedTypeName := commons.TypeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
 
 		c.addGlobal(qualifiedTypeName)
 
@@ -583,7 +584,7 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 	case *ast.MemberExpression:
 		memberInfo := c.Elaboration.MemberExpressionMemberInfos[invokedExpr]
 		typeName := memberInfo.AccessedType.QualifiedString()
-		funcName := typeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
+		funcName := commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
 
 		invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 		if invocationType.IsConstructor {
@@ -595,7 +596,6 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 			c.emit(opcode.Invoke)
 		} else {
 			// Receiver is loaded first. So 'self' is always the zero-th argument.
-			// This must be in sync with `compileCompositeFunction`.
 			c.compileExpression(invokedExpr.Expression)
 			// Load arguments
 			c.loadArguments(expression)
@@ -824,7 +824,7 @@ func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration
 
 func (c *Compiler) declareFunction(declaration *ast.FunctionDeclaration, declareReceiver bool) *function {
 	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
-	functionName := typeQualifiedName(enclosingCompositeTypeName, declaration.Identifier.Identifier)
+	functionName := commons.TypeQualifiedName(enclosingCompositeTypeName, declaration.Identifier.Identifier)
 
 	functionType := c.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 	parameterCount := len(functionType.Parameters)
@@ -946,7 +946,7 @@ func (c *Compiler) emitCheckType(targetType sema.Type) {
 	}
 
 	first, second := encodeUint16(index)
-	c.emit(opcode.CheckType, first, second)
+	c.emit(opcode.Transfer, first, second)
 }
 
 func (c *Compiler) addType(data []byte) uint16 {
@@ -973,14 +973,6 @@ func (c *Compiler) enclosingCompositeTypeFullyQualifiedName() string {
 	}
 
 	return sb.String()
-}
-
-func typeQualifiedName(typeName, functionName string) string {
-	if typeName == "" {
-		return functionName
-	}
-
-	return typeName + "." + functionName
 }
 
 func (c *Compiler) declareParameters(function *function, parameters []*ast.Parameter, declareReceiver bool) {

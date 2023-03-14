@@ -16,9 +16,30 @@
  * limitations under the License.
  */
 
-package commons
+package vm
 
-const (
-	InitFunctionName = "init"
-	LogFunctionName  = "log"
+import (
+	"github.com/onflow/atree"
+	"github.com/onflow/cadence/runtime/format"
+
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
+
+type VoidValue struct{}
+
+var _ Value = VoidValue{}
+
+func (VoidValue) isValue() {}
+
+func (VoidValue) StaticType(common.MemoryGauge) StaticType {
+	return interpreter.PrimitiveStaticTypeVoid
+}
+
+func (v VoidValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+	return v
+}
+
+func (v VoidValue) String() string {
+	return format.Void
+}

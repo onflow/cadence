@@ -18,7 +18,10 @@
 
 package commons
 
-const (
-	InitFunctionName = "init"
-	LogFunctionName  = "log"
-)
+func TypeQualifiedName(typeName, functionName string) string {
+	if typeName == "" {
+		return functionName
+	}
+
+	return typeName + "." + functionName
+}

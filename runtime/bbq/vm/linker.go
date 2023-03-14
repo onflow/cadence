@@ -19,7 +19,10 @@
 package vm
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/bbq"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -73,7 +76,12 @@ func LinkGlobals(
 			linkedGlobalsCache[importLocation] = linkedGlobals
 		}
 
-		importedGlobal := linkedGlobals.indexedGlobals[programImport.Name]
+		importedGlobal, ok := linkedGlobals.indexedGlobals[programImport.Name]
+		if !ok {
+			panic(LinkerError{
+				Message: fmt.Sprintf("cannot find import '%s'", programImport.Name),
+			})
+		}
 		importedGlobals = append(importedGlobals, importedGlobal)
 	}
 

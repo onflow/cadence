@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 
@@ -287,7 +288,7 @@ func TestStructMethodCall(t *testing.T) {
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t, StringValue{String: []byte("Hello from Foo!")}, result)
+	require.Equal(t, StringValue{Str: []byte("Hello from Foo!")}, result)
 }
 
 func BenchmarkNewStruct(b *testing.B) {
@@ -469,7 +470,7 @@ func TestImport(t *testing.T) {
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t, StringValue{String: []byte("global function of the imported program")}, result)
+	require.Equal(t, StringValue{Str: []byte("global function of the imported program")}, result)
 }
 
 func TestContractImport(t *testing.T) {
@@ -555,7 +556,7 @@ func TestContractImport(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, StringValue{String: []byte("global function of the imported program")}, result)
+		require.Equal(t, StringValue{Str: []byte("global function of the imported program")}, result)
 	})
 
 	t.Run("contract function", func(t *testing.T) {
@@ -627,7 +628,7 @@ func TestContractImport(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, StringValue{String: []byte("contract function of the imported program")}, result)
+		require.Equal(t, StringValue{Str: []byte("contract function of the imported program")}, result)
 	})
 
 	t.Run("nested imports", func(t *testing.T) {
@@ -798,7 +799,7 @@ func TestContractImport(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, StringValue{String: []byte("Hello from Foo!")}, result)
+		require.Equal(t, StringValue{Str: []byte("Hello from Foo!")}, result)
 	})
 }
 
@@ -922,7 +923,7 @@ func TestInitializeContract(t *testing.T) {
 	require.NoError(t, err)
 
 	fieldValue := contractValue.GetMember(vm.config, "status")
-	assert.Equal(t, StringValue{String: []byte("PENDING")}, fieldValue)
+	assert.Equal(t, StringValue{Str: []byte("PENDING")}, fieldValue)
 }
 
 func TestContractAccessDuringInit(t *testing.T) {
@@ -958,7 +959,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 		require.NoError(t, err)
 
 		fieldValue := contractValue.GetMember(vm.config, "status")
-		assert.Equal(t, StringValue{String: []byte("PENDING")}, fieldValue)
+		assert.Equal(t, StringValue{Str: []byte("PENDING")}, fieldValue)
 	})
 
 	t.Run("using self", func(t *testing.T) {
@@ -990,7 +991,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 		require.NoError(t, err)
 
 		fieldValue := contractValue.GetMember(vm.config, "status")
-		assert.Equal(t, StringValue{String: []byte("PENDING")}, fieldValue)
+		assert.Equal(t, StringValue{Str: []byte("PENDING")}, fieldValue)
 	})
 }
 
@@ -1148,7 +1149,7 @@ func TestContractField(t *testing.T) {
 		vm = NewVM(program, vmConfig)
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, StringValue{String: []byte("PENDING")}, result)
+		require.Equal(t, StringValue{Str: []byte("PENDING")}, result)
 	})
 
 	t.Run("set", func(t *testing.T) {
@@ -1216,10 +1217,10 @@ func TestContractField(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, StringValue{String: []byte("UPDATED")}, result)
+		require.Equal(t, StringValue{Str: []byte("UPDATED")}, result)
 
 		fieldValue := importedContractValue.GetMember(vm.config, "status")
-		assert.Equal(t, StringValue{String: []byte("UPDATED")}, fieldValue)
+		assert.Equal(t, StringValue{Str: []byte("UPDATED")}, fieldValue)
 	})
 }
 
@@ -1241,4 +1242,74 @@ func singleIdentifierLocationResolver(t testing.TB) func(
 			},
 		}, nil
 	}
+}
+
+func TestNativeFunctions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("static function", func(t *testing.T) {
+
+		logFunction := stdlib.NewStandardLibraryFunction(
+			"log",
+			&sema.FunctionType{
+				Parameters: []*sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
+			},
+			``,
+			nil,
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
+
+		checker, err := ParseAndCheckWithOptions(t, `
+            fun test() {
+                log("Hello, World!")
+            }`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+		printProgram(program)
+
+		vm := NewVM(program, nil)
+
+		_, err = vm.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("bound function", func(t *testing.T) {
+		checker, err := ParseAndCheck(t, `
+            fun test(): String {
+                return "Hello".concat(", World!")
+            }`,
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+		printProgram(program)
+
+		vm := NewVM(program, nil)
+
+		result, err := vm.Invoke("test")
+		require.NoError(t, err)
+
+		require.Equal(t, StringValue{Str: []byte("Hello, World!")}, result)
+	})
 }

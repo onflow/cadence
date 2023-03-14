@@ -19,44 +19,20 @@
 package vm
 
 import (
+	"strconv"
+
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type Value interface {
-	isValue()
-	StaticType(common.MemoryGauge) StaticType
-	Transfer(
-		config *Config,
-		address atree.Address,
-		remove bool,
-		storable atree.Storable,
-	) Value
-}
-
-var TrueValue Value = BoolValue(true)
-var FalseValue Value = BoolValue(false)
-
-type BoolValue bool
-
-var _ Value = BoolValue(true)
-
-func (BoolValue) isValue() {}
-
-func (BoolValue) StaticType(common.MemoryGauge) StaticType {
-	return interpreter.PrimitiveStaticTypeBool
-}
-
-func (v BoolValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
 type IntValue struct {
 	SmallInt int64
+}
+
+func (v IntValue) String() string {
+	return strconv.FormatInt(v.SmallInt, 10)
 }
 
 var _ Value = IntValue{}
@@ -91,37 +67,4 @@ func (v IntValue) Greater(other IntValue) Value {
 		return TrueValue
 	}
 	return FalseValue
-}
-
-type FunctionValue struct {
-	Function *bbq.Function
-	Context  *Context
-}
-
-var _ Value = FunctionValue{}
-
-func (FunctionValue) isValue() {}
-
-func (FunctionValue) StaticType(common.MemoryGauge) StaticType {
-	panic(errors.NewUnreachableError())
-}
-
-func (v FunctionValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-type StringValue struct {
-	String []byte
-}
-
-var _ Value = StringValue{}
-
-func (StringValue) isValue() {}
-
-func (StringValue) StaticType(common.MemoryGauge) StaticType {
-	return interpreter.PrimitiveStaticTypeString
-}
-
-func (v StringValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
-	return v
 }

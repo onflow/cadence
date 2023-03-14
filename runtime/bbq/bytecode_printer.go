@@ -67,7 +67,7 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 			opcode.SetGlobal,
 			opcode.Jump,
 			opcode.JumpIfFalse,
-			opcode.CheckType:
+			opcode.Transfer:
 			var operand int
 			operand, i = p.getIntOperand(codes, i)
 			p.stringBuilder.WriteString(" " + fmt.Sprint(operand))
@@ -152,8 +152,11 @@ func (p *BytecodePrinter) getLocation(codes []byte, i int) (location common.Loca
 func (p *BytecodePrinter) printImports(imports []*Import) {
 	p.stringBuilder.WriteString("-- Imports --\n")
 	for _, impt := range imports {
-		p.stringBuilder.WriteString(impt.Location.String())
-		p.stringBuilder.WriteRune('.')
+		location := impt.Location
+		if location != nil {
+			p.stringBuilder.WriteString(location.String())
+			p.stringBuilder.WriteRune('.')
+		}
 		p.stringBuilder.WriteString(impt.Name)
 		p.stringBuilder.WriteRune('\n')
 	}

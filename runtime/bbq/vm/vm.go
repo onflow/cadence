@@ -49,7 +49,13 @@ func NewVM(program *bbq.Program, conf *Config) *VM {
 	}
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
-	linkedGlobalsCache := map[common.Location]LinkedGlobals{}
+	linkedGlobalsCache := map[common.Location]LinkedGlobals{
+		BuiltInLocation: {
+			// It is safe to re-use native functions map here because,
+			// once put into the cache, it will only be used for read-only operations.
+			indexedGlobals: NativeFunctions,
+		},
+	}
 
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(program, conf, linkedGlobalsCache)
@@ -251,13 +257,23 @@ func opSetGlobal(vm *VM) {
 }
 
 func opInvoke(vm *VM) {
-	value := vm.pop().(FunctionValue)
+	value := vm.pop()
 	stackHeight := len(vm.stack)
-	parameterCount := int(value.Function.ParameterCount)
-	arguments := vm.stack[stackHeight-parameterCount:]
 
-	vm.pushCallFrame(value.Context, value.Function, arguments)
-	vm.dropN(parameterCount)
+	switch value := value.(type) {
+	case FunctionValue:
+		parameterCount := int(value.Function.ParameterCount)
+		arguments := vm.stack[stackHeight-parameterCount:]
+		vm.pushCallFrame(value.Context, value.Function, arguments)
+		vm.dropN(parameterCount)
+	case NativeFunctionValue:
+		parameterCount := value.ParameterCount
+		arguments := vm.stack[stackHeight-parameterCount:]
+		result := value.Function(arguments...)
+		vm.push(result)
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func opDrop(vm *VM) {
@@ -295,7 +311,7 @@ func opNew(vm *VM) {
 
 func opSetField(vm *VM) {
 	fieldName := vm.pop().(StringValue)
-	fieldNameStr := string(fieldName.String)
+	fieldNameStr := string(fieldName.Str)
 
 	// TODO: support all container types
 	structValue := vm.pop().(*CompositeValue)
@@ -307,7 +323,7 @@ func opSetField(vm *VM) {
 
 func opGetField(vm *VM) {
 	fieldName := vm.pop().(StringValue)
-	fieldNameStr := string(fieldName.String)
+	fieldNameStr := string(fieldName.Str)
 
 	// TODO: support all container types
 	structValue := vm.pop().(*CompositeValue)
@@ -322,7 +338,7 @@ func opGetField(vm *VM) {
 	vm.push(fieldValue)
 }
 
-func opCheckType(vm *VM) {
+func opTransfer(vm *VM) {
 	targetType := vm.loadType()
 	value := vm.peek()
 
@@ -400,8 +416,8 @@ func (vm *VM) run() {
 			opSetField(vm)
 		case opcode.GetField:
 			opGetField(vm)
-		case opcode.CheckType:
-			opCheckType(vm)
+		case opcode.Transfer:
+			opTransfer(vm)
 		case opcode.Destroy:
 			opDestroy(vm)
 		default:
@@ -423,7 +439,7 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 		smallInt, _, _ := leb128.ReadInt64(constant.Data)
 		value = IntValue{SmallInt: smallInt}
 	case constantkind.String:
-		value = StringValue{String: constant.Data}
+		value = StringValue{Str: constant.Data}
 	default:
 		// TODO:
 		panic(errors.NewUnreachableError())
