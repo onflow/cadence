@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence"
+	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
 // encodeCompositeType encodes cadence.CompositeType in type definition as
@@ -88,7 +89,7 @@ func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDB
 		cborTagNum = CBORTagEnumType
 
 	default:
-		panic(fmt.Errorf("unexpected composite type %s (%T)", t.ID(), t))
+		panic(cadenceErrors.NewUnexpectedError("unexpected composite type %s (%T)", t.ID(), t))
 	}
 
 	// Encode tag number indicating composite type.
@@ -230,7 +231,7 @@ func (e *Encoder) encodeInterfaceType(typ cadence.InterfaceType, tids ccfTypeIDB
 		cborTagNum = CBORTagContractInterfaceType
 
 	default:
-		panic(fmt.Errorf("unexpected interface type %s (%T)", t.ID(), t))
+		panic(cadenceErrors.NewUnexpectedError("unexpected interface type %s (%T)", t.ID(), t))
 	}
 
 	// Encode tag number indicating interface type.

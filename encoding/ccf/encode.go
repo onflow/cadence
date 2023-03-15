@@ -20,7 +20,6 @@ package ccf
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	goRuntime "runtime"
@@ -31,6 +30,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
 // CBOREncMode
@@ -97,25 +97,22 @@ func (e *Encoder) Encode(value cadence.Value) (err error) {
 	defer func() {
 		// Recover panic error if there is any.
 		if r := recover(); r != nil {
-			// Don't recover Go errors.
-			goErr, ok := r.(goRuntime.Error)
-			if ok {
-				panic(goErr)
-			}
-
-			panicErr, isError := r.(error)
-			if !isError {
+			// Don't recover Go errors, internal errors, or non-errors.
+			switch r := r.(type) {
+			case goRuntime.Error, cadenceErrors.InternalError:
+				panic(r)
+			case error:
+				err = r
+			default:
 				panic(r)
 			}
-
-			err = panicErr
 		}
 
 		// Add context to error if there is any.
 		if err != nil {
 			err = fmt.Errorf(
-				"ccf: failed to encode value %q (type %q): %s",
-				value.String(),
+				"ccf: failed to encode value (type %T, %q): %s",
+				value,
 				value.Type().ID(),
 				err,
 			)
@@ -262,7 +259,7 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 			}
 
 		default:
-			panic(fmt.Errorf("unexpected type %s in type definition", typ.ID()))
+			panic(cadenceErrors.NewUnexpectedError("unexpected type %s in type definition", typ.ID()))
 		}
 	}
 
@@ -340,7 +337,7 @@ func (e *Encoder) encodeValue(
 
 	// CCF requires value to have non-nil type.
 	if runtimeType == nil {
-		panic(errors.New("value has nil type"))
+		panic(cadenceErrors.NewUnexpectedError("value (%T) has nil type", v))
 	}
 
 	if needToEncodeRuntimeType(staticType, runtimeType) {
@@ -479,7 +476,7 @@ func (e *Encoder) encodeValue(
 		return e.encodeFunction(x.FunctionType, ccfTypeIDByCadenceType{})
 
 	default:
-		panic(fmt.Errorf("unsupported value %s (%T)", v, v))
+		panic(cadenceErrors.NewUnexpectedError("cannot encode unsupported value (%T)", v))
 	}
 }
 
@@ -831,7 +828,7 @@ func encodeAndSortKeyValuePairs(
 	}
 	if off != len(b) {
 		// Sanity check
-		panic(fmt.Errorf("encoded dictionary pairs' offset %d doesn't match buffer length %d", off, len(b)))
+		panic(cadenceErrors.NewUnexpectedError("encoded dictionary pairs' offset %d doesn't match buffer length %d", off, len(b)))
 	}
 
 	sort.Sort(bytewiseKeyValuePairSorter(encodedPairs))
@@ -885,7 +882,7 @@ func (e *Encoder) encodeComposite(
 	staticFieldTypes := typ.CompositeFields()
 
 	if len(staticFieldTypes) != len(fields) {
-		panic(fmt.Errorf(
+		panic(cadenceErrors.NewUnexpectedError(
 			"%s field count %d doesn't match declared field type count %d",
 			typ.ID(),
 			len(fields),
@@ -1121,7 +1118,7 @@ func (e *Encoder) encodeTypeValue(typ cadence.Type, visited ccfTypeIDByCadenceTy
 		return e.encodeNilTypeValue()
 
 	default:
-		panic(fmt.Errorf("unsupported type value %s (%T)", typ.ID(), typ))
+		panic(cadenceErrors.NewUnexpectedError("unsupported type value %s (%T)", typ.ID(), typ))
 	}
 }
 

@@ -19,10 +19,10 @@
 package ccf
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/onflow/cadence"
+	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
 type encodeTypeFn func(typ cadence.Type, tids ccfTypeIDByCadenceType) error
@@ -65,7 +65,7 @@ func (e *Encoder) encodeInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType
 	case cadence.CompositeType, cadence.InterfaceType:
 		id, err := tids.id(typ)
 		if err != nil {
-			panic(err)
+			panic(cadenceErrors.NewUnexpectedErrorFromCause(err))
 		}
 		return e.encodeTypeRef(id)
 
@@ -82,7 +82,7 @@ func (e *Encoder) encodeInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType
 		return e.encodeSimpleType(TypeFunction)
 
 	default:
-		panic(fmt.Errorf("unsupported type %s (%T)", typ.ID(), typ))
+		panic(cadenceErrors.NewUnexpectedError("unsupported type %s (%T)", typ.ID(), typ))
 	}
 }
 

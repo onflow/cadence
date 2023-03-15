@@ -28,7 +28,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
+	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
 // CBORDecMode
@@ -90,23 +90,20 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 	defer func() {
 		// Recover panic error if there is any.
 		if r := recover(); r != nil {
-			// Don't recover Go errors.
-			goErr, ok := r.(goRuntime.Error)
-			if ok {
-				panic(goErr)
-			}
-
-			panicErr, isError := r.(error)
-			if !isError {
+			// Don't recover Go errors, internal errors, or non-errors.
+			switch r := r.(type) {
+			case goRuntime.Error, cadenceErrors.InternalError:
+				panic(r)
+			case error:
+				err = r
+			default:
 				panic(r)
 			}
-
-			err = panicErr
 		}
 
 		// Add context to error if there is any.
 		if err != nil {
-			err = errors.NewDefaultUserError("ccf: failed to decode: %s", err)
+			err = cadenceErrors.NewDefaultUserError("ccf: failed to decode: %s", err)
 		}
 	}()
 
