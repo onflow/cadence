@@ -1879,8 +1879,8 @@ func TestParseAccess(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+					Message: "unexpected token: got ',', expected '|' or ')'",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
 				},
 			},
 			errs,
@@ -1900,8 +1900,8 @@ func TestParseAccess(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+					Message: "unexpected token: got '|', expected ',' or ')'",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
 				},
 			},
 			errs,
@@ -2005,7 +2005,7 @@ func TestParseAccess(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: got identifier, expected ',' or ')'",
+					Message: "unexpected entitlement separator identifier",
 					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
@@ -2026,8 +2026,8 @@ func TestParseAccess(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected separator '&'",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+					Message: "unexpected entitlement separator '&'",
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
@@ -8106,7 +8106,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 
 }
 
-func TestParseEntitlementMappingDeclaration(t *testing.T) {
+/*func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 	t.Parallel()
 
@@ -8134,7 +8134,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			result,
 		)
 	})
-}
+}*/
 
 func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
 

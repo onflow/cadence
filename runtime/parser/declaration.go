@@ -385,6 +385,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			switch p.current.Type {
 			case lexer.TokenComma, lexer.TokenVerticalBar:
 				separator = p.current.Type
+				p.nextSemanticToken()
 			case lexer.TokenParenClose:
 				// it is impossible to disambiguate at parsing time between an access that is a single
 				// conjunctive entitlement, a single disjunctive entitlement, and the name of an entitlement mapping.
@@ -396,31 +397,32 @@ func parseAccess(p *parser) (ast.Access, error) {
 					p.current.Type.String(),
 				)
 			}
-			p.nextSemanticToken()
 
-			remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true, separator)
-			if err != nil {
-				return nil, err
-			}
+			if separator != lexer.TokenError {
+				remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true, separator)
+				if err != nil {
+					return ast.AccessNotSpecified, err
+				}
 
-			entitlements = append(entitlements, remainingEntitlements...)
-			if err != nil {
-				return ast.AccessNotSpecified, err
+				entitlements = append(entitlements, remainingEntitlements...)
+				if err != nil {
+					return ast.AccessNotSpecified, err
+				}
+				if len(entitlements) < 1 {
+					return ast.AccessNotSpecified, p.syntaxError(
+						"expected keyword %s or a list of entitlements, got %q",
+						enumeratedAccessModifierKeywords,
+						keyword,
+					)
+				}
+				var entitlementSet ast.EntitlementSet
+				if separator == lexer.TokenComma {
+					entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
+				} else {
+					entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
+				}
+				access = ast.NewEntitlementAccess(entitlementSet)
 			}
-			if len(entitlements) < 1 {
-				return ast.AccessNotSpecified, p.syntaxError(
-					"expected keyword %s or a list of entitlements, got %q",
-					enumeratedAccessModifierKeywords,
-					keyword,
-				)
-			}
-			var entitlementSet ast.EntitlementSet
-			if separator == lexer.TokenComma {
-				entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
-			} else {
-				entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
-			}
-			access = ast.NewEntitlementAccess(entitlementSet)
 		}
 
 		_, err = p.mustOne(lexer.TokenParenClose)
