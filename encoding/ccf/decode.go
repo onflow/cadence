@@ -861,49 +861,51 @@ func (d *Decoder) decodeDictionary(typ *cadence.DictionaryType, types cadenceTyp
 		)
 	}
 
-	// previousKeyRawBytes is used to determine if dictionary keys are sorted
-	var previousKeyRawBytes []byte
-
-	pairCount := n / 2
-	pairs := make([]cadence.KeyValuePair, pairCount)
-	for i := 0; i < int(pairCount); i++ {
-		// element i: key
-
-		// Decode key as raw bytes to check that key pairs are sorted by key.
-		keyRawBytes, err := d.dec.DecodeRawBytes()
-		if err != nil {
-			return nil, err
-		}
-
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "dict-value key-value pairs MUST be sorted by key."
-		if !bytesAreSortedBytewise(previousKeyRawBytes, keyRawBytes) {
-			return nil, fmt.Errorf("encoded dict-value keys are not sorted")
-		}
-
-		previousKeyRawBytes = keyRawBytes
-
-		// decode key from raw bytes
-		keyDecoder := NewDecoder(d.gauge, keyRawBytes)
-		key, err := keyDecoder.decodeValue(typ.KeyType, types)
-		if err != nil {
-			return nil, err
-		}
-
-		// element i+1: value
-		element, err := d.decodeValue(typ.ElementType, types)
-		if err != nil {
-			return nil, err
-		}
-
-		pairs[i] = cadence.NewMeteredKeyValuePair(d.gauge, key, element)
-	}
+	pairCount := int(n / 2)
 
 	value, err := cadence.NewMeteredDictionary(
 		d.gauge,
-		len(pairs),
+		pairCount,
 		func() ([]cadence.KeyValuePair, error) {
+			pairs := make([]cadence.KeyValuePair, pairCount)
+
+			// previousKeyRawBytes is used to determine if dictionary keys are sorted
+			var previousKeyRawBytes []byte
+
+			for i := 0; i < pairCount; i++ {
+				// element i: key
+
+				// Decode key as raw bytes to check that key pairs are sorted by key.
+				keyRawBytes, err := d.dec.DecodeRawBytes()
+				if err != nil {
+					return nil, err
+				}
+
+				// "Deterministic CCF Encoding Requirements" in CCF specs:
+				//
+				//   "dict-value key-value pairs MUST be sorted by key."
+				if !bytesAreSortedBytewise(previousKeyRawBytes, keyRawBytes) {
+					return nil, fmt.Errorf("encoded dict-value keys are not sorted")
+				}
+
+				previousKeyRawBytes = keyRawBytes
+
+				// decode key from raw bytes
+				keyDecoder := NewDecoder(d.gauge, keyRawBytes)
+				key, err := keyDecoder.decodeValue(typ.KeyType, types)
+				if err != nil {
+					return nil, err
+				}
+
+				// element i+1: value
+				element, err := d.decodeValue(typ.ElementType, types)
+				if err != nil {
+					return nil, err
+				}
+
+				pairs[i] = cadence.NewMeteredKeyValuePair(d.gauge, key, element)
+			}
+
 			// "Valid CCF Encoding Requirements" in CCF specs:
 			//
 			//   "Keys MUST be unique in dict-value. Decoders are not always required to check
