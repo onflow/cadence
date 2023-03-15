@@ -246,7 +246,7 @@ func (e *Encoder) encodeInterfaceType(typ cadence.InterfaceType, tids ccfTypeIDB
 		return err
 	}
 
-	// element 0: CCf type ID
+	// element 0: CCF type ID
 	err = e.encodeCCFTypeID(ccfID)
 	if err != nil {
 		return err

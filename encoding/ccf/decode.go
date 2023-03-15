@@ -116,11 +116,11 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 
 	switch tagNum {
 	case CBORTagTypeDefAndValue:
-		// Decode ccf-type-and-value-message.
+		// Decode ccf-typedef-and-value-message.
 		return d.decodeTypeDefAndValue()
 
 	case CBORTagTypeAndValue:
-		// Decode ccf-typedef-and-value-message.
+		// Decode ccf-type-and-value-message.
 		return d.decodeTypeAndValue(cadenceTypeByCCFTypeID{})
 
 	default:
@@ -331,7 +331,7 @@ func (d *Decoder) decodeValue(t cadence.Type, types cadenceTypeByCCFTypeID) (cad
 		return d.decodeArray(typ, false, 0, types)
 
 	case *cadence.ConstantSizedArrayType:
-		return d.decodeArray(typ, true, typ.Size, types)
+		return d.decodeArray(typ, true, uint64(typ.Size), types)
 
 	case *cadence.DictionaryType:
 		return d.decodeDictionary(typ, types)
@@ -806,14 +806,14 @@ func (d *Decoder) decodeOptional(typ *cadence.OptionalType, types cadenceTypeByC
 // decodeArray decodes encoded array-value as
 // language=CDDL
 // array-value = [* value]
-func (d *Decoder) decodeArray(typ cadence.ArrayType, hasKnownSize bool, knownSize uint, types cadenceTypeByCCFTypeID) (cadence.Value, error) {
+func (d *Decoder) decodeArray(typ cadence.ArrayType, hasKnownSize bool, knownSize uint64, types cadenceTypeByCCFTypeID) (cadence.Value, error) {
 	// Decode array length.
 	n, err := d.dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
 	}
 
-	if hasKnownSize && uint64(knownSize) != n {
+	if hasKnownSize && knownSize != n {
 		return nil, fmt.Errorf(
 			"encoded array-value has %d elements (expected %d elements)",
 			n,

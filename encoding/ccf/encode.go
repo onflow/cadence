@@ -713,7 +713,7 @@ func (e *Encoder) encodeDictionary(v cadence.Dictionary, tids ccfTypeIDByCadence
 	staticElementType := dictionaryType.ElementType
 
 	// Encode array head with array size of 2 * number of pairs.
-	err := e.enc.EncodeArrayHead(uint64(len(v.Pairs) * 2))
+	err := e.enc.EncodeArrayHead(uint64(len(v.Pairs)) * 2)
 	if err != nil {
 		return err
 	}
@@ -755,7 +755,7 @@ func (e *Encoder) encodeSortedDictionary(v cadence.Dictionary, tids ccfTypeIDByC
 	}
 
 	// Encode array head with 2 * number of pairs.
-	err = e.enc.EncodeArrayHead(uint64(len(v.Pairs) * 2))
+	err = e.enc.EncodeArrayHead(uint64(len(v.Pairs)) * 2)
 	if err != nil {
 		return err
 	}
