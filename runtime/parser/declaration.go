@@ -374,7 +374,36 @@ func parseAccess(p *parser) (ast.Access, error) {
 			p.nextSemanticToken()
 
 		default:
-			entitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true)
+			firstTy, err := parseNominalType(p, lowestBindingPower, true)
+			if err != nil {
+				return ast.AccessNotSpecified, err
+			}
+			p.skipSpaceAndComments()
+			entitlements := []*ast.NominalType{firstTy}
+			var separator lexer.TokenType
+
+			switch p.current.Type {
+			case lexer.TokenComma, lexer.TokenVerticalBar:
+				separator = p.current.Type
+			case lexer.TokenParenClose:
+				// it is impossible to disambiguate at parsing time between an access that is a single
+				// conjunctive entitlement, a single disjunctive entitlement, and the name of an entitlement mapping.
+				// Luckily, however, the former two are just equiavlent, and the latter we can disambiguate in the type checker.
+				access = ast.NewEntitlementAccess(ast.NewConjunctiveEntitlementSet(entitlements))
+			default:
+				return ast.AccessNotSpecified, p.syntaxError(
+					"unexpected entitlement separator %s",
+					p.current.Type.String(),
+				)
+			}
+			p.nextSemanticToken()
+
+			remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true, separator)
+			if err != nil {
+				return nil, err
+			}
+
+			entitlements = append(entitlements, remainingEntitlements...)
 			if err != nil {
 				return ast.AccessNotSpecified, err
 			}
@@ -385,7 +414,13 @@ func parseAccess(p *parser) (ast.Access, error) {
 					keyword,
 				)
 			}
-			access = ast.NewEntitlementAccess(entitlements)
+			var entitlementSet ast.EntitlementSet
+			if separator == lexer.TokenComma {
+				entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
+			} else {
+				entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
+			}
+			access = ast.NewEntitlementAccess(entitlementSet)
 		}
 
 		_, err = p.mustOne(lexer.TokenParenClose)
@@ -981,7 +1016,7 @@ func parseFieldWithVariableKind(
 
 // parseEntitlementDeclaration parses an entitlement declaration.
 //
-//	entitlementDeclaration : 'entitlement' identifier '{' membersAndNestedDeclarations '}'
+//	entitlementDeclaration : 'entitlement' identifier
 func parseEntitlementDeclaration(
 	p *parser,
 	access ast.Access,
@@ -1000,37 +1035,18 @@ func parseEntitlementDeclaration(
 	if err != nil {
 		return nil, err
 	}
-
 	p.nextSemanticToken()
-
-	_, err = p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
-
-	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
-	if err != nil {
-		return nil, err
-	}
-
-	p.skipSpaceAndComments()
-
-	endToken, err := p.mustOne(lexer.TokenBraceClose)
-	if err != nil {
-		return nil, err
-	}
 
 	declarationRange := ast.NewRange(
 		p.memoryGauge,
 		startPos,
-		endToken.EndPos,
+		identifier.Pos,
 	)
 
 	return ast.NewEntitlementDeclaration(
 		p.memoryGauge,
 		access,
 		identifier,
-		members,
 		docString,
 		declarationRange,
 	), nil
@@ -1044,7 +1060,7 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 		// Skip the colon
 		p.next()
 
-		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen, false)
+		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen, false, lexer.TokenComma)
 		if err != nil {
 			return nil, err
 		}

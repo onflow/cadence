@@ -166,6 +166,8 @@ const (
 	MemoryKindAttachmentDeclaration
 	MemoryKindInterfaceDeclaration
 	MemoryKindEntitlementDeclaration
+	MemoryKindEntitlementMappingElement
+	MemoryKindEntitlementMappingDeclaration
 	MemoryKindEnumCaseDeclaration
 	MemoryKindFieldDeclaration
 	MemoryKindTransactionDeclaration

@@ -882,10 +882,12 @@ func TestReferenceType_Doc(t *testing.T) {
 
 		ty := &ReferenceType{
 			Authorization: &Authorization{
-				Entitlements: []*NominalType{
-					{
-						Identifier: Identifier{
-							Identifier: "X",
+				EntitlementSet: ConjunctiveEntitlementSet{
+					Elements: []*NominalType{
+						{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
 						},
 					},
 				},
@@ -911,21 +913,23 @@ func TestReferenceType_Doc(t *testing.T) {
 		)
 	})
 
-	t.Run("auth with 2 entitlements", func(t *testing.T) {
+	t.Run("auth with 2 conjunctive entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
 		ty := &ReferenceType{
 			Authorization: &Authorization{
-				Entitlements: []*NominalType{
-					{
-						Identifier: Identifier{
-							Identifier: "X",
+				EntitlementSet: ConjunctiveEntitlementSet{
+					Elements: []*NominalType{
+						{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
 						},
-					},
-					{
-						Identifier: Identifier{
-							Identifier: "Y",
+						{
+							Identifier: Identifier{
+								Identifier: "Y",
+							},
 						},
 					},
 				},
@@ -943,6 +947,51 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("("),
 				prettier.Text("X"),
 				prettier.Text(","),
+				prettier.Space,
+				prettier.Text("Y"),
+				prettier.Text(")"),
+				prettier.Space,
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("auth with 2 disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &Authorization{
+				EntitlementSet: DisjunctiveEntitlementSet{
+					Elements: []*NominalType{
+						{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+						{
+							Identifier: Identifier{
+								Identifier: "Y",
+							},
+						},
+					},
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("auth"),
+				prettier.Text("("),
+				prettier.Text("X"),
+				prettier.Text(" |"),
 				prettier.Space,
 				prettier.Text("Y"),
 				prettier.Text(")"),
@@ -1005,10 +1054,12 @@ func TestReferenceType_String(t *testing.T) {
 
 		ty := &ReferenceType{
 			Authorization: &Authorization{
-				Entitlements: []*NominalType{
-					{
-						Identifier: Identifier{
-							Identifier: "X",
+				EntitlementSet: ConjunctiveEntitlementSet{
+					Elements: []*NominalType{
+						{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
 						},
 					},
 				},
@@ -1026,21 +1077,23 @@ func TestReferenceType_String(t *testing.T) {
 		)
 	})
 
-	t.Run("auth with 2 entitlements", func(t *testing.T) {
+	t.Run("auth with 2 conjunctive entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
 		ty := &ReferenceType{
 			Authorization: &Authorization{
-				Entitlements: []*NominalType{
-					{
-						Identifier: Identifier{
-							Identifier: "X",
+				EntitlementSet: ConjunctiveEntitlementSet{
+					Elements: []*NominalType{
+						{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
 						},
-					},
-					{
-						Identifier: Identifier{
-							Identifier: "Y",
+						{
+							Identifier: Identifier{
+								Identifier: "Y",
+							},
 						},
 					},
 				},
@@ -1054,6 +1107,40 @@ func TestReferenceType_String(t *testing.T) {
 
 		assert.Equal(t,
 			"auth(X, Y) &T",
+			ty.String(),
+		)
+	})
+
+	t.Run("auth with 2 disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &Authorization{
+				EntitlementSet: DisjunctiveEntitlementSet{
+					Elements: []*NominalType{
+						{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+						{
+							Identifier: Identifier{
+								Identifier: "Y",
+							},
+						},
+					},
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"auth(X | Y) &T",
 			ty.String(),
 		)
 	})
@@ -1084,15 +1171,17 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 
 	ty := &ReferenceType{
 		Authorization: &Authorization{
-			Entitlements: []*NominalType{
-				{
-					Identifier: Identifier{
-						Identifier: "X",
+			EntitlementSet: ConjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					{
+						Identifier: Identifier{
+							Identifier: "X",
+						},
 					},
-				},
-				{
-					Identifier: Identifier{
-						Identifier: "Y",
+					{
+						Identifier: Identifier{
+							Identifier: "Y",
+						},
 					},
 				},
 			},
@@ -1115,28 +1204,30 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
         {
             "Type": "ReferenceType",
             "Authorization": {
-				"Entitlements": [
-					{ 
-						"Type": "NominalType",
-						"Identifier": {
-							"Identifier": "X",
+				"EntitlementSet": {
+					"ConjunctiveElements": [
+						{ 
+							"Type": "NominalType",
+							"Identifier": {
+								"Identifier": "X",
+								"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+								"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+							},
 							"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-                    		"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
-						},
-						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-						"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
-					}, 
-					{ 
-						"Type": "NominalType",
-						"Identifier": {
-							"Identifier": "Y",
+							"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+						}, 
+						{ 
+							"Type": "NominalType",
+							"Identifier": {
+								"Identifier": "Y",
+								"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+								"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+							},
 							"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-                    		"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
-						},
-						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-						"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
-					}
-				]
+							"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+						}
+					]
+				}
 			},
             "ReferencedType": {
                 "Type": "NominalType",

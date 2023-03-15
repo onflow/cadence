@@ -520,7 +520,7 @@ func defineRestrictedOrDictionaryType() {
 				return left, nil, true
 			}
 
-			nominalTypes, endPos, err := parseNominalTypes(p, lexer.TokenBraceClose, false)
+			nominalTypes, endPos, err := parseNominalTypes(p, lexer.TokenBraceClose, false, lexer.TokenComma)
 
 			if err != nil {
 				return nil, err, true
@@ -545,11 +545,36 @@ func defineRestrictedOrDictionaryType() {
 	)
 }
 
-// parseNominalTypes parses zero or more nominal types separated by comma.
+func parseNominalType(
+	p *parser,
+	rightBindingPower int,
+	rejectAccessKeywords bool,
+) (*ast.NominalType, error) {
+	ty, err := parseType(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+	nominalType, ok := ty.(*ast.NominalType)
+	if !ok {
+		return nil, p.syntaxError("unexpected non-nominal type: %s", ty)
+	}
+	if rejectAccessKeywords &&
+		nominalType.Identifier.Identifier == KeywordAll ||
+		nominalType.Identifier.Identifier == KeywordAccess ||
+		nominalType.Identifier.Identifier == KeywordAccount ||
+		nominalType.Identifier.Identifier == KeywordSelf {
+		return nil, p.syntaxError("unexpected non-nominal type: %s", ty)
+	}
+	return nominalType, nil
+}
+
+// parseNominalTypes parses zero or more nominal types separated by a separator, either
+// a comma `,` or a vertical bar `|`.
 func parseNominalTypes(
 	p *parser,
 	endTokenType lexer.TokenType,
 	rejectAccessKeywords bool,
+	separator lexer.TokenType,
 ) (
 	nominalTypes []*ast.NominalType,
 	endPos ast.Position,
@@ -561,17 +586,17 @@ func parseNominalTypes(
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
-		case lexer.TokenComma:
+		case separator:
 			if expectType {
-				return nil, ast.EmptyPosition, p.syntaxError("unexpected comma")
+				return nil, ast.EmptyPosition, p.syntaxError("unexpected separator")
 			}
-			// Skip the comma
+			// Skip the separator
 			p.next()
 			expectType = true
 
 		case endTokenType:
 			if expectType && len(nominalTypes) > 0 {
-				p.reportSyntaxError("missing type after comma")
+				p.reportSyntaxError("missing type after separator")
 			}
 			endPos = p.current.EndPos
 			atEnd = true
@@ -588,28 +613,16 @@ func parseNominalTypes(
 				return nil, ast.EmptyPosition, p.syntaxError(
 					"unexpected token: got %s, expected %s or %s",
 					p.current.Type,
-					lexer.TokenComma,
+					separator,
 					endTokenType,
 				)
 			}
 
-			ty, err := parseType(p, lowestBindingPower)
-			if err != nil {
-				return nil, ast.EmptyPosition, err
-			}
-
 			expectType = false
 
-			nominalType, ok := ty.(*ast.NominalType)
-			if !ok {
-				return nil, ast.EmptyPosition, p.syntaxError("unexpected non-nominal type: %s", ty)
-			}
-			if rejectAccessKeywords &&
-				nominalType.Identifier.Identifier == KeywordAll ||
-				nominalType.Identifier.Identifier == KeywordAccess ||
-				nominalType.Identifier.Identifier == KeywordAccount ||
-				nominalType.Identifier.Identifier == KeywordSelf {
-				return nil, ast.EmptyPosition, p.syntaxError("unexpected non-nominal type: %s", ty)
+			nominalType, err := parseNominalType(p, lowestBindingPower, rejectAccessKeywords)
+			if err != nil {
+				return nil, ast.EmptyPosition, err
 			}
 			nominalTypes = append(nominalTypes, nominalType)
 		}
@@ -954,19 +967,50 @@ func defineIdentifierTypes() {
 					if err != nil {
 						return nil, err
 					}
-					entitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true)
+					firstTy, err := parseNominalType(p, lowestBindingPower, true)
 					if err != nil {
 						return nil, err
 					}
-					if len(entitlements) < 1 {
-						return nil, p.syntaxError("entitlements list cannot be empty")
-					}
-					authorization.Entitlements = entitlements
-					_, err = p.mustOne(lexer.TokenParenClose)
-					if err != nil {
-						return nil, err
-					}
+					entitlements := []*ast.NominalType{firstTy}
 					p.skipSpaceAndComments()
+					var separator lexer.TokenType
+
+					switch p.current.Type {
+					case lexer.TokenComma, lexer.TokenVerticalBar:
+						separator = p.current.Type
+					case lexer.TokenParenClose:
+						authorization.EntitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
+					default:
+						return nil, p.syntaxError(
+							"unexpected entitlement separator %s",
+							p.current.Type.String(),
+						)
+					}
+					p.nextSemanticToken()
+
+					if separator != lexer.TokenError {
+						remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true, separator)
+						if err != nil {
+							return nil, err
+						}
+
+						entitlements = append(entitlements, remainingEntitlements...)
+						if len(entitlements) < 1 {
+							return nil, p.syntaxError("entitlements list cannot be empty")
+						}
+						var entitlementSet ast.EntitlementSet
+						if separator == lexer.TokenComma {
+							entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
+						} else {
+							entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
+						}
+						authorization.EntitlementSet = entitlementSet
+						_, err = p.mustOne(lexer.TokenParenClose)
+						if err != nil {
+							return nil, err
+						}
+						p.skipSpaceAndComments()
+					}
 				}
 
 				_, err := p.mustOne(lexer.TokenAmpersand)

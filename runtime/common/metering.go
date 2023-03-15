@@ -59,18 +59,20 @@ var (
 
 	// AST Declarations
 
-	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
-	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
-	AttachmentDeclarationMemoryUsage      = NewConstantMemoryUsage(MemoryKindAttachmentDeclaration)
-	InterfaceDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
-	EntitlementDeclarationMemoryUsage     = NewConstantMemoryUsage(MemoryKindEntitlementDeclaration)
-	ImportDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindImportDeclaration)
-	TransactionDeclarationMemoryUsage     = NewConstantMemoryUsage(MemoryKindTransactionDeclaration)
-	FieldDeclarationMemoryUsage           = NewConstantMemoryUsage(MemoryKindFieldDeclaration)
-	EnumCaseDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindEnumCaseDeclaration)
-	VariableDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
-	SpecialFunctionDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindSpecialFunctionDeclaration)
-	PragmaDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindPragmaDeclaration)
+	FunctionDeclarationMemoryUsage           = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
+	CompositeDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
+	AttachmentDeclarationMemoryUsage         = NewConstantMemoryUsage(MemoryKindAttachmentDeclaration)
+	InterfaceDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
+	EntitlementDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindEntitlementDeclaration)
+	EntitlementMappingElementMemoryUsage     = NewConstantMemoryUsage(MemoryKindEntitlementMappingElement)
+	EntitlementMappingDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMappingDeclaration)
+	ImportDeclarationMemoryUsage             = NewConstantMemoryUsage(MemoryKindImportDeclaration)
+	TransactionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindTransactionDeclaration)
+	FieldDeclarationMemoryUsage              = NewConstantMemoryUsage(MemoryKindFieldDeclaration)
+	EnumCaseDeclarationMemoryUsage           = NewConstantMemoryUsage(MemoryKindEnumCaseDeclaration)
+	VariableDeclarationMemoryUsage           = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
+	SpecialFunctionDeclarationMemoryUsage    = NewConstantMemoryUsage(MemoryKindSpecialFunctionDeclaration)
+	PragmaDeclarationMemoryUsage             = NewConstantMemoryUsage(MemoryKindPragmaDeclaration)
 
 	// AST Statements
 
