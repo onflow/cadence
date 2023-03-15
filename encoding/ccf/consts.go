@@ -20,6 +20,21 @@ package ccf
 
 // CCF uses CBOR tag numbers 128-255, which are unassigned by [IANA]
 // (https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml).
+//
+// !!! *WARNING* !!!
+//
+// CCF Codec *MUST* comply with CCF Specifications.  Relevant changes
+// must be in sync between codec and specifications.
+//
+// Only add new tag number by:
+// - replacing existing placeholders (`_`) with new tag number
+//
+// Only remove tag number by:
+// - replace existing tag number with a placeholder `_`
+//
+// DO *NOT* REPLACE EXISTING TAG NUMBERS!
+// DO *NOT* ADD NEW TAG NUMBERS IN BETWEEN!
+// DO *NOT* APPEND NEW TAG NUMBERS AT END!
 
 const (
 	// CBOR tag numbers (128-135) for root objects (131-135 are reserved)
