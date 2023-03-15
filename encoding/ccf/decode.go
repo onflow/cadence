@@ -534,13 +534,13 @@ func (d *Decoder) decodeInt64() (cadence.Value, error) {
 // language=CDDL
 // int128-value = bigint
 func (d *Decoder) decodeInt128() (cadence.Value, error) {
-	bigInt, err := d.dec.DecodeBigInt()
-	if err != nil {
-		return nil, err
-	}
 	return cadence.NewMeteredInt128FromBig(
 		d.gauge,
 		func() *big.Int {
+			bigInt, err := d.dec.DecodeBigInt()
+			if err != nil {
+				panic(fmt.Errorf("failed to decode Int128: %s", err))
+			}
 			return bigInt
 		},
 	)
@@ -550,13 +550,13 @@ func (d *Decoder) decodeInt128() (cadence.Value, error) {
 // language=CDDL
 // int256-value = bigint
 func (d *Decoder) decodeInt256() (cadence.Value, error) {
-	bigInt, err := d.dec.DecodeBigInt()
-	if err != nil {
-		return nil, err
-	}
 	return cadence.NewMeteredInt256FromBig(
 		d.gauge,
 		func() *big.Int {
+			bigInt, err := d.dec.DecodeBigInt()
+			if err != nil {
+				panic(fmt.Errorf("failed to decode Int256: %s", err))
+			}
 			return bigInt
 		},
 	)
@@ -653,16 +653,14 @@ func (d *Decoder) decodeUInt64() (cadence.Value, error) {
 // language=CDDL
 // uint128-value = bigint .ge 0
 func (d *Decoder) decodeUInt128() (cadence.Value, error) {
-	bigInt, err := d.dec.DecodeBigInt()
-	if err != nil {
-		return nil, err
-	}
-	if bigInt.Sign() < 0 {
-		return nil, errors.New("encoded uint128-value is negative")
-	}
+	// NewMeteredUInt128FromBig checks if decoded big.Int is positive.
 	return cadence.NewMeteredUInt128FromBig(
 		d.gauge,
 		func() *big.Int {
+			bigInt, err := d.dec.DecodeBigInt()
+			if err != nil {
+				panic(fmt.Errorf("failed to decode UInt128: %s", err))
+			}
 			return bigInt
 		},
 	)
@@ -672,16 +670,14 @@ func (d *Decoder) decodeUInt128() (cadence.Value, error) {
 // language=CDDL
 // uint256-value = bigint .ge 0
 func (d *Decoder) decodeUInt256() (cadence.Value, error) {
-	bigInt, err := d.dec.DecodeBigInt()
-	if err != nil {
-		return nil, err
-	}
-	if bigInt.Sign() < 0 {
-		return nil, errors.New("encoded uint256-value is negative")
-	}
+	// NewMeteredUInt256FromBig checks if decoded big.Int is positive.
 	return cadence.NewMeteredUInt256FromBig(
 		d.gauge,
 		func() *big.Int {
+			bigInt, err := d.dec.DecodeBigInt()
+			if err != nil {
+				panic(fmt.Errorf("failed to decode UInt256: %s", err))
+			}
 			return bigInt
 		},
 	)
