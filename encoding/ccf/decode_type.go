@@ -534,23 +534,25 @@ func (d *Decoder) decodeRestrictedType(
 			return nil, err
 		}
 
+		restrictedTypeID := restrictedType.ID()
+
 		// "Valid CCF Encoding Requirements" in CCF specs:
 		//
 		//   "Elements MUST be unique in restricted-type or restricted-type-value."
-		if _, ok := restrictionTypeIDs[restrictedType.ID()]; ok {
-			return nil, fmt.Errorf("found duplicate restricted type %s", restrictedType.ID())
+		if _, ok := restrictionTypeIDs[restrictedTypeID]; ok {
+			return nil, fmt.Errorf("found duplicate restricted type %s", restrictedTypeID)
 		}
 
 		// "Deterministic CCF Encoding Requirements" in CCF specs:
 		//
 		//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
 		//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
-		if !stringsAreSortedBytewise(previousRestrictedTypeID, restrictedType.ID()) {
-			return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousRestrictedTypeID, restrictedType.ID())
+		if !stringsAreSortedBytewise(previousRestrictedTypeID, restrictedTypeID) {
+			return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousRestrictedTypeID, restrictedTypeID)
 		}
 
-		restrictionTypeIDs[restrictedType.ID()] = struct{}{}
-		previousRestrictedTypeID = restrictedType.ID()
+		restrictionTypeIDs[restrictedTypeID] = struct{}{}
+		previousRestrictedTypeID = restrictedTypeID
 
 		restrictions[i] = restrictedType
 	}
