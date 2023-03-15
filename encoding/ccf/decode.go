@@ -19,6 +19,7 @@
 package ccf
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -473,7 +474,7 @@ func (d *Decoder) decodeInt8() (cadence.Value, error) {
 		return nil, fmt.Errorf(
 			"encoded int8-value %d is outside range of Int8 [%d, %d]",
 			i,
-			math.MaxInt8,
+			math.MinInt8,
 			math.MaxInt8,
 		)
 	}
@@ -570,10 +571,7 @@ func (d *Decoder) decodeUInt() (cadence.Value, error) {
 		return nil, err
 	}
 	if bigInt.Sign() < 0 {
-		return nil, fmt.Errorf(
-			"encoded uint-value %s is negative",
-			bigInt.String(),
-		)
+		return nil, errors.New("encoded uint-value is negative")
 	}
 	return cadence.NewMeteredUIntFromBig(
 		d.gauge,
@@ -660,10 +658,7 @@ func (d *Decoder) decodeUInt128() (cadence.Value, error) {
 		return nil, err
 	}
 	if bigInt.Sign() < 0 {
-		return nil, fmt.Errorf(
-			"encoded uint128-value %s is negative",
-			bigInt.String(),
-		)
+		return nil, errors.New("encoded uint128-value is negative")
 	}
 	return cadence.NewMeteredUInt128FromBig(
 		d.gauge,
@@ -682,10 +677,7 @@ func (d *Decoder) decodeUInt256() (cadence.Value, error) {
 		return nil, err
 	}
 	if bigInt.Sign() < 0 {
-		return nil, fmt.Errorf(
-			"encoded uint256-value %s is negative",
-			bigInt.String(),
-		)
+		return nil, errors.New("encoded uint256-value is negative")
 	}
 	return cadence.NewMeteredUInt256FromBig(
 		d.gauge,
