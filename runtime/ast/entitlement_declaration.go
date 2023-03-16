@@ -133,10 +133,10 @@ func NewEntitlementMapElement(
 	gauge common.MemoryGauge,
 	input *NominalType,
 	output *NominalType,
-) EntitlementMapElement {
+) *EntitlementMapElement {
 	common.UseMemory(gauge, common.EntitlementMappingElementMemoryUsage)
 
-	return EntitlementMapElement{
+	return &EntitlementMapElement{
 		Input:  input,
 		Output: output,
 	}
@@ -160,7 +160,7 @@ type EntitlementMappingDeclaration struct {
 	Access       Access
 	DocString    string
 	Identifier   Identifier
-	Associations []EntitlementMapElement
+	Associations []*EntitlementMapElement
 	Range
 }
 
@@ -172,7 +172,7 @@ func NewEntitlementMappingDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
 	identifier Identifier,
-	associations []EntitlementMapElement,
+	associations []*EntitlementMapElement,
 	docString string,
 	declRange Range,
 ) *EntitlementMappingDeclaration {

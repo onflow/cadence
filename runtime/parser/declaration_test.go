@@ -7854,7 +7854,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected identifier following entitlement declaration, got EOF",
+					Message: "expected identifier, got EOF",
 					Pos:     ast.Position{Offset: 16, Line: 1, Column: 16},
 				},
 			},
@@ -8106,7 +8106,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 
 }
 
-/*func TestParseEntitlementMappingDeclaration(t *testing.T) {
+func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 	t.Parallel()
 
@@ -8114,7 +8114,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations(" pub entitlement mapping M ")
+		result, errs := testParseDeclarations(" pub entitlement mapping M { } ")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -8123,18 +8123,305 @@ func TestParseMemberDocStrings(t *testing.T) {
 					Access: ast.AccessPublic,
 					Identifier: ast.Identifier{
 						Identifier: "M",
-						Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
+						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
 					},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+						EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
 					},
 				},
 			},
 			result,
 		)
 	})
-}*/
+
+	t.Run("mappings", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A -> B
+			C -> D
+		} `)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 4, Column: 2, Offset: 52},
+					},
+					Associations: []*ast.EntitlementMapElement{
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Line: 2, Column: 3, Offset: 33},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "B",
+									Pos:        ast.Position{Line: 2, Column: 8, Offset: 38},
+								},
+							},
+						},
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "C",
+									Pos:        ast.Position{Line: 3, Column: 3, Offset: 43},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "D",
+									Pos:        ast.Position{Line: 3, Column: 8, Offset: 48},
+								},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("same line mappings", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A -> B C -> D
+		} `)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 49},
+					},
+					Associations: []*ast.EntitlementMapElement{
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Line: 2, Column: 3, Offset: 33},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "B",
+									Pos:        ast.Position{Line: 2, Column: 8, Offset: 38},
+								},
+							},
+						},
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "C",
+									Pos:        ast.Position{Line: 2, Column: 10, Offset: 40},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "D",
+									Pos:        ast.Position{Line: 2, Column: 15, Offset: 45},
+								},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("missing entitlement keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub mapping M {} ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing mapping keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement M {} ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: '{'",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing body", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping M ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '{'",
+					Pos:     ast.Position{Offset: 27, Line: 1, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing close brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping M {")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '}'",
+					Pos:     ast.Position{Offset: 28, Line: 1, Column: 28},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing open brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping M }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '{'",
+					Pos:     ast.Position{Offset: 27, Line: 1, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping {}")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier following entitlement mapping declaration, got '{'",
+					Pos:     ast.Position{Offset: 25, Line: 1, Column: 25},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("non-nominal mapping first", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			&A -> B
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected nominal type, got &A",
+					Pos:     ast.Position{Offset: 35, Line: 2, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("non-nominal mapping second", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A -> [B]
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected nominal type, got [B]",
+					Pos:     ast.Position{Offset: 41, Line: 2, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing arrow", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A B
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '->'",
+					Pos:     ast.Position{Offset: 35, Line: 2, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("wrong mapping separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A - B
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '->'",
+					Pos:     ast.Position{Offset: 35, Line: 2, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+}
 
 func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
 

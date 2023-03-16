@@ -164,7 +164,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for entitlement")
 				}
-				return parseEntitlementDeclaration(p, access, accessPos, docString)
+				return parseEntitlementOrMappingDeclaration(p, access, accessPos, docString)
 
 			case keywordAttachment:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindAttachment)
@@ -1016,10 +1016,87 @@ func parseFieldWithVariableKind(
 	), nil
 }
 
-// parseEntitlementDeclaration parses an entitlement declaration.
+// parseEntitlementMapping parses an entitlement mapping
 //
-//	entitlementDeclaration : 'entitlement' identifier
-func parseEntitlementDeclaration(
+//	entitlementMapping : nominalType '->' nominalType
+func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapElement, error) {
+	inputType, err := parseType(p, lowestBindingPower)
+	inputNominalType, ok := inputType.(*ast.NominalType)
+	if !ok {
+		p.reportSyntaxError(
+			"expected nominal type, got %s",
+			inputType,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpaceAndComments()
+
+	_, err = p.mustOne(lexer.TokenRightArrow)
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpaceAndComments()
+
+	outputType, err := parseType(p, lowestBindingPower)
+	outputNominalType, ok := outputType.(*ast.NominalType)
+	if !ok {
+		p.reportSyntaxError(
+			"expected nominal type, got %s",
+			outputType,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpaceAndComments()
+
+	return ast.NewEntitlementMapElement(p.memoryGauge, inputNominalType, outputNominalType), nil
+}
+
+// parseEntitlementMappings parses entitlement mappings
+//
+//	membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
+func parseEntitlementMappings(p *parser, endTokenType lexer.TokenType) ([]*ast.EntitlementMapElement, error) {
+	var mappings []*ast.EntitlementMapElement
+
+	for {
+		_, docString := p.parseTrivia(triviaOptions{
+			skipNewlines:    true,
+			parseDocStrings: true,
+		})
+
+		switch p.current.Type {
+
+		case endTokenType, lexer.TokenEOF:
+			return mappings, nil
+
+		default:
+			mapping, err := parseEntitlementMapping(p, docString)
+			if err != nil {
+				return nil, err
+			}
+
+			if mapping == nil {
+				return mappings, nil
+			}
+
+			mappings = append(mappings, mapping)
+		}
+	}
+}
+
+// parseEntitlementOrMappingDeclaration parses an entitlement declaration,
+// or an entitlement mapping declaration
+//
+// entitlementDeclaration : 'entitlement' identifier
+//
+// mappingDeclaration : 'entitlement' 'mapping' identifier '{' entitlementMappings '}'
+func parseEntitlementOrMappingDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
@@ -1032,26 +1109,79 @@ func parseEntitlementDeclaration(
 
 	// Skip the `entitlement` keyword
 	p.nextSemanticToken()
+
+	var isMapping bool
+	expectString := "following entitlement declaration"
+
+	if !p.current.Is(lexer.TokenIdentifier) {
+		return nil, p.syntaxError(
+			"expected %s, got %s",
+			lexer.TokenIdentifier,
+			p.current.Type,
+		)
+	}
+
+	if string(p.currentTokenSource()) == KeywordMapping {
+		// we are parsing an entitlement mapping
+		// Skip the `mapping` keyword
+		p.nextSemanticToken()
+		isMapping = true
+		expectString = "following entitlement mapping declaration"
+	}
+
+	// parse the name of the entitlement or mapping
 	var identifier ast.Identifier
-	identifier, err := p.nonReservedIdentifier("following entitlement declaration")
+	identifier, err := p.nonReservedIdentifier(expectString)
 	if err != nil {
 		return nil, err
 	}
 	p.nextSemanticToken()
 
-	declarationRange := ast.NewRange(
-		p.memoryGauge,
-		startPos,
-		identifier.Pos,
-	)
+	if isMapping {
+		_, err = p.mustOne(lexer.TokenBraceOpen)
+		if err != nil {
+			return nil, err
+		}
+		mappings, err := parseEntitlementMappings(p, lexer.TokenBraceClose)
+		if err != nil {
+			return nil, err
+		}
 
-	return ast.NewEntitlementDeclaration(
-		p.memoryGauge,
-		access,
-		identifier,
-		docString,
-		declarationRange,
-	), nil
+		p.skipSpaceAndComments()
+
+		endToken, err := p.mustOne(lexer.TokenBraceClose)
+		if err != nil {
+			return nil, err
+		}
+		declarationRange := ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endToken.EndPos,
+		)
+
+		return ast.NewEntitlementMappingDeclaration(
+			p.memoryGauge,
+			access,
+			identifier,
+			mappings,
+			docString,
+			declarationRange,
+		), nil
+	} else {
+		declarationRange := ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			identifier.Pos,
+		)
+
+		return ast.NewEntitlementDeclaration(
+			p.memoryGauge,
+			access,
+			identifier,
+			docString,
+			declarationRange,
+		), nil
+	}
 }
 
 func parseConformances(p *parser) ([]*ast.NominalType, error) {
@@ -1255,6 +1385,8 @@ func parseAttachmentDeclaration(
 	if err != nil {
 		return nil, err
 	}
+
+	p.skipSpaceAndComments()
 
 	conformances, err := parseConformances(p)
 	if err != nil {
@@ -1464,7 +1596,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for entitlement")
 				}
-				return parseEntitlementDeclaration(p, access, accessPos, docString)
+				return parseEntitlementOrMappingDeclaration(p, access, accessPos, docString)
 
 			case KeywordEnum:
 				if purity != ast.FunctionPurityUnspecified {

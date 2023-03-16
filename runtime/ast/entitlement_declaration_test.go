@@ -135,7 +135,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
 		},
-		Associations: []EntitlementMapElement{
+		Associations: []*EntitlementMapElement{
 			{
 				Input: &NominalType{
 					Identifier: Identifier{
@@ -215,7 +215,7 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
 		},
-		Associations: []EntitlementMapElement{
+		Associations: []*EntitlementMapElement{
 			{
 				Input: &NominalType{
 					Identifier: Identifier{
@@ -276,7 +276,7 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
 		},
-		Associations: []EntitlementMapElement{
+		Associations: []*EntitlementMapElement{
 			{
 				Input: &NominalType{
 					Identifier: Identifier{
