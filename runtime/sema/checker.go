@@ -1864,6 +1864,14 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				}
 			}
 		case ast.EntitlementAccess:
+			// attachments may be declared with an entitlement map access
+			if declarationKind == common.DeclarationKindAttachment {
+				semaAccess := checker.accessFromAstAccess(access)
+				switch semaAccess.(type) {
+				case EntitlementMapAccess:
+					return
+				}
+			}
 			if containerKind == nil ||
 				(*containerKind != common.CompositeKindResource && *containerKind != common.CompositeKindStructure) {
 				checker.report(

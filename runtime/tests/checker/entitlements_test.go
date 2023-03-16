@@ -132,6 +132,21 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
 	})
 
+	t.Run("attachment", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement A 
+			attachment B for AnyStruct {}
+			entitlement mapping M {
+				A -> B
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+	})
+
 	t.Run("interface", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -257,6 +272,19 @@ func TestCheckEntitlementDeclarationNesting(t *testing.T) {
 		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	})
 
+	t.Run("in attachment", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			attachment A for AnyStruct {
+				entitlement E
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
 	t.Run("in struct", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -339,6 +367,19 @@ func TestCheckEntitlementMappingDeclarationNesting(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			resource interface R {
+				entitlement mapping M {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("in attachment", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			attachment A for AnyStruct {
 				entitlement mapping M {}
 			}
 		`)
@@ -510,6 +551,21 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.InvalidMultipleMappedEntitlementError{}, errs[0])
 	})
 
+	t.Run("multiple mappings conjunction with regular", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {} 
+			entitlement N
+			resource interface R {
+				access(M, N) let foo: String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMultipleMappedEntitlementError{}, errs[0])
+	})
+
 	t.Run("multiple mappings disjunction", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -523,6 +579,21 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidMultipleMappedEntitlementError{}, errs[0])
+	})
+
+	t.Run("multiple mappings disjunction with regular", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement M 
+			entitlement mapping N {}
+			resource interface R {
+				access(M | N) let foo: String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
 	})
 
 	t.Run("valid in contract", func(t *testing.T) {
@@ -817,6 +888,20 @@ func TestCheckNonEntitlementAccess(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			resource interface E {}
+			resource R {
+				access(E) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("attachment", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			attachment E for AnyStruct {}
 			resource R {
 				access(E) fun foo() {}
 			}
@@ -1661,4 +1746,58 @@ func TestCheckEntitlementMappingTypeAnnotation(t *testing.T) {
 
 		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
 	})
+}
+
+func TestChecAttachmentEntitlementAccessAnnotation(t *testing.T) {
+
+	t.Parallel()
+	t.Run("mapping allowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping E {}
+			access(E) attachment A for AnyStruct {}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("entitlement set not allowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F
+			access(E, F) attachment A for AnyStruct {}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+	})
+
+	t.Run("mapping allowed in contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		contract C {
+			entitlement mapping E {}
+			access(E) attachment A for AnyStruct {}
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("entitlement set not allowed in contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		contract C {
+			entitlement E
+			access(E) attachment A for AnyStruct {}
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+	})
+
 }
