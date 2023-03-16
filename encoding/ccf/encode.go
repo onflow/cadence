@@ -511,18 +511,13 @@ func (e *Encoder) encodeVoid(v cadence.Void) error {
 // language=CDDL
 // optional-value = nil / value
 func (e *Encoder) encodeOptional(v cadence.Optional, tids ccfTypeIDByCadenceType) error {
-	switch innerValue := v.Value.(type) {
-	case cadence.Optional:
-		return e.encodeOptional(innerValue, tids)
-
-	case nil:
+	innerValue := v.Value
+	if innerValue == nil {
 		return e.enc.EncodeNil()
-
-	default:
-		// Use innerValue.Type() as static type to avoid encoding type
-		// because OptionalType is already encoded.
-		return e.encodeValue(innerValue, innerValue.Type(), tids)
 	}
+	// Use innerValue.Type() as static type to avoid encoding type
+	// because OptionalType is already encoded.
+	return e.encodeValue(innerValue, innerValue.Type(), tids)
 }
 
 // encodeBool encodes cadence.Bool as
