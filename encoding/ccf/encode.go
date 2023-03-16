@@ -51,6 +51,8 @@ var CBOREncMode = func() cbor.EncMode {
 type Encoder struct {
 	// CCF codec uses CBOR codec under the hood.
 	enc *cbor.StreamEncoder
+	// cachedSortedFieldIndex contains sorted field index of Cadence composite types.
+	cachedSortedFieldIndex map[string][]int // key: composite type ID, value: sorted field indexes
 }
 
 // Encode returns the CCF-encoded representation of the given value.
@@ -84,7 +86,10 @@ func MustEncode(value cadence.Value) []byte {
 // given io.Writer.
 func NewEncoder(w io.Writer) *Encoder {
 	// CCF codec uses CBOR codec under the hood.
-	return &Encoder{enc: CBOREncMode.NewStreamEncoder(w)}
+	return &Encoder{
+		enc:                    CBOREncMode.NewStreamEncoder(w),
+		cachedSortedFieldIndex: make(map[string][]int),
+	}
 }
 
 // Encode writes the CCF-encoded representation of the given value to this
@@ -921,7 +926,7 @@ func (e *Encoder) encodeComposite(
 		return e.encodeValue(fields[0], staticFieldTypes[0].Type, tids)
 
 	default:
-		sortedIndexes := getSortedFieldIndex(typ)
+		sortedIndexes := e.getSortedFieldIndex(typ)
 
 		for _, index := range sortedIndexes {
 			// Encode sorted field as value.
@@ -1782,4 +1787,22 @@ func getBuffer() *bytes.Buffer {
 func putBuffer(e *bytes.Buffer) {
 	e.Reset()
 	bufferPool.Put(e)
+}
+
+func (e *Encoder) getSortedFieldIndex(t cadence.CompositeType) []int {
+	cadenceTypeID := t.ID()
+
+	if indexes, ok := e.cachedSortedFieldIndex[cadenceTypeID]; ok {
+		return indexes
+	}
+
+	// NOTE: bytewiseFieldIdentifierSorter doesn't sort fields in place.
+	// bytewiseFieldIdentifierSorter.indexes is used as sorted fieldTypes
+	// index.
+	sorter := newBytewiseFieldSorter(t.CompositeFields())
+
+	sort.Sort(sorter)
+
+	e.cachedSortedFieldIndex[cadenceTypeID] = sorter.indexes
+	return sorter.indexes
 }

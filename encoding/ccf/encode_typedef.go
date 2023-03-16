@@ -151,7 +151,7 @@ func (e *Encoder) encodeCompositeTypeFields(typ cadence.CompositeType, tids ccfT
 		// "Deterministic CCF Encoding Requirements" in CCF specs:
 		//
 		//   "composite-type.fields MUST be sorted by name"
-		sortedIndexes := getSortedFieldIndex(typ)
+		sortedIndexes := e.getSortedFieldIndex(typ)
 
 		for _, index := range sortedIndexes {
 			// Encode field
