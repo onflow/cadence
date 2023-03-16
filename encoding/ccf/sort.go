@@ -35,7 +35,8 @@ import (
 //     // process sorted field at fields[index]
 //     }
 type bytewiseFieldSorter struct {
-	// NOTE: DON'T sort fields because it isn't a copy.
+	// NOTE: DON'T sort fields in place because it isn't a copy.
+	// Instead, sort indexes by field identifier.
 	fields []cadence.Field
 	// indexes represents sorted indexes of fields
 	indexes []int
@@ -81,7 +82,8 @@ func (x bytewiseFieldSorter) Less(i, j int) bool {
 //     // process sorted field at parameters[index]
 //     }
 type bytewiseParameterSorter struct {
-	// NOTE: DON'T sort parameters because it isn't a copy.
+	// NOTE: DON'T sort parameters in place because it isn't a copy.
+	// Instead, sort indexes by parameter identifier.
 	parameters []cadence.Parameter
 	// indexes represents sorted indexes of fields
 	indexes []int
@@ -164,7 +166,8 @@ func (t bytewiseCadenceTypeInPlaceSorter) Less(i, j int) bool {
 
 // bytewiseCadenceTypeSorter is used to sort Cadence types by Cadence type ID.
 type bytewiseCadenceTypeSorter struct {
-	// NOTE: DON'T sort fields because it isn't a copy.
+	// NOTE: DON'T sort types in place because it isn't a copy.
+	// Instead, sort indexes by Cadence type ID.
 	types []cadence.Type
 	// indexes represents sorted indexes of fields
 	indexes []int
