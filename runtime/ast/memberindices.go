@@ -53,10 +53,14 @@ type memberIndices struct {
 	_interfacesByIdentifier map[string]*InterfaceDeclaration
 	// Use `EntitlementsByIdentifier()` instead
 	_entitlementsByIdentifier map[string]*EntitlementDeclaration
+	// Use `EntitlementsByIdentifier()` instead
+	_entitlementMappingsByIdentifier map[string]*EntitlementMappingDeclaration
 	// Use `Interfaces()` instead
 	_interfaces []*InterfaceDeclaration
 	// Use `Entitlements()` instead
 	_entitlements []*EntitlementDeclaration
+	// Use `EntitlementMappings()` instead
+	_entitlementMappings []*EntitlementMappingDeclaration
 	// Use `Composites()` instead
 	_composites []*CompositeDeclaration
 	// Use `Attachments()` instead
@@ -95,6 +99,11 @@ func (i *memberIndices) EntitlementsByIdentifier(declarations []Declaration) map
 	return i._entitlementsByIdentifier
 }
 
+func (i *memberIndices) EntitlementMappingsByIdentifier(declarations []Declaration) map[string]*EntitlementMappingDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._entitlementMappingsByIdentifier
+}
+
 func (i *memberIndices) Initializers(declarations []Declaration) []*SpecialFunctionDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._initializers
@@ -128,6 +137,11 @@ func (i *memberIndices) Interfaces(declarations []Declaration) []*InterfaceDecla
 func (i *memberIndices) Entitlements(declarations []Declaration) []*EntitlementDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._entitlements
+}
+
+func (i *memberIndices) EntitlementMappings(declarations []Declaration) []*EntitlementMappingDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._entitlementMappings
 }
 
 func (i *memberIndices) Composites(declarations []Declaration) []*CompositeDeclaration {
@@ -176,6 +190,9 @@ func (i *memberIndices) init(declarations []Declaration) {
 	i._entitlements = make([]*EntitlementDeclaration, 0)
 	i._entitlementsByIdentifier = make(map[string]*EntitlementDeclaration)
 
+	i._entitlementMappings = make([]*EntitlementMappingDeclaration, 0)
+	i._entitlementMappingsByIdentifier = make(map[string]*EntitlementMappingDeclaration)
+
 	i._enumCases = make([]*EnumCaseDeclaration, 0)
 
 	for _, declaration := range declarations {
@@ -201,6 +218,10 @@ func (i *memberIndices) init(declarations []Declaration) {
 		case *EntitlementDeclaration:
 			i._entitlements = append(i._entitlements, declaration)
 			i._entitlementsByIdentifier[declaration.Identifier.Identifier] = declaration
+
+		case *EntitlementMappingDeclaration:
+			i._entitlementMappings = append(i._entitlementMappings, declaration)
+			i._entitlementMappingsByIdentifier[declaration.Identifier.Identifier] = declaration
 
 		case *InterfaceDeclaration:
 			i._interfaces = append(i._interfaces, declaration)

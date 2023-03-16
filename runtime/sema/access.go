@@ -32,19 +32,35 @@ type Access interface {
 	Access() ast.Access
 }
 
+type EntitlementSetKind uint8
+
+const (
+	Conjunction EntitlementSetKind = iota
+	Disjunction
+)
+
 type EntitlementAccess struct {
 	astAccess    ast.EntitlementAccess
 	Entitlements *EntitlementOrderedSet
+	SetKind      EntitlementSetKind
 }
 
 var _ Access = EntitlementAccess{}
 
-func NewEntitlementAccess(entitlements []*EntitlementType) EntitlementAccess {
+func NewEntitlementAccess(
+	astAccess ast.EntitlementAccess,
+	entitlements []*EntitlementType,
+	setKind EntitlementSetKind,
+) EntitlementAccess {
 	set := orderedmap.New[EntitlementOrderedSet](len(entitlements))
 	for _, entitlement := range entitlements {
 		set.Set(entitlement, struct{}{})
 	}
-	return EntitlementAccess{Entitlements: set}
+	return EntitlementAccess{
+		Entitlements: set,
+		SetKind:      setKind,
+		astAccess:    astAccess,
+	}
 }
 
 func (EntitlementAccess) isAccess() {}
@@ -54,19 +70,68 @@ func (a EntitlementAccess) Access() ast.Access {
 }
 
 func (e EntitlementAccess) IsMorePermissiveThan(other Access) bool {
-	if _, isPrimitive := other.(PrimitiveAccess); isPrimitive {
+	switch otherAccess := other.(type) {
+	case PrimitiveAccess:
 		return true
+	case EntitlementAccess:
+		// e >= other if e is a subset of other, as entitlement sets are unions rather than intersections
+		return e.Entitlements.KeysetIsSubsetOf(otherAccess.Entitlements)
+	default:
+		return false
 	}
-	// e >= other if e is a subset of other, as entitlement sets are unions rather than intersections
-	return e.Entitlements.KeysetIsSubsetOf(other.(EntitlementAccess).Entitlements)
 }
 
 func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
-	if primitive, isPrimitive := other.(PrimitiveAccess); isPrimitive {
-		return ast.PrimitiveAccess(primitive) != ast.AccessPrivate
+	switch otherAccess := other.(type) {
+	case PrimitiveAccess:
+		return ast.PrimitiveAccess(otherAccess) != ast.AccessPrivate
+	case EntitlementAccess:
+		// subset check returns true on equality, and we want this function to be false on equality, so invert the >= check
+		return !otherAccess.IsMorePermissiveThan(e)
+	default:
+		return false
 	}
-	// subset check returns true on equality, and we want this function to be false on equality, so invert the >= check
-	return !other.IsMorePermissiveThan(e)
+}
+
+type EntitlementMapAccess struct {
+	astAccess ast.EntitlementAccess
+	Type      *EntitlementMapType
+}
+
+var _ Access = EntitlementMapAccess{}
+
+func NewEntitlementMapAccess(astAccess ast.EntitlementAccess, mapType *EntitlementMapType) EntitlementMapAccess {
+	return EntitlementMapAccess{astAccess: astAccess, Type: mapType}
+}
+
+func (EntitlementMapAccess) isAccess() {}
+
+func (a EntitlementMapAccess) Access() ast.Access {
+	return a.astAccess
+}
+
+func (e EntitlementMapAccess) IsMorePermissiveThan(other Access) bool {
+	switch otherAccess := other.(type) {
+	case PrimitiveAccess:
+		return true
+	case EntitlementMapAccess:
+		// maps are only >= if they are ==
+		return e.Type.Equal(otherAccess.Type)
+	default:
+		return false
+	}
+}
+
+func (e EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
+	switch otherAccess := other.(type) {
+	case PrimitiveAccess:
+		return ast.PrimitiveAccess(otherAccess) != ast.AccessPrivate
+	case EntitlementMapAccess:
+		// this should be false on equality
+		return !e.Type.Equal(otherAccess.Type)
+	default:
+		return false
+	}
 }
 
 type PrimitiveAccess ast.PrimitiveAccess

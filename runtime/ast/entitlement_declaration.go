@@ -188,7 +188,7 @@ func NewEntitlementMappingDeclaration(
 }
 
 func (*EntitlementMappingDeclaration) ElementType() ElementType {
-	return ElementTypeEntitlementDeclaration
+	return ElementTypeEntitlementMappingDeclaration
 }
 
 func (*EntitlementMappingDeclaration) Walk(_ func(Element)) {}
@@ -208,7 +208,7 @@ func (d *EntitlementMappingDeclaration) DeclarationAccess() Access {
 }
 
 func (d *EntitlementMappingDeclaration) DeclarationKind() common.DeclarationKind {
-	return common.DeclarationKindEntitlement
+	return common.DeclarationKindEntitlementMapping
 }
 
 func (d *EntitlementMappingDeclaration) DeclarationMembers() *Members {

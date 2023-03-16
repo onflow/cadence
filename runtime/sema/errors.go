@@ -3929,57 +3929,6 @@ func (e *InvalidatedResourceReferenceError) ErrorNotes() []errors.ErrorNote {
 	}
 }
 
-// InvalidEntitlementMemberAccessDeclaration
-
-type InvalidEntitlementMemberAccessDeclaration struct {
-	ast.Range
-}
-
-var _ SemanticError = &InvalidEntitlementMemberAccessDeclaration{}
-var _ errors.UserError = &InvalidEntitlementMemberAccessDeclaration{}
-
-func (*InvalidEntitlementMemberAccessDeclaration) isSemanticError() {}
-
-func (*InvalidEntitlementMemberAccessDeclaration) IsUserError() {}
-
-func (e *InvalidEntitlementMemberAccessDeclaration) Error() string {
-	return "cannot declare an entitlement member with an access modifier"
-}
-
-// InvalidEntitlementFunctionDeclaration
-
-type InvalidEntitlementFunctionDeclaration struct {
-	ast.Range
-}
-
-var _ SemanticError = &InvalidEntitlementFunctionDeclaration{}
-var _ errors.UserError = &InvalidEntitlementFunctionDeclaration{}
-
-func (*InvalidEntitlementFunctionDeclaration) isSemanticError() {}
-
-func (*InvalidEntitlementFunctionDeclaration) IsUserError() {}
-
-func (e *InvalidEntitlementFunctionDeclaration) Error() string {
-	return "entitlement functions may not have implementations"
-}
-
-// InvalidEntitlementNestedDeclarationError
-type InvalidEntitlementNestedDeclarationError struct {
-	NestedDeclarationKind common.DeclarationKind
-	ast.Range
-}
-
-var _ SemanticError = &InvalidEntitlementNestedDeclarationError{}
-var _ errors.UserError = &InvalidEntitlementNestedDeclarationError{}
-
-func (*InvalidEntitlementNestedDeclarationError) isSemanticError() {}
-
-func (*InvalidEntitlementNestedDeclarationError) IsUserError() {}
-
-func (e *InvalidEntitlementNestedDeclarationError) Error() string {
-	return fmt.Sprintf("%s may not be declared inside an entitlement", e.NestedDeclarationKind.Name())
-}
-
 // InvalidEntitlementAccessError
 type InvalidEntitlementAccessError struct {
 	Pos ast.Position
@@ -4001,6 +3950,54 @@ func (e *InvalidEntitlementAccessError) StartPosition() ast.Position {
 }
 
 func (e *InvalidEntitlementAccessError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidMultipleMappedEntitlementError
+type InvalidMultipleMappedEntitlementError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidMultipleMappedEntitlementError{}
+var _ errors.UserError = &InvalidMultipleMappedEntitlementError{}
+
+func (*InvalidMultipleMappedEntitlementError) isSemanticError() {}
+
+func (*InvalidMultipleMappedEntitlementError) IsUserError() {}
+
+func (e *InvalidMultipleMappedEntitlementError) Error() string {
+	return "entitlement mappings cannot be used as part of an entitlement set"
+}
+
+func (e *InvalidMultipleMappedEntitlementError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidMultipleMappedEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidNonEntitlementTypeInMapError
+type InvalidNonEntitlementTypeInMapError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidNonEntitlementTypeInMapError{}
+var _ errors.UserError = &InvalidNonEntitlementTypeInMapError{}
+
+func (*InvalidNonEntitlementTypeInMapError) isSemanticError() {}
+
+func (*InvalidNonEntitlementTypeInMapError) IsUserError() {}
+
+func (e *InvalidNonEntitlementTypeInMapError) Error() string {
+	return "cannot use non-entitlement type in entitlement mapping"
+}
+
+func (e *InvalidNonEntitlementTypeInMapError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidNonEntitlementTypeInMapError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -4034,60 +4031,6 @@ func (*DirectEntitlementAnnotationError) IsUserError() {}
 
 func (e *DirectEntitlementAnnotationError) Error() string {
 	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
-}
-
-// EntitlementConformanceError
-type EntitlementConformanceError struct {
-	EntitlementType *EntitlementType
-	MemberContainer CompositeKindedType
-	Member          *Member
-	ast.Range
-}
-
-var _ SemanticError = &EntitlementConformanceError{}
-var _ errors.UserError = &EntitlementConformanceError{}
-
-func (*EntitlementConformanceError) isSemanticError() {}
-
-func (*EntitlementConformanceError) IsUserError() {}
-
-func (e *EntitlementConformanceError) Error() string {
-	return fmt.Sprintf(
-		"%s `%s` may not be declared with `%s` access in `%s` because `%s` does not match its declaration in `%s`",
-		e.Member.DeclarationKind.Name(),
-		e.Member.Identifier.Identifier,
-		e.EntitlementType.QualifiedString(),
-		e.MemberContainer.QualifiedString(),
-		e.Member.Identifier.Identifier,
-		e.EntitlementType.QualifiedString(),
-	)
-}
-
-// EntitlementMemberNotDeclaredError
-type EntitlementMemberNotDeclaredError struct {
-	EntitlementType *EntitlementType
-	MemberContainer CompositeKindedType
-	Member          *Member
-	ast.Range
-}
-
-var _ SemanticError = &EntitlementMemberNotDeclaredError{}
-var _ errors.UserError = &EntitlementMemberNotDeclaredError{}
-
-func (*EntitlementMemberNotDeclaredError) isSemanticError() {}
-
-func (*EntitlementMemberNotDeclaredError) IsUserError() {}
-
-func (e *EntitlementMemberNotDeclaredError) Error() string {
-	return fmt.Sprintf(
-		"%s `%s` may not be declared with `%s` access in `%s` because `%s` is not declared in `%s`",
-		e.Member.DeclarationKind.Name(),
-		e.Member.Identifier.Identifier,
-		e.EntitlementType.QualifiedString(),
-		e.MemberContainer.QualifiedString(),
-		e.Member.Identifier.Identifier,
-		e.EntitlementType.QualifiedString(),
-	)
 }
 
 // InvalidBaseTypeError

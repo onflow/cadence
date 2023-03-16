@@ -6913,13 +6913,9 @@ func isNumericSuperType(typ Type) bool {
 // EntitlementType
 
 type EntitlementType struct {
-	Location            common.Location
-	containerType       Type
-	memberResolvers     map[string]MemberResolver
-	Members             *StringMemberOrderedMap
-	memberResolversOnce sync.Once
-	Identifier          string
-	Fields              []string
+	Location      common.Location
+	containerType Type
+	Identifier    string
 }
 
 var _ Type = &EntitlementType{}
@@ -6974,31 +6970,8 @@ func (t *EntitlementType) Equal(other Type) bool {
 	return otherEntitlement.ID() == t.ID()
 }
 
-func (t *EntitlementType) MemberMap() *StringMemberOrderedMap {
-	return t.Members
-}
-
 func (t *EntitlementType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
-
-func (t *EntitlementType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		members := make(map[string]MemberResolver, t.Members.Len())
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
-
-		t.memberResolvers = members
-	})
+	return withBuiltinMembers(t, nil)
 }
 
 func (t *EntitlementType) IsInvalidType() bool {
@@ -7038,5 +7011,115 @@ func (*EntitlementType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err
 }
 
 func (t *EntitlementType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+	return t
+}
+
+// EntitlementMapType
+
+type EntitlementRelation struct {
+	Input  *EntitlementType
+	Output *EntitlementType
+}
+
+type EntitlementMapType struct {
+	Location      common.Location
+	containerType Type
+	Identifier    string
+	Relations     []EntitlementRelation
+}
+
+var _ Type = &EntitlementMapType{}
+var _ ContainedType = &EntitlementMapType{}
+var _ LocatedType = &EntitlementMapType{}
+
+func (*EntitlementMapType) IsType() {}
+
+func (t *EntitlementMapType) Tag() TypeTag {
+	return InvalidTypeTag // entitlement map types may never appear as types, and thus cannot have a computed supertype
+}
+
+func (t *EntitlementMapType) String() string {
+	return t.Identifier
+}
+
+func (t *EntitlementMapType) QualifiedString() string {
+	return t.QualifiedIdentifier()
+}
+
+func (t *EntitlementMapType) GetContainerType() Type {
+	return t.containerType
+}
+
+func (t *EntitlementMapType) SetContainerType(containerType Type) {
+	t.containerType = containerType
+}
+
+func (t *EntitlementMapType) GetLocation() common.Location {
+	return t.Location
+}
+
+func (t *EntitlementMapType) QualifiedIdentifier() string {
+	return qualifiedIdentifier(t.Identifier, t.containerType)
+}
+
+func (t *EntitlementMapType) ID() TypeID {
+	identifier := t.QualifiedIdentifier()
+	if t.Location == nil {
+		return TypeID(identifier)
+	} else {
+		return t.Location.TypeID(nil, identifier)
+	}
+}
+
+func (t *EntitlementMapType) Equal(other Type) bool {
+	otherEntitlement, ok := other.(*EntitlementMapType)
+	if !ok {
+		return false
+	}
+
+	return otherEntitlement.ID() == t.ID()
+}
+
+func (t *EntitlementMapType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
+}
+
+func (t *EntitlementMapType) IsInvalidType() bool {
+	return false
+}
+
+func (t *EntitlementMapType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *EntitlementMapType) IsExportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *EntitlementMapType) IsImportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*EntitlementMapType) IsEquatable() bool {
+	return false
+}
+
+func (*EntitlementMapType) IsResourceType() bool {
+	return false
+}
+
+func (*EntitlementMapType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateDirectEntitlementTypeAnnotation
+}
+
+func (t *EntitlementMapType) RewriteWithRestrictedTypes() (Type, bool) {
+	return t, false
+}
+
+func (*EntitlementMapType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *EntitlementMapType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }

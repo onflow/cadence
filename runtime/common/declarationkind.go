@@ -49,6 +49,7 @@ const (
 	DeclarationKindResourceInterface
 	DeclarationKindContractInterface
 	DeclarationKindEntitlement
+	DeclarationKindEntitlementMapping
 	DeclarationKindImport
 	DeclarationKindSelf
 	DeclarationKindBase
@@ -72,6 +73,7 @@ func (k DeclarationKind) IsTypeDeclaration() bool {
 		DeclarationKindResource,
 		DeclarationKindContract,
 		DeclarationKindEntitlement,
+		DeclarationKindEntitlementMapping,
 		DeclarationKindEvent,
 		DeclarationKindStructureInterface,
 		DeclarationKindResourceInterface,
@@ -127,6 +129,8 @@ func (k DeclarationKind) Name() string {
 		return "contract interface"
 	case DeclarationKindEntitlement:
 		return "entitlement"
+	case DeclarationKindEntitlementMapping:
+		return "entitlement mapping"
 	case DeclarationKindImport:
 		return "import"
 	case DeclarationKindSelf:
@@ -184,6 +188,8 @@ func (k DeclarationKind) Keywords() string {
 		return "contract interface"
 	case DeclarationKindEntitlement:
 		return "entitlement"
+	case DeclarationKindEntitlementMapping:
+		return "entitlement mapping"
 	case DeclarationKindImport:
 		return "import"
 	case DeclarationKindSelf:

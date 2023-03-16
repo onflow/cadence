@@ -395,6 +395,11 @@ func (*generator) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) str
 	panic("entitlement declarations are not supported")
 }
 
+func (*generator) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) struct{} {
+	// TODO
+	panic("entitlement declarations are not supported")
+}
+
 func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{}) {
 	fieldName := decl.Identifier.Identifier
 	fullTypeName := g.fullTypeName()

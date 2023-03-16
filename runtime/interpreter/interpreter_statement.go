@@ -111,6 +111,11 @@ func (interpreter *Interpreter) VisitEntitlementDeclaration(_ *ast.EntitlementDe
 	panic(errors.NewUnreachableError())
 }
 
+func (interpreter *Interpreter) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) StatementResult {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) StatementResult {
 	switch test := statement.Test.(type) {
 	case ast.Expression:

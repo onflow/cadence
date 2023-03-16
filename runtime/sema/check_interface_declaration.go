@@ -112,12 +112,6 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		kind,
 	)
 
-	// check that members conform to their entitlement declarations, where applicable
-
-	interfaceType.Members.Foreach(func(name string, member *Member) {
-		checker.checkMemberEntitlementConformance(interfaceType, member)
-	})
-
 	// NOTE: visit entitlements, then interfaces, then composites
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
@@ -290,7 +284,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 
 	// Check and declare nested types
 
-	nestedDeclarations, nestedInterfaceTypes, nestedCompositeTypes, nestedEntitlementTypes :=
+	nestedDeclarations, nestedInterfaceTypes, nestedCompositeTypes, nestedEntitlementTypes, nestedEntitlementMapTypes :=
 		checker.declareNestedDeclarations(
 			declaration.CompositeKind,
 			declaration.DeclarationKind(),
@@ -298,9 +292,20 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 			declaration.Members.Attachments(),
 			declaration.Members.Interfaces(),
 			declaration.Members.Entitlements(),
+			declaration.Members.EntitlementMaps(),
 		)
 
 	checker.Elaboration.SetInterfaceNestedDeclarations(declaration, nestedDeclarations)
+
+	for _, nestedEntitlementType := range nestedEntitlementTypes {
+		interfaceType.NestedTypes.Set(nestedEntitlementType.Identifier, nestedEntitlementType)
+		nestedEntitlementType.SetContainerType(interfaceType)
+	}
+
+	for _, nestedEntitlementMapType := range nestedEntitlementMapTypes {
+		interfaceType.NestedTypes.Set(nestedEntitlementMapType.Identifier, nestedEntitlementMapType)
+		nestedEntitlementMapType.SetContainerType(interfaceType)
+	}
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
 		interfaceType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
@@ -310,11 +315,6 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	for _, nestedCompositeType := range nestedCompositeTypes {
 		interfaceType.NestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
 		nestedCompositeType.SetContainerType(interfaceType)
-	}
-
-	for _, nestedEntitlementType := range nestedEntitlementTypes {
-		interfaceType.NestedTypes.Set(nestedEntitlementType.Identifier, nestedEntitlementType)
-		nestedEntitlementType.SetContainerType(interfaceType)
 	}
 
 	return interfaceType
@@ -374,10 +374,6 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	// Declare nested declarations' members
 
-	for _, nestedEntitlementDeclaration := range declaration.Members.Entitlements() {
-		checker.declareEntitlementMembers(nestedEntitlementDeclaration)
-	}
-
 	for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 		checker.declareInterfaceMembers(nestedInterfaceDeclaration)
 	}
@@ -397,7 +393,6 @@ func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDecla
 	entitlementType := &EntitlementType{
 		Location:   checker.Location,
 		Identifier: identifier.Identifier,
-		Members:    &StringMemberOrderedMap{},
 	}
 
 	variable, err := checker.typeActivations.declareType(typeDeclaration{
@@ -423,143 +418,6 @@ func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDecla
 	return entitlementType
 }
 
-func (checker *Checker) declareEntitlementMembers(declaration *ast.EntitlementDeclaration) {
-	entitlementType := checker.Elaboration.EntitlementDeclarationType(declaration)
-	if entitlementType == nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	fields := declaration.Members.Fields()
-	functions := declaration.Members.Functions()
-
-	reportInvalidDeclaration := func(nestedDeclarationKind common.DeclarationKind, identifier ast.Identifier) {
-		checker.report(
-			&InvalidEntitlementNestedDeclarationError{
-				NestedDeclarationKind: nestedDeclarationKind,
-				Range:                 ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
-			},
-		)
-	}
-
-	// reject all non-field or function declarations
-	for _, nestedDecl := range declaration.Members.Declarations() {
-		switch nestedDecl.(type) {
-		case *ast.FieldDeclaration, *ast.FunctionDeclaration:
-			break
-		default:
-			reportInvalidDeclaration(nestedDecl.DeclarationKind(), *nestedDecl.DeclarationIdentifier())
-		}
-	}
-
-	members := &StringMemberOrderedMap{}
-	// declare a member for each field
-	for _, field := range fields {
-		identifier := field.Identifier.Identifier
-		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
-		checker.checkTypeAnnotation(fieldTypeAnnotation, field.TypeAnnotation)
-		const declarationKind = common.DeclarationKindField
-		if field.Access != ast.AccessNotSpecified {
-			checker.report(
-				&InvalidEntitlementMemberAccessDeclaration{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, field),
-				},
-			)
-		}
-
-		checker.checkStaticModifier(field.IsStatic(), field.Identifier)
-		checker.checkNativeModifier(field.IsNative(), field.Identifier)
-
-		members.Set(
-			identifier,
-			&Member{
-				ContainerType:   entitlementType,
-				Access:          checker.accessFromAstAccess(field.Access),
-				Identifier:      field.Identifier,
-				DeclarationKind: declarationKind,
-				TypeAnnotation:  fieldTypeAnnotation,
-				VariableKind:    field.VariableKind,
-				DocString:       field.DocString,
-			})
-	}
-
-	// declare a member for each function
-	for _, function := range functions {
-		identifier := function.Identifier.Identifier
-		functionType := checker.functionType(function.Purity, function.ParameterList, function.ReturnTypeAnnotation)
-		argumentLabels := function.ParameterList.EffectiveArgumentLabels()
-		fieldTypeAnnotation := NewTypeAnnotation(functionType)
-		const declarationKind = common.DeclarationKindFunction
-
-		if function.Access != ast.AccessNotSpecified {
-			checker.report(
-				&InvalidEntitlementMemberAccessDeclaration{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, function),
-				},
-			)
-		}
-
-		if function.FunctionBlock != nil {
-			checker.report(
-				&InvalidEntitlementFunctionDeclaration{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, function),
-				},
-			)
-		}
-
-		members.Set(
-			identifier,
-			&Member{
-				ContainerType:     entitlementType,
-				Access:            checker.accessFromAstAccess(function.Access),
-				Identifier:        function.Identifier,
-				DeclarationKind:   declarationKind,
-				TypeAnnotation:    fieldTypeAnnotation,
-				VariableKind:      ast.VariableKindConstant,
-				ArgumentLabels:    argumentLabels,
-				DocString:         function.DocString,
-				HasImplementation: false,
-			})
-	}
-
-	entitlementType.Members = members
-}
-
-func (checker *Checker) checkMemberEntitlementConformance(memberContainer CompositeKindedType, member *Member) {
-	entitlementAccess, hasEntitlements := member.Access.(EntitlementAccess)
-	if !hasEntitlements {
-		return
-	}
-
-	entitlementAccess.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-		entitlementMember, memberPresent := entitlement.Members.Get(member.Identifier.Identifier)
-		if !memberPresent {
-
-			checker.report(&EntitlementMemberNotDeclaredError{
-				EntitlementType: entitlement,
-				MemberContainer: memberContainer,
-				Member:          member,
-				Range:           ast.NewRangeFromPositioned(checker.memoryGauge, member.Identifier),
-			})
-			return
-		}
-
-		// a member's declaration in a composite or interface must exactly match its declaration in an entitlement
-		if !entitlementMember.TypeAnnotation.Type.Equal(member.TypeAnnotation.Type) ||
-			entitlementMember.DeclarationKind != member.DeclarationKind ||
-			(entitlementMember.VariableKind != ast.VariableKindNotSpecified &&
-				member.VariableKind != entitlementMember.VariableKind) {
-
-			checker.report(&EntitlementConformanceError{
-				EntitlementType: entitlement,
-				MemberContainer: memberContainer,
-				Member:          member,
-				Range:           ast.NewRangeFromPositioned(checker.memoryGauge, member.Identifier),
-			})
-		}
-
-	})
-}
-
 func (checker *Checker) VisitEntitlementDeclaration(declaration *ast.EntitlementDeclaration) (_ struct{}) {
 	entitlementType := checker.Elaboration.EntitlementDeclarationType(declaration)
 	if entitlementType == nil {
@@ -574,14 +432,87 @@ func (checker *Checker) VisitEntitlementDeclaration(declaration *ast.Entitlement
 		true,
 	)
 
-	checker.checkNestedIdentifiers(declaration.Members)
+	return
+}
 
-	checker.checkInterfaceFunctions(
-		declaration.Members.Functions(),
-		entitlementType,
+func (checker *Checker) declareEntitlementMappingType(declaration *ast.EntitlementMappingDeclaration) *EntitlementMapType {
+	identifier := declaration.Identifier
+
+	entitlementMapType := &EntitlementMapType{
+		Location:   checker.Location,
+		Identifier: identifier.Identifier,
+	}
+
+	variable, err := checker.typeActivations.declareType(typeDeclaration{
+		identifier:               identifier,
+		ty:                       entitlementMapType,
+		declarationKind:          declaration.DeclarationKind(),
+		access:                   checker.accessFromAstAccess(declaration.Access),
+		docString:                declaration.DocString,
+		allowOuterScopeShadowing: false,
+	})
+
+	checker.report(err)
+	if checker.PositionInfo != nil && variable != nil {
+		checker.recordVariableDeclarationOccurrence(
+			identifier.Identifier,
+			variable,
+		)
+	}
+
+	checker.Elaboration.SetEntitlementMapDeclarationType(declaration, entitlementMapType)
+	checker.Elaboration.SetEntitlementMapTypeDeclaration(entitlementMapType, declaration)
+
+	return entitlementMapType
+}
+
+func (checker *Checker) declareEntitlementMappingElements(declaration *ast.EntitlementMappingDeclaration) {
+
+	entitlementMapType := checker.Elaboration.EntitlementMapDeclarationType(declaration)
+	if entitlementMapType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	entitlementRelations := make([]EntitlementRelation, 0, len(declaration.Associations))
+
+	for _, association := range declaration.Associations {
+		input := checker.convertNominalType(association.Input)
+		inputEntitlement, isEntitlement := input.(*EntitlementType)
+
+		if !isEntitlement {
+			checker.report(&InvalidNonEntitlementTypeInMapError{
+				Pos: association.Input.Identifier.Pos,
+			})
+		}
+
+		output := checker.convertNominalType(association.Output)
+		outputEntitlement, isEntitlement := output.(*EntitlementType)
+
+		if !isEntitlement {
+			checker.report(&InvalidNonEntitlementTypeInMapError{
+				Pos: association.Output.Identifier.Pos,
+			})
+		}
+
+		entitlementRelations = append(entitlementRelations, EntitlementRelation{Input: inputEntitlement, Output: outputEntitlement})
+	}
+
+	entitlementMapType.Relations = entitlementRelations
+}
+
+func (checker *Checker) VisitEntitlementMappingDeclaration(declaration *ast.EntitlementMappingDeclaration) (_ struct{}) {
+
+	entitlementMapType := checker.Elaboration.EntitlementMapDeclarationType(declaration)
+	if entitlementMapType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	checker.checkDeclarationAccessModifier(
+		declaration.Access,
 		declaration.DeclarationKind(),
 		nil,
-		declaration.DeclarationDocString(),
+		declaration.StartPos,
+		true,
 	)
 
 	return

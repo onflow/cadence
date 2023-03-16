@@ -258,6 +258,10 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 		ast.AcceptDeclaration[struct{}](nestedEntitlement, checker)
 	}
 
+	for _, nestedEntitlement := range members.EntitlementMaps() {
+		ast.AcceptDeclaration[struct{}](nestedEntitlement, checker)
+	}
+
 	for _, nestedInterface := range members.Interfaces() {
 		ast.AcceptDeclaration[struct{}](nestedInterface, checker)
 	}
@@ -269,12 +273,6 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 	for _, nestedAttachments := range members.Attachments() {
 		ast.AcceptDeclaration[struct{}](nestedAttachments, checker)
 	}
-
-	// check that members conform to their entitlement declarations, where applicable
-
-	compositeType.Members.Foreach(func(name string, member *Member) {
-		checker.checkMemberEntitlementConformance(compositeType, member)
-	})
 }
 
 // declareCompositeNestedTypes declares the types nested in a composite,
@@ -370,11 +368,13 @@ func (checker *Checker) declareNestedDeclarations(
 	nestedAttachmentDeclaration []*ast.AttachmentDeclaration,
 	nestedInterfaceDeclarations []*ast.InterfaceDeclaration,
 	nestedEntitlementDeclarations []*ast.EntitlementDeclaration,
+	nestedEntitlementMappingDeclarations []*ast.EntitlementMappingDeclaration,
 ) (
 	nestedDeclarations map[string]ast.Declaration,
 	nestedInterfaceTypes []*InterfaceType,
 	nestedCompositeTypes []*CompositeType,
 	nestedEntitlementTypes []*EntitlementType,
+	nestedEntitlementMapTypes []*EntitlementMapType,
 ) {
 	nestedDeclarations = map[string]ast.Declaration{}
 
@@ -415,6 +415,14 @@ func (checker *Checker) declareNestedDeclarations(
 			reportInvalidNesting(
 				firstNestedEntitlementDeclaration.DeclarationKind(),
 				firstNestedEntitlementDeclaration.Identifier,
+			)
+		} else if len(nestedEntitlementMappingDeclarations) > 0 {
+
+			firstNestedEntitlementMappingDeclaration := nestedEntitlementMappingDeclarations[0]
+
+			reportInvalidNesting(
+				firstNestedEntitlementMappingDeclaration.DeclarationKind(),
+				firstNestedEntitlementMappingDeclaration.Identifier,
 			)
 		} else if len(nestedAttachmentDeclaration) > 0 {
 
@@ -484,6 +492,28 @@ func (checker *Checker) declareNestedDeclarations(
 		// NOTE: don't return, so nested declarations / types are still declared
 	}
 
+	// Declare nested entitlements
+
+	for _, nestedDeclaration := range nestedEntitlementDeclarations {
+		if _, exists := nestedDeclarations[nestedDeclaration.Identifier.Identifier]; !exists {
+			nestedDeclarations[nestedDeclaration.Identifier.Identifier] = nestedDeclaration
+		}
+
+		nestedEntitlementType := checker.declareEntitlementType(nestedDeclaration)
+		nestedEntitlementTypes = append(nestedEntitlementTypes, nestedEntitlementType)
+	}
+
+	// Declare nested entitlement mappings
+
+	for _, nestedDeclaration := range nestedEntitlementMappingDeclarations {
+		if _, exists := nestedDeclarations[nestedDeclaration.Identifier.Identifier]; !exists {
+			nestedDeclarations[nestedDeclaration.Identifier.Identifier] = nestedDeclaration
+		}
+
+		nestedEntitlementMapType := checker.declareEntitlementMappingType(nestedDeclaration)
+		nestedEntitlementMapTypes = append(nestedEntitlementMapTypes, nestedEntitlementMapType)
+	}
+
 	// Declare nested interfaces
 
 	for _, nestedDeclaration := range nestedInterfaceDeclarations {
@@ -506,17 +536,6 @@ func (checker *Checker) declareNestedDeclarations(
 
 		nestedCompositeType := checker.declareCompositeType(nestedDeclaration)
 		nestedCompositeTypes = append(nestedCompositeTypes, nestedCompositeType)
-	}
-
-	// Declare nested entitlements
-
-	for _, nestedDeclaration := range nestedEntitlementDeclarations {
-		if _, exists := nestedDeclarations[nestedDeclaration.Identifier.Identifier]; !exists {
-			nestedDeclarations[nestedDeclaration.Identifier.Identifier] = nestedDeclaration
-		}
-
-		nestedEntitlementType := checker.declareEntitlementType(nestedDeclaration)
-		nestedEntitlementTypes = append(nestedEntitlementTypes, nestedEntitlementType)
 	}
 
 	// Declare nested attachments
@@ -604,7 +623,7 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 
 	// Check and declare nested types
 
-	nestedDeclarations, nestedInterfaceTypes, nestedCompositeTypes, nestedEntitlementTypes :=
+	nestedDeclarations, nestedInterfaceTypes, nestedCompositeTypes, nestedEntitlementTypes, nestedEntitlementMapTypes :=
 		checker.declareNestedDeclarations(
 			declaration.Kind(),
 			declaration.DeclarationKind(),
@@ -612,9 +631,20 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 			members.Attachments(),
 			members.Interfaces(),
 			members.Entitlements(),
+			members.EntitlementMaps(),
 		)
 
 	checker.Elaboration.SetCompositeNestedDeclarations(declaration, nestedDeclarations)
+
+	for _, nestedEntitlementType := range nestedEntitlementTypes {
+		compositeType.NestedTypes.Set(nestedEntitlementType.Identifier, nestedEntitlementType)
+		nestedEntitlementType.SetContainerType(compositeType)
+	}
+
+	for _, nestedEntitlementMapType := range nestedEntitlementMapTypes {
+		compositeType.NestedTypes.Set(nestedEntitlementMapType.Identifier, nestedEntitlementMapType)
+		nestedEntitlementMapType.SetContainerType(compositeType)
+	}
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
 		compositeType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
@@ -624,11 +654,6 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 	for _, nestedCompositeType := range nestedCompositeTypes {
 		compositeType.NestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
 		nestedCompositeType.SetContainerType(compositeType)
-	}
-
-	for _, nestedEntitlementType := range nestedEntitlementTypes {
-		compositeType.NestedTypes.Set(nestedEntitlementType.Identifier, nestedEntitlementType)
-		nestedEntitlementType.SetContainerType(compositeType)
 	}
 
 	return compositeType
@@ -681,10 +706,6 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 
 		for _, nestedInterfaceDeclaration := range members.Interfaces() {
 			checker.declareInterfaceMembers(nestedInterfaceDeclaration)
-		}
-
-		for _, nestedEntitlementDeclaration := range members.Entitlements() {
-			checker.declareEntitlementMembers(nestedEntitlementDeclaration)
 		}
 
 		// If this composite declaration has nested composite declaration,

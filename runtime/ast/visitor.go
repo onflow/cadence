@@ -36,6 +36,7 @@ type StatementDeclarationVisitor[T any] interface {
 	VisitAttachmentDeclaration(*AttachmentDeclaration) T
 	VisitInterfaceDeclaration(*InterfaceDeclaration) T
 	VisitEntitlementDeclaration(*EntitlementDeclaration) T
+	VisitEntitlementMappingDeclaration(*EntitlementMappingDeclaration) T
 	VisitTransactionDeclaration(*TransactionDeclaration) T
 }
 
@@ -86,6 +87,9 @@ func AcceptDeclaration[T any](declaration Declaration, visitor DeclarationVisito
 
 	case ElementTypeEntitlementDeclaration:
 		return visitor.VisitEntitlementDeclaration(declaration.(*EntitlementDeclaration))
+
+	case ElementTypeEntitlementMappingDeclaration:
+		return visitor.VisitEntitlementMappingDeclaration(declaration.(*EntitlementMappingDeclaration))
 	}
 
 	panic(errors.NewUnreachableError())

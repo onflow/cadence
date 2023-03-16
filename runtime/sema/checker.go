@@ -339,6 +339,8 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 			checker.Elaboration.SetCompositeType(typedType.ID(), typedType)
 		case *EntitlementType:
 			checker.Elaboration.SetEntitlementType(typedType.ID(), typedType)
+		case *EntitlementMapType:
+			checker.Elaboration.SetEntitlementMapType(typedType.ID(), typedType)
 		default:
 			panic(errors.NewUnreachableError())
 		}
@@ -346,6 +348,15 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	for _, declaration := range program.EntitlementDeclarations() {
 		entitlementType := checker.declareEntitlementType(declaration)
+
+		// NOTE: register types in elaboration
+		// *after* the full container chain is fully set up
+
+		VisitThisAndNested(entitlementType, registerInElaboration)
+	}
+
+	for _, declaration := range program.EntitlementMappingDeclarations() {
+		entitlementType := checker.declareEntitlementMappingType(declaration)
 
 		// NOTE: register types in elaboration
 		// *after* the full container chain is fully set up
@@ -382,8 +393,8 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	// Declare interfaces' and composites' members
 
-	for _, declaration := range program.EntitlementDeclarations() {
-		checker.declareEntitlementMembers(declaration)
+	for _, declaration := range program.EntitlementMappingDeclarations() {
+		checker.declareEntitlementMappingElements(declaration)
 	}
 
 	for _, declaration := range program.InterfaceDeclarations() {
@@ -1899,24 +1910,55 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) Access {
 	case ast.PrimitiveAccess:
 		return PrimitiveAccess(access)
 	case ast.EntitlementAccess:
-		entitlements := make([]*EntitlementType, 0, len(access.Entitlements))
-		for _, entitlement := range access.Entitlements {
-			nominalType := checker.convertNominalType(entitlement)
-			entitlementType, ok := nominalType.(*EntitlementType)
-			if !ok {
-				// don't duplicate errors when the type here is invalid, as this will have triggered an error before
-				if nominalType != InvalidType {
-					checker.report(
-						&InvalidNonEntitlementAccessError{
-							Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
-						},
-					)
+		astEntitlements := access.EntitlementSet.Entitlements()
+		nominalType := checker.convertNominalType(astEntitlements[0])
+
+		switch nominalType := nominalType.(type) {
+		case *EntitlementType:
+			semanticEntitlements := make([]*EntitlementType, 0, len(astEntitlements))
+			semanticEntitlements = append(semanticEntitlements, nominalType)
+
+			for _, entitlement := range astEntitlements[1:] {
+				nominalType := checker.convertNominalType(entitlement)
+				entitlementType, ok := nominalType.(*EntitlementType)
+				if !ok {
+					// don't duplicate errors when the type here is invalid, as this will have triggered an error before
+					if nominalType != InvalidType {
+						checker.report(
+							&InvalidNonEntitlementAccessError{
+								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
+							},
+						)
+					}
+					return PrimitiveAccess(ast.AccessNotSpecified)
 				}
+				semanticEntitlements = append(semanticEntitlements, entitlementType)
+			}
+			if access.EntitlementSet.Separator() == "," {
+				return NewEntitlementAccess(access, semanticEntitlements, Conjunction)
+			}
+			return NewEntitlementAccess(access, semanticEntitlements, Disjunction)
+		case *EntitlementMapType:
+			if len(astEntitlements) != 1 {
+				checker.report(
+					&InvalidMultipleMappedEntitlementError{
+						Pos: astEntitlements[1].Identifier.Pos,
+					},
+				)
 				return PrimitiveAccess(ast.AccessNotSpecified)
 			}
-			entitlements = append(entitlements, entitlementType)
+			return NewEntitlementMapAccess(access, nominalType)
+		default:
+			// don't duplicate errors when the type here is invalid, as this will have triggered an error before
+			if nominalType != InvalidType {
+				checker.report(
+					&InvalidNonEntitlementAccessError{
+						Range: ast.NewRangeFromPositioned(checker.memoryGauge, astEntitlements[0]),
+					},
+				)
+			}
+			return PrimitiveAccess(ast.AccessNotSpecified)
 		}
-		return NewEntitlementAccess(entitlements)
 	}
 	panic(errors.NewUnreachableError())
 }

@@ -395,6 +395,11 @@ func (compiler *Compiler) VisitEntitlementDeclaration(_ *ast.EntitlementDeclarat
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) ir.Stmt {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())

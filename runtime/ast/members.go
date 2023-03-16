@@ -68,6 +68,10 @@ func (m *Members) Entitlements() []*EntitlementDeclaration {
 	return m.indices.Entitlements(m.declarations)
 }
 
+func (m *Members) EntitlementMaps() []*EntitlementMappingDeclaration {
+	return m.indices.EntitlementMappings(m.declarations)
+}
+
 func (m *Members) Composites() []*CompositeDeclaration {
 	return m.indices.Composites(m.declarations)
 }
@@ -94,6 +98,14 @@ func (m *Members) CompositesByIdentifier() map[string]*CompositeDeclaration {
 
 func (m *Members) AttachmentsByIdentifier() map[string]*AttachmentDeclaration {
 	return m.indices.AttachmentsByIdentifier(m.declarations)
+}
+
+func (m *Members) EntitlementsByIdentifier() map[string]*EntitlementDeclaration {
+	return m.indices.EntitlementsByIdentifier(m.declarations)
+}
+
+func (m *Members) EntitlementMappingsByIdentifier() map[string]*EntitlementMappingDeclaration {
+	return m.indices.EntitlementMappingsByIdentifier(m.declarations)
 }
 
 func (m *Members) InterfacesByIdentifier() map[string]*InterfaceDeclaration {
