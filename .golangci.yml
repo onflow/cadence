@@ -8,8 +8,8 @@ linters:
     - ineffassign
     - typecheck
     - misspell
-    #- maprange
-    #- unkeyed
+    - maprange
+    - unkeyed
     - unused
     - exportloopref
     - gocritic
@@ -38,16 +38,16 @@ linters-settings:
       - exitAfterDefer
   goimports:
     local-prefixes: github.com/onflow/cadence
-  #custom:
-  #  maprange:
-  #    path: tools/maprange/maprange.so
-  #    description: reports for-range statements over maps
-  #    original-url: github.com/onflow/cadence/tools/maprange
-  #  unkeyed:
-  #    path: tools/unkeyed/unkeyed.so
-  #    description: reports unkeyed composite literals
-  #    original-url: github.com/onflow/cadence/tools/unkeyed
-  #  constructorcheck:
-  #    path: tools/constructorcheck/constructorcheck.so
-  #    description: reports range statements over maps
-  #    original-url: github.com/onflow/cadence/tools/constructorcheck
+  custom:
+    maprange:
+      path: tools/maprange/maprange.so
+      description: reports for-range statements over maps
+      original-url: github.com/onflow/cadence/tools/maprange
+    unkeyed:
+      path: tools/unkeyed/unkeyed.so
+      description: reports unkeyed composite literals
+      original-url: github.com/onflow/cadence/tools/unkeyed
+    constructorcheck:
+      path: tools/constructorcheck/constructorcheck.so
+      description: reports range statements over maps
+      original-url: github.com/onflow/cadence/tools/constructorcheck
