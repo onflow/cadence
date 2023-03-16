@@ -36,6 +36,7 @@ const (
 	ElementTypeCompositeDeclaration
 	ElementTypeInterfaceDeclaration
 	ElementTypeEntitlementDeclaration
+	ElementTypeEntitlementMappingDeclaration
 	ElementTypeAttachmentDeclaration
 	ElementTypeFieldDeclaration
 	ElementTypeEnumCaseDeclaration

@@ -1787,7 +1787,7 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
-	t.Run("access, entitlement", func(t *testing.T) {
+	t.Run("access, single entitlement", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1796,11 +1796,13 @@ func TestParseAccess(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			ast.EntitlementAccess{
-				Entitlements: []*ast.NominalType{
-					{
-						Identifier: ast.Identifier{
-							Identifier: "foo",
-							Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+				EntitlementSet: ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
 						},
 					},
 				},
@@ -1809,7 +1811,7 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
-	t.Run("access, multiple entitlements", func(t *testing.T) {
+	t.Run("access, multiple conjunctive entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1818,17 +1820,19 @@ func TestParseAccess(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			ast.EntitlementAccess{
-				Entitlements: []*ast.NominalType{
-					{
-						Identifier: ast.Identifier{
-							Identifier: "foo",
-							Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+				EntitlementSet: ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
 						},
-					},
-					{
-						Identifier: ast.Identifier{
-							Identifier: "bar",
-							Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+							},
 						},
 					},
 				},
@@ -1837,7 +1841,79 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
-	t.Run("access, entitlements list starting with keyword", func(t *testing.T) {
+	t.Run("access, multiple disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo | bar )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.EntitlementAccess{
+				EntitlementSet: ast.DisjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("access, mixed disjunctive and conjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo | bar , baz )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: got ',', expected '|' or ')'",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, mixed conjunctive and disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo , bar | baz )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: got '|', expected ',' or ')'",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, conjunctive entitlements list starting with keyword", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1858,16 +1934,16 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
-	t.Run("access, entitlements list ending with keyword", func(t *testing.T) {
+	t.Run("access, disjunctive entitlements list starting with keyword", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := parse("access ( foo, self )")
+		result, errs := parse("access ( self | bar )")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected non-nominal type: self",
-					Pos:     ast.Position{Offset: 18, Line: 1, Column: 18},
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
 				},
 			},
 			errs,
@@ -1879,7 +1955,49 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
-	t.Run("access, multiple entitlements no comma", func(t *testing.T) {
+	t.Run("access, conjunctive entitlements list ending with keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo , self )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected non-nominal type: self",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, disjunctive entitlements list ending with keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo | self )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected non-nominal type: self",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, multiple entitlements no separator", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1887,7 +2005,7 @@ func TestParseAccess(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: got identifier, expected ',' or ')'",
+					Message: "unexpected entitlement separator identifier",
 					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
@@ -1899,6 +2017,28 @@ func TestParseAccess(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("access, invalid separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo & bar )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected entitlement separator '&'",
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
 }
 
 func TestParseImportDeclaration(t *testing.T) {
@@ -3600,11 +3740,13 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
 								Access: ast.EntitlementAccess{
-									Entitlements: []*ast.NominalType{
-										{
-											Identifier: ast.Identifier{
-												Identifier: "X",
-												Pos:        ast.Position{Offset: 35, Line: 2, Column: 10},
+									EntitlementSet: ast.ConjunctiveEntitlementSet{
+										Elements: []*ast.NominalType{
+											{
+												Identifier: ast.Identifier{
+													Identifier: "X",
+													Pos:        ast.Position{Offset: 35, Line: 2, Column: 10},
+												},
 											},
 										},
 									},
@@ -7632,11 +7774,11 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("no members", func(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations(" pub entitlement E { }")
+		result, errs := testParseDeclarations(" pub entitlement E ")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -7647,194 +7789,9 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 						Identifier: "E",
 						Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
 					},
-					Members: &ast.Members{},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 21, Offset: 21},
-					},
-				},
-			},
-			result,
-		)
-	})
-
-	t.Run("with members", func(t *testing.T) {
-
-		t.Parallel()
-
-		// init and destroy will be rejected in the semantic checker,
-		// since it doesn't make sense for an entitlement to have these
-		result, errs := testParseDeclarations(`
-          entitlement LongNameX {
-                       var foo: Int
-
-              init(foo: Int)
-
-                  fun getFoo(): Int
-
-                  fun getBar(): Int {}
-
-              destroy() {}
-          }
-	    `)
-
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			[]ast.Declaration{
-				&ast.EntitlementDeclaration{
-					Access: ast.AccessNotSpecified,
-					Identifier: ast.Identifier{
-						Identifier: "LongNameX",
-						Pos:        ast.Position{Offset: 23, Line: 2, Column: 22},
-					},
-					Members: ast.NewUnmeteredMembers(
-						[]ast.Declaration{
-							&ast.FieldDeclaration{
-								Access:       ast.AccessNotSpecified,
-								VariableKind: ast.VariableKindVariable,
-								Identifier: ast.Identifier{
-									Identifier: "foo",
-									Pos:        ast.Position{Offset: 62, Line: 3, Column: 27},
-								},
-								TypeAnnotation: &ast.TypeAnnotation{
-									IsResource: false,
-									Type: &ast.NominalType{
-										Identifier: ast.Identifier{
-											Identifier: "Int",
-											Pos:        ast.Position{Offset: 67, Line: 3, Column: 32},
-										},
-									},
-									StartPos: ast.Position{Offset: 67, Line: 3, Column: 32},
-								},
-								Range: ast.Range{
-									StartPos: ast.Position{Offset: 58, Line: 3, Column: 23},
-									EndPos:   ast.Position{Offset: 69, Line: 3, Column: 34},
-								},
-							},
-							&ast.SpecialFunctionDeclaration{
-								Kind: common.DeclarationKindInitializer,
-								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access: ast.AccessNotSpecified,
-									Identifier: ast.Identifier{
-										Identifier: "init",
-										Pos:        ast.Position{Offset: 86, Line: 5, Column: 14},
-									},
-									ParameterList: &ast.ParameterList{
-										Parameters: []*ast.Parameter{
-											{
-												Label: "",
-												Identifier: ast.Identifier{
-													Identifier: "foo",
-													Pos:        ast.Position{Offset: 91, Line: 5, Column: 19},
-												},
-												TypeAnnotation: &ast.TypeAnnotation{
-													IsResource: false,
-													Type: &ast.NominalType{
-														Identifier: ast.Identifier{
-															Identifier: "Int",
-															Pos:        ast.Position{Offset: 96, Line: 5, Column: 24},
-														},
-													},
-													StartPos: ast.Position{Offset: 96, Line: 5, Column: 24},
-												},
-												StartPos: ast.Position{Offset: 91, Line: 5, Column: 19},
-											},
-										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 90, Line: 5, Column: 18},
-											EndPos:   ast.Position{Offset: 99, Line: 5, Column: 27},
-										},
-									},
-									StartPos: ast.Position{Offset: 86, Line: 5, Column: 14},
-								},
-							},
-							&ast.FunctionDeclaration{
-								Access: ast.AccessNotSpecified,
-								Identifier: ast.Identifier{
-									Identifier: "getFoo",
-									Pos:        ast.Position{Offset: 124, Line: 7, Column: 22},
-								},
-								ParameterList: &ast.ParameterList{
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 130, Line: 7, Column: 28},
-										EndPos:   ast.Position{Offset: 131, Line: 7, Column: 29},
-									},
-								},
-								ReturnTypeAnnotation: &ast.TypeAnnotation{
-									IsResource: false,
-									Type: &ast.NominalType{
-										Identifier: ast.Identifier{
-											Identifier: "Int",
-											Pos:        ast.Position{Offset: 134, Line: 7, Column: 32},
-										},
-									},
-									StartPos: ast.Position{Offset: 134, Line: 7, Column: 32},
-								},
-								StartPos: ast.Position{Offset: 120, Line: 7, Column: 18},
-							},
-							&ast.FunctionDeclaration{
-								Access: ast.AccessNotSpecified,
-								Identifier: ast.Identifier{
-									Identifier: "getBar",
-									Pos:        ast.Position{Offset: 161, Line: 9, Column: 22},
-								},
-								ParameterList: &ast.ParameterList{
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 167, Line: 9, Column: 28},
-										EndPos:   ast.Position{Offset: 168, Line: 9, Column: 29},
-									},
-								},
-								ReturnTypeAnnotation: &ast.TypeAnnotation{
-									IsResource: false,
-									Type: &ast.NominalType{
-										Identifier: ast.Identifier{
-											Identifier: "Int",
-											Pos:        ast.Position{Offset: 171, Line: 9, Column: 32},
-										},
-									},
-									StartPos: ast.Position{Offset: 171, Line: 9, Column: 32},
-								},
-								FunctionBlock: &ast.FunctionBlock{
-									Block: &ast.Block{
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 175, Line: 9, Column: 36},
-											EndPos:   ast.Position{Offset: 176, Line: 9, Column: 37},
-										},
-									},
-								},
-								StartPos: ast.Position{Offset: 157, Line: 9, Column: 18},
-							},
-							&ast.SpecialFunctionDeclaration{
-								Kind: common.DeclarationKindDestructor,
-								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access: ast.AccessNotSpecified,
-									Identifier: ast.Identifier{
-										Identifier: "destroy",
-										Pos:        ast.Position{Offset: 193, Line: 11, Column: 14},
-									},
-									ParameterList: &ast.ParameterList{
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 200, Line: 11, Column: 21},
-											EndPos:   ast.Position{Offset: 201, Line: 11, Column: 22},
-										},
-									},
-									FunctionBlock: &ast.FunctionBlock{
-										Block: &ast.Block{
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 203, Line: 11, Column: 24},
-												EndPos:   ast.Position{Offset: 204, Line: 11, Column: 25},
-											},
-										},
-									},
-									StartPos: ast.Position{Offset: 193, Line: 11, Column: 14},
-								},
-							},
-						},
-					),
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
-						EndPos:   ast.Position{Offset: 216, Line: 12, Column: 10},
+						EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
 					},
 				},
 			},
@@ -7850,7 +7807,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		// will be rejected
 		result, errs := testParseDeclarations(`
             pub contract C { 
-                pub entitlement E {}
+                pub entitlement E
             }
         `)
 		require.Empty(t, errs)
@@ -7866,7 +7823,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 					},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 2, Column: 12, Offset: 13},
-						EndPos:   ast.Position{Line: 4, Column: 12, Offset: 80},
+						EndPos:   ast.Position{Line: 4, Column: 12, Offset: 77},
 					},
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
@@ -7876,10 +7833,9 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 									Identifier: "E",
 									Pos:        ast.Position{Line: 3, Column: 32, Offset: 63},
 								},
-								Members: &ast.Members{},
 								Range: ast.Range{
 									StartPos: ast.Position{Line: 3, Column: 16, Offset: 47},
-									EndPos:   ast.Position{Line: 3, Column: 35, Offset: 66},
+									EndPos:   ast.Position{Line: 3, Column: 32, Offset: 63},
 								},
 							},
 						},
@@ -7894,44 +7850,12 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(" pub entitlement { }")
+		_, errs := testParseDeclarations(" pub entitlement")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected identifier following entitlement declaration, got '{'",
-					Pos:     ast.Position{Offset: 17, Line: 1, Column: 17},
-				},
-			},
-			errs,
-		)
-	})
-
-	t.Run("no open brace", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseDeclarations(" pub entitlement E }")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected token '{'",
-					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
-				},
-			},
-			errs,
-		)
-	})
-
-	t.Run("no close brace", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseDeclarations(" pub entitlement E {")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected token '}'",
-					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
+					Message: "expected identifier, got EOF",
+					Pos:     ast.Position{Offset: 16, Line: 1, Column: 16},
 				},
 			},
 			errs,
@@ -7942,7 +7866,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(" pub view entitlement E { }")
+		_, errs := testParseDeclarations(" pub view entitlement E")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -8180,6 +8104,323 @@ func TestParseMemberDocStrings(t *testing.T) {
 		)
 	})
 
+}
+
+func TestParseEntitlementMappingDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(" pub entitlement mapping M { } ")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("mappings", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A -> B
+			C -> D
+		} `)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 4, Column: 2, Offset: 52},
+					},
+					Associations: []*ast.EntitlementMapElement{
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Line: 2, Column: 3, Offset: 33},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "B",
+									Pos:        ast.Position{Line: 2, Column: 8, Offset: 38},
+								},
+							},
+						},
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "C",
+									Pos:        ast.Position{Line: 3, Column: 3, Offset: 43},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "D",
+									Pos:        ast.Position{Line: 3, Column: 8, Offset: 48},
+								},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("same line mappings", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A -> B C -> D
+		} `)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 49},
+					},
+					Associations: []*ast.EntitlementMapElement{
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Line: 2, Column: 3, Offset: 33},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "B",
+									Pos:        ast.Position{Line: 2, Column: 8, Offset: 38},
+								},
+							},
+						},
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "C",
+									Pos:        ast.Position{Line: 2, Column: 10, Offset: 40},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "D",
+									Pos:        ast.Position{Line: 2, Column: 15, Offset: 45},
+								},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("missing entitlement keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub mapping M {} ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing mapping keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement M {} ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: '{'",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing body", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping M ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '{'",
+					Pos:     ast.Position{Offset: 27, Line: 1, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing close brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping M {")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '}'",
+					Pos:     ast.Position{Offset: 28, Line: 1, Column: 28},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing open brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping M }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '{'",
+					Pos:     ast.Position{Offset: 27, Line: 1, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping {}")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier following entitlement mapping declaration, got '{'",
+					Pos:     ast.Position{Offset: 25, Line: 1, Column: 25},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("non-nominal mapping first", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			&A -> B
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected nominal type, got &A",
+					Pos:     ast.Position{Offset: 35, Line: 2, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("non-nominal mapping second", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A -> [B]
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected nominal type, got [B]",
+					Pos:     ast.Position{Offset: 41, Line: 2, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing arrow", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A B
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '->'",
+					Pos:     ast.Position{Offset: 35, Line: 2, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("wrong mapping separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A - B
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '->'",
+					Pos:     ast.Position{Offset: 35, Line: 2, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {

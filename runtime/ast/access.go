@@ -35,14 +35,51 @@ type Access interface {
 	MarshalJSON() ([]byte, error)
 }
 
+type EntitlementSet interface {
+	Entitlements() []*NominalType
+	Separator() string
+}
+
+type ConjunctiveEntitlementSet struct {
+	Elements []*NominalType `json:"ConjunctiveElements"`
+}
+
+func (s ConjunctiveEntitlementSet) Entitlements() []*NominalType {
+	return s.Elements
+}
+
+func (s ConjunctiveEntitlementSet) Separator() string {
+	return ","
+}
+
+func NewConjunctiveEntitlementSet(entitlements []*NominalType) ConjunctiveEntitlementSet {
+	return ConjunctiveEntitlementSet{Elements: entitlements}
+}
+
+type DisjunctiveEntitlementSet struct {
+	Elements []*NominalType `json:"DisjunctiveElements"`
+}
+
+func (s DisjunctiveEntitlementSet) Entitlements() []*NominalType {
+	return s.Elements
+}
+
+func (s DisjunctiveEntitlementSet) Separator() string {
+	return " |"
+}
+
+func NewDisjunctiveEntitlementSet(entitlements []*NominalType) DisjunctiveEntitlementSet {
+	return DisjunctiveEntitlementSet{Elements: entitlements}
+}
+
 type EntitlementAccess struct {
-	Entitlements []*NominalType
+	EntitlementSet EntitlementSet
 }
 
 var _ Access = EntitlementAccess{}
 
-func NewEntitlementAccess(entitlements []*NominalType) EntitlementAccess {
-	return EntitlementAccess{Entitlements: entitlements}
+func NewEntitlementAccess(entitlements EntitlementSet) EntitlementAccess {
+	return EntitlementAccess{EntitlementSet: entitlements}
 }
 
 func (EntitlementAccess) isAccess() {}
@@ -53,17 +90,17 @@ func (EntitlementAccess) Description() string {
 
 func (e EntitlementAccess) entitlementsString() string {
 	str := strings.Builder{}
-	for i, entitlement := range e.Entitlements {
+	for i, entitlement := range e.EntitlementSet.Entitlements() {
 		str.Write([]byte(entitlement.String()))
-		if i < len(e.Entitlements)-1 {
-			str.Write([]byte(", "))
+		if i < len(e.EntitlementSet.Entitlements())-1 {
+			str.Write([]byte(e.EntitlementSet.Separator()))
 		}
 	}
 	return str.String()
 }
 
 func (e EntitlementAccess) String() string {
-	return "EntitlementAccess" + e.entitlementsString()
+	return "ConjunctiveEntitlementAccess " + e.entitlementsString()
 }
 
 func (e EntitlementAccess) Keyword() string {
@@ -76,11 +113,11 @@ func (e EntitlementAccess) MarshalJSON() ([]byte, error) {
 
 func (e EntitlementAccess) subset(other EntitlementAccess) bool {
 	otherSet := make(map[*NominalType]struct{})
-	for _, entitlement := range other.Entitlements {
+	for _, entitlement := range other.EntitlementSet.Entitlements() {
 		otherSet[entitlement] = struct{}{}
 	}
 
-	for _, entitlement := range e.Entitlements {
+	for _, entitlement := range e.EntitlementSet.Entitlements() {
 		if _, found := otherSet[entitlement]; !found {
 			return false
 		}
@@ -93,7 +130,11 @@ func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
 	if primitive, isPrimitive := other.(PrimitiveAccess); isPrimitive {
 		return primitive == AccessPublic || primitive == AccessPublicSettable
 	}
-	return e.subset(other.(EntitlementAccess))
+	conjunctiveEntitlementAccess, ok := other.(EntitlementAccess)
+	if !ok {
+		return false
+	}
+	return e.subset(conjunctiveEntitlementAccess)
 }
 
 type PrimitiveAccess uint8

@@ -329,11 +329,13 @@ func TestParseReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
 				Authorization: &ast.Authorization{
-					Entitlements: []*ast.NominalType{
-						{
-							Identifier: ast.Identifier{
-								Identifier: "X",
-								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+					EntitlementSet: ast.ConjunctiveEntitlementSet{
+						Elements: []*ast.NominalType{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "X",
+									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
 							},
 						},
 					},
@@ -350,7 +352,7 @@ func TestParseReferenceType(t *testing.T) {
 		)
 	})
 
-	t.Run("authorized, two entitlements", func(t *testing.T) {
+	t.Run("authorized, two conjunctive entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -360,17 +362,58 @@ func TestParseReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
 				Authorization: &ast.Authorization{
-					Entitlements: []*ast.NominalType{
-						{
-							Identifier: ast.Identifier{
-								Identifier: "X",
-								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+					EntitlementSet: ast.ConjunctiveEntitlementSet{
+						Elements: []*ast.NominalType{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "X",
+									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+							{
+								Identifier: ast.Identifier{
+									Identifier: "Y",
+									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+								},
 							},
 						},
-						{
-							Identifier: ast.Identifier{
-								Identifier: "Y",
-								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("authorized, two disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth(X| Y) &Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorization: &ast.Authorization{
+					EntitlementSet: ast.DisjunctiveEntitlementSet{
+						Elements: []*ast.NominalType{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "X",
+									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+							{
+								Identifier: ast.Identifier{
+									Identifier: "Y",
+									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+								},
 							},
 						},
 					},
@@ -396,8 +439,40 @@ func TestParseReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "entitlements list cannot be empty",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+					Message: "unexpected token in type: ')'",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("authorized, mixed entitlements conjunction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth(X, Y | Z) &Int")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: got '|', expected ',' or ')'",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("authorized, mixed entitlements conjunction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth(X | Y, Z) &Int")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: got ',', expected '|' or ')'",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
 				},
 			},
 			errs,
@@ -878,7 +953,7 @@ func TestParseRestrictedType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected comma",
+					Message: "unexpected separator",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},

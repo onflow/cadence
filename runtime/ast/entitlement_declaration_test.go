@@ -37,7 +37,6 @@ func TestEntitlementDeclaration_MarshalJSON(t *testing.T) {
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
 		},
-		Members:   NewUnmeteredMembers([]Declaration{}),
 		DocString: "test",
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
@@ -58,9 +57,6 @@ func TestEntitlementDeclaration_MarshalJSON(t *testing.T) {
                 "Identifier": "AB",
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 2, "Line": 2, "Column": 4}
-            },
-            "Members": {
-                "Declarations": []
             },
             "DocString": "test",
             "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
@@ -84,7 +80,6 @@ func TestEntitlementDeclaration_Doc(t *testing.T) {
 			Identifier: Identifier{
 				Identifier: "AB",
 			},
-			Members: NewMembers(nil, []Declaration{}),
 		}
 
 		require.Equal(
@@ -94,65 +89,6 @@ func TestEntitlementDeclaration_Doc(t *testing.T) {
 				prettier.Text(" "),
 				prettier.Text("entitlement "),
 				prettier.Text("AB"),
-				prettier.Text(" "),
-				prettier.Text("{}"),
-			},
-			decl.Doc(),
-		)
-
-	})
-
-	t.Run("members", func(t *testing.T) {
-
-		t.Parallel()
-
-		decl := &EntitlementDeclaration{
-			Access: AccessPublic,
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-			Members: NewMembers(nil, []Declaration{
-				&FieldDeclaration{
-					Access: AccessNotSpecified,
-					Identifier: Identifier{
-						Identifier: "x",
-					},
-					TypeAnnotation: &TypeAnnotation{
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "X",
-							},
-						},
-					},
-				},
-			}),
-		}
-
-		require.Equal(
-			t,
-			prettier.Concat{
-				prettier.Text("pub"),
-				prettier.Text(" "),
-				prettier.Text("entitlement "),
-				prettier.Text("AB"),
-				prettier.Text(" "),
-				prettier.Concat{
-					prettier.Text("{"),
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.HardLine{},
-							prettier.Group{
-								Doc: prettier.Concat{
-									prettier.Text("x"),
-									prettier.Text(": "),
-									prettier.Text("X"),
-								},
-							},
-						},
-					},
-					prettier.HardLine{},
-					prettier.Text("}"),
-				},
 			},
 			decl.Doc(),
 		)
@@ -173,50 +109,197 @@ func TestEntitlementDeclaration_String(t *testing.T) {
 			Identifier: Identifier{
 				Identifier: "AB",
 			},
-			Members: NewMembers(nil, []Declaration{}),
 		}
 
 		require.Equal(
 			t,
-			"pub entitlement AB {}",
+			"pub entitlement AB",
 			decl.String(),
 		)
 
 	})
+}
 
-	t.Run("members", func(t *testing.T) {
+func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 
-		t.Parallel()
+	t.Parallel()
 
-		decl := &EntitlementDeclaration{
-			Access: AccessPublic,
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-			Members: NewMembers(nil, []Declaration{
-				&FieldDeclaration{
-					Access: AccessNotSpecified,
+	decl := &EntitlementMappingDeclaration{
+		Access: AccessPublic,
+		Identifier: Identifier{
+			Identifier: "AB",
+			Pos:        Position{Offset: 1, Line: 2, Column: 3},
+		},
+		DocString: "test",
+		Range: Range{
+			StartPos: Position{Offset: 7, Line: 8, Column: 9},
+			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+		},
+		Associations: []*EntitlementMapElement{
+			{
+				Input: &NominalType{
 					Identifier: Identifier{
-						Identifier: "x",
-					},
-					TypeAnnotation: &TypeAnnotation{
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "X",
-							},
-						},
+						Identifier: "X",
+						Pos:        Position{Offset: 1, Line: 2, Column: 3},
 					},
 				},
-			}),
-		}
+				Output: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Y",
+						Pos:        Position{Offset: 1, Line: 2, Column: 3},
+					},
+				},
+			},
+		},
+	}
 
-		require.Equal(
-			t,
-			"pub entitlement AB {\n"+
-				"    x: X\n"+
-				"}",
-			decl.String(),
-		)
+	actual, err := json.Marshal(decl)
+	require.NoError(t, err)
 
-	})
+	assert.JSONEq(t,
+		// language=json
+		`
+        {
+            "Type": "EntitlementMappingDeclaration",
+            "Access": "AccessPublic", 
+            "Identifier": {
+                "Identifier": "AB",
+				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+				"EndPos": {"Offset": 2, "Line": 2, "Column": 4}
+            },
+			"Associations": [
+				{
+					"Input": {
+						"Type": "NominalType",
+						"Identifier": {
+							"Identifier": "X",
+							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+							"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+						},
+						"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+						"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+					},
+					"Output":  {
+						"Type": "NominalType",
+						"Identifier": {
+							"Identifier": "Y",
+							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+							"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+						},
+						"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+						"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+					}
+				}
+			],
+            "DocString": "test",
+            "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+            "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &EntitlementMappingDeclaration{
+		Access: AccessPublic,
+		Identifier: Identifier{
+			Identifier: "AB",
+			Pos:        Position{Offset: 1, Line: 2, Column: 3},
+		},
+		DocString: "test",
+		Range: Range{
+			StartPos: Position{Offset: 7, Line: 8, Column: 9},
+			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+		},
+		Associations: []*EntitlementMapElement{
+			{
+				Input: &NominalType{
+					Identifier: Identifier{
+						Identifier: "X",
+						Pos:        Position{Offset: 1, Line: 2, Column: 3},
+					},
+				},
+				Output: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Y",
+						Pos:        Position{Offset: 1, Line: 2, Column: 3},
+					},
+				},
+			},
+		},
+	}
+
+	require.Equal(
+		t,
+		prettier.Concat{
+			prettier.Text("pub"),
+			prettier.Text(" "),
+			prettier.Text("entitlement "),
+			prettier.Text("mapping "),
+			prettier.Text("AB"),
+			prettier.Space,
+			prettier.Text("{"),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.HardLine{},
+					prettier.Concat{
+						prettier.Text("X"),
+						prettier.Text(" -> "),
+						prettier.Text("Y"),
+					},
+				},
+			},
+			prettier.HardLine{},
+			prettier.Text("}"),
+		},
+		decl.Doc(),
+	)
+
+}
+
+func TestEntitlementMappingDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &EntitlementMappingDeclaration{
+		Access: AccessPublic,
+		Identifier: Identifier{
+			Identifier: "AB",
+			Pos:        Position{Offset: 1, Line: 2, Column: 3},
+		},
+		DocString: "test",
+		Range: Range{
+			StartPos: Position{Offset: 7, Line: 8, Column: 9},
+			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+		},
+		Associations: []*EntitlementMapElement{
+			{
+				Input: &NominalType{
+					Identifier: Identifier{
+						Identifier: "X",
+						Pos:        Position{Offset: 1, Line: 2, Column: 3},
+					},
+				},
+				Output: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Y",
+						Pos:        Position{Offset: 1, Line: 2, Column: 3},
+					},
+				},
+			},
+		},
+	}
+
+	require.Equal(
+		t,
+		`pub entitlement mapping AB {
+    X -> Y
+}`,
+		decl.String(),
+	)
+
 }

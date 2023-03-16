@@ -535,7 +535,7 @@ func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error
 // ReferenceType
 
 type Authorization struct {
-	Entitlements []*NominalType `json:"Entitlements"`
+	EntitlementSet EntitlementSet `json:"EntitlementSet"`
 }
 
 type ReferenceType struct {
@@ -581,12 +581,12 @@ func (t *ReferenceType) Doc() prettier.Doc {
 	var doc prettier.Concat
 	if t.Authorization != nil {
 		doc = append(doc, referenceTypeAuthKeywordDoc)
-		if len(t.Authorization.Entitlements) > 0 {
+		if t.Authorization.EntitlementSet != nil && len(t.Authorization.EntitlementSet.Entitlements()) > 0 {
 			doc = append(doc, prettier.Text("("))
-			for i, entitlement := range t.Authorization.Entitlements {
+			for i, entitlement := range t.Authorization.EntitlementSet.Entitlements() {
 				doc = append(doc, entitlement.Doc())
-				if i < len(t.Authorization.Entitlements)-1 {
-					doc = append(doc, prettier.Text(","), prettier.Space)
+				if i < len(t.Authorization.EntitlementSet.Entitlements())-1 {
+					doc = append(doc, prettier.Text(t.Authorization.EntitlementSet.Separator()), prettier.Space)
 				}
 			}
 			doc = append(doc, prettier.Text(")"))

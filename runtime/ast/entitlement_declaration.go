@@ -31,7 +31,6 @@ type EntitlementDeclaration struct {
 	Access     Access
 	DocString  string
 	Identifier Identifier
-	Members    *Members
 	Range
 }
 
@@ -43,7 +42,6 @@ func NewEntitlementDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
 	identifier Identifier,
-	members *Members,
 	docString string,
 	declRange Range,
 ) *EntitlementDeclaration {
@@ -52,7 +50,6 @@ func NewEntitlementDeclaration(
 	return &EntitlementDeclaration{
 		Access:     access,
 		Identifier: identifier,
-		Members:    members,
 		DocString:  docString,
 		Range:      declRange,
 	}
@@ -62,9 +59,7 @@ func (*EntitlementDeclaration) ElementType() ElementType {
 	return ElementTypeEntitlementDeclaration
 }
 
-func (d *EntitlementDeclaration) Walk(walkChild func(Element)) {
-	walkDeclarations(walkChild, d.Members.declarations)
-}
+func (*EntitlementDeclaration) Walk(_ func(Element)) {}
 
 func (*EntitlementDeclaration) isDeclaration() {}
 
@@ -85,7 +80,7 @@ func (d *EntitlementDeclaration) DeclarationKind() common.DeclarationKind {
 }
 
 func (d *EntitlementDeclaration) DeclarationMembers() *Members {
-	return d.Members
+	return nil
 }
 
 func (d *EntitlementDeclaration) DeclarationDocString() string {
@@ -120,13 +115,168 @@ func (d *EntitlementDeclaration) Doc() prettier.Doc {
 		doc,
 		entitlementKeywordSpaceDoc,
 		prettier.Text(d.Identifier.Identifier),
-		prettier.Space,
-		d.Members.Doc(),
 	)
 
 	return doc
 }
 
 func (d *EntitlementDeclaration) String() string {
+	return Prettier(d)
+}
+
+type EntitlementMapElement struct {
+	Input  *NominalType
+	Output *NominalType
+}
+
+func NewEntitlementMapElement(
+	gauge common.MemoryGauge,
+	input *NominalType,
+	output *NominalType,
+) *EntitlementMapElement {
+	common.UseMemory(gauge, common.EntitlementMappingElementMemoryUsage)
+
+	return &EntitlementMapElement{
+		Input:  input,
+		Output: output,
+	}
+}
+
+var arrowKeywordSpaceDoc = prettier.Text(" -> ")
+
+func (d EntitlementMapElement) Doc() prettier.Doc {
+	var doc prettier.Concat
+
+	return append(
+		doc,
+		d.Input.Doc(),
+		arrowKeywordSpaceDoc,
+		d.Output.Doc(),
+	)
+}
+
+// EntitlementMappingDeclaration
+type EntitlementMappingDeclaration struct {
+	Access       Access
+	DocString    string
+	Identifier   Identifier
+	Associations []*EntitlementMapElement
+	Range
+}
+
+var _ Element = &EntitlementMappingDeclaration{}
+var _ Declaration = &EntitlementMappingDeclaration{}
+var _ Statement = &EntitlementMappingDeclaration{}
+
+func NewEntitlementMappingDeclaration(
+	gauge common.MemoryGauge,
+	access Access,
+	identifier Identifier,
+	associations []*EntitlementMapElement,
+	docString string,
+	declRange Range,
+) *EntitlementMappingDeclaration {
+	common.UseMemory(gauge, common.EntitlementDeclarationMemoryUsage)
+
+	return &EntitlementMappingDeclaration{
+		Access:       access,
+		Identifier:   identifier,
+		Associations: associations,
+		DocString:    docString,
+		Range:        declRange,
+	}
+}
+
+func (*EntitlementMappingDeclaration) ElementType() ElementType {
+	return ElementTypeEntitlementDeclaration
+}
+
+func (*EntitlementMappingDeclaration) Walk(_ func(Element)) {}
+
+func (*EntitlementMappingDeclaration) isDeclaration() {}
+
+// NOTE: statement, so it can be represented in the AST,
+// but will be rejected in semantic analysis
+func (*EntitlementMappingDeclaration) isStatement() {}
+
+func (d *EntitlementMappingDeclaration) DeclarationIdentifier() *Identifier {
+	return &d.Identifier
+}
+
+func (d *EntitlementMappingDeclaration) DeclarationAccess() Access {
+	return d.Access
+}
+
+func (d *EntitlementMappingDeclaration) DeclarationKind() common.DeclarationKind {
+	return common.DeclarationKindEntitlement
+}
+
+func (d *EntitlementMappingDeclaration) DeclarationMembers() *Members {
+	return nil
+}
+
+func (d *EntitlementMappingDeclaration) DeclarationDocString() string {
+	return d.DocString
+}
+
+func (d *EntitlementMappingDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias EntitlementMappingDeclaration
+	return json.Marshal(&struct {
+		*Alias
+		Type string
+	}{
+		Type:  "EntitlementMappingDeclaration",
+		Alias: (*Alias)(d),
+	})
+}
+
+var mappingKeywordSpaceDoc = prettier.Text("mapping ")
+var mappingStartDoc prettier.Doc = prettier.Text("{")
+var mappingEndDoc prettier.Doc = prettier.Text("}")
+
+func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
+	var doc prettier.Concat
+
+	if d.Access != AccessNotSpecified {
+		doc = append(
+			doc,
+			prettier.Text(d.Access.Keyword()),
+			prettier.Space,
+		)
+	}
+
+	var mappingAssociationsDoc prettier.Concat
+
+	for _, decl := range d.Associations {
+		mappingAssociationsDoc = append(
+			mappingAssociationsDoc,
+			prettier.Concat{
+				prettier.HardLine{},
+				decl.Doc(),
+			},
+		)
+	}
+
+	doc = append(
+		doc,
+		entitlementKeywordSpaceDoc,
+		mappingKeywordSpaceDoc,
+		prettier.Text(d.Identifier.Identifier),
+		prettier.Space,
+		mappingStartDoc,
+		prettier.Indent{
+			Doc: prettier.Join(
+				prettier.HardLine{},
+				mappingAssociationsDoc...,
+			),
+		},
+		prettier.HardLine{},
+		mappingEndDoc,
+	)
+
+	return doc
+}
+
+func (d *EntitlementMappingDeclaration) String() string {
 	return Prettier(d)
 }

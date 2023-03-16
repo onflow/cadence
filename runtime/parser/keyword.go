@@ -59,6 +59,7 @@ const (
 	KeywordResource    = "resource"
 	KeywordInterface   = "interface"
 	KeywordEntitlement = "entitlement"
+	KeywordMapping     = "mapping"
 	KeywordTransaction = "transaction"
 	KeywordPrepare     = "prepare"
 	KeywordExecute     = "execute"
