@@ -213,21 +213,26 @@ func (r *CoverageReport) IsProgramInspected(location Location) bool {
 	return isInspected
 }
 
-// CoveredStatementsPercentage returns a string representation of
-// the covered statements percentage. It is defined as the ratio
-// of total covered lines over total statements, for all locations.
-func (r *CoverageReport) CoveredStatementsPercentage() string {
+// Percentage returns a string representation of the covered statements
+// percentage. It is defined as the ratio of total covered lines over
+// total statements, for all locations.
+func (r *CoverageReport) Percentage() string {
 	totalStatements := 0
 	totalCoveredLines := 0
 	for _, locationCoverage := range r.Coverage { // nolint:maprange
 		totalStatements += locationCoverage.Statements
 		totalCoveredLines += locationCoverage.CoveredLines()
 	}
-	percentage := fmt.Sprintf(
+	return fmt.Sprintf(
 		"%0.1f%%",
 		100*float64(totalCoveredLines)/float64(totalStatements),
 	)
-	return fmt.Sprintf("Coverage: %v of statements", percentage)
+}
+
+// String returns a human-friendly message for the covered
+// statements percentage.
+func (r *CoverageReport) String() string {
+	return fmt.Sprintf("Coverage: %v of statements", r.Percentage())
 }
 
 // Reset flushes the collected coverage information for all locations

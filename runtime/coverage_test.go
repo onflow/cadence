@@ -582,6 +582,7 @@ func TestCoverageReportWithAddressLocation(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 
 }
+
 func TestCoverageReportReset(t *testing.T) {
 
 	t.Parallel()
@@ -656,6 +657,109 @@ func TestCoverageReportAddLineHitForNonInspectedProgram(t *testing.T) {
 	assert.Equal(t, 0, len(coverageReport.Coverage))
 	assert.Equal(t, 0, len(coverageReport.Programs))
 	assert.Equal(t, false, coverageReport.IsProgramInspected(location))
+}
+
+func TestCoverageReportPercentage(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.StringLocation("AnswerScript")
+	coverageReport.InspectProgram(location, program)
+	coverageReport.AddLineHit(location, 3)
+	coverageReport.AddLineHit(location, 4)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "S.AnswerScript": {
+	        "line_hits": {
+	          "3": 1,
+	          "4": 1,
+	          "5": 0,
+	          "7": 0
+	        },
+	        "missed_lines": [5, 7],
+	        "statements": 4,
+	        "percentage": "50.0%"
+	      }
+	    }
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+
+	assert.Equal(t, "50.0%", coverageReport.Percentage())
+}
+
+func TestCoverageReportString(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.StringLocation("AnswerScript")
+	coverageReport.InspectProgram(location, program)
+	coverageReport.AddLineHit(location, 3)
+	coverageReport.AddLineHit(location, 4)
+	coverageReport.AddLineHit(location, 5)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "S.AnswerScript": {
+	        "line_hits": {
+	          "3": 1,
+	          "4": 1,
+	          "5": 1,
+	          "7": 0
+	        },
+	        "missed_lines": [7],
+	        "statements": 4,
+	        "percentage": "75.0%"
+	      }
+	    }
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+
+	assert.Equal(
+		t,
+		"Coverage: 75.0% of statements",
+		coverageReport.String(),
+	)
 }
 
 func TestRuntimeCoverage(t *testing.T) {
@@ -829,7 +933,7 @@ func TestRuntimeCoverage(t *testing.T) {
 	assert.Equal(
 		t,
 		"Coverage: 100.0% of statements",
-		coverageReport.CoveredStatementsPercentage(),
+		coverageReport.String(),
 	)
 }
 
@@ -965,6 +1069,6 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 	assert.Equal(
 		t,
 		"Coverage: 100.0% of statements",
-		coverageReport.CoveredStatementsPercentage(),
+		coverageReport.String(),
 	)
 }
