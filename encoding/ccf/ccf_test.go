@@ -52,7 +52,7 @@ func TestEncodeVoid(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.NewVoid(),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Void"}
 			//
 			// language=edn, format=ccf
@@ -81,7 +81,7 @@ func TestEncodeOptional(t *testing.T) {
 		{
 			"Optional(nil)",
 			cadence.NewOptional(nil),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Optional","value":null}
 				//
 				// language=edn, format=ccf
@@ -105,7 +105,7 @@ func TestEncodeOptional(t *testing.T) {
 		{
 			"Optional(non-nil)",
 			cadence.NewOptional(cadence.NewInt(42)),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Optional","value":{"type":"Int","value":"42"}}
 				//
 				// language=edn, format=ccf
@@ -133,7 +133,7 @@ func TestEncodeOptional(t *testing.T) {
 		{
 			"Optional(Optional(nil))",
 			cadence.NewOptional(cadence.NewOptional(nil)),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"value":{"value":null,"type":"Optional"},"type":"Optional"}
 				//
 				// language=edn, format=ccf
@@ -159,7 +159,7 @@ func TestEncodeOptional(t *testing.T) {
 		{
 			"Optional(Optional(non-nil))",
 			cadence.NewOptional(cadence.NewOptional(cadence.NewInt(42))),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"value":{"value":{"value":"42","type":"Int"},"type":"Optional"},"type":"Optional"}
 				//
 				// language=edn, format=ccf
@@ -189,7 +189,7 @@ func TestEncodeOptional(t *testing.T) {
 		{
 			"Optional(Optional(Optional(nil)))",
 			cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(nil))),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"value":{"value":{"value":null,"type":"Optional"},"type":"Optional"},"type":"Optional"}
 				//
 				// language=edn, format=ccf
@@ -217,7 +217,7 @@ func TestEncodeOptional(t *testing.T) {
 		{
 			"Optional(Optional(Optional(non-nil)))",
 			cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(cadence.NewInt(42)))),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"value":{"value":{"value":{"value":"42","type":"Int"},"type":"Optional"},"type":"Optional"},"type":"Optional"}
 				//
 				// language=edn, format=ccf
@@ -257,7 +257,7 @@ func TestEncodeBool(t *testing.T) {
 		{
 			"True",
 			cadence.NewBool(true),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Bool","value":true}
 				//
 				// language=edn, format=ccf
@@ -279,7 +279,7 @@ func TestEncodeBool(t *testing.T) {
 		{
 			"False",
 			cadence.NewBool(false),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Bool","value":false}
 				//
 				// language=edn, format=ccf
@@ -312,7 +312,7 @@ func TestEncodeCharacter(t *testing.T) {
 		{
 			"a",
 			a,
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Character","value":"a"}
 				//
 				// language=edn, format=ccf
@@ -336,7 +336,7 @@ func TestEncodeCharacter(t *testing.T) {
 		{
 			"b",
 			b,
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Character","value":"b"}
 				//
 				// language=edn, format=ccf
@@ -368,7 +368,7 @@ func TestEncodeString(t *testing.T) {
 		{
 			"Empty",
 			cadence.String(""),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"String","value":""}
 				//
 				// language=edn, format=ccf
@@ -390,7 +390,7 @@ func TestEncodeString(t *testing.T) {
 		{
 			"Non-empty",
 			cadence.String("foo"),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"String","value":"foo"}
 				//
 				// language=edn, format=ccf
@@ -421,7 +421,7 @@ func TestEncodeAddress(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Address","value":"0x0000000102030405"}
 			//
 			// language=edn, format=ccf
@@ -452,7 +452,7 @@ func TestEncodeInt(t *testing.T) {
 		{
 			"Negative",
 			cadence.NewInt(-42),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int","value":"-42"}
 				//
 				// language=edn, format=ccf
@@ -478,7 +478,7 @@ func TestEncodeInt(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewInt(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -502,7 +502,7 @@ func TestEncodeInt(t *testing.T) {
 		{
 			"Positive",
 			cadence.NewInt(42),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int","value":"42"}
 				//
 				// language=edn, format=ccf
@@ -528,7 +528,7 @@ func TestEncodeInt(t *testing.T) {
 		{
 			"SmallerThanMinInt256",
 			cadence.NewIntFromBig(new(big.Int).Sub(sema.Int256TypeMinIntBig, big.NewInt(10))),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int","value":"-57896044618658097711785492504343953926634992332820282019728792003956564819978"}
 				//
 				// language=edn, format=ccf
@@ -557,7 +557,7 @@ func TestEncodeInt(t *testing.T) {
 		{
 			"LargerThanMaxUInt256",
 			cadence.NewIntFromBig(new(big.Int).Add(sema.UInt256TypeMaxIntBig, big.NewInt(10))),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int","value":"115792089237316195423570985008687907853269984665640564039457584007913129639945"}
 				//
 				// language=edn, format=ccf
@@ -595,7 +595,7 @@ func TestEncodeInt8(t *testing.T) {
 		{
 			"Min",
 			cadence.NewInt8(math.MinInt8),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int8","value":"-128"}
 				//
 				// language=edn, format=ccf
@@ -617,7 +617,7 @@ func TestEncodeInt8(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewInt8(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int8","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -639,7 +639,7 @@ func TestEncodeInt8(t *testing.T) {
 		{
 			"Max",
 			cadence.NewInt8(math.MaxInt8),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int8","value":"127"}
 				//
 				// language=edn, format=ccf
@@ -669,7 +669,7 @@ func TestEncodeInt16(t *testing.T) {
 		{
 			"Min",
 			cadence.NewInt16(math.MinInt16),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int16","value":"-32768"}
 				//
 				// language=edn, format=ccf
@@ -691,7 +691,7 @@ func TestEncodeInt16(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewInt16(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int16","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -713,7 +713,7 @@ func TestEncodeInt16(t *testing.T) {
 		{
 			"Max",
 			cadence.NewInt16(math.MaxInt16),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int16","value":"32767"}
 				//
 				// language=edn, format=ccf
@@ -743,7 +743,7 @@ func TestEncodeInt32(t *testing.T) {
 		{
 			"Min",
 			cadence.NewInt32(math.MinInt32),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int32","value":"-2147483648"}
 				//
 				// language=edn, format=ccf
@@ -765,7 +765,7 @@ func TestEncodeInt32(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewInt32(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int32","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -787,7 +787,7 @@ func TestEncodeInt32(t *testing.T) {
 		{
 			"Max",
 			cadence.NewInt32(math.MaxInt32),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int32","value":"2147483647"}
 				//
 				// language=edn, format=ccf
@@ -817,7 +817,7 @@ func TestEncodeInt64(t *testing.T) {
 		{
 			"Min",
 			cadence.NewInt64(math.MinInt64),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int64","value":"-9223372036854775808"}
 				//
 				// language=edn, format=ccf
@@ -839,7 +839,7 @@ func TestEncodeInt64(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewInt64(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int64","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -861,7 +861,7 @@ func TestEncodeInt64(t *testing.T) {
 		{
 			"Max",
 			cadence.NewInt64(math.MaxInt64),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int64","value":"9223372036854775807"}
 				//
 				// language=edn, format=ccf
@@ -891,7 +891,7 @@ func TestEncodeInt128(t *testing.T) {
 		{
 			"Min",
 			cadence.Int128{Value: sema.Int128TypeMinIntBig},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int128","value":"-170141183460469231731687303715884105728"}
 				//
 				// language=edn, format=ccf
@@ -918,7 +918,7 @@ func TestEncodeInt128(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewInt128(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int128","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -942,7 +942,7 @@ func TestEncodeInt128(t *testing.T) {
 		{
 			"Max",
 			cadence.Int128{Value: sema.Int128TypeMaxIntBig},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int128","value":"170141183460469231731687303715884105727"}
 				//
 				// language=edn, format=ccf
@@ -977,7 +977,7 @@ func TestEncodeInt256(t *testing.T) {
 		{
 			"Min",
 			cadence.Int256{Value: sema.Int256TypeMinIntBig},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int256","value":"-57896044618658097711785492504343953926634992332820282019728792003956564819968"}
 				//
 				// language=edn, format=ccf
@@ -1006,7 +1006,7 @@ func TestEncodeInt256(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewInt256(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int256","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1030,7 +1030,7 @@ func TestEncodeInt256(t *testing.T) {
 		{
 			"Max",
 			cadence.Int256{Value: sema.Int256TypeMaxIntBig},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Int256","value":"57896044618658097711785492504343953926634992332820282019728792003956564819967"}
 				//
 				// language=edn, format=ccf
@@ -1067,7 +1067,7 @@ func TestEncodeUInt(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1091,7 +1091,7 @@ func TestEncodeUInt(t *testing.T) {
 		{
 			"Positive",
 			cadence.NewUInt(42),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt","value":"42"}
 				//
 				// language=edn, format=ccf
@@ -1117,7 +1117,7 @@ func TestEncodeUInt(t *testing.T) {
 		{
 			"LargerThanMaxUInt256",
 			cadence.UInt{Value: new(big.Int).Add(sema.UInt256TypeMaxIntBig, big.NewInt(10))},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt","value":"115792089237316195423570985008687907853269984665640564039457584007913129639945"}
 				//
 				// language=edn, format=ccf
@@ -1155,7 +1155,7 @@ func TestEncodeUInt8(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt8(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt8","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1177,7 +1177,7 @@ func TestEncodeUInt8(t *testing.T) {
 		{
 			"Max",
 			cadence.NewUInt8(math.MaxUint8),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt8","value":"255"}
 				//
 				// language=edn, format=ccf
@@ -1207,7 +1207,7 @@ func TestEncodeUInt16(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt16(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt16","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1229,7 +1229,7 @@ func TestEncodeUInt16(t *testing.T) {
 		{
 			"Max",
 			cadence.NewUInt16(math.MaxUint16),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt16","value":"65535"}
 				//
 				// language=edn, format=ccf
@@ -1259,7 +1259,7 @@ func TestEncodeUInt32(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt32(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt32","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1281,7 +1281,7 @@ func TestEncodeUInt32(t *testing.T) {
 		{
 			"Max",
 			cadence.NewUInt32(math.MaxUint32),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt32","value":"4294967295"}
 				//
 				// language=edn, format=ccf
@@ -1311,7 +1311,7 @@ func TestEncodeUInt64(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt64(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt64","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1333,7 +1333,7 @@ func TestEncodeUInt64(t *testing.T) {
 		{
 			"Max",
 			cadence.NewUInt64(uint64(math.MaxUint64)),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt64","value":"18446744073709551615"}
 				//
 				// language=edn, format=ccf
@@ -1363,7 +1363,7 @@ func TestEncodeUInt128(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt128(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt128","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1387,7 +1387,7 @@ func TestEncodeUInt128(t *testing.T) {
 		{
 			"Max",
 			cadence.UInt128{Value: sema.UInt128TypeMaxIntBig},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt128","value":"340282366920938463463374607431768211455"}
 				//
 				// language=edn, format=ccf
@@ -1422,7 +1422,7 @@ func TestEncodeUInt256(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt256(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt256","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1446,7 +1446,7 @@ func TestEncodeUInt256(t *testing.T) {
 		{
 			"Max",
 			cadence.UInt256{Value: sema.UInt256TypeMaxIntBig},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UInt256","value":"115792089237316195423570985008687907853269984665640564039457584007913129639935"}
 				//
 				// language=edn, format=ccf
@@ -1483,7 +1483,7 @@ func TestEncodeWord8(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewWord8(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Word8","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1505,7 +1505,7 @@ func TestEncodeWord8(t *testing.T) {
 		{
 			"Max",
 			cadence.NewWord8(math.MaxUint8),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Word8","value":"255"}
 				//
 				// language=edn, format=ccf
@@ -1535,7 +1535,7 @@ func TestEncodeWord16(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewWord16(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Word16","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1557,7 +1557,7 @@ func TestEncodeWord16(t *testing.T) {
 		{
 			"Max",
 			cadence.NewWord16(math.MaxUint16),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Word16","value":"65535"}
 				//
 				// language=edn, format=ccf
@@ -1587,7 +1587,7 @@ func TestEncodeWord32(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewWord32(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Word32","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1609,7 +1609,7 @@ func TestEncodeWord32(t *testing.T) {
 		{
 			"Max",
 			cadence.NewWord32(math.MaxUint32),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Word32","value":"4294967295"}
 				//
 				// language=edn, format=ccf
@@ -1639,7 +1639,7 @@ func TestEncodeWord64(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewWord64(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Word64","value":"0"}
 				//
 				// language=edn, format=ccf
@@ -1661,7 +1661,7 @@ func TestEncodeWord64(t *testing.T) {
 		{
 			"Max",
 			cadence.NewWord64(math.MaxUint64),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Word64","value":"18446744073709551615"}
 				//
 				// language=edn, format=ccf
@@ -1691,7 +1691,7 @@ func TestEncodeFix64(t *testing.T) {
 		{
 			"Zero",
 			cadence.Fix64(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Fix64","value":"0.00000000"}
 				//
 				// language=edn, format=ccf
@@ -1713,7 +1713,7 @@ func TestEncodeFix64(t *testing.T) {
 		{
 			"789.00123010",
 			cadence.Fix64(78_900_123_010),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Fix64","value":"789.00123010"}
 				//
 				// language=edn, format=ccf
@@ -1735,7 +1735,7 @@ func TestEncodeFix64(t *testing.T) {
 		{
 			"1234.056",
 			cadence.Fix64(123_405_600_000),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Fix64","value":"1234.05600000"}
 				//
 				// language=edn, format=ccf
@@ -1757,7 +1757,7 @@ func TestEncodeFix64(t *testing.T) {
 		{
 			"-12345.006789",
 			cadence.Fix64(-1_234_500_678_900),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Fix64","value":"-12345.00678900"}
 				//
 				// language=edn, format=ccf
@@ -1787,7 +1787,7 @@ func TestEncodeUFix64(t *testing.T) {
 		{
 			"Zero",
 			cadence.UFix64(0),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UFix64","value":"0.00000000"}
 				//
 				// language=edn, format=ccf
@@ -1809,7 +1809,7 @@ func TestEncodeUFix64(t *testing.T) {
 		{
 			"789.00123010",
 			cadence.UFix64(78_900_123_010),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UFix64","value":"789.00123010"}
 				//
 				// language=edn, format=ccf
@@ -1831,7 +1831,7 @@ func TestEncodeUFix64(t *testing.T) {
 		{
 			"1234.056",
 			cadence.UFix64(123_405_600_000),
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"UFix64","value":"1234.05600000"}
 				//
 				// language=edn, format=ccf
@@ -1863,7 +1863,7 @@ func TestEncodeArray(t *testing.T) {
 		cadence.NewArray(
 			[]cadence.Value{},
 		).WithType(cadence.NewVariableSizedArrayType(cadence.NewIntType())),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Array","value":[]}
 			//
 			// language=edn, format=ccf
@@ -1895,7 +1895,7 @@ func TestEncodeArray(t *testing.T) {
 			cadence.NewInt(2),
 			cadence.NewInt(3),
 		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewIntType())),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Array","value":[{"type":"Int","value":"1"},{"type":"Int","value":"2"},{"type":"Int","value":"3"}]}
 			//
 			// language=edn, format=ccf
@@ -1951,7 +1951,7 @@ func TestEncodeArray(t *testing.T) {
 				cadence.NewInt(3),
 			}).WithType(fooResourceType),
 		}).WithType(cadence.NewVariableSizedArrayType(fooResourceType)),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Array","value":[{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}]}
 			//
 			// language=edn, format=ccf
@@ -2054,7 +2054,7 @@ func TestEncodeArray(t *testing.T) {
 				cadence.NewBool(true),
 			}).WithType(foooResourceTypeWithAbstractField),
 		}).WithType(cadence.NewVariableSizedArrayType(foooResourceTypeWithAbstractField)),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Array","value":[{"type":"Resource","value":{"id":"S.test.Fooo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}},{"name":"baz","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"S.test.Fooo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}},{"name":"baz","value":{"type":"String","value":"a"}}]}},{"type":"Resource","value":{"id":"S.test.Fooo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}},{"name":"baz","value":{"type":"Bool","value":true}}]}}]}
 			//
 			// language=edn, format=ccf
@@ -2196,7 +2196,7 @@ func TestEncodeArray(t *testing.T) {
 			s,
 			cadence.NewBool(true),
 		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewAnyStructType())),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Array","value":[{"type":"Int","value":"1"},{"type":"String","value":"a"},{"type":"Bool","value":true}]}
 			//
 			// language=edn, format=ccf
@@ -2267,7 +2267,7 @@ func TestEncodeArray(t *testing.T) {
 			cadence.NewInt16(2),
 			cadence.NewInt32(3),
 		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewNumberType())),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"value":[{"value":"1","type":"Int8"},{"value":"2","type":"Int16"},{"value":"3","type":"Int32"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
@@ -2333,7 +2333,7 @@ func TestEncodeArray(t *testing.T) {
 				cadence.NewInt(1),
 			}).WithType(fooResourceType),
 		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewAnyStructType())),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"value":[{"value":"1","type":"Int"},{"value":{"id":"S.test.Foo","fields":[{"value":{"value":"1","type":"Int"},"name":"bar"}]},"type":"Resource"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
@@ -2444,7 +2444,7 @@ func TestEncodeArray(t *testing.T) {
 				s,
 			}).WithType(foooResourceTypeWithAbstractField),
 		}).WithType(cadence.NewVariableSizedArrayType(resourceInterfaceType)),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"value":[{"value":{"id":"S.test.Foo","fields":[{"value":{"value":"1","type":"Int"},"name":"bar"}]},"type":"Resource"},{"value":{"id":"S.test.Fooo","fields":[{"value":{"value":"2","type":"Int"},"name":"bar"},{"value":{"value":"a","type":"String"},"name":"baz"}]},"type":"Resource"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
@@ -2639,7 +2639,7 @@ func TestEncodeDictionary(t *testing.T) {
 		cadence.NewDictionary(
 			[]cadence.KeyValuePair{},
 		).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"value":[],"type":"Dictionary"}
 			//
 			// language=edn, format=ccf
@@ -2685,7 +2685,7 @@ func TestEncodeDictionary(t *testing.T) {
 				Value: cadence.NewInt(3),
 			},
 		}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Int","value":"1"}},{"key":{"type":"String","value":"b"},"value":{"type":"Int","value":"2"}},{"key":{"type":"String","value":"c"},"value":{"type":"Int","value":"3"}}]}
 			//
 			// language=edn, format=ccf
@@ -2780,7 +2780,7 @@ func TestEncodeDictionary(t *testing.T) {
 			cadence.NewStringType(),
 			cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
 		),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Dictionary","value":[{"key":{"type":"String","value":"1"},"value":{"type":"Int","value":"1"}}]}},{"key":{"type":"String","value":"b"},"value":{"type":"Dictionary","value":[{"key":{"type":"String","value":"2"},"value":{"type":"Int","value":"2"}}]}},{"key":{"type":"String","value":"c"},"value":{"type":"Dictionary","value":[{"key":{"type":"String","value":"3"},"value":{"type":"Int","value":"3"}}]}}]}
 			//
 			// language=edn, format=ccf
@@ -2895,7 +2895,7 @@ func TestEncodeDictionary(t *testing.T) {
 			cadence.NewStringType(),
 			fooResourceType,
 		)),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}}},{"key":{"type":"String","value":"b"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}}},{"key":{"type":"String","value":"c"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}}]}
 			//
 			// language=edn, format=ccf
@@ -3046,7 +3046,7 @@ func TestEncodeSortedDictionary(t *testing.T) {
 		"Simple",
 		dict,
 		expectedDict,
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Int","value":"1"}},{"key":{"type":"String","value":"b"},"value":{"type":"Int","value":"2"}},{"key":{"type":"String","value":"c"},"value":{"type":"Int","value":"3"}}]}
 			//
 			// language=edn, format=ccf
@@ -3189,7 +3189,7 @@ func TestEncodeResource(t *testing.T) {
 		))
 
 		expectedCBOR := []byte{
-			// language=json, format=json-cadence data interchange format
+			// language=json, format=json-cdc
 			// {"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}
 			//
 			// language=edn, format=ccf
@@ -3305,7 +3305,7 @@ func TestEncodeResource(t *testing.T) {
 		))
 
 		// function "foo" should be omitted from resulting CBOR
-		expectedCBOR := []byte{ // language=json, format=json-cadence data interchange format
+		expectedCBOR := []byte{ // language=json, format=json-cdc
 			// {"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}
 			//
 			// language=edn, format=ccf
@@ -3447,7 +3447,7 @@ func TestEncodeResource(t *testing.T) {
 			nil,
 		))
 
-		expectedCBOR := []byte{ // language=json, format=json-cadence data interchange format
+		expectedCBOR := []byte{ // language=json, format=json-cdc
 			// {"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"2"}},{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}
 			//
 			// language=edn, format=ccf
@@ -3605,7 +3605,7 @@ func TestEncodeStruct(t *testing.T) {
 				cadence.String("foo"),
 			},
 		).WithType(simpleStructType),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}
 			//
 			// language=edn, format=ccf
@@ -3710,7 +3710,7 @@ func TestEncodeStruct(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceStructType),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}
 			//
 			// language=edn, format=ccf
@@ -3857,7 +3857,7 @@ func TestEncodeEvent(t *testing.T) {
 				cadence.String("foo"),
 			},
 		).WithType(simpleEventType),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}
 			//
 			// language=edn, format=ccf
@@ -3962,7 +3962,7 @@ func TestEncodeEvent(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceEventType),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}
 			//
 			// language=edn, format=ccf
@@ -4108,7 +4108,7 @@ func TestEncodeContract(t *testing.T) {
 				cadence.String("foo"),
 			},
 		).WithType(simpleContractType),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}
 			//
 			// language=edn, format=ccf
@@ -4213,7 +4213,7 @@ func TestEncodeContract(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceContractType),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}
 			//
 			// language=edn, format=ccf
@@ -4422,7 +4422,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 				StaticType: ty.typ,
 			},
 			expected: w.Bytes(),
-			// language=json, format=json-cadence data interchange format
+			// language=json, format=json-cdc
 			// {"type":"Type","value":{"staticType":{"kind":"[ty.ID()]"}}}
 			//
 			// language=edn, format=ccf
@@ -4444,7 +4444,7 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.OptionalType{Type: cadence.IntType{}},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Optional", "type" : {"kind" : "Int"}}}}
 				//
 				// language=edn, format=ccf
@@ -4477,7 +4477,7 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.OptionalType{Type: &cadence.OptionalType{Type: cadence.IntType{}}},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Optional", "type" : {"kind" : "Int"}}}}
 				//
 				// language=edn, format=ccf
@@ -4511,7 +4511,7 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.VariableSizedArrayType{ElementType: cadence.IntType{}},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"VariableSizedArray", "type" : {"kind" : "Int"}}}}
 				//
 				// language=edn, format=ccf
@@ -4547,7 +4547,7 @@ func TestEncodeType(t *testing.T) {
 					Size:        3,
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"ConstantSizedArray", "type" : {"kind" : "Int"}, "size" : 3}}}
 				//
 				// language=edn, format=ccf
@@ -4587,7 +4587,7 @@ func TestEncodeType(t *testing.T) {
 					KeyType:     cadence.IntType{},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Dictionary", "key" : {"kind" : "Int"}, "value" : {"kind" : "String"}}}}
 				//
 				// language=edn, format=ccf
@@ -4636,7 +4636,7 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type", "value": {"staticType": {"kind": "Struct", "type" : "", "typeID" : "S.test.S", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
 				//
 				// language=edn, format=ccf
@@ -4731,7 +4731,7 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type", "value": {"staticType": {"kind": "Resource", "type" : "", "typeID" : "S.test.R", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
 				//
 				// language=edn, format=ccf
@@ -4827,7 +4827,7 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type", "value": {"staticType": {"kind": "Contract", "type" : "", "typeID" : "S.test.C", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
 				//
 				// language=edn, format=ccf
@@ -4923,7 +4923,7 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type", "value": {"staticType": {"kind": "StructInterface", "type" : "", "typeID" : "S.test.S", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
 				//
 				// language=edn, format=ccf
@@ -5019,7 +5019,7 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type", "value": {"staticType": {"kind": "ResourceInterface", "type" : "", "typeID" : "S.test.R", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
 				//
 				// language=edn, format=ccf
@@ -5115,7 +5115,7 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type", "value": {"staticType": {"kind": "ContractInterface", "type" : "", "typeID" : "S.test.C", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
 				//
 				// language=edn, format=ccf
@@ -5211,7 +5211,7 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type", "value": {"staticType": {"kind": "Event", "type" : "", "typeID" : "S.test.E", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [[{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}, {"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]] } } }
 				//
 				// language=edn, format=ccf
@@ -5306,7 +5306,7 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type", "value": {"staticType": {"kind": "Enum", "type" : {"kind" : "String"}, "typeID" : "S.test.E", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
 				//
 				// language=edn, format=ccf
@@ -5397,7 +5397,7 @@ func TestEncodeType(t *testing.T) {
 					Type:       cadence.IntType{},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Reference", "type" : {"kind" : "Int"}, "authorized" : false}}}`
 				//
 				// language=edn, format=ccf
@@ -5440,7 +5440,7 @@ func TestEncodeType(t *testing.T) {
 					ReturnType: cadence.IntType{},
 				}).WithID("Foo"),
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType": { "kind" : "Function", "typeID":"Foo", "return" : {"kind" : "Int"}, "parameters" : [ {"label" : "qux", "id" : "baz", "type": {"kind" : "String"}} ]} } }
 				//
 				// language=edn, format=ccf
@@ -5497,7 +5497,7 @@ func TestEncodeType(t *testing.T) {
 					BorrowType: cadence.IntType{},
 				},
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Capability", "type" : {"kind" : "Int"}}}}
 				//
 				// language=edn, format=ccf
@@ -5536,7 +5536,7 @@ func TestEncodeType(t *testing.T) {
 					Type: cadence.IntType{},
 				}).WithID("Int{String}"),
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType": { "kind": "Restriction", "typeID":"Int{String}", "type" : {"kind" : "Int"}, "restrictions" : [ {"kind" : "String"} ]} } }
 				//
 				// language=edn, format=ccf
@@ -5582,7 +5582,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":""}}
 				//
 				// language=edn, format=ccf
@@ -5615,7 +5615,7 @@ func TestEncodeCapability(t *testing.T) {
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		},
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Capability","value":{"path":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":{"kind":"Int"},"address":"0x0000000102030405"}}
 			//
 			// language=edn, format=ccf
@@ -5675,7 +5675,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     "12.3",
 			expected: cadence.Fix64(12_30000000),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "12.3"}
 				//
 				// language=edn, format=ccf
@@ -5698,7 +5698,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     "12.03",
 			expected: cadence.Fix64(12_03000000),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "12.03"}
 				//
 				// language=edn, format=ccf
@@ -5721,7 +5721,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     "12.003",
 			expected: cadence.Fix64(12_00300000),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "12.003"}
 				//
 				// language=edn, format=ccf
@@ -5744,7 +5744,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     "12.0003",
 			expected: cadence.Fix64(12_00030000),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "12.0003"}
 				//
 				// language=edn, format=ccf
@@ -5767,7 +5767,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     "12.00003",
 			expected: cadence.Fix64(12_00003000),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "12.00003"}
 				//
 				// language=edn, format=ccf
@@ -5790,7 +5790,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     "12.000003",
 			expected: cadence.Fix64(12_00000300),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "12.000003"}
 				//
 				// language=edn, format=ccf
@@ -5813,7 +5813,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     "12.0000003",
 			expected: cadence.Fix64(12_00000030),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "12.0000003"}
 				//
 				// language=edn, format=ccf
@@ -5836,7 +5836,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     "120.3",
 			expected: cadence.Fix64(120_30000000),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "120.3"}
 				//
 				// language=edn, format=ccf
@@ -5860,7 +5860,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     fmt.Sprintf("%d.1", maxInt),
 			expected: cadence.Fix64(9223372036810000000),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "92233720368.1"}
 				//
 				// language=edn, format=ccf
@@ -5883,7 +5883,7 @@ func TestDecodeFix64(t *testing.T) {
 			// 92233720369.1
 			name: fmt.Sprintf("%d.1", maxInt+1),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "92233720369.1"}
 				//
 				// language=edn, format=ccf
@@ -5910,7 +5910,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     fmt.Sprintf("%d.1", minInt),
 			expected: cadence.Fix64(-9223372036810000000),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "-92233720368.1"}
 				//
 				// language=edn, format=ccf
@@ -5933,7 +5933,7 @@ func TestDecodeFix64(t *testing.T) {
 			// -92233720369.1
 			name: fmt.Sprintf("%d.1", minInt-1),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "-92233720369.1"}
 				//
 				// language=edn, format=ccf
@@ -5960,7 +5960,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     fmt.Sprintf("%d.%d", maxInt, maxFrac),
 			expected: cadence.Fix64(maxInt*factor + maxFrac),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "92233720368.54775807"}
 				//
 				// language=edn, format=ccf
@@ -5983,7 +5983,7 @@ func TestDecodeFix64(t *testing.T) {
 			// 92233720368.54775808
 			name: fmt.Sprintf("%d.%d", maxInt, maxFrac+1),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "92233720368.54775808"}
 				//
 				// language=edn, format=ccf
@@ -6010,7 +6010,7 @@ func TestDecodeFix64(t *testing.T) {
 			name:     fmt.Sprintf("%d.%d", minInt, -(minFrac)),
 			expected: cadence.Fix64(-9223372036854775808),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "-92233720368.54775808"}
 				//
 				// language=edn, format=ccf
@@ -6033,7 +6033,7 @@ func TestDecodeFix64(t *testing.T) {
 			// -92233720368.54775809
 			name: fmt.Sprintf("%d.%d", minInt, -(minFrac - 1)),
 			encodedData: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"type": "Fix64", "value": "-92233720368.54775809"}
 				//
 				// language=edn, format=ccf
@@ -6094,7 +6094,7 @@ func TestExportRecursiveType(t *testing.T) {
 				cadence.Optional{},
 			},
 		}.WithType(ty),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"foo","value":{"type": "Optional","value":null}}]}}
 			//
 			// language=edn, format=ccf
@@ -6185,7 +6185,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: ty,
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Foo","fields":[{"id":"foo","type":{"kind":"Optional","type":"S.test.Foo"}}],"initializers":[],"type":""}}}
 				//
 				// language=edn, format=ccf
@@ -6267,7 +6267,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: barTy,
 			},
-			[]byte{ // language=json, format=json-cadence data interchange format
+			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Bar","fields":[{"id":"foo1","type":{"kind":"Resource","typeID":"S.test.Foo","fields":[],"initializers":[],"type":""}},{"id":"foo2","type":"S.test.Foo"}],"initializers":[],"type":""}}}
 				//
 				// language=edn, format=ccf
@@ -6350,7 +6350,7 @@ func TestEncodePath(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.NewPath("storage", "foo"),
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// {"type":"Path","value":{"domain":"storage","identifier":"foo"}}
 			//
 			// language=edn, format=ccf
@@ -6402,7 +6402,7 @@ func TestDecodeInvalidType(t *testing.T) {
 		t.Parallel()
 
 		encodedData := []byte{
-			// language=json, format=json-cadence data interchange format
+			// language=json, format=json-cdc
 			// { "type":"Struct", "value":{ "id":"", "fields":[] } }
 			//
 			// language=edn, format=ccf
@@ -6453,7 +6453,7 @@ func TestDecodeInvalidType(t *testing.T) {
 		t.Parallel()
 
 		encodedData := []byte{
-			// language=json, format=json-cadence data interchange format
+			// language=json, format=json-cdc
 			// { "type":"Struct", "value":{ "id":"I.Foo", "fields":[] } }
 			//
 			// language=edn, format=ccf
@@ -6506,7 +6506,7 @@ func TestDecodeInvalidType(t *testing.T) {
 		t.Parallel()
 
 		encodedData := []byte{
-			// language=json, format=json-cadence data interchange format
+			// language=json, format=json-cdc
 			// { "type":"Struct", "value":{ "id":"N.PublicKey", "fields":[] } }
 			//
 			// language=edn, format=ccf
@@ -6624,7 +6624,7 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "Foo",
 			},
-			encoded: []byte{ // language=json, format=json-cadence data interchange format
+			encoded: []byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Struct","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
 				//
 				// language=edn, format=ccf
@@ -6665,7 +6665,7 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "Foo",
 			},
-			encoded: []byte{ // language=json, format=json-cadence data interchange format
+			encoded: []byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"StructInterface","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
 				//
 				// language=edn, format=ccf
@@ -6706,7 +6706,7 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "Foo",
 			},
-			encoded: []byte{ // language=json, format=json-cadence data interchange format
+			encoded: []byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
 				//
 				// language=edn, format=ccf
@@ -6747,7 +6747,7 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "Foo",
 			},
-			encoded: []byte{ // language=json, format=json-cadence data interchange format
+			encoded: []byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"ResourceInterface","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
 				//
 				// language=edn, format=ccf
@@ -6788,7 +6788,7 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "Foo",
 			},
-			encoded: []byte{ // language=json, format=json-cadence data interchange format
+			encoded: []byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Contract","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
 				//
 				// language=edn, format=ccf
@@ -6829,7 +6829,7 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "Foo",
 			},
-			encoded: []byte{ // language=json, format=json-cadence data interchange format
+			encoded: []byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"ContractInterface","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
 				//
 				// language=edn, format=ccf
@@ -6870,7 +6870,7 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "Foo",
 			},
-			encoded: []byte{ // language=json, format=json-cadence data interchange format
+			encoded: []byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Enum","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
 				//
 				// language=edn, format=ccf
@@ -6911,7 +6911,7 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "Foo",
 			},
-			encoded: []byte{ // language=json, format=json-cadence data interchange format
+			encoded: []byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Event","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
 				//
 				// language=edn, format=ccf
@@ -6984,7 +6984,7 @@ func TestExportFunctionValue(t *testing.T) {
 				ReturnType: cadence.VoidType{},
 			}).WithID("(():Void)"),
 		},
-		[]byte{ // language=json, format=json-cadence data interchange format
+		[]byte{ // language=json, format=json-cdc
 			// { "type": "Function", "value": { "functionType": { "kind": "Function", "typeID": "(():Void)", "parameters": [], "return": { "kind": "Void" } } } }
 			//
 			// language=edn, format=ccf
@@ -7028,7 +7028,7 @@ func TestDeployedEvents(t *testing.T) {
 			name:  "FlowFees.FeesDeducted",
 			event: createFlowFeesFeesDeductedEvent(),
 			expectedCBOR: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"value":{"id":"A.f919ee77447b7497.FlowFees.FeesDeducted","fields":[{"value":{"value":"0.01797293","type":"UFix64"},"name":"amount"},{"value":{"value":"1.00000000","type":"UFix64"},"name":"inclusionEffort"},{"value":{"value":"0.00360123","type":"UFix64"},"name":"executionEffort"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
@@ -7116,7 +7116,7 @@ func TestDeployedEvents(t *testing.T) {
 			name:  "FlowFees.TokensWithdrawn",
 			event: createFlowFeesTokensWithdrawnEvent(),
 			expectedCBOR: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"value":{"id":"A.f919ee77447b7497.FlowFees.TokensWithdrawn","fields":[{"value":{"value":"53.04112895","type":"UFix64"},"name":"amount"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
@@ -7178,7 +7178,7 @@ func TestDeployedEvents(t *testing.T) {
 			name:  "FlowIDTableStaking.DelegatorRewardsPaid",
 			event: createFlowIDTableStakingDelegatorRewardsPaidEvent(),
 			expectedCBOR: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"value":{"id":"A.8624b52f9ddcd04a.FlowIDTableStaking.DelegatorRewardsPaid","fields":[{"value":{"value":"e52cbcd825e328acac8db6bcbdcbb6e7724862c8b89b09d85edccf41ff9981eb","type":"String"},"name":"nodeID"},{"value":{"value":"92","type":"UInt32"},"name":"delegatorID"},{"value":{"value":"4.38760261","type":"UFix64"},"name":"amount"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
@@ -7269,7 +7269,7 @@ func TestDeployedEvents(t *testing.T) {
 			name:  "FlowIDTableStaking.EpochTotalRewardsPaid",
 			event: createFlowIDTableStakingEpochTotalRewardsPaidEvent(),
 			expectedCBOR: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"value":{"id":"A.8624b52f9ddcd04a.FlowIDTableStaking.EpochTotalRewardsPaid","fields":[{"value":{"value":"1316543.00000000","type":"UFix64"},"name":"total"},{"value":{"value":"53.04112895","type":"UFix64"},"name":"fromFees"},{"value":{"value":"1316489.95887105","type":"UFix64"},"name":"minted"},{"value":{"value":"6.04080767","type":"UFix64"},"name":"feesBurned"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
@@ -7370,7 +7370,7 @@ func TestDeployedEvents(t *testing.T) {
 			name:  "FlowIDTableStaking.NewWeeklyPayout",
 			event: createFlowIDTableStakingNewWeeklyPayoutEvent(),
 			expectedCBOR: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"value":{"id":"A.8624b52f9ddcd04a.FlowIDTableStaking.NewWeeklyPayout","fields":[{"value":{"value":"1317778.00000000","type":"UFix64"},"name":"newPayout"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
@@ -7432,7 +7432,7 @@ func TestDeployedEvents(t *testing.T) {
 			name:  "FlowIDTableStaking.RewardsPaid",
 			event: createFlowIDTableStakingRewardsPaidEvent(),
 			expectedCBOR: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"value":{"id":"A.8624b52f9ddcd04a.FlowIDTableStaking.RewardsPaid","fields":[{"value":{"value":"e52cbcd825e328acac8db6bcbdcbb6e7724862c8b89b09d85edccf41ff9981eb","type":"String"},"name":"nodeID"},{"value":{"value":"1745.49955740","type":"UFix64"},"name":"amount"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
@@ -7509,7 +7509,7 @@ func TestDeployedEvents(t *testing.T) {
 			name:  "FlowToken.TokensDeposited with nil receiver",
 			event: createFlowTokenTokensDepositedEventNoReceiver(),
 			expectedCBOR: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"value":{"id":"A.1654653399040a61.FlowToken.TokensDeposited","fields":[{"value":{"value":"1316489.95887105","type":"UFix64"},"name":"amount"},{"value":{"value":null,"type":"Optional"},"name":"to"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
@@ -7586,7 +7586,7 @@ func TestDeployedEvents(t *testing.T) {
 			name:  "FlowToken.TokensDeposited",
 			event: createFlowTokenTokensDepositedEvent(),
 			expectedCBOR: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"value":{"id":"A.1654653399040a61.FlowToken.TokensDeposited","fields":[{"value":{"value":"1745.49955740","type":"UFix64"},"name":"amount"},{"value":{"value":{"value":"0x8624b52f9ddcd04a","type":"Address"},"type":"Optional"},"name":"to"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
@@ -7665,7 +7665,7 @@ func TestDeployedEvents(t *testing.T) {
 			name:  "FlowToken.TokensMinted",
 			event: createFlowTokenTokensMintedEvent(),
 			expectedCBOR: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"value":{"id":"A.1654653399040a61.FlowToken.TokensMinted","fields":[{"value":{"value":"1316489.95887105","type":"UFix64"},"name":"amount"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
@@ -7727,7 +7727,7 @@ func TestDeployedEvents(t *testing.T) {
 			name:  "FlowToken.TokensWithdrawn",
 			event: createFlowTokenTokensWithdrawnEvent(),
 			expectedCBOR: []byte{
-				// language=json, format=json-cadence data interchange format
+				// language=json, format=json-cdc
 				// {"value":{"id":"A.1654653399040a61.FlowToken.TokensWithdrawn","fields":[{"value":{"value":"53.04112895","type":"UFix64"},"name":"amount"},{"value":{"value":{"value":"0xf919ee77447b7497","type":"Address"},"type":"Optional"},"name":"from"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
