@@ -22,9 +22,10 @@ import (
 	"math"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCCFTypeID(t *testing.T) {
@@ -69,7 +70,7 @@ func TestCCFTypeIDByCadenceType(t *testing.T) {
 	ccfIDs := make(ccfTypeIDByCadenceType)
 
 	// Lookup non-existent CCF type ID.
-	id, err := ccfIDs.id(simpleStructType())
+	_, err := ccfIDs.id(simpleStructType())
 	require.Error(t, err)
 
 	// Add entry.
@@ -77,7 +78,7 @@ func TestCCFTypeIDByCadenceType(t *testing.T) {
 	ccfIDs[simpleStructType().ID()] = ccfID
 
 	// Lookup existing CCF type ID.
-	id, err = ccfIDs.id(simpleStructType())
+	id, err := ccfIDs.id(simpleStructType())
 	require.Equal(t, ccfID, id)
 	require.NoError(t, err)
 }
