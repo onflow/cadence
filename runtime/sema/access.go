@@ -25,10 +25,10 @@ import (
 
 type Access interface {
 	isAccess()
-	// returns whether receiver access < argument access
+	// returns whether receiver access is less permissive than argument access
 	IsLessPermissiveThan(Access) bool
-	// returns whether receiver access >= argument access
-	IsMorePermissiveThan(Access) bool
+	// returns whether receiver access permits argument access
+	PermitsAccess(Access) bool
 	Access() ast.Access
 }
 
@@ -69,13 +69,45 @@ func (a EntitlementAccess) Access() ast.Access {
 	return a.astAccess
 }
 
-func (e EntitlementAccess) IsMorePermissiveThan(other Access) bool {
+func (e EntitlementAccess) PermitsAccess(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
-		return true
+		return otherAccess == PrimitiveAccess(ast.AccessPrivate)
 	case EntitlementAccess:
-		// e >= other if e is a subset of other, as entitlement sets are unions rather than intersections
-		return e.Entitlements.KeysetIsSubsetOf(otherAccess.Entitlements)
+		switch otherAccess.SetKind {
+		case Disjunction:
+			var innerPredicate func(eKey *EntitlementType) bool
+			switch e.SetKind {
+			case Disjunction:
+				// e permits other if e is a superset of other when both are disjunctions,
+				// or equivalently if other is a subset of e, i.e. whichever entitlement other has,
+				// it is guaranteed to be a valid entitlement for e
+				innerPredicate = e.Entitlements.Contains
+			case Conjunction:
+				// when e is a conjunction and other is a disjunction, e permits other only when the two sets contain
+				// exactly the same elements
+				innerPredicate = func(eKey *EntitlementType) bool {
+					return e.Entitlements.ForAllKeys(func(otherKey *EntitlementType) bool {
+						return eKey.Equal(otherKey)
+					})
+				}
+			}
+			return otherAccess.Entitlements.ForAllKeys(innerPredicate)
+		case Conjunction:
+			var outerPredicate func(func(eKey *EntitlementType) bool) bool
+			switch e.SetKind {
+			case Conjunction:
+				// e permits other whenever e is a subset of other (when other possesses more entitlements than e)
+				// when both are conjunctions
+				outerPredicate = e.Entitlements.ForAllKeys
+			case Disjunction:
+				// when e is a disjunction and other is a conjunction, e permits other when any of other's entitlements appear in e,
+				// or equivalently, when the two sets are not disjoint
+				outerPredicate = e.Entitlements.ForAnyKey
+			}
+			return outerPredicate(otherAccess.Entitlements.Contains)
+		}
+		return false
 	default:
 		return false
 	}
@@ -87,9 +119,9 @@ func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
 		return ast.PrimitiveAccess(otherAccess) != ast.AccessPrivate
 	case EntitlementAccess:
 		// subset check returns true on equality, and we want this function to be false on equality, so invert the >= check
-		return !otherAccess.IsMorePermissiveThan(e)
+		return !e.PermitsAccess(otherAccess)
 	default:
-		return false
+		return true
 	}
 }
 
@@ -110,12 +142,11 @@ func (a EntitlementMapAccess) Access() ast.Access {
 	return a.astAccess
 }
 
-func (e EntitlementMapAccess) IsMorePermissiveThan(other Access) bool {
+func (e EntitlementMapAccess) PermitsAccess(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
-		return true
+		return otherAccess == PrimitiveAccess(ast.AccessPrivate)
 	case EntitlementMapAccess:
-		// maps are only >= if they are ==
 		return e.Type.Equal(otherAccess.Type)
 	default:
 		return false
@@ -130,7 +161,7 @@ func (e EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
 		// this should be false on equality
 		return !e.Type.Equal(otherAccess.Type)
 	default:
-		return false
+		return true
 	}
 }
 
@@ -150,7 +181,7 @@ func (a PrimitiveAccess) IsLessPermissiveThan(otherAccess Access) bool {
 	return true
 }
 
-func (a PrimitiveAccess) IsMorePermissiveThan(otherAccess Access) bool {
+func (a PrimitiveAccess) PermitsAccess(otherAccess Access) bool {
 	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
 		return ast.PrimitiveAccess(a) >= ast.PrimitiveAccess(otherPrimitive)
 	}

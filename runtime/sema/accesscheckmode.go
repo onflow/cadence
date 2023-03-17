@@ -55,12 +55,12 @@ func (mode AccessCheckMode) IsReadableAccess(access Access) bool {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
-		return access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublic))
+		return access.PermitsAccess(PrimitiveAccess(ast.AccessPublic))
 
 	case AccessCheckModeNotSpecifiedUnrestricted:
 
 		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
-			access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublic))
+			access.PermitsAccess(PrimitiveAccess(ast.AccessPublic))
 
 	case AccessCheckModeNone:
 		return true
@@ -75,12 +75,12 @@ func (mode AccessCheckMode) IsWriteableAccess(access Access) bool {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
-		return access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublicSettable))
+		return access.PermitsAccess(PrimitiveAccess(ast.AccessPublicSettable))
 
 	case AccessCheckModeNotSpecifiedUnrestricted:
 
 		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
-			access.IsMorePermissiveThan(PrimitiveAccess(ast.AccessPublicSettable))
+			access.PermitsAccess(PrimitiveAccess(ast.AccessPublicSettable))
 
 	case AccessCheckModeNone:
 		return true

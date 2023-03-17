@@ -1079,12 +1079,51 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 			struct interface I {
 				access(E) fun foo() 
 			}
-			struct S {
+			struct S: I {
 				access(E) fun foo() {}
 			}
 		`)
 
 		assert.NoError(t, err)
+	})
+
+	t.Run("valid mapped", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface I {
+				access(M) let x: auth(M) &String
+			}
+			struct S: I {
+				access(M) let x: auth(M) &String
+				init() {
+					self.x = &"foo" as auth(M) &String
+				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("mismatched mapped", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			entitlement mapping N {}
+			struct interface I {
+				access(M) let x: auth(M) &String
+			}
+			struct S: I {
+				access(N) let x: auth(N) &String
+				init() {
+					self.x = &"foo" as auth(N) &String
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
 	t.Run("pub subtyping invalid", func(t *testing.T) {
@@ -1246,6 +1285,98 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
+	t.Run("invalid map subtype with regular conjunction", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement mapping M {}
+			struct interface I {
+				access(E, F) var x: auth(M) &String
+			}
+			struct S: I {
+				access(M) var x: auth(M) &String 
+
+				init() {
+					self.x = &"foo" as auth(M) &String
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("invalid map supertype with regular conjunction", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement mapping M {}
+			struct interface I {
+				access(M) var x: auth(M) &String
+			}
+			struct S: I {
+				access(E, F) var x: auth(M) &String 
+
+				init() {
+					self.x = &"foo" as auth(M) &String
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("invalid map subtype with regular disjunction", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement mapping M {}
+			struct interface I {
+				access(E | F) var x: auth(M) &String
+			}
+			struct S: I {
+				access(M) var x: auth(M) &String 
+
+				init() {
+					self.x = &"foo" as auth(M) &String
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("invalid map supertype with regular disjunction", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement mapping M {}
+			struct interface I {
+				access(M) var x: auth(M) &String
+			}
+			struct S: I {
+				access(E | F) var x: auth(M) &String 
+
+				init() {
+					self.x = &"foo" as auth(M) &String
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
 	t.Run("expanded entitlements valid in disjunction", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -1265,19 +1396,54 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("more expanded entitlements valid in disjunction", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F
+			entitlement G
+			struct interface I {
+				access(E | G) fun foo() 
+			}
+			struct S: I {
+				access(E | F | G) fun foo() {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("reduced entitlements valid with conjunction", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E
 			entitlement F 
+			entitlement G
 			struct interface I {
-				access(E) fun foo() 
+				access(E, G) fun foo() 
 			}
 			struct interface J {
 				access(E, F) fun foo() 
 			}
 			struct S: I, J {
 				access(E) fun foo() {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("more reduced entitlements valid with conjunction", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			struct interface I {
+				access(E, F, G) fun foo() 
+			}
+			struct S: I {
+				access(E, F) fun foo() {}
 			}
 		`)
 
@@ -1297,6 +1463,27 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 			}
 			struct S: I, J {
 				access(E, F) fun foo() {}
+			}
+		`)
+
+		// this conforms to neither I nor J
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.IsType(t, &sema.ConformanceError{}, errs[1])
+	})
+
+	t.Run("more expanded entitlements invalid in conjunction", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F
+			entitlement G
+			struct interface I {
+				access(E, F) fun foo() 
+			}
+			struct S: I {
+				access(E, F, G) fun foo() {}
 			}
 		`)
 
@@ -1345,6 +1532,97 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("more reduced entitlements invalid with disjunction", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			struct interface I {
+				access(E | F | G) fun foo() 
+			}
+			struct S: I {
+				access(E | G) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("overlapped entitlements invalid with disjunction", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			struct interface J {
+				access(E | F) fun foo() 
+			}
+			struct S: J {
+				access(E | G) fun foo() {}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("overlapped entitlements invalid with disjunction/conjunction subtype", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			struct interface J {
+				access(E | F) fun foo() 
+			}
+			struct S: J {
+				access(E, G) fun foo() {}
+			}
+		`)
+
+		// implementation is more specific because it requires both, but interface only guarantees one
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("disjunction/conjunction subtype valid when sets are the same", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			struct interface J {
+				access(E | E) fun foo() 
+			}
+			struct S: J {
+				access(E, E) fun foo() {}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("overlapped entitlements valid with conjunction/disjunction subtype", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			struct interface J {
+				access(E, F) fun foo() 
+			}
+			struct S: J {
+				access(E | G) fun foo() {}
+			}
+		`)
+
+		// implementation is less specific because it only requires one, but interface guarantees both
+		assert.NoError(t, err)
 	})
 
 	t.Run("different entitlements invalid", func(t *testing.T) {

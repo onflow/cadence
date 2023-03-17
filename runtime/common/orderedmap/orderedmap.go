@@ -190,17 +190,37 @@ func (om *OrderedMap[K, V]) ForeachWithError(f func(key K, value V) error) error
 	return nil
 }
 
-// KeysetIsSubsetOf checks whether the key set of the receiver is a subset of the
-// argument map's key set
-func (om *OrderedMap[K, V]) KeysetIsSubsetOf(other *OrderedMap[K, V]) bool {
-	isSubset := true
-	om.Foreach(func(key K, _ V) {
-		isSubset = isSubset && other.Contains(key)
-	})
-	return isSubset
+// ForAllKeys iterates over the keys of the map, and returns whether the provided
+// predicate is true for all of them
+func (om *OrderedMap[K, V]) ForAllKeys(predicate func(key K) bool) bool {
+	if om.pairs == nil {
+		return true
+	}
+
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		if !predicate(pair.Key) {
+			return false
+		}
+	}
+	return true
 }
 
-// KeySetIsDisjointFrom checks whether the key set of the receiver is a disjoint from of the
+// ForAnyKey iterates over the keys of the map, and returns whether the provided
+// predicate is true for any of them
+func (om *OrderedMap[K, V]) ForAnyKey(predicate func(key K) bool) bool {
+	if om.pairs == nil {
+		return true
+	}
+
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		if predicate(pair.Key) {
+			return true
+		}
+	}
+	return false
+}
+
+// KeySetIsDisjointFrom checks whether the key set of the receiver is disjoint from of the
 // argument map's key set
 func (om *OrderedMap[K, V]) KeySetIsDisjointFrom(other *OrderedMap[K, V]) bool {
 	isDisjoint := true
