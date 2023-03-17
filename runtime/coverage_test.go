@@ -762,6 +762,71 @@ func TestCoverageReportString(t *testing.T) {
 	)
 }
 
+func TestCoverageReportDiff(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.StringLocation("AnswerScript")
+	coverageReport.InspectProgram(location, program)
+	coverageReport.AddLineHit(location, 3)
+	coverageReport.AddLineHit(location, 4)
+
+	summary := coverageReport.Summary()
+
+	actual, err := json.Marshal(summary)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": "50.0%",
+	    "hits": 2,
+	    "locations": 1,
+	    "misses": 2,
+	    "statements": 4
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+
+	otherCoverageReport := NewCoverageReport()
+	otherCoverageReport.InspectProgram(location, program)
+	otherCoverageReport.AddLineHit(location, 3)
+	otherCoverageReport.AddLineHit(location, 4)
+	otherCoverageReport.AddLineHit(location, 5)
+	otherCoverageReport.AddLineHit(location, 5)
+	otherCoverageReport.AddLineHit(location, 7)
+
+	diff := coverageReport.Diff(*otherCoverageReport)
+
+	actual, err = json.Marshal(diff)
+	require.NoError(t, err)
+
+	expected = `
+	  {
+	    "coverage": "100.0%",
+	    "hits": 2,
+	    "locations": 0,
+	    "misses": -2,
+	    "statements": 0
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+}
+
 func TestCoverageReportMerge(t *testing.T) {
 
 	t.Parallel()

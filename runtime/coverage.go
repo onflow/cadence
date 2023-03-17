@@ -217,12 +217,8 @@ func (r *CoverageReport) IsProgramInspected(location Location) bool {
 // percentage. It is defined as the ratio of total covered lines over
 // total statements, for all locations.
 func (r *CoverageReport) Percentage() string {
-	totalStatements := 0
-	totalCoveredLines := 0
-	for _, locationCoverage := range r.Coverage { // nolint:maprange
-		totalStatements += locationCoverage.Statements
-		totalCoveredLines += locationCoverage.CoveredLines()
-	}
+	totalStatements := r.Statements()
+	totalCoveredLines := r.Hits()
 	return fmt.Sprintf(
 		"%0.1f%%",
 		100*float64(totalCoveredLines)/float64(totalStatements),
@@ -259,6 +255,116 @@ func (r *CoverageReport) Merge(other CoverageReport) {
 	for location := range other.ExcludedLocations {
 		r.ExcludedLocations[location] = struct{}{}
 	}
+}
+
+func (r *CoverageReport) ExcludedLocationIDs() []string {
+	excludedLocationIDs := make([]string, 0, len(r.ExcludedLocations))
+	for location := range r.ExcludedLocations { // nolint:maprange
+		excludedLocationIDs = append(excludedLocationIDs, location.ID())
+	}
+	return excludedLocationIDs
+}
+
+// TotalLocations returns the count of locations included in
+// the CoverageReport. This implies that these locations are:
+// - inspected,
+// - not marked as exlucded.
+func (r *CoverageReport) TotalLocations() int {
+	return len(r.Coverage)
+}
+
+// Statements returns the total count of statements, for all the
+// locations included in the CoverageReport.
+func (r *CoverageReport) Statements() int {
+	totalStatements := 0
+	for _, locationCoverage := range r.Coverage { // nolint:maprange
+		totalStatements += locationCoverage.Statements
+	}
+	return totalStatements
+}
+
+// Hits returns the total count of covered lines, for all the
+// locations included in the CoverageReport.
+func (r *CoverageReport) Hits() int {
+	totalCoveredLines := 0
+	for _, locationCoverage := range r.Coverage { // nolint:maprange
+		totalCoveredLines += locationCoverage.CoveredLines()
+	}
+	return totalCoveredLines
+}
+
+// Misses returns the total count of non-covered lines, for all
+// the locations included in the CoverageReport.
+func (r *CoverageReport) Misses() int {
+	return r.Statements() - r.Hits()
+}
+
+// Summary returns a CoverageReportSummary object, containing
+// key metrics for a CoverageReport, such as:
+// - Total Locations,
+// - Total Statements,
+// - Total Hits,
+// - Total Misses,
+// - Overall Coverage Percentage.
+func (r *CoverageReport) Summary() CoverageReportSummary {
+	return CoverageReportSummary{
+		Locations:  r.Locations(),
+		Statements: r.Statements(),
+		Hits:       r.Hits(),
+		Misses:     r.Misses(),
+		Coverage:   r.Percentage(),
+	}
+}
+
+// Diff computes the incremental diff between the calling object and
+// a new CoverageReport. The returned result is a CoverageReportSummary
+// object.
+//
+//	CoverageReportSummary{
+//		Locations:  0,
+//		Statements: 0,
+//		Hits:       2,
+//		Misses:     -2,
+//		Coverage:   "100.0%",
+//	}
+//
+// The above diff is interpreted as follows:
+// - No diff in locations,
+// - No diff in statements,
+// - Hits increased by 2,
+// - Misses decreased by 2,
+// - Coverage Δ increased by 100.0%.
+func (r *CoverageReport) Diff(other CoverageReport) CoverageReportSummary {
+	baseCoverage := 100 * float64(r.Hits()) / float64(r.Statements())
+	newCoverage := 100 * float64(other.Hits()) / float64(other.Statements())
+	coverageDelta := fmt.Sprintf(
+		"%0.1f%%",
+		100*(newCoverage-baseCoverage)/baseCoverage,
+	)
+	return CoverageReportSummary{
+		Locations:  other.Locations() - r.Locations(),
+		Statements: other.Statements() - r.Statements(),
+		Hits:       other.Hits() - r.Hits(),
+		Misses:     other.Misses() - r.Misses(),
+		Coverage:   coverageDelta,
+	}
+}
+
+// CoverageReportSummary contains key metrics that are derived
+// from a CoverageReport object, such as:
+// - Total Locations,
+// - Total Statements,
+// - Total Hits,
+// - Total Misses,
+// - Overall Coverage Percentage.
+// This metrics can be utilized in various ways, such as a CI
+// plugin/app.
+type CoverageReportSummary struct {
+	Locations  int    `json:"locations"`
+	Statements int    `json:"statements"`
+	Hits       int    `json:"hits"`
+	Misses     int    `json:"misses"`
+	Coverage   string `json:"coverage"`
 }
 
 // NewCoverageReport creates and returns a *CoverageReport.
