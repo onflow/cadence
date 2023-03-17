@@ -762,6 +762,127 @@ func TestCoverageReportString(t *testing.T) {
 	)
 }
 
+func TestCoverageReportMerge(t *testing.T) {
+
+	t.Parallel()
+
+	integerTraitsScript := []byte(`
+	  pub let specialNumbers: {Int: String} = {
+	    1729: "Harshad",
+	    8128: "Harmonic",
+	    41041: "Carmichael"
+	  }
+
+	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	    specialNumbers[n] = trait
+	  }
+
+	  pub fun getIntegerTrait(_ n: Int): String {
+	    if n < 0 {
+	      return "Negative"
+	    } else if n == 0 {
+	      return "Zero"
+	    } else if n < 10 {
+	      return "Small"
+	    } else if n < 100 {
+	      return "Big"
+	    } else if n < 1000 {
+	      return "Huge"
+	    }
+
+	    if specialNumbers.containsKey(n) {
+	      return specialNumbers[n]!
+	    }
+
+	    return "Enormous"
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, integerTraitsScript, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.StringLocation("IntegerTraits")
+	coverageReport.InspectProgram(location, program)
+
+	factorialScript := []byte(`
+	  pub fun factorial(_ n: Int): Int {
+	    pre {
+	      n >= 0:
+	        "factorial is only defined for integers greater than or equal to zero"
+	    }
+	    post {
+	      result >= 1:
+	        "the result must be greater than or equal to 1"
+	    }
+
+	    if n < 1 {
+	      return 1
+	    }
+
+	    return n * factorial(n - 1)
+	  }
+	`)
+
+	otherProgram, err := parser.ParseProgram(nil, factorialScript, parser.Config{})
+	require.NoError(t, err)
+
+	otherCoverageReport := NewCoverageReport()
+
+	otherLocation := common.StringLocation("Factorial")
+	otherCoverageReport.InspectProgram(otherLocation, otherProgram)
+
+	excludedLocation := common.StringLocation("FooContract")
+	otherCoverageReport.ExcludeLocation(excludedLocation)
+
+	coverageReport.Merge(*otherCoverageReport)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "S.Factorial": {
+	        "line_hits": {
+	          "12": 0,
+	          "13": 0,
+	          "16": 0,
+	          "4": 0,
+	          "8": 0
+	        },
+	        "missed_lines": [4, 8, 12, 13, 16],
+	        "statements": 5,
+	        "percentage": "0.0%"
+	      },
+	      "S.IntegerTraits": {
+	        "line_hits": {
+	          "13": 0,
+	          "14": 0,
+	          "15": 0,
+	          "16": 0,
+	          "17": 0,
+	          "18": 0,
+	          "19": 0,
+	          "20": 0,
+	          "21": 0,
+	          "22": 0,
+	          "25": 0,
+	          "26": 0,
+	          "29": 0,
+	          "9": 0
+	        },
+	        "missed_lines": [9, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 25, 26, 29],
+	        "statements": 14,
+	        "percentage": "0.0%"
+	      }
+	    }
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+}
+
 func TestRuntimeCoverage(t *testing.T) {
 
 	t.Parallel()

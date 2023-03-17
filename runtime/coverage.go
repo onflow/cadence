@@ -241,8 +241,23 @@ func (r *CoverageReport) Reset() {
 	for location := range r.Coverage { // nolint:maprange
 		delete(r.Coverage, location)
 	}
-	for program := range r.Programs { // nolint:maprange
-		delete(r.Programs, program)
+	for location := range r.Programs { // nolint:maprange
+		delete(r.Programs, location)
+	}
+}
+
+// Merge adds all the collected coverage information to the
+// calling object. Excluded locations are also taken into
+// account.
+func (r *CoverageReport) Merge(other CoverageReport) {
+	for location, locationCoverage := range other.Coverage { // nolint:maprange
+		r.Coverage[location] = locationCoverage
+	}
+	for location, program := range other.Programs { // nolint:maprange
+		r.Programs[location] = program
+	}
+	for location := range other.ExcludedLocations {
+		r.ExcludedLocations[location] = struct{}{}
 	}
 }
 
