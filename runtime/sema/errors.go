@@ -4001,6 +4001,30 @@ func (e *InvalidNonEntitlementTypeInMapError) EndPosition(common.MemoryGauge) as
 	return e.Pos
 }
 
+// InvalidMappedEntitlementMemberError
+type InvalidMappedEntitlementMemberError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidMappedEntitlementMemberError{}
+var _ errors.UserError = &InvalidMappedEntitlementMemberError{}
+
+func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
+
+func (*InvalidMappedEntitlementMemberError) IsUserError() {}
+
+func (e *InvalidMappedEntitlementMemberError) Error() string {
+	return "mapped entitlement access modifiers may only be used for fields with a reference type authorized with the same mapped entitlement"
+}
+
+func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidMappedEntitlementMemberError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
 // InvalidNonEntitlementAccessError
 type InvalidNonEntitlementAccessError struct {
 	ast.Range

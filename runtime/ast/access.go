@@ -44,32 +44,32 @@ type ConjunctiveEntitlementSet struct {
 	Elements []*NominalType `json:"ConjunctiveElements"`
 }
 
-func (s ConjunctiveEntitlementSet) Entitlements() []*NominalType {
+func (s *ConjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
 }
 
-func (s ConjunctiveEntitlementSet) Separator() string {
+func (s *ConjunctiveEntitlementSet) Separator() string {
 	return ","
 }
 
-func NewConjunctiveEntitlementSet(entitlements []*NominalType) ConjunctiveEntitlementSet {
-	return ConjunctiveEntitlementSet{Elements: entitlements}
+func NewConjunctiveEntitlementSet(entitlements []*NominalType) *ConjunctiveEntitlementSet {
+	return &ConjunctiveEntitlementSet{Elements: entitlements}
 }
 
 type DisjunctiveEntitlementSet struct {
 	Elements []*NominalType `json:"DisjunctiveElements"`
 }
 
-func (s DisjunctiveEntitlementSet) Entitlements() []*NominalType {
+func (s *DisjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
 }
 
-func (s DisjunctiveEntitlementSet) Separator() string {
+func (s *DisjunctiveEntitlementSet) Separator() string {
 	return " |"
 }
 
-func NewDisjunctiveEntitlementSet(entitlements []*NominalType) DisjunctiveEntitlementSet {
-	return DisjunctiveEntitlementSet{Elements: entitlements}
+func NewDisjunctiveEntitlementSet(entitlements []*NominalType) *DisjunctiveEntitlementSet {
+	return &DisjunctiveEntitlementSet{Elements: entitlements}
 }
 
 type EntitlementAccess struct {

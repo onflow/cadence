@@ -33,7 +33,6 @@ import (
 func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
 
 	const kind = ContainerKindInterface
-
 	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
 	if interfaceType == nil {
 		panic(errors.NewUnreachableError())
@@ -45,15 +44,16 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	}()
 
 	checker.checkDeclarationAccessModifier(
-		declaration.Access,
+		checker.accessFromAstAccess(declaration.Access),
 		declaration.DeclarationKind(),
+		interfaceType,
 		nil,
 		declaration.StartPos,
 		true,
 	)
 
 	// NOTE: functions are checked separately
-	checker.checkFieldsAccessModifier(declaration.Members.Fields(), &declaration.CompositeKind)
+	checker.checkFieldsAccessModifier(declaration.Members.Fields(), interfaceType.Members, &declaration.CompositeKind)
 
 	checker.checkNestedIdentifiers(declaration.Members)
 
@@ -419,14 +419,16 @@ func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDecla
 }
 
 func (checker *Checker) VisitEntitlementDeclaration(declaration *ast.EntitlementDeclaration) (_ struct{}) {
+
 	entitlementType := checker.Elaboration.EntitlementDeclarationType(declaration)
 	if entitlementType == nil {
 		panic(errors.NewUnreachableError())
 	}
 
 	checker.checkDeclarationAccessModifier(
-		declaration.Access,
+		checker.accessFromAstAccess(declaration.Access),
 		declaration.DeclarationKind(),
+		entitlementType,
 		nil,
 		declaration.StartPos,
 		true,
@@ -508,8 +510,9 @@ func (checker *Checker) VisitEntitlementMappingDeclaration(declaration *ast.Enti
 	}
 
 	checker.checkDeclarationAccessModifier(
-		declaration.Access,
+		checker.accessFromAstAccess(declaration.Access),
 		declaration.DeclarationKind(),
+		entitlementMapType,
 		nil,
 		declaration.StartPos,
 		true,

@@ -89,7 +89,6 @@ func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDe
 // and that the members and nested declarations for the composite type were declared
 // through `declareCompositeMembersAndValue`.
 func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeLikeDeclaration, kind ContainerKind) {
-
 	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
 	if compositeType == nil {
 		panic(errors.NewUnreachableError())
@@ -101,8 +100,9 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 	}()
 
 	checker.checkDeclarationAccessModifier(
-		declaration.DeclarationAccess(),
+		checker.accessFromAstAccess(declaration.DeclarationAccess()),
 		declaration.DeclarationKind(),
+		compositeType,
 		nil,
 		declaration.StartPosition(),
 		true,
@@ -112,7 +112,7 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 
 	// NOTE: functions are checked separately
 	declarationKind := declaration.Kind()
-	checker.checkFieldsAccessModifier(members.Fields(), &declarationKind)
+	checker.checkFieldsAccessModifier(members.Fields(), compositeType.Members, &declarationKind)
 
 	checker.checkNestedIdentifiers(members)
 

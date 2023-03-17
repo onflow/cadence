@@ -882,7 +882,7 @@ func TestReferenceType_Doc(t *testing.T) {
 
 		ty := &ReferenceType{
 			Authorization: &Authorization{
-				EntitlementSet: ConjunctiveEntitlementSet{
+				EntitlementSet: &ConjunctiveEntitlementSet{
 					Elements: []*NominalType{
 						{
 							Identifier: Identifier{
@@ -919,7 +919,7 @@ func TestReferenceType_Doc(t *testing.T) {
 
 		ty := &ReferenceType{
 			Authorization: &Authorization{
-				EntitlementSet: ConjunctiveEntitlementSet{
+				EntitlementSet: &ConjunctiveEntitlementSet{
 					Elements: []*NominalType{
 						{
 							Identifier: Identifier{
@@ -964,7 +964,7 @@ func TestReferenceType_Doc(t *testing.T) {
 
 		ty := &ReferenceType{
 			Authorization: &Authorization{
-				EntitlementSet: DisjunctiveEntitlementSet{
+				EntitlementSet: &DisjunctiveEntitlementSet{
 					Elements: []*NominalType{
 						{
 							Identifier: Identifier{
@@ -1054,7 +1054,7 @@ func TestReferenceType_String(t *testing.T) {
 
 		ty := &ReferenceType{
 			Authorization: &Authorization{
-				EntitlementSet: ConjunctiveEntitlementSet{
+				EntitlementSet: &ConjunctiveEntitlementSet{
 					Elements: []*NominalType{
 						{
 							Identifier: Identifier{
@@ -1083,7 +1083,7 @@ func TestReferenceType_String(t *testing.T) {
 
 		ty := &ReferenceType{
 			Authorization: &Authorization{
-				EntitlementSet: ConjunctiveEntitlementSet{
+				EntitlementSet: &ConjunctiveEntitlementSet{
 					Elements: []*NominalType{
 						{
 							Identifier: Identifier{
@@ -1117,7 +1117,7 @@ func TestReferenceType_String(t *testing.T) {
 
 		ty := &ReferenceType{
 			Authorization: &Authorization{
-				EntitlementSet: DisjunctiveEntitlementSet{
+				EntitlementSet: &DisjunctiveEntitlementSet{
 					Elements: []*NominalType{
 						{
 							Identifier: Identifier{
@@ -1171,7 +1171,7 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 
 	ty := &ReferenceType{
 		Authorization: &Authorization{
-			EntitlementSet: ConjunctiveEntitlementSet{
+			EntitlementSet: &ConjunctiveEntitlementSet{
 				Elements: []*NominalType{
 					{
 						Identifier: Identifier{

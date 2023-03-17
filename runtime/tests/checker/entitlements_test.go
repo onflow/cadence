@@ -220,6 +220,21 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 
 		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
 	})
+
+	t.Run("other mapping", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement B
+			entitlement mapping A {}
+			entitlement mapping M {
+				A -> B
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+	})
 }
 
 func TestCheckEntitlementDeclarationNesting(t *testing.T) {
@@ -529,11 +544,68 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		_, err := ParseAndCheck(t, `
 			entitlement mapping M {}
 			struct interface S {
-				access(M) let foo: String
+				access(M) let foo: auth(M) &String
 			}
 		`)
 
 		assert.NoError(t, err)
+	})
+
+	t.Run("non-reference field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface S {
+				access(M) let foo: String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("non-auth reference field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface S {
+				access(M) let foo: &String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("mismatched entitlement mapping", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			entitlement mapping N {}
+			struct interface S {
+				access(M) let foo: auth(N) &String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("function", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface S {
+				access(M) fun foo() 
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("multiple mappings conjunction", func(t *testing.T) {
@@ -602,7 +674,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 			contract C {
 				entitlement mapping M {} 
 				struct interface S {
-					access(M) let foo: String
+					access(M) let foo: auth(M) &String
 				}
 			}
 		`)
@@ -616,7 +688,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 			contract interface C {
 				entitlement mapping M {} 
 				struct interface S {
-					access(M) let foo: String
+					access(M) let foo: auth(M) &String
 				}
 			}
 		`)
@@ -630,11 +702,11 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 			contract C {
 				entitlement mapping M {} 
 				struct interface S {
-					access(M) let foo: String
+					access(M) let foo: auth(M) &String
 				}
 			}
-			resource R {
-				access(C.M) fun bar() {}
+			resource interface R {
+				access(C.M) let bar: auth(C.M) &String
 			}
 		`)
 
@@ -767,7 +839,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("invalid fun decl", func(t *testing.T) {
@@ -779,7 +851,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("invalid contract field", func(t *testing.T) {
@@ -793,7 +865,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("invalid contract interface field", func(t *testing.T) {
@@ -807,7 +879,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("invalid event", func(t *testing.T) {
@@ -822,7 +894,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
-		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[1])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[1])
 	})
 
 	t.Run("invalid enum case", func(t *testing.T) {

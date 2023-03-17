@@ -69,14 +69,6 @@ func (checker *Checker) visitFunctionDeclaration(
 	containerKind *common.CompositeKind,
 ) {
 
-	checker.checkDeclarationAccessModifier(
-		declaration.Access,
-		declaration.DeclarationKind(),
-		containerKind,
-		declaration.StartPos,
-		true,
-	)
-
 	checker.checkStaticModifier(
 		declaration.IsStatic(),
 		declaration.Identifier,
@@ -97,6 +89,15 @@ func (checker *Checker) visitFunctionDeclaration(
 			checker.declareFunctionDeclaration(declaration, functionType)
 		}
 	}
+
+	checker.checkDeclarationAccessModifier(
+		checker.accessFromAstAccess(declaration.Access),
+		declaration.DeclarationKind(),
+		functionType,
+		containerKind,
+		declaration.StartPos,
+		true,
+	)
 
 	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 

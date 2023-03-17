@@ -157,6 +157,7 @@ type Elaboration struct {
 	staticCastTypes                     map[*ast.CastingExpression]CastTypes
 	expressionTypes                     map[ast.Expression]ExpressionTypes
 	TransactionTypes                    []*TransactionType
+	semanticAccesses                    map[ast.Access]Access
 	isChecking                          bool
 }
 
@@ -1012,4 +1013,19 @@ func (e *Elaboration) ExpressionTypes(expression ast.Expression) ExpressionTypes
 
 func (e *Elaboration) AllExpressionTypes() map[ast.Expression]ExpressionTypes {
 	return e.expressionTypes
+}
+
+func (e *Elaboration) SetSemanticAccess(access ast.Access, semanticAccess Access) {
+	if e.semanticAccesses == nil {
+		e.semanticAccesses = map[ast.Access]Access{}
+	}
+	e.semanticAccesses[access] = semanticAccess
+}
+
+func (e *Elaboration) GetSemanticAccess(access ast.Access) (semaAccess Access, present bool) {
+	if e.semanticAccesses == nil {
+		return
+	}
+	semaAccess, present = e.semanticAccesses[access]
+	return
 }
