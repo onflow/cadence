@@ -104,13 +104,13 @@ func NewLocationCoverage(lineHits map[int]int) *LocationCoverage {
 }
 
 // CoverageReport collects coverage information per location.
-// It keeps track of inspected programs per location, and can
-// also exclude locations from coverage collection.
+// It keeps track of inspected locations, and can also exclude
+// locations from coverage collection.
 type CoverageReport struct {
 	// Contains a *LocationCoverage per location.
 	Coverage map[common.Location]*LocationCoverage `json:"-"`
-	// Contains an *ast.Program per location.
-	Programs map[common.Location]*ast.Program `json:"-"`
+	// Contains locations whose programs are already inspected.
+	Locations map[common.Location]struct{} `json:"-"`
 	// Contains locations excluded from coverage collection.
 	ExcludedLocations map[common.Location]struct{} `json:"-"`
 }
@@ -131,13 +131,13 @@ func (r *CoverageReport) IsLocationExcluded(location Location) bool {
 // AddLineHit increments the hit count for the given line, on the given
 // location. The method call is a NO-OP in two cases:
 // - If the location is excluded from coverage collection
-// - If the location's *ast.Program, has not been inspected
+// - If the location has not been inspected for its statements
 func (r *CoverageReport) AddLineHit(location Location, line int) {
 	if r.IsLocationExcluded(location) {
 		return
 	}
 
-	if !r.IsProgramInspected(location) {
+	if !r.IsLocationInspected(location) {
 		return
 	}
 
@@ -146,14 +146,14 @@ func (r *CoverageReport) AddLineHit(location Location, line int) {
 }
 
 // InspectProgram inspects the elements of the given *ast.Program, and counts its
-// statements. If inspection is successful, the *ast.Program is marked as inspected.
+// statements. If inspection is successful, the location is marked as inspected.
 // If the given location is excluded from coverage collection, the method call
 // results in a NO-OP.
 func (r *CoverageReport) InspectProgram(location Location, program *ast.Program) {
 	if r.IsLocationExcluded(location) {
 		return
 	}
-	r.Programs[location] = program
+	r.Locations[location] = struct{}{}
 	lineHits := make(map[int]int, 0)
 	recordLine := func(hasPosition ast.HasPosition) {
 		line := hasPosition.StartPosition().Line
@@ -206,10 +206,10 @@ func (r *CoverageReport) InspectProgram(location Location, program *ast.Program)
 	r.Coverage[location] = locationCoverage
 }
 
-// IsProgramInspected checks whether the *ast.Program on the given
-// location, has been inspected or not.
-func (r *CoverageReport) IsProgramInspected(location Location) bool {
-	_, isInspected := r.Programs[location]
+// IsLocationInspected checks whether the given location,
+// has been inspected or not.
+func (r *CoverageReport) IsLocationInspected(location Location) bool {
+	_, isInspected := r.Locations[location]
 	return isInspected
 }
 
@@ -232,13 +232,13 @@ func (r *CoverageReport) String() string {
 }
 
 // Reset flushes the collected coverage information for all locations
-// and inspected programs. Excluded locations remain intact.
+// and inspected locations. Excluded locations remain intact.
 func (r *CoverageReport) Reset() {
 	for location := range r.Coverage { // nolint:maprange
 		delete(r.Coverage, location)
 	}
-	for location := range r.Programs { // nolint:maprange
-		delete(r.Programs, location)
+	for location := range r.Locations { // nolint:maprange
+		delete(r.Locations, location)
 	}
 }
 
@@ -249,14 +249,17 @@ func (r *CoverageReport) Merge(other CoverageReport) {
 	for location, locationCoverage := range other.Coverage { // nolint:maprange
 		r.Coverage[location] = locationCoverage
 	}
-	for location, program := range other.Programs { // nolint:maprange
-		r.Programs[location] = program
+	for location, v := range other.Locations { // nolint:maprange
+		r.Locations[location] = v
 	}
-	for location := range other.ExcludedLocations {
-		r.ExcludedLocations[location] = struct{}{}
+	for location, v := range other.ExcludedLocations { // nolint:maprange
+		r.ExcludedLocations[location] = v
 	}
 }
 
+// ExcludedLocationIDs returns the ID of each excluded location. This
+// is helpful in order to marshal/unmarshal a CoverageReport, without
+// losing any valuable information.
 func (r *CoverageReport) ExcludedLocationIDs() []string {
 	excludedLocationIDs := make([]string, 0, len(r.ExcludedLocations))
 	for location := range r.ExcludedLocations { // nolint:maprange
@@ -308,7 +311,7 @@ func (r *CoverageReport) Misses() int {
 // - Overall Coverage Percentage.
 func (r *CoverageReport) Summary() CoverageReportSummary {
 	return CoverageReportSummary{
-		Locations:  r.Locations(),
+		Locations:  r.TotalLocations(),
 		Statements: r.Statements(),
 		Hits:       r.Hits(),
 		Misses:     r.Misses(),
@@ -342,7 +345,7 @@ func (r *CoverageReport) Diff(other CoverageReport) CoverageReportSummary {
 		100*(newCoverage-baseCoverage)/baseCoverage,
 	)
 	return CoverageReportSummary{
-		Locations:  other.Locations() - r.Locations(),
+		Locations:  other.TotalLocations() - r.TotalLocations(),
 		Statements: other.Statements() - r.Statements(),
 		Hits:       other.Hits() - r.Hits(),
 		Misses:     other.Misses() - r.Misses(),
@@ -371,29 +374,30 @@ type CoverageReportSummary struct {
 func NewCoverageReport() *CoverageReport {
 	return &CoverageReport{
 		Coverage:          map[common.Location]*LocationCoverage{},
-		Programs:          map[common.Location]*ast.Program{},
+		Locations:         map[common.Location]struct{}{},
 		ExcludedLocations: map[common.Location]struct{}{},
 	}
 }
 
+type crAlias CoverageReport
+
+// To avoid the overhead of having the Percentage & MissedLines
+// as fields in the LocationCoverage struct, we simply populate
+// this lcAlias struct, with the corresponding methods, upon marshalling.
+type lcAlias struct {
+	LineHits    map[int]int `json:"line_hits"`
+	MissedLines []int       `json:"missed_lines"`
+	Statements  int         `json:"statements"`
+	Percentage  string      `json:"percentage"`
+}
+
 // MarshalJSON serializes each common.Location/*LocationCoverage
-// key/value pair on the *CoverageReport.Coverage map.
+// key/value pair on the *CoverageReport.Coverage map, as well
+// as the IDs on the *CoverageReport.ExcludedLocations map.
 func (r *CoverageReport) MarshalJSON() ([]byte, error) {
-	type Alias CoverageReport
-
-	// To avoid the overhead of having the Percentage & MissedLines
-	// as fields in the LocationCoverage struct, we simply populate
-	// this LC struct, with the corresponding methods, upon marshalling.
-	type LC struct {
-		LineHits    map[int]int `json:"line_hits"`
-		MissedLines []int       `json:"missed_lines"`
-		Statements  int         `json:"statements"`
-		Percentage  string      `json:"percentage"`
-	}
-
-	coverage := make(map[string]LC, len(r.Coverage))
+	coverage := make(map[string]lcAlias, len(r.Coverage))
 	for location, locationCoverage := range r.Coverage { // nolint:maprange
-		coverage[location.ID()] = LC{
+		coverage[location.ID()] = lcAlias{
 			LineHits:    locationCoverage.LineHits,
 			MissedLines: locationCoverage.MissedLines(),
 			Statements:  locationCoverage.Statements,
@@ -401,10 +405,50 @@ func (r *CoverageReport) MarshalJSON() ([]byte, error) {
 		}
 	}
 	return json.Marshal(&struct {
-		Coverage map[string]LC `json:"coverage"`
-		*Alias
+		Coverage          map[string]lcAlias `json:"coverage"`
+		ExcludedLocations []string           `json:"excluded_locations"`
+		*crAlias
 	}{
-		Coverage: coverage,
-		Alias:    (*Alias)(r),
+		Coverage:          coverage,
+		ExcludedLocations: r.ExcludedLocationIDs(),
+		crAlias:           (*crAlias)(r),
 	})
+}
+
+// UnmarshalJSON deserializes a JSON structure and populates
+// the calling object with the respective *CoverageReport.Coverage &
+// *CoverageReport.ExcludedLocations maps.
+func (r *CoverageReport) UnmarshalJSON(data []byte) error {
+	cr := &struct {
+		Coverage          map[string]lcAlias `json:"coverage"`
+		ExcludedLocations []string           `json:"excluded_locations"`
+		*crAlias
+	}{
+		crAlias: (*crAlias)(r),
+	}
+
+	if err := json.Unmarshal(data, cr); err != nil {
+		return err
+	}
+
+	for locationID, locationCoverage := range cr.Coverage { // nolint:maprange
+		location, _, _ := common.DecodeTypeID(nil, locationID)
+		if location == nil {
+			return fmt.Errorf("invalid Location ID: %s", locationID)
+		}
+		r.Coverage[location] = &LocationCoverage{
+			LineHits:   locationCoverage.LineHits,
+			Statements: locationCoverage.Statements,
+		}
+		r.Locations[location] = struct{}{}
+	}
+	for _, locationID := range cr.ExcludedLocations {
+		location, _, _ := common.DecodeTypeID(nil, locationID)
+		if location == nil {
+			return fmt.Errorf("invalid Location ID: %s", locationID)
+		}
+		r.ExcludedLocations[location] = struct{}{}
+	}
+
+	return nil
 }

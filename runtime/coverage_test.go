@@ -105,6 +105,7 @@ func TestLocationCoverageCoveredLines(t *testing.T) {
 }
 
 func TestLocationCoverageMissedLines(t *testing.T) {
+
 	t.Parallel()
 
 	lineHits := map[int]int{3: 0, 4: 0, 5: 0, 7: 0, 9: 0, 11: 0}
@@ -147,7 +148,7 @@ func TestNewCoverageReport(t *testing.T) {
 	coverageReport := NewCoverageReport()
 
 	assert.Equal(t, 0, len(coverageReport.Coverage))
-	assert.Equal(t, 0, len(coverageReport.Programs))
+	assert.Equal(t, 0, len(coverageReport.Locations))
 	assert.Equal(t, 0, len(coverageReport.ExcludedLocations))
 }
 
@@ -189,8 +190,8 @@ func TestCoverageReportInspectProgram(t *testing.T) {
 	coverageReport.InspectProgram(location, program)
 
 	assert.Equal(t, 1, len(coverageReport.Coverage))
-	assert.Equal(t, 1, len(coverageReport.Programs))
-	assert.Equal(t, true, coverageReport.IsProgramInspected(location))
+	assert.Equal(t, 1, len(coverageReport.Locations))
+	assert.Equal(t, true, coverageReport.IsLocationInspected(location))
 }
 
 func TestCoverageReportInspectProgramForExcludedLocation(t *testing.T) {
@@ -217,8 +218,8 @@ func TestCoverageReportInspectProgramForExcludedLocation(t *testing.T) {
 	coverageReport.InspectProgram(location, program)
 
 	assert.Equal(t, 0, len(coverageReport.Coverage))
-	assert.Equal(t, 0, len(coverageReport.Programs))
-	assert.Equal(t, false, coverageReport.IsProgramInspected(location))
+	assert.Equal(t, 0, len(coverageReport.Locations))
+	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
 }
 
 func TestCoverageReportAddLineHit(t *testing.T) {
@@ -303,7 +304,8 @@ func TestCoverageReportWithFlowLocation(t *testing.T) {
 	        "statements": 4,
 	        "percentage": "0.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
@@ -348,7 +350,8 @@ func TestCoverageReportWithREPLLocation(t *testing.T) {
 	        "statements": 4,
 	        "percentage": "0.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
@@ -393,7 +396,8 @@ func TestCoverageReportWithScriptLocation(t *testing.T) {
 	        "statements": 4,
 	        "percentage": "0.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
@@ -438,7 +442,8 @@ func TestCoverageReportWithStringLocation(t *testing.T) {
 	        "statements": 4,
 	        "percentage": "0.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
@@ -483,7 +488,8 @@ func TestCoverageReportWithIdentifierLocation(t *testing.T) {
 	        "statements": 4,
 	        "percentage": "0.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
@@ -528,7 +534,8 @@ func TestCoverageReportWithTransactionLocation(t *testing.T) {
 	        "statements": 4,
 	        "percentage": "0.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
@@ -576,11 +583,11 @@ func TestCoverageReportWithAddressLocation(t *testing.T) {
 	        "statements": 4,
 	        "percentage": "0.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
-
 }
 
 func TestCoverageReportReset(t *testing.T) {
@@ -612,17 +619,17 @@ func TestCoverageReportReset(t *testing.T) {
 	coverageReport.ExcludeLocation(excludedLocation)
 
 	assert.Equal(t, 1, len(coverageReport.Coverage))
-	assert.Equal(t, 1, len(coverageReport.Programs))
+	assert.Equal(t, 1, len(coverageReport.Locations))
 	assert.Equal(t, 1, len(coverageReport.ExcludedLocations))
-	assert.Equal(t, true, coverageReport.IsProgramInspected(location))
+	assert.Equal(t, true, coverageReport.IsLocationInspected(location))
 	assert.Equal(t, true, coverageReport.IsLocationExcluded(excludedLocation))
 
 	coverageReport.Reset()
 
 	assert.Equal(t, 0, len(coverageReport.Coverage))
-	assert.Equal(t, 0, len(coverageReport.Programs))
+	assert.Equal(t, 0, len(coverageReport.Locations))
 	assert.Equal(t, 1, len(coverageReport.ExcludedLocations))
-	assert.Equal(t, false, coverageReport.IsProgramInspected(location))
+	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
 	assert.Equal(t, true, coverageReport.IsLocationExcluded(excludedLocation))
 }
 
@@ -639,8 +646,8 @@ func TestCoverageReportAddLineHitForExcludedLocation(t *testing.T) {
 	coverageReport.AddLineHit(location, 5)
 
 	assert.Equal(t, 0, len(coverageReport.Coverage))
-	assert.Equal(t, 0, len(coverageReport.Programs))
-	assert.Equal(t, false, coverageReport.IsProgramInspected(location))
+	assert.Equal(t, 0, len(coverageReport.Locations))
+	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
 }
 
 func TestCoverageReportAddLineHitForNonInspectedProgram(t *testing.T) {
@@ -655,8 +662,8 @@ func TestCoverageReportAddLineHitForNonInspectedProgram(t *testing.T) {
 	coverageReport.AddLineHit(location, 5)
 
 	assert.Equal(t, 0, len(coverageReport.Coverage))
-	assert.Equal(t, 0, len(coverageReport.Programs))
-	assert.Equal(t, false, coverageReport.IsProgramInspected(location))
+	assert.Equal(t, 0, len(coverageReport.Locations))
+	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
 }
 
 func TestCoverageReportPercentage(t *testing.T) {
@@ -700,7 +707,8 @@ func TestCoverageReportPercentage(t *testing.T) {
 	        "statements": 4,
 	        "percentage": "50.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
@@ -750,7 +758,8 @@ func TestCoverageReportString(t *testing.T) {
 	        "statements": 4,
 	        "percentage": "75.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
@@ -942,10 +951,195 @@ func TestCoverageReportMerge(t *testing.T) {
 	        "statements": 14,
 	        "percentage": "0.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": ["S.FooContract"]
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
+}
+
+func TestCoverageReportUnmarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	data := `
+	  {
+	    "coverage": {
+	      "S.Factorial": {
+	        "line_hits": {
+	          "12": 0,
+	          "13": 0,
+	          "16": 0,
+	          "4": 0,
+	          "8": 0
+	        },
+	        "missed_lines": [4, 8, 12, 13, 16],
+	        "statements": 5,
+	        "percentage": "0.0%"
+	      },
+	      "S.IntegerTraits": {
+	        "line_hits": {
+	          "13": 0,
+	          "14": 0,
+	          "15": 0,
+	          "16": 0,
+	          "17": 0,
+	          "18": 0,
+	          "19": 0,
+	          "20": 0,
+	          "21": 0,
+	          "22": 0,
+	          "25": 0,
+	          "26": 0,
+	          "29": 0,
+	          "9": 0
+	        },
+	        "missed_lines": [9, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 25, 26, 29],
+	        "statements": 14,
+	        "percentage": "0.0%"
+	      }
+	    },
+	    "excluded_locations": ["I.Test"]
+	  }
+	`
+
+	coverageReport := NewCoverageReport()
+	err := json.Unmarshal([]byte(data), coverageReport)
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, coverageReport.TotalLocations())
+
+	factorialLocation := common.StringLocation("Factorial")
+
+	assert.Equal(
+		t,
+		5,
+		coverageReport.Coverage[factorialLocation].Statements,
+	)
+	assert.Equal(
+		t,
+		"0.0%",
+		coverageReport.Coverage[factorialLocation].Percentage(),
+	)
+	assert.EqualValues(
+		t,
+		[]int{4, 8, 12, 13, 16},
+		coverageReport.Coverage[factorialLocation].MissedLines(),
+	)
+	assert.Equal(
+		t,
+		map[int]int{4: 0, 8: 0, 12: 0, 13: 0, 16: 0},
+		coverageReport.Coverage[factorialLocation].LineHits,
+	)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	require.JSONEq(t, data, string(actual))
+
+	integerTraitsLocation := common.StringLocation("IntegerTraits")
+
+	assert.Equal(
+		t,
+		coverageReport.Coverage[integerTraitsLocation].Statements,
+		14,
+	)
+	assert.Equal(
+		t,
+		"0.0%",
+		coverageReport.Coverage[integerTraitsLocation].Percentage(),
+	)
+	assert.EqualValues(
+		t,
+		[]int{9, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 25, 26, 29},
+		coverageReport.Coverage[integerTraitsLocation].MissedLines(),
+	)
+	assert.EqualValues(
+		t,
+		map[int]int{9: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0, 19: 0, 20: 0, 21: 0, 22: 0, 25: 0, 26: 0, 29: 0},
+		coverageReport.Coverage[integerTraitsLocation].LineHits,
+	)
+
+	assert.Equal(
+		t,
+		2,
+		len(coverageReport.Locations),
+	)
+
+	assert.Equal(
+		t,
+		[]string{"I.Test"},
+		coverageReport.ExcludedLocationIDs(),
+	)
+}
+
+func TestCoverageReportUnmarshalJSONWithFormatError(t *testing.T) {
+
+	t.Parallel()
+
+	data := "My previous coverage report.txt"
+
+	coverageReport := NewCoverageReport()
+	err := coverageReport.UnmarshalJSON([]byte(data))
+	require.Error(t, err)
+}
+
+func TestCoverageReportUnmarshalJSONWithDecodeLocationError(t *testing.T) {
+
+	t.Parallel()
+
+	data := `
+	  {
+	    "coverage": {
+	      "X.Factorial": {
+	        "line_hits": {
+	          "12": 0,
+	          "13": 0,
+	          "16": 0,
+	          "4": 0,
+	          "8": 0
+	        },
+	        "missed_lines": [4, 8, 12, 13, 16],
+	        "statements": 5,
+	        "percentage": "0.0%"
+	      }
+	    },
+	    "excluded_locations": ["I.Test"]
+	  }
+	`
+
+	coverageReport := NewCoverageReport()
+	err := json.Unmarshal([]byte(data), coverageReport)
+	require.ErrorContains(t, err, "invalid Location ID: X.Factorial")
+}
+
+func TestCoverageReportUnmarshalJSONWithDecodeExcludedLocationError(t *testing.T) {
+
+	t.Parallel()
+
+	data := `
+	  {
+	    "coverage": {
+	      "S.Factorial": {
+	        "line_hits": {
+	          "12": 0,
+	          "13": 0,
+	          "16": 0,
+	          "4": 0,
+	          "8": 0
+	        },
+	        "missed_lines": [4, 8, 12, 13, 16],
+	        "statements": 5,
+	        "percentage": "0.0%"
+	      }
+	    },
+	    "excluded_locations": ["XI.Test"]
+	  }
+	`
+
+	coverageReport := NewCoverageReport()
+	err := json.Unmarshal([]byte(data), coverageReport)
+	require.ErrorContains(t, err, "invalid Location ID: XI.Test")
 }
 
 func TestRuntimeCoverage(t *testing.T) {
@@ -1111,7 +1305,8 @@ func TestRuntimeCoverage(t *testing.T) {
 	        "statements": 9,
 	        "percentage": "100.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
@@ -1247,7 +1442,8 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 	        "statements": 14,
 	        "percentage": "100.0%"
 	      }
-	    }
+	    },
+	    "excluded_locations": ["s.0000000000000000000000000000000000000000000000000000000000000000"]
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
