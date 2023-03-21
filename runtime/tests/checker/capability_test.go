@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 
@@ -91,7 +90,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
 	})
 
-	for _, auth := range []sema.Access{sema.PrimitiveAccess(ast.AccessPublic),
+	for _, auth := range []sema.Access{sema.UnauthorizedAccess,
 		sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
 			Location:   utils.TestLocation,
 			Identifier: "X",
@@ -99,7 +98,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 	} {
 
 		authKeyword := ""
-		if auth != sema.PrimitiveAccess(ast.AccessPublic) {
+		if auth != sema.UnauthorizedAccess {
 			authKeyword = auth.Keyword()
 		}
 

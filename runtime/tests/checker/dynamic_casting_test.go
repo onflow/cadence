@@ -1214,12 +1214,14 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 	types := []sema.Type{
 		&sema.CapabilityType{
 			BorrowType: &sema.ReferenceType{
-				Type: structType,
+				Type:          structType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 		},
 		&sema.CapabilityType{
 			BorrowType: &sema.ReferenceType{
-				Type: sema.AnyStructType,
+				Type:          sema.AnyStructType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 		},
 		&sema.CapabilityType{},
@@ -1228,7 +1230,8 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 
 	capabilityType := &sema.CapabilityType{
 		BorrowType: &sema.ReferenceType{
-			Type: structType,
+			Type:          structType,
+			Authorization: sema.UnauthorizedAccess,
 		},
 	}
 

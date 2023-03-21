@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -729,7 +728,7 @@ func TestCheckAccount_borrow(t *testing.T) {
 	testExplicitTypeArgumentReference := func(domain common.PathDomain, auth sema.Access) {
 
 		authKeyword := ""
-		if auth != sema.PrimitiveAccess(ast.AccessPublic) {
+		if auth != sema.UnauthorizedAccess {
 			authKeyword = auth.Keyword()
 		}
 
@@ -897,7 +896,7 @@ func TestCheckAccount_borrow(t *testing.T) {
 		testMissingTypeArgument(domain)
 
 		for _, auth := range []sema.Access{
-			sema.PrimitiveAccess(ast.AccessPublic),
+			sema.UnauthorizedAccess,
 			sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
 				Location:   utils.TestLocation,
 				Identifier: "X",
@@ -1368,7 +1367,8 @@ func TestCheckAccount_getCapability(t *testing.T) {
 			var expectedBorrowType sema.Type
 			if typed {
 				expectedBorrowType = &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				}
 			}
 

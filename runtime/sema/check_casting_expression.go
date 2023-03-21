@@ -196,7 +196,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 			// is a subtype of a reference type `&U` (authorized or non-authorized),
 			// if `T` is a subtype of `U`
 
-			if !typedSubType.Authorization.Equal(PrimitiveAccess(ast.AccessPublic)) {
+			if !typedSubType.Authorization.Equal(UnauthorizedAccess) {
 				return FailableCastCanSucceed(typedSubType.Type, typedSuperType.Type)
 			}
 
@@ -205,7 +205,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 			//
 			// The holder of the reference may not gain more permissions.
 
-			if !typedSuperType.Authorization.Equal(PrimitiveAccess(ast.AccessPublic)) {
+			if !typedSuperType.Authorization.Equal(UnauthorizedAccess) {
 				return false
 			}
 

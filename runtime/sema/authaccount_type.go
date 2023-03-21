@@ -85,7 +85,8 @@ var AuthAccountType = func() *CompositeType {
 			&OptionalType{
 				Type: &CapabilityType{
 					BorrowType: &ReferenceType{
-						Type: authAccountType,
+						Type:          authAccountType,
+						Authorization: UnauthorizedAccess,
 					},
 				},
 			},
@@ -465,7 +466,8 @@ var AuthAccountTypeBorrowFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
-			Type: AnyType,
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
 		},
 		Name: "T",
 	}
@@ -508,7 +510,8 @@ var AuthAccountTypeLinkFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
-			Type: AnyType,
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
 		},
 		Name: "T",
 	}
@@ -580,7 +583,8 @@ var AuthAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
-			Type: AnyType,
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
 		},
 		Name:     "T",
 		Optional: true,
@@ -843,7 +847,8 @@ var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
 	typeParameter := &TypeParameter{
 		Name: "T",
 		TypeBound: &ReferenceType{
-			Type: AnyType,
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
 		},
 	}
 	return &FunctionType{
@@ -878,7 +883,8 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 	typeParameter := &TypeParameter{
 		Name: "T",
 		TypeBound: &ReferenceType{
-			Type: AnyType,
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
 		},
 	}
 	return &FunctionType{

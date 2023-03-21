@@ -4903,6 +4903,8 @@ var _ Type = &ReferenceType{}
 var _ ValueIndexableType = &ReferenceType{}
 var _ TypeIndexableType = &ReferenceType{}
 
+var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessPublic)
+
 func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorization Access) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
 	return &ReferenceType{
@@ -4922,7 +4924,7 @@ func (t *ReferenceType) string(typeFormatter func(Type) string) string {
 		return "reference"
 	}
 	var builder strings.Builder
-	if !t.Authorization.Equal(PrimitiveAccess(ast.AccessPublic)) {
+	if !t.Authorization.Equal(UnauthorizedAccess) {
 		builder.WriteString("auth(")
 		builder.WriteString(t.Authorization.string(typeFormatter))
 		builder.WriteString(")")
@@ -5040,7 +5042,8 @@ func (t *ReferenceType) IsValidIndexingType(ty Type) bool {
 		// is a valid base for the attachement;
 		// i.e. (&v)[A] is valid only if `v` is a valid base for `A`
 		IsSubType(t, &ReferenceType{
-			Type: attachmentType.baseType,
+			Type:          attachmentType.baseType,
+			Authorization: UnauthorizedAccess,
 		}) &&
 		attachmentType.IsResourceType() == t.Type.IsResourceType()
 }
@@ -5441,7 +5444,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// is a subtype of a reference type `&U` (authorized or non-authorized),
 		// if `T` is a subtype of `U`
 
-		if !typedSubType.Authorization.Equal(PrimitiveAccess(ast.AccessPublic)) {
+		if !typedSubType.Authorization.Equal(UnauthorizedAccess) {
 			return IsSubType(typedSubType.Type, typedSuperType.Type)
 		}
 
@@ -5450,7 +5453,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		//
 		// The holder of the reference may not gain more permissions.
 
-		if !typedSuperType.Authorization.Equal(PrimitiveAccess(ast.AccessPublic)) {
+		if !typedSuperType.Authorization.Equal(UnauthorizedAccess) {
 			return false
 		}
 
@@ -6374,7 +6377,8 @@ func (t *RestrictedType) isTypeIndexableType() bool {
 func (t *RestrictedType) TypeIndexingElementType(indexingType Type) Type {
 	return &OptionalType{
 		Type: &ReferenceType{
-			Type: indexingType,
+			Type:          indexingType,
+			Authorization: UnauthorizedAccess,
 		},
 	}
 }
@@ -6531,7 +6535,8 @@ func (t *CapabilityType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 var capabilityTypeParameter = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -6559,7 +6564,8 @@ func (t *CapabilityType) TypeArguments() []Type {
 	borrowType := t.BorrowType
 	if borrowType == nil {
 		borrowType = &ReferenceType{
-			Type: AnyType,
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
 		}
 	}
 	return []Type{

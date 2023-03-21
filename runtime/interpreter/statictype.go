@@ -25,7 +25,6 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -788,7 +787,7 @@ func ConvertSemaAccesstoStaticAuthorization(
 ) Authorization {
 	switch access := access.(type) {
 	case sema.PrimitiveAccess:
-		if access.Equal(sema.PrimitiveAccess(ast.AccessPublic)) {
+		if access.Equal(sema.UnauthorizedAccess) {
 			return UnauthorizedAccess
 		}
 
@@ -832,7 +831,7 @@ func ConvertStaticAuthorizationToSemaAccess(
 ) (sema.Access, error) {
 	switch auth := auth.(type) {
 	case Unauthorized:
-		return sema.PrimitiveAccess(ast.AccessPublic), nil
+		return sema.UnauthorizedAccess, nil
 	case EntitlementMapAuthorization:
 		entitlement, err := getEntitlementMapType(auth.TypeID)
 		if err != nil {

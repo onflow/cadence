@@ -222,7 +222,8 @@ var PublicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
-			Type: AnyType,
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
 		},
 		Name:     "T",
 		Optional: true,

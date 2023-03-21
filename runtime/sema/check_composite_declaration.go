@@ -2241,7 +2241,7 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 	// attachments are never first class values, they must always exist inside references
 	if typedSelfType, ok := selfType.(*CompositeType); ok && typedSelfType.Kind == common.CompositeKindAttachment {
 		// ENTITLEMENT TODO: self should have type auth(X) &A, where `X` is the image of the base's entitlements through the map `A` was declared with
-		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, PrimitiveAccess(ast.AccessPublic))
+		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, UnauthorizedAccess)
 	}
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }
@@ -2260,7 +2260,7 @@ func (checker *Checker) declareBaseValue(baseType Type, superDocString string) {
 	// References to `base` should be non-auth, as the actual base type in practice may be any number of subtypes of the annotated base type,
 	// not all of which should be available to the writer of the attachment.
 	// ENTITLEMENT TODO: base should have type auth(X) &A, where `X` is the preimage of the self's entitlements through the map `A` was declared with
-	base := NewReferenceType(checker.memoryGauge, baseType, PrimitiveAccess(ast.AccessPublic))
+	base := NewReferenceType(checker.memoryGauge, baseType, UnauthorizedAccess)
 	checker.declareLowerScopedValue(base, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }
 

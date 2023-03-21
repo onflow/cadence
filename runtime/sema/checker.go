@@ -1124,8 +1124,12 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 	ty := checker.ConvertType(t.Type)
 
+	var access Access = UnauthorizedAccess
+	if t.Authorization != nil {
+		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet})
+	}
 	return &ReferenceType{
-		Authorization: checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet}),
+		Authorization: access,
 		Type:          ty,
 	}
 }

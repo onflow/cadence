@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -438,7 +437,7 @@ func exportAuthorization(
 ) cadence.Authorization {
 	switch access := access.(type) {
 	case sema.PrimitiveAccess:
-		if access.Equal(sema.PrimitiveAccess(ast.AccessPublic)) {
+		if access.Equal(sema.UnauthorizedAccess) {
 			return cadence.UnauthorizedAccess
 		}
 	case sema.EntitlementMapAccess:
