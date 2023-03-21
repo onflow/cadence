@@ -2130,8 +2130,7 @@ func (t *EnumType) Equal(other Type) bool {
 	}
 
 	return t.Location == otherType.Location &&
-		t.QualifiedIdentifier == otherType.QualifiedIdentifier &&
-		t.RawType.Equal(otherType.RawType)
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
 // AuthAccountType
