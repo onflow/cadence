@@ -635,6 +635,8 @@ func TestGetType(t *testing.T) {
 			reflect.TypeOf(Event{}):      {},
 			reflect.TypeOf(Resource{}):   {},
 			reflect.TypeOf(Struct{}):     {},
+			reflect.TypeOf(Enum{}):       {},
+			reflect.TypeOf(Attachment{}): {},
 		}
 
 		typelessTypes := map[reflect.Type]struct{}{
@@ -681,12 +683,52 @@ func TestGetType(t *testing.T) {
 		}
 	})
 
-	t.Run("array value", func(t *testing.T) {
+	t.Run("array value without type", func(t *testing.T) {
 		t.Parallel()
 
-		typ := NewConstantSizedArrayType(4, TheInt8Type)
+		// Type is not set.
+		value := NewArray([]Value{})
+		assert.Nil(t, value.Type())
+
+		// Type is nil.
+		value = value.WithType(nil)
+		assert.Nil(t, value.Type())
+
+		// Type is ArrayType(nil).
+		value = value.WithType(ArrayType(nil))
+		assert.Nil(t, value.Type())
+	})
+
+	t.Run("constant sized array value", func(t *testing.T) {
+		t.Parallel()
+
+		typ := NewConstantSizedArrayType(1, TheInt8Type)
+		arrayValue := NewArray([]Value{NewInt8(0)}).WithType(typ)
+		assert.Equal(t, arrayValue.Type(), typ)
+	})
+
+	t.Run("variable sized array value", func(t *testing.T) {
+		t.Parallel()
+
+		typ := NewVariableSizedArrayType(TheInt8Type)
 		arrayValue := NewArray([]Value{}).WithType(typ)
 		assert.Equal(t, arrayValue.Type(), typ)
+	})
+
+	t.Run("contract value without type", func(t *testing.T) {
+		t.Parallel()
+
+		// Type is not set.
+		value := NewContract([]Value{})
+		assert.Nil(t, value.Type())
+
+		// Type is nil.
+		value = value.WithType(nil)
+		assert.Nil(t, value.Type())
+
+		// Type is (*ContractType)(nil).
+		value = value.WithType((*ContractType)(nil))
+		assert.Nil(t, value.Type())
 	})
 
 	t.Run("contract value", func(t *testing.T) {
@@ -697,12 +739,44 @@ func TestGetType(t *testing.T) {
 		assert.Equal(t, typ, value.Type())
 	})
 
+	t.Run("dictionary value without type", func(t *testing.T) {
+		t.Parallel()
+
+		// Type is not set.
+		value := NewDictionary([]KeyValuePair{})
+		assert.Nil(t, value.Type())
+
+		// Type is nil.
+		value = value.WithType(nil)
+		assert.Nil(t, value.Type())
+
+		// Type is (*DictionaryType)(nil).
+		value = value.WithType((*DictionaryType)(nil))
+		assert.Nil(t, value.Type())
+	})
+
 	t.Run("dictionary value", func(t *testing.T) {
 		t.Parallel()
 
 		typ := NewDictionaryType(TheInt8Type, TheStringType)
 		value := NewDictionary([]KeyValuePair{}).WithType(typ)
 		assert.Equal(t, typ, value.Type())
+	})
+
+	t.Run("event value without type", func(t *testing.T) {
+		t.Parallel()
+
+		// Type is not set.
+		value := NewEvent([]Value{})
+		assert.Nil(t, value.Type())
+
+		// Type is nil.
+		value = value.WithType(nil)
+		assert.Nil(t, value.Type())
+
+		// Type is (*EventType)(nil).
+		value = value.WithType((*EventType)(nil))
+		assert.Nil(t, value.Type())
 	})
 
 	t.Run("event value", func(t *testing.T) {
@@ -713,6 +787,22 @@ func TestGetType(t *testing.T) {
 		assert.Equal(t, typ, value.Type())
 	})
 
+	t.Run("resource value without type", func(t *testing.T) {
+		t.Parallel()
+
+		// Type is not set.
+		value := NewResource([]Value{})
+		assert.Nil(t, value.Type())
+
+		// Type is nil.
+		value = value.WithType(nil)
+		assert.Nil(t, value.Type())
+
+		// Type is (*ResourceType)(nil).
+		value = value.WithType((*ResourceType)(nil))
+		assert.Nil(t, value.Type())
+	})
+
 	t.Run("resource value", func(t *testing.T) {
 		t.Parallel()
 
@@ -721,11 +811,75 @@ func TestGetType(t *testing.T) {
 		assert.Equal(t, typ, value.Type())
 	})
 
+	t.Run("struct value without type", func(t *testing.T) {
+		t.Parallel()
+
+		// Type is not set.
+		value := NewStruct([]Value{})
+		assert.Nil(t, value.Type())
+
+		// Type is nil.
+		value = value.WithType(nil)
+		assert.Nil(t, value.Type())
+
+		// Type is (*StructType)(nil).
+		value = value.WithType((*StructType)(nil))
+		assert.Nil(t, value.Type())
+	})
+
 	t.Run("struct value", func(t *testing.T) {
 		t.Parallel()
 
 		typ := NewStructType(nil, "Foo", nil, nil)
 		value := NewStruct([]Value{}).WithType(typ)
+		assert.Equal(t, typ, value.Type())
+	})
+
+	t.Run("enum value without type", func(t *testing.T) {
+		t.Parallel()
+
+		// Type is not set.
+		value := NewEnum([]Value{})
+		assert.Nil(t, value.Type())
+
+		// Type is nil.
+		value = value.WithType(nil)
+		assert.Nil(t, value.Type())
+
+		// Type is (*EnumType)(nil).
+		value = value.WithType((*EnumType)(nil))
+		assert.Nil(t, value.Type())
+	})
+
+	t.Run("enum value", func(t *testing.T) {
+		t.Parallel()
+
+		typ := NewEnumType(nil, "Foo", nil, nil, nil)
+		value := NewEnum([]Value{}).WithType(typ)
+		assert.Equal(t, typ, value.Type())
+	})
+
+	t.Run("attachment value without type", func(t *testing.T) {
+		t.Parallel()
+
+		// Type is not set.
+		value := NewAttachment([]Value{})
+		assert.Nil(t, value.Type())
+
+		// Type is nil.
+		value = value.WithType(nil)
+		assert.Nil(t, value.Type())
+
+		// Type is (*AttachmentType)(nil).
+		value = value.WithType((*AttachmentType)(nil))
+		assert.Nil(t, value.Type())
+	})
+
+	t.Run("attachment value", func(t *testing.T) {
+		t.Parallel()
+
+		typ := NewAttachmentType(nil, nil, "Foo", nil, nil)
+		value := NewAttachment([]Value{}).WithType(typ)
 		assert.Equal(t, typ, value.Type())
 	})
 }
