@@ -921,16 +921,17 @@ func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id any, purit
 func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorization {
 	obj := toObject(authorizationJSON)
 	kind := obj.Get(kindKey)
-	entitlements := toSlice(obj.Get(entitlementsKey))
 
 	switch kind {
 	case "Unauthorized":
 		return cadence.UnauthorizedAccess
 	case "EntitlementMapAuthorization":
+		entitlements := toSlice(obj.Get(entitlementsKey))
 		m := toString(toObject(entitlements[0]).Get("typeID"))
 		return cadence.NewEntitlementMapAuthorization(d.gauge, common.TypeID(m))
 	case "EntitlementConjunctionSet":
 		var typeIDs []common.TypeID
+		entitlements := toSlice(obj.Get(entitlementsKey))
 		for _, entitlement := range entitlements {
 			id := toString(toObject(entitlement).Get("typeID"))
 			typeIDs = append(typeIDs, common.TypeID(id))
@@ -938,6 +939,7 @@ func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorizati
 		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Conjunction)
 	case "EntitlementDisjunctionSet":
 		var typeIDs []common.TypeID
+		entitlements := toSlice(obj.Get(entitlementsKey))
 		for _, entitlement := range entitlements {
 			id := toString(toObject(entitlement).Get("typeID"))
 			typeIDs = append(typeIDs, common.TypeID(id))

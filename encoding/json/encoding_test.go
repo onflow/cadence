@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/checker"
 
@@ -2340,13 +2341,154 @@ func TestEncodeType(t *testing.T) {
                     "type": {
                       "kind": "Int"
                     },
-                    "authorized": false
+                    "authorization": {
+						"kind": "Unauthorized",
+						"entitlements": null
+					}
                   }
                 }
               }
             `,
 		)
+	})
 
+	t.Run("with static auth(foo) &int", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementMapAuthorization{
+						TypeID: "foo",
+					},
+					Type: cadence.IntType{},
+				},
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Reference",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "authorization": {
+						"kind": "EntitlementMapAuthorization",
+						"entitlements": [
+							{
+								"kind": "EntitlementMap",
+								"typeID": "foo",
+								"type": null,
+								"fields": null, 
+								"initializers": null
+							}
+						]
+					}
+                  }
+                }
+              }
+            `,
+		)
+	})
+
+	t.Run("with static auth(X, Y) &int", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementSetAuthorization{
+						Kind:         cadence.Conjunction,
+						Entitlements: []common.TypeID{"X", "Y"},
+					},
+					Type: cadence.IntType{},
+				},
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Reference",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "authorization": {
+						"kind": "EntitlementConjunctionSet",
+						"entitlements": [
+							{
+								"kind": "Entitlement",
+								"typeID": "X",
+								"type": null,
+								"fields": null, 
+								"initializers": null
+							},
+							{
+								"kind": "Entitlement",
+								"typeID": "Y",
+								"type": null,
+								"fields": null, 
+								"initializers": null
+							}
+						]
+					}
+                  }
+                }
+              }
+            `,
+		)
+	})
+
+	t.Run("with static auth(X | Y) &int", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementSetAuthorization{
+						Kind:         cadence.Disjunction,
+						Entitlements: []common.TypeID{"X", "Y"},
+					},
+					Type: cadence.IntType{},
+				},
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Reference",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "authorization": {
+						"kind": "EntitlementDisjunctionSet",
+						"entitlements": [
+							{
+								"kind": "Entitlement",
+								"typeID": "X",
+								"type": null,
+								"fields": null, 
+								"initializers": null
+							},
+							{
+								"kind": "Entitlement",
+								"typeID": "Y",
+								"type": null,
+								"fields": null, 
+								"initializers": null
+							}
+						]
+					}
+                  }
+                }
+              }
+            `,
+		)
 	})
 
 	t.Run("with static function", func(t *testing.T) {
