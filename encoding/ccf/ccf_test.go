@@ -4525,6 +4525,89 @@ func TestEncodeContract(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
 }
 
+func TestEncodeEnum(t *testing.T) {
+	t.Parallel()
+
+	simpleEnumType := &cadence.EnumType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooEnum",
+		Fields: []cadence.Field{
+			{
+				Identifier: "raw",
+				Type:       cadence.UInt8Type{},
+			},
+		},
+	}
+
+	simpleEnum := encodeTest{
+		"Simple",
+		cadence.NewEnum(
+			[]cadence.Value{
+				cadence.NewUInt8(1),
+			},
+		).WithType(simpleEnumType),
+		[]byte{ // language=json, format=json-cdc
+			// {"value":{"id":"S.test.FooEnum","fields":[{"value":{"value":"1","type":"UInt8"},"name":"raw"}]},"type":"Enum"}
+			//
+			// language=edn, format=ccf
+			// 129([[164([h'', "S.test.FooEnum", [["raw", 137(12)]]])], [136(h''), [1]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 1 items follow
+			0x81,
+			// enum type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.FooEnum"
+			// 1 fields: [["raw", type(uint8)]]
+			// tag
+			0xd8, ccf.CBORTagEnumType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 14 bytes follow
+			0x6e,
+			// S.test.FooEnum
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x45, 0x6e, 0x75, 0x6d,
+			// fields
+			// array, 1 items follow
+			0x81,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// raw
+			0x72, 0x61, 0x77,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// UInt8 type ID (12)
+			0x0c,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 bytes follow
+			0x40,
+			// array, 1 items follow
+			0x81,
+			// 1
+			0x01,
+		},
+	}
+
+	testAllEncodeAndDecode(t, simpleEnum)
+}
+
 func TestEncodeSimpleTypes(t *testing.T) {
 
 	t.Parallel()
