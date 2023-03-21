@@ -3980,6 +3980,8 @@ func (t *CompositeType) TypeIndexingElementType(indexingType Type) Type {
 	return &OptionalType{
 		Type: &ReferenceType{
 			Type: indexingType,
+			// ENTITLEMENTS TODO: this should depend on the authorizations of the reference, or be fully authorized
+			Authorization: UnauthorizedAccess,
 		},
 	}
 }
@@ -6377,7 +6379,8 @@ func (t *RestrictedType) isTypeIndexableType() bool {
 func (t *RestrictedType) TypeIndexingElementType(indexingType Type) Type {
 	return &OptionalType{
 		Type: &ReferenceType{
-			Type:          indexingType,
+			Type: indexingType,
+			// ENTITLEMENTS TODO: this should depend on the authorizations of the reference, or be fully authorized
 			Authorization: UnauthorizedAccess,
 		},
 	}

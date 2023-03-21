@@ -647,7 +647,8 @@ func (r *interpreterRuntime) ReadLinked(
 		address,
 		pathValue,
 		&sema.ReferenceType{
-			Type: sema.AnyType,
+			Type:          sema.AnyType,
+			Authorization: sema.UnauthorizedAccess,
 		},
 		interpreter.EmptyLocationRange,
 	)
