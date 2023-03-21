@@ -271,7 +271,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			checker.report(
 				&InvalidAccessError{
 					Name:              member.Identifier.Identifier,
-					RestrictingAccess: member.Access.Access(),
+					RestrictingAccess: member.Access,
 					DeclarationKind:   member.DeclarationKind,
 					Range:             ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 				},
@@ -334,7 +334,7 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 				return memberAccountAccessHandler(checker, location)
 			}
 		}
-	case EntitlementAccess:
+	case EntitlementSetAccess:
 		// ENTITLEMENTTODO: fill this out
 		panic(errors.NewUnreachableError())
 	}

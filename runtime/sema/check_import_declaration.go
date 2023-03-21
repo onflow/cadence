@@ -182,7 +182,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		checker.report(
 			&InvalidAccessError{
 				Name:              identifier.Identifier,
-				RestrictingAccess: invalidAccessedElement.Access.Access(),
+				RestrictingAccess: invalidAccessedElement.Access,
 				DeclarationKind:   invalidAccessedElement.DeclarationKind,
 				Range:             ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
 			},

@@ -1125,9 +1125,8 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 	ty := checker.ConvertType(t.Type)
 
 	return &ReferenceType{
-		// TODO: support entitlements in types
-		Authorized: t.Authorization != nil,
-		Type:       ty,
+		Authorization: checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet}),
+		Type:          ty,
 	}
 }
 
@@ -1766,10 +1765,10 @@ func (checker *Checker) checkDeclarationAccessModifier(
 ) {
 	if checker.functionActivations.IsLocal() {
 
-		if access.Access() != ast.AccessNotSpecified {
+		if !access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 			checker.report(
 				&InvalidAccessModifierError{
-					Access:          access.Access(),
+					Access:          access,
 					Explanation:     "local declarations may not have an access modifier",
 					DeclarationKind: declarationKind,
 					Pos:             startPos,
@@ -1782,7 +1781,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 
 		switch access := access.(type) {
 		case PrimitiveAccess:
-			switch access.Access() {
+			switch ast.PrimitiveAccess(access) {
 			case ast.AccessPublicSettable:
 				// Public settable access for a constant is not sensible
 				// and type declarations must be public for now
@@ -1798,7 +1797,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 
 					checker.report(
 						&InvalidAccessModifierError{
-							Access:          access.Access(),
+							Access:          access,
 							Explanation:     explanation,
 							DeclarationKind: declarationKind,
 							Pos:             startPos,
@@ -1813,7 +1812,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 
 					checker.report(
 						&InvalidAccessModifierError{
-							Access:          access.Access(),
+							Access:          access,
 							Explanation:     invalidTypeDeclarationAccessModifierExplanation,
 							DeclarationKind: declarationKind,
 							Pos:             startPos,
@@ -1829,7 +1828,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				if isTypeDeclaration {
 					checker.report(
 						&InvalidAccessModifierError{
-							Access:          access.Access(),
+							Access:          access,
 							Explanation:     invalidTypeDeclarationAccessModifierExplanation,
 							DeclarationKind: declarationKind,
 							Pos:             startPos,
@@ -1881,7 +1880,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 			// mapped entitlement fields must be references that are authorized to the same mapped entitlement
 			switch referenceType := declarationType.(type) {
 			case *ReferenceType:
-				if !referenceType.Authorized {
+				if !referenceType.Authorization.Equal(access) {
 					checker.report(
 						&InvalidMappedEntitlementMemberError{
 							Pos: startPos,
@@ -1904,7 +1903,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 					},
 				)
 			}
-		case EntitlementAccess:
+		case EntitlementSetAccess:
 			if containerKind == nil ||
 				(*containerKind != common.CompositeKindResource && *containerKind != common.CompositeKindStructure) {
 				checker.report(
@@ -1994,10 +1993,10 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 				semanticEntitlements = append(semanticEntitlements, entitlementType)
 			}
 			if access.EntitlementSet.Separator() == "," {
-				result = NewEntitlementAccess(access, semanticEntitlements, Conjunction)
+				result = NewEntitlementSetAccess(semanticEntitlements, Conjunction)
 				return
 			}
-			result = NewEntitlementAccess(access, semanticEntitlements, Disjunction)
+			result = NewEntitlementSetAccess(semanticEntitlements, Disjunction)
 			return
 		case *EntitlementMapType:
 			if len(astEntitlements) != 1 {
@@ -2009,7 +2008,7 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 				result = PrimitiveAccess(ast.AccessNotSpecified)
 				return
 			}
-			result = NewEntitlementMapAccess(access, nominalType)
+			result = NewEntitlementMapAccess(nominalType)
 			return
 		default:
 			// don't duplicate errors when the type here is invalid, as this will have triggered an error before
@@ -2322,7 +2321,7 @@ func (checker *Checker) effectiveMemberAccess(access Access, containerKind Conta
 }
 
 func (checker *Checker) effectiveInterfaceMemberAccess(access Access) Access {
-	if access.Access() == ast.AccessNotSpecified {
+	if access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return PrimitiveAccess(ast.AccessPublic)
 	} else {
 		return access
@@ -2330,7 +2329,7 @@ func (checker *Checker) effectiveInterfaceMemberAccess(access Access) Access {
 }
 
 func (checker *Checker) effectiveCompositeMemberAccess(access Access) Access {
-	if access.Access() != ast.AccessNotSpecified {
+	if !access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return access
 	}
 

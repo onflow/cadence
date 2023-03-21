@@ -1009,11 +1009,11 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(t *testing.T, auth bool, kind common.CompositeKind) {
+	test := func(t *testing.T, auth sema.Access, kind common.CompositeKind) {
 
 		authKeyword := ""
-		if auth {
-			authKeyword = "auth"
+		if auth != sema.PrimitiveAccess(ast.AccessPublic) {
+			authKeyword = auth.Keyword()
 		}
 
 		testName := fmt.Sprintf("%s, auth: %v", kind.Name(), auth)
@@ -1026,6 +1026,7 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 				fmt.Sprintf(
 					`
                       %[1]s T {}
+                      entitlement X
 
                       let t %[2]s %[3]s T()
                       let ref = &t as %[4]s &T
@@ -1045,8 +1046,8 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 			require.Equal(t,
 				&sema.ReferenceType{
-					Authorized: auth,
-					Type:       tType,
+					Authorization: auth,
+					Type:          tType,
 				},
 				refValueType,
 			)
@@ -1057,7 +1058,13 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 		common.CompositeKindResource,
 		common.CompositeKindStructure,
 	} {
-		for _, auth := range []bool{true, false} {
+		for _, auth := range []sema.Access{
+			sema.PrimitiveAccess(ast.AccessPublic),
+			sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
+				Location:   utils.TestLocation,
+				Identifier: "X",
+			}}, sema.Conjunction),
+		} {
 			test(t, auth, kind)
 		}
 	}

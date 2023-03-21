@@ -188,6 +188,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 
 	switch typedSuperType := superType.(type) {
 	case *ReferenceType:
+		// ENTITLEMENTS TODO: references types should not have special semantics
 		// References types are only subtypes of reference types
 
 		if typedSubType, ok := subType.(*ReferenceType); ok {
@@ -195,7 +196,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 			// is a subtype of a reference type `&U` (authorized or non-authorized),
 			// if `T` is a subtype of `U`
 
-			if typedSubType.Authorized {
+			if !typedSubType.Authorization.Equal(PrimitiveAccess(ast.AccessPublic)) {
 				return FailableCastCanSucceed(typedSubType.Type, typedSuperType.Type)
 			}
 
@@ -204,7 +205,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 			//
 			// The holder of the reference may not gain more permissions.
 
-			if typedSuperType.Authorized {
+			if !typedSuperType.Authorization.Equal(PrimitiveAccess(ast.AccessPublic)) {
 				return false
 			}
 

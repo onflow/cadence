@@ -25,9 +25,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
@@ -724,11 +726,11 @@ func TestCheckAccount_borrow(t *testing.T) {
 		})
 	}
 
-	testExplicitTypeArgumentReference := func(domain common.PathDomain, auth bool) {
+	testExplicitTypeArgumentReference := func(domain common.PathDomain, auth sema.Access) {
 
 		authKeyword := ""
-		if auth {
-			authKeyword = "auth"
+		if auth != sema.PrimitiveAccess(ast.AccessPublic) {
+			authKeyword = auth.Keyword()
 		}
 
 		testName := fmt.Sprintf(
@@ -749,6 +751,7 @@ func TestCheckAccount_borrow(t *testing.T) {
 					fmt.Sprintf(
 						`
                           resource R {}
+						  entitlement X
 
                           let r = authAccount.borrow<%s &R>(from: /%s/r)
                         `,
@@ -767,8 +770,8 @@ func TestCheckAccount_borrow(t *testing.T) {
 					require.Equal(t,
 						&sema.OptionalType{
 							Type: &sema.ReferenceType{
-								Authorized: auth,
-								Type:       rType,
+								Authorization: auth,
+								Type:          rType,
 							},
 						},
 						rValueType,
@@ -788,6 +791,7 @@ func TestCheckAccount_borrow(t *testing.T) {
 					fmt.Sprintf(
 						`
                           struct S {}
+						  entitlement X
 
                           let s = authAccount.borrow<%s &S>(from: /%s/s)
                         `,
@@ -805,8 +809,8 @@ func TestCheckAccount_borrow(t *testing.T) {
 					require.Equal(t,
 						&sema.OptionalType{
 							Type: &sema.ReferenceType{
-								Authorized: auth,
-								Type:       sType,
+								Authorization: auth,
+								Type:          sType,
 							},
 						},
 						sValueType,
@@ -892,7 +896,13 @@ func TestCheckAccount_borrow(t *testing.T) {
 	for _, domain := range common.AllPathDomainsByIdentifier {
 		testMissingTypeArgument(domain)
 
-		for _, auth := range []bool{false, true} {
+		for _, auth := range []sema.Access{
+			sema.PrimitiveAccess(ast.AccessPublic),
+			sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
+				Location:   utils.TestLocation,
+				Identifier: "X",
+			}}, sema.Conjunction),
+		} {
 			testExplicitTypeArgumentReference(domain, auth)
 		}
 

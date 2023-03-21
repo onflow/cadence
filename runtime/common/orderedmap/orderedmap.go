@@ -173,6 +173,20 @@ func (om *OrderedMap[K, V]) Foreach(f func(key K, value V)) {
 	}
 }
 
+// ForeachWithIndex iterates over the entries of the map in the insertion order, and invokes
+// the provided function for each key-value pair.
+func (om *OrderedMap[K, V]) ForeachWithIndex(f func(index int, key K, value V)) {
+	if om.pairs == nil {
+		return
+	}
+
+	index := 0
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		f(index, pair.Key, pair.Value)
+		index++
+	}
+}
+
 // ForeachWithError iterates over the entries of the map in the insertion order,
 // and invokes the provided function for each key-value pair.
 // If the passed function returns an error, iteration breaks and the error is returned.

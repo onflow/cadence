@@ -108,12 +108,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: PrimitiveStaticTypeString,
+				Authorization: UnauthorizedAccess,
+				BorrowedType:  PrimitiveStaticTypeString,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized:   false,
-					BorrowedType: PrimitiveStaticTypeString,
+					Authorization: UnauthorizedAccess,
+					BorrowedType:  PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -125,12 +125,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: PrimitiveStaticTypeInt,
+				Authorization: UnauthorizedAccess,
+				BorrowedType:  PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized:   false,
-					BorrowedType: PrimitiveStaticTypeString,
+					Authorization: UnauthorizedAccess,
+					BorrowedType:  PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -142,12 +142,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: PrimitiveStaticTypeInt,
+				Authorization: UnauthorizedAccess,
+				BorrowedType:  PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized:   true,
-					BorrowedType: PrimitiveStaticTypeInt,
+					Authorization: EntitlementMapAuthorization{TypeID: "Foo"},
+					BorrowedType:  PrimitiveStaticTypeInt,
 				},
 			),
 		)

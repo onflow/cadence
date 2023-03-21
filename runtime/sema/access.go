@@ -19,6 +19,8 @@
 package sema
 
 import (
+	"strings"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
@@ -29,7 +31,10 @@ type Access interface {
 	IsLessPermissiveThan(Access) bool
 	// returns whether receiver access permits argument access
 	PermitsAccess(Access) bool
-	Access() ast.Access
+	Equal(other Access) bool
+	string(func(ty Type) string) string
+	Description() string
+	Keyword() string
 }
 
 type EntitlementSetKind uint8
@@ -39,41 +44,71 @@ const (
 	Disjunction
 )
 
-type EntitlementAccess struct {
-	astAccess    ast.EntitlementAccess
+type EntitlementSetAccess struct {
 	Entitlements *EntitlementOrderedSet
 	SetKind      EntitlementSetKind
 }
 
-var _ Access = EntitlementAccess{}
+var _ Access = EntitlementSetAccess{}
 
-func NewEntitlementAccess(
-	astAccess ast.EntitlementAccess,
+func NewEntitlementSetAccess(
 	entitlements []*EntitlementType,
 	setKind EntitlementSetKind,
-) EntitlementAccess {
+) EntitlementSetAccess {
 	set := orderedmap.New[EntitlementOrderedSet](len(entitlements))
 	for _, entitlement := range entitlements {
 		set.Set(entitlement, struct{}{})
 	}
-	return EntitlementAccess{
+	return EntitlementSetAccess{
 		Entitlements: set,
 		SetKind:      setKind,
-		astAccess:    astAccess,
 	}
 }
 
-func (EntitlementAccess) isAccess() {}
+func (EntitlementSetAccess) isAccess() {}
 
-func (a EntitlementAccess) Access() ast.Access {
-	return a.astAccess
+func (a EntitlementSetAccess) Description() string {
+	return "entitlement set access"
 }
 
-func (e EntitlementAccess) PermitsAccess(other Access) bool {
+func (a EntitlementSetAccess) Keyword() string {
+	return a.string(func(ty Type) string { return ty.String() })
+}
+
+func (e EntitlementSetAccess) string(typeFormatter func(ty Type) string) string {
+	var builder strings.Builder
+	var separator string
+
+	if e.SetKind == Conjunction {
+		separator = ", "
+	} else if e.SetKind == Disjunction {
+		separator = " | "
+	}
+
+	e.Entitlements.ForeachWithIndex(func(i int, entitlement *EntitlementType, _ struct{}) {
+		builder.WriteString(typeFormatter(entitlement))
+		if i < e.Entitlements.Len() {
+			builder.WriteString(separator)
+		}
+	})
+	return builder.String()
+}
+
+func (e EntitlementSetAccess) Equal(other Access) bool {
+	switch otherAccess := other.(type) {
+	case EntitlementSetAccess:
+		return e.SetKind == otherAccess.SetKind &&
+			e.PermitsAccess(otherAccess) &&
+			otherAccess.PermitsAccess(e)
+	}
+	return false
+}
+
+func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
 		return otherAccess == PrimitiveAccess(ast.AccessPrivate)
-	case EntitlementAccess:
+	case EntitlementSetAccess:
 		switch otherAccess.SetKind {
 		case Disjunction:
 			var innerPredicate func(eKey *EntitlementType) bool
@@ -113,11 +148,11 @@ func (e EntitlementAccess) PermitsAccess(other Access) bool {
 	}
 }
 
-func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
+func (e EntitlementSetAccess) IsLessPermissiveThan(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
 		return ast.PrimitiveAccess(otherAccess) != ast.AccessPrivate
-	case EntitlementAccess:
+	case EntitlementSetAccess:
 		// subset check returns true on equality, and we want this function to be false on equality, so invert the >= check
 		return !e.PermitsAccess(otherAccess)
 	default:
@@ -126,20 +161,35 @@ func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
 }
 
 type EntitlementMapAccess struct {
-	astAccess ast.EntitlementAccess
-	Type      *EntitlementMapType
+	Type *EntitlementMapType
 }
 
 var _ Access = EntitlementMapAccess{}
 
-func NewEntitlementMapAccess(astAccess ast.EntitlementAccess, mapType *EntitlementMapType) EntitlementMapAccess {
-	return EntitlementMapAccess{astAccess: astAccess, Type: mapType}
+func NewEntitlementMapAccess(mapType *EntitlementMapType) EntitlementMapAccess {
+	return EntitlementMapAccess{Type: mapType}
 }
 
 func (EntitlementMapAccess) isAccess() {}
 
-func (a EntitlementMapAccess) Access() ast.Access {
-	return a.astAccess
+func (e EntitlementMapAccess) string(typeFormatter func(ty Type) string) string {
+	return typeFormatter(e.Type)
+}
+
+func (a EntitlementMapAccess) Description() string {
+	return "entitlement map access"
+}
+
+func (a EntitlementMapAccess) Keyword() string {
+	return a.string(func(ty Type) string { return ty.String() })
+}
+
+func (e EntitlementMapAccess) Equal(other Access) bool {
+	switch otherAccess := other.(type) {
+	case EntitlementMapAccess:
+		return e.Type.Equal(otherAccess.Type)
+	}
+	return false
 }
 
 func (e EntitlementMapAccess) PermitsAccess(other Access) bool {
@@ -169,8 +219,24 @@ type PrimitiveAccess ast.PrimitiveAccess
 
 func (PrimitiveAccess) isAccess() {}
 
-func (a PrimitiveAccess) Access() ast.Access {
-	return ast.PrimitiveAccess(a)
+func (a PrimitiveAccess) string(_ func(_ Type) string) string {
+	return ast.PrimitiveAccess(a).String()
+}
+
+func (a PrimitiveAccess) Description() string {
+	return ast.PrimitiveAccess(a).Description()
+}
+
+func (a PrimitiveAccess) Keyword() string {
+	return ast.PrimitiveAccess(a).Keyword()
+}
+
+func (a PrimitiveAccess) Equal(other Access) bool {
+	switch otherAccess := other.(type) {
+	case PrimitiveAccess:
+		return ast.PrimitiveAccess(a) == ast.PrimitiveAccess(otherAccess)
+	}
+	return false
 }
 
 func (a PrimitiveAccess) IsLessPermissiveThan(otherAccess Access) bool {

@@ -93,7 +93,7 @@ func (v *AccountReferenceValue) MeteredString(memoryGauge common.MemoryGauge, _ 
 func (v *AccountReferenceValue) StaticType(inter *Interpreter) StaticType {
 	return NewReferenceStaticType(
 		inter,
-		false,
+		UnauthorizedAccess,
 		ConvertSemaToStaticType(inter, v.BorrowedType),
 		PrimitiveStaticTypeAuthAccount,
 	)

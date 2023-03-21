@@ -2326,8 +2326,8 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.ReferenceType{
-					Authorized: false,
-					Type:       cadence.IntType{},
+					Authorization: cadence.UnauthorizedAccess,
+					Type:          cadence.IntType{},
 				},
 			},
 			// language=json

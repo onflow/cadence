@@ -4893,8 +4893,8 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 
 // ReferenceType represents the reference to a value
 type ReferenceType struct {
-	Type       Type
-	Authorized bool
+	Type          Type
+	Authorization Access
 }
 
 var _ Type = &ReferenceType{}
@@ -4903,11 +4903,11 @@ var _ Type = &ReferenceType{}
 var _ ValueIndexableType = &ReferenceType{}
 var _ TypeIndexableType = &ReferenceType{}
 
-func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorized bool) *ReferenceType {
+func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorization Access) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
 	return &ReferenceType{
-		Type:       typ,
-		Authorized: authorized,
+		Type:          typ,
+		Authorization: authorization,
 	}
 }
 
@@ -4922,8 +4922,10 @@ func (t *ReferenceType) string(typeFormatter func(Type) string) string {
 		return "reference"
 	}
 	var builder strings.Builder
-	if t.Authorized {
-		builder.WriteString("auth ")
+	if !t.Authorization.Equal(PrimitiveAccess(ast.AccessPublic)) {
+		builder.WriteString("auth(")
+		builder.WriteString(t.Authorization.string(typeFormatter))
+		builder.WriteString(")")
 	}
 	builder.WriteRune('&')
 	builder.WriteString(typeFormatter(t.Type))
@@ -4956,7 +4958,7 @@ func (t *ReferenceType) Equal(other Type) bool {
 		return false
 	}
 
-	if t.Authorized != otherReference.Authorized {
+	if !t.Authorization.Equal(otherReference.Authorization) {
 		return false
 	}
 
@@ -4998,8 +5000,8 @@ func (t *ReferenceType) RewriteWithRestrictedTypes() (Type, bool) {
 	rewrittenType, rewritten := t.Type.RewriteWithRestrictedTypes()
 	if rewritten {
 		return &ReferenceType{
-			Authorized: t.Authorized,
-			Type:       rewrittenType,
+			Authorization: t.Authorization,
+			Type:          rewrittenType,
 		}, true
 	} else {
 		return t, false
@@ -5088,8 +5090,8 @@ func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type
 	}
 
 	return &ReferenceType{
-		Authorized: t.Authorized,
-		Type:       newInnerType,
+		Authorization: t.Authorization,
+		Type:          newInnerType,
 	}
 }
 
@@ -5427,6 +5429,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		)
 
 	case *ReferenceType:
+		// ENTITLEMENTS TODO: references should not have special semantics
 		// References types are only subtypes of reference types
 
 		typedSubType, ok := subType.(*ReferenceType)
@@ -5438,7 +5441,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// is a subtype of a reference type `&U` (authorized or non-authorized),
 		// if `T` is a subtype of `U`
 
-		if typedSubType.Authorized {
+		if !typedSubType.Authorization.Equal(PrimitiveAccess(ast.AccessPublic)) {
 			return IsSubType(typedSubType.Type, typedSuperType.Type)
 		}
 
@@ -5447,7 +5450,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		//
 		// The holder of the reference may not gain more permissions.
 
-		if typedSuperType.Authorized {
+		if !typedSuperType.Authorization.Equal(PrimitiveAccess(ast.AccessPublic)) {
 			return false
 		}
 

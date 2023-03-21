@@ -1163,13 +1163,45 @@ func TestImportRuntimeType(t *testing.T) {
 			},
 		},
 		{
-			label: "Reference",
+			label: "Unauthorized Reference",
 			actual: &cadence.ReferenceType{
-				Authorized: false,
-				Type:       cadence.IntType{},
+				Authorization: cadence.UnauthorizedAccess,
+				Type:          cadence.IntType{},
 			},
 			expected: interpreter.ReferenceStaticType{
-				Authorized:   false,
+				Authorization: interpreter.UnauthorizedAccess,
+				BorrowedType:  interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Entitlement Set Reference",
+			actual: &cadence.ReferenceType{
+				Authorization: cadence.EntitlementSetAuthorization{
+					Kind:         cadence.Conjunction,
+					Entitlements: []common.TypeID{"E", "F"},
+				},
+				Type: cadence.IntType{},
+			},
+			expected: interpreter.ReferenceStaticType{
+				Authorization: interpreter.EntitlementSetAuthorization{
+					Kind:         sema.Conjunction,
+					Entitlements: []common.TypeID{"E", "F"},
+				},
+				BorrowedType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Entitlement Map Reference",
+			actual: &cadence.ReferenceType{
+				Authorization: cadence.EntitlementMapAuthorization{
+					TypeID: "M",
+				},
+				Type: cadence.IntType{},
+			},
+			expected: interpreter.ReferenceStaticType{
+				Authorization: interpreter.EntitlementMapAuthorization{
+					TypeID: "M",
+				},
 				BorrowedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},

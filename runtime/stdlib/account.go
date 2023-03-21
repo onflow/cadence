@@ -1233,7 +1233,7 @@ func newAccountContractsBorrowFunction(
 
 			reference := interpreter.NewEphemeralReferenceValue(
 				inter,
-				false,
+				interpreter.UnauthorizedAccess,
 				contractValue,
 				referenceType.Type,
 			)

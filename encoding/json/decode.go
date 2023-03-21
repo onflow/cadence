@@ -111,29 +111,30 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey         = "type"
-	kindKey         = "kind"
-	valueKey        = "value"
-	keyKey          = "key"
-	nameKey         = "name"
-	fieldsKey       = "fields"
-	initializersKey = "initializers"
-	idKey           = "id"
-	targetPathKey   = "targetPath"
-	borrowTypeKey   = "borrowType"
-	domainKey       = "domain"
-	identifierKey   = "identifier"
-	staticTypeKey   = "staticType"
-	addressKey      = "address"
-	pathKey         = "path"
-	authorizedKey   = "authorized"
-	sizeKey         = "size"
-	typeIDKey       = "typeID"
-	restrictionsKey = "restrictions"
-	labelKey        = "label"
-	parametersKey   = "parameters"
-	returnKey       = "return"
-	purityKey       = "purity"
+	typeKey          = "type"
+	kindKey          = "kind"
+	valueKey         = "value"
+	keyKey           = "key"
+	nameKey          = "name"
+	fieldsKey        = "fields"
+	initializersKey  = "initializers"
+	idKey            = "id"
+	targetPathKey    = "targetPath"
+	borrowTypeKey    = "borrowType"
+	domainKey        = "domain"
+	identifierKey    = "identifier"
+	staticTypeKey    = "staticType"
+	addressKey       = "address"
+	pathKey          = "path"
+	authorizationKey = "authorization"
+	entitlementsKey  = "entitlements"
+	sizeKey          = "size"
+	typeIDKey        = "typeID"
+	restrictionsKey  = "restrictions"
+	labelKey         = "label"
+	parametersKey    = "parameters"
+	returnKey        = "return"
+	purityKey        = "purity"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -917,6 +918,36 @@ func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id any, purit
 	).WithID(toString(id))
 }
 
+func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorization {
+	obj := toObject(authorizationJSON)
+	kind := obj.Get(kindKey)
+	entitlements := toSlice(obj.Get(entitlementsKey))
+
+	switch kind {
+	case "Unauthorized":
+		return cadence.UnauthorizedAccess
+	case "EntitlementMapAuthorization":
+		m := toString(toObject(entitlements[0]).Get("typeID"))
+		return cadence.NewEntitlementMapAuthorization(d.gauge, common.TypeID(m))
+	case "EntitlementConjunctionSet":
+		var typeIDs []common.TypeID
+		for _, entitlement := range entitlements {
+			id := toString(toObject(entitlement).Get("typeID"))
+			typeIDs = append(typeIDs, common.TypeID(id))
+		}
+		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Conjunction)
+	case "EntitlementDisjunctionSet":
+		var typeIDs []common.TypeID
+		for _, entitlement := range entitlements {
+			id := toString(toObject(entitlement).Get("typeID"))
+			typeIDs = append(typeIDs, common.TypeID(id))
+		}
+		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Disjunction)
+	}
+
+	panic(errors.NewDefaultUserError("invalid kind in authorization: %s", kind))
+}
+
 func (d *Decoder) decodeNominalType(
 	obj jsonObject,
 	kind, typeID string,
@@ -1125,10 +1156,9 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Reference":
-		auth := toBool(obj.Get(authorizedKey))
 		return cadence.NewMeteredReferenceType(
 			d.gauge,
-			auth,
+			d.decodeAuthorization(obj.Get(authorizationKey)),
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Any":

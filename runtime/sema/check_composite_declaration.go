@@ -1799,12 +1799,12 @@ func (checker *Checker) defaultMembersAndOrigins(
 		effectiveAccess := checker.effectiveMemberAccess(fieldAccess, containerKind)
 
 		if requireNonPrivateMemberAccess &&
-			effectiveAccess.Access() == ast.AccessPrivate {
+			effectiveAccess.Equal(PrimitiveAccess(ast.AccessPrivate)) {
 
 			checker.report(
 				&InvalidAccessModifierError{
 					DeclarationKind: declarationKind,
-					Access:          field.Access,
+					Access:          fieldAccess,
 					Explanation:     "private fields can never be used",
 					Pos:             field.StartPos,
 				},
@@ -1867,12 +1867,12 @@ func (checker *Checker) defaultMembersAndOrigins(
 		effectiveAccess := checker.effectiveMemberAccess(functionAccess, containerKind)
 
 		if requireNonPrivateMemberAccess &&
-			effectiveAccess.Access() == ast.AccessPrivate {
+			effectiveAccess.Equal(PrimitiveAccess(ast.AccessPrivate)) {
 
 			checker.report(
 				&InvalidAccessModifierError{
 					DeclarationKind: declarationKind,
-					Access:          function.Access,
+					Access:          functionAccess,
 					Explanation:     "private functions can never be used",
 					Pos:             function.StartPos,
 				},
@@ -1980,12 +1980,13 @@ func (checker *Checker) enumMembersAndOrigins(
 		}
 
 		// Enum cases must be effectively public
+		enumAccess := checker.accessFromAstAccess(enumCase.Access)
 
-		if checker.effectiveCompositeMemberAccess(checker.accessFromAstAccess(enumCase.Access)).Access() != ast.AccessPublic {
+		if !checker.effectiveCompositeMemberAccess(enumAccess).Equal(PrimitiveAccess(ast.AccessPublic)) {
 			checker.report(
 				&InvalidAccessModifierError{
 					DeclarationKind: enumCase.DeclarationKind(),
-					Access:          enumCase.Access,
+					Access:          enumAccess,
 					Explanation:     "enum cases must be public",
 					Pos:             enumCase.StartPos,
 				},
@@ -2239,7 +2240,8 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 	// inside of an attachment, self is a reference to the attachment's type, because
 	// attachments are never first class values, they must always exist inside references
 	if typedSelfType, ok := selfType.(*CompositeType); ok && typedSelfType.Kind == common.CompositeKindAttachment {
-		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, false)
+		// ENTITLEMENT TODO: self should have type auth(X) &A, where `X` is the image of the base's entitlements through the map `A` was declared with
+		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, PrimitiveAccess(ast.AccessPublic))
 	}
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }
@@ -2257,7 +2259,8 @@ func (checker *Checker) declareBaseValue(baseType Type, superDocString string) {
 	}
 	// References to `base` should be non-auth, as the actual base type in practice may be any number of subtypes of the annotated base type,
 	// not all of which should be available to the writer of the attachment.
-	base := NewReferenceType(checker.memoryGauge, baseType, false)
+	// ENTITLEMENT TODO: base should have type auth(X) &A, where `X` is the preimage of the self's entitlements through the map `A` was declared with
+	base := NewReferenceType(checker.memoryGauge, baseType, PrimitiveAccess(ast.AccessPublic))
 	checker.declareLowerScopedValue(base, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }
 

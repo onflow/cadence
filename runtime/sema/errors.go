@@ -655,7 +655,7 @@ type InvalidAccessModifierError struct {
 	Explanation     string
 	Pos             ast.Position
 	DeclarationKind common.DeclarationKind
-	Access          ast.Access
+	Access          Access
 }
 
 var _ SemanticError = &InvalidAccessModifierError{}
@@ -671,7 +671,7 @@ func (e *InvalidAccessModifierError) Error() string {
 		explanation = fmt.Sprintf(". %s", e.Explanation)
 	}
 
-	if e.Access == ast.AccessNotSpecified {
+	if e.Access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return fmt.Sprintf(
 			"invalid effective access modifier for %s%s",
 			e.DeclarationKind.Name(),
@@ -692,7 +692,7 @@ func (e *InvalidAccessModifierError) StartPosition() ast.Position {
 }
 
 func (e *InvalidAccessModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	if e.Access == ast.AccessNotSpecified {
+	if e.Access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return e.Pos
 	}
 
@@ -2803,7 +2803,7 @@ func (e *InvalidOptionalChainingError) Error() string {
 
 type InvalidAccessError struct {
 	Name              string
-	RestrictingAccess ast.Access
+	RestrictingAccess Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }
@@ -2828,7 +2828,7 @@ func (e *InvalidAccessError) Error() string {
 
 type InvalidAssignmentAccessError struct {
 	Name              string
-	RestrictingAccess ast.Access
+	RestrictingAccess Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }

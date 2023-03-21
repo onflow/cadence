@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -89,11 +91,16 @@ func TestCheckCapability_borrow(t *testing.T) {
 		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
 	})
 
-	for _, auth := range []bool{false, true} {
+	for _, auth := range []sema.Access{sema.PrimitiveAccess(ast.AccessPublic),
+		sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
+			Location:   utils.TestLocation,
+			Identifier: "X",
+		}}, sema.Conjunction),
+	} {
 
 		authKeyword := ""
-		if auth {
-			authKeyword = "auth"
+		if auth != sema.PrimitiveAccess(ast.AccessPublic) {
+			authKeyword = auth.Keyword()
 		}
 
 		testName := fmt.Sprintf(
@@ -108,6 +115,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 				checker, err := ParseAndCheckWithPanic(t,
 					fmt.Sprintf(
 						`
+						  entitlement X
                           resource R {}
 
                           let capability: Capability = panic("")
@@ -126,8 +134,8 @@ func TestCheckCapability_borrow(t *testing.T) {
 				require.Equal(t,
 					&sema.OptionalType{
 						Type: &sema.ReferenceType{
-							Authorized: auth,
-							Type:       rType,
+							Authorization: auth,
+							Type:          rType,
 						},
 					},
 					rValueType,
@@ -139,6 +147,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 				checker, err := ParseAndCheckWithPanic(t,
 					fmt.Sprintf(
 						`
+						  entitlement X
                           resource R {}
 
                           let capability: Capability<%s &R> = panic("")
@@ -157,8 +166,8 @@ func TestCheckCapability_borrow(t *testing.T) {
 				require.Equal(t,
 					&sema.OptionalType{
 						Type: &sema.ReferenceType{
-							Authorized: auth,
-							Type:       rType,
+							Authorization: auth,
+							Type:          rType,
 						},
 					},
 					rValueType,
@@ -170,6 +179,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 				checker, err := ParseAndCheckWithPanic(t,
 					fmt.Sprintf(
 						`
+						  entitlement X
                           struct S {}
 
                           let capability: Capability = panic("")
@@ -188,8 +198,8 @@ func TestCheckCapability_borrow(t *testing.T) {
 				require.Equal(t,
 					&sema.OptionalType{
 						Type: &sema.ReferenceType{
-							Authorized: auth,
-							Type:       sType,
+							Authorization: auth,
+							Type:          sType,
 						},
 					},
 					sValueType,
@@ -201,6 +211,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 				checker, err := ParseAndCheckWithPanic(t,
 					fmt.Sprintf(
 						`
+						  entitlement X
                           struct S {}
 
                           let capability: Capability<%s &S> = panic("")
@@ -219,8 +230,8 @@ func TestCheckCapability_borrow(t *testing.T) {
 				require.Equal(t,
 					&sema.OptionalType{
 						Type: &sema.ReferenceType{
-							Authorized: auth,
-							Type:       sType,
+							Authorization: auth,
+							Type:          sType,
 						},
 					},
 					sValueType,

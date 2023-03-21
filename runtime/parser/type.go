@@ -961,59 +961,56 @@ func defineIdentifierTypes() {
 
 				var authorization ast.Authorization
 
-				current := p.current
-				if current.Is(lexer.TokenParenOpen) {
-					_, err := p.mustOne(lexer.TokenParenOpen)
+				_, err := p.mustOne(lexer.TokenParenOpen)
+				if err != nil {
+					return nil, err
+				}
+				firstTy, err := parseNominalType(p, lowestBindingPower, true)
+				if err != nil {
+					return nil, err
+				}
+				entitlements := []*ast.NominalType{firstTy}
+				p.skipSpaceAndComments()
+				var separator lexer.TokenType
+
+				switch p.current.Type {
+				case lexer.TokenComma, lexer.TokenVerticalBar:
+					separator = p.current.Type
+				case lexer.TokenParenClose:
+					authorization.EntitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
+				default:
+					return nil, p.syntaxError(
+						"unexpected entitlement separator %s",
+						p.current.Type.String(),
+					)
+				}
+				p.nextSemanticToken()
+
+				if separator != lexer.TokenError {
+					remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true, separator)
 					if err != nil {
 						return nil, err
 					}
-					firstTy, err := parseNominalType(p, lowestBindingPower, true)
+
+					entitlements = append(entitlements, remainingEntitlements...)
+					if len(entitlements) < 1 {
+						return nil, p.syntaxError("entitlements list cannot be empty")
+					}
+					var entitlementSet ast.EntitlementSet
+					if separator == lexer.TokenComma {
+						entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
+					} else {
+						entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
+					}
+					authorization.EntitlementSet = entitlementSet
+					_, err = p.mustOne(lexer.TokenParenClose)
 					if err != nil {
 						return nil, err
 					}
-					entitlements := []*ast.NominalType{firstTy}
 					p.skipSpaceAndComments()
-					var separator lexer.TokenType
-
-					switch p.current.Type {
-					case lexer.TokenComma, lexer.TokenVerticalBar:
-						separator = p.current.Type
-					case lexer.TokenParenClose:
-						authorization.EntitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
-					default:
-						return nil, p.syntaxError(
-							"unexpected entitlement separator %s",
-							p.current.Type.String(),
-						)
-					}
-					p.nextSemanticToken()
-
-					if separator != lexer.TokenError {
-						remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true, separator)
-						if err != nil {
-							return nil, err
-						}
-
-						entitlements = append(entitlements, remainingEntitlements...)
-						if len(entitlements) < 1 {
-							return nil, p.syntaxError("entitlements list cannot be empty")
-						}
-						var entitlementSet ast.EntitlementSet
-						if separator == lexer.TokenComma {
-							entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
-						} else {
-							entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
-						}
-						authorization.EntitlementSet = entitlementSet
-						_, err = p.mustOne(lexer.TokenParenClose)
-						if err != nil {
-							return nil, err
-						}
-						p.skipSpaceAndComments()
-					}
 				}
 
-				_, err := p.mustOne(lexer.TokenAmpersand)
+				_, err = p.mustOne(lexer.TokenAmpersand)
 				if err != nil {
 					return nil, err
 				}

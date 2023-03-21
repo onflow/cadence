@@ -1139,7 +1139,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 				interpreter,
 				NewEphemeralReferenceValue(
 					interpreter,
-					innerBorrowType.Authorized,
+					ConvertSemaAccesstoStaticAuthorization(interpreter, innerBorrowType.Authorization),
 					innerValue,
 					innerBorrowType.Type,
 				),
@@ -1162,7 +1162,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 				locationRange,
 				NewEphemeralReferenceValue(
 					interpreter,
-					innerBorrowType.Authorized,
+					ConvertSemaAccesstoStaticAuthorization(interpreter, innerBorrowType.Authorization),
 					result,
 					innerBorrowType.Type,
 				),
@@ -1171,7 +1171,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		}
 
 	case *sema.ReferenceType:
-		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
+		return NewEphemeralReferenceValue(interpreter, ConvertSemaAccesstoStaticAuthorization(interpreter, typ.Authorization), result, typ.Type)
 	}
 	panic(errors.NewUnreachableError())
 }
@@ -1243,9 +1243,12 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
 	// we create an implicit constructor argument containing a reference to the base
+
+	// ENTITLEMENTS TODO: the entitlements of the base value should be fully qualified for the preimage
+	// of the map for this attachment
 	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
-		false,
+		UnauthorizedAccess,
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
