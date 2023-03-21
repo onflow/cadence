@@ -19,6 +19,7 @@
 package sema
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -264,4 +265,237 @@ func TestFunctionSubtyping(t *testing.T) {
 			),
 		)
 	})
+}
+
+func TestReferenceSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	intRef := func(access Access) *ReferenceType {
+		return &ReferenceType{
+			Authorization: access,
+			Type:          IntType,
+		}
+	}
+
+	anyStructRef := func(access Access) *ReferenceType {
+		return &ReferenceType{
+			Authorization: access,
+			Type:          AnyStructType,
+		}
+	}
+
+	anyResourceRef := func(access Access) *ReferenceType {
+		return &ReferenceType{
+			Authorization: access,
+			Type:          AnyResourceType,
+		}
+	}
+
+	mapAccess := EntitlementMapAccess{
+		Type: &EntitlementMapType{
+			Location:   testLocation,
+			Identifier: "M",
+		},
+	}
+
+	containedMapAccess := EntitlementMapAccess{
+		Type: &EntitlementMapType{
+			Location: testLocation,
+			containerType: &InterfaceType{
+				Location:   testLocation,
+				Identifier: "C",
+			},
+			Identifier: "M",
+		},
+	}
+
+	x := &EntitlementType{
+		Location:   testLocation,
+		Identifier: "X",
+	}
+
+	y := &EntitlementType{
+		Location:   testLocation,
+		Identifier: "Y",
+	}
+
+	z := &EntitlementType{
+		Location:   testLocation,
+		Identifier: "Z",
+	}
+
+	cx := &EntitlementType{
+		Location: testLocation,
+		containerType: &InterfaceType{
+			Location:   testLocation,
+			Identifier: "C",
+		},
+		Identifier: "X",
+	}
+
+	xyzConjunction := NewEntitlementSetAccess([]*EntitlementType{x, y, z}, Conjunction)
+
+	xyConjunction := NewEntitlementSetAccess([]*EntitlementType{x, y}, Conjunction)
+	xzConjunction := NewEntitlementSetAccess([]*EntitlementType{x, z}, Conjunction)
+	yzConjunction := NewEntitlementSetAccess([]*EntitlementType{y, z}, Conjunction)
+
+	xConjunction := NewEntitlementSetAccess([]*EntitlementType{x}, Conjunction)
+	yConjunction := NewEntitlementSetAccess([]*EntitlementType{y}, Conjunction)
+	zConjunction := NewEntitlementSetAccess([]*EntitlementType{z}, Conjunction)
+	cxConjunction := NewEntitlementSetAccess([]*EntitlementType{cx}, Conjunction)
+
+	xyzDisjunction := NewEntitlementSetAccess([]*EntitlementType{x, y, z}, Disjunction)
+	xyDisjunction := NewEntitlementSetAccess([]*EntitlementType{x, y}, Disjunction)
+	xzDisjunction := NewEntitlementSetAccess([]*EntitlementType{x, z}, Disjunction)
+	yzDisjunction := NewEntitlementSetAccess([]*EntitlementType{y, z}, Disjunction)
+
+	test := func(result bool, subType, superType Type) {
+		t.Run(fmt.Sprintf("%s <: %s", subType.QualifiedString(), superType.QualifiedString()), func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, result, IsSubType(subType, superType))
+		})
+	}
+
+	tests := []struct {
+		subType   Type
+		superType Type
+		result    bool
+	}{
+		{intRef(UnauthorizedAccess), AnyStructType, true},
+		{intRef(UnauthorizedAccess), AnyResourceType, false},
+		{anyStructRef(UnauthorizedAccess), AnyStructType, true},
+		{anyStructRef(UnauthorizedAccess), AnyResourceType, false},
+		{anyResourceRef(UnauthorizedAccess), AnyStructType, true},
+		{anyResourceRef(UnauthorizedAccess), AnyResourceType, false},
+
+		{AnyStructType, intRef(UnauthorizedAccess), false},
+		{AnyResourceType, intRef(UnauthorizedAccess), false},
+
+		{intRef(UnauthorizedAccess), intRef(UnauthorizedAccess), true},
+		{anyStructRef(UnauthorizedAccess), anyStructRef(UnauthorizedAccess), true},
+		{anyResourceRef(UnauthorizedAccess), anyResourceRef(UnauthorizedAccess), true},
+		{intRef(UnauthorizedAccess), anyStructRef(UnauthorizedAccess), true},
+		{anyStructRef(UnauthorizedAccess), intRef(UnauthorizedAccess), false},
+		{intRef(UnauthorizedAccess), anyResourceRef(UnauthorizedAccess), false},
+		{anyResourceRef(UnauthorizedAccess), anyStructRef(UnauthorizedAccess), false},
+
+		{intRef(UnauthorizedAccess), intRef(mapAccess), false},
+		{intRef(UnauthorizedAccess), intRef(containedMapAccess), false},
+		{intRef(UnauthorizedAccess), intRef(xyzConjunction), false},
+		{intRef(UnauthorizedAccess), intRef(xyzDisjunction), false},
+
+		{intRef(UnauthorizedAccess), anyStructRef(mapAccess), false},
+		{intRef(UnauthorizedAccess), anyStructRef(containedMapAccess), false},
+		{intRef(UnauthorizedAccess), anyStructRef(xyzConjunction), false},
+		{intRef(UnauthorizedAccess), anyStructRef(xyzDisjunction), false},
+
+		{intRef(UnauthorizedAccess), anyResourceRef(mapAccess), false},
+		{intRef(UnauthorizedAccess), anyResourceRef(containedMapAccess), false},
+		{intRef(UnauthorizedAccess), anyResourceRef(xyzConjunction), false},
+		{intRef(UnauthorizedAccess), anyResourceRef(xyzDisjunction), false},
+
+		{intRef(mapAccess), intRef(UnauthorizedAccess), true},
+		{intRef(mapAccess), intRef(mapAccess), true},
+		{intRef(mapAccess), intRef(containedMapAccess), false},
+		{intRef(mapAccess), intRef(xyzConjunction), false},
+		{intRef(mapAccess), intRef(xyzDisjunction), false},
+
+		{intRef(mapAccess), anyStructRef(UnauthorizedAccess), true},
+		{intRef(mapAccess), anyStructRef(mapAccess), true},
+		{intRef(mapAccess), anyStructRef(containedMapAccess), false},
+		{intRef(mapAccess), anyStructRef(xyzConjunction), false},
+		{intRef(mapAccess), anyStructRef(xyzDisjunction), false},
+
+		{intRef(containedMapAccess), intRef(UnauthorizedAccess), true},
+		{intRef(containedMapAccess), intRef(containedMapAccess), true},
+		{intRef(containedMapAccess), intRef(mapAccess), false},
+		{intRef(containedMapAccess), intRef(xyzConjunction), false},
+		{intRef(containedMapAccess), intRef(xyzDisjunction), false},
+
+		{intRef(containedMapAccess), anyStructRef(UnauthorizedAccess), true},
+		{intRef(containedMapAccess), anyStructRef(containedMapAccess), true},
+		{intRef(containedMapAccess), anyStructRef(mapAccess), false},
+		{intRef(containedMapAccess), anyStructRef(xyzConjunction), false},
+		{intRef(containedMapAccess), anyStructRef(xyzDisjunction), false},
+
+		{intRef(xyzConjunction), intRef(UnauthorizedAccess), true},
+		{intRef(xyzConjunction), intRef(containedMapAccess), false},
+		{intRef(xyzConjunction), intRef(mapAccess), false},
+		{intRef(xyzConjunction), intRef(xyzConjunction), true},
+		{intRef(xyzConjunction), intRef(xyzDisjunction), true},
+		{intRef(xyzConjunction), intRef(xConjunction), true},
+		{intRef(xyzConjunction), intRef(xyConjunction), true},
+		{intRef(xyzConjunction), intRef(xyDisjunction), true},
+
+		{intRef(xyzConjunction), anyStructRef(UnauthorizedAccess), true},
+		{intRef(xyzConjunction), anyStructRef(containedMapAccess), false},
+		{intRef(xyzConjunction), anyStructRef(mapAccess), false},
+		{intRef(xyzConjunction), anyStructRef(xyzConjunction), true},
+		{intRef(xyzConjunction), anyStructRef(xyzDisjunction), true},
+		{intRef(xyzConjunction), anyStructRef(xConjunction), true},
+		{intRef(xyzConjunction), anyStructRef(xyConjunction), true},
+		{intRef(xyzConjunction), anyStructRef(xyDisjunction), true},
+
+		{intRef(xyzDisjunction), intRef(UnauthorizedAccess), true},
+		{intRef(xyzDisjunction), intRef(containedMapAccess), false},
+		{intRef(xyzDisjunction), intRef(mapAccess), false},
+		{intRef(xyzDisjunction), intRef(xyzConjunction), false},
+		{intRef(xyzDisjunction), intRef(xyzDisjunction), true},
+		{intRef(xyzDisjunction), intRef(xConjunction), false},
+		{intRef(xyzDisjunction), intRef(xyConjunction), false},
+		{intRef(xyzDisjunction), intRef(xyDisjunction), false},
+
+		{intRef(xyzDisjunction), anyStructRef(UnauthorizedAccess), true},
+		{intRef(xyzDisjunction), anyStructRef(containedMapAccess), false},
+		{intRef(xyzDisjunction), anyStructRef(mapAccess), false},
+		{intRef(xyzDisjunction), anyStructRef(xyzConjunction), false},
+		{intRef(xyzDisjunction), anyStructRef(xyzDisjunction), true},
+		{intRef(xyzDisjunction), anyStructRef(xConjunction), false},
+		{intRef(xyzDisjunction), anyStructRef(xyConjunction), false},
+		{intRef(xyzDisjunction), anyStructRef(xyDisjunction), false},
+
+		{intRef(xConjunction), intRef(yConjunction), false},
+		{intRef(xConjunction), intRef(zConjunction), false},
+		{intRef(xConjunction), intRef(cxConjunction), false},
+		{intRef(xConjunction), intRef(xzConjunction), false},
+		{intRef(xConjunction), intRef(xyzConjunction), false},
+		{intRef(xConjunction), intRef(xConjunction), true},
+		{intRef(xConjunction), intRef(xyDisjunction), true},
+		{intRef(xConjunction), intRef(xzDisjunction), true},
+		{intRef(xConjunction), intRef(yzDisjunction), false},
+		{intRef(xConjunction), intRef(xyzDisjunction), true},
+
+		{intRef(xzConjunction), intRef(xConjunction), true},
+		{intRef(xzConjunction), intRef(cxConjunction), false},
+		{intRef(xzConjunction), intRef(zConjunction), true},
+		{intRef(xzConjunction), intRef(yConjunction), false},
+		{intRef(xzConjunction), intRef(xyConjunction), false},
+		{intRef(xzConjunction), intRef(xzConjunction), true},
+		{intRef(xzConjunction), intRef(yzConjunction), false},
+		{intRef(xzConjunction), intRef(xyDisjunction), true},
+		{intRef(xzConjunction), intRef(xzDisjunction), true},
+		{intRef(xzConjunction), intRef(yzDisjunction), true},
+		{intRef(xzConjunction), intRef(xyzDisjunction), true},
+		{intRef(xzConjunction), intRef(xyzConjunction), false},
+
+		{intRef(xzDisjunction), intRef(xConjunction), false},
+		{intRef(xzDisjunction), intRef(cxConjunction), false},
+		{intRef(xzDisjunction), intRef(zConjunction), false},
+		{intRef(xzDisjunction), intRef(yConjunction), false},
+		{intRef(xzDisjunction), intRef(xyConjunction), false},
+		{intRef(xzDisjunction), intRef(xzConjunction), false},
+		{intRef(xzDisjunction), intRef(yzConjunction), false},
+		{intRef(xzDisjunction), intRef(xyDisjunction), false},
+		{intRef(xzDisjunction), intRef(xzDisjunction), true},
+		{intRef(xzDisjunction), intRef(yzDisjunction), false},
+		{intRef(xzDisjunction), intRef(xyzDisjunction), true},
+		{intRef(xzDisjunction), intRef(xyzConjunction), false},
+	}
+
+	for _, t := range tests {
+		test(t.result, t.subType, t.superType)
+	}
 }
