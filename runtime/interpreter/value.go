@@ -14955,7 +14955,10 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 				return nil, nil, nil
 			}
 
-			key := MustConvertStoredValue(interpreter, atreeKey).Clone(interpreter)
+			// The key is always interpreter.StringAtreeValue,
+			// an "atree-level string", not an interpreter.Value.
+			// Thus, we do not, and cannot, convert.
+			key := atreeKey
 			value := MustConvertStoredValue(interpreter, atreeValue).Clone(interpreter)
 
 			return key, value, nil
