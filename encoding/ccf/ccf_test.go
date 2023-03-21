@@ -103,7 +103,7 @@ func TestEncodeOptional(t *testing.T) {
 			},
 		},
 		{
-			"Optional(non-nil)",
+			"Optional(Int)",
 			cadence.NewOptional(cadence.NewInt(42)),
 			[]byte{ // language=json, format=json-cdc
 				// {"type":"Optional","value":{"type":"Int","value":"42"}}
@@ -157,7 +157,7 @@ func TestEncodeOptional(t *testing.T) {
 			},
 		},
 		{
-			"Optional(Optional(non-nil))",
+			"Optional(Optional(Int))",
 			cadence.NewOptional(cadence.NewOptional(cadence.NewInt(42))),
 			[]byte{ // language=json, format=json-cdc
 				// {"value":{"value":{"value":"42","type":"Int"},"type":"Optional"},"type":"Optional"}
@@ -215,7 +215,7 @@ func TestEncodeOptional(t *testing.T) {
 			},
 		},
 		{
-			"Optional(Optional(Optional(non-nil)))",
+			"Optional(Optional(Optional(int)))",
 			cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(cadence.NewInt(42)))),
 			[]byte{ // language=json, format=json-cdc
 				// {"value":{"value":{"value":{"value":"42","type":"Int"},"type":"Optional"},"type":"Optional"},"type":"Optional"}
@@ -1887,6 +1887,60 @@ func TestEncodeArray(t *testing.T) {
 		},
 	}
 
+	// constant sized array [1, 2, 3]
+	constantSizedIntArray := encodeTest{
+		"Constant-sized Integers",
+		cadence.NewArray([]cadence.Value{
+			cadence.NewInt(1),
+			cadence.NewInt(2),
+			cadence.NewInt(3),
+		}).WithType(cadence.NewConstantSizedArrayType(3, cadence.NewIntType())),
+		[]byte{ // language=json, format=json-cdc
+			// {"type":"Array","value":[{"type":"Int","value":"1"},{"type":"Int","value":"2"},{"type":"Int","value":"3"}]}
+			//
+			// language=edn, format=ccf
+			// 130([140[3, (137(4))], [1, 2, 3]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// type constant-sized [3]int
+			// tag
+			0xd8, ccf.CBORTagConstsizedArrayType,
+			// array, 2 items follow
+			0x82,
+			// number of elements
+			0x03,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// array data without inlined type definition
+			// array, 3 items follow
+			0x83,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 2
+			0x02,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 3
+			0x03,
+		},
+	}
+
 	// [1, 2, 3]
 	intArray := encodeTest{
 		"Integers",
@@ -2043,15 +2097,15 @@ func TestEncodeArray(t *testing.T) {
 		cadence.NewArray([]cadence.Value{
 			cadence.NewResource([]cadence.Value{
 				cadence.NewInt(1),
-				cadence.NewInt(1),
+				cadence.NewInt(1), // field is AnyStruct type
 			}).WithType(foooResourceTypeWithAbstractField),
 			cadence.NewResource([]cadence.Value{
 				cadence.NewInt(2),
-				s,
+				s, // field is AnyStruct type
 			}).WithType(foooResourceTypeWithAbstractField),
 			cadence.NewResource([]cadence.Value{
 				cadence.NewInt(3),
-				cadence.NewBool(true),
+				cadence.NewBool(true), // field is AnyStruct type
 			}).WithType(foooResourceTypeWithAbstractField),
 		}).WithType(cadence.NewVariableSizedArrayType(foooResourceTypeWithAbstractField)),
 		[]byte{ // language=json, format=json-cdc
@@ -2618,9 +2672,163 @@ func TestEncodeArray(t *testing.T) {
 		},
 	}
 
+	// [S.test.FooStruct{"a", S.test.Foo{0}}, S.test.FooStruct{"b", S.test.Foo{1}}]
+	resourceStructArray := encodeTest{
+		"Resource Struct Array",
+		cadence.NewArray([]cadence.Value{
+			cadence.NewStruct([]cadence.Value{
+				cadence.String("a"),
+				cadence.NewResource([]cadence.Value{
+					cadence.NewInt(0),
+				}).WithType(fooResourceType),
+			}).WithType(resourceStructType),
+			cadence.NewStruct([]cadence.Value{
+				cadence.String("b"),
+				cadence.NewResource([]cadence.Value{
+					cadence.NewInt(1),
+				}).WithType(fooResourceType),
+			}).WithType(resourceStructType),
+		}).WithType(cadence.NewVariableSizedArrayType(resourceStructType)),
+		[]byte{ // language=json, format=json-cdc
+			// {"value":[{"value":{"id":"S.test.FooStruct","fields":[{"value":{"value":"a","type":"String"},"name":"a"},{"value":{"value":{"id":"S.test.Foo","fields":[{"value":{"value":"0","type":"Int"},"name":"bar"}]},"type":"Resource"},"name":"b"}]},"type":"Struct"},{"value":{"id":"S.test.FooStruct","fields":[{"value":{"value":"b","type":"String"},"name":"a"},{"value":{"value":{"id":"S.test.Foo","fields":[{"value":{"value":"1","type":"Int"},"name":"bar"}]},"type":"Resource"},"name":"b"}]},"type":"Struct"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 129([[161([h'', "S.test.Foo", [["bar", 137(4)]]]), 160([h'01', "S.test.FooStruct", [["a", 137(1)], ["b", 136(h'')]]])], [139(136(h'01')), [["a", [0]], ["b", [1]]]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 2 items follow
+			0x82,
+			// type definition 0
+			// resource type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.Foo"
+			// fields: [["bar", int type]]
+			// tag
+			0xd8, ccf.CBORTagResourceType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 10 bytes follow
+			0x6a,
+			// S.test.Foo
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
+			// fields
+			// array, 1 items follow
+			0x81,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// bar
+			0x62, 0x61, 0x72,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// type definition 1
+			// struct type:
+			// id: []byte{1}
+			// cadence-type-id: "S.test.FooStruct"
+			// fields: [["a", string type], ["b", foo resource type]]
+			// tag
+			0xd8, ccf.CBORTagStructType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 16 bytes follow
+			0x70,
+			// S.test.FooStruct
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+			// fields
+			// array, 2 items follow
+			0x82,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// a
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// field 1
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// b
+			0x62,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 bytes follow
+			0x40,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// [S.test.FooStruct{"a", S.test.Foo{0}}, S.test.FooStruct{"b", S.test.Foo{1}}]
+			// array, 2 item follow
+			0x82,
+			// element 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// a
+			0x61,
+			// array, 1 items follow
+			0x81,
+			// tag (big num)
+			0xc2,
+			// bytes, 0 bytes follow
+			0x40,
+			// element 1
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// b
+			0x62,
+			// array, 1 items follow
+			0x81,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+		},
+	}
+
 	testAllEncodeAndDecode(t,
 		emptyArray,
+		constantSizedIntArray,
 		intArray,
+		resourceStructArray,
 		resourceArray,
 		resourceWithAbstractFieldArray,
 		heterogeneousSimpleTypeArray,
@@ -3680,21 +3888,6 @@ func TestEncodeStruct(t *testing.T) {
 			0x63,
 			// foo
 			0x66, 0x6f, 0x6f,
-		},
-	}
-
-	resourceStructType := &cadence.StructType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "FooStruct",
-		Fields: []cadence.Field{
-			{
-				Identifier: "a",
-				Type:       cadence.StringType{},
-			},
-			{
-				Identifier: "b",
-				Type:       fooResourceType,
-			},
 		},
 	}
 
@@ -6582,6 +6775,21 @@ func testDecode(t *testing.T, actualCBOR []byte, expectedVal cadence.Value) {
 		cadence.ValueWithCachedTypeID(expectedVal),
 		cadence.ValueWithCachedTypeID(decodedVal),
 	)
+}
+
+var resourceStructType = &cadence.StructType{
+	Location:            utils.TestLocation,
+	QualifiedIdentifier: "FooStruct",
+	Fields: []cadence.Field{
+		{
+			Identifier: "a",
+			Type:       cadence.StringType{},
+		},
+		{
+			Identifier: "b",
+			Type:       fooResourceType,
+		},
+	},
 }
 
 var fooResourceType = &cadence.ResourceType{
