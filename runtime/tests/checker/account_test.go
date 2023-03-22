@@ -727,10 +727,7 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 	testExplicitTypeArgumentReference := func(domain common.PathDomain, auth sema.Access) {
 
-		authKeyword := ""
-		if auth != sema.UnauthorizedAccess {
-			authKeyword = auth.Keyword()
-		}
+		authKeyword := auth.AuthKeyword()
 
 		testName := fmt.Sprintf(
 			"explicit type argument, %s reference, %s",
@@ -766,10 +763,16 @@ func TestCheckAccount_borrow(t *testing.T) {
 					rType := RequireGlobalType(t, checker.Elaboration, "R")
 					rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
 
+					xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
+					var access sema.Access = sema.UnauthorizedAccess
+					if !auth.Equal(sema.UnauthorizedAccess) {
+						access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
+					}
+
 					require.Equal(t,
 						&sema.OptionalType{
 							Type: &sema.ReferenceType{
-								Authorization: auth,
+								Authorization: access,
 								Type:          rType,
 							},
 						},
@@ -805,10 +808,16 @@ func TestCheckAccount_borrow(t *testing.T) {
 					sType := RequireGlobalType(t, checker.Elaboration, "S")
 					sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
 
+					xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
+					var access sema.Access = sema.UnauthorizedAccess
+					if !auth.Equal(sema.UnauthorizedAccess) {
+						access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
+					}
+
 					require.Equal(t,
 						&sema.OptionalType{
 							Type: &sema.ReferenceType{
-								Authorization: auth,
+								Authorization: access,
 								Type:          sType,
 							},
 						},
@@ -950,12 +959,9 @@ func TestCheckAccount_link(t *testing.T) {
 		})
 	}
 
-	testExplicitTypeArgumentReference := func(domain common.PathDomain, auth bool) {
+	testExplicitTypeArgumentReference := func(domain common.PathDomain, auth sema.Access) {
 
-		authKeyword := ""
-		if auth {
-			authKeyword = "auth"
-		}
+		authKeyword := auth.AuthKeyword()
 
 		testName := fmt.Sprintf(
 			"explicit type argument, %s reference, %s",
@@ -977,6 +983,7 @@ func TestCheckAccount_link(t *testing.T) {
 					fmt.Sprintf(
 						`
                           resource R {}
+						  entitlement X
 
                           fun test(): Capability%[1]s? {
                               return authAccount.link%[1]s(/%[2]s/r, target: /storage/r)
@@ -1008,6 +1015,7 @@ func TestCheckAccount_link(t *testing.T) {
 					fmt.Sprintf(
 						`
                           struct S {}
+						  entitlement X
 
                           fun test(): Capability%[1]s? {
                               return authAccount.link%[1]s(/%[2]s/s, target: /storage/s)
@@ -1112,7 +1120,12 @@ func TestCheckAccount_link(t *testing.T) {
 	for _, domain := range common.AllPathDomainsByIdentifier {
 		testMissingTypeArgument(domain)
 
-		for _, auth := range []bool{false, true} {
+		for _, auth := range []sema.Access{sema.UnauthorizedAccess,
+			sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
+				Location:   utils.TestLocation,
+				Identifier: "X",
+			}}, sema.Conjunction),
+		} {
 			testExplicitTypeArgumentReference(domain, auth)
 		}
 

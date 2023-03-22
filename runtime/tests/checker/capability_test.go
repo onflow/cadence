@@ -97,10 +97,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 		}}, sema.Conjunction),
 	} {
 
-		authKeyword := ""
-		if auth != sema.UnauthorizedAccess {
-			authKeyword = auth.Keyword()
-		}
+		authKeyword := auth.AuthKeyword()
 
 		testName := fmt.Sprintf(
 			"explicit type argument, %s reference",
@@ -128,12 +125,18 @@ func TestCheckCapability_borrow(t *testing.T) {
 				require.NoError(t, err)
 
 				rType := RequireGlobalType(t, checker.Elaboration, "R")
+				xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
 				rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
+
+				var access sema.Access = sema.UnauthorizedAccess
+				if !auth.Equal(sema.UnauthorizedAccess) {
+					access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
+				}
 
 				require.Equal(t,
 					&sema.OptionalType{
 						Type: &sema.ReferenceType{
-							Authorization: auth,
+							Authorization: access,
 							Type:          rType,
 						},
 					},
@@ -160,12 +163,18 @@ func TestCheckCapability_borrow(t *testing.T) {
 				require.NoError(t, err)
 
 				rType := RequireGlobalType(t, checker.Elaboration, "R")
+				xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
 				rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
+
+				var access sema.Access = sema.UnauthorizedAccess
+				if !auth.Equal(sema.UnauthorizedAccess) {
+					access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
+				}
 
 				require.Equal(t,
 					&sema.OptionalType{
 						Type: &sema.ReferenceType{
-							Authorization: auth,
+							Authorization: access,
 							Type:          rType,
 						},
 					},
@@ -192,12 +201,18 @@ func TestCheckCapability_borrow(t *testing.T) {
 				require.NoError(t, err)
 
 				sType := RequireGlobalType(t, checker.Elaboration, "S")
+				xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
 				sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
+
+				var access sema.Access = sema.UnauthorizedAccess
+				if !auth.Equal(sema.UnauthorizedAccess) {
+					access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
+				}
 
 				require.Equal(t,
 					&sema.OptionalType{
 						Type: &sema.ReferenceType{
-							Authorization: auth,
+							Authorization: access,
 							Type:          sType,
 						},
 					},
@@ -224,12 +239,18 @@ func TestCheckCapability_borrow(t *testing.T) {
 				require.NoError(t, err)
 
 				sType := RequireGlobalType(t, checker.Elaboration, "S")
+				xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
 				sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
+
+				var access sema.Access = sema.UnauthorizedAccess
+				if !auth.Equal(sema.UnauthorizedAccess) {
+					access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
+				}
 
 				require.Equal(t,
 					&sema.OptionalType{
 						Type: &sema.ReferenceType{
-							Authorization: auth,
+							Authorization: access,
 							Type:          sType,
 						},
 					},
@@ -293,12 +314,13 @@ func TestCheckCapability_check(t *testing.T) {
 		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
 	})
 
-	for _, auth := range []bool{false, true} {
-
-		authKeyword := ""
-		if auth {
-			authKeyword = "auth"
-		}
+	for _, auth := range []sema.Access{sema.UnauthorizedAccess,
+		sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
+			Location:   utils.TestLocation,
+			Identifier: "X",
+		}}, sema.Conjunction),
+	} {
+		authKeyword := auth.AuthKeyword()
 
 		testName := fmt.Sprintf(
 			"explicit type argument, %s reference",
@@ -312,6 +334,7 @@ func TestCheckCapability_check(t *testing.T) {
 				checker, err := ParseAndCheckWithPanic(t,
 					fmt.Sprintf(
 						`
+						  entitlement X
                           resource R {}
 
                           let capability: Capability = panic("")
@@ -338,6 +361,7 @@ func TestCheckCapability_check(t *testing.T) {
 					fmt.Sprintf(
 						`
                           resource R {}
+						  entitlement X
 
                           let capability: Capability<%s &R> = panic("")
 
@@ -363,6 +387,7 @@ func TestCheckCapability_check(t *testing.T) {
 					fmt.Sprintf(
 						`
                           struct S {}
+						  entitlement X
 
                           let capability: Capability = panic("")
 
@@ -388,6 +413,7 @@ func TestCheckCapability_check(t *testing.T) {
 					fmt.Sprintf(
 						`
                           struct S {}
+						  entitlement X
 
                           let capability: Capability<%s &S> = panic("")
 

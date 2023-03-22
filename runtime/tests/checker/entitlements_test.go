@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/sema"
@@ -2149,5 +2150,151 @@ func TestChecAttachmentEntitlementAccessAnnotation(t *testing.T) {
 
 		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
 	})
+
+}
+
+func TestCheckEntitlementSetAccess(t *testing.T) {
+
+	t.Parallel()
+
+	runTest := func(refType string, memberName string, valid bool) {
+		t.Run(fmt.Sprintf("%s on %s", memberName, refType), func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheckAccount(t, fmt.Sprintf(`
+				entitlement X
+				entitlement Y
+				entitlement Z
+
+				struct R {
+					pub fun p() {}
+
+					access(X) fun x() {}
+					access(Y) fun y() {}
+					access(Z) fun z() {}
+
+					access(X, Y) fun xy() {}
+					access(Y, Z) fun yz() {}
+					access(X, Z) fun xz() {}
+					
+					access(X, Y, Z) fun xyz() {}
+
+					access(X | Y) fun xyOr() {}
+					access(Y | Z) fun yzOr() {}
+					access(X | Z) fun xzOr() {}
+
+					access(X | Y | Z) fun xyzOr() {}
+
+					priv fun private() {}
+					access(contract) fun c() {}
+					access(account) fun a() {}
+				}
+
+				fun test(ref: %s) {
+					ref.%s()
+				}
+			`, refType, memberName))
+
+			if valid {
+				assert.NoError(t, err)
+			} else {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+			}
+		})
+	}
+
+	tests := []struct {
+		refType    string
+		memberName string
+		valid      bool
+	}{
+		{"&R", "p", true},
+		{"&R", "x", false},
+		{"&R", "xy", false},
+		{"&R", "xyz", false},
+		{"&R", "xyOr", false},
+		{"&R", "xyzOr", false},
+		{"&R", "private", false},
+		{"&R", "a", true},
+		{"&R", "c", false},
+
+		{"auth(X) &R", "p", true},
+		{"auth(X) &R", "x", true},
+		{"auth(X) &R", "y", false},
+		{"auth(X) &R", "xy", false},
+		{"auth(X) &R", "xyz", false},
+		{"auth(X) &R", "xyOr", true},
+		{"auth(X) &R", "xyzOr", true},
+		{"auth(X) &R", "private", false},
+		{"auth(X) &R", "a", true},
+		{"auth(X) &R", "c", false},
+
+		{"auth(X, Y) &R", "p", true},
+		{"auth(X, Y) &R", "x", true},
+		{"auth(X, Y) &R", "y", true},
+		{"auth(X, Y) &R", "xy", true},
+		{"auth(X, Y) &R", "xyz", false},
+		{"auth(X, Y) &R", "xyOr", true},
+		{"auth(X, Y) &R", "xyzOr", true},
+		{"auth(X, Y) &R", "private", false},
+		{"auth(X, Y) &R", "a", true},
+		{"auth(X, Y) &R", "c", false},
+
+		{"auth(X, Y, Z) &R", "p", true},
+		{"auth(X, Y, Z) &R", "x", true},
+		{"auth(X, Y, Z) &R", "y", true},
+		{"auth(X, Y, Z) &R", "z", true},
+		{"auth(X, Y, Z) &R", "xy", true},
+		{"auth(X, Y, Z) &R", "xyz", true},
+		{"auth(X, Y, Z) &R", "xyOr", true},
+		{"auth(X, Y, Z) &R", "xyzOr", true},
+		{"auth(X, Y, Z) &R", "private", false},
+		{"auth(X, Y, Z) &R", "a", true},
+		{"auth(X, Y, Z) &R", "c", false},
+
+		{"auth(X | Y) &R", "p", true},
+		{"auth(X | Y) &R", "x", false},
+		{"auth(X | Y) &R", "y", false},
+		{"auth(X | Y) &R", "xy", false},
+		{"auth(X | Y) &R", "xyz", false},
+		{"auth(X | Y) &R", "xyOr", true},
+		{"auth(X | Y) &R", "xzOr", false},
+		{"auth(X | Y) &R", "yzOr", false},
+		{"auth(X | Y) &R", "xyzOr", true},
+		{"auth(X | Y) &R", "private", false},
+		{"auth(X | Y) &R", "a", true},
+		{"auth(X | Y) &R", "c", false},
+
+		{"auth(X | Y | Z) &R", "p", true},
+		{"auth(X | Y | Z) &R", "x", false},
+		{"auth(X | Y | Z) &R", "y", false},
+		{"auth(X | Y | Z) &R", "xy", false},
+		{"auth(X | Y | Z) &R", "xyz", false},
+		{"auth(X | Y | Z) &R", "xyOr", false},
+		{"auth(X | Y | Z) &R", "xzOr", false},
+		{"auth(X | Y | Z) &R", "yzOr", false},
+		{"auth(X | Y | Z) &R", "xyzOr", true},
+		{"auth(X | Y | Z) &R", "private", false},
+		{"auth(X | Y | Z) &R", "a", true},
+		{"auth(X | Y | Z) &R", "c", false},
+
+		{"R", "p", true},
+		{"R", "x", true},
+		{"R", "y", true},
+		{"R", "xy", true},
+		{"R", "xyz", true},
+		{"R", "xyOr", true},
+		{"R", "xzOr", true},
+		{"R", "yzOr", true},
+		{"R", "xyzOr", true},
+		{"R", "private", false},
+		{"R", "a", true},
+		{"R", "c", false},
+	}
+
+	for _, test := range tests {
+		runTest(test.refType, test.memberName, test.valid)
+	}
 
 }

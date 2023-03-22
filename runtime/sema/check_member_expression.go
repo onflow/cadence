@@ -267,7 +267,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 		// Check access and report if inaccessible
 
-		if !checker.isReadableMember(member) {
+		if !checker.isReadableMember(accessedType, member) {
 			checker.report(
 				&InvalidAccessError{
 					Name:              member.Identifier.Identifier,
@@ -301,7 +301,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 // isReadableMember returns true if the given member can be read from
 // in the current location of the checker
-func (checker *Checker) isReadableMember(member *Member) bool {
+func (checker *Checker) isReadableMember(accessedType Type, member *Member) bool {
 	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType] {
 
@@ -335,7 +335,18 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 			}
 		}
 	case EntitlementSetAccess:
-		// ENTITLEMENTTODO: fill this out
+		switch ty := accessedType.(type) {
+		case *ReferenceType:
+			// when accessing a member on a reference, the read is allowed if
+			// the member's access permits the reference's authorization
+			return member.Access.PermitsAccess(ty.Authorization)
+		default:
+			// when accessing a member on a non-reference, the read is always
+			// allowed as an owned value is considered fully authorized
+			return true
+		}
+	case EntitlementMapAccess:
+		// ENTITLEMENT TODO: fill this out
 		panic(errors.NewUnreachableError())
 	}
 

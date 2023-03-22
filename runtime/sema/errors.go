@@ -681,7 +681,7 @@ func (e *InvalidAccessModifierError) Error() string {
 		return fmt.Sprintf(
 			"invalid access modifier for %s: `%s`%s",
 			e.DeclarationKind.Name(),
-			e.Access.Keyword(),
+			e.Access.AccessKeyword(),
 			explanation,
 		)
 	}
@@ -696,7 +696,7 @@ func (e *InvalidAccessModifierError) EndPosition(memoryGauge common.MemoryGauge)
 		return e.Pos
 	}
 
-	length := len(e.Access.Keyword())
+	length := len(e.Access.AccessKeyword())
 	return e.Pos.Shifted(memoryGauge, length-1)
 }
 

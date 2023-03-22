@@ -19,6 +19,7 @@
 package sema
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -34,7 +35,10 @@ type Access interface {
 	Equal(other Access) bool
 	string(func(ty Type) string) string
 	Description() string
-	Keyword() string
+	// string representation of this access when it is used as an access modifier
+	AccessKeyword() string
+	// string representation of this access when it is used as an auth modifier
+	AuthKeyword() string
 }
 
 type EntitlementSetKind uint8
@@ -71,8 +75,12 @@ func (a EntitlementSetAccess) Description() string {
 	return "entitlement set access"
 }
 
-func (a EntitlementSetAccess) Keyword() string {
+func (a EntitlementSetAccess) AccessKeyword() string {
 	return a.string(func(ty Type) string { return ty.String() })
+}
+
+func (a EntitlementSetAccess) AuthKeyword() string {
+	return fmt.Sprintf("auth(%s)", a.AccessKeyword())
 }
 
 func (e EntitlementSetAccess) string(typeFormatter func(ty Type) string) string {
@@ -180,8 +188,12 @@ func (a EntitlementMapAccess) Description() string {
 	return "entitlement map access"
 }
 
-func (a EntitlementMapAccess) Keyword() string {
+func (a EntitlementMapAccess) AccessKeyword() string {
 	return a.string(func(ty Type) string { return ty.String() })
+}
+
+func (a EntitlementMapAccess) AuthKeyword() string {
+	return fmt.Sprintf("auth(%s)", a.AccessKeyword())
 }
 
 func (e EntitlementMapAccess) Equal(other Access) bool {
@@ -227,8 +239,12 @@ func (a PrimitiveAccess) Description() string {
 	return ast.PrimitiveAccess(a).Description()
 }
 
-func (a PrimitiveAccess) Keyword() string {
+func (a PrimitiveAccess) AccessKeyword() string {
 	return ast.PrimitiveAccess(a).Keyword()
+}
+
+func (a PrimitiveAccess) AuthKeyword() string {
+	return ""
 }
 
 func (a PrimitiveAccess) Equal(other Access) bool {

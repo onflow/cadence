@@ -56,7 +56,8 @@ func TestCheckReference(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
-              let x: auth &Int = &1
+            entitlement X
+              let x: auth(X) &Int = &1
             `)
 
 			require.NoError(t, err)
@@ -89,12 +90,13 @@ func TestCheckReference(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		t.Run("non-auth", func(t *testing.T) {
+		t.Run("auth", func(t *testing.T) {
 
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
-              let x = &1 as auth &Int
+              entitlement X
+              let x = &1 as auth(X) &Int
             `)
 
 			require.NoError(t, err)
@@ -119,7 +121,8 @@ func TestCheckReference(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-          let x = &1 as &Int as auth &Int
+        entitlement X
+          let x = &1 as &Int as auth(X) &Int
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -1014,10 +1017,7 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 	test := func(t *testing.T, auth sema.Access, kind common.CompositeKind) {
 
-		authKeyword := ""
-		if auth != sema.UnauthorizedAccess {
-			authKeyword = auth.Keyword()
-		}
+		authKeyword := auth.AuthKeyword()
 
 		testName := fmt.Sprintf("%s, auth: %v", kind.Name(), auth)
 
@@ -1046,10 +1046,15 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 			tType := RequireGlobalType(t, checker.Elaboration, "T")
 
 			refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+			xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
+			var access sema.Access = sema.UnauthorizedAccess
+			if !auth.Equal(sema.UnauthorizedAccess) {
+				access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
+			}
 
 			require.Equal(t,
 				&sema.ReferenceType{
-					Authorization: auth,
+					Authorization: access,
 					Type:          tType,
 				},
 				refValueType,
