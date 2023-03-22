@@ -77,6 +77,55 @@ func TestEncodeOptional(t *testing.T) {
 
 	t.Parallel()
 
+	simpleStructType := &cadence.StructType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooStruct",
+		Fields: []cadence.Field{
+			{
+				Identifier: "bar",
+				Type:       cadence.IntType{},
+			},
+		},
+	}
+
+	structType := &cadence.StructType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.NewOptionalType(cadence.NewIntType()),
+			},
+			{
+				Identifier: "b",
+				Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewIntType())),
+			},
+			{
+				Identifier: "c",
+				Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewIntType()))),
+			},
+		},
+	}
+
+	structTypeWithOptionalAbstractField := &cadence.StructType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.NewOptionalType(cadence.NewAnyStructType()),
+			},
+			{
+				Identifier: "b",
+				Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewAnyStructType())),
+			},
+			{
+				Identifier: "c",
+				Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewAnyStructType()))),
+			},
+		},
+	}
+
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Optional(nil)",
@@ -244,6 +293,656 @@ func TestEncodeOptional(t *testing.T) {
 				0x41,
 				// 42
 				0x2a,
+			},
+		},
+		{
+			"struct with nil optional fields",
+			cadence.NewStruct([]cadence.Value{
+				cadence.NewOptional(nil),
+				cadence.NewOptional(cadence.NewOptional(nil)),
+				cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(nil))),
+			}).WithType(structType),
+			[]byte{ // language=json, format=json-cdc
+				// {"value":{"id":"S.test.Foo","fields":[{"value":{"value":null,"type":"Optional"},"name":"a"},{"value":{"value":{"value":null,"type":"Optional"},"type":"Optional"},"name":"b"},{"value":{"value":{"value":{"value":null,"type":"Optional"},"type":"Optional"},"type":"Optional"},"name":"c"}]},"type":"Struct"}
+				//
+				// language=edn, format=ccf
+				// 129([[160([h'', "S.test.Foo", [["a", 138(137(4))], ["b", 138(138(137(4)))], ["c", 138(138(138(137(4))))]]])], [136(h''), [null, null, null]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeDefAndValue,
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 1 items follow
+				0x81,
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.Foo"
+				// fields: [["a", OptionalType(IntType)], ["b", OptionalType(OptionalType(IntType))], ["c", OptionalType(OptionalType(OptionalType(IntType)))]]
+				// tag
+				0xd8, ccf.CBORTagStructType,
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 10 bytes follow
+				0x6a,
+				// S.test.Foo
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
+				// fields
+				// array, 3 items follow
+				0x83,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// a
+				0x61,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// field 1
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// b
+				0x62,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// field 2
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// c
+				0x63,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagTypeRef,
+				// bytes, 0 bytes follow
+				0x40,
+				// array, 3 items follow
+				0x83,
+				// nil
+				0xf6,
+				// nil
+				0xf6,
+				// nil
+				0xf6,
+			},
+		},
+		{
+			"struct with non-nil optional fields",
+			cadence.NewStruct([]cadence.Value{
+				cadence.NewOptional(cadence.NewInt(1)),
+				cadence.NewOptional(cadence.NewOptional(cadence.NewInt(2))),
+				cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(cadence.NewInt(3)))),
+			}).WithType(structType),
+			[]byte{ // language=json, format=json-cdc
+				// {"value":{"id":"S.test.Foo","fields":[{"value":{"value":{"value":"1","type":"Int"},"type":"Optional"},"name":"a"},{"value":{"value":{"value":{"value":"2","type":"Int"},"type":"Optional"},"type":"Optional"},"name":"b"},{"value":{"value":{"value":{"value":{"value":"3","type":"Int"},"type":"Optional"},"type":"Optional"},"type":"Optional"},"name":"c"}]},"type":"Struct"}
+				//
+				// language=edn, format=ccf
+				// 129([[160([h'', "S.test.Foo", [["a", 138(137(4))], ["b", 138(138(137(4)))], ["c", 138(138(138(137(4))))]]])], [136(h''), [1, 2, 3]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeDefAndValue,
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 1 items follow
+				0x81,
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.Foo"
+				// fields: [["a", OptionalType(IntType)], ["b", OptionalType(OptionalType(IntType))], ["c", OptionalType(OptionalType(OptionalType(IntType)))]]
+				// tag
+				0xd8, ccf.CBORTagStructType,
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 10 bytes follow
+				0x6a,
+				// S.test.Foo
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
+				// fields
+				// array, 3 items follow
+				0x83,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// a
+				0x61,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// field 1
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// b
+				0x62,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// field 2
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// c
+				0x63,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagTypeRef,
+				// bytes, 0 bytes follow
+				0x40,
+				// array, 3 items follow
+				0x83,
+				// tag (big number)
+				0xc2,
+				// bytes, 1 byte follow
+				0x41,
+				// 1
+				0x01,
+				// tag (big number)
+				0xc2,
+				// bytes, 1 byte follow
+				0x41,
+				// 2
+				0x02,
+				// tag (big number)
+				0xc2,
+				// bytes, 1 byte follow
+				0x41,
+				// 3
+				0x03,
+			},
+		},
+		{
+			"struct with nil optional abstract fields",
+			cadence.NewStruct([]cadence.Value{
+				cadence.NewOptional(nil),
+				cadence.NewOptional(cadence.NewOptional(nil)),
+				cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(nil))),
+			}).WithType(structTypeWithOptionalAbstractField),
+			[]byte{ // language=json, format=json-cdc
+				// {"value":{"id":"S.test.Foo","fields":[{"value":{"value":null,"type":"Optional"},"name":"a"},{"value":{"value":{"value":null,"type":"Optional"},"type":"Optional"},"name":"b"},{"value":{"value":{"value":{"value":null,"type":"Optional"},"type":"Optional"},"type":"Optional"},"name":"c"}]},"type":"Struct"}
+				//
+				// language=edn, format=ccf
+				// 129([[160([h'', "S.test.Foo", [["a", 138(137(39))], ["b", 138(138(137(39)))], ["c", 138(138(138(137(39))))]]])], [136(h''), [null, null, null]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeDefAndValue,
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 1 items follow
+				0x81,
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.Foo"
+				// fields: [["a", OptionalType(IntType)], ["b", OptionalType(OptionalType(IntType))], ["c", OptionalType(OptionalType(OptionalType(IntType)))]]
+				// tag
+				0xd8, ccf.CBORTagStructType,
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 10 bytes follow
+				0x6a,
+				// S.test.Foo
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
+				// fields
+				// array, 3 items follow
+				0x83,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// a
+				0x61,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+				// field 1
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// b
+				0x62,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+				// field 2
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// c
+				0x63,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagTypeRef,
+				// bytes, 0 bytes follow
+				0x40,
+				// array, 3 items follow
+				0x83,
+				// nil
+				0xf6,
+				// nil
+				0xf6,
+				// nil
+				0xf6,
+			},
+		},
+		{
+			"struct with optional Int for optional abstract fields",
+			cadence.NewStruct([]cadence.Value{
+				cadence.NewOptional(cadence.NewOptional(cadence.NewInt(1))),
+				cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(cadence.NewInt(2)))),
+				cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(cadence.NewInt(3))))),
+			}).WithType(structTypeWithOptionalAbstractField),
+			[]byte{ // language=json, format=json-cdc
+				// {"value":{"id":"S.test.Foo","fields":[{"value":{"value":{"value":{"value":"1","type":"Int"},"type":"Optional"},"type":"Optional"},"name":"a"},{"value":{"value":{"value":{"value":{"value":"2","type":"Int"},"type":"Optional"},"type":"Optional"},"type":"Optional"},"name":"b"},{"value":{"value":{"value":{"value":{"value":{"value":"3","type":"Int"},"type":"Optional"},"type":"Optional"},"type":"Optional"},"type":"Optional"},"name":"c"}]},"type":"Struct"}
+				//
+				// language=edn, format=ccf
+				// 129([[160([h'', "S.test.Foo", [["a", 138(137(39))], ["b", 138(138(137(39)))], ["c", 138(138(138(137(39))))]]])], [136(h''), [130([138(137(4)), 1]), 130([138(137(4)), 2]), 130([138(137(4)), 3])]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeDefAndValue,
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 1 items follow
+				0x81,
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.Foo"
+				// fields: [["a", OptionalType(AnyStructType)], ["b", OptionalType(OptionalType(AnyStructType))], ["c", OptionalType(OptionalType(OptionalType(AnyStructType)))]]
+				// tag
+				0xd8, ccf.CBORTagStructType,
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 10 bytes follow
+				0x6a,
+				// S.test.Foo
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
+				// fields
+				// array, 3 items follow
+				0x83,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// a
+				0x61,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+				// field 1
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// b
+				0x62,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+				// field 2
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// c
+				0x63,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagTypeRef,
+				// bytes, 0 bytes follow
+				0x40,
+				// array, 3 items follow
+				0x83,
+				// field 0
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+				// field 1
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 2
+				0x02,
+				// field 2
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 3
+				0x03,
+			},
+		},
+		{
+			"struct with non-nil optional abstract fields",
+			cadence.NewStruct([]cadence.Value{
+				cadence.NewOptional(cadence.NewInt(1)),
+				cadence.NewOptional(cadence.NewOptional(cadence.NewInt(2))),
+				cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(cadence.NewStruct([]cadence.Value{
+					cadence.NewInt(3),
+				}).WithType(simpleStructType)))),
+			}).WithType(structTypeWithOptionalAbstractField),
+			[]byte{ // language=json, format=json-cdc
+				// {"value":{"id":"S.test.Foo","fields":[{"value":{"value":{"value":"1","type":"Int"},"type":"Optional"},"name":"a"},{"value":{"value":{"value":{"value":"2","type":"Int"},"type":"Optional"},"type":"Optional"},"name":"b"},{"value":{"value":{"value":{"value":{"value":{"id":"S.test.FooStruct","fields":[{"value":{"value":"3","type":"Int"},"name":"bar"}]},"type":"Struct"},"type":"Optional"},"type":"Optional"},"type":"Optional"},"name":"c"}]},"type":"Struct"}
+				//
+				// language=edn, format=ccf
+				// 129([[160([h'', "S.test.Foo", [["a", 138(137(39))], ["b", 138(138(137(39)))], ["c", 138(138(138(137(39))))]]]), 160([h'01', "S.test.FooStruct", [["bar", 137(4)]]])], [136(h''), [130([137(4), 1]), 130([137(4), 2]), 130([136(h'01'), [3]])]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeDefAndValue,
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 2 items follow
+				0x82,
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.Foo"
+				// fields: [["a", OptionalType(AnyStructType)], ["b", OptionalType(OptionalType(AnyStructType))], ["c", OptionalType(OptionalType(OptionalType(AnyStructType)))]]
+				// tag
+				0xd8, ccf.CBORTagStructType,
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 10 bytes follow
+				0x6a,
+				// S.test.Foo
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
+				// fields
+				// array, 3 items follow
+				0x83,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// a
+				0x61,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+				// field 1
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// b
+				0x62,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+				// field 2
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// c
+				0x63,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.FooStruct"
+				// fields: [["bar", IntType]]
+				// tag
+				0xd8, ccf.CBORTagStructType,
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+				// cadence-type-id
+				// string, 16 bytes follow
+				0x70,
+				// S.test.FooStruct
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+				// fields
+				// array, 1 items follow
+				0x81,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 3 bytes follow
+				0x63,
+				// bar
+				0x62, 0x61, 0x72,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagTypeRef,
+				// bytes, 0 bytes follow
+				0x40,
+				// array, 3 items follow
+				0x83,
+				// field 0
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+				// field 1
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 2
+				0x02,
+				// field 2
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagTypeRef,
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+				// array, 1 items follow
+				0x81,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 3
+				0x03,
 			},
 		},
 	}...)

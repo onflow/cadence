@@ -346,6 +346,9 @@ func (e *Encoder) encodeValue(
 	}
 
 	if needToEncodeRuntimeType(staticType, runtimeType) {
+		// Get type that needs to be encoded as inline type.
+		inlineType := getTypeToEncodeAsCCFInlineType(staticType, runtimeType)
+
 		// Encode ccf-type-and-value-message.
 
 		// Encode tag number and array head of length 2.
@@ -360,7 +363,7 @@ func (e *Encoder) encodeValue(
 		}
 
 		// element 0: type as inline-type
-		err = e.encodeInlineType(runtimeType, tids)
+		err = e.encodeInlineType(inlineType, tids)
 		if err != nil {
 			return err
 		}
@@ -1754,6 +1757,35 @@ func needToEncodeRuntimeType(staticType cadence.Type, runtimeType cadence.Type) 
 		}
 	}
 	return true
+}
+
+func getTypeToEncodeAsCCFInlineType(staticType cadence.Type, runtimeType cadence.Type) cadence.Type {
+	if _, ok := staticType.(*cadence.OptionalType); ok {
+		return getOptionalInnerTypeToEncodeAsCCFInlineType(staticType, runtimeType)
+	}
+	return runtimeType
+}
+
+// getOptionalInnerTypeToEncodeAsCCFInlineType returns cadence.Type that needs to be encoded as CCF inline type.
+// Since static type is encoded at higher level, inline type shouldn't repeat encoded static type.
+// So inline type is runtime type after removing OptionalType wrappers that are present in static type.
+func getOptionalInnerTypeToEncodeAsCCFInlineType(staticType cadence.Type, runtimeType cadence.Type) cadence.Type {
+	for {
+		sot, ok := staticType.(*cadence.OptionalType)
+		if !ok {
+			break
+		}
+		rot, ok := runtimeType.(*cadence.OptionalType)
+		if !ok {
+			// static type is optional type while runtime type isn't.
+			panic(cadenceErrors.NewUnexpectedError("static type (%T) is optional type while runtime type (%T) isn't", staticType, runtimeType))
+		}
+
+		staticType = sot.Type
+		runtimeType = rot.Type
+	}
+
+	return runtimeType
 }
 
 // isOptionalNeverType returns true if t is (nested) optional never type.
