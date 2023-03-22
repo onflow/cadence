@@ -44,6 +44,16 @@ func newValueTestCases() map[string]valueTestCase {
 	ufix64, _ := NewUFix64("64.01")
 	fix64, _ := NewFix64("-32.11")
 
+	testFunctionType := NewFunctionType(
+		"((String):UInt8)",
+		[]Parameter{
+			{
+				Type: StringType{},
+			},
+		},
+		UInt8Type{},
+	)
+
 	return map[string]valueTestCase{
 		"UInt": {
 			value:        NewUInt(10),
@@ -354,19 +364,10 @@ func newValueTestCases() map[string]valueTestCase {
 			string:       "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
 		},
 		"Function": {
-			value: Function{},
-			exampleType: NewFunctionType(
-				"((String):UInt8)",
-				[]Parameter{
-					{
-						Type: StringType{},
-					},
-				},
-				UInt8Type{},
+			value: NewFunction(
+				testFunctionType,
 			),
-			withType: func(value Value, ty Type) Value {
-				return value.(Function).WithType(ty.(*FunctionType))
-			},
+			expectedType: testFunctionType,
 			string: "Function(...)",
 		},
 	}

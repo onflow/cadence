@@ -2102,11 +2102,6 @@ func (v Function) Type() Type {
 	return v.FunctionType
 }
 
-func (v Function) WithType(functionType *FunctionType) Function {
-	v.FunctionType = functionType
-	return v
-}
-
 func (v Function) MeteredType(common.MemoryGauge) Type {
 	return v.FunctionType
 }
