@@ -727,13 +727,8 @@ func (e *Encoder) encodeDictionary(v cadence.Dictionary, tids ccfTypeIDByCadence
 		return e.encodeSortedDictionary(v, tids)
 	}
 
-	dictionaryType := v.DictionaryType.(*cadence.DictionaryType)
-	if dictionaryType == nil {
-		return fmt.Errorf("unexpected dictionary type %s", v.DictionaryType.ID())
-	}
-
-	staticKeyType := dictionaryType.KeyType
-	staticElementType := dictionaryType.ElementType
+	staticKeyType := v.DictionaryType.KeyType
+	staticElementType := v.DictionaryType.ElementType
 
 	// Encode array head with array size of 2 * number of pairs.
 	err := e.enc.EncodeArrayHead(uint64(len(v.Pairs)) * 2)
@@ -802,13 +797,8 @@ func encodeAndSortKeyValuePairs(
 	[]encodedKeyValuePair,
 	error,
 ) {
-	dictionaryType := v.DictionaryType.(*cadence.DictionaryType)
-	if dictionaryType == nil {
-		return nil, fmt.Errorf("expected dictionary type %s", v.DictionaryType.ID())
-	}
-
-	staticKeyType := dictionaryType.KeyType
-	staticElementType := dictionaryType.ElementType
+	staticKeyType := v.DictionaryType.KeyType
+	staticElementType := v.DictionaryType.ElementType
 
 	encodedPairs := make([]encodedKeyValuePair, len(v.Pairs))
 
