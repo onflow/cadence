@@ -595,6 +595,21 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
+	t.Run("mismatched entitlement mapping to set", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			entitlement N
+			struct interface S {
+				access(M) let foo: auth(N) &String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
+
 	t.Run("function", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -2297,4 +2312,370 @@ func TestCheckEntitlementSetAccess(t *testing.T) {
 		runTest(test.refType, test.memberName, test.valid)
 	}
 
+}
+
+func TestCheckEntitlementMapAccess(t *testing.T) {
+
+	t.Parallel()
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(X) &{S}) {
+			let x: auth(Y) &Int = ref.x
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("different views", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement A
+		entitlement B
+		entitlement mapping M {
+			X -> Y
+			A -> B
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(A) &{S}) {
+			let x: auth(Y) &Int = ref.x
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// access gives B, not Y
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("safe disjoint", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement A
+		entitlement B
+		entitlement mapping M {
+			X -> Y
+			A -> B
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(A | X) &{S}) {
+			let x: auth(B | Y) &Int = ref.x
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("unrepresentable disjoint", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement A
+		entitlement B
+		entitlement C
+		entitlement mapping M {
+			X -> Y
+			X -> C
+			A -> B
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(A | X) &{S}) {
+			let x = ref.x
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
+	})
+
+	t.Run("unrepresentable disjoint with dedup", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement A
+		entitlement B
+		entitlement mapping M {
+			X -> Y
+			X -> B
+			A -> B
+			A -> Y
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(A | X) &{S}) {
+			let x = ref.x
+		}
+		`)
+
+		// theoretically this should be allowed, because ((Y & B) | (Y & B)) simplifies to
+		// just (Y & B), but this would require us to build in a simplifier for boolean expressions,
+		// which is a lot of work for an edge case that is very unlikely to come up
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
+	})
+
+	t.Run("multiple output", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(X) &{S}) {
+			let x: auth(Y, Z) &Int = ref.x
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("multiple output with upcasting", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(X) &{S}) {
+			let x: auth(Z) &Int = ref.x
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("multiple inputs", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement A
+		entitlement B 
+		entitlement C
+		entitlement X
+		entitlement Y
+		entitlement Z
+		entitlement mapping M {
+			A -> C
+			B -> C
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref1: auth(A) &{S}, ref2: auth(B) &{S}) {
+			let x1: auth(C) &Int = ref1.x
+			let x2: auth(C) &Int = ref2.x
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("multiple inputs and outputs", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement A
+		entitlement B 
+		entitlement C
+		entitlement X
+		entitlement Y
+		entitlement Z
+		entitlement mapping M {
+			A -> B
+			A -> C
+			X -> Y
+			X -> Z
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(A, X) &{S}) {
+			let x: auth(B, C, Y, Z) &Int = ref.x
+			let upRef = ref as auth(A) &{S}
+			let upX: auth(B, C) &Int = upRef.x
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("multiple inputs and outputs mismatch", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement A
+		entitlement B 
+		entitlement C
+		entitlement X
+		entitlement Y
+		entitlement Z
+		entitlement mapping M {
+			A -> B
+			A -> C
+			X -> Y
+			X -> Z
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(A, X) &{S}) {
+			let upRef = ref as auth(A) &{S}
+			let upX: auth(X, Y) &Int = upRef.x
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// access gives B & C, not X & Y
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("unauthorized", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: &{S}) {
+			let x: &Int = ref.x
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("unauthorized downcast", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: &{S}) {
+			let x: auth(Y) &Int = ref.x
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// result is not authorized
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("basic with init", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct S {
+			access(M) let x: auth(M) &Int
+			init() {
+				self.x = &1 as auth(Y, Z) &Int
+			}
+		}
+		let ref = &S() as auth(X) &S
+		let x = ref.x
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic with unauthorized init", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {
+			access(M) let x: auth(M) &Int
+			init() {
+				self.x = &1 as &Int
+			}
+		}
+		let ref = &S() as auth(X) &S
+		let x = ref.x
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// init of map needs full authorization of codomain
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("basic with underauthorized init", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct S {
+			access(M) let x: auth(M) &Int
+			init() {
+				self.x = &1 as auth(Y) &Int
+			}
+		}
+		let ref = &S() as auth(X) &S
+		let x = ref.x
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// init of map needs full authorization of codomain
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }

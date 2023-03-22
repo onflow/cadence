@@ -24,6 +24,8 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
+	"github.com/onflow/cadence/runtime/errors"
+	"golang.org/x/exp/maps"
 )
 
 type Access interface {
@@ -72,7 +74,7 @@ func NewEntitlementSetAccess(
 func (EntitlementSetAccess) isAccess() {}
 
 func (a EntitlementSetAccess) Description() string {
-	return "entitlement set access"
+	return a.AccessKeyword()
 }
 
 func (a EntitlementSetAccess) AccessKeyword() string {
@@ -95,7 +97,7 @@ func (e EntitlementSetAccess) string(typeFormatter func(ty Type) string) string 
 
 	e.Entitlements.ForeachWithIndex(func(i int, entitlement *EntitlementType, _ struct{}) {
 		builder.WriteString(typeFormatter(entitlement))
-		if i < e.Entitlements.Len() {
+		if i < e.Entitlements.Len()-1 {
 			builder.WriteString(separator)
 		}
 	})
@@ -185,7 +187,7 @@ func (e EntitlementMapAccess) string(typeFormatter func(ty Type) string) string 
 }
 
 func (a EntitlementMapAccess) Description() string {
-	return "entitlement map access"
+	return a.AccessKeyword()
 }
 
 func (a EntitlementMapAccess) AccessKeyword() string {
@@ -225,6 +227,113 @@ func (e EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
 	default:
 		return true
 	}
+}
+
+func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
+	var codomain map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
+	for _, relation := range e.Type.Relations {
+		codomain[relation.Output] = struct{}{}
+	}
+	return NewEntitlementSetAccess(maps.Keys(codomain), Conjunction)
+}
+
+func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (output map[*EntitlementType]struct{}) {
+	output = make(map[*EntitlementType]struct{})
+	for _, relation := range e.Type.Relations {
+		if relation.Input.Equal(entitlement) {
+			output[relation.Output] = struct{}{}
+		}
+	}
+	return
+}
+
+func (e EntitlementMapAccess) entitlementPreImage(entitlement *EntitlementType) (input map[*EntitlementType]struct{}) {
+	input = make(map[*EntitlementType]struct{})
+	for _, relation := range e.Type.Relations {
+		if relation.Output.Equal(entitlement) {
+			input[relation.Input] = struct{}{}
+		}
+	}
+	return
+}
+
+// Image applies all the entitlements in the `argumentAccess` to the function
+// defined by the map in `e`, producing a new entitlement set of the image of the
+// arguments
+func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, error) {
+	switch inputs := inputs.(type) {
+	// primitive access always passes trivially through the map
+	case PrimitiveAccess:
+		return inputs, nil
+	case EntitlementSetAccess:
+		var output map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
+		var err error = nil
+		inputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+			entitlementImage := e.entitlementImage(entitlement)
+			// the image of a single element is always a conjunctive set; consider a mapping
+			// M defined as X -> Y, X -> Z, A -> B, A -> C. M(X) = Y & Z and M(A) = B & C.
+			// Thus M(X | A) would be ((Y & Z) | (B & C)), which is a disjunction of two conjunctions,
+			// which is too complex to be represented in Cadence as a type. Thus whenever such a type
+			// would arise, we raise an error instead
+			if inputs.SetKind == Disjunction && len(entitlementImage) > 1 {
+				err = &UnrepresentableEntitlementMapOutputError{
+					Input: inputs,
+					Map:   e.Type,
+					Range: astRange,
+				}
+			}
+			for _, entitlement := range maps.Keys(entitlementImage) {
+				output[entitlement] = struct{}{}
+			}
+		})
+		if err != nil {
+			return nil, err
+		}
+		// the image of a set through a map is the conjunction of all the output sets
+		return NewEntitlementSetAccess(maps.Keys(output), Conjunction), nil
+	}
+	// it should be impossible to obtain a concrete reference with a mapped entitlement authorization
+	panic(errors.NewUnreachableError())
+}
+
+// Preimage applies all the entitlements in the `argumentAccess` to the inverse of the function
+// defined by the map in `e`, producing a new entitlement set of the preimage of the
+// arguments
+func (e EntitlementMapAccess) Preimage(outputs Access, astRange ast.Range) (Access, error) {
+	switch outputs := outputs.(type) {
+	// primitive access always passes trivially through the map
+	case PrimitiveAccess:
+		return outputs, nil
+	case EntitlementSetAccess:
+		var input map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
+		var err error = nil
+		outputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+			entitlementPreImage := e.entitlementPreImage(entitlement)
+			// the preimage of a single element is always a disjunctive set; consider a mapping
+			// M defined as Y -> X, Z -> X, B -> A, C -> A. M^-1(X) = Y | Z and M^-1(A) = B | C, since either an
+			// Y or a Z can result in an X and either a B or a C can result in an A.
+			// Thus M^-1(X | A) would be ((Y | Z) & (B | C)), which is a conjunction of two disjunctions,
+			// which is too complex to be represented in Cadence as a type. Thus whenever such a type
+			// would arise, we raise an error instead
+			if outputs.SetKind == Conjunction && len(entitlementPreImage) > 1 {
+				err = &UnrepresentableEntitlementMapOutputError{
+					Input: outputs,
+					Map:   e.Type,
+					Range: astRange,
+				}
+			}
+			for _, entitlement := range maps.Keys(entitlementPreImage) {
+				input[entitlement] = struct{}{}
+			}
+		})
+		if err != nil {
+			return nil, err
+		}
+		// the preimage of a set through a map is the disjunction of all the input sets
+		return NewEntitlementSetAccess(maps.Keys(input), Disjunction), nil
+	}
+	// it should be impossible to obtain a concrete reference with a mapped entitlement authorization
+	panic(errors.NewUnreachableError())
 }
 
 type PrimitiveAccess ast.PrimitiveAccess
