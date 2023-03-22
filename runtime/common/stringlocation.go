@@ -103,11 +103,8 @@ func decodeStringLocationTypeID(gauge MemoryGauge, typeID string) (StringLocatio
 	parts := strings.SplitN(typeID, ".", 3)
 
 	pieceCount := len(parts)
-	switch pieceCount {
-	case 1:
+	if pieceCount == 1 {
 		return newError("missing location")
-	case 2:
-		return newError("missing qualified identifier")
 	}
 
 	prefix := parts[0]
@@ -122,7 +119,10 @@ func decodeStringLocationTypeID(gauge MemoryGauge, typeID string) (StringLocatio
 	}
 
 	location := NewStringLocation(gauge, parts[1])
-	qualifiedIdentifier := parts[2]
+	var qualifiedIdentifier string
+	if pieceCount > 2 {
+		qualifiedIdentifier = parts[2]
+	}
 
 	return location, qualifiedIdentifier, nil
 }
