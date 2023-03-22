@@ -1436,7 +1436,7 @@ func (v Array) String() string {
 // Dictionary
 
 type Dictionary struct {
-	DictionaryType Type
+	DictionaryType *DictionaryType
 	Pairs          []KeyValuePair
 }
 
@@ -1463,6 +1463,11 @@ func NewMeteredDictionary(
 func (Dictionary) isValue() {}
 
 func (v Dictionary) Type() Type {
+	if v.DictionaryType == nil {
+		// Return nil Type instead of Type referencing nil *DictionaryType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.DictionaryType
 }
 
@@ -1551,6 +1556,11 @@ func NewMeteredStruct(
 func (Struct) isValue() {}
 
 func (v Struct) Type() Type {
+	if v.StructType == nil {
+		// Return nil Type instead of Type referencing nil *StructType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.StructType
 }
 
@@ -1629,6 +1639,11 @@ func NewMeteredResource(
 func (Resource) isValue() {}
 
 func (v Resource) Type() Type {
+	if v.ResourceType == nil {
+		// Return nil Type instead of Type referencing nil *ResourceType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.ResourceType
 }
 
@@ -1686,6 +1701,11 @@ func NewMeteredAttachment(
 func (Attachment) isValue() {}
 
 func (v Attachment) Type() Type {
+	if v.AttachmentType == nil {
+		// Return nil Type instead of Type referencing nil *AttachmentType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.AttachmentType
 }
 
@@ -1743,6 +1763,11 @@ func NewMeteredEvent(
 func (Event) isValue() {}
 
 func (v Event) Type() Type {
+	if v.EventType == nil {
+		// Return nil Type instead of Type referencing nil *EventType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.EventType
 }
 
@@ -1799,6 +1824,11 @@ func NewMeteredContract(
 func (Contract) isValue() {}
 
 func (v Contract) Type() Type {
+	if v.ContractType == nil {
+		// Return nil Type instead of Type referencing nil *ContractType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.ContractType
 }
 
@@ -2022,6 +2052,11 @@ func NewMeteredEnum(
 func (Enum) isValue() {}
 
 func (v Enum) Type() Type {
+	if v.EnumType == nil {
+		// Return nil Type instead of Type referencing nil *EnumType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.EnumType
 }
 
@@ -2069,6 +2104,11 @@ func NewMeteredFunction(gauge common.MemoryGauge, functionType *FunctionType) Fu
 func (Function) isValue() {}
 
 func (v Function) Type() Type {
+	if v.FunctionType == nil {
+		// Return nil Type instead of Type referencing nil *FunctionType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.FunctionType
 }
 

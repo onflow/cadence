@@ -4,7 +4,7 @@ title: Attachments
 
 <Callout type="warning">
 ⚠️  This section describes a feature that is not yet released on Mainnet. 
-It will be available following the next Mainnet Spork. 
+It will be deployed to Testnet in its next major upgrade. 
 </Callout>
 
 Attachments are a feature of Cadence designed to allow developers to extend a struct or resource type 

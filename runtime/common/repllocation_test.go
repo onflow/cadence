@@ -57,6 +57,19 @@ func TestREPLLocation_TypeID(t *testing.T) {
 	)
 }
 
+func TestREPLLocation_ID(t *testing.T) {
+
+	t.Parallel()
+
+	location, _, err := decodeREPLLocationTypeID("REPL.Bar.Baz")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"REPL",
+		location.ID(),
+	)
+}
+
 func TestDecodeREPLLocationTypeID(t *testing.T) {
 
 	t.Parallel()

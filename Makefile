@@ -29,19 +29,6 @@ ifneq ($(linters),)
 	LINTERS = -E $(linters)
 endif
 
-
-.PHONY: test
-test:
-	# test all packages
-	GO111MODULE=on go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
-	# remove coverage of empty functions from report
-	sed -i -e 's/^.* 0 0$$//' coverage.txt
-
-.PHONY: fast-test
-fast-test:
-	# test all packages
-	GO111MODULE=on go test -parallel 8 ./...
-
 .PHONY: build
 build: build-tools ./runtime/cmd/parse/parse ./runtime/cmd/parse/parse.wasm ./runtime/cmd/check/check ./runtime/cmd/main/main
 
@@ -67,6 +54,20 @@ build-analysis:
 .PHONY: build-batch-script
 build-batch-script:
 	(cd ./tools/batch-script && go build .)
+
+.PHONY: ci
+ci:
+	# test all packages
+	go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
+	# run interpreter smoke tests. results from run above are reused, so no tests runs are duplicated
+	go test -count=5 ./runtime/tests/interpreter/... -runSmokeTests=true -validateAtree=false
+	# remove coverage of empty functions from report
+	sed -i -e 's/^.* 0 0$$//' coverage.txt
+
+.PHONY: test
+test:
+	# test all packages
+	go test -parallel 8 ./...
 
 .PHONY: lint-github-actions
 lint-github-actions: build-linter

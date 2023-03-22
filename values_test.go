@@ -21,10 +21,8 @@ package cadence
 import (
 	"fmt"
 	"math/big"
-	"reflect"
 	"testing"
 	"unicode/utf8"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,129 +31,170 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestStringer(t *testing.T) {
+type valueTestCase struct {
+	value        Value
+	string       string
+	exampleType  Type
+	expectedType Type
+	withType     func(value Value, ty Type) Value
+	noType       bool
+}
 
-	t.Parallel()
-
-	type testCase struct {
-		value    Value
-		expected string
-	}
-
+func newValueTestCases() map[string]valueTestCase {
 	ufix64, _ := NewUFix64("64.01")
 	fix64, _ := NewFix64("-32.11")
 
-	stringerTests := map[string]testCase{
+	testFunctionType := NewFunctionType(
+		"((String):UInt8)",
+		[]Parameter{
+			{
+				Type: StringType{},
+			},
+		},
+		UInt8Type{},
+	)
+
+	return map[string]valueTestCase{
 		"UInt": {
-			value:    NewUInt(10),
-			expected: "10",
+			value:        NewUInt(10),
+			string:       "10",
+			expectedType: UIntType{},
 		},
 		"UInt8": {
-			value:    NewUInt8(8),
-			expected: "8",
+			value:        NewUInt8(8),
+			string:       "8",
+			expectedType: UInt8Type{},
 		},
 		"UInt16": {
-			value:    NewUInt16(16),
-			expected: "16",
+			value:        NewUInt16(16),
+			string:       "16",
+			expectedType: UInt16Type{},
 		},
 		"UInt32": {
-			value:    NewUInt32(32),
-			expected: "32",
+			value:        NewUInt32(32),
+			string:       "32",
+			expectedType: UInt32Type{},
 		},
 		"UInt64": {
-			value:    NewUInt64(64),
-			expected: "64",
+			value:        NewUInt64(64),
+			string:       "64",
+			expectedType: UInt64Type{},
 		},
 		"UInt128": {
-			value:    NewUInt128(128),
-			expected: "128",
+			value:        NewUInt128(128),
+			string:       "128",
+			expectedType: UInt128Type{},
 		},
 		"UInt256": {
-			value:    NewUInt256(256),
-			expected: "256",
+			value:        NewUInt256(256),
+			string:       "256",
+			expectedType: UInt256Type{},
 		},
 		"Int": {
-			value:    NewInt(1000000),
-			expected: "1000000",
+			value:        NewInt(1000000),
+			string:       "1000000",
+			expectedType: IntType{},
 		},
 		"Int8": {
-			value:    NewInt8(-8),
-			expected: "-8",
+			value:        NewInt8(-8),
+			string:       "-8",
+			expectedType: Int8Type{},
 		},
 		"Int16": {
-			value:    NewInt16(-16),
-			expected: "-16",
+			value:        NewInt16(-16),
+			string:       "-16",
+			expectedType: Int16Type{},
 		},
 		"Int32": {
-			value:    NewInt32(-32),
-			expected: "-32",
+			value:        NewInt32(-32),
+			string:       "-32",
+			expectedType: Int32Type{},
 		},
 		"Int64": {
-			value:    NewInt64(-64),
-			expected: "-64",
+			value:        NewInt64(-64),
+			string:       "-64",
+			expectedType: Int64Type{},
 		},
 		"Int128": {
-			value:    NewInt128(-128),
-			expected: "-128",
+			value:        NewInt128(-128),
+			string:       "-128",
+			expectedType: Int128Type{},
 		},
 		"Int256": {
-			value:    NewInt256(-256),
-			expected: "-256",
+			value:        NewInt256(-256),
+			string:       "-256",
+			expectedType: Int256Type{},
 		},
 		"Word8": {
-			value:    NewWord8(8),
-			expected: "8",
+			value:        NewWord8(8),
+			string:       "8",
+			expectedType: Word8Type{},
 		},
 		"Word16": {
-			value:    NewWord16(16),
-			expected: "16",
+			value:        NewWord16(16),
+			string:       "16",
+			expectedType: Word16Type{},
 		},
 		"Word32": {
-			value:    NewWord32(32),
-			expected: "32",
+			value:        NewWord32(32),
+			string:       "32",
+			expectedType: Word32Type{},
 		},
 		"Word64": {
-			value:    NewWord64(64),
-			expected: "64",
+			value:        NewWord64(64),
+			string:       "64",
+			expectedType: Word64Type{},
 		},
 		"UFix64": {
-			value:    ufix64,
-			expected: "64.01000000",
+			value:        ufix64,
+			string:       "64.01000000",
+			expectedType: UFix64Type{},
 		},
 		"Fix64": {
-			value:    fix64,
-			expected: "-32.11000000",
+			value:        fix64,
+			string:       "-32.11000000",
+			expectedType: Fix64Type{},
 		},
 		"Void": {
-			value:    NewVoid(),
-			expected: "()",
+			value:        NewVoid(),
+			string:       "()",
+			expectedType: VoidType{},
 		},
-		"true": {
-			value:    NewBool(true),
-			expected: "true",
-		},
-		"false": {
-			value:    NewBool(false),
-			expected: "false",
+		"Bool": {
+			value:        NewBool(true),
+			string:       "true",
+			expectedType: BoolType{},
 		},
 		"some": {
-			value:    NewOptional(ufix64),
-			expected: "64.01000000",
+			value:        NewOptional(ufix64),
+			string:       "64.01000000",
+			expectedType: NewOptionalType(UFix64Type{}),
 		},
 		"nil": {
-			value:    NewOptional(nil),
-			expected: "nil",
+			value:        NewOptional(nil),
+			string:       "nil",
+			expectedType: NewOptionalType(NeverType{}),
 		},
 		"String": {
-			value:    String("Flow ridah!"),
-			expected: "\"Flow ridah!\"",
+			value:        String("Flow ridah!"),
+			string:       "\"Flow ridah!\"",
+			expectedType: StringType{},
+		},
+		"Character": {
+			value:        Character("✌️"),
+			string:       "\"\\u{270c}\\u{fe0f}\"",
+			expectedType: CharacterType{},
 		},
 		"Array": {
 			value: NewArray([]Value{
 				NewInt(10),
 				String("TEST"),
 			}),
-			expected: "[10, \"TEST\"]",
+			exampleType: NewConstantSizedArrayType(2, AnyType{}),
+			withType: func(value Value, ty Type) Value {
+				return value.(Array).WithType(ty.(ArrayType))
+			},
+			string: "[10, \"TEST\"]",
 		},
 		"Dictionary": {
 			value: NewDictionary([]KeyValuePair{
@@ -164,18 +203,25 @@ func TestStringer(t *testing.T) {
 					Value: String("value"),
 				},
 			}),
-			expected: "{\"key\": \"value\"}",
+			exampleType: NewDictionaryType(StringType{}, StringType{}),
+			withType: func(value Value, ty Type) Value {
+				return value.(Dictionary).WithType(ty.(*DictionaryType))
+			},
+			string: "{\"key\": \"value\"}",
 		},
 		"Bytes": {
-			value:    NewBytes([]byte{0x1, 0x2}),
-			expected: "[0x1, 0x2]",
+			value:        NewBytes([]byte{0x1, 0x2}),
+			string:       "[0x1, 0x2]",
+			expectedType: BytesType{},
 		},
 		"Address": {
-			value:    NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-			expected: "0x0000000000000001",
+			value:        NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+			string:       "0x0000000000000001",
+			expectedType: AddressType{},
 		},
 		"struct": {
-			value: NewStruct([]Value{String("bar")}).WithType(&StructType{
+			value: NewStruct([]Value{String("bar")}),
+			exampleType: &StructType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooStruct",
 				Fields: []Field{
@@ -184,11 +230,15 @@ func TestStringer(t *testing.T) {
 						Type:       StringType{},
 					},
 				},
-			}),
-			expected: "S.test.FooStruct(y: \"bar\")",
+			},
+			withType: func(value Value, ty Type) Value {
+				return value.(Struct).WithType(ty.(*StructType))
+			},
+			string: "S.test.FooStruct(y: \"bar\")",
 		},
 		"resource": {
-			value: NewResource([]Value{NewInt(1)}).WithType(&ResourceType{
+			value: NewResource([]Value{NewInt(1)}),
+			exampleType: &ResourceType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooResource",
 				Fields: []Field{
@@ -197,8 +247,11 @@ func TestStringer(t *testing.T) {
 						Type:       IntType{},
 					},
 				},
-			}),
-			expected: "S.test.FooResource(bar: 1)",
+			},
+			withType: func(value Value, ty Type) Value {
+				return value.(Resource).WithType(ty.(*ResourceType))
+			},
+			string: "S.test.FooResource(bar: 1)",
 		},
 		"event": {
 			value: NewEvent(
@@ -206,7 +259,8 @@ func TestStringer(t *testing.T) {
 					NewInt(1),
 					String("foo"),
 				},
-			).WithType(&EventType{
+			),
+			exampleType: &EventType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooEvent",
 				Fields: []Field{
@@ -219,11 +273,15 @@ func TestStringer(t *testing.T) {
 						Type:       StringType{},
 					},
 				},
-			}),
-			expected: "S.test.FooEvent(a: 1, b: \"foo\")",
+			},
+			withType: func(value Value, ty Type) Value {
+				return value.(Event).WithType(ty.(*EventType))
+			},
+			string: "S.test.FooEvent(a: 1, b: \"foo\")",
 		},
 		"contract": {
-			value: NewContract([]Value{String("bar")}).WithType(&ContractType{
+			value: NewContract([]Value{String("bar")}),
+			exampleType: &ContractType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooContract",
 				Fields: []Field{
@@ -232,8 +290,45 @@ func TestStringer(t *testing.T) {
 						Type:       StringType{},
 					},
 				},
-			}),
-			expected: "S.test.FooContract(y: \"bar\")",
+			},
+			withType: func(value Value, ty Type) Value {
+				return value.(Contract).WithType(ty.(*ContractType))
+			},
+			string: "S.test.FooContract(y: \"bar\")",
+		},
+		"enum": {
+			value: NewEnum([]Value{UInt8(1)}),
+			exampleType: &EnumType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooEnum",
+				Fields: []Field{
+					{
+						Identifier: sema.EnumRawValueFieldName,
+						Type:       UInt8Type{},
+					},
+				},
+			},
+			withType: func(value Value, ty Type) Value {
+				return value.(Enum).WithType(ty.(*EnumType))
+			},
+			string: "S.test.FooEnum(rawValue: 1)",
+		},
+		"attachment": {
+			value: NewAttachment([]Value{NewInt(1)}),
+			exampleType: &AttachmentType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooAttachment",
+				Fields: []Field{
+					{
+						Identifier: "bar",
+						Type:       IntType{},
+					},
+				},
+			},
+			withType: func(value Value, ty Type) Value {
+				return value.(Attachment).WithType(ty.(*AttachmentType))
+			},
+			string: "S.test.FooAttachment(bar: 1)",
 		},
 		"Link": {
 			value: NewPathLink(
@@ -243,18 +338,21 @@ func TestStringer(t *testing.T) {
 				},
 				"Int",
 			),
-			expected: "PathLink<Int>(/storage/foo)",
+			string: "PathLink<Int>(/storage/foo)",
+			noType: true,
 		},
 		"Path": {
 			value: Path{
 				Domain:     "storage",
 				Identifier: "foo",
 			},
-			expected: "/storage/foo",
+			expectedType: PathType{},
+			string:       "/storage/foo",
 		},
 		"Type": {
-			value:    TypeValue{StaticType: IntType{}},
-			expected: "Type<Int>()",
+			value:        TypeValue{StaticType: IntType{}},
+			expectedType: NewMetaType(),
+			string:       "Type<Int>()",
 		},
 		"Capability": {
 			value: StorageCapability{
@@ -262,29 +360,47 @@ func TestStringer(t *testing.T) {
 				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				BorrowType: IntType{},
 			},
-			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
+			expectedType: NewCapabilityType(IntType{}),
+			string:       "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
+		},
+		"Function": {
+			value: NewFunction(
+				testFunctionType,
+			),
+			expectedType: testFunctionType,
+			string:       "Function(...)",
 		},
 	}
+}
 
-	test := func(name string, testCase testCase) {
+func TestValue_String(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(name string, testCase valueTestCase) {
 
 		t.Run(name, func(t *testing.T) {
 
 			t.Parallel()
 
+			withType := testCase.withType
+			if withType != nil {
+				testCase.value = withType(testCase.value, testCase.exampleType)
+			}
+
 			assert.Equal(t,
-				testCase.expected,
+				testCase.string,
 				testCase.value.String(),
 			)
 		})
 	}
 
-	for name, testCase := range stringerTests {
+	for name, testCase := range newValueTestCases() {
 		test(name, testCase)
 	}
 }
 
-func TestToBigEndianBytes(t *testing.T) {
+func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 
 	t.Parallel()
 
@@ -612,120 +728,50 @@ func TestNewUInt256FromBig(t *testing.T) {
 	require.Error(t, err)
 }
 
-//go:linkname typelinks reflect.typelinks
-func typelinks() (sections []unsafe.Pointer, offset [][]int32)
-
-//go:linkname add reflect.add
-func add(p unsafe.Pointer, x uintptr, whySafe string) unsafe.Pointer
-
-func TestGetType(t *testing.T) {
+func TestValue_Type(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("simple values", func(t *testing.T) {
+	checkedTypes := map[Type]struct{}{}
 
-		// This method test all simple typed values (and any newly added values/types).
+	test := func(name string, testCase valueTestCase) {
 
-		t.Parallel()
+		t.Run(name, func(t *testing.T) {
 
-		complexTypes := map[reflect.Type]struct{}{
-			reflect.TypeOf(Array{}):      {},
-			reflect.TypeOf(Contract{}):   {},
-			reflect.TypeOf(Dictionary{}): {},
-			reflect.TypeOf(Event{}):      {},
-			reflect.TypeOf(Resource{}):   {},
-			reflect.TypeOf(Struct{}):     {},
-		}
+			value := testCase.value
 
-		typelessTypes := map[reflect.Type]struct{}{
-			reflect.TypeOf(PathLink{}): {},
-		}
+			returnedType := value.Type()
 
-		var valueInterface Value
-		valueInterfaceType := reflect.TypeOf(&valueInterface).Elem()
+			expectedType := testCase.expectedType
+			if expectedType != nil {
+				require.NotNil(t, returnedType)
+				require.True(t, returnedType != nil)
+				require.Equal(t, expectedType, returnedType)
+			} else if !testCase.noType {
+				exampleType := testCase.exampleType
+				require.NotNil(t, exampleType)
 
-		checkedTypes := map[Type]struct{}{}
+				// Ensure the nil type is an *untyped nil*
+				require.Nil(t, returnedType)
+				require.True(t, returnedType == nil)
 
-		sections, offsets := typelinks()
-		for i, base := range sections {
-			for _, offset := range offsets[i] {
-				typeAddr := add(base, uintptr(offset), "")
-				valueType := reflect.TypeOf(*(*interface{})(unsafe.Pointer(&typeAddr)))
+				// Once a type is set, it should be returned
+				value = testCase.withType(value, exampleType)
 
-				if !valueType.Implements(valueInterfaceType) {
-					continue
-				}
+				returnedType = value.Type()
 
-				valueType = valueType.Elem()
-
-				if _, ok := complexTypes[valueType]; ok {
-					continue
-				}
-
-				if _, ok := typelessTypes[valueType]; ok {
-					continue
-				}
-
-				valueInstance := reflect.New(valueType)
-				value := valueInstance.Elem().Interface().(Value)
-
-				// Check whether the type is always returned
-				cadenceType := value.Type()
-				assert.NotNil(t, cadenceType)
-
-				// Check if the type is not a duplicate of some other type
-				// i.e: two values can't return the same type.
-				assert.NotContains(t, checkedTypes, cadenceType)
-				checkedTypes[cadenceType] = struct{}{}
+				require.NotNil(t, returnedType)
+				require.Equal(t, exampleType, returnedType)
 			}
-		}
-	})
 
-	t.Run("array value", func(t *testing.T) {
-		t.Parallel()
+			// Check if the type is not a duplicate of some other type
+			// i.e: two values can't return the same type.
+			require.NotContains(t, checkedTypes, returnedType)
+			checkedTypes[returnedType] = struct{}{}
+		})
+	}
 
-		typ := NewConstantSizedArrayType(4, TheInt8Type)
-		arrayValue := NewArray([]Value{}).WithType(typ)
-		assert.Equal(t, arrayValue.Type(), typ)
-	})
-
-	t.Run("contract value", func(t *testing.T) {
-		t.Parallel()
-
-		typ := NewContractType(nil, "Foo", nil, nil)
-		value := NewContract([]Value{}).WithType(typ)
-		assert.Equal(t, typ, value.Type())
-	})
-
-	t.Run("dictionary value", func(t *testing.T) {
-		t.Parallel()
-
-		typ := NewDictionaryType(TheInt8Type, TheStringType)
-		value := NewDictionary([]KeyValuePair{}).WithType(typ)
-		assert.Equal(t, typ, value.Type())
-	})
-
-	t.Run("event value", func(t *testing.T) {
-		t.Parallel()
-
-		typ := NewEventType(nil, "Foo", nil, nil)
-		value := NewEvent([]Value{}).WithType(typ)
-		assert.Equal(t, typ, value.Type())
-	})
-
-	t.Run("resource value", func(t *testing.T) {
-		t.Parallel()
-
-		typ := NewResourceType(nil, "Foo", nil, nil)
-		value := NewResource([]Value{}).WithType(typ)
-		assert.Equal(t, typ, value.Type())
-	})
-
-	t.Run("struct value", func(t *testing.T) {
-		t.Parallel()
-
-		typ := NewStructType(nil, "Foo", nil, nil)
-		value := NewStruct([]Value{}).WithType(typ)
-		assert.Equal(t, typ, value.Type())
-	})
+	for name, testCase := range newValueTestCases() {
+		test(name, testCase)
+	}
 }

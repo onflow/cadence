@@ -85,6 +85,10 @@ func (l AddressLocation) Description() string {
 	)
 }
 
+func (l AddressLocation) ID() string {
+	return fmt.Sprintf("%s.%s", AddressLocationPrefix, l)
+}
+
 func (l AddressLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type    string
