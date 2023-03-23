@@ -21,17 +21,18 @@ package checker
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/stretchr/testify/require"
 )
 
 func ParseAndCheckCapcon(t *testing.T, code string) (*sema.Checker, error) {
 	baseActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseActivation.DeclareValue(stdlib.StandardLibraryValue{
 		Name: "controller",
-		Type: sema.CapabilityControllerType,
+		Type: sema.StorageCapabilityControllerType,
 		Kind: common.DeclarationKindConstant,
 	})
 
@@ -46,22 +47,38 @@ func ParseAndCheckCapcon(t *testing.T, code string) (*sema.Checker, error) {
 	)
 }
 
-func TestCheckCapconNonEquatable(t *testing.T) {
+func TestCheckStorageCapabilityController(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheckCapcon(t, `
-		let kaboom: Bool = controller == controller
-	`)
+	t.Run("not equatable", func(t *testing.T) {
 
-	errs := RequireCheckerErrors(t, err, 1)
-	require.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
-}
+		_, err := ParseAndCheckCapcon(t, `
+          let equal = controller == controller
+        `)
 
-func TestCheckCapconTypeInScope(t *testing.T) {
-	t.Parallel()
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+	})
 
-	_, err := ParseAndCheckCapcon(t, `
-		let typ = Type<CapabilityController>()
-	`)
-	require.NoError(t, err)
+	t.Run("in scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckCapcon(t, `
+          let typ = Type<StorageCapabilityController>()
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("members", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckCapcon(t, `
+          let borrowType: Type = controller.borrowType
+          let capabilityID: UInt64 = controller.capabilityID
+          let target: StoragePath = controller.target()
+          let _: Void = controller.retarget(target: /storage/test)
+        `)
+
+		require.NoError(t, err)
+	})
 }

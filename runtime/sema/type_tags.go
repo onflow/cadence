@@ -218,7 +218,7 @@ const (
 	transactionTypeMask
 	anyResourceAttachmentMask
 	anyStructAttachmentMask
-	capabilityControllerTypeMask
+	storageCapabilityControllerTypeMask
 
 	invalidTypeMask
 )
@@ -328,13 +328,13 @@ var (
 	FunctionTypeTag      = newTypeTagFromLowerMask(functionTypeMask)
 	InterfaceTypeTag     = newTypeTagFromLowerMask(interfaceTypeMask)
 
-	RestrictedTypeTag            = newTypeTagFromUpperMask(restrictedTypeMask)
-	CapabilityTypeTag            = newTypeTagFromUpperMask(capabilityTypeMask)
-	InvalidTypeTag               = newTypeTagFromUpperMask(invalidTypeMask)
-	TransactionTypeTag           = newTypeTagFromUpperMask(transactionTypeMask)
-	AnyResourceAttachmentTypeTag = newTypeTagFromUpperMask(anyResourceAttachmentMask)
-	AnyStructAttachmentTypeTag   = newTypeTagFromUpperMask(anyStructAttachmentMask)
-	CapabilityControllerTypeTag  = newTypeTagFromUpperMask(capabilityControllerTypeMask)
+	RestrictedTypeTag                  = newTypeTagFromUpperMask(restrictedTypeMask)
+	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
+	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
+	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
+	AnyResourceAttachmentTypeTag       = newTypeTagFromUpperMask(anyResourceAttachmentMask)
+	AnyStructAttachmentTypeTag         = newTypeTagFromUpperMask(anyStructAttachmentMask)
+	StorageCapabilityControllerTypeTag = newTypeTagFromUpperMask(storageCapabilityControllerTypeMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -358,7 +358,7 @@ var (
 				Or(DeployedContractTypeTag).
 				Or(CapabilityTypeTag).
 				Or(FunctionTypeTag).
-				Or(CapabilityControllerTypeTag)
+				Or(StorageCapabilityControllerTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)
@@ -665,8 +665,8 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 	case anyStructAttachmentMask:
 		return AnyStructAttachmentType
 
-	case capabilityControllerTypeMask:
-		return CapabilityControllerType
+	case storageCapabilityControllerTypeMask:
+		return StorageCapabilityControllerType
 
 	default:
 		return nil

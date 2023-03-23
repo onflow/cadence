@@ -22,6 +22,6 @@ import (
 	"testing"
 )
 
-func TestCapabilityControllerValue(t *testing.T) {
+func TestStorageCapabilityControllerValue(t *testing.T) {
 	// TODO add tests when capcons are integrated with accounts
 }
