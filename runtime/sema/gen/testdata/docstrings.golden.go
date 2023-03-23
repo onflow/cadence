@@ -48,6 +48,7 @@ const DocstringsTypeNwnFunctionName = "nwn"
 var DocstringsTypeNwnFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
+			Identifier:     "x",
 			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
