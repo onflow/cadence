@@ -7111,6 +7111,70 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
+	t.Run("with static multiple restricted type", func(t *testing.T) {
+
+		testEncodeAndDecodeEx(
+			t,
+			cadence.TypeValue{
+				StaticType: (&cadence.RestrictedType{
+					Restrictions: []cadence.Type{
+						cadence.NewAnyStructType(),
+						cadence.StringType{},
+					},
+					Type: cadence.IntType{},
+				}).WithID("Int{AnyStruct, String}"),
+			},
+			[]byte{ // language=json, format=json-cdc
+				// {"value":{"staticType":{"kind":"Restriction","typeID":"Int{AnyStruct, String}","type":{"kind":"Int"},"restrictions":[{"kind":"AnyStruct"},{"kind":"String"}]}},"type":"Type"}
+				//
+				// language=edn, format=ccf
+				// 130([137(41), 191(["Int{AnyStruct, String}", 185(4), [185(1), 185(39)]])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagRestrictedTypeValue,
+				// array, 3 elements follow
+				0x83,
+				// ID
+				// string, 22 bytes follow
+				0x76,
+				// Int{AnyStruct, String}
+				0x49, 0x6e, 0x74, 0x7b, 0x41, 0x6e, 0x79, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x2c, 0x20, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x7d,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type ID (4)
+				0x04,
+				// array, 2 element follows
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// String type ID (1)
+				0x01,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+			},
+			cadence.TypeValue{
+				StaticType: (&cadence.RestrictedType{
+					Restrictions: []cadence.Type{
+						cadence.StringType{},
+						cadence.NewAnyStructType(),
+					},
+					Type: cadence.IntType{},
+				}).WithID("Int{AnyStruct, String}"),
+			},
+		)
+
+	})
 	t.Run("without static type", func(t *testing.T) {
 
 		t.Parallel()
