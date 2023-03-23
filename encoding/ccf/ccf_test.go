@@ -5867,6 +5867,234 @@ func TestEncodeEnum(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleEnum)
 }
 
+func TestEncodeValueOfRestrictedType(t *testing.T) {
+	hasCountInterfaceType := cadence.NewResourceInterfaceType(
+		common.NewStringLocation(nil, "test"),
+		"HasCount",
+		nil,
+		nil,
+	)
+
+	hasSumInterfaceType := cadence.NewResourceInterfaceType(
+		common.NewStringLocation(nil, "test"),
+		"HasSum",
+		nil,
+		nil,
+	)
+
+	statsType := cadence.NewResourceType(
+		common.NewStringLocation(nil, "test"),
+		"Stats",
+		[]cadence.Field{
+			cadence.NewField("count", cadence.NewIntType()),
+			cadence.NewField("sum", cadence.NewIntType()),
+		},
+		nil,
+	)
+
+	countSumRestrictedType := cadence.NewRestrictedType(
+		"Stats{HasCount, HasSum}",
+		statsType,
+		[]cadence.Type{
+			hasCountInterfaceType,
+			hasSumInterfaceType,
+		},
+	)
+
+	val := cadence.NewArray([]cadence.Value{
+		cadence.NewResource(
+			[]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewInt(2),
+			},
+		).WithType(statsType),
+	}).WithType(cadence.NewVariableSizedArrayType(countSumRestrictedType))
+
+	expectedStatsType := cadence.NewResourceType(
+		common.NewStringLocation(nil, "test"),
+		"Stats",
+		[]cadence.Field{
+			cadence.NewField("sum", cadence.NewIntType()),
+			cadence.NewField("count", cadence.NewIntType()),
+		},
+		nil,
+	)
+
+	expectedCountSumRestrictedType := cadence.NewRestrictedType(
+		"Stats{HasCount, HasSum}",
+		expectedStatsType,
+		[]cadence.Type{
+			hasSumInterfaceType,
+			hasCountInterfaceType,
+		},
+	)
+
+	expectedVal := cadence.NewArray([]cadence.Value{
+		cadence.NewResource(
+			[]cadence.Value{
+				cadence.NewInt(2),
+				cadence.NewInt(1),
+			},
+		).WithType(expectedStatsType),
+	}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+
+	testEncodeAndDecodeEx(
+		t,
+		val,
+		[]byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":{"id":"S.test.Stats","fields":[{"value":{"value":"1","type":"Int"},"name":"sum"},{"value":{"value":"2","type":"Int"},"name":"count"}]},"type":"Resource"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 129([[161([h'', "S.test.Stats", [["sum", 137(4)], ["count", 137(4)]]]), 177([h'01', "S.test.HasSum"]), 177([h'02', "S.test.HasCount"])], [139(143(["Stats{HasCount, HasSum}", 136(h''), [136(h'01'), 136(h'02')]])), [130([136(h''), [2, 1]])]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 3 items follow
+			0x83,
+			// resource type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.Stats"
+			// 2 fields: [["sum", type(int)], ["count", type(int)]]
+			// tag
+			0xd8, ccf.CBORTagResourceType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 12 bytes follow
+			0x6c,
+			// S.test.Stats
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x73,
+			// fields
+			// array, 2 items follow
+			0x82,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// sum
+			0x73, 0x75, 0x6d,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// field 1
+			// array, 2 items follow
+			0x82,
+			// text, 5 bytes follow
+			0x65,
+			// count
+			0x63, 0x6f, 0x75, 0x6e, 0x74,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// resource interface type:
+			// id: []byte{1}
+			// cadence-type-id: "S.test.HasSum"
+			// tag
+			0xd8, ccf.CBORTagResourceInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 13 bytes follow
+			0x6d,
+			// S.test.HasSum
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x61, 0x73, 0x53, 0x75, 0x6d,
+			// resource interface type:
+			// id: []byte{2}
+			// cadence-type-id: "S.test.HasCount"
+			// tag
+			0xd8, ccf.CBORTagResourceInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 2
+			0x02,
+			// cadence-type-id
+			// string, 15 bytes follow
+			0x6f,
+			// S.test.HasCount
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x61, 0x73, 0x43, 0x6f, 0x75, 0x6e, 0x74,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagRestrictedType,
+			// array, 3 items follow
+			0x83,
+			// cadence type id
+			// text, 23 bytes follow
+			0x77,
+			// Stats{HasCount, HasSum}
+			0x53, 0x74, 0x61, 0x74, 0x73, 0x7b, 0x48, 0x61, 0x73, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x2c, 0x20, 0x48, 0x61, 0x73, 0x53, 0x75, 0x6d, 0x7d,
+			// type
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 byte follows
+			0x40,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 byte follows
+			0x41,
+			// 1
+			0x01,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 byte follows
+			0x41,
+			// 2
+			0x02,
+
+			// array, 1 item follows
+			0x81,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 byte follows
+			0x40,
+			// array, 2 items follow
+			0x82,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 byte follows
+			0x41,
+			// 2
+			0x02,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 byte follows
+			0x41,
+			// 1
+			0x01,
+		},
+		expectedVal,
+	)
+}
+
 func TestEncodeSimpleTypes(t *testing.T) {
 
 	t.Parallel()
