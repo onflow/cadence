@@ -3186,8 +3186,8 @@ func TestEncodeArray(t *testing.T) {
 	}
 
 	// [S.test.Foo{1}, S.test.Fooo{2, "a"}]
-	heterogeneousInterfaceTypeArray := encodeTest{
-		"Heterogenous Interface Array",
+	resourceInterfaceTypeArray := encodeTest{
+		"Resource Interface Array",
 		cadence.NewArray([]cadence.Value{
 			cadence.NewResource([]cadence.Value{
 				cadence.NewInt(1),
@@ -3523,6 +3523,286 @@ func TestEncodeArray(t *testing.T) {
 		},
 	}
 
+	structInterfaceType := &cadence.StructInterfaceType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooStructInterface",
+	}
+
+	structType := &cadence.StructType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooStruct",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.IntType{},
+			},
+		},
+	}
+
+	// [S.test.FooStruct{1}, S.test.FooStruct{2}]
+	structInterfaceTypeArray := encodeTest{
+		"Struct Interface Array",
+		cadence.NewArray([]cadence.Value{
+			cadence.NewStruct([]cadence.Value{
+				cadence.NewInt(1),
+			}).WithType(structType),
+			cadence.NewStruct([]cadence.Value{
+				cadence.NewInt(2),
+			}).WithType(structType),
+		}).WithType(cadence.NewVariableSizedArrayType(structInterfaceType)),
+		[]byte{ // language=json, format=json-cdc
+			// {"value":[{"value":{"id":"S.test.FooStruct","fields":[{"value":{"value":"1","type":"Int"},"name":"a"}]},"type":"Struct"},{"value":{"id":"S.test.FooStruct","fields":[{"value":{"value":"2","type":"Int"},"name":"a"}]},"type":"Struct"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 129([[160([h'', "S.test.FooStruct", [["a", 137(4)]]]), 176([h'01', "S.test.FooStructInterface"])], [139(136(h'01')), [130([136(h''), [1]]), 130([136(h''), [2]])]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 2 items follow
+			0x82,
+			// type definition 0
+			// struct type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.FooStruct"
+			// fields: [["a", int type]]
+			// tag
+			0xd8, ccf.CBORTagStructType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 16 bytes follow
+			0x70,
+			// S.test.FooStruct
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+			// fields
+			// array, 1 items follow
+			0x81,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// a
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// type definition 1
+			// struct interface type:
+			// id: []byte{1}
+			// cadence-type-id: "S.test.FooStructInterface"
+			// tag
+			0xd8, ccf.CBORTagStructInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 25 bytes follow
+			0x78, 0x19,
+			// S.test.FooStructInterface
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// array, 2 item follow
+			0x82,
+			// element 0 (inline type and value)
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 bytes follow
+			0x40,
+			// array, 1 items follow
+			0x81,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// element 1 (inline type and value)
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 bytes follow
+			0x40,
+			// array, 1 items follow
+			0x81,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 2
+			0x02,
+		},
+	}
+
+	contractInterfaceType := &cadence.ContractInterfaceType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooContractInterface",
+	}
+
+	contractType := &cadence.ContractType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooContract",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.IntType{},
+			},
+		},
+	}
+
+	// [S.test.FooContract{1}, S.test.FooContract{2}]
+	contractInterfaceTypeArray := encodeTest{
+		"Contract Interface Array",
+		cadence.NewArray([]cadence.Value{
+			cadence.NewContract([]cadence.Value{
+				cadence.NewInt(1),
+			}).WithType(contractType),
+			cadence.NewContract([]cadence.Value{
+				cadence.NewInt(2),
+			}).WithType(contractType),
+		}).WithType(cadence.NewVariableSizedArrayType(contractInterfaceType)),
+		[]byte{ // language=json, format=json-cdc
+			// {"value":[{"value":{"id":"S.test.FooContract","fields":[{"value":{"value":"1","type":"Int"},"name":"a"}]},"type":"Contract"},{"value":{"id":"S.test.FooContract","fields":[{"value":{"value":"2","type":"Int"},"name":"a"}]},"type":"Contract"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 129([[163([h'', "S.test.FooContract", [["a", 137(4)]]]), 178([h'01', "S.test.FooContractInterface"])], [139(136(h'01')), [130([136(h''), [1]]), 130([136(h''), [2]])]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 2 items follow
+			0x82,
+			// type definition 0
+			// contract type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.FooContract"
+			// fields: [["a", int type]]
+			// tag
+			0xd8, ccf.CBORTagContractType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 12 bytes follow
+			0x72,
+			// S.test.FooContract
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x74,
+			// fields
+			// array, 1 items follow
+			0x81,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// a
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// type definition 1
+			// constract interface type:
+			// id: []byte{1}
+			// cadence-type-id: "S.test.FooContractInterface"
+			// tag
+			0xd8, ccf.CBORTagContractInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 27 bytes follow
+			0x78, 0x1b,
+			// S.test.FooContractInterface
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x74, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// array, 2 item follow
+			0x82,
+			// element 0 (inline type and value)
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 bytes follow
+			0x40,
+			// array, 1 items follow
+			0x81,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// element 1 (inline type and value)
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 bytes follow
+			0x40,
+			// array, 1 items follow
+			0x81,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 2
+			0x02,
+		},
+	}
 	testAllEncodeAndDecode(t,
 		emptyArray,
 		constantSizedIntArray,
@@ -3533,7 +3813,9 @@ func TestEncodeArray(t *testing.T) {
 		heterogeneousSimpleTypeArray,
 		heterogeneousNumberTypeArray,
 		heterogeneousCompositeTypeArray,
-		heterogeneousInterfaceTypeArray,
+		resourceInterfaceTypeArray,
+		structInterfaceTypeArray,
+		contractInterfaceTypeArray,
 	)
 }
 
@@ -5333,6 +5615,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		{cadence.IntegerType{}, ccf.TypeInteger},
 		{cadence.SignedIntegerType{}, ccf.TypeSignedInteger},
 		{cadence.FixedPointType{}, ccf.TypeFixedPoint},
+		{cadence.SignedFixedPointType{}, ccf.TypeSignedFixedPoint},
 		{cadence.IntType{}, ccf.TypeInt},
 		{cadence.Int8Type{}, ccf.TypeInt8},
 		{cadence.Int16Type{}, ccf.TypeInt16},
