@@ -2336,6 +2336,30 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("do not retain entitlements", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(X) &{S}) {
+			let x: auth(X) &Int = ref.x
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// X is not retained in the entitlements for ref
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X) &Int")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &Int")
+	})
+
 	t.Run("different views", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -2359,6 +2383,8 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 
 		// access gives B, not Y
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &Int")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(B) &Int")
 	})
 
 	t.Run("safe disjoint", func(t *testing.T) {
@@ -2459,6 +2485,33 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		`)
 
 		assert.NoError(t, err)
+	})
+
+	t.Run("unmapped entitlements do not pass through map", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement D
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Int
+		}
+		fun foo(ref: auth(D) &{S}) {
+			let x1: auth(D) &Int = ref.x
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// access results in pub access because D is not mapped
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(D) &Int")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&Int")
 	})
 
 	t.Run("multiple output with upcasting", func(t *testing.T) {
@@ -2563,6 +2616,8 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 
 		// access gives B & C, not X & Y
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X, Y) &Int")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(B, C) &Int")
 	})
 
 	t.Run("unauthorized", func(t *testing.T) {
@@ -2667,6 +2722,58 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 			access(M) let x: auth(M) &Int
 			init() {
 				self.x = &1 as auth(Y) &Int
+			}
+		}
+		let ref = &S() as auth(X) &S
+		let x = ref.x
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// init of map needs full authorization of codomain
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("basic with underauthorized disjunction init", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct S {
+			access(M) let x: auth(M) &Int
+			init() {
+				self.x = &1 as auth(Y | Z) &Int
+			}
+		}
+		let ref = &S() as auth(X) &S
+		let x = ref.x
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// init of map needs full authorization of codomain
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("basic with non-reference init", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct S {
+			access(M) let x: auth(M) &Int
+			init() {
+				self.x = 1
 			}
 		}
 		let ref = &S() as auth(X) &S

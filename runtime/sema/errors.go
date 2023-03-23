@@ -4083,6 +4083,30 @@ func (e *UnrepresentableEntitlementMapOutputError) EndPosition(common.MemoryGaug
 	return e.EndPos
 }
 
+// InvalidMappedAuthorizationOutsideOfFieldError
+type InvalidMappedAuthorizationOutsideOfFieldError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidMappedAuthorizationOutsideOfFieldError{}
+var _ errors.UserError = &InvalidMappedAuthorizationOutsideOfFieldError{}
+
+func (*InvalidMappedAuthorizationOutsideOfFieldError) isSemanticError() {}
+
+func (*InvalidMappedAuthorizationOutsideOfFieldError) IsUserError() {}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) Error() string {
+	return "cannot use mapped entitlement authorization outside of a reference in a composite field"
+}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.EndPos
+}
+
 // InvalidBaseTypeError
 
 type InvalidBaseTypeError struct {

@@ -4929,7 +4929,7 @@ func (t *ReferenceType) string(typeFormatter func(Type) string) string {
 	if !t.Authorization.Equal(UnauthorizedAccess) {
 		builder.WriteString("auth(")
 		builder.WriteString(t.Authorization.string(typeFormatter))
-		builder.WriteString(")")
+		builder.WriteString(") ")
 	}
 	builder.WriteRune('&')
 	builder.WriteString(typeFormatter(t.Type))

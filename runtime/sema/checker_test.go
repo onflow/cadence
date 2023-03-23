@@ -294,24 +294,6 @@ func TestReferenceSubtyping(t *testing.T) {
 		}
 	}
 
-	mapAccess := EntitlementMapAccess{
-		Type: &EntitlementMapType{
-			Location:   testLocation,
-			Identifier: "M",
-		},
-	}
-
-	containedMapAccess := EntitlementMapAccess{
-		Type: &EntitlementMapType{
-			Location: testLocation,
-			containerType: &InterfaceType{
-				Location:   testLocation,
-				Identifier: "C",
-			},
-			Identifier: "M",
-		},
-	}
-
 	x := &EntitlementType{
 		Location:   testLocation,
 		Identifier: "X",
@@ -327,6 +309,17 @@ func TestReferenceSubtyping(t *testing.T) {
 		Identifier: "Z",
 	}
 
+	mapAccess := EntitlementMapAccess{
+		Type: &EntitlementMapType{
+			Location:   testLocation,
+			Identifier: "M",
+			Relations: []EntitlementRelation{
+				{x, y},
+				{x, z},
+			},
+		},
+	}
+
 	cx := &EntitlementType{
 		Location: testLocation,
 		containerType: &InterfaceType{
@@ -334,6 +327,22 @@ func TestReferenceSubtyping(t *testing.T) {
 			Identifier: "C",
 		},
 		Identifier: "X",
+	}
+
+	containedMapAccess := EntitlementMapAccess{
+		Type: &EntitlementMapType{
+			Location: testLocation,
+			containerType: &InterfaceType{
+				Location:   testLocation,
+				Identifier: "C",
+			},
+			Identifier: "M",
+			Relations: []EntitlementRelation{
+				{x, y},
+				{x, z},
+				{x, cx},
+			},
+		},
 	}
 
 	xyzConjunction := NewEntitlementSetAccess([]*EntitlementType{x, y, z}, Conjunction)
@@ -423,16 +432,20 @@ func TestReferenceSubtyping(t *testing.T) {
 
 		{intRef(xyzConjunction), intRef(UnauthorizedAccess), true},
 		{intRef(xyzConjunction), intRef(containedMapAccess), false},
-		{intRef(xyzConjunction), intRef(mapAccess), false},
+		{intRef(xyzConjunction), intRef(mapAccess), true},
 		{intRef(xyzConjunction), intRef(xyzConjunction), true},
 		{intRef(xyzConjunction), intRef(xyzDisjunction), true},
 		{intRef(xyzConjunction), intRef(xConjunction), true},
 		{intRef(xyzConjunction), intRef(xyConjunction), true},
 		{intRef(xyzConjunction), intRef(xyDisjunction), true},
 
+		{intRef(yzConjunction), intRef(mapAccess), true},
+		{intRef(xzConjunction), intRef(mapAccess), false},
+		{intRef(xyConjunction), intRef(mapAccess), false},
+
 		{intRef(xyzConjunction), anyStructRef(UnauthorizedAccess), true},
 		{intRef(xyzConjunction), anyStructRef(containedMapAccess), false},
-		{intRef(xyzConjunction), anyStructRef(mapAccess), false},
+		{intRef(xyzConjunction), anyStructRef(mapAccess), true},
 		{intRef(xyzConjunction), anyStructRef(xyzConjunction), true},
 		{intRef(xyzConjunction), anyStructRef(xyzDisjunction), true},
 		{intRef(xyzConjunction), anyStructRef(xConjunction), true},
