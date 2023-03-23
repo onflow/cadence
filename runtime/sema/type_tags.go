@@ -326,9 +326,9 @@ var (
 	FunctionTypeTag      = newTypeTagFromLowerMask(functionTypeMask)
 	InterfaceTypeTag     = newTypeTagFromLowerMask(interfaceTypeMask)
 
-	RestrictedTypeTag           = newTypeTagFromUpperMask(restrictedTypeMask)
-	CapabilityTypeTag           = newTypeTagFromUpperMask(capabilityTypeMask)
-	InvalidTypeTag              = newTypeTagFromUpperMask(invalidTypeMask)
+	RestrictedTypeTag                  = newTypeTagFromUpperMask(restrictedTypeMask)
+	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
+	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
 	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
 	StorageCapabilityControllerTypeTag = newTypeTagFromUpperMask(storageCapabilityControllerTypeMask)
 
