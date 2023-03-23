@@ -46,7 +46,9 @@ func ParseAndCheckCapcon(t *testing.T, code string) (*sema.Checker, error) {
 	)
 }
 
-func TestCapconNonEquatable(t *testing.T) {
+func TestCheckCapconNonEquatable(t *testing.T) {
+	t.Parallel()
+
 	_, err := ParseAndCheckCapcon(t, `
 		let kaboom: Bool = controller == controller
 	`)
@@ -55,7 +57,9 @@ func TestCapconNonEquatable(t *testing.T) {
 	require.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 }
 
-func TestCapconTypeInScope(t *testing.T) {
+func TestCheckCapconTypeInScope(t *testing.T) {
+	t.Parallel()
+
 	_, err := ParseAndCheckCapcon(t, `
 		let typ = Type<CapabilityController>()
 	`)
