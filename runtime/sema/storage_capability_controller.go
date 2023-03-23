@@ -18,6 +18,6 @@
 
 package sema
 
-//go:generate go run ./gen/main.go capability_controller.cdc capability_controller.gen.go
+//go:generate go run ./gen/main.go storage_capability_controller.cdc storage_capability_controller.gen.go
 
-var CapabilityControllerTypeAnnotation = NewTypeAnnotation(CapabilityControllerType)
+var StorageCapabilityControllerTypeAnnotation = NewTypeAnnotation(StorageCapabilityControllerType)

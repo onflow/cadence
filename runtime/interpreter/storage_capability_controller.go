@@ -27,15 +27,13 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var capabilityControllerFieldNames = []string{
-	sema.CapabilityControllerTypeIssueHeightFieldName,
-	sema.CapabilityControllerTypeBorrowTypeFieldName,
-	sema.CapabilityControllerTypeCapabilityIDFieldName,
+var storageCapabilityControllerFieldNames = []string{
+	sema.StorageCapabilityControllerTypeBorrowTypeFieldName,
+	sema.StorageCapabilityControllerTypeCapabilityIDFieldName,
 }
 
-func NewCapabilityControllerValue(
+func NewStorageCapabilityControllerValue(
 	gauge common.MemoryGauge,
-	issueHeight uint64,
 	capabilityID uint64,
 	borrowType StaticType,
 	delete func() error,
@@ -45,21 +43,18 @@ func NewCapabilityControllerValue(
 
 	borrowTypeValue := NewTypeValue(gauge, borrowType)
 	fields := map[string]Value{
-		sema.CapabilityControllerTypeIssueHeightFieldName: NewUInt64Value(gauge, func() uint64 {
-			return issueHeight
-		}),
-		sema.CapabilityControllerTypeBorrowTypeFieldName: borrowTypeValue,
-		sema.CapabilityControllerTypeCapabilityIDFieldName: NewUInt64Value(gauge, func() uint64 {
+		sema.StorageCapabilityControllerTypeBorrowTypeFieldName: borrowTypeValue,
+		sema.StorageCapabilityControllerTypeCapabilityIDFieldName: NewUInt64Value(gauge, func() uint64 {
 			return capabilityID
 		}),
 	}
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
-		case sema.CapabilityControllerTypeTargetFunctionName:
+		case sema.StorageCapabilityControllerTypeTargetFunctionName:
 			return NewHostFunctionValue(
 				gauge,
-				sema.CapabilityControllerTypeTargetFunctionType,
+				sema.StorageCapabilityControllerTypeTargetFunctionType,
 				func(invocation Invocation) Value {
 					target, err := getTarget()
 					if err != nil {
@@ -70,10 +65,10 @@ func NewCapabilityControllerValue(
 				},
 			)
 
-		case sema.CapabilityControllerTypeDeleteFunctionName:
+		case sema.StorageCapabilityControllerTypeDeleteFunctionName:
 			return NewHostFunctionValue(
 				gauge,
-				sema.CapabilityControllerTypeDeleteFunctionType,
+				sema.StorageCapabilityControllerTypeDeleteFunctionType,
 				func(invocation Invocation) Value {
 					err := delete()
 					if err != nil {
@@ -84,10 +79,10 @@ func NewCapabilityControllerValue(
 				},
 			)
 
-		case sema.CapabilityControllerTypeRetargetFunctionName:
+		case sema.StorageCapabilityControllerTypeRetargetFunctionName:
 			return NewHostFunctionValue(
 				gauge,
-				sema.CapabilityControllerTypeRetargetFunctionType,
+				sema.StorageCapabilityControllerTypeRetargetFunctionType,
 				func(invocation Invocation) Value {
 					newTarget, ok := invocation.Arguments[0].(PathValue)
 					if !ok {
@@ -110,7 +105,7 @@ func NewCapabilityControllerValue(
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.CapabilityControllerStringMemoryUsage)
+			common.UseMemory(memoryGauge, common.StorageCapabilityControllerStringMemoryUsage)
 
 			borrowTypeStr := borrowTypeValue.MeteredString(gauge, seenReferences)
 
@@ -119,7 +114,7 @@ func NewCapabilityControllerValue(
 
 			idStr := fmt.Sprint(capabilityID)
 
-			str = format.CapabilityController(borrowTypeStr, idStr)
+			str = format.StorageCapabilityController(borrowTypeStr, idStr)
 		}
 
 		return str
@@ -127,9 +122,9 @@ func NewCapabilityControllerValue(
 
 	return NewSimpleCompositeValue(
 		gauge,
-		sema.CapabilityControllerType.ID(),
-		PrimitiveStaticTypeCapabilityController,
-		capabilityControllerFieldNames,
+		sema.StorageCapabilityControllerType.ID(),
+		PrimitiveStaticTypeStorageCapabilityController,
+		storageCapabilityControllerFieldNames,
 		fields,
 		computeField,
 		nil,

@@ -216,7 +216,7 @@ const (
 	capabilityTypeMask uint64 = 1 << iota
 	restrictedTypeMask
 	transactionTypeMask
-	capabilityControllerTypeMask
+	storageCapabilityControllerTypeMask
 
 	invalidTypeMask
 )
@@ -329,8 +329,8 @@ var (
 	RestrictedTypeTag           = newTypeTagFromUpperMask(restrictedTypeMask)
 	CapabilityTypeTag           = newTypeTagFromUpperMask(capabilityTypeMask)
 	InvalidTypeTag              = newTypeTagFromUpperMask(invalidTypeMask)
-	TransactionTypeTag          = newTypeTagFromUpperMask(transactionTypeMask)
-	CapabilityControllerTypeTag = newTypeTagFromUpperMask(capabilityControllerTypeMask)
+	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
+	StorageCapabilityControllerTypeTag = newTypeTagFromUpperMask(storageCapabilityControllerTypeMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -353,7 +353,7 @@ var (
 				Or(DeployedContractTypeTag).
 				Or(CapabilityTypeTag).
 				Or(FunctionTypeTag).
-				Or(CapabilityControllerTypeTag)
+				Or(StorageCapabilityControllerTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask)
 
@@ -653,8 +653,8 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 		transactionTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 
-	case capabilityControllerTypeMask:
-		return CapabilityControllerType
+	case storageCapabilityControllerTypeMask:
+		return StorageCapabilityControllerType
 
 	default:
 		return nil
