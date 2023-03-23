@@ -34,6 +34,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
+	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/dave/dst"
 )
@@ -265,6 +266,7 @@ func (g *generator) addFunctionTypeDeclaration(
 					ReturnTypeAnnotation:     decl.ReturnTypeAnnotation,
 					ParameterTypeAnnotations: parameterTypeAnnotations,
 				},
+				decl.ParameterList,
 				decl.TypeParameterList,
 				typeParams,
 			),
@@ -497,7 +499,7 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 		}
 
 	case *ast.FunctionType:
-		return functionTypeExpr(t, nil, typeParams)
+		return functionTypeExpr(t, nil, nil, typeParams)
 
 	case *ast.InstantiationType:
 		typeArguments := t.TypeArguments
@@ -529,6 +531,7 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 
 func functionTypeExpr(
 	t *ast.FunctionType,
+	parameters *ast.ParameterList,
 	typeParameterList *ast.TypeParameterList,
 	typeParams map[string]string,
 ) dst.Expr {
@@ -579,16 +582,48 @@ func functionTypeExpr(
 	if parameterCount > 0 {
 		parameterExprs := make([]dst.Expr, 0, parameterCount)
 
-		for _, parameterTypeAnnotation := range parameterTypeAnnotations {
+		for parameterIndex, parameterTypeAnnotation := range parameterTypeAnnotations {
+
+			var parameterElements []dst.Expr
+
+			if parameters != nil {
+				parameter := parameters.Parameters[parameterIndex]
+
+				if parameter.Label != "" {
+					var lit dst.Expr
+					if parameter.Label == sema.ArgumentLabelNotRequired {
+						lit = &dst.Ident{
+							Path: "github.com/onflow/cadence/runtime/sema",
+							Name: "ArgumentLabelNotRequired",
+						}
+					} else {
+						lit = goStringLit(parameter.Label)
+					}
+
+					parameterElements = append(
+						parameterElements,
+						goKeyValue("Label", lit),
+					)
+				}
+
+				parameterElements = append(
+					parameterElements,
+					goKeyValue("Identifier", goStringLit(parameter.Identifier.Identifier)),
+				)
+			}
+
+			parameterElements = append(
+				parameterElements,
+				goKeyValue(
+					"TypeAnnotation",
+					typeAnnotationCallExpr(typeExpr(parameterTypeAnnotation.Type, typeParams)),
+				),
+			)
 
 			parameterExpr := &dst.CompositeLit{
-				Elts: []dst.Expr{
-					goKeyValue(
-						"TypeAnnotation",
-						typeAnnotationCallExpr(typeExpr(parameterTypeAnnotation.Type, typeParams)),
-					),
-				},
+				Elts: parameterElements,
 			}
+
 			parameterExpr.Decorations().Before = dst.NewLine
 			parameterExpr.Decorations().After = dst.NewLine
 
