@@ -1790,7 +1790,9 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		fieldNames = append(fieldNames, identifier)
 
+		checker.inFieldAnnotation = true
 		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
+		checker.inFieldAnnotation = false
 		checker.checkTypeAnnotation(fieldTypeAnnotation, field.TypeAnnotation)
 
 		const declarationKind = common.DeclarationKindField

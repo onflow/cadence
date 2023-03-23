@@ -283,6 +283,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			switch ty := resultingType.(type) {
 			case *ReferenceType:
 				resultingType = NewReferenceType(checker.memoryGauge, ty.Type, resultingAuthorization)
+			case *OptionalType:
+				switch innerTy := ty.Type.(type) {
+				case *ReferenceType:
+					resultingType = NewOptionalType(checker.memoryGauge,
+						NewReferenceType(checker.memoryGauge, innerTy.Type, resultingAuthorization))
+				}
 			}
 		}
 
