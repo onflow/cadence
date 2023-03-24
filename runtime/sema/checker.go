@@ -1943,16 +1943,19 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				return
 			}
 			if containerKind == nil ||
-				(*containerKind != common.CompositeKindResource && *containerKind != common.CompositeKindStructure) {
+				(*containerKind != common.CompositeKindResource &&
+					*containerKind != common.CompositeKindStructure) {
 				checker.report(
-					&InvalidEntitlementAccessError{
+					&InvalidMappedEntitlementMemberError{
 						Pos: startPos,
 					},
 				)
 			}
 		case EntitlementSetAccess:
 			if containerKind == nil ||
-				(*containerKind != common.CompositeKindResource && *containerKind != common.CompositeKindStructure) {
+				(*containerKind != common.CompositeKindResource &&
+					*containerKind != common.CompositeKindStructure &&
+					*containerKind != common.CompositeKindAttachment) {
 				checker.report(
 					&InvalidEntitlementAccessError{
 						Pos: startPos,

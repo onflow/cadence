@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -495,8 +496,7 @@ func TestInterpretFunctionType(t *testing.T) {
 	)
 }
 
-// ENTITLEMENTS TODO: Fix this test
-/*func TestInterpretReferenceType(t *testing.T) {
+func TestInterpretReferenceType(t *testing.T) {
 
 	t.Parallel()
 
@@ -519,7 +519,10 @@ func TestInterpretFunctionType(t *testing.T) {
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.R",
 				},
-				Authorized: true,
+				Authorization: interpreter.EntitlementSetAuthorization{
+					Entitlements: []common.TypeID{"S.test.X"},
+					Kind:         sema.Conjunction,
+				},
 			},
 		},
 		inter.Globals.Get("a").GetValue(),
@@ -543,7 +546,10 @@ func TestInterpretFunctionType(t *testing.T) {
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.S",
 				},
-				Authorized: true,
+				Authorization: interpreter.EntitlementSetAuthorization{
+					Entitlements: []common.TypeID{"S.test.X"},
+					Kind:         sema.Conjunction,
+				},
 			},
 		},
 		inter.Globals.Get("c").GetValue(),
@@ -553,7 +559,7 @@ func TestInterpretFunctionType(t *testing.T) {
 		inter.Globals.Get("a").GetValue(),
 		inter.Globals.Get("d").GetValue(),
 	)
-}*/
+}
 
 func TestInterpretRestrictedType(t *testing.T) {
 

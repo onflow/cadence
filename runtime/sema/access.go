@@ -302,7 +302,7 @@ func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, 
 		}
 		return EntitlementSetAccess{
 			Entitlements: output,
-			SetKind:      Conjunction,
+			SetKind:      inputs.SetKind,
 		}, nil
 	}
 	// it should be impossible to obtain a concrete reference with a mapped entitlement authorization
@@ -328,7 +328,7 @@ func (e EntitlementMapAccess) Preimage(outputs Access, astRange ast.Range) (Acce
 			// Thus M^-1(X | A) would be ((Y | Z) & (B | C)), which is a conjunction of two disjunctions,
 			// which is too complex to be represented in Cadence as a type. Thus whenever such a type
 			// would arise, we raise an error instead
-			if outputs.SetKind == Conjunction && entitlementPreImage.Len() > 1 {
+			if (outputs.SetKind == Conjunction && outputs.Entitlements.Len() > 1) && entitlementPreImage.Len() > 1 {
 				err = &UnrepresentableEntitlementMapOutputError{
 					Input: outputs,
 					Map:   e.Type,
@@ -346,9 +346,13 @@ func (e EntitlementMapAccess) Preimage(outputs Access, astRange ast.Range) (Acce
 		if input.Len() == 0 {
 			return UnauthorizedAccess, nil
 		}
+		setKind := outputs.SetKind
+		if outputs.SetKind == Conjunction && outputs.Entitlements.Len() == 1 {
+			setKind = Disjunction
+		}
 		return EntitlementSetAccess{
 			Entitlements: input,
-			SetKind:      Disjunction,
+			SetKind:      setKind,
 		}, nil
 	}
 	// it should be impossible to obtain a concrete reference with a mapped entitlement authorization

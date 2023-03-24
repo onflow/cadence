@@ -4270,3 +4270,49 @@ func (*AttachmentsNotEnabledError) IsUserError() {}
 func (e *AttachmentsNotEnabledError) Error() string {
 	return "attachments are not enabled and cannot be used in this environment"
 }
+
+// InvalidAttachmentEntitlementError
+type InvalidAttachmentEntitlementError struct {
+	Attachment               *CompositeType
+	AttachmentAccessModifier Access
+	InvalidEntitlement       *EntitlementType
+	Pos                      ast.Position
+}
+
+var _ SemanticError = &InvalidAttachmentEntitlementError{}
+var _ errors.UserError = &InvalidAttachmentEntitlementError{}
+
+func (*InvalidAttachmentEntitlementError) isSemanticError() {}
+
+func (*InvalidAttachmentEntitlementError) IsUserError() {}
+
+func (e *InvalidAttachmentEntitlementError) Error() string {
+	entitlementDescription := "entitlements"
+	if e.InvalidEntitlement != nil {
+		entitlementDescription = fmt.Sprintf("`%s`", e.InvalidEntitlement.QualifiedIdentifier())
+	}
+
+	return fmt.Sprintf("cannot use %s in the access modifier for a member in `%s`",
+		entitlementDescription,
+		e.Attachment.QualifiedIdentifier())
+}
+
+func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
+	switch access := e.AttachmentAccessModifier.(type) {
+	case PrimitiveAccess:
+		return "attachments declared with `pub` access do not support entitlements on their members"
+	case EntitlementMapAccess:
+		return fmt.Sprintf("`%s` must appear in the output of the entitlement mapping `%s`",
+			e.InvalidEntitlement.QualifiedIdentifier(),
+			access.Type.QualifiedIdentifier())
+	}
+	return ""
+}
+
+func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidAttachmentEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}

@@ -57,7 +57,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	checker.enterValueScope()
 	defer checker.leaveValueScope(declaration.EndPosition, true)
 
-	checker.declareSelfValue(transactionType, "")
+	checker.declareSelfValue(transactionType, checker.accessFromAstAccess(declaration.DeclarationAccess()), "")
 
 	if declaration.ParameterList != nil {
 		checker.checkTransactionParameters(declaration, transactionType.Parameters)

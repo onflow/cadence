@@ -243,7 +243,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		)
 		require.Equal(t,
 			&sema.ReferenceType{
-				Type: sema.IntType,
+				Type:          sema.IntType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 			cap2Type.(*sema.CapabilityType).BorrowType,
 		)
