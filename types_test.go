@@ -173,49 +173,6 @@ func TestType_ID(t *testing.T) {
 			"S.test.Foo{S.test.FooI}",
 		},
 		{
-			(&RestrictedType{
-				Type: &StructType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Foo",
-				},
-			}),
-			"S.test.Foo{}",
-		},
-		{
-			(&RestrictedType{
-				Type: &StructType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Foo",
-				},
-				Restrictions: []Type{
-					&StructInterfaceType{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "FooI",
-					},
-				},
-			}),
-			"S.test.Foo{S.test.FooI}",
-		},
-		{
-			(&RestrictedType{
-				Type: &StructType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Foo",
-				},
-				Restrictions: []Type{
-					&StructInterfaceType{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "FooI",
-					},
-					&StructInterfaceType{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "FooII",
-					},
-				},
-			}),
-			"S.test.Foo{S.test.FooI, S.test.FooII}",
-		},
-		{
 			&EventType{
 				QualifiedIdentifier: "Event",
 			},
@@ -278,41 +235,6 @@ func TestType_ID(t *testing.T) {
 				},
 			},
 			"Foo",
-		},
-		{
-			&FunctionType{
-				UInt8Type{},
-				"",
-				[]Parameter{},
-			},
-			"(():UInt8)",
-		},
-		{
-			&FunctionType{
-				UInt8Type{},
-				"",
-				[]Parameter{
-					{
-						Type: StringType{},
-					},
-				},
-			},
-			"((String):UInt8)",
-		},
-		{
-			&FunctionType{
-				UInt8Type{},
-				"",
-				[]Parameter{
-					{
-						Type: StringType{},
-					},
-					{
-						Type: AddressType{},
-					},
-				},
-			},
-			"((String, Address):UInt8)",
 		},
 	}
 

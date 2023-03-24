@@ -20,7 +20,6 @@ package cadence
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -1727,27 +1726,7 @@ func NewMeteredFunctionType(
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) ID() string {
-	if t.typeID == "" {
-		t.typeID = t.id()
-	}
 	return t.typeID
-}
-
-func (t *FunctionType) id() string {
-	returnTypeID := t.ReturnType.ID()
-
-	switch len(t.Parameters) {
-	case 0:
-		return "(():" + returnTypeID + ")"
-	case 1:
-		return "((" + t.Parameters[0].Type.ID() + "):" + returnTypeID + ")"
-	default:
-		params := make([]string, len(t.Parameters))
-		for i, param := range t.Parameters {
-			params[i] = param.Type.ID()
-		}
-		return "((" + strings.Join(params, ", ") + "):" + returnTypeID + ")"
-	}
 }
 
 func (t *FunctionType) WithID(id string) *FunctionType {
@@ -1864,27 +1843,7 @@ func NewMeteredRestrictedType(
 func (*RestrictedType) isType() {}
 
 func (t *RestrictedType) ID() string {
-	if t.typeID == "" {
-		t.typeID = t.id()
-	}
 	return t.typeID
-}
-
-func (t *RestrictedType) id() string {
-	typeID := t.Type.ID()
-
-	switch len(t.Restrictions) {
-	case 0:
-		return typeID + "{}"
-	case 1:
-		return typeID + "{" + t.Restrictions[0].ID() + "}"
-	default:
-		restrictions := make([]string, len(t.Restrictions))
-		for i, restriction := range t.Restrictions {
-			restrictions[i] = restriction.ID()
-		}
-		return typeID + "{" + strings.Join(restrictions, ", ") + "}"
-	}
 }
 
 func (t *RestrictedType) WithID(id string) *RestrictedType {

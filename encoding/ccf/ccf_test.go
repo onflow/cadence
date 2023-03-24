@@ -7189,7 +7189,7 @@ func TestEncodeType(t *testing.T) {
 
 	t.Run("with static function", func(t *testing.T) {
 
-		testEncodeAndDecode(
+		testEncodeAndDecodeEx(
 			t,
 			cadence.TypeValue{
 				StaticType: (&cadence.FunctionType{
@@ -7239,6 +7239,15 @@ func TestEncodeType(t *testing.T) {
 				// Int type ID (4)
 				0x04,
 			},
+			// Expected decoded FunctionType doesn't have type ID.
+			cadence.TypeValue{
+				StaticType: (&cadence.FunctionType{
+					Parameters: []cadence.Parameter{
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+					},
+					ReturnType: cadence.IntType{},
+				}),
+			},
 		)
 
 	})
@@ -7281,7 +7290,7 @@ func TestEncodeType(t *testing.T) {
 
 	t.Run("with static restricted type", func(t *testing.T) {
 
-		testEncodeAndDecode(
+		testEncodeAndDecodeEx(
 			t,
 			cadence.TypeValue{
 				StaticType: (&cadence.RestrictedType{
@@ -7320,6 +7329,15 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// String type ID (1)
 				0x01,
+			},
+			// Expected decoded RestrictedType doesn't have type ID.
+			cadence.TypeValue{
+				StaticType: (&cadence.RestrictedType{
+					Restrictions: []cadence.Type{
+						cadence.StringType{},
+					},
+					Type: cadence.IntType{},
+				}),
 			},
 		)
 
@@ -7372,7 +7390,7 @@ func TestEncodeType(t *testing.T) {
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 			},
-			// Expected decoded val with sorted restrictions and type ID.
+			// Expected decoded RestrictedType has sorted restrictions and no type ID.
 			cadence.TypeValue{
 				StaticType: (&cadence.RestrictedType{
 					Restrictions: []cadence.Type{
@@ -7380,7 +7398,7 @@ func TestEncodeType(t *testing.T) {
 						cadence.NewAnyStructType(),
 					},
 					Type: cadence.IntType{},
-				}).WithID("Int{String, AnyStruct}"),
+				}),
 			},
 		)
 	})
