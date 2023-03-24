@@ -431,7 +431,10 @@ func (r *CoverageReport) UnmarshalJSON(data []byte) error {
 	}
 
 	for locationID, locationCoverage := range cr.Coverage { // nolint:maprange
-		location, _, _ := common.DecodeTypeID(nil, locationID)
+		location, _, err := common.DecodeTypeID(nil, locationID)
+		if err != nil {
+			return err
+		}
 		if location == nil {
 			return fmt.Errorf("invalid Location ID: %s", locationID)
 		}
@@ -442,7 +445,10 @@ func (r *CoverageReport) UnmarshalJSON(data []byte) error {
 		r.Locations[location] = struct{}{}
 	}
 	for _, locationID := range cr.ExcludedLocations {
-		location, _, _ := common.DecodeTypeID(nil, locationID)
+		location, _, err := common.DecodeTypeID(nil, locationID)
+		if err != nil {
+			return err
+		}
 		if location == nil {
 			return fmt.Errorf("invalid Location ID: %s", locationID)
 		}
