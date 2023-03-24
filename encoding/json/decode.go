@@ -894,16 +894,15 @@ func (d *Decoder) decodeFieldType(valueJSON any, results typeDecodingResults) ca
 	)
 }
 
-func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id any, results typeDecodingResults) cadence.Type {
+func (d *Decoder) decodeFunctionType(returnValue, parametersValue any, results typeDecodingResults) cadence.Type {
 	parameters := d.decodeParamTypes(toSlice(parametersValue), results)
 	returnType := d.decodeType(returnValue, results)
 
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
-		"",
 		parameters,
 		returnType,
-	).WithID(toString(id))
+	)
 }
 
 func (d *Decoder) decodeNominalType(
@@ -1026,10 +1025,10 @@ func (d *Decoder) decodeNominalType(
 func (d *Decoder) decodeRestrictedType(
 	typeValue any,
 	restrictionsValue []any,
-	typeIDValue string,
 	results typeDecodingResults,
 ) cadence.Type {
 	typ := d.decodeType(typeValue, results)
+
 	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
 	for _, restriction := range restrictionsValue {
 		restrictions = append(restrictions, d.decodeType(restriction, results))
@@ -1037,10 +1036,9 @@ func (d *Decoder) decodeRestrictedType(
 
 	return cadence.NewMeteredRestrictedType(
 		d.gauge,
-		"",
 		typ,
 		restrictions,
-	).WithID(typeIDValue)
+	)
 }
 
 type typeDecodingResults map[string]cadence.Type
@@ -1069,16 +1067,13 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 	case "Function":
 		returnValue := obj.Get(returnKey)
 		parametersValue := obj.Get(parametersKey)
-		idValue := obj.Get(typeIDKey)
-		return d.decodeFunctionType(returnValue, parametersValue, idValue, results)
+		return d.decodeFunctionType(returnValue, parametersValue, results)
 	case "Restriction":
 		restrictionsValue := obj.Get(restrictionsKey)
-		typeIDValue := toString(obj.Get(typeIDKey))
 		typeValue := obj.Get(typeKey)
 		return d.decodeRestrictedType(
 			typeValue,
 			toSlice(restrictionsValue),
-			typeIDValue,
 			results,
 		)
 	case "Optional":

@@ -2736,10 +2736,10 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                   }
                 `,
 				expected: cadence.Function{
-					FunctionType: (&cadence.FunctionType{
+					FunctionType: &cadence.FunctionType{
 						Parameters: []cadence.Parameter{},
 						ReturnType: cadence.IntType{},
-					}).WithID("(():Int)"),
+					},
 				},
 			},
 		)
@@ -2757,7 +2757,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                   }
                 `,
 				expected: cadence.Function{
-					FunctionType: (&cadence.FunctionType{
+					FunctionType: &cadence.FunctionType{
 						Parameters: []cadence.Parameter{
 							{
 								Label:      sema.ArgumentLabelNotRequired,
@@ -2766,7 +2766,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 							},
 						},
 						ReturnType: cadence.NeverType{},
-					}).WithID("((String):Never)"),
+					},
 				},
 			},
 		)
@@ -2789,10 +2789,10 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                   }
                 `,
 				expected: cadence.Function{
-					FunctionType: (&cadence.FunctionType{
+					FunctionType: &cadence.FunctionType{
 						Parameters: []cadence.Parameter{},
 						ReturnType: cadence.VoidType{},
-					}).WithID("(():Void)"),
+					},
 				},
 			},
 		)

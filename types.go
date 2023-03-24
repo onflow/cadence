@@ -1702,12 +1702,10 @@ type FunctionType struct {
 }
 
 func NewFunctionType(
-	typeID string,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	return &FunctionType{
-		typeID:     typeID,
 		Parameters: parameters,
 		ReturnType: returnType,
 	}
@@ -1715,23 +1713,18 @@ func NewFunctionType(
 
 func NewMeteredFunctionType(
 	gauge common.MemoryGauge,
-	typeID string,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	common.UseMemory(gauge, common.CadenceFunctionTypeMemoryUsage)
-	return NewFunctionType(typeID, parameters, returnType)
+	return NewFunctionType(parameters, returnType)
 }
 
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) ID() string {
+	// TODO:
 	return t.typeID
-}
-
-func (t *FunctionType) WithID(id string) *FunctionType {
-	t.typeID = id
-	return t
 }
 
 func (t *FunctionType) Equal(other Type) bool {
@@ -1819,12 +1812,10 @@ type RestrictedType struct {
 }
 
 func NewRestrictedType(
-	typeID string,
 	typ Type,
 	restrictions []Type,
 ) *RestrictedType {
 	return &RestrictedType{
-		typeID:       typeID,
 		Type:         typ,
 		Restrictions: restrictions,
 	}
@@ -1832,23 +1823,18 @@ func NewRestrictedType(
 
 func NewMeteredRestrictedType(
 	gauge common.MemoryGauge,
-	typeID string,
 	typ Type,
 	restrictions []Type,
 ) *RestrictedType {
 	common.UseMemory(gauge, common.CadenceRestrictedTypeMemoryUsage)
-	return NewRestrictedType(typeID, typ, restrictions)
+	return NewRestrictedType(typ, restrictions)
 }
 
 func (*RestrictedType) isType() {}
 
 func (t *RestrictedType) ID() string {
+	// TODO:
 	return t.typeID
-}
-
-func (t *RestrictedType) WithID(id string) *RestrictedType {
-	t.typeID = id
-	return t
 }
 
 func (t *RestrictedType) Equal(other Type) bool {

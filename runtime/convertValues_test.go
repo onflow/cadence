@@ -133,7 +133,10 @@ func TestExportValue(t *testing.T) {
 		},
 	}
 
-	testFunctionType := cadence.NewFunctionType("(():Void)", []cadence.Parameter{}, cadence.VoidType{})
+	testFunctionType := cadence.NewFunctionType(
+		[]cadence.Parameter{},
+		cadence.VoidType{},
+	)
 
 	for _, tt := range []exportTest{
 		{
@@ -1959,7 +1962,7 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.TypeValue{
-				StaticType: (&cadence.RestrictedType{
+				StaticType: &cadence.RestrictedType{
 					Type: &cadence.StructType{
 						QualifiedIdentifier: "S",
 						Location:            TestLocation,
@@ -1972,7 +1975,7 @@ func TestExportTypeValue(t *testing.T) {
 							Fields:              []cadence.Field{},
 						},
 					},
-				}).WithID("S.test.S{S.test.SI}"),
+				},
 			},
 			actual,
 		)
@@ -2237,10 +2240,10 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 			},
 			{
 				Identifier: "f",
-				Type: (&cadence.FunctionType{
+				Type: &cadence.FunctionType{
 					Parameters: []cadence.Parameter{},
 					ReturnType: cadence.VoidType{},
-				}).WithID("(():Void)"),
+				},
 			},
 		},
 	}
@@ -2249,10 +2252,10 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 	expected := cadence.NewStruct([]cadence.Value{
 		cadence.NewInt(42),
 		cadence.Function{
-			FunctionType: (&cadence.FunctionType{
+			FunctionType: &cadence.FunctionType{
 				Parameters: []cadence.Parameter{},
 				ReturnType: cadence.VoidType{},
-			}).WithID("(():Void)"),
+			},
 		},
 	}).WithType(fooStructType)
 

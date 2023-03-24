@@ -424,10 +424,9 @@ func exportFunctionType(
 
 	return cadence.NewMeteredFunctionType(
 		gauge,
-		"",
 		convertedParameters,
 		convertedReturnType,
-	).WithID(string(t.ID()))
+	)
 }
 
 func exportReferenceType(
@@ -460,10 +459,9 @@ func exportRestrictedType(
 
 	return cadence.NewMeteredRestrictedType(
 		gauge,
-		"",
 		convertedType,
 		restrictions,
-	).WithID(string(t.ID()))
+	)
 }
 
 func exportCapabilityType(

@@ -178,7 +178,6 @@ type jsonReferenceType struct {
 
 type jsonRestrictedType struct {
 	Kind         string      `json:"kind"`
-	TypeID       string      `json:"typeID"`
 	Type         jsonValue   `json:"type"`
 	Restrictions []jsonValue `json:"restrictions"`
 }
@@ -192,7 +191,6 @@ type jsonParameterType struct {
 type jsonFunctionType struct {
 	Return     jsonValue           `json:"return"`
 	Kind       string              `json:"kind"`
-	TypeID     string              `json:"typeID"`
 	Parameters []jsonParameterType `json:"parameters"`
 }
 
@@ -826,7 +824,6 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 	case *cadence.FunctionType:
 		return jsonFunctionType{
 			Kind:       "Function",
-			TypeID:     typ.ID(),
 			Return:     prepareType(typ.ReturnType, results),
 			Parameters: prepareParameters(typ.Parameters, results),
 		}
@@ -843,7 +840,6 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		}
 		return jsonRestrictedType{
 			Kind:         "Restriction",
-			TypeID:       typ.ID(),
 			Type:         prepareType(typ.Type, results),
 			Restrictions: restrictions,
 		}

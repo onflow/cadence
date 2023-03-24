@@ -169,8 +169,28 @@ func TestType_ID(t *testing.T) {
 			"S.test.BarI",
 		},
 		{
-			(&RestrictedType{}).WithID("S.test.Foo{S.test.FooI}"),
+			&RestrictedType{
+				Type: &ResourceType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "Foo",
+				},
+				Restrictions: []Type{
+					&ResourceInterfaceType{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "FooI",
+					},
+				},
+			},
 			"S.test.Foo{S.test.FooI}",
+		},
+		{
+			&FunctionType{
+				Parameters: []Parameter{
+					{Type: IntType{}},
+				},
+				ReturnType: StringType{},
+			},
+			"((Int):String)",
 		},
 		{
 			&EventType{
