@@ -3407,3 +3407,173 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
 	})
 }
+
+func TestCheckAttachmentAccessEntitlements(t *testing.T) {
+
+	t.Parallel()
+	t.Run("basic owned fully entitled", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z 
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct S {}
+		access(M) attachment A for S {}
+		let s = attach A() to S()
+		let a: auth(Y, Z) &A = s[A]!
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic owned restricted fully entitled", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z 
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct interface I {}
+		struct S: I {}
+		access(M) attachment A for I {}
+		let s: {I} = attach A() to S()
+		let a: auth(Y, Z) &A = s[A]!
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic reference mapping", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement E
+		entitlement F
+		entitlement mapping M {
+			X -> Y
+			E -> F
+		}
+		struct S {}
+		access(M) attachment A for S {}
+		let s = attach A() to S()
+		let yRef = &s as auth(X) &S
+		let fRef = &s as auth(E) &S
+		let a1: auth(Y) &A = yRef[A]!
+		let a2: auth(F) &A = fRef[A]!
+		let a3: auth(X) &A = yRef[A]! // err
+		let a4: auth(E) &A = fRef[A]! // err
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X) &A?")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &A?")
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		require.Equal(t, errs[1].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(E) &A?")
+		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(F) &A?")
+	})
+
+	t.Run("pub access entitled attachment", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {}
+		access(M) attachment A for S {}
+		let s = attach A() to S()
+		let ref = &s as &S
+		let a1: auth(Y) &A = ref[A]!
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
+	})
+
+	t.Run("entitled access pub attachment", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {}
+		pub attachment A for S {}
+		let s = attach A() to S()
+		let ref = &s as auth(X) &S
+		let a1: auth(Y) &A = ref[A]!
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
+	})
+
+	t.Run("pub access pub attachment", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {}
+		pub attachment A for S {}
+		let s = attach A() to S()
+		let ref = &s as &S
+		let a1: auth(Y) &A = ref[A]!
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
+	})
+
+	t.Run("unrepresentable access mapping", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement E
+		entitlement F
+		entitlement G
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+			E -> F
+			E -> G
+		}
+		struct S {}
+		access(M) attachment A for S {}
+		let s = attach A() to S()
+		let ref = &s as auth(X | E) &S
+		let a1 = ref[A]!
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
+		require.IsType(t, &sema.InvalidTypeIndexingError{}, errs[1])
+	})
+}

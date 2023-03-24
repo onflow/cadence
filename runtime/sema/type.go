@@ -185,7 +185,7 @@ type TypeIndexableType interface {
 	Type
 	isTypeIndexableType() bool
 	IsValidIndexingType(indexingType Type) bool
-	TypeIndexingElementType(indexingType Type) Type
+	TypeIndexingElementType(indexingType Type, astRange ast.Range) (Type, error)
 }
 
 type MemberResolver struct {
@@ -3978,14 +3978,21 @@ func (t *CompositeType) isTypeIndexableType() bool {
 	return t.Kind.SupportsAttachments()
 }
 
-func (t *CompositeType) TypeIndexingElementType(indexingType Type) Type {
+func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ ast.Range) (Type, error) {
+	var access Access = UnauthorizedAccess
+	switch attachment := indexingType.(type) {
+	case *CompositeType:
+		if attachment.attachmentEntitlementAccess != nil {
+			access = (*attachment.attachmentEntitlementAccess).Codomain()
+		}
+	}
+
 	return &OptionalType{
 		Type: &ReferenceType{
-			Type: indexingType,
-			// ENTITLEMENTS TODO: this should depend on the authorizations of the reference, or be fully authorized
-			Authorization: UnauthorizedAccess,
+			Type:          indexingType,
+			Authorization: access,
 		},
-	}
+	}, nil
 }
 
 func (t *CompositeType) IsValidIndexingType(ty Type) bool {
@@ -5031,12 +5038,30 @@ func (t *ReferenceType) isTypeIndexableType() bool {
 	return ok && referencedType.isTypeIndexableType()
 }
 
-func (t *ReferenceType) TypeIndexingElementType(indexingType Type) Type {
-	referencedType, ok := t.Type.(TypeIndexableType)
+func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange ast.Range) (Type, error) {
+	_, ok := t.Type.(TypeIndexableType)
 	if !ok {
-		return nil
+		return nil, nil
 	}
-	return referencedType.TypeIndexingElementType(indexingType)
+
+	var access Access = UnauthorizedAccess
+	switch attachment := indexingType.(type) {
+	case *CompositeType:
+		if attachment.attachmentEntitlementAccess != nil {
+			var err error
+			access, err = (*attachment.attachmentEntitlementAccess).Image(t.Authorization, astRange)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return &OptionalType{
+		Type: &ReferenceType{
+			Type:          indexingType,
+			Authorization: access,
+		},
+	}, nil
 }
 
 func (t *ReferenceType) IsValidIndexingType(ty Type) bool {
@@ -6169,14 +6194,21 @@ func (t *RestrictedType) isTypeIndexableType() bool {
 	return true
 }
 
-func (t *RestrictedType) TypeIndexingElementType(indexingType Type) Type {
+func (t *RestrictedType) TypeIndexingElementType(indexingType Type, _ ast.Range) (Type, error) {
+	var access Access = UnauthorizedAccess
+	switch attachment := indexingType.(type) {
+	case *CompositeType:
+		if attachment.attachmentEntitlementAccess != nil {
+			access = (*attachment.attachmentEntitlementAccess).Codomain()
+		}
+	}
+
 	return &OptionalType{
 		Type: &ReferenceType{
-			Type: indexingType,
-			// ENTITLEMENTS TODO: this should depend on the authorizations of the reference, or be fully authorized
-			Authorization: UnauthorizedAccess,
+			Type:          indexingType,
+			Authorization: access,
 		},
-	}
+	}, nil
 }
 
 func (t *RestrictedType) IsValidIndexingType(ty Type) bool {
