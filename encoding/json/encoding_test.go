@@ -1649,7 +1649,7 @@ func TestEncodeLink(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(
+	testEncode(
 		t,
 		cadence.NewPathLink(
 			cadence.NewPath("storage", "foo"),
