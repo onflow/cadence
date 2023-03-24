@@ -2652,9 +2652,7 @@ func (t *FunctionType) ID() TypeID {
 	if typeParameterCount > 0 {
 		typeParameters = make([]string, typeParameterCount)
 		for i, typeParameter := range t.TypeParameters {
-			if typeParameter.TypeBound != nil {
-				typeParameters[i] = string(typeParameter.TypeBound.ID())
-			}
+			typeParameters[i] = typeParameter.Name
 		}
 	}
 
