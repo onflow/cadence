@@ -5286,6 +5286,17 @@ func TestEncodeEvent(t *testing.T) {
 
 	t.Parallel()
 
+	simpleStructType := &cadence.StructType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooStruct",
+		Fields: []cadence.Field{
+			{
+				Identifier: "c",
+				Type:       cadence.StringType{},
+			},
+		},
+	}
+
 	simpleEventType := &cadence.EventType{
 		Location:            utils.TestLocation,
 		QualifiedIdentifier: "FooEvent",
@@ -5384,6 +5395,153 @@ func TestEncodeEvent(t *testing.T) {
 			0x63,
 			// foo
 			0x66, 0x6f, 0x6f,
+		},
+	}
+
+	abstractEventType := &cadence.EventType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooEvent",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       cadence.AnyStructType{},
+			},
+		},
+	}
+
+	abstractEvent := encodeTest{
+		name: "abstract event",
+		val: cadence.NewEvent(
+			[]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewStruct([]cadence.Value{
+					cadence.String("b"),
+				}).WithType(simpleStructType),
+			},
+		).WithType(abstractEventType),
+		expected: []byte{ // language=json, format=json-cdc
+			// {"value":{"id":"S.test.FooEvent","fields":[{"value":{"value":"1","type":"Int"},"name":"a"},{"value":{"value":{"id":"S.test.FooStruct","fields":[{"value":{"value":"b","type":"String"},"name":"c"}]},"type":"Struct"},"name":"b"}]},"type":"Event"}
+			//
+			// language=edn, format=ccf
+			// 129([[162([h'', "S.test.FooEvent", [["a", 137(4)], ["b", 137(39)]]]), 160([h'01', "S.test.FooStruct", [["c", 137(1)]]])], [136(h''), [1, 130([136(h'01'), ["b"]])]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 2 items follow
+			0x82,
+			// event type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.FooEvent"
+			// 2 fields: [["a", type(int)], ["b", type(anystruct)]]
+			// tag
+			0xd8, ccf.CBORTagEventType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 15 bytes follow
+			0x6f,
+			// S.test.FooEvent
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x45, 0x76, 0x65, 0x6e, 0x74,
+			// fields
+			// array, 2 items follow
+			0x82,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// a
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// field 1
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// b
+			0x62,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+			// struct type:
+			// id: []byte{0x01}
+			// cadence-type-id: "S.test.FooStruct"
+			// 1 fields: [["c", type(string)]]
+			// tag
+			0xd8, ccf.CBORTagStructType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 16 bytes follow
+			0x70,
+			// S.test.FooStruct
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+			// fields
+			// array, 1 items follow
+			0x81,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// c
+			0x63,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 bytes follow
+			0x40,
+			// array, 2 items follow
+			0x82,
+			// tag (big number)
+			0xc2,
+			// bytes, 1 byte follow
+			0x41,
+			// 1
+			0x01,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// array, 1 items follow
+			0x81,
+			// string, 1 byte follows
+			0x61,
+			// "b"
+			0x62,
 		},
 	}
 
@@ -5530,12 +5688,23 @@ func TestEncodeEvent(t *testing.T) {
 		},
 	}
 
-	testAllEncodeAndDecode(t, simpleEvent, resourceEvent)
+	testAllEncodeAndDecode(t, simpleEvent, resourceEvent, abstractEvent)
 }
 
 func TestEncodeContract(t *testing.T) {
 
 	t.Parallel()
+
+	simpleStructType := &cadence.StructType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooStruct",
+		Fields: []cadence.Field{
+			{
+				Identifier: "c",
+				Type:       cadence.StringType{},
+			},
+		},
+	}
 
 	simpleContractType := &cadence.ContractType{
 		Location:            utils.TestLocation,
@@ -5635,6 +5804,153 @@ func TestEncodeContract(t *testing.T) {
 			0x63,
 			// foo
 			0x66, 0x6f, 0x6f,
+		},
+	}
+
+	abstractContractType := &cadence.ContractType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooContract",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       cadence.AnyStructType{},
+			},
+		},
+	}
+
+	abstractContract := encodeTest{
+		name: "abstract contract",
+		val: cadence.NewContract(
+			[]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewStruct([]cadence.Value{
+					cadence.String("b"),
+				}).WithType(simpleStructType),
+			},
+		).WithType(abstractContractType),
+		expected: []byte{ // language=json, format=json-cdc
+			// {"value":{"id":"S.test.FooContract","fields":[{"value":{"value":"1","type":"Int"},"name":"a"},{"value":{"value":{"id":"S.test.FooStruct","fields":[{"value":{"value":"b","type":"String"},"name":"c"}]},"type":"Struct"},"name":"b"}]},"type":"Contract"}
+			//
+			// language=edn, format=ccf
+			// 129([[160([h'', "S.test.FooStruct", [["c", 137(1)]]]), 163([h'01', "S.test.FooContract", [["a", 137(4)], ["b", 137(39)]]])], [136(h'01'), [1, 130([136(h''), ["b"]])]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 2 items follow
+			0x82,
+			// struct type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.FooStruct"
+			// 1 fields: [["c", type(string)]]
+			// tag
+			0xd8, ccf.CBORTagStructType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 16 bytes follow
+			0x70,
+			// S.test.FooStruct
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+			// fields
+			// array, 1 items follow
+			0x81,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// c
+			0x63,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// contract type:
+			// id: []byte{0x01}
+			// cadence-type-id: "S.test.FooContract"
+			// 2 fields: [["a", type(int)], ["b", type(string)]]
+			// tag
+			0xd8, ccf.CBORTagContractType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 18 bytes follow
+			0x72,
+			// S.test.FooContract
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x74,
+			// fields
+			// array, 2 items follow
+			0x82,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// a
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// field 1
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// b
+			0x62,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// array, 2 items follow
+			0x82,
+			// tag (big number)
+			0xc2,
+			// bytes, 1 byte follow
+			0x41,
+			// 1
+			0x01,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 byte follow
+			0x40,
+			// array, 1 item follows
+			0x81,
+			// String, 1 bytes follow
+			0x61,
+			// "b"
+			0x62,
 		},
 	}
 
@@ -5781,7 +6097,7 @@ func TestEncodeContract(t *testing.T) {
 		},
 	}
 
-	testAllEncodeAndDecode(t, simpleContract, resourceContract)
+	testAllEncodeAndDecode(t, simpleContract, abstractContract, resourceContract)
 }
 
 func TestEncodeEnum(t *testing.T) {
