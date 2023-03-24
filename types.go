@@ -1745,7 +1745,34 @@ func NewMeteredFunctionType(
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) ID() string {
-	// TODO:
+	if t.typeID == "" {
+
+		typeParameterCount := len(t.TypeParameters)
+		var typeParameters []string
+		if typeParameterCount > 0 {
+			typeParameters = make([]string, typeParameterCount)
+			for i, typeParameter := range t.TypeParameters {
+				typeParameters[i] = typeParameter.Name
+			}
+		}
+
+		parameterCount := len(t.Parameters)
+		var parameters []string
+		if parameterCount > 0 {
+			parameters = make([]string, parameterCount)
+			for i, parameter := range t.Parameters {
+				parameters[i] = parameter.Type.ID()
+			}
+		}
+
+		returnType := t.ReturnType.ID()
+
+		t.typeID = sema.FormatFunctionTypeID(
+			typeParameters,
+			parameters,
+			returnType,
+		)
+	}
 	return t.typeID
 }
 
