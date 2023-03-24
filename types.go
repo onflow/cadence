@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type Type interface {
@@ -1779,12 +1780,8 @@ func NewMeteredReferenceType(
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) ID() string {
-	if len(t.typeID) == 0 {
-		var prefix string
-		if t.Authorized {
-			prefix = "auth"
-		}
-		t.typeID = fmt.Sprintf("%s&%s", prefix, t.Type.ID())
+	if t.typeID == "" {
+		t.typeID = sema.FormatReferenceTypeID(t.Authorized, t.Type.ID())
 	}
 	return t.typeID
 }
@@ -2017,7 +2014,7 @@ func NewMeteredCapabilityType(
 func (*CapabilityType) isType() {}
 
 func (t *CapabilityType) ID() string {
-	if len(t.typeID) == 0 {
+	if t.typeID == "" {
 		if t.BorrowType != nil {
 			t.typeID = fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
 		} else {

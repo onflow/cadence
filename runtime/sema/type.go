@@ -4762,37 +4762,46 @@ func (t *ReferenceType) Tag() TypeTag {
 	return ReferenceTypeTag
 }
 
-func (t *ReferenceType) string(typeFormatter func(Type) string) string {
-	if t.Type == nil {
-		return "reference"
-	}
+func formatReferenceType(
+	separator string,
+	authorized bool,
+	typeString string,
+) string {
 	var builder strings.Builder
-	if t.Authorized {
-		builder.WriteString("auth ")
+	if authorized {
+		builder.WriteString("auth")
+		builder.WriteString(separator)
 	}
 	builder.WriteRune('&')
-	builder.WriteString(typeFormatter(t.Type))
+	builder.WriteString(typeString)
 	return builder.String()
 }
 
+func FormatReferenceTypeID(authorized bool, typeString string) string {
+	return formatReferenceType("", authorized, typeString)
+}
+
 func (t *ReferenceType) String() string {
-	return t.string(func(ty Type) string {
-		return ty.String()
-	})
+	if t.Type == nil {
+		return "reference"
+	}
+	return formatReferenceType(" ", t.Authorized, t.Type.String())
 }
 
 func (t *ReferenceType) QualifiedString() string {
-	return t.string(func(ty Type) string {
-		return ty.QualifiedString()
-	})
+	if t.Type == nil {
+		return "reference"
+	}
+	return formatReferenceType(" ", t.Authorized, t.Type.QualifiedString())
 }
 
 func (t *ReferenceType) ID() TypeID {
-	return TypeID(
-		t.string(func(ty Type) string {
-			return string(ty.ID())
-		}),
-	)
+	if t.Type == nil {
+		return "reference"
+	}
+	authorized := t.Authorized
+	typeString := string(t.Type.ID())
+	return TypeID(FormatReferenceTypeID(authorized, typeString))
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
