@@ -121,7 +121,6 @@ type Checker struct {
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
-	allowAccountLinking                bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -404,20 +403,18 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	for _, declaration := range declarations {
 
 		// A pragma declaration #allowAccountLinking determines
-		// if the program is allowed to use the account linking.
+		// if the program is allowed to use account linking.
 		//
 		// It must appear as a top-level declaration (i.e. not nested in the program),
 		// and must appear before all other declarations (i.e. at the top of the program).
 		//
-		// This is a temporary feature, which is planned to get replaced
-		// by capability controllers, a new Account type, and account entitlements.
+		// This is a temporary feature, which is planned to get replaced by capability controllers,
+		// and a new Account type with entitlements.
 
 		if pragmaDeclaration, isPragma := declaration.(*ast.PragmaDeclaration); isPragma {
 			if IsAllowAccountLinkingPragma(pragmaDeclaration) {
 				if rejectAllowAccountLinkingPragma {
 					checker.reportInvalidNonHeaderPragma(pragmaDeclaration)
-				} else {
-					checker.allowAccountLinking = true
 				}
 				continue
 			}
@@ -2059,17 +2056,20 @@ func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) P
 			}
 
 			for _, extractedExpression := range extractedExpressions {
+				expression := extractedExpression.Expression
+				startPos := expression.StartPosition()
 
 				// NOTE: no need to check the before statements or update elaboration here:
 				// The before statements are visited/checked later
 				variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
+				variableDeclaration.StartPos = startPos
 				variableDeclaration.Identifier = extractedExpression.Identifier
 				variableDeclaration.Transfer = ast.NewTransfer(
 					checker.memoryGauge,
 					ast.TransferOperationCopy,
-					ast.EmptyPosition,
+					startPos,
 				)
-				variableDeclaration.Value = extractedExpression.Expression
+				variableDeclaration.Value = expression
 
 				beforeStatements = append(beforeStatements,
 					variableDeclaration,
@@ -2477,8 +2477,7 @@ func (checker *Checker) isAvailableMember(expressionType Type, identifier string
 	if expressionType == AuthAccountType &&
 		identifier == AuthAccountTypeLinkAccountFunctionName {
 
-		return checker.Config.AccountLinkingEnabled &&
-			checker.allowAccountLinking
+		return checker.Config.AccountLinkingEnabled
 	}
 
 	return true

@@ -161,11 +161,10 @@ func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *inte
 }
 
 func (s *Storage) recordContractUpdate(
-	address common.Address,
-	name string,
+	location common.AddressLocation,
 	contractValue *interpreter.CompositeValue,
 ) {
-	key := interpreter.NewStorageKey(s.memoryGauge, address, name)
+	key := interpreter.NewStorageKey(s.memoryGauge, location.Address, location.Name)
 
 	// NOTE: do NOT delete the map entry,
 	// otherwise the removal write is lost
@@ -228,6 +227,13 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 	}
 
 	// Commit the underlying slab storage's writes
+
+	size := s.PersistentSlabStorage.DeltasSizeWithoutTempAddresses()
+	if size > 0 {
+		inter.ReportComputation(common.ComputationKindEncodeValue, uint(size))
+		usage := common.NewBytesMemoryUsage(int(size))
+		common.UseMemory(s.memoryGauge, usage)
+	}
 
 	deltas := s.PersistentSlabStorage.DeltasWithoutTempAddresses()
 	common.UseMemory(s.memoryGauge, common.NewAtreeEncodedSlabMemoryUsage(deltas))
