@@ -921,6 +921,10 @@ func (e *Encoder) encodeComposite(
 	default:
 		sortedIndexes := e.getSortedFieldIndex(typ)
 
+		if len(sortedIndexes) != len(staticFieldTypes) {
+			panic(cadenceErrors.NewUnexpectedError("number of sorted indexes doesn't match number of field types"))
+		}
+
 		for _, index := range sortedIndexes {
 			// Encode sorted field as value.
 			err = e.encodeValue(fields[index], staticFieldTypes[index].Type, tids)
