@@ -6248,33 +6248,46 @@ func (t *CapabilityType) Tag() TypeTag {
 	return CapabilityTypeTag
 }
 
-func (t *CapabilityType) string(typeFormatter func(Type) string) string {
+func formatCapabilityType(borrowTypeString string) string {
 	var builder strings.Builder
 	builder.WriteString("Capability")
-	if t.BorrowType != nil {
+	if borrowTypeString != "" {
 		builder.WriteRune('<')
-		builder.WriteString(typeFormatter(t.BorrowType))
+		builder.WriteString(borrowTypeString)
 		builder.WriteRune('>')
 	}
 	return builder.String()
 }
 
+func FormatCapabilityTypeID(borrowTypeString string) string {
+	return formatCapabilityType(borrowTypeString)
+}
+
 func (t *CapabilityType) String() string {
-	return t.string(func(t Type) string {
-		return t.String()
-	})
+	var borrowTypeString string
+	borrowType := t.BorrowType
+	if borrowType != nil {
+		borrowTypeString = borrowType.String()
+	}
+	return formatCapabilityType(borrowTypeString)
 }
 
 func (t *CapabilityType) QualifiedString() string {
-	return t.string(func(t Type) string {
-		return t.QualifiedString()
-	})
+	var borrowTypeString string
+	borrowType := t.BorrowType
+	if borrowType != nil {
+		borrowTypeString = borrowType.QualifiedString()
+	}
+	return formatCapabilityType(borrowTypeString)
 }
 
 func (t *CapabilityType) ID() TypeID {
-	return TypeID(t.string(func(t Type) string {
-		return string(t.ID())
-	}))
+	var borrowTypeString string
+	borrowType := t.BorrowType
+	if borrowType != nil {
+		borrowTypeString = string(borrowType.ID())
+	}
+	return TypeID(FormatCapabilityTypeID(borrowTypeString))
 }
 
 func (t *CapabilityType) Equal(other Type) bool {

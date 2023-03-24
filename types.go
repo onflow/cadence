@@ -2015,11 +2015,12 @@ func (*CapabilityType) isType() {}
 
 func (t *CapabilityType) ID() string {
 	if t.typeID == "" {
-		if t.BorrowType != nil {
-			t.typeID = fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
-		} else {
-			t.typeID = "Capability"
+		var borrowTypeString string
+		borrowType := t.BorrowType
+		if borrowType != nil {
+			borrowTypeString = borrowType.ID()
 		}
+		t.typeID = sema.FormatCapabilityTypeID(borrowTypeString)
 	}
 	return t.typeID
 }
