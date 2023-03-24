@@ -6090,6 +6090,376 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 	)
 }
 
+func TestEncodeValueOfReferenceType(t *testing.T) {
+	simpleStructType := &cadence.StructType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.StringType{},
+			},
+		},
+	}
+
+	// ["a", "b"] with static type []&String
+	referenceToSimpleType := encodeTest{
+		name: "array of reference to string",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.String("b"),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(false, cadence.NewStringType()),
+		)),
+		expected: []byte{ // language=json, format=json-cdc
+			// {"value":[{"value":"a","type":"String"},{"value":"b","type":"String"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([false, 137(1)])), ["a", "b"]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// type []&String
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// false
+			0xf4,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// array data without inlined type
+			// array, 2 items follow
+			0x82,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// text, 1 byte follow
+			0x61,
+			// "b"
+			0x62,
+		},
+	}
+
+	// ["a", nil] with static type []&String?
+	referenceToOptionalSimpleType := encodeTest{
+		name: "array of reference to optional string",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewOptional(cadence.String("a")),
+			cadence.NewOptional(nil),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(false, cadence.NewOptionalType(cadence.NewStringType())),
+		)),
+		expected: []byte{ // language=json, format=json-cdc
+			// {"value":[{"value":{"value":"a","type":"String"},"type":"Optional"},{"value":null,"type":"Optional"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([false, 138(137(1))])), ["a", null]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// type []&String?
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// false
+			0xf4,
+			// tag
+			0xd8, ccf.CBORTagOptionalType,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// array data without inlined type
+			// array, 2 items follow
+			0x82,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// nil
+			0xf6,
+		},
+	}
+
+	// ["a", 1] with static type []&AnyStruct
+	referenceToAnyStructWithSimpleTypes := encodeTest{
+		name: "array of reference to any",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.NewUInt8(1),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(false, cadence.NewAnyStructType()),
+		)),
+		expected: []byte{ // language=json, format=json-cdc
+			// {"value":[{"value":"a","type":"String"},{"value":"1","type":"UInt8"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([false, 137(39)])), [130([137(1), "a"]), 130([137(12), 1])]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// type []&AnyStruct
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// false
+			0xf4,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+			// array data without inlined type
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// string type ID (1)
+			0x01,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// UInt8 type ID (12)
+			0x0c,
+			// 1
+			0x01,
+		},
+	}
+
+	// [FooStruct(1), FooStruct(2)] with static type []&FooStruct
+	referenceToStructType := encodeTest{
+		name: "array of reference to struct",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewStruct([]cadence.Value{
+				cadence.String("a"),
+			}).WithType(simpleStructType),
+			cadence.NewStruct([]cadence.Value{
+				cadence.String("b"),
+			}).WithType(simpleStructType),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(false, simpleStructType),
+		)),
+		expected: []byte{ // language=json, format=json-cdc
+			// {"value":[{"value":{"id":"S.test.Foo","fields":[{"value":{"value":"a","type":"String"},"name":"a"}]},"type":"Struct"},{"value":{"id":"S.test.Foo","fields":[{"value":{"value":"b","type":"String"},"name":"a"}]},"type":"Struct"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 129([[160([h'', "S.test.Foo", [["a", 137(1)]]])], [139(142([false, 136(h'')])), [["a"], ["b"]]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 1 items follow
+			0x81,
+			// struct type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.Foo"
+			// fields: [["a", StringType]
+			// tag
+			0xd8, ccf.CBORTagStructType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 10 bytes follow
+			0x6a,
+			// S.test.Foo
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
+			// fields
+			// array, 1 items follow
+			0x81,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// a
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+
+			// array, 2 items follow
+			0x82,
+			// type []&S.test.Foo
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// false
+			0xf4,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 byte follows
+			0x40,
+			// array data without inlined type
+			// array, 2 items follow
+			0x82,
+			// array, 1 items follow
+			0x81,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// array, 1 items follow
+			0x81,
+			// text, 1 byte follow
+			0x61,
+			// "b"
+			0x62,
+		},
+	}
+
+	// ["a", FooStruct("b")] with static type []&AnyStruct
+	referenceToAnyStructWithStructType := encodeTest{
+		name: "array of reference to any with struct",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.NewStruct([]cadence.Value{
+				cadence.String("b"),
+			}).WithType(simpleStructType),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(false, cadence.NewAnyStructType()),
+		)),
+		expected: []byte{ // language=json, format=json-cdc
+			// {"value":[{"value":"a","type":"String"},{"value":{"id":"S.test.Foo","fields":[{"value":{"value":"1","type":"Int"},"name":"a"}]},"type":"Struct"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 129([[160([h'', "S.test.Foo", [["a", 137(1)]]])], [139(142([false, 137(39)])), [130([137(1), "a"]), 130([136(h''), ["b"]])]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 1 items follow
+			0x81,
+			// struct type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.Foo"
+			// fields: [["a", StringType]
+			// tag
+			0xd8, ccf.CBORTagStructType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 10 bytes follow
+			0x6a,
+			// S.test.Foo
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
+			// fields
+			// array, 1 items follow
+			0x81,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// a
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+
+			// array, 2 items follow
+			0x82,
+			// type []&AnyStruct
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// false
+			0xf4,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// string type ID (1)
+			0x01,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 byte follows
+			0x40,
+			// array, 1 item follows
+			0x81,
+			// text, 1 byte follow
+			0x61,
+			// "b"
+			0x62,
+		},
+	}
+
+	testAllEncodeAndDecode(t,
+		referenceToSimpleType,
+		referenceToOptionalSimpleType,
+		referenceToStructType,
+		referenceToAnyStructWithSimpleTypes,
+		referenceToAnyStructWithStructType,
+	)
+}
+
 func TestEncodeSimpleTypes(t *testing.T) {
 
 	t.Parallel()

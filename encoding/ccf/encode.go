@@ -1731,19 +1731,28 @@ func needToEncodeRuntimeType(staticType cadence.Type, runtimeType cadence.Type) 
 	if staticType.Equal(runtimeType) {
 		return false
 	}
+
 	// Here, static type is different from runtime type.
-	// Handle special case of runtime type being OptionalType{NeverType}.
-	// We handle special case of Optional{nil} because its runtime type is OptionalType{NeverType}
-	// while its static type can be different, such as OptionalType{AddressType}.
-	// For example, TokensDeposited event is defined as `TokensDeposited(amount: UFix64, to: Address?)`,
-	// field to's type is OptionalType{AddressType} and its value can be nil with runtime type
-	// OptionalType{NeverType}. Even though runtime type is different from static type (field type),
-	// encoder encodes nil value without encoding its runtime type.
-	if _, ok := staticType.(*cadence.OptionalType); ok {
+
+	switch typ := staticType.(type) {
+	case *cadence.OptionalType:
+		// Handle special case of runtime type being OptionalType{NeverType}.
+		// We handle special case of Optional{nil} because its runtime type is OptionalType{NeverType}
+		// while its static type can be different, such as OptionalType{AddressType}.
+		// For example, TokensDeposited event is defined as `TokensDeposited(amount: UFix64, to: Address?)`,
+		// field to's type is OptionalType{AddressType} and its value can be nil with runtime type
+		// OptionalType{NeverType}. Even though runtime type is different from static type (field type),
+		// encoder encodes nil value without encoding its runtime type.
 		if isOptionalNeverType(runtimeType) {
 			return false
 		}
+
+	case *cadence.ReferenceType:
+		// Handle special case of static type being ReferenceType.
+		// Encoder doesn't need to encode runtime type if runtime type is the deferenced type of static type.
+		return needToEncodeRuntimeType(typ.Type, runtimeType)
 	}
+
 	return true
 }
 

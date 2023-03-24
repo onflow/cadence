@@ -364,6 +364,10 @@ func (d *Decoder) decodeValue(t cadence.Type, types cadenceTypeByCCFTypeID) (cad
 	case *cadence.EnumType:
 		return d.decodeEnum(typ, types)
 
+	case *cadence.ReferenceType:
+		// When static type is a reference type, encoded value is its deferenced type.
+		return d.decodeValue(typ.Type, types)
+
 	default:
 		err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
 		if err != nil {
