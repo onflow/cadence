@@ -347,7 +347,6 @@ func (e *Encoder) encodeReferenceTypeWithRawTag(
 //
 //	; cbor-tag-restricted-type
 //	#6.143([
-//	  cadence-type-id: cadence-type-id,
 //	  type: inline-type,
 //	  restrictions: [* inline-type]
 //	])
@@ -375,25 +374,19 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 		return err
 	}
 
-	// Encode array head of length 3.
-	err = e.enc.EncodeArrayHead(3)
+	// Encode array head of length 2.
+	err = e.enc.EncodeArrayHead(2)
 	if err != nil {
 		return err
 	}
 
-	// element 0: cadence type id.
-	err = e.encodeCadenceTypeID(typ.ID())
-	if err != nil {
-		return err
-	}
-
-	// element 1: type with given encodeTypeFn
+	// element 0: type with given encodeTypeFn
 	err = encodeTypeFn(typ.Type, tids)
 	if err != nil {
 		return err
 	}
 
-	// element 2: restrictions as array.
+	// element 1: restrictions as array.
 
 	// Encode array head with number of restrictions.
 	restrictions := typ.Restrictions

@@ -5893,7 +5893,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 	)
 
 	countSumRestrictedType := cadence.NewRestrictedType(
-		"Stats{HasCount, HasSum}",
+		"",
 		statsType,
 		[]cadence.Type{
 			hasCountInterfaceType,
@@ -5921,7 +5921,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 	)
 
 	expectedCountSumRestrictedType := cadence.NewRestrictedType(
-		"Stats{HasCount, HasSum}",
+		"",
 		expectedStatsType,
 		[]cadence.Type{
 			hasSumInterfaceType,
@@ -5946,7 +5946,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 			// {"value":[{"value":{"id":"S.test.Stats","fields":[{"value":{"value":"1","type":"Int"},"name":"sum"},{"value":{"value":"2","type":"Int"},"name":"count"}]},"type":"Resource"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
-			// 129([[161([h'', "S.test.Stats", [["sum", 137(4)], ["count", 137(4)]]]), 177([h'01', "S.test.HasSum"]), 177([h'02', "S.test.HasCount"])], [139(143(["Stats{HasCount, HasSum}", 136(h''), [136(h'01'), 136(h'02')]])), [130([136(h''), [2, 1]])]]])
+			// 129([[161([h'', "S.test.Stats", [["sum", 137(4)], ["count", 137(4)]]]), 177([h'01', "S.test.HasSum"]), 177([h'02', "S.test.HasCount"])], [139(143([136(h''), [136(h'01'), 136(h'02')]])), [130([136(h''), [2, 1]])]]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -6039,13 +6039,8 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 			0xd8, ccf.CBORTagVarsizedArrayType,
 			// tag
 			0xd8, ccf.CBORTagRestrictedType,
-			// array, 3 items follow
-			0x83,
-			// cadence type id
-			// text, 23 bytes follow
-			0x77,
-			// Stats{HasCount, HasSum}
-			0x53, 0x74, 0x61, 0x74, 0x73, 0x7b, 0x48, 0x61, 0x73, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x2c, 0x20, 0x48, 0x61, 0x73, 0x53, 0x75, 0x6d, 0x7d,
+			// array, 2 items follow
+			0x82,
 			// type
 			// tag
 			0xd8, ccf.CBORTagTypeRef,
@@ -7304,7 +7299,7 @@ func TestEncodeType(t *testing.T) {
 				// {"type":"Type","value":{"staticType": { "kind": "Restriction", "typeID":"Int{String}", "type" : {"kind" : "Int"}, "restrictions" : [ {"kind" : "String"} ]} } }
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 191(["Int{String}", 185(4), [185(1)]])])
+				// 130([137(41), 191([185(4), [185(1)]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -7317,13 +7312,8 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagRestrictedTypeValue,
-				// array, 3 elements follow
-				0x83,
-				// ID
-				// string, 11 bytes follow
-				0x6b,
-				// Int{String}
-				0x49, 0x6e, 0x74, 0x7b, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x7d,
+				// array, 2 elements follow
+				0x82,
 				// tag
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type ID (4)
@@ -7356,7 +7346,7 @@ func TestEncodeType(t *testing.T) {
 				// {"value":{"staticType":{"kind":"Restriction","typeID":"Int{AnyStruct, String}","type":{"kind":"Int"},"restrictions":[{"kind":"AnyStruct"},{"kind":"String"}]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 191(["Int{AnyStruct, String}", 185(4), [185(1), 185(39)]])])
+				// 130([137(41), 191([185(4), [185(1), 185(39)]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -7369,13 +7359,8 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagRestrictedTypeValue,
-				// array, 3 elements follow
-				0x83,
-				// ID
-				// string, 22 bytes follow
-				0x76,
-				// Int{AnyStruct, String}
-				0x49, 0x6e, 0x74, 0x7b, 0x41, 0x6e, 0x79, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x2c, 0x20, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x7d,
+				// array, 2 elements follow
+				0x82,
 				// tag
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type ID (4)
@@ -7391,6 +7376,7 @@ func TestEncodeType(t *testing.T) {
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 			},
+			// Expected decoded val with sorted restrictions and type ID.
 			cadence.TypeValue{
 				StaticType: (&cadence.RestrictedType{
 					Restrictions: []cadence.Type{
@@ -7398,11 +7384,11 @@ func TestEncodeType(t *testing.T) {
 						cadence.NewAnyStructType(),
 					},
 					Type: cadence.IntType{},
-				}).WithID("Int{AnyStruct, String}"),
+				}).WithID("Int{String, AnyStruct}"),
 			},
 		)
-
 	})
+
 	t.Run("without static type", func(t *testing.T) {
 
 		t.Parallel()

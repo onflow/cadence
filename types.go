@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -1843,7 +1844,27 @@ func NewMeteredRestrictedType(
 func (*RestrictedType) isType() {}
 
 func (t *RestrictedType) ID() string {
+	if t.typeID == "" {
+		t.typeID = t.id()
+	}
 	return t.typeID
+}
+
+func (t *RestrictedType) id() string {
+	typeID := t.Type.ID()
+
+	switch len(t.Restrictions) {
+	case 0:
+		return typeID + "{}"
+	case 1:
+		return typeID + "{" + t.Restrictions[0].ID() + "}"
+	default:
+		restrictions := make([]string, len(t.Restrictions))
+		for i, restriction := range t.Restrictions {
+			restrictions[i] = restriction.ID()
+		}
+		return typeID + "{" + strings.Join(restrictions, ", ") + "}"
+	}
 }
 
 func (t *RestrictedType) WithID(id string) *RestrictedType {

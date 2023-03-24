@@ -480,7 +480,6 @@ func (d *Decoder) decodeReferenceType(
 //
 //	; cbor-tag-restricted-type
 //	#6.143([
-//	  cadence-type-id: cadence-type-id,
 //	  type: inline-type,
 //	  restrictions: [* inline-type]
 //	])
@@ -489,7 +488,6 @@ func (d *Decoder) decodeReferenceType(
 //
 //	; cbor-tag-restricted-type-value
 //	#6.191([
-//	  cadence-type-id: cadence-type-id,
 //	  type: type-value,
 //	  restrictions: [* type-value]
 //	])
@@ -499,25 +497,19 @@ func (d *Decoder) decodeRestrictedType(
 	types cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
-	// Decode array of length 3.
-	err := decodeCBORArrayWithKnownSize(d.dec, 3)
+	// Decode array of length 2.
+	err := decodeCBORArrayWithKnownSize(d.dec, 2)
 	if err != nil {
 		return nil, err
 	}
 
-	// element 0: cadence-type-id
-	typeID, err := d.dec.DecodeString()
-	if err != nil {
-		return nil, err
-	}
-
-	// element 1: type
+	// element 0: type
 	typ, err := decodeTypeFn(types)
 	if err != nil {
 		return nil, err
 	}
 
-	// element 2: restrictions
+	// element 1: restrictions
 	restrictionCount, err := d.dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
@@ -562,7 +554,7 @@ func (d *Decoder) decodeRestrictedType(
 		"",
 		typ,
 		restrictions,
-	).WithID(typeID), nil
+	), nil
 }
 
 // decodeCCFTypeID decodes encoded id as

@@ -1252,7 +1252,6 @@ func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited c
 //
 //	; cbor-tag-restricted-type-value
 //	#6.191([
-//	  cadence-type-id: cadence-type-id,
 //	  type: type-value,
 //	  restrictions: [* type-value]
 //	])
