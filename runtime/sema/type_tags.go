@@ -217,6 +217,7 @@ const (
 	restrictedTypeMask
 	transactionTypeMask
 	storageCapabilityControllerTypeMask
+	accountCapabilityControllerTypeMask
 
 	invalidTypeMask
 )
@@ -226,49 +227,49 @@ var (
 	NoTypeTag = newTypeTagFromLowerMask(noTypeMask)
 
 	SignedIntegerTypeTag = newTypeTagFromLowerMask(signedIntegerTypeMask).
-				Or(IntTypeTag).
-				Or(Int8TypeTag).
-				Or(Int16TypeTag).
-				Or(Int32TypeTag).
-				Or(Int64TypeTag).
-				Or(Int128TypeTag).
-				Or(Int256TypeTag)
+		Or(IntTypeTag).
+		Or(Int8TypeTag).
+		Or(Int16TypeTag).
+		Or(Int32TypeTag).
+		Or(Int64TypeTag).
+		Or(Int128TypeTag).
+		Or(Int256TypeTag)
 
 	UnsignedIntegerTypeTag = newTypeTagFromLowerMask(unsignedIntegerTypeMask).
-				Or(UIntTypeTag).
-				Or(UInt8TypeTag).
-				Or(UInt16TypeTag).
-				Or(UInt32TypeTag).
-				Or(UInt64TypeTag).
-				Or(UInt128TypeTag).
-				Or(UInt256TypeTag).
-				Or(Word8TypeTag).
-				Or(Word16TypeTag).
-				Or(Word32TypeTag).
-				Or(Word64TypeTag)
+		Or(UIntTypeTag).
+		Or(UInt8TypeTag).
+		Or(UInt16TypeTag).
+		Or(UInt32TypeTag).
+		Or(UInt64TypeTag).
+		Or(UInt128TypeTag).
+		Or(UInt256TypeTag).
+		Or(Word8TypeTag).
+		Or(Word16TypeTag).
+		Or(Word32TypeTag).
+		Or(Word64TypeTag)
 
 	IntegerTypeTag = newTypeTagFromLowerMask(integerTypeMask).
-			Or(SignedIntegerTypeTag).
-			Or(UnsignedIntegerTypeTag)
+		Or(SignedIntegerTypeTag).
+		Or(UnsignedIntegerTypeTag)
 
 	SignedFixedPointTypeTag = newTypeTagFromLowerMask(signedFixedPointTypeMask).
-				Or(Fix64TypeTag)
+		Or(Fix64TypeTag)
 
 	UnsignedFixedPointTypeTag = newTypeTagFromLowerMask(unsignedFixedPointTypeMask).
-					Or(UFix64TypeTag)
+		Or(UFix64TypeTag)
 
 	FixedPointTypeTag = newTypeTagFromLowerMask(fixedPointTypeMask).
-				Or(SignedFixedPointTypeTag).
-				Or(UnsignedFixedPointTypeTag)
+		Or(SignedFixedPointTypeTag).
+		Or(UnsignedFixedPointTypeTag)
 
 	SignedNumberTypeTag = newTypeTagFromLowerMask(signedNumberTypeMask).
-				Or(SignedIntegerTypeTag).
-				Or(SignedFixedPointTypeTag)
+		Or(SignedIntegerTypeTag).
+		Or(SignedFixedPointTypeTag)
 
 	NumberTypeTag = newTypeTagFromLowerMask(numberTypeMask).
-			Or(IntegerTypeTag).
-			Or(FixedPointTypeTag).
-			Or(SignedNumberTypeTag)
+		Or(IntegerTypeTag).
+		Or(FixedPointTypeTag).
+		Or(SignedNumberTypeTag)
 
 	UIntTypeTag    = newTypeTagFromLowerMask(uintTypeMask)
 	UInt8TypeTag   = newTypeTagFromLowerMask(uint8TypeMask)
@@ -310,12 +311,12 @@ var (
 	PrivatePathTypeTag = newTypeTagFromLowerMask(privatePathTypeMask)
 
 	CapabilityPathTypeTag = newTypeTagFromLowerMask(capabilityPathTypeMask).
-				Or(PublicPathTypeTag).
-				Or(PrivatePathTypeTag)
+		Or(PublicPathTypeTag).
+		Or(PrivatePathTypeTag)
 
 	PathTypeTag = newTypeTagFromLowerMask(pathTypeMask).
-			Or(CapabilityPathTypeTag).
-			Or(StoragePathTypeTag)
+		Or(CapabilityPathTypeTag).
+		Or(StoragePathTypeTag)
 
 	ConstantSizedTypeTag = newTypeTagFromLowerMask(constantSizedTypeMask)
 	VariableSizedTypeTag = newTypeTagFromLowerMask(variableSizedTypeMask)
@@ -331,6 +332,7 @@ var (
 	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
 	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
 	StorageCapabilityControllerTypeTag = newTypeTagFromUpperMask(storageCapabilityControllerTypeMask)
+	AccountCapabilityControllerTypeTag = newTypeTagFromUpperMask(accountCapabilityControllerTypeMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -338,35 +340,36 @@ var (
 	// to be included in the mask without knowing their member types.
 	// Hence, they are checked on demand in `getSuperTypeOfDerivedTypes()`.
 	AnyStructTypeTag = newTypeTagFromLowerMask(anyStructTypeMask).
-				Or(NeverTypeTag).
-				Or(NumberTypeTag).
-				Or(StringTypeTag).
-				Or(ReferenceTypeTag).
-				Or(NilTypeTag).
-				Or(BoolTypeTag).
-				Or(CharacterTypeTag).
-				Or(VoidTypeTag).
-				Or(MetaTypeTag).
-				Or(PathTypeTag).
-				Or(AddressTypeTag).
-				Or(BlockTypeTag).
-				Or(DeployedContractTypeTag).
-				Or(CapabilityTypeTag).
-				Or(FunctionTypeTag).
-				Or(StorageCapabilityControllerTypeTag)
+		Or(NeverTypeTag).
+		Or(NumberTypeTag).
+		Or(StringTypeTag).
+		Or(ReferenceTypeTag).
+		Or(NilTypeTag).
+		Or(BoolTypeTag).
+		Or(CharacterTypeTag).
+		Or(VoidTypeTag).
+		Or(MetaTypeTag).
+		Or(PathTypeTag).
+		Or(AddressTypeTag).
+		Or(BlockTypeTag).
+		Or(DeployedContractTypeTag).
+		Or(CapabilityTypeTag).
+		Or(FunctionTypeTag).
+		Or(StorageCapabilityControllerTypeTag).
+		Or(AccountCapabilityControllerTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask)
 
 	AnyTypeTag = newTypeTagFromLowerMask(anyTypeMask).
-			Or(AnyStructTypeTag).
-			Or(AnyResourceTypeTag).
-			Or(ConstantSizedTypeTag).
-			Or(VariableSizedTypeTag).
-			Or(DictionaryTypeTag).
-			Or(GenericTypeTag).
-			Or(InterfaceTypeTag).
-			Or(TransactionTypeTag).
-			Or(RestrictedTypeTag)
+		Or(AnyStructTypeTag).
+		Or(AnyResourceTypeTag).
+		Or(ConstantSizedTypeTag).
+		Or(VariableSizedTypeTag).
+		Or(DictionaryTypeTag).
+		Or(GenericTypeTag).
+		Or(InterfaceTypeTag).
+		Or(TransactionTypeTag).
+		Or(RestrictedTypeTag)
 )
 
 // Methods
@@ -655,6 +658,9 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	case storageCapabilityControllerTypeMask:
 		return StorageCapabilityControllerType
+
+	case accountCapabilityControllerTypeMask:
+		return AccountCapabilityControllerType
 
 	default:
 		return nil
