@@ -202,8 +202,7 @@ func (r *CoverageReport) InspectProgram(location Location, program *ast.Program)
 			return true
 		})
 
-	locationCoverage := NewLocationCoverage(lineHits)
-	r.Coverage[location] = locationCoverage
+	r.Coverage[location] = NewLocationCoverage(lineHits)
 }
 
 // IsLocationInspected checks whether the given location,
