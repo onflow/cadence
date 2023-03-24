@@ -1645,7 +1645,7 @@ func TestEncodeContract(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
 }
 
-func TestEncodeLink(t *testing.T) {
+func TestEncodePathLink(t *testing.T) {
 
 	t.Parallel()
 
@@ -1669,6 +1669,22 @@ func TestEncodeLink(t *testing.T) {
               },
               "borrowType": "Bar"
             }
+          }
+        `,
+	)
+}
+
+func TestEncodeAccountLink(t *testing.T) {
+
+	t.Parallel()
+
+	testEncode(
+		t,
+		cadence.NewAccountLink(),
+		// language=json
+		`
+          {
+            "type": "AccountLink"
           }
         `,
 	)

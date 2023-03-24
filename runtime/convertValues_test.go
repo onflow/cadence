@@ -818,7 +818,7 @@ func TestImportValue(t *testing.T) {
 			},
 		},
 		{
-			label: "Link (invalid)",
+			label: "Path Link (invalid)",
 			value: cadence.PathLink{
 				TargetPath: cadence.Path{
 					Domain:     "storage",
@@ -826,6 +826,11 @@ func TestImportValue(t *testing.T) {
 				},
 				BorrowType: "Int",
 			},
+			expected: nil,
+		},
+		{
+			label:    "Account Link (invalid)",
+			value:    cadence.AccountLink{},
 			expected: nil,
 		},
 		{
@@ -2181,6 +2186,25 @@ func TestExportPathLinkValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+}
+
+func TestExportAccountLinkValue(t *testing.T) {
+
+	t.Parallel()
+
+	link := interpreter.AccountLinkValue{}
+
+	actual, err := exportValueWithInterpreter(
+		link,
+		newTestInterpreter(t),
+		interpreter.EmptyLocationRange,
+		seenReferences{},
+	)
+	require.NoError(t, err)
+
+	expected := cadence.AccountLink{}
+
+	assert.Equal(t, expected, actual)
 }
 
 func TestExportCompositeValueWithFunctionValueField(t *testing.T) {

@@ -101,6 +101,7 @@ const (
 	MemoryKindCadenceEnumValueBase
 	MemoryKindCadenceEnumValueSize
 	MemoryKindCadencePathLinkValue
+	MemoryKindCadenceAccountLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
 	MemoryKindCadenceStorageCapabilityValue
