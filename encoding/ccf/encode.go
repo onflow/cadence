@@ -994,7 +994,6 @@ func (e *Encoder) encodeCapability(capability cadence.StorageCapability) error {
 // language=CDDL
 // function-value = [
 //
-//	cadence-type-id: cadence-type-id,
 //	parameters: [
 //	    * [
 //	        label: tstr,
@@ -1006,28 +1005,22 @@ func (e *Encoder) encodeCapability(capability cadence.StorageCapability) error {
 //
 // ]
 func (e *Encoder) encodeFunction(typ *cadence.FunctionType, visited ccfTypeIDByCadenceType) error {
-	// Encode array head of length 3.
+	// Encode array head of length 2.
 	err := e.enc.EncodeRawBytes([]byte{
-		// array, 3 items follow
-		0x83,
+		// array, 2 items follow
+		0x82,
 	})
 	if err != nil {
 		return err
 	}
 
-	// element 0: cadence-type-id as tstr.
-	err = e.encodeCadenceTypeID(typ.ID())
-	if err != nil {
-		return err
-	}
-
-	// element 1: parameters as array.
+	// element 0: parameters as array.
 	err = e.encodeParameterTypeValues(typ.Parameters, visited)
 	if err != nil {
 		return err
 	}
 
-	// element 2: return type as type-value.
+	// element 1: return type as type-value.
 	return e.encodeTypeValue(typ.ReturnType, visited)
 }
 

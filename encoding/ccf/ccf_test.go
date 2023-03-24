@@ -7197,13 +7197,13 @@ func TestEncodeType(t *testing.T) {
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},
 					ReturnType: cadence.IntType{},
-				}).WithID("Foo"),
+				}).WithID("((String):Int)"),
 			},
 			[]byte{ // language=json, format=json-cdc
-				// {"type":"Type","value":{"staticType": { "kind" : "Function", "typeID":"Foo", "return" : {"kind" : "Int"}, "parameters" : [ {"label" : "qux", "id" : "baz", "type": {"kind" : "String"}} ]} } }
+				// {"type":"Type","value":{"staticType": { "kind" : "Function", "typeID":"((String):Int)", "return" : {"kind" : "Int"}, "parameters" : [ {"label" : "qux", "id" : "baz", "type": {"kind" : "String"}} ]} } }
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 193(["Foo", [["qux", "baz", 185(1)]], 185(4)])])
+				// 130([137(41), 193([[["qux", "baz", 185(1)]], 185(4)])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -7216,12 +7216,8 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagFunctionTypeValue,
-				// array, 3 elements follow
-				0x83,
-				// string, 3 bytes follow
-				0x63,
-				// Foo
-				0x46, 0x6f, 0x6f,
+				// array, 2 elements follow
+				0x82,
 				// array, 1 elements follow
 				0x81,
 				// array, 3 elements follow
@@ -8821,7 +8817,7 @@ func TestExportFunctionValue(t *testing.T) {
 			// { "type": "Function", "value": { "functionType": { "kind": "Function", "typeID": "(():Void)", "parameters": [], "return": { "kind": "Void" } } } }
 			//
 			// language=edn, format=ccf
-			// 130([137(51), ["(():Void)", [], 185(50)]])
+			// 130([137(51), [[], 185(50)]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -8832,13 +8828,8 @@ func TestExportFunctionValue(t *testing.T) {
 			0xd8, ccf.CBORTagSimpleType,
 			// Function type ID (51)
 			0x18, 0x33,
-			// array, 3 elements follow
-			0x83,
-			// element 0: cadence-type-id
-			// string, 9 bytes follow
-			0x69,
-			// (():Void)
-			0x28, 0x28, 0x29, 0x3a, 0x56, 0x6f, 0x69, 0x64, 0x29,
+			// array, 2 elements follow
+			0x82,
 			// element 1: parameters
 			// array, 0 element
 			0x80,

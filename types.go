@@ -1727,7 +1727,27 @@ func NewMeteredFunctionType(
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) ID() string {
+	if t.typeID == "" {
+		t.typeID = t.id()
+	}
 	return t.typeID
+}
+
+func (t *FunctionType) id() string {
+	returnTypeID := t.ReturnType.ID()
+
+	switch len(t.Parameters) {
+	case 0:
+		return "(():" + returnTypeID + ")"
+	case 1:
+		return "((" + t.Parameters[0].Type.ID() + "):" + returnTypeID + ")"
+	default:
+		params := make([]string, len(t.Parameters))
+		for i, param := range t.Parameters {
+			params[i] = param.Type.ID()
+		}
+		return "((" + strings.Join(params, ", ") + "):" + returnTypeID + ")"
+	}
 }
 
 func (t *FunctionType) WithID(id string) *FunctionType {

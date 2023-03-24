@@ -1793,7 +1793,6 @@ func (d *Decoder) decodeParameterTypeValue(visited cadenceTypeByCCFTypeID) (cade
 // language=CDDL
 // function-value = [
 //
-//	cadence-type-id: cadence-type-id,
 //	parameters: [
 //	    * [
 //	        label: tstr,
@@ -1805,25 +1804,19 @@ func (d *Decoder) decodeParameterTypeValue(visited cadenceTypeByCCFTypeID) (cade
 //
 // ]
 func (d *Decoder) decodeFunctionTypeValue(visited cadenceTypeByCCFTypeID) (cadence.Type, error) {
-	// Decode array head of length 3
-	err := decodeCBORArrayWithKnownSize(d.dec, 3)
+	// Decode array head of length 2
+	err := decodeCBORArrayWithKnownSize(d.dec, 2)
 	if err != nil {
 		return nil, err
 	}
 
-	// element 0: cadence-type-id
-	typeID, err := d.dec.DecodeString()
-	if err != nil {
-		return nil, err
-	}
-
-	// element 1: parameters
+	// element 0: parameters
 	parameters, err := d.decodeParameterTypeValues(visited)
 	if err != nil {
 		return nil, err
 	}
 
-	// element 2: return-type
+	// element 1: return-type
 	returnType, err := d._decodeTypeValue(visited)
 	if err != nil {
 		return nil, err
@@ -1834,7 +1827,7 @@ func (d *Decoder) decodeFunctionTypeValue(visited cadenceTypeByCCFTypeID) (caden
 		"",
 		parameters,
 		returnType,
-	).WithID(typeID), nil
+	), nil
 }
 
 func decodeCBORArrayWithKnownSize(dec *cbor.StreamDecoder, n uint64) error {

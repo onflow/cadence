@@ -267,6 +267,53 @@ func TestType_ID(t *testing.T) {
 			},
 			"S.test.ContractI",
 		},
+		{
+			&FunctionType{
+				UInt8Type{},
+				"Foo",
+				[]Parameter{
+					{
+						Type: StringType{},
+					},
+				},
+			},
+			"Foo",
+		},
+		{
+			&FunctionType{
+				UInt8Type{},
+				"",
+				[]Parameter{},
+			},
+			"(():UInt8)",
+		},
+		{
+			&FunctionType{
+				UInt8Type{},
+				"",
+				[]Parameter{
+					{
+						Type: StringType{},
+					},
+				},
+			},
+			"((String):UInt8)",
+		},
+		{
+			&FunctionType{
+				UInt8Type{},
+				"",
+				[]Parameter{
+					{
+						Type: StringType{},
+					},
+					{
+						Type: AddressType{},
+					},
+				},
+			},
+			"((String, Address):UInt8)",
+		},
 	}
 
 	test := func(ty Type, expected string) {
