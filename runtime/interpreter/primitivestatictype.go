@@ -201,6 +201,7 @@ const (
 	PrimitiveStaticTypeAccountKey
 	PrimitiveStaticTypeAuthAccountInbox
 	PrimitiveStaticTypeStorageCapabilityController
+	PrimitiveStaticTypeAccountCapabilityController
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -282,7 +283,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeAuthAccountKeys,
 		PrimitiveStaticTypePublicAccountKeys,
 		PrimitiveStaticTypeAccountKey,
-		PrimitiveStaticTypeStorageCapabilityController:
+		PrimitiveStaticTypeStorageCapabilityController,
+		PrimitiveStaticTypeAccountCapabilityController:
 		return UnknownElementSize
 	}
 	return UnknownElementSize
@@ -427,6 +429,8 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.AuthAccountInboxType
 	case PrimitiveStaticTypeStorageCapabilityController:
 		return sema.StorageCapabilityControllerType
+	case PrimitiveStaticTypeAccountCapabilityController:
+		return sema.AccountCapabilityControllerType
 	default:
 		panic(errors.NewUnexpectedError("missing case for %s", i))
 	}
@@ -561,6 +565,8 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeAuthAccountInbox
 	case sema.StorageCapabilityControllerType:
 		typ = PrimitiveStaticTypeStorageCapabilityController
+	case sema.AccountCapabilityControllerType:
+		typ = PrimitiveStaticTypeAccountCapabilityController
 	}
 
 	switch t.(type) {

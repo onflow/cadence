@@ -62,10 +62,11 @@ func _() {
 	_ = x[PrimitiveStaticTypeAccountKey-97]
 	_ = x[PrimitiveStaticTypeAuthAccountInbox-98]
 	_ = x[PrimitiveStaticTypeStorageCapabilityController-99]
-	_ = x[PrimitiveStaticType_Count-100]
+	_ = x[PrimitiveStaticTypeAccountCapabilityController-100]
+	_ = x[PrimitiveStaticType_Count-101]
 }
 
-const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityController_Count"
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityController_Count"
 
 var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	0:   _PrimitiveStaticType_name[0:7],
@@ -122,7 +123,8 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	97:  _PrimitiveStaticType_name[425:435],
 	98:  _PrimitiveStaticType_name[435:451],
 	99:  _PrimitiveStaticType_name[451:478],
-	100: _PrimitiveStaticType_name[478:484],
+	100: _PrimitiveStaticType_name[478:505],
+	101: _PrimitiveStaticType_name[505:511],
 }
 
 func (i PrimitiveStaticType) String() string {

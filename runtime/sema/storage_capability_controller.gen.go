@@ -79,6 +79,7 @@ const StorageCapabilityControllerTypeRetargetFunctionName = "retarget"
 var StorageCapabilityControllerTypeRetargetFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
+			Identifier:     "target",
 			TypeAnnotation: NewTypeAnnotation(StoragePathType),
 		},
 	},

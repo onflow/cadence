@@ -219,6 +219,7 @@ const (
 	anyResourceAttachmentMask
 	anyStructAttachmentMask
 	storageCapabilityControllerTypeMask
+	accountCapabilityControllerTypeMask
 
 	invalidTypeMask
 )
@@ -335,6 +336,7 @@ var (
 	AnyResourceAttachmentTypeTag       = newTypeTagFromUpperMask(anyResourceAttachmentMask)
 	AnyStructAttachmentTypeTag         = newTypeTagFromUpperMask(anyStructAttachmentMask)
 	StorageCapabilityControllerTypeTag = newTypeTagFromUpperMask(storageCapabilityControllerTypeMask)
+	AccountCapabilityControllerTypeTag = newTypeTagFromUpperMask(accountCapabilityControllerTypeMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -358,7 +360,8 @@ var (
 				Or(DeployedContractTypeTag).
 				Or(CapabilityTypeTag).
 				Or(FunctionTypeTag).
-				Or(StorageCapabilityControllerTypeTag)
+				Or(StorageCapabilityControllerTypeTag).
+				Or(AccountCapabilityControllerTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)
@@ -667,6 +670,9 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	case storageCapabilityControllerTypeMask:
 		return StorageCapabilityControllerType
+
+	case accountCapabilityControllerTypeMask:
+		return AccountCapabilityControllerType
 
 	default:
 		return nil
