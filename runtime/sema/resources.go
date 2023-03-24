@@ -98,7 +98,7 @@ func (ris *Resources) String() string {
 		builder.WriteString(fmt.Sprint(resource))
 		builder.WriteString(": ")
 		builder.WriteString(fmt.Sprint(info))
-		builder.WriteRune('\n')
+		builder.WriteByte('\n')
 	})
 	return builder.String()
 }

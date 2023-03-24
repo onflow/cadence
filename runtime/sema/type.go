@@ -2387,15 +2387,15 @@ func formatParameter(spaces bool, label, identifier, typeAnnotation string) stri
 	if label != "" {
 		builder.WriteString(label)
 		if spaces {
-			builder.WriteRune(' ')
+			builder.WriteByte(' ')
 		}
 	}
 
 	if identifier != "" {
 		builder.WriteString(identifier)
-		builder.WriteRune(':')
+		builder.WriteByte(':')
 		if spaces {
-			builder.WriteRune(' ')
+			builder.WriteByte(' ')
 		}
 	}
 
@@ -2518,37 +2518,37 @@ func formatFunctionType(
 ) string {
 
 	var builder strings.Builder
-	builder.WriteRune('(')
+	builder.WriteByte('(')
 
 	if len(typeParameters) > 0 {
-		builder.WriteRune('<')
+		builder.WriteByte('<')
 		for i, typeParameter := range typeParameters {
 			if i > 0 {
-				builder.WriteRune(',')
+				builder.WriteByte(',')
 				if spaces {
-					builder.WriteRune(' ')
+					builder.WriteByte(' ')
 				}
 			}
 			builder.WriteString(typeParameter)
 		}
-		builder.WriteRune('>')
+		builder.WriteByte('>')
 	}
-	builder.WriteRune('(')
+	builder.WriteByte('(')
 	for i, parameter := range parameters {
 		if i > 0 {
-			builder.WriteRune(',')
+			builder.WriteByte(',')
 			if spaces {
-				builder.WriteRune(' ')
+				builder.WriteByte(' ')
 			}
 		}
 		builder.WriteString(parameter)
 	}
 	builder.WriteString("):")
 	if spaces {
-		builder.WriteRune(' ')
+		builder.WriteByte(' ')
 	}
 	builder.WriteString(returnTypeAnnotation)
-	builder.WriteRune(')')
+	builder.WriteByte(')')
 	return builder.String()
 }
 
@@ -4772,7 +4772,7 @@ func formatReferenceType(
 		builder.WriteString("auth")
 		builder.WriteString(separator)
 	}
-	builder.WriteRune('&')
+	builder.WriteByte('&')
 	builder.WriteString(typeString)
 	return builder.String()
 }
@@ -6008,12 +6008,12 @@ func (t *RestrictedType) string(separator string, typeFormatter func(Type) strin
 	result.WriteRune('{')
 	for i, restriction := range t.Restrictions {
 		if i > 0 {
-			result.WriteRune(',')
+			result.WriteByte(',')
 			result.WriteString(separator)
 		}
 		result.WriteString(typeFormatter(restriction))
 	}
-	result.WriteRune('}')
+	result.WriteByte('}')
 	return result.String()
 }
 
@@ -6252,9 +6252,9 @@ func formatCapabilityType(borrowTypeString string) string {
 	var builder strings.Builder
 	builder.WriteString("Capability")
 	if borrowTypeString != "" {
-		builder.WriteRune('<')
+		builder.WriteByte('<')
 		builder.WriteString(borrowTypeString)
-		builder.WriteRune('>')
+		builder.WriteByte('>')
 	}
 	return builder.String()
 }
