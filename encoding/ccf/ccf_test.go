@@ -5049,6 +5049,62 @@ func TestEncodeStruct(t *testing.T) {
 
 	t.Parallel()
 
+	noFieldStructType := &cadence.StructType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooStruct",
+		Fields:              []cadence.Field{},
+	}
+
+	noFieldStruct := encodeTest{
+		name: "no field",
+		val: cadence.NewStruct(
+			[]cadence.Value{},
+		).WithType(noFieldStructType),
+		expected: []byte{ // language=json, format=json-cdc
+			// {"value":{"id":"S.test.FooStruct","fields":[]},"type":"Struct"}
+			//
+			// language=edn, format=ccf
+			// 129([[160([h'', "S.test.FooStruct", []])], [136(h''), []]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 1 items follow
+			0x81,
+			// struct type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.FooStruct"
+			// 0 fields: []
+			// tag
+			0xd8, ccf.CBORTagStructType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 16 bytes follow
+			0x70,
+			// S.test.FooStruct
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+			// array, 0 item follows
+			0x80,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 bytes follow
+			0x40,
+			// array, 0 items follow
+			0x80,
+		},
+	}
+
 	simpleStructType := &cadence.StructType{
 		Location:            utils.TestLocation,
 		QualifiedIdentifier: "FooStruct",
@@ -5279,7 +5335,7 @@ func TestEncodeStruct(t *testing.T) {
 		},
 	}
 
-	testAllEncodeAndDecode(t, simpleStruct, resourceStruct)
+	testAllEncodeAndDecode(t, noFieldStruct, simpleStruct, resourceStruct)
 }
 
 func TestEncodeEvent(t *testing.T) {
@@ -7064,6 +7120,55 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
+	t.Run("with static struct with no field", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.StructType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "S",
+					Fields:              []cadence.Field{},
+					Initializers:        [][]cadence.Parameter{},
+				},
+			},
+			[]byte{ // language=json, format=json-cdc
+				// {"value":{"staticType":{"type":"","kind":"Struct","typeID":"S.test.S","fields":[],"initializers":[]}},"type":"Type"}
+				//
+				// language=edn, format=ccf
+				// 130([137(41), 208([h'', "S.test.S", null, [], []])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagStructTypeValue,
+				// array, 5 elements follow
+				0x85,
+				// bytes, 0 bytes follow
+				0x40,
+				// string, 8 bytes follow
+				0x68,
+				// S.test.So
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53,
+				// type (nil for struct)
+				0xf6,
+				// fields
+				// array, 0 element follows
+				0x80,
+				// initializers
+				// array, 0 elements follow
+				0x80,
+			},
+		)
+	})
+
 	t.Run("with static struct", func(t *testing.T) {
 
 		testEncodeAndDecode(
@@ -7970,6 +8075,52 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type ID (4)
 				0x04,
+			},
+		)
+	})
+
+	t.Run("with static no restricted type", func(t *testing.T) {
+
+		testEncodeAndDecodeEx(
+			t,
+			cadence.TypeValue{
+				StaticType: (&cadence.RestrictedType{
+					Restrictions: []cadence.Type{},
+					Type:         cadence.IntType{},
+				}).WithID("Int{String}"),
+			},
+			[]byte{ // language=json, format=json-cdc
+				// {"value":{"staticType":{"kind":"Restriction","typeID":"Int{String}","type":{"kind":"Int"},"restrictions":[]}},"type":"Type"}
+				//
+				// language=edn, format=ccf
+				// 130([137(41), 191([185(4), []])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagRestrictedTypeValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type ID (4)
+				0x04,
+				// array, 0 element follows
+				0x80,
+			},
+			// Expected decoded RestrictedType doesn't have type ID.
+			cadence.TypeValue{
+				StaticType: (&cadence.RestrictedType{
+					Restrictions: []cadence.Type{},
+					Type:         cadence.IntType{},
+				}),
 			},
 		)
 	})
