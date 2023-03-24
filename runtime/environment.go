@@ -612,7 +612,7 @@ func (e *interpreterEnvironment) newOnStatementHandler() interpreter.OnStatement
 
 	return func(inter *interpreter.Interpreter, statement ast.Statement) {
 		location := inter.Location
-		if !e.coverageReport.IsProgramInspected(location) {
+		if !e.coverageReport.IsLocationInspected(location) {
 			program := inter.Program.Program
 			e.coverageReport.InspectProgram(location, program)
 		}
