@@ -72,6 +72,8 @@ func (ct *compositeTypes) traverseValue(v cadence.Value) {
 	}
 
 	// Traverse v's elements for runtime types.
+	// Note: don't need to traverse fields of cadence.Enum
+	// because enum's field is an integer subtype.
 	switch x := v.(type) {
 
 	case cadence.Optional:
@@ -108,10 +110,6 @@ func (ct *compositeTypes) traverseValue(v cadence.Value) {
 			ct.traverseValue(field)
 		}
 
-	case cadence.Enum:
-		for _, field := range x.Fields {
-			ct.traverseValue(field)
-		}
 	}
 }
 
