@@ -6007,19 +6007,35 @@ func (t *RestrictedType) Tag() TypeTag {
 	return RestrictedTypeTag
 }
 
-func (t *RestrictedType) string(separator string, typeFormatter func(Type) string) string {
+func formatRestrictedType(separator string, typeString string, restrictionStrings []string) string {
 	var result strings.Builder
-	result.WriteString(typeFormatter(t.Type))
-	result.WriteRune('{')
-	for i, restriction := range t.Restrictions {
+	result.WriteString(typeString)
+	result.WriteByte('{')
+	for i, restrictionString := range restrictionStrings {
 		if i > 0 {
 			result.WriteByte(',')
 			result.WriteString(separator)
 		}
-		result.WriteString(typeFormatter(restriction))
+		result.WriteString(restrictionString)
 	}
 	result.WriteByte('}')
 	return result.String()
+}
+
+func FormatRestrictedTypeID(typeString string, restrictionStrings []string) string {
+	return formatRestrictedType("", typeString, restrictionStrings)
+}
+
+func (t *RestrictedType) string(separator string, typeFormatter func(Type) string) string {
+	var restrictionStrings []string
+	restrictionCount := len(t.Restrictions)
+	if restrictionCount > 0 {
+		restrictionStrings = make([]string, 0, restrictionCount)
+		for _, restriction := range t.Restrictions {
+			restrictionStrings = append(restrictionStrings, typeFormatter(restriction))
+		}
+	}
+	return formatRestrictedType(separator, typeFormatter(t.Type), restrictionStrings)
 }
 
 func (t *RestrictedType) String() string {

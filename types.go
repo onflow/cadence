@@ -1830,7 +1830,17 @@ func NewMeteredRestrictedType(
 func (*RestrictedType) isType() {}
 
 func (t *RestrictedType) ID() string {
-	// TODO:
+	if t.typeID == "" {
+		var restrictionStrings []string
+		restrictionCount := len(t.Restrictions)
+		if restrictionCount > 0 {
+			restrictionStrings = make([]string, 0, restrictionCount)
+			for _, restriction := range t.Restrictions {
+				restrictionStrings = append(restrictionStrings, restriction.ID())
+			}
+		}
+		t.typeID = sema.FormatRestrictedTypeID(t.Type.ID(), restrictionStrings)
+	}
 	return t.typeID
 }
 
