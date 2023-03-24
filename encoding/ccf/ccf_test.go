@@ -8263,12 +8263,12 @@ func TestDecodeInvalidType(t *testing.T) {
 		assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: ``", err.Error())
 	})
 
-	t.Run("undefined type", func(t *testing.T) {
+	t.Run("invalid type ID", func(t *testing.T) {
 		t.Parallel()
 
 		encodedData := []byte{
 			// language=json, format=json-cdc
-			// { "type":"Struct", "value":{ "id":"I.Foo", "fields":[] } }
+			// { "type":"Struct", "value":{ "id":"I", "fields":[] } }
 			//
 			// language=edn, format=ccf
 			// 129([[160([h'', "I.Foo", []])], [136(h''), []]])
@@ -8283,7 +8283,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			0x81,
 			// struct type:
 			// id: []byte{}
-			// cadence-type-id: "I.Foo"
+			// cadence-type-id: "I"
 			// 0 field
 			// tag
 			0xd8, ccf.CBORTagStructType,
@@ -8293,10 +8293,10 @@ func TestDecodeInvalidType(t *testing.T) {
 			// bytes, 0 bytes follow
 			0x40,
 			// cadence-type-id
-			// string, 5 bytes follow
-			0x65,
-			// I.Foo
-			0x49, 0x2e, 0x46, 0x6f, 0x6f,
+			// string, 1 bytes follow
+			0x61,
+			// I
+			0x49,
 			// fields
 			// array, 0 items follow
 			0x80,
@@ -8313,7 +8313,7 @@ func TestDecodeInvalidType(t *testing.T) {
 		}
 		_, err := ccf.Decode(nil, encodedData)
 		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: invalid type ID `I.Foo`: invalid identifier location type ID: missing qualified identifier", err.Error())
+		assert.Equal(t, "ccf: failed to decode: invalid type ID `I`: invalid identifier location type ID: missing location", err.Error())
 	})
 
 	t.Run("unknown location prefix", func(t *testing.T) {
