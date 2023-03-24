@@ -98,7 +98,7 @@ func minify(inputFile, outputFile string) error {
 		}
 
 		if !eof {
-			_, err = writer.WriteByte('\n')
+			_ = writer.WriteByte('\n')
 			if err != nil {
 				return err
 			}

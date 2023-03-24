@@ -403,27 +403,59 @@ func exportFunctionType(
 	t *sema.FunctionType,
 	results map[sema.TypeID]cadence.Type,
 ) cadence.Type {
+	// Type parameters
+	typeParameterCount := len(t.TypeParameters)
+	common.UseMemory(gauge, common.MemoryUsage{
+		Kind:   common.MemoryKindCadenceTypeParameter,
+		Amount: uint64(typeParameterCount),
+	})
+	var convertedTypeParameters []cadence.TypeParameter
+	if typeParameterCount > 0 {
+		convertedTypeParameters = make([]cadence.TypeParameter, typeParameterCount)
+
+		for i, typeParameter := range t.TypeParameters {
+
+			typeBound := typeParameter.TypeBound
+			var convertedParameterTypeBound cadence.Type
+			if typeBound != nil {
+				convertedParameterTypeBound = ExportMeteredType(gauge, typeBound, results)
+			}
+
+			// Metered above
+			convertedTypeParameters[i] = cadence.NewTypeParameter(
+				typeParameter.Name,
+				convertedParameterTypeBound,
+			)
+		}
+	}
+
+	// Parameters
+	parameterCount := len(t.Parameters)
 	common.UseMemory(gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceParameter,
-		Amount: uint64(len(t.Parameters)),
+		Amount: uint64(parameterCount),
 	})
-	convertedParameters := make([]cadence.Parameter, len(t.Parameters))
+	var convertedParameters []cadence.Parameter
+	if parameterCount > 0 {
+		convertedParameters = make([]cadence.Parameter, parameterCount)
 
-	for i, parameter := range t.Parameters {
-		convertedParameterType := ExportMeteredType(gauge, parameter.TypeAnnotation.Type, results)
+		for i, parameter := range t.Parameters {
+			convertedParameterType := ExportMeteredType(gauge, parameter.TypeAnnotation.Type, results)
 
-		// Metered above
-		convertedParameters[i] = cadence.NewParameter(
-			parameter.Label,
-			parameter.Identifier,
-			convertedParameterType,
-		)
+			// Metered above
+			convertedParameters[i] = cadence.NewParameter(
+				parameter.Label,
+				parameter.Identifier,
+				convertedParameterType,
+			)
+		}
 	}
 
 	convertedReturnType := ExportMeteredType(gauge, t.ReturnTypeAnnotation.Type, results)
 
 	return cadence.NewMeteredFunctionType(
 		gauge,
+		convertedTypeParameters,
 		convertedParameters,
 		convertedReturnType,
 	)

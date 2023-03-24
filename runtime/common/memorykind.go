@@ -114,6 +114,7 @@ const (
 	MemoryKindCadenceDictionaryType
 	MemoryKindCadenceField
 	MemoryKindCadenceParameter
+	MemoryKindCadenceTypeParameter
 	MemoryKindCadenceStructType
 	MemoryKindCadenceResourceType
 	MemoryKindCadenceAttachmentType

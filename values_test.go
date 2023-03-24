@@ -45,6 +45,7 @@ func newValueTestCases() map[string]valueTestCase {
 	fix64, _ := NewFix64("-32.11")
 
 	testFunctionType := NewFunctionType(
+		nil,
 		[]Parameter{
 			{
 				Type: StringType{},

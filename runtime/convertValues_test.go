@@ -134,7 +134,8 @@ func TestExportValue(t *testing.T) {
 	}
 
 	testFunctionType := cadence.NewFunctionType(
-		[]cadence.Parameter{},
+		nil,
+		nil,
 		cadence.VoidType{},
 	)
 
@@ -2241,7 +2242,6 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 			{
 				Identifier: "f",
 				Type: &cadence.FunctionType{
-					Parameters: []cadence.Parameter{},
 					ReturnType: cadence.VoidType{},
 				},
 			},
@@ -2253,7 +2253,6 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 		cadence.NewInt(42),
 		cadence.Function{
 			FunctionType: &cadence.FunctionType{
-				Parameters: []cadence.Parameter{},
 				ReturnType: cadence.VoidType{},
 			},
 		},

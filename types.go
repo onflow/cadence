@@ -1054,6 +1054,23 @@ func NewParameter(
 	}
 }
 
+// TypeParameter
+
+type TypeParameter struct {
+	Name      string
+	TypeBound Type
+}
+
+func NewTypeParameter(
+	name string,
+	typeBound Type,
+) TypeParameter {
+	return TypeParameter{
+		Name:      name,
+		TypeBound: typeBound,
+	}
+}
+
 // CompositeType
 
 type CompositeType interface {
@@ -1697,28 +1714,32 @@ func (t *ContractInterfaceType) Equal(other Type) bool {
 
 // TODO: type parameters
 type FunctionType struct {
-	ReturnType Type
-	typeID     string
-	Parameters []Parameter
+	TypeParameters []TypeParameter
+	Parameters     []Parameter
+	ReturnType     Type
+	typeID         string
 }
 
 func NewFunctionType(
+	typeParameters []TypeParameter,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	return &FunctionType{
-		Parameters: parameters,
-		ReturnType: returnType,
+		TypeParameters: typeParameters,
+		Parameters:     parameters,
+		ReturnType:     returnType,
 	}
 }
 
 func NewMeteredFunctionType(
 	gauge common.MemoryGauge,
+	typeParameters []TypeParameter,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	common.UseMemory(gauge, common.CadenceFunctionTypeMemoryUsage)
-	return NewFunctionType(parameters, returnType)
+	return NewFunctionType(typeParameters, parameters, returnType)
 }
 
 func (*FunctionType) isType() {}

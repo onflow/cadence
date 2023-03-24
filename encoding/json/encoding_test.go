@@ -2400,6 +2400,9 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.FunctionType{
+					TypeParameters: []cadence.TypeParameter{
+						{Name: "T", TypeBound: cadence.AnyStructType{}},
+					},
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},
@@ -2416,6 +2419,14 @@ func TestEncodeType(t *testing.T) {
                     "return": {
                       "kind": "Int"
                     },
+                    "typeParameters": [
+                      {
+                        "name": "T",
+                        "typeBound": {
+                          "kind": "AnyStruct"
+                        }
+                      }
+                    ],
                     "parameters": [
                       {
                         "label": "qux",
@@ -3255,10 +3266,10 @@ func TestExportFunctionValue(t *testing.T) {
 	testEncode(
 		t,
 		cadence.Function{
-			FunctionType: (&cadence.FunctionType{
+			FunctionType: &cadence.FunctionType{
 				Parameters: []cadence.Parameter{},
 				ReturnType: cadence.VoidType{},
-			}),
+			},
 		},
 		// language=json
 		`
@@ -3268,6 +3279,7 @@ func TestExportFunctionValue(t *testing.T) {
               "functionType": {
                 "kind": "Function",
                 "parameters": [],
+                "typeParameters": [],
                 "return": {
                   "kind": "Void"
                 }

@@ -2737,7 +2737,6 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                 `,
 				expected: cadence.Function{
 					FunctionType: &cadence.FunctionType{
-						Parameters: []cadence.Parameter{},
 						ReturnType: cadence.IntType{},
 					},
 				},
@@ -2790,7 +2789,6 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                 `,
 				expected: cadence.Function{
 					FunctionType: &cadence.FunctionType{
-						Parameters: []cadence.Parameter{},
 						ReturnType: cadence.VoidType{},
 					},
 				},
