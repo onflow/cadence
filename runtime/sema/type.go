@@ -4781,18 +4781,23 @@ func FormatReferenceTypeID(authorized bool, typeString string) string {
 	return formatReferenceType("", authorized, typeString)
 }
 
-func (t *ReferenceType) String() string {
+func (t *ReferenceType) string(typeFormatter func(Type) string) string {
 	if t.Type == nil {
 		return "reference"
 	}
-	return formatReferenceType(" ", t.Authorized, t.Type.String())
+	return formatReferenceType(" ", t.Authorized, typeFormatter(t.Type))
+}
+
+func (t *ReferenceType) String() string {
+	return t.string(func(t Type) string {
+		return t.String()
+	})
 }
 
 func (t *ReferenceType) QualifiedString() string {
-	if t.Type == nil {
-		return "reference"
-	}
-	return formatReferenceType(" ", t.Authorized, t.Type.QualifiedString())
+	return t.string(func(t Type) string {
+		return t.QualifiedString()
+	})
 }
 
 func (t *ReferenceType) ID() TypeID {
