@@ -2511,7 +2511,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 // Function types
 
 func formatFunctionType(
-	spaces bool,
+	separator string,
 	typeParameters []string,
 	parameters []string,
 	returnTypeAnnotation string,
@@ -2525,9 +2525,7 @@ func formatFunctionType(
 		for i, typeParameter := range typeParameters {
 			if i > 0 {
 				builder.WriteByte(',')
-				if spaces {
-					builder.WriteByte(' ')
-				}
+				builder.WriteString(separator)
 			}
 			builder.WriteString(typeParameter)
 		}
@@ -2537,16 +2535,12 @@ func formatFunctionType(
 	for i, parameter := range parameters {
 		if i > 0 {
 			builder.WriteByte(',')
-			if spaces {
-				builder.WriteByte(' ')
-			}
+			builder.WriteString(separator)
 		}
 		builder.WriteString(parameter)
 	}
 	builder.WriteString("):")
-	if spaces {
-		builder.WriteByte(' ')
-	}
+	builder.WriteString(separator)
 	builder.WriteString(returnTypeAnnotation)
 	builder.WriteByte(')')
 	return builder.String()
@@ -2575,14 +2569,18 @@ func (t *FunctionType) Tag() TypeTag {
 	return FunctionTypeTag
 }
 
-func (t *FunctionType) String() string {
+func (t *FunctionType) string(
+	typeParameterFormatter func(*TypeParameter) string,
+	parameterFormatter func(Parameter) string,
+	returnTypeAnnotationFormatter func(TypeAnnotation) string,
+) string {
 
 	var typeParameters []string
 	typeParameterCount := len(t.TypeParameters)
 	if typeParameterCount > 0 {
 		typeParameters = make([]string, typeParameterCount)
 		for i, typeParameter := range t.TypeParameters {
-			typeParameters[i] = typeParameter.String()
+			typeParameters[i] = typeParameterFormatter(typeParameter)
 		}
 	}
 
@@ -2591,64 +2589,88 @@ func (t *FunctionType) String() string {
 	if parameterCount > 0 {
 		parameters = make([]string, parameterCount)
 		for i, parameter := range t.Parameters {
-			parameters[i] = parameter.String()
+			parameters[i] = parameterFormatter(parameter)
 		}
 	}
 
-	returnTypeAnnotation := t.ReturnTypeAnnotation.String()
+	returnTypeAnnotation := returnTypeAnnotationFormatter(t.ReturnTypeAnnotation)
 
 	return formatFunctionType(
-		true,
+		" ",
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
 	)
 }
 
-func (t *FunctionType) QualifiedString() string {
-
-	typeParameters := make([]string, len(t.TypeParameters))
-
-	for i, typeParameter := range t.TypeParameters {
-		typeParameters[i] = typeParameter.QualifiedString()
-	}
-
-	parameters := make([]string, len(t.Parameters))
-
-	for i, parameter := range t.Parameters {
-		parameters[i] = parameter.QualifiedString()
-	}
-
-	returnTypeAnnotation := t.ReturnTypeAnnotation.QualifiedString()
-
+func FormatFunctionTypeID(
+	typeParameters []string,
+	parameters []string,
+	returnTypeAnnotation string,
+) string {
 	return formatFunctionType(
-		true,
+		"",
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
+	)
+}
+
+func (t *FunctionType) String() string {
+	return t.string(
+		func(parameter *TypeParameter) string {
+			return parameter.String()
+		},
+		func(parameter Parameter) string {
+			return parameter.String()
+		},
+		func(typeAnnotation TypeAnnotation) string {
+			return typeAnnotation.String()
+		},
+	)
+}
+
+func (t *FunctionType) QualifiedString() string {
+	return t.string(
+		func(parameter *TypeParameter) string {
+			return parameter.QualifiedString()
+		},
+		func(parameter Parameter) string {
+			return parameter.QualifiedString()
+		},
+		func(typeAnnotation TypeAnnotation) string {
+			return typeAnnotation.QualifiedString()
+		},
 	)
 }
 
 // NOTE: parameter names and argument labels are *not* part of the ID!
 func (t *FunctionType) ID() TypeID {
 
-	typeParameters := make([]string, len(t.TypeParameters))
-
-	for i, typeParameter := range t.TypeParameters {
-		typeParameters[i] = string(typeParameter.TypeBound.ID())
+	typeParameterCount := len(t.TypeParameters)
+	var typeParameters []string
+	if typeParameterCount > 0 {
+		typeParameters = make([]string, typeParameterCount)
+		for i, typeParameter := range t.TypeParameters {
+			if typeParameter.TypeBound != nil {
+				typeParameters[i] = string(typeParameter.TypeBound.ID())
+			}
+		}
 	}
 
-	parameters := make([]string, len(t.Parameters))
-
-	for i, parameter := range t.Parameters {
-		parameters[i] = string(parameter.TypeAnnotation.Type.ID())
+	parameterCount := len(t.Parameters)
+	var parameters []string
+	if parameterCount > 0 {
+		parameters = make([]string, parameterCount)
+		for i, parameter := range t.Parameters {
+			parameters[i] = string(parameter.TypeAnnotation.Type.ID())
+		}
 	}
 
 	returnTypeAnnotation := string(t.ReturnTypeAnnotation.Type.ID())
 
 	return TypeID(
-		formatFunctionType(
-			false,
+		FormatFunctionTypeID(
 			typeParameters,
 			parameters,
 			returnTypeAnnotation,
@@ -4804,9 +4826,7 @@ func (t *ReferenceType) ID() TypeID {
 	if t.Type == nil {
 		return "reference"
 	}
-	authorized := t.Authorized
-	typeString := string(t.Type.ID())
-	return TypeID(FormatReferenceTypeID(authorized, typeString))
+	return TypeID(FormatReferenceTypeID(t.Authorized, string(t.Type.ID())))
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
