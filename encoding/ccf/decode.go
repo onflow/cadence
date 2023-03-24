@@ -68,6 +68,10 @@ func Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
 		return nil, err
 	}
 
+	if dec.dec.NumBytesDecoded() != len(b) {
+		return nil, cadenceErrors.NewDefaultUserError("ccf: failed to decode: decoded %d bytes, received %d bytes", dec.dec.NumBytesDecoded(), len(b))
+	}
+
 	return v, nil
 }
 
