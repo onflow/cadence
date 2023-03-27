@@ -1020,6 +1020,81 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[1])
 	})
+
+	t.Run("mapped ref unmapped field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement mapping M {
+				E -> F
+			}
+			struct interface S {
+				access(E) var x: auth(M) &String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("mapped nonref unmapped field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement mapping M {
+				E -> F
+			}
+			struct interface S {
+				access(E) var x: fun(auth(M) &String): Int
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
+	})
+
+	t.Run("mapped field unmapped ref", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement mapping M {
+				E -> F
+			}
+			struct interface S {
+				access(M) var x: auth(E) &String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("different map", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement mapping M {
+				E -> F
+			}
+			entitlement mapping N {
+				E -> F
+			}
+			struct interface S {
+				access(M) var x: auth(N) &String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
 }
 
 func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
@@ -1052,7 +1127,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
-	t.Run("optional field", func(t *testing.T) {
+	t.Run("optional nonreference field", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement mapping M {}
@@ -1526,7 +1601,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 				E -> F
 			}
 			struct interface I {
-				access(E, F) var x: auth(M) &String
+				access(E, F) var x: auth(E, F) &String
 			}
 			struct S: I {
 				access(M) var x: auth(M) &String 
@@ -1554,10 +1629,10 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 				access(M) var x: auth(M) &String
 			}
 			struct S: I {
-				access(E, F) var x: auth(M) &String 
+				access(E, F) var x: auth(E, F) &String 
 
 				init() {
-					self.x = &"foo" as auth(F) &String
+					self.x = &"foo" as auth(E, F) &String
 				}
 			}
 		`)
@@ -1576,7 +1651,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 				E -> F
 			}
 			struct interface I {
-				access(E | F) var x: auth(M) &String
+				access(E | F) var x: auth(E | F) &String
 			}
 			struct S: I {
 				access(M) var x: auth(M) &String 
@@ -1604,7 +1679,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 				access(M) var x: auth(M) &String
 			}
 			struct S: I {
-				access(E | F) var x: auth(M) &String 
+				access(E | F) var x: auth(E | F) &String 
 
 				init() {
 					self.x = &"foo" as auth(F) &String

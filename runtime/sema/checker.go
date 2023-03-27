@@ -1892,57 +1892,15 @@ func (checker *Checker) checkDeclarationAccessModifier(
 					)
 				}
 			}
+
 		case EntitlementMapAccess:
 			// attachments may be declared with an entitlement map access
 			if declarationKind == common.DeclarationKindAttachment {
 				return
 			}
-			// otherwise, mapped entitlements may only be used on composite fields
-			if declarationKind != common.DeclarationKindField {
-				checker.report(
-					&InvalidMappedEntitlementMemberError{
-						Pos: startPos,
-					},
-				)
-				return
-			}
-			// mapped entitlement fields must be references that are authorized to the same mapped entitlement,
-			// or optional references that are authorized to the same mapped entitlement
-			switch ty := declarationType.(type) {
-			case *ReferenceType:
-				if !ty.Authorization.Equal(access) {
-					checker.report(
-						&InvalidMappedEntitlementMemberError{
-							Pos: startPos,
-						},
-					)
-				}
-			case *OptionalType:
-				switch optionalType := ty.Type.(type) {
-				case *ReferenceType:
-					if !optionalType.Authorization.Equal(access) {
-						checker.report(
-							&InvalidMappedEntitlementMemberError{
-								Pos: startPos,
-							},
-						)
-					}
-				default:
-					checker.report(
-						&InvalidMappedEntitlementMemberError{
-							Pos: startPos,
-						},
-					)
-				}
-			default:
-				checker.report(
-					&InvalidMappedEntitlementMemberError{
-						Pos: startPos,
-					},
-				)
-				return
-			}
-			if containerKind == nil ||
+
+			// otherwise, mapped entitlements may only be used on fields in structs and resources
+			if declarationKind != common.DeclarationKindField || containerKind == nil ||
 				(*containerKind != common.CompositeKindResource &&
 					*containerKind != common.CompositeKindStructure) {
 				checker.report(
@@ -1950,7 +1908,30 @@ func (checker *Checker) checkDeclarationAccessModifier(
 						Pos: startPos,
 					},
 				)
+				return
 			}
+
+			// mapped entitlement fields must be references that are authorized to the same mapped entitlement,
+			// or optional references that are authorized to the same mapped entitlement
+			switch ty := declarationType.(type) {
+			case *ReferenceType:
+				if ty.Authorization.Equal(access) {
+					return
+				}
+			case *OptionalType:
+				switch optionalType := ty.Type.(type) {
+				case *ReferenceType:
+					if optionalType.Authorization.Equal(access) {
+						return
+					}
+				}
+			}
+			checker.report(
+				&InvalidMappedEntitlementMemberError{
+					Pos: startPos,
+				},
+			)
+
 		case EntitlementSetAccess:
 			if containerKind == nil ||
 				(*containerKind != common.CompositeKindResource &&
@@ -1961,6 +1942,30 @@ func (checker *Checker) checkDeclarationAccessModifier(
 						Pos: startPos,
 					},
 				)
+				return
+			}
+
+			// when using entitlement set access, it is not permitted for the value to be declared with a mapped entitlement
+			switch ty := declarationType.(type) {
+			case *ReferenceType:
+				if _, isMap := ty.Authorization.(EntitlementMapAccess); isMap {
+					checker.report(
+						&InvalidMappedEntitlementMemberError{
+							Pos: startPos,
+						},
+					)
+				}
+			case *OptionalType:
+				switch optionalType := ty.Type.(type) {
+				case *ReferenceType:
+					if _, isMap := optionalType.Authorization.(EntitlementMapAccess); isMap {
+						checker.report(
+							&InvalidMappedEntitlementMemberError{
+								Pos: startPos,
+							},
+						)
+					}
+				}
 			}
 		}
 	}
