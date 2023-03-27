@@ -2915,6 +2915,8 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 
 		// result is not authorized
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &Int")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&Int")
 	})
 
 	t.Run("basic with init", func(t *testing.T) {
