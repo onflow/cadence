@@ -3543,10 +3543,12 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		let s = attach A() to S()
 		let yRef = &s as auth(X) &S
 		let fRef = &s as auth(E) &S
+		let bothRef = &s as auth(X, E) &S
 		let a1: auth(Y) &A = yRef[A]!
 		let a2: auth(F) &A = fRef[A]!
 		let a3: auth(X) &A = yRef[A]! // err
 		let a4: auth(E) &A = fRef[A]! // err
+		let a5: auth(Y, F) &A = bothRef[A]!
 		`)
 
 		errs := RequireCheckerErrors(t, err, 2)
