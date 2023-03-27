@@ -158,8 +158,18 @@ var ReferenceTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{
-			Identifier:     "authorized",
-			TypeAnnotation: BoolTypeAnnotation,
+			Identifier: "entitlements",
+			TypeAnnotation: NewTypeAnnotation(
+				&OptionalType{
+					Type: &VariableSizedType{
+						Type: StringType,
+					},
+				},
+			),
+		},
+		{
+			Identifier:     "setKind",
+			TypeAnnotation: StringTypeAnnotation,
 		},
 		{
 			Identifier:     "type",
@@ -228,9 +238,11 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	},
 
 	{
-		Name:      "ReferenceType",
-		Value:     ReferenceTypeFunctionType,
-		DocString: "Creates a run-time type representing a reference type of the given type, with authorization provided by the first argument.",
+		Name:  "ReferenceType",
+		Value: ReferenceTypeFunctionType,
+		DocString: `Creates a run-time type representing a reference type of the given type. The first argument specifies the set of entitlements to which
+		this reference is entitled, with the second specifying whether the set represents a conjunction or a disjunction. Providing a nil or empty array for the
+		first argument will result in an unauthorized reference.`,
 	},
 
 	{
