@@ -118,6 +118,16 @@ func (om *OrderedMap[K, V]) Set(key K, value V) (oldValue V, present bool) {
 	return
 }
 
+// SetAll sets all the values in the input map in the receiver map, overrwriting any previous entries
+func (om *OrderedMap[K, V]) SetAll(other *OrderedMap[K, V]) {
+	if other == nil {
+		return
+	}
+	other.Foreach(func(key K, value V) {
+		om.Set(key, value)
+	})
+}
+
 // Delete removes the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Delete`.
 func (om *OrderedMap[K, V]) Delete(key K) (oldValue V, present bool) {

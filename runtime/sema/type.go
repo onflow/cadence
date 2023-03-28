@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -203,6 +204,12 @@ type MemberResolver struct {
 type NominalType interface {
 	Type
 	MemberMap() *StringMemberOrderedMap
+}
+
+// entitlement supporting types
+type EntitlementSupportingType interface {
+	Type
+	SupportedEntitlements() *EntitlementOrderedSet
 }
 
 // ContainedType is a type which might have a container type
@@ -627,6 +634,13 @@ func (t *OptionalType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 	return &OptionalType{
 		Type: newInnerType,
 	}
+}
+
+func (t *OptionalType) SupportedEntitlements() *EntitlementOrderedSet {
+	if entitlementSupportingType, ok := t.Type.(EntitlementSupportingType); ok {
+		return entitlementSupportingType.SupportedEntitlements()
+	}
+	return orderedmap.New[EntitlementOrderedSet](0)
 }
 
 const optionalTypeMapFunctionDocString = `
@@ -3799,6 +3813,19 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
 }
 
+func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
+	t.Members.Foreach(func(_ string, member *Member) {
+		switch access := member.Access.(type) {
+		case EntitlementMapAccess:
+			set.SetAll(access.Domain().Entitlements)
+		case EntitlementSetAccess:
+			set.SetAll(access.Entitlements)
+		}
+	})
+	return set
+}
+
 func (t *CompositeType) IsResourceType() bool {
 	return t.Kind == common.CompositeKindResource ||
 		// attachments are always the same kind as their base type
@@ -4343,6 +4370,23 @@ func (t *InterfaceType) Equal(other Type) bool {
 
 func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
+}
+
+func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
+	t.Members.Foreach(func(_ string, member *Member) {
+		switch access := member.Access.(type) {
+		case EntitlementMapAccess:
+			access.Domain().Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+				set.Set(entitlement, struct{}{})
+			})
+		case EntitlementSetAccess:
+			access.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+				set.Set(entitlement, struct{}{})
+			})
+		}
+	})
+	return set
 }
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
@@ -6173,6 +6217,18 @@ func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 	return members
 }
 
+func (t *RestrictedType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	// a restricted type supports all the entitlements of its interfaces and its restricted type
+	set = orderedmap.New[EntitlementOrderedSet](t.RestrictionSet().Len())
+	t.RestrictionSet().ForEach(func(it *InterfaceType) {
+		set.SetAll(it.SupportedEntitlements())
+	})
+	if supportingType, ok := t.Type.(EntitlementSupportingType); ok {
+		set.SetAll(supportingType.SupportedEntitlements())
+	}
+	return set
+}
+
 func (*RestrictedType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	// TODO: how do we unify the restriction sets?
 	return false
@@ -6959,4 +7015,12 @@ func (*EntitlementMapType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(
 
 func (t *EntitlementMapType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func SupportedEntitlementsOfType(ty Type) *EntitlementOrderedSet {
+	switch ty := ty.(type) {
+	case EntitlementSupportingType:
+		return ty.SupportedEntitlements()
+	}
+	return orderedmap.New[EntitlementOrderedSet](0)
 }

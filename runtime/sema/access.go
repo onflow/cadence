@@ -236,6 +236,14 @@ func (e EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
 	}
 }
 
+func (e EntitlementMapAccess) Domain() EntitlementSetAccess {
+	var domain map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
+	for _, relation := range e.Type.Relations {
+		domain[relation.Input] = struct{}{}
+	}
+	return NewEntitlementSetAccess(maps.Keys(domain), Disjunction)
+}
+
 func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
 	var codomain map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
 	for _, relation := range e.Type.Relations {
@@ -289,9 +297,7 @@ func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, 
 					Range: astRange,
 				}
 			}
-			entitlementImage.Foreach(func(entitlement *EntitlementType, value struct{}) {
-				output.Set(entitlement, struct{}{})
-			})
+			output.SetAll(entitlementImage)
 		})
 		if err != nil {
 			return nil, err
@@ -335,9 +341,7 @@ func (e EntitlementMapAccess) Preimage(outputs Access, astRange ast.Range) (Acce
 					Range: astRange,
 				}
 			}
-			entitlementPreImage.Foreach(func(entitlement *EntitlementType, value struct{}) {
-				input.Set(entitlement, struct{}{})
-			})
+			input.SetAll(entitlementPreImage)
 		})
 		if err != nil {
 			return nil, err

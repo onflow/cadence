@@ -357,7 +357,8 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 		var resultType Type
 		if returnType.IsResourceType() {
 			resultType = &ReferenceType{
-				Type:          returnType,
+				Type: returnType,
+				// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
 				Authorization: UnauthorizedAccess,
 			}
 		} else {
