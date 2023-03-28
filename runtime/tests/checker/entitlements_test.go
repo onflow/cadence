@@ -3683,7 +3683,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 	})
 }
 
-func TestChecEntitlenedReferenceRestrictions(t *testing.T) {
+func TestCheckEntitlenedReferenceRestrictions(t *testing.T) {
 	t.Parallel()
 
 	t.Run("use of entitlements where not applicable struct", func(t *testing.T) {
@@ -3718,6 +3718,21 @@ func TestChecEntitlenedReferenceRestrictions(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[0])
+	})
+
+	t.Run("use of entitlements where not applicable optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			struct S {
+				access(X) fun foo() {}
+			}
+			fun bar(s: auth(X) &S?) {}
+		`)
+
+		assert.NoError(t, err)
 	})
 
 	t.Run("use of entitlements where not applicable dict", func(t *testing.T) {
@@ -3808,8 +3823,11 @@ func TestChecEntitlenedReferenceRestrictions(t *testing.T) {
 				X -> Z
 				Y -> Z
 			}
+			struct S {
+				access(Z) fun foo() {}
+			}
 			struct interface I {
-				access(M) let x: auth(M) &Int
+				access(M) let x: auth(M) &S
 			}
 			fun bar(s: auth(X, Y, Z) &{I}) {}
 		`)
@@ -3835,8 +3853,11 @@ func TestChecEntitlenedReferenceRestrictions(t *testing.T) {
 				X -> Z
 				Y -> Z
 			}
+			struct S {
+				access(Z) fun foo() {}
+			}
 			struct interface I {
-				access(M) let x: auth(M) &Int
+				access(M) let x: auth(M) &S
 				access(E) fun foo()
 			}
 			fun bar(s: auth(X | Y | Z | E | F) &{I}) {}
@@ -3992,14 +4013,19 @@ func TestCheckAttachmentEntitlementConditions(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		entitlement X
+		entitlement Y
 		resource R {
 			view access(X) fun foo(): Bool {
+				return true
+			}
+			view access(X, Y) fun bar(): Bool {
 				return true
 			}
 		}
 		fun bar(r: @R): @R {
 			post {
 				result.foo(): ""
+				result.bar(): ""
 			}
 			return <-r
 		}
