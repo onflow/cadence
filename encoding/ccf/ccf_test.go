@@ -11574,6 +11574,27 @@ func TestDecodeInvalidData(t *testing.T) {
 				0xf6,
 			},
 		},
+		{
+			name: "extraneous data",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(0), true]), 0
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Bool type ID (0)
+				0x00,
+				// true
+				0xf5,
+				// extraneous data
+				0x00,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
