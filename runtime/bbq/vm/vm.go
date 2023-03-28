@@ -361,6 +361,17 @@ func opDestroy(vm *VM) {
 	value.Destroy(vm.config)
 }
 
+func opPath(vm *VM) {
+	callframe := vm.callFrame
+	domain := common.PathDomain(callframe.getByte())
+	identifier := callframe.getString()
+	value := PathValue{
+		Domain:     domain,
+		Identifier: identifier,
+	}
+	vm.push(value)
+}
+
 func (vm *VM) run() {
 	for {
 
@@ -420,6 +431,8 @@ func (vm *VM) run() {
 			opTransfer(vm)
 		case opcode.Destroy:
 			opDestroy(vm)
+		case opcode.Path:
+			opPath(vm)
 		default:
 			panic(errors.NewUnreachableError())
 		}
@@ -442,7 +455,7 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 		value = StringValue{Str: constant.Data}
 	default:
 		// TODO:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("unsupported constant kind '%s'", constant.Kind.String()))
 	}
 
 	ctx.Constants[index] = value

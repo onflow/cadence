@@ -88,6 +88,18 @@ func (c *Compiler) findGlobal(name string) *global {
 		return global
 	}
 
+	// If failed to find, then try with type-qualified name.
+	// This is because contract functions/type-constructors can be accessed without the contract name.
+	// e.g: SomeContract.Foo() == Foo(), within `SomeContract`.
+	if !c.compositeTypeStack.isEmpty() {
+		enclosingContract := c.compositeTypeStack.bottom()
+		typeQualifiedName := commons.TypeQualifiedName(enclosingContract.Identifier, name)
+		global, ok = c.globals[typeQualifiedName]
+		if ok {
+			return global
+		}
+	}
+
 	importedGlobal, ok := c.indexedImportedGlobals[name]
 	if !ok {
 		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", name))
@@ -225,6 +237,12 @@ func (c *Compiler) Compile() *bbq.Program {
 		c.compileDeclaration(declaration)
 	}
 
+	if c.Program.SoleContractInterfaceDeclaration() != nil {
+		return &bbq.Program{
+			Contract: c.exportContract(),
+		}
+	}
+
 	// Reserve globals for functions/types before visiting their implementations.
 	c.reserveGlobalVars(
 		"",
@@ -351,16 +369,30 @@ func (c *Compiler) exportFunctions() []*bbq.Function {
 }
 
 func (c *Compiler) exportContract() *bbq.Contract {
+	var location common.Location
+	var name string
+
 	contractDecl := c.Program.SoleContractDeclaration()
-	if contractDecl == nil {
-		return nil
+	if contractDecl != nil {
+		contractType := c.Elaboration.CompositeDeclarationTypes[contractDecl]
+		location = contractType.Location
+		name = contractType.Identifier
+	} else {
+		interfaceDecl := c.Program.SoleContractInterfaceDeclaration()
+		if interfaceDecl == nil {
+			return nil
+		}
+
+		interfaceType := c.Elaboration.InterfaceDeclarationTypes[interfaceDecl]
+		location = interfaceType.Location
+		name = interfaceType.Identifier
 	}
 
-	contractType := c.Elaboration.CompositeDeclarationTypes[contractDecl]
-	addressLocation := contractType.Location.(common.AddressLocation)
+	addressLocation := location.(common.AddressLocation)
 	return &bbq.Contract{
-		Name:    contractType.Identifier,
-		Address: addressLocation.Address[:],
+		Name:        name,
+		Address:     addressLocation.Address[:],
+		IsInterface: contractDecl == nil,
 	}
 }
 
@@ -377,6 +409,10 @@ func (c *Compiler) compileBlock(block *ast.Block) {
 
 func (c *Compiler) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
 	// TODO: pre and post conditions, incl. interfaces
+	if functionBlock == nil {
+		return
+	}
+
 	c.compileBlock(functionBlock.Block)
 }
 
@@ -576,6 +612,12 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 
 	switch invokedExpr := expression.InvokedExpression.(type) {
 	case *ast.IdentifierExpression:
+		typ := c.Elaboration.IdentifierInInvocationTypes[invokedExpr]
+		invocationType := typ.(*sema.FunctionType)
+		if invocationType.IsConstructor {
+
+		}
+
 		// Load arguments
 		c.loadArguments(expression)
 		// Load function value
@@ -679,9 +721,17 @@ func (c *Compiler) VisitStringExpression(expression *ast.StringExpression) (_ st
 	return
 }
 
-func (c *Compiler) VisitCastingExpression(_ *ast.CastingExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitCastingExpression(expression *ast.CastingExpression) (_ struct{}) {
+	c.compileExpression(expression.Expression)
+
+	targetType := c.Elaboration.CastingTargetTypes[expression]
+	index := c.getOrAddType(targetType)
+	first, second := encodeUint16(index)
+
+	castType := commons.CastTypeFrom(expression.Operation)
+
+	c.emit(opcode.Cast, first, second, byte(castType))
+	return
 }
 
 func (c *Compiler) VisitCreateExpression(expression *ast.CreateExpression) (_ struct{}) {
@@ -705,9 +755,25 @@ func (c *Compiler) VisitForceExpression(_ *ast.ForceExpression) (_ struct{}) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitPathExpression(_ *ast.PathExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitPathExpression(expression *ast.PathExpression) (_ struct{}) {
+	identifier := expression.Identifier.Identifier
+
+	byteSize := 1 + // one byte for path domain
+		2 + // 2 bytes for identifier size
+		len(identifier) // identifier
+
+	args := make([]byte, 0, byteSize)
+
+	domainByte := byte(common.PathDomainFromIdentifier(expression.Domain.Identifier))
+	args = append(args, domainByte)
+
+	identifierSizeFirst, identifierSizeSecond := encodeUint16(uint16(len(identifier)))
+	args = append(args, identifierSizeFirst, identifierSizeSecond)
+	args = append(args, identifier...)
+
+	c.emit(opcode.Path, args...)
+
+	return
 }
 
 func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) (_ struct{}) {
@@ -715,6 +781,8 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 	switch kind {
 	case common.DeclarationKindInitializer:
 		c.compileInitializer(declaration)
+	case common.DeclarationKindDestructor:
+		// TODO:
 	default:
 		// TODO: support other special functions
 		panic(errors.NewUnreachableError())
@@ -933,6 +1001,12 @@ func (c *Compiler) patchLoop(l *loop) {
 }
 
 func (c *Compiler) emitCheckType(targetType sema.Type) {
+	index := c.getOrAddType(targetType)
+	first, second := encodeUint16(index)
+	c.emit(opcode.Transfer, first, second)
+}
+
+func (c *Compiler) getOrAddType(targetType sema.Type) uint16 {
 	// Optimization: Re-use types in the pool.
 	index, ok := c.typesInPool[targetType]
 	if !ok {
@@ -944,9 +1018,7 @@ func (c *Compiler) emitCheckType(targetType sema.Type) {
 		index = c.addType(bytes)
 		c.typesInPool[targetType] = index
 	}
-
-	first, second := encodeUint16(index)
-	c.emit(opcode.Transfer, first, second)
+	return index
 }
 
 func (c *Compiler) addType(data []byte) uint16 {

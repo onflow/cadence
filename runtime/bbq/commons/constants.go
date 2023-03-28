@@ -18,7 +18,33 @@
 
 package commons
 
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
+)
+
 const (
 	InitFunctionName = "init"
 	LogFunctionName  = "log"
 )
+
+type CastType byte
+
+const (
+	SimpleCast CastType = iota
+	FailableCast
+	ForceCast
+)
+
+func CastTypeFrom(operation ast.Operation) CastType {
+	switch operation {
+	case ast.OperationCast:
+		return SimpleCast
+	case ast.OperationFailableCast:
+		return FailableCast
+	case ast.OperationForceCast:
+		return ForceCast
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}

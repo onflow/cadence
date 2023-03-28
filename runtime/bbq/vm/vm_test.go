@@ -801,6 +801,175 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, StringValue{Str: []byte("Hello from Foo!")}, result)
 	})
+
+	t.Run("contract interface", func(t *testing.T) {
+
+		// Initialize Foo
+
+		fooLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			"Foo",
+		)
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+            contract interface Foo {
+                fun withdraw(_ amount: Int): String {
+                    pre {
+                        amount < 100: "Withdraw limit exceeds"
+                    }
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: fooLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		fooCompiler := compiler.NewCompiler(fooChecker.Program, fooChecker.Elaboration)
+		fooProgram := fooCompiler.Compile()
+
+		//vm := NewVM(fooProgram, nil)
+		//fooContractValue, err := vm.InitializeContract()
+		//require.NoError(t, err)
+
+		// Initialize Bar
+
+		barLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			"Bar",
+		)
+
+		barChecker, err := ParseAndCheckWithOptions(t, `
+            import Foo from 0x01
+
+            contract Bar: Foo {
+                init() {}
+                fun withdraw(_ amount: Int): String {
+                    return "Successfully withdrew"
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: barLocation,
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, fooLocation, location)
+						return sema.ElaborationImport{
+							Elaboration: fooChecker.Elaboration,
+						}, nil
+					},
+					LocationHandler: singleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		barCompiler := compiler.NewCompiler(barChecker.Program, barChecker.Elaboration)
+		barCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program {
+			require.Equal(t, fooLocation, location)
+			return fooProgram
+		}
+
+		barProgram := barCompiler.Compile()
+
+		vmConfig := &Config{
+			ImportHandler: func(location common.Location) *bbq.Program {
+				require.Equal(t, fooLocation, location)
+				return fooProgram
+			},
+			//ContractValueHandler: func(_ *Config, location common.Location) *CompositeValue {
+			//	require.Equal(t, fooLocation, location)
+			//	return fooContractValue
+			//},
+		}
+
+		vm := NewVM(barProgram, vmConfig)
+		barContractValue, err := vm.InitializeContract()
+		require.NoError(t, err)
+
+		// Compile and run main program
+
+		checker, err := ParseAndCheckWithOptions(t, `
+            import Bar from 0x02
+
+            fun test(): String {
+                return Bar.withdraw(150)
+            }`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, location)
+						addressLocation := location.(common.AddressLocation)
+						var elaboration *sema.Elaboration
+						switch addressLocation.Address {
+						case fooLocation.Address:
+							elaboration = fooChecker.Elaboration
+						case barLocation.Address:
+							elaboration = barChecker.Elaboration
+						default:
+							assert.FailNow(t, "invalid location")
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: singleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
+		}
+
+		program := comp.Compile()
+
+		vmConfig = &Config{
+			ImportHandler: func(location common.Location) *bbq.Program {
+				switch location {
+				case fooLocation:
+					return fooProgram
+				case barLocation:
+					return barProgram
+				default:
+					assert.FailNow(t, "invalid location")
+					return nil
+				}
+			},
+			ContractValueHandler: func(_ *Config, location common.Location) *CompositeValue {
+				switch location {
+				//case fooLocation:
+				//	return fooContractValue
+				case barLocation:
+					return barContractValue
+				default:
+					assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+					return nil
+				}
+			},
+		}
+
+		vm = NewVM(program, vmConfig)
+
+		result, err := vm.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, StringValue{Str: []byte("Successfully withdrew")}, result)
+	})
 }
 
 func BenchmarkContractImport(b *testing.B) {

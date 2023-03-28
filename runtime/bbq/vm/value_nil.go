@@ -16,32 +16,32 @@
  * limitations under the License.
  */
 
-package compiler
+package vm
 
-type Stack[T any] struct {
-	elements []T
+import (
+	"github.com/onflow/atree"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/format"
+	"github.com/onflow/cadence/runtime/interpreter"
+)
+
+type NilValue struct{}
+
+var _ Value = NilValue{}
+
+func (NilValue) isValue() {}
+
+func (NilValue) StaticType(common.MemoryGauge) StaticType {
+	return interpreter.NewOptionalStaticType(
+		nil,
+		interpreter.PrimitiveStaticTypeNever,
+	)
 }
 
-func (s *Stack[T]) push(typ T) {
-	s.elements = append(s.elements, typ)
+func (v NilValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+	return v
 }
 
-func (s *Stack[T]) pop() T {
-	lastIndex := len(s.elements) - 1
-	top := s.elements[lastIndex]
-	s.elements = s.elements[:lastIndex]
-	return top
-}
-
-func (s *Stack[T]) top() T {
-	lastIndex := len(s.elements) - 1
-	return s.elements[lastIndex]
-}
-
-func (s *Stack[T]) bottom() T {
-	return s.elements[0]
-}
-
-func (s *Stack[T]) isEmpty() bool {
-	return len(s.elements) == 0
+func (v NilValue) String() string {
+	return format.Nil
 }

@@ -37,6 +37,12 @@ func (f *callFrame) getUint16() uint16 {
 	return uint16(first)<<8 | uint16(last)
 }
 
+func (f *callFrame) getByte() byte {
+	byt := f.function.Code[f.ip]
+	f.ip++
+	return byt
+}
+
 func (f *callFrame) getString() string {
 	strLen := f.getUint16()
 	str := string(f.function.Code[f.ip : f.ip+strLen])

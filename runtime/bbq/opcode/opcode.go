@@ -54,10 +54,12 @@ const (
 	SetField
 
 	Invoke
-
-	New
 	Destroy
 	Transfer
+	Cast
+
+	New
+	Path
 
 	Drop
 	Dup

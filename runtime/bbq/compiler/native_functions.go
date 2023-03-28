@@ -29,6 +29,7 @@ var nativeFunctions []*global
 
 var builtinTypes = []sema.Type{
 	sema.StringType,
+	sema.AuthAccountType,
 }
 
 // TODO: Maybe
