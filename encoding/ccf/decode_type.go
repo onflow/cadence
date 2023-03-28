@@ -19,6 +19,7 @@
 package ccf
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/onflow/cadence"
@@ -274,6 +275,9 @@ func (d *Decoder) decodeOptionalType(
 	if err != nil {
 		return nil, err
 	}
+	if elementType == nil {
+		return nil, errors.New("unexpected nil type as optional inner type")
+	}
 	return cadence.NewMeteredOptionalType(d.gauge, elementType), nil
 }
 
@@ -298,6 +302,9 @@ func (d *Decoder) decodeVarSizedArrayType(
 	elementType, err := decodeTypeFn(types)
 	if err != nil {
 		return nil, err
+	}
+	if elementType == nil {
+		return nil, errors.New("unexpected nil type as variable sized array element type")
 	}
 	return cadence.NewMeteredVariableSizedArrayType(d.gauge, elementType), nil
 }
@@ -343,6 +350,10 @@ func (d *Decoder) decodeConstantSizedArrayType(
 		return nil, err
 	}
 
+	if elementType == nil {
+		return nil, errors.New("unexpected nil type as constant sized array element type")
+	}
+
 	return cadence.NewMeteredConstantSizedArrayType(d.gauge, uint(size), elementType), nil
 }
 
@@ -381,10 +392,18 @@ func (d *Decoder) decodeDictType(
 		return nil, err
 	}
 
+	if keyType == nil {
+		return nil, errors.New("unexpected nil type as dictionary key type")
+	}
+
 	// element 1: element type (inline-type or type-value)
 	elementType, err := decodeTypeFn(types)
 	if err != nil {
 		return nil, err
+	}
+
+	if elementType == nil {
+		return nil, errors.New("unexpected nil type as dictionary element type")
 	}
 
 	return cadence.NewMeteredDictionaryType(d.gauge, keyType, elementType), nil
@@ -425,6 +444,10 @@ func (d *Decoder) decodeCapabilityType(
 	borrowType, err := decodeTypeFn(types)
 	if err != nil {
 		return nil, err
+	}
+
+	if borrowType == nil {
+		return nil, errors.New("unexpected nil type as capability borrow type")
 	}
 
 	return cadence.NewMeteredCapabilityType(d.gauge, borrowType), nil
@@ -471,6 +494,10 @@ func (d *Decoder) decodeReferenceType(
 		return nil, err
 	}
 
+	if elementType == nil {
+		return nil, errors.New("unexpected nil type as reference type")
+	}
+
 	return cadence.NewMeteredReferenceType(d.gauge, authorized, elementType), nil
 }
 
@@ -509,6 +536,10 @@ func (d *Decoder) decodeRestrictedType(
 		return nil, err
 	}
 
+	if typ == nil {
+		return nil, errors.New("unexpected nil type as restricted type")
+	}
+
 	// element 1: restrictions
 	restrictionCount, err := d.dec.DecodeArrayHead()
 	if err != nil {
@@ -524,6 +555,10 @@ func (d *Decoder) decodeRestrictedType(
 		restrictedType, err := decodeTypeFn(types)
 		if err != nil {
 			return nil, err
+		}
+
+		if restrictedType == nil {
+			return nil, errors.New("unexpected nil type as restriction type")
 		}
 
 		restrictedTypeID := restrictedType.ID()

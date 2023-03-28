@@ -244,6 +244,9 @@ func (d *Decoder) decodeTypeAndValue(types cadenceTypeByCCFTypeID) (cadence.Valu
 //	/ fix64-value
 //	/ ufix64-value
 func (d *Decoder) decodeValue(t cadence.Type, types cadenceTypeByCCFTypeID) (cadence.Value, error) {
+	if t == nil {
+		return nil, fmt.Errorf("unexpected nil type")
+	}
 
 	// "Deterministic CCF Encoding Requirements" in CCF specs:
 	//
@@ -1412,6 +1415,9 @@ func (d *Decoder) decodeEnumTypeValue(visited cadenceTypeByCCFTypeID) (cadence.T
 		typ cadence.Type,
 		inits [][]cadence.Parameter,
 	) (cadence.Type, error) {
+		if typ == nil {
+			return nil, fmt.Errorf("encoded enum-type-value has nil type")
+		}
 		return cadence.NewMeteredEnumType(
 			d.gauge,
 			location,
@@ -1552,6 +1558,11 @@ func (d *Decoder) decodeCompositeTypeValue(
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if compositeType == nil {
+		// Sanity check that compositeType isn't nil.
+		return nil, errors.New("unexpected nil composite type value")
 	}
 
 	// "Deterministic CCF Encoding Requirements" in CCF specs:
@@ -1710,6 +1721,10 @@ func (d *Decoder) decodeParameterTypeValues(visited cadenceTypeByCCFTypeID) ([]c
 		return nil, err
 	}
 
+	if count == 0 {
+		return []cadence.Parameter{}, nil
+	}
+
 	parameterTypes := make([]cadence.Parameter, count)
 	parameterLabels := make(map[string]struct{}, count)
 	parameterIdentifiers := make(map[string]struct{}, count)
@@ -1792,6 +1807,10 @@ func (d *Decoder) decodeParameterTypeValue(visited cadenceTypeByCCFTypeID) (cade
 		return cadence.Parameter{}, err
 	}
 
+	if t == nil {
+		return cadence.Parameter{}, errors.New("unexpected nil parameter type")
+	}
+
 	// Unmetered because decodeParamTypeValue is metered in decodeParamTypeValues and called nowhere else
 	// Type is metered.
 	return cadence.NewParameter(label, identifier, t), nil
@@ -1828,6 +1847,10 @@ func (d *Decoder) decodeFunctionTypeValue(visited cadenceTypeByCCFTypeID) (caden
 	returnType, err := d._decodeTypeValue(visited)
 	if err != nil {
 		return nil, err
+	}
+
+	if returnType == nil {
+		return nil, errors.New("unexpected nil function return type")
 	}
 
 	return cadence.NewMeteredFunctionType(

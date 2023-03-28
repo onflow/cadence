@@ -10886,3 +10886,701 @@ func testEventEquality(t *testing.T, event1 cadence.Event, event2 cadence.Event)
 		require.True(t, foundField)
 	}
 }
+
+func TestDecodeTruncatedData(t *testing.T) {
+	data, err := ccf.Encode(createFlowTokenTokensWithdrawnEvent())
+	require.NoError(t, err)
+
+	_, err = ccf.Decode(nil, data)
+	require.NoError(t, err)
+
+	for i := len(data) - 1; i >= 0; i-- {
+		decodedVal, err := ccf.Decode(nil, data[:i])
+		require.Nil(t, decodedVal)
+		require.Error(t, err)
+	}
+}
+
+func TestDecodeInvalidData(t *testing.T) {
+	type testCase struct {
+		name string
+		data []byte
+	}
+
+	testCases := []testCase{
+		{
+			name: "nil",
+			data: nil,
+		},
+		{
+			name: "empty",
+			data: []byte{},
+		},
+		{
+			name: "malformed CBOR data for potential OOM",
+			data: []byte{0x9b, 0x00, 0x00, 0x42, 0xfa, 0x42, 0xfa, 0x42, 0xfa, 0x42},
+		},
+		{
+			name: "mismatched type and value",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(1), true])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// String type ID (1)
+				0x01,
+				// true
+				0xf5,
+			},
+		},
+		{
+			name: "not found type defintion",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([136(h''), [1]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagTypeRef,
+				// bytes, 0 bytes follow
+				0x40,
+				// array, 1 items follow
+				0x81,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+			},
+		},
+		{
+			name: "nil type",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([null, true])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// true
+				0xf5,
+			},
+		},
+		{
+			name: "nil type definitions",
+			data: []byte{
+				// language=edn, format=ccf
+				// 129(null, [137(0), true])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeDefAndValue,
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Bool type ID (0)
+				0x00,
+				// true
+				0xf5,
+			},
+		},
+		{
+			name: "nil type definition",
+			data: []byte{
+				// language=edn, format=ccf
+				// 129([null], [137(0), true])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeDefAndValue,
+				// array, 2 items follow
+				0x82,
+				// array, 1 items follow
+				0x81,
+				// nil
+				0xf6,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Bool type ID (0)
+				0x00,
+				// true
+				0xf5,
+			},
+		},
+		{
+			name: "nil optional inner type",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([138(null), null])
+				//
+				// language=cbor, format=ccf, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagOptionalType,
+				// nil
+				0xf6,
+				// nil
+				0xf6,
+			},
+		},
+		{
+			name: "nil element type in constant sized array",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([140[1, null], [1]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// type constant-sized [1]nil
+				// tag
+				0xd8, ccf.CBORTagConstsizedArrayType,
+				// array, 2 items follow
+				0x82,
+				// number of elements
+				0x01,
+				// nil
+				0xf6,
+				// array data without inlined type definition
+				// array, 1 items follow
+				0x81,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+			},
+		},
+		{
+			name: "nil element type in variable sized array",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([139(null), [1]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// type []nil
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayType,
+				// null
+				0xf6,
+				// array data without inlined type definition
+				// array, 1 items follow
+				0x81,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+			},
+		},
+		{
+			name: "nil key type in dictionary type",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([141([nil, 137(4)]), ["a", 1]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// type (map[nil]int)
+				// tag
+				0xd8, ccf.CBORTagDictType,
+				// array, 2 items follow
+				0x82,
+				// null
+				0xf6,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// array data without inlined type definition
+				// array, 2 items follow
+				0x82,
+				// string, 1 bytes follow
+				0x61,
+				// a
+				0x61,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+			},
+		},
+		{
+			name: "nil element type in dictionary type",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([141([137(1), nil]), ["a", 1]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// type (map[int]nil)
+				// tag
+				0xd8, ccf.CBORTagDictType,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// String type ID (1)
+				0x01,
+				// null
+				0xf6,
+				// array data without inlined type definition
+				// array, 2 items follow
+				0x82,
+				// string, 1 bytes follow
+				0x61,
+				// a
+				0x61,
+				// tag (big num)
+				0xc2,
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+			},
+		},
+		{
+			name: "nil composite field type",
+			data: []byte{
+				// language=edn, format=ccf
+				// 129([[160([h'', "S.test.FooStruct", [["a", nil], ["b", 137(1)]]])], [136(h''), [1, "foo"]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeDefAndValue,
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 1 items follow
+				0x81,
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.FooStruct"
+				// 2 fields: [["a", nil], ["b", type(string)]]
+				// tag
+				0xd8, ccf.CBORTagStructType,
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 16 bytes follow
+				0x70,
+				// S.test.FooStruct
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+				// fields
+				// array, 2 items follow
+				0x82,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// a
+				0x61,
+				// null
+				0xf6,
+				// field 1
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// b
+				0x62,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// String type ID (1)
+				0x01,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagTypeRef,
+				// bytes, 0 bytes follow
+				0x40,
+				// array, 2 items follow
+				0x82,
+				// tag (big number)
+				0xc2,
+				// bytes, 1 byte follow
+				0x41,
+				// 1
+				0x01,
+				// String, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+			},
+		},
+		{
+			name: "nil inner type in optional type value",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(41), 186(null)])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagOptionalTypeValue,
+				// null
+				0xf6,
+			},
+		},
+		{
+			name: "nil element type in constant sized array type value",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(41), 188([3, null])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagConstsizedArrayTypeValue,
+				// array, 2 elements follow
+				0x82,
+				// 3
+				0x03,
+				// null
+				0xf6,
+			},
+		},
+		{
+			name: "nil element type in variable sized array type value",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(41), 187(null)])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayTypeValue,
+				// null
+				0xf6,
+			},
+		},
+		{
+			name: "nil key type in dictionary type value",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(41), 189([null, 185(1)])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagDictTypeValue,
+				// array, 2 elements follow
+				0x82,
+				// null
+				0xf6,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// String type (1)
+				0x01,
+			},
+		},
+		{
+			name: "nil element type in dictionary type value",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(41), 189([185(4), null])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagDictTypeValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type (4)
+				0x04,
+				// null
+				0xf6,
+			},
+		},
+		{
+			name: "nil field type in struct type value",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(41), 208([h'', "S.test.S", null, [["foo", null]], [[["foo", "bar", 185(4)]], [["qux", "baz", 185(1)]]]])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagStructTypeValue,
+				// array, 5 elements follow
+				0x85,
+				// bytes, 0 bytes follow
+				0x40,
+				// string, 8 bytes follow
+				0x68,
+				// S.test.So
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53,
+				// type (nil for struct)
+				0xf6,
+				// fields
+				// array, 1 element follows
+				0x81,
+				// array, 2 elements follow
+				0x82,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+				// null
+				0xf6,
+				// initializers
+				// array, 2 elements follow
+				0x82,
+				// array, 1 element follows
+				0x81,
+				// array, 3 elements follow
+				0x83,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+				// string, 3 bytes follow
+				0x63,
+				// bar
+				0x62, 0x61, 0x72,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type (4)
+				0x04,
+				// array, 1 element follows
+				0x81,
+				// array, 3 elements follow
+				0x83,
+				// string, 3 bytes follow
+				0x63,
+				// qux
+				0x71, 0x75, 0x78,
+				// string, 3 bytes follow
+				0x63,
+				// bax
+				0x62, 0x61, 0x7a,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// String type (1)
+				0x01,
+			},
+		},
+		{
+			name: "nil initializer type in struct type value",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(41), 208([h'', "S.test.S", null, [["foo", 185(4)]], [[["foo", "bar", null]], [["qux", "baz", 185(1)]]]])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagStructTypeValue,
+				// array, 5 elements follow
+				0x85,
+				// bytes, 0 bytes follow
+				0x40,
+				// string, 8 bytes follow
+				0x68,
+				// S.test.So
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53,
+				// type (nil for struct)
+				0xf6,
+				// fields
+				// array, 1 element follows
+				0x81,
+				// array, 2 elements follow
+				0x82,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type (4)
+				0x04,
+				// initializers
+				// array, 2 elements follow
+				0x82,
+				// array, 1 element follows
+				0x81,
+				// array, 3 elements follow
+				0x83,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+				// string, 3 bytes follow
+				0x63,
+				// bar
+				0x62, 0x61, 0x72,
+				// null
+				0xf6,
+				// array, 1 element follows
+				0x81,
+				// array, 3 elements follow
+				0x83,
+				// string, 3 bytes follow
+				0x63,
+				// qux
+				0x71, 0x75, 0x78,
+				// string, 3 bytes follow
+				0x63,
+				// bax
+				0x62, 0x61, 0x7a,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// String type (1)
+				0x01,
+			},
+		},
+		{
+			name: "null restriction in restricted type value",
+			// Data is generated by fuzzer.
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(41), 191([208([h'', "S.\ufffd0000000.000000", null, [], []]), [null]])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagRestrictedTypeValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagStructTypeValue,
+				// array, 5 items follow
+				0x85,
+				// ccf type ID
+				// bytes, 0 byte follows
+				0x40,
+				// cadence type ID
+				// text, 19 bytes follow
+				0x73,
+				// "S.�0000000.000000"
+				0x53, 0x2e, 0xef, 0xbf, 0xbd, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x2e, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+				// type
+				// nil
+				0xf6,
+				// fields
+				// array, 0 item follows
+				0x80,
+				// initializers
+				// array, 0 item follows
+				0x80,
+				// restrictions
+				// array, 1 item follows
+				0x81,
+				// nil
+				0xf6,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			decodedVal, err := ccf.Decode(nil, tc.data)
+			require.Nil(t, decodedVal)
+			require.Error(t, err)
+		})
+	}
+}

@@ -425,6 +425,10 @@ func (d *Decoder) decodeCompositeField(types cadenceTypeByCCFTypeID, decodeTypeF
 		return cadence.Field{}, err
 	}
 
+	if fieldType == nil {
+		return cadence.Field{}, errors.New("unexpected nil type as composite field type")
+	}
+
 	// Unmetered because decodeCompositeField is metered in decodeCompositeFields and called nowhere else
 	// fieldType is still metered.
 	return cadence.NewField(fieldName, fieldType), nil
