@@ -10940,7 +10940,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
-			name: "not found type defintion",
+			name: "not found type definition",
 			data: []byte{
 				// language=edn, format=ccf
 				// 130([136(h''), [1]])
