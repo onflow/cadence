@@ -190,8 +190,12 @@ func (t bytewiseCadenceTypeSorter) Swap(i, j int) {
 }
 
 func (t bytewiseCadenceTypeSorter) Less(i, j int) bool {
+	i = t.indexes[i]
+	j = t.indexes[j]
+
 	iID := t.types[i].ID()
 	jID := t.types[j].ID()
+
 	if len(iID) != len(jID) {
 		return len(iID) < len(jID)
 	}

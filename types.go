@@ -2318,6 +2318,11 @@ func TypeWithCachedTypeID(t Type) Type {
 				TypeWithCachedTypeID(p.Type)
 			}
 		}
+
+	case *RestrictedType:
+		for _, restriction := range t.Restrictions {
+			TypeWithCachedTypeID(restriction)
+		}
 	}
 
 	return t
