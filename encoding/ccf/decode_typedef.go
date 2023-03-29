@@ -40,7 +40,7 @@ import (
 //	  / resource-interface-type
 //	  / contract-interface-type
 //	  )]
-func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
+func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 	// Decode number of type definitions.
 	count, err := d.dec.DecodeArrayHead()
 	if err != nil {
@@ -51,7 +51,7 @@ func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
 		return nil, errors.New("found 0 type definition in composite-typedef (expected at least 1 type definition)")
 	}
 
-	types := make(map[ccfTypeID]cadence.Type, count)
+	types := newCadenceTypeByCCFTypeID()
 
 	// NOTE: composite fields are not decoded while composite types are decoded
 	// because field type might reference composite type that hasn't decoded yet.
@@ -106,9 +106,9 @@ func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
 
 	// Decode fields after all high-level type definitions are resolved.
 	for id, raw := range rawFields { //nolint:maprange
-		typ, ok := types[id]
-		if !ok {
-			return nil, fmt.Errorf("composite fields' CCF type ID %d not found in composite-typedef", id)
+		typ, err := types.typ(id)
+		if err != nil {
+			return nil, err
 		}
 
 		dec := NewDecoder(d.gauge, raw)
@@ -171,7 +171,7 @@ func (d *Decoder) decodeTypeDefs() (cadenceTypeByCCFTypeID, error) {
 //	; cbor-tag-contract-interface-type
 //	#6.178(interface-type)
 func (d *Decoder) decodeTypeDef(
-	types cadenceTypeByCCFTypeID,
+	types *cadenceTypeByCCFTypeID,
 	rawFields map[ccfTypeID][]byte,
 ) (
 	ccfTypeID,
@@ -303,7 +303,7 @@ func (d *Decoder) decodeTypeDef(
 //
 // ]
 func (d *Decoder) decodeCompositeType(
-	types cadenceTypeByCCFTypeID,
+	types *cadenceTypeByCCFTypeID,
 	rawFields map[ccfTypeID][]byte,
 	constructor func(common.Location, string) cadence.Type,
 ) (ccfTypeID, cadenceTypeID, error) {
@@ -323,7 +323,7 @@ func (d *Decoder) decodeCompositeType(
 	// "Valid CCF Encoding Requirements" in CCF specs:
 	//
 	//   "composite-type.id MUST be unique in ccf-typedef-message or ccf-typedef-and-value-message."
-	if _, ok := types[ccfID]; ok {
+	if types.has(ccfID) {
 		return ccfTypeID(0), cadenceTypeID(""), fmt.Errorf("found duplicate CCF type ID %d in composite-type", ccfID)
 	}
 
@@ -339,7 +339,7 @@ func (d *Decoder) decodeCompositeType(
 		return ccfTypeID(0), cadenceTypeID(""), err
 	}
 
-	types[ccfID] = constructor(location, identifier)
+	_ = types.add(ccfID, constructor(location, identifier))
 	rawFields[ccfID] = rawField
 	return ccfID, cadenceID, nil
 }
@@ -353,7 +353,7 @@ func (d *Decoder) decodeCompositeType(
 //	        field-type: inline-type
 //	    ]
 //	]
-func (d *Decoder) decodeCompositeFields(types cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) ([]cadence.Field, error) {
+func (d *Decoder) decodeCompositeFields(types *cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) ([]cadence.Field, error) {
 	// Decode number of fields.
 	fieldCount, err := d.dec.DecodeArrayHead()
 	if err != nil {
@@ -406,7 +406,7 @@ func (d *Decoder) decodeCompositeFields(types cadenceTypeByCCFTypeID, decodeType
 //	    field-name: tstr,
 //	    field-type: inline-type
 //	]
-func (d *Decoder) decodeCompositeField(types cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) (cadence.Field, error) {
+func (d *Decoder) decodeCompositeField(types *cadenceTypeByCCFTypeID, decodeTypeFn decodeTypeFn) (cadence.Field, error) {
 	// Decode array head of length 2
 	err := decodeCBORArrayWithKnownSize(d.dec, 2)
 	if err != nil {
@@ -443,7 +443,7 @@ func (d *Decoder) decodeCompositeField(types cadenceTypeByCCFTypeID, decodeTypeF
 //
 // ]
 func (d *Decoder) decodeInterfaceType(
-	types cadenceTypeByCCFTypeID,
+	types *cadenceTypeByCCFTypeID,
 	constructor func(common.Location, string) cadence.Type,
 ) (ccfTypeID, cadenceTypeID, error) {
 
@@ -462,7 +462,7 @@ func (d *Decoder) decodeInterfaceType(
 	// "Valid CCF Encoding Requirements" in CCF specs:
 	//
 	//   "composite-type.id MUST be unique in ccf-typedef-message or ccf-typedef-and-value-message."
-	if _, ok := types[ccfID]; ok {
+	if types.has(ccfID) {
 		return ccfTypeID(0), cadenceTypeID(""), fmt.Errorf("found duplicate CCF type ID %d in interface-type", ccfID)
 	}
 
@@ -472,6 +472,6 @@ func (d *Decoder) decodeInterfaceType(
 		return ccfTypeID(0), cadenceTypeID(""), err
 	}
 
-	types[ccfID] = constructor(location, identifier)
+	_ = types.add(ccfID, constructor(location, identifier))
 	return ccfID, cadenceID, nil
 }

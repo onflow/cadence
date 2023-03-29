@@ -57,21 +57,47 @@ func (types ccfTypeIDByCadenceType) id(t cadence.Type) (ccfTypeID, error) {
 	return id, nil
 }
 
-type cadenceTypeByCCFTypeID map[ccfTypeID]cadence.Type
+type cadenceTypeByCCFTypeID struct {
+	types           map[ccfTypeID]cadence.Type
+	referencedTypes map[ccfTypeID]struct{}
+}
 
-func (ids cadenceTypeByCCFTypeID) add(id ccfTypeID, typ cadence.Type) bool {
-	_, ok := ids[id]
-	if ok {
+func newCadenceTypeByCCFTypeID() *cadenceTypeByCCFTypeID {
+	return &cadenceTypeByCCFTypeID{
+		types:           make(map[ccfTypeID]cadence.Type),
+		referencedTypes: make(map[ccfTypeID]struct{}),
+	}
+}
+
+func (ids *cadenceTypeByCCFTypeID) add(id ccfTypeID, typ cadence.Type) bool {
+	if ids.has(id) {
 		return false
 	}
-	ids[id] = typ
+	ids.types[id] = typ
 	return true
 }
 
-func (ids cadenceTypeByCCFTypeID) typ(id ccfTypeID) (cadence.Type, error) {
-	t, ok := ids[id]
+func (ids *cadenceTypeByCCFTypeID) reference(id ccfTypeID) {
+	ids.referencedTypes[id] = struct{}{}
+}
+
+func (ids *cadenceTypeByCCFTypeID) typ(id ccfTypeID) (cadence.Type, error) {
+	t, ok := ids.types[id]
 	if !ok {
 		return nil, fmt.Errorf("type not found for CCF type ID %d", id)
 	}
 	return t, nil
+}
+
+func (ids *cadenceTypeByCCFTypeID) has(id ccfTypeID) bool {
+	_, ok := ids.types[id]
+	return ok
+}
+
+func (ids *cadenceTypeByCCFTypeID) count() int {
+	return len(ids.types)
+}
+
+func (ids *cadenceTypeByCCFTypeID) hasUnreferenced() bool {
+	return len(ids.types) > len(ids.referencedTypes)
 }

@@ -29,7 +29,7 @@ import (
 
 type cadenceTypeID string
 
-type decodeTypeFn func(types cadenceTypeByCCFTypeID) (cadence.Type, error)
+type decodeTypeFn func(types *cadenceTypeByCCFTypeID) (cadence.Type, error)
 
 // decodeInlineType decodes inline-type as
 // language=CDDL
@@ -47,7 +47,7 @@ type decodeTypeFn func(types cadenceTypeByCCFTypeID) (cadence.Type, error)
 //
 // All exported Cadence types needs to be handled in this function,
 // including abstract and interface types.
-func (d *Decoder) decodeInlineType(types cadenceTypeByCCFTypeID) (cadence.Type, error) {
+func (d *Decoder) decodeInlineType(types *cadenceTypeByCCFTypeID) (cadence.Type, error) {
 	tagNum, err := d.dec.DecodeTagNumber()
 	if err != nil {
 		return nil, err
@@ -267,7 +267,7 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
 func (d *Decoder) decodeOptionalType(
-	types cadenceTypeByCCFTypeID,
+	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
 	// Decode inline-type or type-value.
@@ -295,7 +295,7 @@ func (d *Decoder) decodeOptionalType(
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
 func (d *Decoder) decodeVarSizedArrayType(
-	types cadenceTypeByCCFTypeID,
+	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
 	// Decode inline-type or type-value.
@@ -329,7 +329,7 @@ func (d *Decoder) decodeVarSizedArrayType(
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
 func (d *Decoder) decodeConstantSizedArrayType(
-	types cadenceTypeByCCFTypeID,
+	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
 	// Decode array head of length 2.
@@ -377,7 +377,7 @@ func (d *Decoder) decodeConstantSizedArrayType(
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
 func (d *Decoder) decodeDictType(
-	types cadenceTypeByCCFTypeID,
+	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
 	// Decode array head of length 2.
@@ -431,7 +431,7 @@ func (d *Decoder) decodeDictType(
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
 func (d *Decoder) decodeCapabilityType(
-	types cadenceTypeByCCFTypeID,
+	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
 	// Decode array head of length 1
@@ -473,7 +473,7 @@ func (d *Decoder) decodeCapabilityType(
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
 func (d *Decoder) decodeReferenceType(
-	types cadenceTypeByCCFTypeID,
+	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
 	// Decode array head of length 2
@@ -521,7 +521,7 @@ func (d *Decoder) decodeReferenceType(
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
 func (d *Decoder) decodeRestrictedType(
-	types cadenceTypeByCCFTypeID,
+	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
 	// Decode array of length 2.
@@ -630,7 +630,7 @@ func (d *Decoder) decodeCadenceTypeID() (cadenceTypeID, common.Location, string,
 //
 //	; cbor-tag-type-ref
 //	#6.136(id)
-func (d *Decoder) decodeTypeRef(types cadenceTypeByCCFTypeID) (cadence.Type, error) {
+func (d *Decoder) decodeTypeRef(types *cadenceTypeByCCFTypeID) (cadence.Type, error) {
 	id, err := d.decodeCCFTypeID()
 	if err != nil {
 		return nil, err
@@ -640,5 +640,14 @@ func (d *Decoder) decodeTypeRef(types cadenceTypeByCCFTypeID) (cadence.Type, err
 	//
 	//   "type-ref.id MUST refer to composite-type.id."
 	//   "type-value-ref.id MUST refer to composite-type-value.id in the same composite-type-value data item."
-	return types.typ(id)
+	t, err := types.typ(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Track referenced type definition so the decoder can detect
+	// encoded but not referenced type definition (extraneous data).
+	types.reference(id)
+
+	return t, nil
 }

@@ -84,8 +84,7 @@ func TestCCFTypeIDByCadenceType(t *testing.T) {
 }
 
 func TestCadenceTypeByCCFTypeID(t *testing.T) {
-	// Create cadenceTypeByCCFTypeID map
-	cadenceTypes := make(cadenceTypeByCCFTypeID)
+	cadenceTypes := newCadenceTypeByCCFTypeID()
 
 	// Add new entry.
 	newType := cadenceTypes.add(newCCFTypeIDFromUint64(0), simpleStructType())

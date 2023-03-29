@@ -11570,6 +11570,126 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
+			name: "unreferenced type definition",
+			data: []byte{
+				// language=edn, format=ccf
+				// 129([[162([h'', "S.test.FooEvent", [["a", 137(4)], ["b", 137(1)]]]), 160([h'1', "S.test.FooStruct", [["a", 137(4)], ["b", 137(1)]]])], [136(h''), [1, "foo"]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeDefAndValue,
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 2 items follow
+				0x82,
+				// event type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.FooEvent"
+				// 2 fields: [["a", type(int)], ["b", type(string)]]
+				// tag
+				0xd8, ccf.CBORTagEventType,
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 15 bytes follow
+				0x6f,
+				// S.test.FooEvent
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x45, 0x76, 0x65, 0x6e, 0x74,
+				// fields
+				// array, 2 items follow
+				0x82,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// a
+				0x61,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// field 1
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// b
+				0x62,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// String type ID (1)
+				0x01,
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.FooStruct"
+				// 2 fields: [["a", type(int)], ["b", type(string)]]
+				// tag
+				0xd8, ccf.CBORTagStructType,
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 1 byte follow
+				0x41,
+				// 1
+				0x01,
+				// cadence-type-id
+				// string, 16 bytes follow
+				0x70,
+				// S.test.FooStruct
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+				// fields
+				// array, 2 items follow
+				0x82,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// a
+				0x61,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// field 1
+				// array, 2 items follow
+				0x82,
+				// text, 1 bytes follow
+				0x61,
+				// b
+				0x62,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// String type ID (1)
+				0x01,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagTypeRef,
+				// bytes, 0 bytes follow
+				0x40,
+				// array, 2 items follow
+				0x82,
+				// tag (big number)
+				0xc2,
+				// bytes, 1 byte follow
+				0x41,
+				// 1
+				0x01,
+				// String, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+			},
+		},
+		{
 			name: "nil type",
 			data: []byte{
 				// language=edn, format=ccf
