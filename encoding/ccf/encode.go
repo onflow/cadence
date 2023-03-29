@@ -1751,6 +1751,12 @@ func needToEncodeRuntimeType(staticType cadence.Type, runtimeType cadence.Type) 
 			return false
 		}
 
+		// Handle special case of static type being OptionalType{ReferenceType}
+		// since runtime type is optional type of the deferenced type.
+		if or, ok := runtimeType.(*cadence.OptionalType); ok {
+			return needToEncodeRuntimeType(typ.Type, or.Type)
+		}
+
 	case *cadence.ReferenceType:
 		// Handle special case of static type being ReferenceType.
 		// Encoder doesn't need to encode runtime type if runtime type is the deferenced type of static type.
