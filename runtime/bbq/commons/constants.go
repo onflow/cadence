@@ -24,8 +24,11 @@ import (
 )
 
 const (
-	InitFunctionName = "init"
-	LogFunctionName  = "log"
+	InitFunctionName                = "init"
+	TransactionWrapperCompositeName = "transaction"
+	TransactionExecuteFunctionName  = "transaction.execute"
+	TransactionPrepareFunctionName  = "transaction.prepare"
+	LogFunctionName                 = "log"
 )
 
 type CastType byte

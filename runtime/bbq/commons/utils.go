@@ -18,10 +18,34 @@
 
 package commons
 
+import (
+	"bytes"
+
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+)
+
 func TypeQualifiedName(typeName, functionName string) string {
 	if typeName == "" {
 		return functionName
 	}
 
 	return typeName + "." + functionName
+}
+
+func LocationToBytes(location common.Location) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := interpreter.CBOREncMode.NewStreamEncoder(&buf)
+
+	err := interpreter.EncodeLocation(enc, location)
+	if err != nil {
+		return nil, err
+	}
+
+	err = enc.Flush()
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }

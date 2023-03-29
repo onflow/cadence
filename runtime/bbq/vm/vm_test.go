@@ -1482,3 +1482,58 @@ func TestNativeFunctions(t *testing.T) {
 		require.Equal(t, StringValue{Str: []byte("Hello, World!")}, result)
 	})
 }
+
+func TestTransaction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+
+		checker, err := ParseAndCheck(t, `
+            transaction {
+				var a: String
+                prepare() {
+                    self.a = "Hello!"
+                }
+                execute {
+                    self.a = "Hello again!"
+                }
+            }`,
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+		printProgram(program)
+
+		vm := NewVM(program, nil)
+
+		err = vm.ExecuteTransaction()
+		require.NoError(t, err)
+
+		// Rerun the same again using internal functions, to get the access to the transaction value.
+
+		transaction, err := vm.Invoke(commons.TransactionWrapperCompositeName)
+		require.NoError(t, err)
+
+		require.IsType(t, &CompositeValue{}, transaction)
+		compositeValue := transaction.(*CompositeValue)
+
+		// At the beginning, 'a' is uninitialized
+		assert.Nil(t, compositeValue.GetMember(vm.config, "a"))
+
+		// Invoke 'prepare'
+		_, err = vm.Invoke(commons.TransactionPrepareFunctionName, transaction)
+		require.NoError(t, err)
+
+		// Once 'prepare' is called, 'a' is initialized to "Hello!"
+		assert.Equal(t, StringValue{Str: []byte("Hello!")}, compositeValue.GetMember(vm.config, "a"))
+
+		// Invoke 'execute'
+		_, err = vm.Invoke(commons.TransactionExecuteFunctionName, transaction)
+		require.NoError(t, err)
+
+		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
+		assert.Equal(t, StringValue{Str: []byte("Hello again!")}, compositeValue.GetMember(vm.config, "a"))
+	})
+}

@@ -82,8 +82,25 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 			var typeName string
 			typeName, i = p.getStringOperand(codes, i)
 
-			p.stringBuilder.WriteString(" " + fmt.Sprint(kind) +
-				" " + string(location.TypeID(nil, typeName)))
+			if location != nil {
+				typeName = string(location.TypeID(nil, typeName))
+			}
+
+			p.stringBuilder.WriteString(" " + fmt.Sprint(kind) + " " + typeName)
+
+		case opcode.Cast:
+			var typeIndex int
+			var castType byte
+			typeIndex, i = p.getIntOperand(codes, i)
+			castType, i = p.getByteOperand(codes, i)
+			p.stringBuilder.WriteString(" " + fmt.Sprint(typeIndex) + " " + fmt.Sprint(int8(castType)))
+
+		case opcode.Path:
+			var identifier string
+			var domain byte
+			domain, i = p.getByteOperand(codes, i)
+			identifier, i = p.getStringOperand(codes, i)
+			p.stringBuilder.WriteString(" " + fmt.Sprint(int8(domain)) + " " + identifier)
 
 		// opcodes with no operands
 		default:
@@ -105,6 +122,11 @@ func (p *BytecodePrinter) getStringOperand(codes []byte, i int) (operand string,
 	strLen, i := p.getIntOperand(codes, i)
 	operand = string(codes[i+1 : i+1+strLen])
 	return operand, i + strLen
+}
+
+func (*BytecodePrinter) getByteOperand(codes []byte, i int) (operand byte, endIndex int) {
+	byt := codes[i+1]
+	return byt, i + 1
 }
 
 func (p *BytecodePrinter) printConstantPool(constants []*Constant) {

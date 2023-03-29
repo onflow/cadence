@@ -19,7 +19,6 @@
 package compiler
 
 import (
-	"bytes"
 	"math"
 	"strings"
 
@@ -243,18 +242,26 @@ func (c *Compiler) Compile() *bbq.Program {
 		}
 	}
 
+	compositeDeclarations := c.Program.CompositeDeclarations()
+
+	transaction := c.Program.SoleTransactionDeclaration()
+	if transaction != nil {
+		desugaredTransaction := c.desugarTransaction(transaction)
+		compositeDeclarations = append(compositeDeclarations, desugaredTransaction)
+	}
+
 	// Reserve globals for functions/types before visiting their implementations.
 	c.reserveGlobalVars(
 		"",
 		c.Program.FunctionDeclarations(),
-		c.Program.CompositeDeclarations(),
+		compositeDeclarations,
 	)
 
 	// Compile declarations
 	for _, declaration := range c.Program.FunctionDeclarations() {
 		c.compileDeclaration(declaration)
 	}
-	for _, declaration := range c.Program.CompositeDeclarations() {
+	for _, declaration := range compositeDeclarations {
 		c.compileDeclaration(declaration)
 	}
 
@@ -781,8 +788,8 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 	switch kind {
 	case common.DeclarationKindInitializer:
 		c.compileInitializer(declaration)
-	case common.DeclarationKindDestructor:
-		// TODO:
+	case common.DeclarationKindDestructor, common.DeclarationKindPrepare:
+		c.compileDeclaration(declaration.FunctionDeclaration)
 	default:
 		// TODO: support other special functions
 		panic(errors.NewUnreachableError())
@@ -806,14 +813,18 @@ func (c *Compiler) compileInitializer(declaration *ast.SpecialFunctionDeclaratio
 		functionName = enclosingCompositeTypeName
 	}
 
-	parameters := declaration.FunctionDeclaration.ParameterList.Parameters
-	parameterCount := len(parameters)
+	parameterCount := 0
+	parameterList := declaration.FunctionDeclaration.ParameterList
+	if parameterList != nil {
+		parameterCount = len(parameterList.Parameters)
+	}
+
 	if parameterCount > math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
 	function := c.addFunction(functionName, uint16(parameterCount))
-	c.declareParameters(function, parameters, false)
+	c.declareParameters(function, parameterList, false)
 
 	// Declare `self`
 	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
@@ -823,8 +834,7 @@ func (c *Compiler) compileInitializer(declaration *ast.SpecialFunctionDeclaratio
 	// i.e: `self = New()`
 
 	enclosingCompositeType := c.compositeTypeStack.top()
-	location := enclosingCompositeType.Location
-	locationBytes, err := locationToBytes(location)
+	locationBytes, err := commons.LocationToBytes(enclosingCompositeType.Location)
 	if err != nil {
 		panic(err)
 	}
@@ -885,7 +895,7 @@ func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
 
-	c.declareParameters(function, declaration.ParameterList.Parameters, declareReceiver)
+	c.declareParameters(function, declaration.ParameterList, declareReceiver)
 	c.compileFunctionBlock(declaration.FunctionBlock)
 	return
 }
@@ -894,8 +904,13 @@ func (c *Compiler) declareFunction(declaration *ast.FunctionDeclaration, declare
 	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
 	functionName := commons.TypeQualifiedName(enclosingCompositeTypeName, declaration.Identifier.Identifier)
 
-	functionType := c.Elaboration.FunctionDeclarationFunctionTypes[declaration]
-	parameterCount := len(functionType.Parameters)
+	parameterCount := 0
+
+	paramList := declaration.ParameterList
+	if paramList != nil {
+		parameterCount = len(paramList.Parameters)
+	}
+
 	if parameterCount >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
@@ -915,8 +930,17 @@ func (c *Compiler) VisitCompositeDeclaration(declaration *ast.CompositeDeclarati
 	}()
 
 	// Compile members
+	hasInit := false
 	for _, specialFunc := range declaration.Members.SpecialFunctions() {
+		if specialFunc.Kind == common.DeclarationKindInitializer {
+			hasInit = true
+		}
 		c.compileDeclaration(specialFunc)
+	}
+
+	// If the initializer is not declared, generate an empty initializer.
+	if !hasInit {
+		c.generateEmptyInit()
 	}
 
 	for _, function := range declaration.Members.Functions() {
@@ -1047,32 +1071,93 @@ func (c *Compiler) enclosingCompositeTypeFullyQualifiedName() string {
 	return sb.String()
 }
 
-func (c *Compiler) declareParameters(function *function, parameters []*ast.Parameter, declareReceiver bool) {
+func (c *Compiler) declareParameters(function *function, paramList *ast.ParameterList, declareReceiver bool) {
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
 		function.declareLocal(sema.SelfIdentifier)
 	}
 
-	for _, parameter := range parameters {
-		parameterName := parameter.Identifier.Identifier
-		function.declareLocal(parameterName)
+	if paramList != nil {
+		for _, parameter := range paramList.Parameters {
+			parameterName := parameter.Identifier.Identifier
+			function.declareLocal(parameterName)
+		}
 	}
 }
 
-func locationToBytes(location common.Location) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := interpreter.CBOREncMode.NewStreamEncoder(&buf)
+// desugarTransaction Convert a transaction into a composite type declaration,
+// so the code-gen would seamlessly work without having special-case anything in compiler/vm.
+func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) *ast.CompositeDeclaration {
 
-	err := interpreter.EncodeLocation(enc, location)
-	if err != nil {
-		return nil, err
+	// TODO: This assumes the transaction program/elaboration is not cached.
+	//  i.e: Modifies the elaboration.
+	//  Handle this properly for cached transactions.
+
+	members := []ast.Declaration{
+		transaction.Execute.FunctionDeclaration,
 	}
 
-	err = enc.Flush()
-	if err != nil {
-		return nil, err
+	if transaction.Prepare != nil {
+		members = append(members, transaction.Prepare)
 	}
 
-	return buf.Bytes(), nil
+	compositeType := &sema.CompositeType{
+		Location:   nil,
+		Identifier: commons.TransactionWrapperCompositeName,
+		Kind:       common.CompositeKindStructure,
+	}
+
+	compositeDecl := ast.NewCompositeDeclaration(
+		c.memoryGauge,
+		ast.AccessNotSpecified,
+		common.CompositeKindStructure,
+		ast.NewIdentifier(
+			c.memoryGauge,
+			commons.TransactionWrapperCompositeName,
+			ast.EmptyPosition,
+		),
+		nil,
+		ast.NewMembers(c.memoryGauge, members),
+		"",
+		ast.EmptyRange,
+	)
+
+	c.Elaboration.CompositeDeclarationTypes[compositeDecl] = compositeType
+
+	return compositeDecl
+}
+
+var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
+	// This is created only once per compilation. So no need to meter memory.
+
+	initializer := ast.NewFunctionDeclaration(
+		nil,
+		ast.AccessNotSpecified,
+		ast.NewIdentifier(
+			nil,
+			commons.InitFunctionName,
+			ast.EmptyPosition,
+		),
+		nil,
+		nil,
+		ast.NewFunctionBlock(
+			nil,
+			ast.NewBlock(nil, nil, ast.EmptyRange),
+			nil,
+			nil,
+		),
+		ast.Position{},
+		"",
+	)
+
+	return ast.NewSpecialFunctionDeclaration(
+		nil,
+		common.DeclarationKindInitializer,
+		initializer,
+	)
+}()
+
+func (c *Compiler) generateEmptyInit() {
+	c.VisitSpecialFunctionDeclaration(emptyInitializer)
 }

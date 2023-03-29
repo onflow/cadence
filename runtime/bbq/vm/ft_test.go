@@ -401,8 +401,6 @@ pub contract FlowToken: FungibleToken {
 
     pub resource Administrator {
 
-        init() {}
-
         // createNewMinter
         //
         // Function that creates and returns a new minter resource
@@ -457,8 +455,6 @@ pub contract FlowToken: FungibleToken {
     // Resource object that token admin accounts can hold to burn tokens.
     //
     pub resource Burner {
-
-        init() {}
 
         // burnTokens
         //

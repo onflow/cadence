@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -162,6 +161,28 @@ func (vm *VM) InitializeContract(arguments ...Value) (*CompositeValue, error) {
 	}
 
 	return contractValue, nil
+}
+
+func (vm *VM) ExecuteTransaction() error {
+	// Create transaction value
+	transaction, err := vm.Invoke(commons.TransactionWrapperCompositeName)
+	if err != nil {
+		return err
+	}
+
+	// Invoke 'prepare'
+	_, err = vm.Invoke(commons.TransactionPrepareFunctionName, transaction)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Invoke pre/post conditions
+
+	// Invoke 'execute'
+	// TODO: pass auth accounts
+	_, err = vm.Invoke(commons.TransactionExecuteFunctionName, transaction)
+
+	return err
 }
 
 func opReturnValue(vm *VM) {

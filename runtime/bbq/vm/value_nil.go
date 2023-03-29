@@ -31,9 +31,9 @@ var _ Value = NilValue{}
 
 func (NilValue) isValue() {}
 
-func (NilValue) StaticType(common.MemoryGauge) StaticType {
+func (NilValue) StaticType(gauge common.MemoryGauge) StaticType {
 	return interpreter.NewOptionalStaticType(
-		nil,
+		gauge,
 		interpreter.PrimitiveStaticTypeNever,
 	)
 }
