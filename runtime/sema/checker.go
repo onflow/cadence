@@ -1135,7 +1135,7 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 
 	if t.Authorization != nil {
 		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet})
-		switch entitledAccess := access.(type) {
+		switch access.(type) {
 		case EntitlementMapAccess:
 			// mapped auth types are only allowed in the annotations of composite fields
 			if !checker.inFieldAnnotation {
@@ -1144,37 +1144,10 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 				})
 				access = UnauthorizedAccess
 			}
-			ty = checker.ConvertNestedType(t.Type)
-			allReferencedTypeEntitlements := SupportedEntitlementsOfType(ty)
-			// when defining a mapped auth reference field, all the possible outputs of the map must be valid
-			// entitlements for the referenced type
-			entitledAccess.Codomain().Entitlements.Foreach(func(entitlement *EntitlementType, value struct{}) {
-				if !allReferencedTypeEntitlements.Contains(entitlement) {
-					checker.report(&InvalidEntitlementInAuthorizationError{
-						Range:          ast.NewRangeFromPositioned(checker.memoryGauge, t),
-						Entitlement:    entitlement,
-						ReferencedType: ty,
-					})
-				}
-			})
-		case EntitlementSetAccess:
-			ty = checker.ConvertNestedType(t.Type)
-			// each of the entitlements in the reference's set must be valid entitlements for the referenced type; it would be nonsensical
-			// to allow the creation or expression of an entitled reference to a value that does not support that entitlement
-			allReferencedTypeEntitlements := SupportedEntitlementsOfType(ty)
-			entitledAccess.Entitlements.Foreach(func(entitlement *EntitlementType, value struct{}) {
-				if !allReferencedTypeEntitlements.Contains(entitlement) {
-					checker.report(&InvalidEntitlementInAuthorizationError{
-						Range:          ast.NewRangeFromPositioned(checker.memoryGauge, t),
-						Entitlement:    entitlement,
-						ReferencedType: ty,
-					})
-				}
-			})
 		}
-	} else {
-		ty = checker.ConvertNestedType(t.Type)
 	}
+
+	ty = checker.ConvertNestedType(t.Type)
 
 	return &ReferenceType{
 		Authorization: access,

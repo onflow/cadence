@@ -7016,11 +7016,3 @@ func (*EntitlementMapType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(
 func (t *EntitlementMapType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
-
-func SupportedEntitlementsOfType(ty Type) *EntitlementOrderedSet {
-	switch ty := ty.(type) {
-	case EntitlementSupportingType:
-		return ty.SupportedEntitlements()
-	}
-	return orderedmap.New[EntitlementOrderedSet](0)
-}

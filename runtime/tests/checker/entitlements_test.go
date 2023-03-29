@@ -2607,14 +2607,11 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		_, err := ParseAndCheck(t, `
 		entitlement X
 		entitlement Y 
-		entitlement mapping M {
-			X -> Y
+		struct Q {
+			access(Y) fun foo() {}
 		}
 		struct interface S {
-			access(M) let x: auth(M) &Int
-		}
-		fun foo(ref: auth(X) &{S}) {
-			let x: auth(Y) &Int = ref.x
+			access(Y) let x: auth(Y) &Q
 		}
 		`)
 
@@ -3333,11 +3330,13 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		entitlement mapping M {
 			X -> Y
 		}
-		struct S {}
+		struct S {
+			access(Y) fun foo() {}
+		}
 		access(M) attachment A for S {
-			access(M) let x: auth(M) &Int
+			access(M) let x: auth(M) &S
 			init() {
-				self.x = &1 as auth(Y) &Int
+				self.x = &S() as auth(Y) &S
 			}
 		}
 		`)
@@ -3619,12 +3618,11 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		let a1: auth(Y) &A = ref[A]!
 		`)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[0])
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
 	})
 
 	t.Run("pub access pub attachment", func(t *testing.T) {
@@ -3642,12 +3640,11 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		let a1: auth(Y) &A = ref[A]!
 		`)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[0])
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
 	})
 
 	t.Run("unrepresentable access mapping", func(t *testing.T) {
@@ -3680,197 +3677,6 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 
 		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
 		require.IsType(t, &sema.InvalidTypeIndexingError{}, errs[1])
-	})
-}
-
-func TestCheckEntitlenedReferenceRestrictions(t *testing.T) {
-	t.Parallel()
-
-	t.Run("use of entitlements where not applicable struct", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-			entitlement X
-			struct S {
-				pub fun foo() {}
-			}
-			fun bar(s: auth(X) &S) {}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[0])
-	})
-
-	t.Run("use of entitlements where not applicable array", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-			entitlement X
-			struct S {
-				access(X) fun foo() {}
-			}
-			fun bar(s: auth(X) &[S]) {}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[0])
-	})
-
-	t.Run("use of entitlements where not applicable optional", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-			entitlement X
-			struct S {
-				access(X) fun foo() {}
-			}
-			fun bar(s: auth(X) &S?) {}
-		`)
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("use of entitlements where not applicable dict", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-			entitlement X
-			struct S {
-				access(X) fun foo() {}
-			}
-			fun bar(s: auth(X) &{String: S}) {}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[0])
-	})
-
-	t.Run("use of entitlements where not applicable restricted", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-			entitlement X
-			struct interface I {
-				pub fun foo()
-			}
-			struct S: I  {
-				pub fun foo() {}
-			}
-			fun bar(s: auth(X) &S{I}) {}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[0])
-	})
-
-	t.Run("use of entitlements where applicable restricted", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-			entitlement X
-			struct interface I {
-				access(X) fun foo()
-			}
-			struct S: I  {
-				access(X) fun foo() {}
-			}
-			fun bar(s: auth(X) &S{I}) {}
-		`)
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("use of entitlements where not applicable multiple access", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-			entitlement X
-			entitlement Y
-			entitlement Z
-			struct S {
-				access(X, Y) fun foo() {}
-			}
-			fun bar(s: auth(X, Y, Z) &S) {}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.InvalidEntitlementInAuthorizationError).Entitlement.QualifiedString(), "Z")
-		require.Equal(t, errs[0].(*sema.InvalidEntitlementInAuthorizationError).ReferencedType.QualifiedString(), "S")
-	})
-
-	t.Run("use of entitlements where not applicable map domain", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-			entitlement X
-			entitlement Y
-			entitlement Z
-			entitlement mapping M {
-				X -> Z
-				Y -> Z
-			}
-			struct S {
-				access(Z) fun foo() {}
-			}
-			struct interface I {
-				access(M) let x: auth(M) &S
-			}
-			fun bar(s: auth(X, Y, Z) &{I}) {}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.InvalidEntitlementInAuthorizationError).Entitlement.QualifiedString(), "Z")
-		require.Equal(t, errs[0].(*sema.InvalidEntitlementInAuthorizationError).ReferencedType.QualifiedString(), "AnyStruct{I}")
-	})
-
-	t.Run("multiple fields", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-			entitlement X
-			entitlement Y
-			entitlement Z
-			entitlement E
-			entitlement F
-			entitlement mapping M {
-				X -> Z
-				Y -> Z
-			}
-			struct S {
-				access(Z) fun foo() {}
-			}
-			struct interface I {
-				access(M) let x: auth(M) &S
-				access(E) fun foo()
-			}
-			fun bar(s: auth(X | Y | Z | E | F) &{I}) {}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 2)
-
-		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.InvalidEntitlementInAuthorizationError).Entitlement.QualifiedString(), "Z")
-		require.Equal(t, errs[0].(*sema.InvalidEntitlementInAuthorizationError).ReferencedType.QualifiedString(), "AnyStruct{I}")
-		require.IsType(t, &sema.InvalidEntitlementInAuthorizationError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.InvalidEntitlementInAuthorizationError).Entitlement.QualifiedString(), "F")
-		require.Equal(t, errs[1].(*sema.InvalidEntitlementInAuthorizationError).ReferencedType.QualifiedString(), "AnyStruct{I}")
 	})
 }
 

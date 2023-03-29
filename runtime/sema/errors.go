@@ -4057,30 +4057,6 @@ func (e *DirectEntitlementAnnotationError) Error() string {
 	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
 }
 
-// InvalidEntitlementInAuthorizationError
-type InvalidEntitlementInAuthorizationError struct {
-	ReferencedType Type
-	Entitlement    *EntitlementType
-	ast.Range
-}
-
-var _ SemanticError = &InvalidEntitlementInAuthorizationError{}
-var _ errors.UserError = &InvalidEntitlementInAuthorizationError{}
-
-func (*InvalidEntitlementInAuthorizationError) isSemanticError() {}
-
-func (*InvalidEntitlementInAuthorizationError) IsUserError() {}
-
-func (e *InvalidEntitlementInAuthorizationError) Error() string {
-	return fmt.Sprintf(
-		"Cannot define a reference type `auth(%s) &%s`, as `%s` does not support `%s` entitlements ",
-		e.Entitlement.QualifiedIdentifier(),
-		e.ReferencedType.QualifiedString(),
-		e.ReferencedType.QualifiedString(),
-		e.Entitlement.QualifiedIdentifier(),
-	)
-}
-
 // UnrepresentableEntitlementMapOutputError
 type UnrepresentableEntitlementMapOutputError struct {
 	Input EntitlementSetAccess
