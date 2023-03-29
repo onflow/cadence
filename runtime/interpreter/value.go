@@ -16963,6 +16963,10 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
+type ReferenceValue interface {
+	isReference()
+}
+
 // StorageReferenceValue
 
 type StorageReferenceValue struct {
@@ -16977,6 +16981,7 @@ var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
 var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
+var _ ReferenceValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
 	authorized bool,
@@ -17312,6 +17317,8 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
+func (*StorageReferenceValue) isReference() {}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
@@ -17325,6 +17332,7 @@ var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
+var _ ReferenceValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
 	authorized bool,
@@ -17646,6 +17654,8 @@ func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
+
+func (*EphemeralReferenceValue) isReference() {}
 
 // AddressValue
 type AddressValue common.Address
