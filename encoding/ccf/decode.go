@@ -1283,7 +1283,6 @@ func (d *Decoder) decodeStructTypeValue(visited cadenceTypeByCCFTypeID) (cadence
 		location common.Location,
 		qualifiedIdentifier string,
 		typ cadence.Type,
-		inits [][]cadence.Parameter,
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
@@ -1296,7 +1295,7 @@ func (d *Decoder) decodeStructTypeValue(visited cadenceTypeByCCFTypeID) (cadence
 			location,
 			qualifiedIdentifier,
 			nil,
-			inits,
+			nil,
 		), nil
 	}
 
@@ -1314,7 +1313,6 @@ func (d *Decoder) decodeResourceTypeValue(visited cadenceTypeByCCFTypeID) (caden
 		location common.Location,
 		qualifiedIdentifier string,
 		typ cadence.Type,
-		inits [][]cadence.Parameter,
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
@@ -1327,7 +1325,7 @@ func (d *Decoder) decodeResourceTypeValue(visited cadenceTypeByCCFTypeID) (caden
 			location,
 			qualifiedIdentifier,
 			nil,
-			inits,
+			nil,
 		), nil
 	}
 
@@ -1345,7 +1343,6 @@ func (d *Decoder) decodeEventTypeValue(visited cadenceTypeByCCFTypeID) (cadence.
 		location common.Location,
 		qualifiedIdentifier string,
 		typ cadence.Type,
-		inits [][]cadence.Parameter,
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
@@ -1353,18 +1350,12 @@ func (d *Decoder) decodeEventTypeValue(visited cadenceTypeByCCFTypeID) (cadence.
 				typ.ID(),
 			)
 		}
-		if len(inits) != 1 {
-			return nil, fmt.Errorf(
-				"encoded event-type-value has %d initializations (expected 1 initialization)",
-				len(inits),
-			)
-		}
 		return cadence.NewMeteredEventType(
 			d.gauge,
 			location,
 			qualifiedIdentifier,
 			nil,
-			inits[0],
+			nil,
 		), nil
 	}
 
@@ -1382,7 +1373,6 @@ func (d *Decoder) decodeContractTypeValue(visited cadenceTypeByCCFTypeID) (caden
 		location common.Location,
 		qualifiedIdentifier string,
 		typ cadence.Type,
-		inits [][]cadence.Parameter,
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
@@ -1395,7 +1385,7 @@ func (d *Decoder) decodeContractTypeValue(visited cadenceTypeByCCFTypeID) (caden
 			location,
 			qualifiedIdentifier,
 			nil,
-			inits,
+			nil,
 		), nil
 	}
 
@@ -1413,7 +1403,6 @@ func (d *Decoder) decodeEnumTypeValue(visited cadenceTypeByCCFTypeID) (cadence.T
 		location common.Location,
 		qualifiedIdentifier string,
 		typ cadence.Type,
-		inits [][]cadence.Parameter,
 	) (cadence.Type, error) {
 		if typ == nil {
 			return nil, fmt.Errorf("encoded enum-type-value has nil type")
@@ -1424,7 +1413,7 @@ func (d *Decoder) decodeEnumTypeValue(visited cadenceTypeByCCFTypeID) (cadence.T
 			qualifiedIdentifier,
 			typ,
 			nil,
-			inits,
+			nil,
 		), nil
 	}
 
@@ -1442,7 +1431,6 @@ func (d *Decoder) decodeStructInterfaceTypeValue(visited cadenceTypeByCCFTypeID)
 		location common.Location,
 		qualifiedIdentifier string,
 		typ cadence.Type,
-		inits [][]cadence.Parameter,
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
@@ -1455,7 +1443,7 @@ func (d *Decoder) decodeStructInterfaceTypeValue(visited cadenceTypeByCCFTypeID)
 			location,
 			qualifiedIdentifier,
 			nil,
-			inits,
+			nil,
 		), nil
 	}
 
@@ -1473,7 +1461,6 @@ func (d *Decoder) decodeResourceInterfaceTypeValue(visited cadenceTypeByCCFTypeI
 		location common.Location,
 		qualifiedIdentifier string,
 		typ cadence.Type,
-		inits [][]cadence.Parameter,
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
@@ -1486,7 +1473,7 @@ func (d *Decoder) decodeResourceInterfaceTypeValue(visited cadenceTypeByCCFTypeI
 			location,
 			qualifiedIdentifier,
 			nil,
-			inits,
+			nil,
 		), nil
 	}
 
@@ -1504,7 +1491,6 @@ func (d *Decoder) decodeContractInterfaceTypeValue(visited cadenceTypeByCCFTypeI
 		location common.Location,
 		qualifiedIdentifier string,
 		typ cadence.Type,
-		inits [][]cadence.Parameter,
 	) (cadence.Type, error) {
 		if typ != nil {
 			return nil, fmt.Errorf(
@@ -1517,7 +1503,7 @@ func (d *Decoder) decodeContractInterfaceTypeValue(visited cadenceTypeByCCFTypeI
 			location,
 			qualifiedIdentifier,
 			nil,
-			inits,
+			nil,
 		), nil
 	}
 	return d.decodeCompositeTypeValue(visited, ctr)
@@ -1527,16 +1513,15 @@ type compositeTypeConstructor func(
 	location common.Location,
 	qualifiedIdentifier string,
 	typ cadence.Type,
-	inits [][]cadence.Parameter,
 ) (cadence.Type, error)
 
 type compositeTypeValue struct {
-	ccfID            ccfTypeID
-	location         common.Location
-	identifier       string
-	typ              cadence.Type
-	rawField         []byte
-	initializerTypes [][]cadence.Parameter
+	ccfID           ccfTypeID
+	location        common.Location
+	identifier      string
+	typ             cadence.Type
+	rawFields       []byte
+	rawInitializers []byte
 }
 
 // decodeCompositeTypeValue decodes composite-type-value.
@@ -1554,7 +1539,6 @@ func (d *Decoder) decodeCompositeTypeValue(
 		compTypeValue.location,
 		compTypeValue.identifier,
 		compTypeValue.typ,
-		compTypeValue.initializerTypes,
 	)
 	if err != nil {
 		return nil, err
@@ -1584,18 +1568,57 @@ func (d *Decoder) decodeCompositeTypeValue(
 	}
 
 	// Decode fields after type is resolved to handle recursive types.
-	dec := NewDecoder(d.gauge, compTypeValue.rawField)
+	dec := NewDecoder(d.gauge, compTypeValue.rawFields)
 	fields, err := dec.decodeCompositeFields(visited, dec._decodeTypeValue)
 	if err != nil {
 		return nil, err
 	}
 
-	switch compositeType := compositeType.(type) {
-	case cadence.CompositeType:
-		compositeType.SetCompositeFields(fields)
+	// Decode initializers after type is resolved to handle recursive types.
+	dec = NewDecoder(d.gauge, compTypeValue.rawInitializers)
+	initializers, err := dec.decodeInitializerTypeValues(visited)
+	if err != nil {
+		return nil, err
+	}
 
-	case cadence.InterfaceType:
-		compositeType.SetInterfaceFields(fields)
+	switch typ := compositeType.(type) {
+	case *cadence.StructType:
+		typ.Fields = fields
+		typ.Initializers = initializers
+
+	case *cadence.ResourceType:
+		typ.Fields = fields
+		typ.Initializers = initializers
+
+	case *cadence.EventType:
+		if len(initializers) != 1 {
+			return nil, fmt.Errorf(
+				"encoded event-type-value has %d initializations (expected 1 initialization)",
+				len(initializers),
+			)
+		}
+		typ.Fields = fields
+		typ.Initializer = initializers[0]
+
+	case *cadence.ContractType:
+		typ.Fields = fields
+		typ.Initializers = initializers
+
+	case *cadence.EnumType:
+		typ.Fields = fields
+		typ.Initializers = initializers
+
+	case *cadence.StructInterfaceType:
+		typ.Fields = fields
+		typ.Initializers = initializers
+
+	case *cadence.ResourceInterfaceType:
+		typ.Fields = fields
+		typ.Initializers = initializers
+
+	case *cadence.ContractInterfaceType:
+		typ.Fields = fields
+		typ.Initializers = initializers
 	}
 
 	return compositeType, nil
@@ -1652,24 +1675,24 @@ func (d *Decoder) _decodeCompositeTypeValue(visited cadenceTypeByCCFTypeID) (*co
 	}
 
 	// element 3: fields
-	rawField, err := d.dec.DecodeRawBytes()
+	rawFields, err := d.dec.DecodeRawBytes()
 	if err != nil {
 		return nil, err
 	}
 
 	// element 4: initializers
-	initializerTypes, err := d.decodeInitializerTypeValues(visited)
+	rawInitializers, err := d.dec.DecodeRawBytes()
 	if err != nil {
 		return nil, err
 	}
 
 	return &compositeTypeValue{
-		ccfID:            ccfID,
-		location:         location,
-		identifier:       identifier,
-		typ:              typ,
-		rawField:         rawField,
-		initializerTypes: initializerTypes,
+		ccfID:           ccfID,
+		location:        location,
+		identifier:      identifier,
+		typ:             typ,
+		rawFields:       rawFields,
+		rawInitializers: rawInitializers,
 	}, nil
 }
 
