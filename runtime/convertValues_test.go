@@ -1791,6 +1791,78 @@ func TestExportReferenceValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run("storage, recursive, same reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(): &AnyStruct {
+                var acct = getAuthAccount(0x01)
+	            var v:[AnyStruct] = []
+	            acct.save(v, to: /storage/x)
+
+                var ref = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+	            ref.append(ref)
+	            return ref
+            }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cannot store non-storable value")
+	})
+
+	t.Run("storage, recursive, two references", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(): &AnyStruct {
+                var acct = getAuthAccount(0x01)
+	            var v:[AnyStruct] = []
+	            acct.save(v, to: /storage/x)
+
+                var ref1 = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+                var ref2 = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+
+	            ref1.append(ref2)
+	            return ref1
+            }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cannot store non-storable value")
+	})
 }
 
 func TestExportTypeValue(t *testing.T) {
