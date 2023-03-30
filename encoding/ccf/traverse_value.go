@@ -25,8 +25,9 @@ import (
 )
 
 type compositeTypes struct {
-	ids   ccfTypeIDByCadenceType
-	types []cadence.Type
+	ids           ccfTypeIDByCadenceType
+	abstractTypes map[string]bool
+	types         []cadence.Type
 }
 
 // compositeTypesFromValue returns all composite/interface types for value v.
@@ -34,8 +35,9 @@ type compositeTypes struct {
 // NOTE: nested composite/interface types are included in the returned types.
 func compositeTypesFromValue(v cadence.Value) ([]cadence.Type, ccfTypeIDByCadenceType) {
 	ct := &compositeTypes{
-		ids:   make(ccfTypeIDByCadenceType),
-		types: make([]cadence.Type, 0, 1),
+		ids:           make(ccfTypeIDByCadenceType),
+		abstractTypes: make(map[string]bool),
+		types:         make([]cadence.Type, 0, 1),
 	}
 
 	// Traverse v to get all unique:
@@ -147,19 +149,22 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		return check
 
 	case cadence.CompositeType: // struct, resource, event, contract, enum
-		check := false
-
 		newType := ct.add(t)
-		if newType {
-			fields := t.CompositeFields()
-			for _, field := range fields {
-				checkField := ct.traverseType(field.Type)
-				check = check || checkField
-			}
-
-			// Don't need to traverse initializers because
-			// they are not encoded and their types aren't needed.
+		if !newType {
+			return ct.abstractTypes[t.ID()]
 		}
+
+		check := false
+		fields := t.CompositeFields()
+		for _, field := range fields {
+			checkField := ct.traverseType(field.Type)
+			check = check || checkField
+		}
+
+		// Don't need to traverse initializers because
+		// they are not encoded and their types aren't needed.
+
+		ct.abstractTypes[t.ID()] = check
 
 		return check
 
