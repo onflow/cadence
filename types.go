@@ -1712,7 +1712,6 @@ func (t *ContractInterfaceType) Equal(other Type) bool {
 
 // Function
 
-// TODO: type parameters
 type FunctionType struct {
 	TypeParameters []TypeParameter
 	Parameters     []Parameter
