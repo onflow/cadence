@@ -661,35 +661,35 @@ func prepareFieldType(fieldType cadence.Field, results typePreparationResults) j
 }
 
 func prepareFields(fieldTypes []cadence.Field, results typePreparationResults) []jsonFieldType {
-	fields := make([]jsonFieldType, 0)
-	for _, field := range fieldTypes {
-		fields = append(fields, prepareFieldType(field, results))
+	fields := make([]jsonFieldType, len(fieldTypes))
+	for i, fieldType := range fieldTypes {
+		fields[i] = prepareFieldType(fieldType, results)
 	}
 	return fields
 }
 
 func prepareTypeParameters(typeParameters []cadence.TypeParameter, results typePreparationResults) []jsonTypeParameter {
-	result := make([]jsonTypeParameter, 0)
-	for _, typeParameter := range typeParameters {
-		result = append(result, prepareTypeParameter(typeParameter, results))
+	result := make([]jsonTypeParameter, len(typeParameters))
+	for i, typeParameter := range typeParameters {
+		result[i] = prepareTypeParameter(typeParameter, results)
 	}
 	return result
 }
 
-func prepareParameters(parameterTypes []cadence.Parameter, results typePreparationResults) []jsonParameterType {
-	result := make([]jsonParameterType, 0)
-	for _, param := range parameterTypes {
-		result = append(result, prepareParameter(param, results))
+func prepareParameters(parameters []cadence.Parameter, results typePreparationResults) []jsonParameterType {
+	result := make([]jsonParameterType, len(parameters))
+	for i, param := range parameters {
+		result[i] = prepareParameter(param, results)
 	}
 	return result
 }
 
-func prepareInitializers(initializerTypes [][]cadence.Parameter, results typePreparationResults) [][]jsonParameterType {
-	initializers := make([][]jsonParameterType, 0)
-	for _, params := range initializerTypes {
-		initializers = append(initializers, prepareParameters(params, results))
+func prepareInitializers(initializers [][]cadence.Parameter, results typePreparationResults) [][]jsonParameterType {
+	result := make([][]jsonParameterType, len(initializers))
+	for i, params := range initializers {
+		result[i] = prepareParameters(params, results)
 	}
-	return initializers
+	return result
 }
 
 func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
@@ -861,9 +861,9 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Type:       prepareType(typ.Type, results),
 		}
 	case *cadence.RestrictedType:
-		restrictions := make([]jsonValue, 0)
-		for _, restriction := range typ.Restrictions {
-			restrictions = append(restrictions, prepareType(restriction, results))
+		restrictions := make([]jsonValue, len(typ.Restrictions))
+		for i, restriction := range typ.Restrictions {
+			restrictions[i] = prepareType(restriction, results)
 		}
 		return jsonRestrictedType{
 			Kind:         "Restriction",
