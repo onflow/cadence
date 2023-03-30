@@ -46,6 +46,7 @@ func newValueTestCases() map[string]valueTestCase {
 
 	testFunctionType := NewFunctionType(
 		"((String):UInt8)",
+		FunctionPurityUnspecified,
 		[]Parameter{
 			{
 				Type: StringType{},
