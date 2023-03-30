@@ -58,6 +58,19 @@ func TestStringLocation_TypeID(t *testing.T) {
 	)
 }
 
+func TestStringLocation_ID(t *testing.T) {
+
+	t.Parallel()
+
+	location, _, err := decodeStringLocationTypeID(nil, "S.foo.Bar.Baz")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"S.foo",
+		location.ID(),
+	)
+}
+
 func TestDecodeStringLocationTypeID(t *testing.T) {
 
 	t.Parallel()
@@ -78,15 +91,35 @@ func TestDecodeStringLocationTypeID(t *testing.T) {
 		require.EqualError(t, err, "invalid string location type ID: missing location")
 	})
 
-	t.Run("missing qualified identifier", func(t *testing.T) {
+	t.Run("missing qualified identifier part", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeStringLocationTypeID(nil, "S.test")
-		require.EqualError(t, err, "invalid string location type ID: missing qualified identifier")
+		location, qualifiedIdentifier, err := decodeStringLocationTypeID(nil, "S.test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			StringLocation("test"),
+			location,
+		)
+		assert.Equal(t, "", qualifiedIdentifier)
 	})
 
-	t.Run("missing qualified identifier", func(t *testing.T) {
+	t.Run("empty qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		location, qualifiedIdentifier, err := decodeStringLocationTypeID(nil, "S.test.")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			StringLocation("test"),
+			location,
+		)
+		assert.Equal(t, "", qualifiedIdentifier)
+	})
+
+	t.Run("invalid prefix", func(t *testing.T) {
 
 		t.Parallel()
 

@@ -1646,6 +1646,35 @@ func TestEncodeContract(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
 }
 
+func TestEncodeLink(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeAndDecode(
+		t,
+		cadence.NewPathLink(
+			cadence.NewPath("storage", "foo"),
+			"Bar",
+		),
+		// language=json
+		`
+          {
+            "type": "Link",
+            "value": {
+              "targetPath": {
+                "type": "Path",
+                "value": {
+                  "domain": "storage",
+                  "identifier": "foo"
+                }
+              },
+              "borrowType": "Bar"
+            }
+          }
+        `,
+	)
+}
+
 func TestEncodeSimpleTypes(t *testing.T) {
 
 	t.Parallel()
@@ -3141,7 +3170,7 @@ func TestDecodeInvalidType(t *testing.T) {
 		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: ``", err.Error())
 	})
 
-	t.Run("undefined type", func(t *testing.T) {
+	t.Run("invalid type ID", func(t *testing.T) {
 		t.Parallel()
 
 		// language=json
@@ -3149,14 +3178,14 @@ func TestDecodeInvalidType(t *testing.T) {
           {
             "type": "Struct",
             "value": {
-              "id": "I.Foo",
+              "id": "I",
               "fields": []
             }
           }
         `
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
-		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID `I.Foo`: invalid identifier location type ID: missing qualified identifier", err.Error())
+		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID `I`: invalid identifier location type ID: missing location", err.Error())
 	})
 
 	t.Run("unknown location prefix", func(t *testing.T) {

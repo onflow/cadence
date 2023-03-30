@@ -1093,12 +1093,12 @@ func NewStructType(
 func NewMeteredStructType(
 	gauge common.MemoryGauge,
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *StructType {
 	common.UseMemory(gauge, common.CadenceStructTypeMemoryUsage)
-	return NewStructType(location, qualifiedIdentifer, fields, initializers)
+	return NewStructType(location, qualifiedIdentifier, fields, initializers)
 }
 
 func (*StructType) isType() {}
@@ -1154,13 +1154,13 @@ type ResourceType struct {
 
 func NewResourceType(
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *ResourceType {
 	return &ResourceType{
 		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifer,
+		QualifiedIdentifier: qualifiedIdentifier,
 		Fields:              fields,
 		Initializers:        initializers,
 	}
@@ -1169,12 +1169,12 @@ func NewResourceType(
 func NewMeteredResourceType(
 	gauge common.MemoryGauge,
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *ResourceType {
 	common.UseMemory(gauge, common.CadenceResourceTypeMemoryUsage)
-	return NewResourceType(location, qualifiedIdentifer, fields, initializers)
+	return NewResourceType(location, qualifiedIdentifier, fields, initializers)
 }
 
 func (*ResourceType) isType() {}
@@ -1313,13 +1313,13 @@ type EventType struct {
 
 func NewEventType(
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializer []Parameter,
 ) *EventType {
 	return &EventType{
 		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifer,
+		QualifiedIdentifier: qualifiedIdentifier,
 		Fields:              fields,
 		Initializer:         initializer,
 	}
@@ -1328,12 +1328,12 @@ func NewEventType(
 func NewMeteredEventType(
 	gauge common.MemoryGauge,
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializer []Parameter,
 ) *EventType {
 	common.UseMemory(gauge, common.CadenceEventTypeMemoryUsage)
-	return NewEventType(location, qualifiedIdentifer, fields, initializer)
+	return NewEventType(location, qualifiedIdentifier, fields, initializer)
 }
 
 func (*EventType) isType() {}

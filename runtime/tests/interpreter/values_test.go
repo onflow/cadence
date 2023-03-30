@@ -50,7 +50,7 @@ var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
 
 func TestRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
-		t.SkipNow()
+		t.Skip("smoke tests are disabled")
 	}
 
 	t.Parallel()
@@ -357,7 +357,25 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("random insert & remove", func(t *testing.T) {
 		keyValues := make([][2]interpreter.Value, numberOfValues)
 		for i := 0; i < numberOfValues; i++ {
-			keyValues[i][0] = randomHashableValue(inter)
+			// Generate unique key
+			var key interpreter.Value
+			for {
+				key = randomHashableValue(inter)
+
+				var foundConflict bool
+				for j := 0; j < i; j++ {
+					existingKey := keyValues[j][0]
+					if key.(interpreter.EquatableValue).Equal(inter, interpreter.EmptyLocationRange, existingKey) {
+						foundConflict = true
+						break
+					}
+				}
+				if !foundConflict {
+					break
+				}
+			}
+
+			keyValues[i][0] = key
 			keyValues[i][1] = randomStorableValue(inter, 0)
 		}
 
@@ -497,7 +515,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 func TestRandomArrayOperations(t *testing.T) {
 	if !*runSmokeTests {
-		t.SkipNow()
+		t.Skip("smoke tests are disabled")
 	}
 
 	seed := time.Now().UnixNano()
@@ -861,7 +879,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 func TestRandomCompositeValueOperations(t *testing.T) {
 	if !*runSmokeTests {
-		t.SkipNow()
+		t.Skip("smoke tests are disabled")
 	}
 
 	seed := time.Now().UnixNano()

@@ -29,12 +29,10 @@ func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 		switch p.current.Type {
 		case lexer.TokenBlockCommentStart:
 			p.next()
-			ok = false
 			depth++
 
 		case lexer.TokenBlockCommentContent:
 			p.next()
-			ok = false
 
 		case lexer.TokenBlockCommentEnd:
 			endToken = p.current

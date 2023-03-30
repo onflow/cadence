@@ -71,6 +71,10 @@ func (l REPLLocation) Description() string {
 	return REPLLocationPrefix
 }
 
+func (l REPLLocation) ID() string {
+	return REPLLocationPrefix
+}
+
 func (l REPLLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type string
@@ -102,11 +106,6 @@ func decodeREPLLocationTypeID(typeID string) (REPLLocation, string, error) {
 
 	parts := strings.SplitN(typeID, ".", 2)
 
-	pieceCount := len(parts)
-	if pieceCount == 1 {
-		return newError("missing qualified identifier")
-	}
-
 	prefix := parts[0]
 
 	if prefix != REPLLocationPrefix {
@@ -118,7 +117,11 @@ func decodeREPLLocationTypeID(typeID string) (REPLLocation, string, error) {
 		)
 	}
 
-	qualifiedIdentifier := parts[1]
+	pieceCount := len(parts)
+	var qualifiedIdentifier string
+	if pieceCount > 1 {
+		qualifiedIdentifier = parts[1]
+	}
 
 	return REPLLocation{}, qualifiedIdentifier, nil
 }

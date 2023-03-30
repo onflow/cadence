@@ -1117,7 +1117,7 @@ func newAccountContractsGetNamesFunction(
 
 type AccountContractProvider interface {
 	// GetAccountContractCode returns the code associated with an account contract.
-	GetAccountContractCode(address common.Address, name string) ([]byte, error)
+	GetAccountContractCode(location common.AddressLocation) ([]byte, error)
 }
 
 func newAccountContractsGetFunction(
@@ -1138,11 +1138,12 @@ func newAccountContractsGetFunction(
 				panic(errors.NewUnreachableError())
 			}
 			name := nameValue.Str
+			location := common.NewAddressLocation(invocation.Interpreter, address, name)
 
 			var code []byte
 			var err error
 			errors.WrapPanic(func() {
-				code, err = provider.GetAccountContractCode(address, name)
+				code, err = provider.GetAccountContractCode(location)
 			})
 			if err != nil {
 				panic(err)
@@ -1189,6 +1190,7 @@ func newAccountContractsBorrowFunction(
 				panic(errors.NewUnreachableError())
 			}
 			name := nameValue.Str
+			location := common.NewAddressLocation(invocation.Interpreter, address, name)
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
@@ -1206,7 +1208,7 @@ func newAccountContractsBorrowFunction(
 			var code []byte
 			var err error
 			errors.WrapPanic(func() {
-				code, err = handler.GetAccountContractCode(address, name)
+				code, err = handler.GetAccountContractCode(location)
 			})
 			if err != nil {
 				panic(err)
@@ -1256,8 +1258,8 @@ type AccountContractAdditionHandler interface {
 		getAndSetProgram bool,
 	) (*interpreter.Program, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
-	UpdateAccountContractCode(address common.Address, name string, code []byte) error
-	RecordContractUpdate(address common.Address, name string, value *interpreter.CompositeValue)
+	UpdateAccountContractCode(location common.AddressLocation, code []byte) error
+	RecordContractUpdate(location common.AddressLocation, value *interpreter.CompositeValue)
 	InterpretContract(
 		location common.AddressLocation,
 		program *interpreter.Program,
@@ -1318,7 +1320,9 @@ func newAuthAccountContractsChangeFunction(
 			}
 
 			address := addressValue.ToAddress()
-			existingCode, err := handler.GetAccountContractCode(address, contractName)
+			location := common.NewAddressLocation(invocation.Interpreter, address, contractName)
+
+			existingCode, err := handler.GetAccountContractCode(location)
 			if err != nil {
 				panic(err)
 			}
@@ -1349,9 +1353,6 @@ func newAuthAccountContractsChangeFunction(
 			}
 
 			// Check the code
-
-			location := common.NewAddressLocation(invocation.Interpreter, address, contractName)
-
 			handleContractUpdateError := func(err error) {
 				if err == nil {
 					return
@@ -1453,7 +1454,7 @@ func newAuthAccountContractsChangeFunction(
 			// Validate the contract update
 
 			if isUpdate {
-				oldCode, err := handler.GetAccountContractCode(address, contractName)
+				oldCode, err := handler.GetAccountContractCode(location)
 				handleContractUpdateError(err)
 
 				oldProgram, err := parser.ParseProgram(
@@ -1484,9 +1485,7 @@ func newAuthAccountContractsChangeFunction(
 				handler,
 				location,
 				program,
-				declaredName,
 				code,
-				addressValue,
 				contractType,
 				constructorArguments,
 				constructorArgumentTypes,
@@ -1607,9 +1606,7 @@ func updateAccountContractCode(
 	handler AccountContractAdditionHandler,
 	location common.AddressLocation,
 	program *interpreter.Program,
-	name string,
 	code []byte,
-	addressValue interpreter.AddressValue,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
 	constructorArgumentTypes []sema.Type,
@@ -1631,8 +1628,6 @@ func updateAccountContractCode(
 
 	createContract := contractType != nil && options.createContract
 
-	address := addressValue.ToAddress()
-
 	var err error
 
 	if createContract {
@@ -1640,7 +1635,6 @@ func updateAccountContractCode(
 			handler,
 			location,
 			program,
-			address,
 			contractType,
 			constructorArguments,
 			constructorArgumentTypes,
@@ -1653,7 +1647,7 @@ func updateAccountContractCode(
 
 	// NOTE: only update account code if contract instantiation succeeded
 	errors.WrapPanic(func() {
-		err = handler.UpdateAccountContractCode(address, name, code)
+		err = handler.UpdateAccountContractCode(location, code)
 	})
 	if err != nil {
 		return err
@@ -1664,8 +1658,7 @@ func updateAccountContractCode(
 		// until the end of the execution of the program
 
 		handler.RecordContractUpdate(
-			address,
-			name,
+			location,
 			contractValue,
 		)
 	}
@@ -1709,7 +1702,6 @@ func instantiateContract(
 	handler AccountContractAdditionHandler,
 	location common.AddressLocation,
 	program *interpreter.Program,
-	address common.Address,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
 	argumentTypes []sema.Type,
@@ -1769,7 +1761,7 @@ func instantiateContract(
 		program,
 		contractType.Identifier,
 		DeployedContractConstructorInvocation{
-			Address:              address,
+			Address:              location.Address,
 			ContractType:         contractType,
 			ConstructorArguments: constructorArguments,
 			ArgumentTypes:        argumentTypes,
@@ -1781,8 +1773,8 @@ func instantiateContract(
 type AccountContractRemovalHandler interface {
 	EventEmitter
 	AccountContractProvider
-	RemoveAccountContractCode(address common.Address, name string) error
-	RecordContractRemoval(address common.Address, name string)
+	RemoveAccountContractCode(location common.AddressLocation) error
+	RecordContractRemoval(location common.AddressLocation)
 }
 
 func newAuthAccountContractsRemoveFunction(
@@ -1805,13 +1797,14 @@ func newAuthAccountContractsRemoveFunction(
 				panic(errors.NewUnreachableError())
 			}
 			name := nameValue.Str
+			location := common.NewAddressLocation(invocation.Interpreter, address, name)
 
 			// Get the current code
 
 			var code []byte
 			var err error
 			errors.WrapPanic(func() {
-				code, err = handler.GetAccountContractCode(address, name)
+				code, err = handler.GetAccountContractCode(location)
 			})
 			if err != nil {
 				panic(err)
@@ -1839,7 +1832,7 @@ func newAuthAccountContractsRemoveFunction(
 				}
 
 				errors.WrapPanic(func() {
-					err = handler.RemoveAccountContractCode(address, name)
+					err = handler.RemoveAccountContractCode(location)
 				})
 				if err != nil {
 					panic(err)
@@ -1848,7 +1841,7 @@ func newAuthAccountContractsRemoveFunction(
 				// NOTE: the contract recording function delays the write
 				// until the end of the execution of the program
 
-				handler.RecordContractRemoval(address, name)
+				handler.RecordContractRemoval(location)
 
 				codeHashValue := CodeToHashValue(inter, code)
 
