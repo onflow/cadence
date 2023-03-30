@@ -10,7 +10,6 @@ require (
 	github.com/go-test/deep v1.1.0
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/leanovate/gopter v0.2.9
-	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/onflow/atree v0.5.0
 	github.com/rivo/uniseg v0.4.4
 	github.com/schollz/progressbar/v3 v3.13.1
@@ -28,6 +27,7 @@ require (
 
 require (
 	github.com/dave/dst v0.27.2
+	github.com/logrusorgru/aurora/v4 v4.0.0
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 )
 
