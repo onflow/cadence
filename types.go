@@ -1867,13 +1867,13 @@ func (t *ReferenceType) Equal(other Type) bool {
 
 // RestrictedType
 
-type restrictionSet = map[Type]struct{}
+type RestrictionSet = map[Type]struct{}
 
 type RestrictedType struct {
 	typeID             string
 	Type               Type
 	Restrictions       []Type
-	restrictionSet     restrictionSet
+	restrictionSet     RestrictionSet
 	restrictionSetOnce sync.Once
 }
 
@@ -1923,15 +1923,15 @@ func (t *RestrictedType) Equal(other Type) bool {
 		return false
 	}
 
-	t.initializeRestrictionSet()
-	otherType.initializeRestrictionSet()
+	restrictionSet := t.RestrictionSet()
+	otherRestrictionSet := otherType.RestrictionSet()
 
-	if len(t.restrictionSet) != len(otherType.restrictionSet) {
+	if len(restrictionSet) != len(otherRestrictionSet) {
 		return false
 	}
 
-	for restriction := range t.restrictionSet { //nolint:maprange
-		_, ok := otherType.restrictionSet[restriction]
+	for restriction := range restrictionSet { //nolint:maprange
+		_, ok := otherRestrictionSet[restriction]
 		if !ok {
 			return false
 		}
@@ -1942,11 +1942,16 @@ func (t *RestrictedType) Equal(other Type) bool {
 
 func (t *RestrictedType) initializeRestrictionSet() {
 	t.restrictionSetOnce.Do(func() {
-		t.restrictionSet = restrictionSet{}
+		t.restrictionSet = make(RestrictionSet, len(t.Restrictions))
 		for _, restriction := range t.Restrictions {
 			t.restrictionSet[restriction] = struct{}{}
 		}
 	})
+}
+
+func (t *RestrictedType) RestrictionSet() RestrictionSet {
+	t.initializeRestrictionSet()
+	return t.restrictionSet
 }
 
 // BlockType
