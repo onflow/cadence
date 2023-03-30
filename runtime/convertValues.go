@@ -61,7 +61,7 @@ func ExportValue(
 
 // NOTE: Do not generalize to map[interpreter.Value],
 // as not all values are Go hashable, i.e. this might lead to run-time panics
-type seenReferences map[*interpreter.EphemeralReferenceValue]struct{}
+type seenReferences map[interpreter.ReferenceValue]struct{}
 
 // exportValueWithInterpreter exports the given internal (interpreter) value to an external value.
 //
@@ -220,7 +220,7 @@ func exportValueWithInterpreter(
 	case *interpreter.StorageCapabilityValue:
 		return exportStorageCapabilityValue(v, inter), nil
 	case *interpreter.EphemeralReferenceValue:
-		// Break recursion through ephemeral references
+		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
 			return nil, nil
 		}
@@ -233,6 +233,13 @@ func exportValueWithInterpreter(
 			seenReferences,
 		)
 	case *interpreter.StorageReferenceValue:
+		// Break recursion through references
+		if _, ok := seenReferences[v]; ok {
+			return nil, nil
+		}
+		defer delete(seenReferences, v)
+		seenReferences[v] = struct{}{}
+
 		referencedValue := v.ReferencedValue(inter)
 		if referencedValue == nil {
 			return nil, nil
