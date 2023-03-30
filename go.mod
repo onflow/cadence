@@ -4,11 +4,9 @@ go 1.18
 
 require (
 	github.com/bits-and-blooms/bitset v1.5.0
-	github.com/bytecodealliance/wasmtime-go v0.40.0
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/fxamacker/cbor/v2 v2.4.1-0.20220515183430-ad2eae63303f
 	github.com/go-test/deep v1.1.0
-	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/leanovate/gopter v0.2.9
 	github.com/onflow/atree v0.5.0
 	github.com/rivo/uniseg v0.4.4
@@ -26,7 +24,9 @@ require (
 )
 
 require (
+	github.com/bytecodealliance/wasmtime-go/v7 v7.0.0
 	github.com/dave/dst v0.27.2
+	github.com/k0kubun/pp/v3 v3.2.0
 	github.com/logrusorgru/aurora/v4 v4.0.0
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 )
@@ -34,7 +34,6 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fxamacker/circlehash v0.3.0 // indirect
-	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -48,6 +47,5 @@ require (
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
