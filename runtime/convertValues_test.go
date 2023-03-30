@@ -133,7 +133,11 @@ func TestExportValue(t *testing.T) {
 		},
 	}
 
-	testFunctionType := cadence.NewFunctionType("(():Void)", []cadence.Parameter{}, cadence.VoidType{})
+	testFunctionType := cadence.NewFunctionType(
+		nil,
+		nil,
+		cadence.VoidType{},
+	)
 
 	for _, tt := range []exportTest{
 		{
@@ -818,7 +822,7 @@ func TestImportValue(t *testing.T) {
 			},
 		},
 		{
-			label: "Link (invalid)",
+			label: "Path Link (invalid)",
 			value: cadence.PathLink{
 				TargetPath: cadence.Path{
 					Domain:     "storage",
@@ -826,6 +830,11 @@ func TestImportValue(t *testing.T) {
 				},
 				BorrowType: "Int",
 			},
+			expected: nil,
+		},
+		{
+			label:    "Account Link (invalid)",
+			value:    cadence.AccountLink{},
 			expected: nil,
 		},
 		{
@@ -2026,7 +2035,7 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.TypeValue{
-				StaticType: (&cadence.RestrictedType{
+				StaticType: &cadence.RestrictedType{
 					Type: &cadence.StructType{
 						QualifiedIdentifier: "S",
 						Location:            TestLocation,
@@ -2039,7 +2048,7 @@ func TestExportTypeValue(t *testing.T) {
 							Fields:              []cadence.Field{},
 						},
 					},
-				}).WithID("S.test.S{S.test.SI}"),
+				},
 			},
 			actual,
 		)
@@ -2255,6 +2264,25 @@ func TestExportPathLinkValue(t *testing.T) {
 	})
 }
 
+func TestExportAccountLinkValue(t *testing.T) {
+
+	t.Parallel()
+
+	link := interpreter.AccountLinkValue{}
+
+	actual, err := exportValueWithInterpreter(
+		link,
+		newTestInterpreter(t),
+		interpreter.EmptyLocationRange,
+		seenReferences{},
+	)
+	require.NoError(t, err)
+
+	expected := cadence.AccountLink{}
+
+	assert.Equal(t, expected, actual)
+}
+
 func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 
 	t.Parallel()
@@ -2285,10 +2313,9 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 			},
 			{
 				Identifier: "f",
-				Type: (&cadence.FunctionType{
-					Parameters: []cadence.Parameter{},
+				Type: &cadence.FunctionType{
 					ReturnType: cadence.VoidType{},
-				}).WithID("(():Void)"),
+				},
 			},
 		},
 	}
@@ -2297,10 +2324,9 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 	expected := cadence.NewStruct([]cadence.Value{
 		cadence.NewInt(42),
 		cadence.Function{
-			FunctionType: (&cadence.FunctionType{
-				Parameters: []cadence.Parameter{},
+			FunctionType: &cadence.FunctionType{
 				ReturnType: cadence.VoidType{},
-			}).WithID("(():Void)"),
+			},
 		},
 	}).WithType(fooStructType)
 
