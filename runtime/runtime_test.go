@@ -176,9 +176,9 @@ type testRuntimeInterface struct {
 	getAccountKey             func(address Address, index int) (*stdlib.AccountKey, error)
 	removeAccountKey          func(address Address, index int) (*stdlib.AccountKey, error)
 	accountKeysCount          func(address Address) (uint64, error)
-	updateAccountContractCode func(address Address, name string, code []byte) error
-	getAccountContractCode    func(address Address, name string) (code []byte, err error)
-	removeAccountContractCode func(address Address, name string) (err error)
+	updateAccountContractCode func(location common.AddressLocation, code []byte) error
+	getAccountContractCode    func(location common.AddressLocation) (code []byte, err error)
+	removeAccountContractCode func(location common.AddressLocation) (err error)
 	getSigningAccounts        func() ([]Address, error)
 	log                       func(string)
 	emitEvent                 func(cadence.Event) error
@@ -375,12 +375,12 @@ func (i *testRuntimeInterface) RevokeAccountKey(address Address, index int) (*st
 	return i.removeAccountKey(address, index)
 }
 
-func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name string, code []byte) (err error) {
+func (i *testRuntimeInterface) UpdateAccountContractCode(location common.AddressLocation, code []byte) (err error) {
 	if i.updateAccountContractCode == nil {
 		panic("must specify testRuntimeInterface.updateAccountContractCode")
 	}
 
-	err = i.updateAccountContractCode(address, name, code)
+	err = i.updateAccountContractCode(location, code)
 	if err != nil {
 		return err
 	}
@@ -390,18 +390,18 @@ func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name s
 	return nil
 }
 
-func (i *testRuntimeInterface) GetAccountContractCode(address Address, name string) (code []byte, err error) {
+func (i *testRuntimeInterface) GetAccountContractCode(location common.AddressLocation) (code []byte, err error) {
 	if i.getAccountContractCode == nil {
 		panic("must specify testRuntimeInterface.getAccountContractCode")
 	}
-	return i.getAccountContractCode(address, name)
+	return i.getAccountContractCode(location)
 }
 
-func (i *testRuntimeInterface) RemoveAccountContractCode(address Address, name string) (err error) {
+func (i *testRuntimeInterface) RemoveAccountContractCode(location common.AddressLocation) (err error) {
 	if i.removeAccountContractCode == nil {
 		panic("must specify testRuntimeInterface.removeAccountContractCode")
 	}
-	return i.removeAccountContractCode(address, name)
+	return i.removeAccountContractCode(location)
 }
 
 func (i *testRuntimeInterface) GetSigningAccounts() ([]Address, error) {
@@ -1374,11 +1374,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 					return tc.authorizers, nil
 				},
 				resolveLocation: singleIdentifierLocationResolver(t),
-				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
+				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 					return tc.contracts[location], nil
 				},
 				log: func(message string) {
@@ -3300,10 +3296,10 @@ func TestRuntimeContractAccount(t *testing.T) {
 			return []Address{Address(addressValue)}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -3410,10 +3406,10 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			return []Address{addressValue}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -3705,10 +3701,10 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 			return []Address{addressValue}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -3802,10 +3798,10 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 			return []Address{addressValue}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(address Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -3897,10 +3893,10 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 			return []Address{addressValue}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(address Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -3995,14 +3991,14 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 			return []Address{addressValue}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(address Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		removeAccountContractCode: func(_ Address, _ string) (err error) {
+		removeAccountContractCode: func(_ common.AddressLocation) (err error) {
 			accountCode = nil
 			return nil
 		},
@@ -4232,18 +4228,10 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 			return []Address{signerAccount}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
 			accountCodes[location] = code
 			return nil
 		},
@@ -4377,18 +4365,10 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 			return []Address{signerAccount}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
 			accountCodes[location] = code
 			return nil
 		},
@@ -4540,18 +4520,10 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			return []Address{{0x1}}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
@@ -4861,10 +4833,10 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{addressValue.ToAddress()}, nil
 				},
-				getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+				getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 					return accountCode, nil
 				},
-				updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+				updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 					accountCode = code
 					return nil
 				},
@@ -4987,18 +4959,10 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 			return []Address{address}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
@@ -5191,19 +5155,11 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
@@ -5373,18 +5329,10 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 			return []Address{address}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
@@ -5691,10 +5639,10 @@ func TestRuntimeContractWriteback(t *testing.T) {
 			return []Address{Address(addressValue)}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) (err error) {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -5833,10 +5781,10 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 			return []Address{Address(addressValue)}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -6146,18 +6094,10 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 			return signerAddresses, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
@@ -6291,18 +6231,10 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			return signerAddresses, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
@@ -6534,18 +6466,10 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 			return signerAddresses, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
@@ -6722,10 +6646,10 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 				},
 			}, nil
 		},
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -7150,19 +7074,11 @@ func TestRuntimeStackOverflow(t *testing.T) {
 			return []Address{signerAddress}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = string(code)
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = []byte(accountCodes[location])
 			return code, nil
 		},
@@ -7341,10 +7257,10 @@ func TestRuntimeInternalErrors(t *testing.T) {
 				return []Address{addressValue}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
-			updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+			updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 				accountCode = code
 				return nil
 			},
@@ -7524,10 +7440,11 @@ func TestRuntimeComputationMetring(t *testing.T) {
 	t.Parallel()
 
 	type test struct {
-		name        string
-		code        string
-		ok          bool
-		expCompUsed uint
+		name      string
+		code      string
+		ok        bool
+		hits      uint
+		intensity uint
 	}
 
 	compLimit := uint(6)
@@ -7538,8 +7455,9 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			code: `
           while true {}
         `,
-			ok:          false,
-			expCompUsed: compLimit,
+			ok:        false,
+			hits:      compLimit,
+			intensity: 6,
 		},
 		{
 			name: "Limited while loop",
@@ -7549,24 +7467,36 @@ func TestRuntimeComputationMetring(t *testing.T) {
               i = i + 1
           }
         `,
-			ok:          false,
-			expCompUsed: compLimit,
+			ok:        false,
+			hits:      compLimit,
+			intensity: 6,
 		},
 		{
 			name: "statement + createArray + transferArray + too many for-in loop iterations",
 			code: `
           for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
         `,
-			ok:          false,
-			expCompUsed: compLimit,
+			ok:        false,
+			hits:      compLimit,
+			intensity: 15,
 		},
 		{
-			name: "statement + createArray + transferArray + some for-in loop iterations",
+			name: "statement + createArray + transferArray + two for-in loop iterations",
 			code: `
           for i in [1, 2] {}
         `,
-			ok:          true,
-			expCompUsed: 5,
+			ok:        true,
+			hits:      5,
+			intensity: 6,
+		},
+		{
+			name: "statement + functionInvocation + encoding",
+			code: `
+          acc.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
+        `,
+			ok:        true,
+			hits:      3,
+			intensity: 88,
 		},
 	}
 
@@ -7578,7 +7508,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
 				fmt.Sprintf(
 					`
                   transaction {
-                      prepare() {
+                      prepare(acc: AuthAccount) {
                           %s
                       }
                   }
@@ -7590,19 +7520,22 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			runtime := newTestInterpreterRuntime()
 
 			compErr := errors.New("computation exceeded limit")
-			var compUsed uint
+			var hits, totalIntensity uint
 			meterComputationFunc := func(kind common.ComputationKind, intensity uint) error {
-				compUsed++
-				if compUsed >= compLimit {
+				hits++
+				totalIntensity += intensity
+				if hits >= compLimit {
 					return compErr
 				}
 				return nil
 			}
 
+			address := common.MustBytesToAddress([]byte{0x1})
+
 			runtimeInterface := &testRuntimeInterface{
 				storage: newTestLedger(nil, nil),
 				getSigningAccounts: func() ([]Address, error) {
-					return nil, nil
+					return []Address{address}, nil
 				},
 				meterComputation: meterComputationFunc,
 			}
@@ -7628,7 +7561,8 @@ func TestRuntimeComputationMetring(t *testing.T) {
 				require.ErrorAs(t, err.(Error).Unwrap(), &compErr)
 			}
 
-			require.Equal(t, test.expCompUsed, compUsed)
+			assert.Equal(t, test.hits, hits)
+			assert.Equal(t, test.intensity, totalIntensity)
 		})
 	}
 }
@@ -7837,18 +7771,10 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 			return []Address{signerAccount}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
 			accountCodes[location] = code
 			return nil
 		},

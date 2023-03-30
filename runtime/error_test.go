@@ -388,11 +388,7 @@ func TestRuntimeError(t *testing.T) {
 				}
 				return
 			},
-			getAccountContractCode: func(address Address, name string) ([]byte, error) {
-				location := common.AddressLocation{
-					Name:    name,
-					Address: address,
-				}
+			getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 				code := codes[location]
 				return []byte(code), nil
 			},
