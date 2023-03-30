@@ -359,9 +359,12 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 			var auth Access = UnauthorizedAccess
 			// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
 			if entitlementSupportingType, ok := returnType.(EntitlementSupportingType); ok {
-				auth = EntitlementSetAccess{
-					SetKind:      Conjunction,
-					Entitlements: entitlementSupportingType.SupportedEntitlements(),
+				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+				if supportedEntitlements.Len() > 0 {
+					auth = EntitlementSetAccess{
+						SetKind:      Conjunction,
+						Entitlements: supportedEntitlements,
+					}
 				}
 			}
 			resultType = &ReferenceType{

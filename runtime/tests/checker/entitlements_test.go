@@ -3839,4 +3839,23 @@ func TestCheckAttachmentEntitlementConditions(t *testing.T) {
 
 		assert.NoError(t, err)
 	})
+
+	t.Run("result value usage unentitled resource", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		resource R {
+			view fun foo(): Bool {
+				return true
+			}
+		}
+		fun bar(r: @R): @R {
+			post {
+				result.foo(): ""
+			}
+			return <-r
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
 }
