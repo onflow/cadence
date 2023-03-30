@@ -1,3 +1,2 @@
-.PHONY: plugin
-plugin:
+maprange.so: go.mod
 	go build -buildmode=plugin .

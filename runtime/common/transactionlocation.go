@@ -70,6 +70,10 @@ func (l TransactionLocation) Description() string {
 	return fmt.Sprintf("transaction with ID %s", hex.EncodeToString(l[:]))
 }
 
+func (l TransactionLocation) ID() string {
+	return fmt.Sprintf("%s.%s", TransactionLocationPrefix, l)
+}
+
 func (l TransactionLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type        string

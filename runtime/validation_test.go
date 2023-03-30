@@ -52,7 +52,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return nil, nil
 			},
 			meterMemory: func(_ common.MemoryUsage) error {
@@ -102,7 +102,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return nil, nil
 			},
 			meterMemory: func(_ common.MemoryUsage) error {

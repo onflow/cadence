@@ -85,6 +85,10 @@ func (l AddressLocation) Description() string {
 	)
 }
 
+func (l AddressLocation) ID() string {
+	return fmt.Sprintf("%s.%s", AddressLocationPrefix, l)
+}
+
 func (l AddressLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type    string
@@ -140,9 +144,7 @@ func decodeAddressLocationTypeID(gauge MemoryGauge, typeID string) (AddressLocat
 		panic(errors.NewUnreachableError())
 	case 1:
 		return newError("missing location")
-	case 2:
-		return newError("missing qualified identifier")
-	case 3, 4:
+	case 2, 3, 4:
 		break
 	default:
 		// strings.SplitN will never return more than 4 parts
@@ -177,6 +179,11 @@ func decodeAddressLocationTypeID(gauge MemoryGauge, typeID string) (AddressLocat
 	var qualifiedIdentifier string
 
 	switch partCount {
+	case 2:
+		// If there are only 2 parts,
+		// then `<qualifiedIdentifier>` is empty,
+		// and both the contract name and the qualified identifier are empty (default)s
+
 	case 3:
 		// If there are only 3 parts,
 		// then `<qualifiedIdentifier>` is both the contract name and the qualified identifier.

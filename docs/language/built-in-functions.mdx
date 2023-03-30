@@ -37,10 +37,30 @@ fun unsafeRandom(): UInt64
 
   Returns a pseudo-random number.
 
-  NOTE: The use of this function is unsafe if not used correctly.
+  NOTE: 
+  Smart contract developers should be mindful about the limitations of unsafeRandom. 
+  The stream of random numbers produced is potentially unsafe in the following two regards:
 
-  Follow [best practices](https://consensys.github.io/smart-contract-best-practices/development-recommendations/general/public-data/)
-  to prevent security issues when using this function.
+  1. The sequence of random numbers is potentially predictable by transactions within the same block
+  and by other smart contracts calling into your smart contract.
+  2. A transaction calling into your smart contract can potentially bias the sequence of random numbers which
+  your smart contract internally generates. 
+  
+  We are working towards removing these limitations incrementally. Once these points are addressed, 
+  Flow’s randomness is safe and we will remove the "unsafe" qualifier.
+
+  Nevertheless, there is an additional safety-relevant aspect that developers need to be mindful about:
+
+  * A transaction can atomically revert all its action at any time. Therefore, it is possible for a transaction calling into
+  your smart contract to post-select favourable results and revert the transaction for unfavourable results.
+  ([example](https://consensys.github.io/smart-contract-best-practices/development-recommendations/general/public-data/))
+
+  This limitation is inherent to any smart contract platform that allows transactions to roll back atomically and cannot be
+  solved through safe randomness alone.  Providing additional Cadence language primitives to simplify this challenge for
+  developers is on our roadmap as well. Nevertheless, with safe randomness (points 1 and 2 above resolved), developers can prevent
+  clients from post-select favourable outcomes using approaches such as described in the
+  [example](https://consensys.github.io/smart-contract-best-practices/development-recommendations/general/public-data/).
+
 
 ## RLP
 

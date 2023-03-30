@@ -40,10 +40,10 @@ jobs:
           cache: true
 
       - name: Build
-        run: make build
+        run: make -j8 build
 
       - name: Test
-        run: make test
+        run: make ci
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v2

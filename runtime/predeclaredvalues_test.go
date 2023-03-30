@@ -75,10 +75,10 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},

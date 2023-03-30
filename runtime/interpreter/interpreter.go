@@ -112,6 +112,14 @@ type OnMeterComputationFunc func(
 	intensity uint,
 )
 
+// OnAccountLinkedFunc is a function that is triggered when an account is linked by the program.
+type OnAccountLinkedFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	path PathValue,
+) error
+
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 type InjectedCompositeFieldsHandlerFunc func(
 	inter *Interpreter,
@@ -3777,6 +3785,12 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
+			if !interpreter.SharedState.Config.AccountLinkingAllowed {
+				panic(AccountLinkingForbiddenError{
+					LocationRange: invocation.LocationRange,
+				})
+			}
+
 			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3801,6 +3815,19 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 				newCapabilityIdentifier,
 				accountLinkValue,
 			)
+
+			onAccountLinked := interpreter.SharedState.Config.OnAccountLinked
+			if onAccountLinked != nil {
+				err := onAccountLinked(
+					interpreter,
+					invocation.LocationRange,
+					addressValue,
+					newCapabilityPath,
+				)
+				if err != nil {
+					panic(err)
+				}
+			}
 
 			return NewSomeValueNonCopying(
 				interpreter,
@@ -4745,4 +4772,32 @@ func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atr
 
 func (interpreter *Interpreter) Storage() Storage {
 	return interpreter.SharedState.Config.Storage
+}
+
+// ConfigureAccountLinkingAllowed configures if execution is allowed to use account linking,
+// depending on the occurrence of the pragma declaration #allowAccountLinking.
+//
+// The pragma declaration must appear as a top-level declaration (i.e. not nested in the program),
+// and must appear before all other declarations (i.e. at the top of the program).
+//
+// This requirement is also checked statically.
+//
+// This is a temporary feature, which is planned to get replaced by capability controllers,
+// and a new Account type with entitlements.
+func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
+	config := interpreter.SharedState.Config
+
+	config.AccountLinkingAllowed = false
+
+	declarations := interpreter.Program.Program.Declarations()
+	if len(declarations) < 1 {
+		return
+	}
+
+	pragmaDeclaration, isPragma := declarations[0].(*ast.PragmaDeclaration)
+	if !isPragma || !sema.IsAllowAccountLinkingPragma(pragmaDeclaration) {
+		return
+	}
+
+	config.AccountLinkingAllowed = true
 }

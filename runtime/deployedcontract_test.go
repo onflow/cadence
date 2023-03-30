@@ -73,10 +73,7 @@ func TestDeployedContracts(t *testing.T) {
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		getAccountContractCode: func(address Address, name string) ([]byte, error) {
-			location := common.AddressLocation{
-				Address: address, Name: name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 			return accountCodes[location], nil
 		},
 		getAccountContractNames: func(_ Address) ([]string, error) {
@@ -89,10 +86,7 @@ func TestDeployedContracts(t *testing.T) {
 		emitEvent: func(_ cadence.Event) error {
 			return nil
 		},
-		updateAccountContractCode: func(address common.Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address, Name: name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
