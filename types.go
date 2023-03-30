@@ -1781,6 +1781,28 @@ func (t *FunctionType) Equal(other Type) bool {
 		return false
 	}
 
+	// Type parameters
+
+	if len(t.TypeParameters) != len(otherType.TypeParameters) {
+		return false
+	}
+
+	for i, typeParameter := range t.TypeParameters {
+		otherTypeParameter := otherType.TypeParameters[i]
+
+		if typeParameter.TypeBound == nil {
+			if otherTypeParameter.TypeBound != nil {
+				return false
+			}
+		} else if otherTypeParameter.TypeBound == nil ||
+			!typeParameter.TypeBound.Equal(otherTypeParameter.TypeBound) {
+
+			return false
+		}
+	}
+
+	// Parameters
+
 	if len(t.Parameters) != len(otherType.Parameters) {
 		return false
 	}
