@@ -74,6 +74,10 @@ func (l FlowLocation) Description() string {
 	return FlowLocationPrefix
 }
 
+func (l FlowLocation) ID() string {
+	return FlowLocationPrefix
+}
+
 func (l FlowLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type string
@@ -105,11 +109,6 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 
 	parts := strings.SplitN(typeID, ".", 2)
 
-	pieceCount := len(parts)
-	if pieceCount == 1 {
-		return newError("missing qualified identifier")
-	}
-
 	prefix := parts[0]
 
 	if prefix != FlowLocationPrefix {
@@ -121,7 +120,11 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 		)
 	}
 
-	qualifiedIdentifier := parts[1]
+	var qualifiedIdentifier string
+	pieceCount := len(parts)
+	if pieceCount > 1 {
+		qualifiedIdentifier = parts[1]
+	}
 
 	return FlowLocation{}, qualifiedIdentifier, nil
 }
@@ -270,4 +273,15 @@ var AccountInboxClaimedEventType = newFlowEventType(
 	AccountEventProviderParameter,
 	AccountEventRecipientParameter,
 	AccountEventNameParameter,
+)
+
+var AccountLinkedEventType = newFlowEventType(
+	"AccountLinked",
+	AccountEventAddressParameter,
+	sema.Parameter{
+		Identifier: "path",
+		TypeAnnotation: sema.NewTypeAnnotation(
+			sema.AuthAccountTypeLinkAccountFunctionTypePathParameterType,
+		),
+	},
 )

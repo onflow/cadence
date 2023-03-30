@@ -113,6 +113,19 @@ func TestCheckAllowAccountLinkingPragma(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("top-level, after other pragmas", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          #someOtherPragma
+          #allowAccountLinking
+
+          let x = 1
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidPragmaError{}, errs[0])
+	})
+
 	t.Run("top-level, after other declarations", func(t *testing.T) {
 		t.Parallel()
 

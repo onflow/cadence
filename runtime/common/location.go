@@ -36,6 +36,9 @@ type Location interface {
 	QualifiedIdentifier(typeID TypeID) string
 	// Description returns a human-readable description. For example, it can be used in error messages
 	Description() string
+	// ID returns a string representation of the location, including the location prefix.
+	// This is helpful to differentiate a location, e.g in the context of code coverage.
+	ID() string
 }
 
 // LocationsInSameAccount returns true if both locations are nil,

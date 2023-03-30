@@ -40,6 +40,16 @@ func newExportableValue(v interpreter.Value, inter *interpreter.Interpreter) exp
 	}
 }
 
+func newExportableValues(inter *interpreter.Interpreter, values []interpreter.Value) []exportableValue {
+	exportableValues := make([]exportableValue, 0, len(values))
+
+	for _, value := range values {
+		exportableValues = append(exportableValues, newExportableValue(value, inter))
+	}
+
+	return exportableValues
+}
+
 func (v exportableValue) Interpreter() *interpreter.Interpreter {
 	return v.inter
 }

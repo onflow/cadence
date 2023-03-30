@@ -79,11 +79,11 @@ type Interface interface {
 	// RevokeAccountKey removes a key from an account by index.
 	RevokeAccountKey(address Address, index int) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
-	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
+	UpdateAccountContractCode(location common.AddressLocation, code []byte) (err error)
 	// GetAccountContractCode returns the code associated with an account contract.
-	GetAccountContractCode(address Address, name string) (code []byte, err error)
+	GetAccountContractCode(location common.AddressLocation) (code []byte, err error)
 	// RemoveAccountContractCode removes the code associated with an account contract.
-	RemoveAccountContractCode(address Address, name string) (err error)
+	RemoveAccountContractCode(location common.AddressLocation) (err error)
 	// GetSigningAccounts returns the signing accounts.
 	GetSigningAccounts() ([]Address, error)
 	// ProgramLog logs program logs.
