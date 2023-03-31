@@ -18751,6 +18751,8 @@ func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
 		ReferenceStaticType{
 			BorrowedType:   authAccountStaticType,
 			ReferencedType: authAccountStaticType,
+			// ENTITLEMENTS TODO: eventually account types should support entitlements
+			Authorization: UnauthorizedAccess,
 		},
 	)
 }

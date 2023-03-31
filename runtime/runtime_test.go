@@ -2834,12 +2834,14 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 						nil,
 					}).WithType(&cadence.VariableSizedArrayType{
 						ElementType: &cadence.ReferenceType{
-							Type: cadence.AnyStructType{},
+							Type:          cadence.AnyStructType{},
+							Authorization: cadence.UnauthorizedAccess,
 						},
 					}),
 				}).WithType(&cadence.VariableSizedArrayType{
 					ElementType: &cadence.ReferenceType{
-						Type: cadence.AnyStructType{},
+						Type:          cadence.AnyStructType{},
+						Authorization: cadence.UnauthorizedAccess,
 					},
 				}),
 			},

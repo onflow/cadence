@@ -3827,6 +3827,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 var authAccountReferenceStaticType = ReferenceStaticType{
 	BorrowedType:   PrimitiveStaticTypeAuthAccount,
 	ReferencedType: PrimitiveStaticTypeAuthAccount,
+	Authorization:  UnauthorizedAccess,
 }
 
 // Linking

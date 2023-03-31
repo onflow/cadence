@@ -1553,9 +1553,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 		},
 	)
 
-	RequireError(t, err)
-
-	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	require.NoError(t, err)
 }
 
 func TestRuntimeStorageNonStorable(t *testing.T) {

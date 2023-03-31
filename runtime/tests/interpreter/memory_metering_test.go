@@ -8538,8 +8538,8 @@ func TestInterpretASTMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(229), meter.getMemory(common.MemoryKindPosition))
-		assert.Equal(t, uint64(124), meter.getMemory(common.MemoryKindRange))
+		assert.Equal(t, uint64(230), meter.getMemory(common.MemoryKindPosition))
+		assert.Equal(t, uint64(125), meter.getMemory(common.MemoryKindRange))
 	})
 
 	t.Run("locations", func(t *testing.T) {
@@ -9188,7 +9188,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 			},
 			{
 				name:        "Auth Reference",
-				constructor: "auth &AnyStruct",
+				constructor: "auth(X) &AnyStruct",
 			},
 			{
 				name:        "Capability",
@@ -9202,6 +9202,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				t.Parallel()
 
 				script := fmt.Sprintf(`
+				    entitlement X
                     pub fun main() {
                         log(Type<%s>())
                     }

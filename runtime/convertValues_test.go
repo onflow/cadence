@@ -1782,12 +1782,14 @@ func TestExportReferenceValue(t *testing.T) {
 				nil,
 			}).WithType(&cadence.VariableSizedArrayType{
 				ElementType: &cadence.ReferenceType{
-					Type: cadence.AnyStructType{},
+					Type:          cadence.AnyStructType{},
+					Authorization: cadence.UnauthorizedAccess,
 				},
 			}),
 		}).WithType(&cadence.VariableSizedArrayType{
 			ElementType: &cadence.ReferenceType{
-				Type: cadence.AnyStructType{},
+				Type:          cadence.AnyStructType{},
+				Authorization: cadence.UnauthorizedAccess,
 			},
 		})
 
@@ -3952,7 +3954,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 		t.Parallel()
 
 		capabilityValue := cadence.StorageCapability{
-			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}},
+			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}, Authorization: cadence.UnauthorizedAccess},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
 				Domain:     common.PathDomainPublic.Identifier(),
@@ -4053,7 +4055,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 		t.Parallel()
 
 		capabilityValue := cadence.StorageCapability{
-			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}},
+			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}, Authorization: cadence.UnauthorizedAccess},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
 				Domain:     common.PathDomainPrivate.Identifier(),
@@ -4100,7 +4102,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 		t.Parallel()
 
 		capabilityValue := cadence.StorageCapability{
-			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}},
+			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}, Authorization: cadence.UnauthorizedAccess},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
 				Domain:     common.PathDomainStorage.Identifier(),
