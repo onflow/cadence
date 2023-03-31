@@ -663,7 +663,6 @@ func TestInterpretGetType(t *testing.T) {
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						Authorization: interpreter.EntitlementSetAuthorization{
-							Kind:         sema.Conjunction,
 							Entitlements: []common.TypeID{"X"},
 						},
 						BorrowedType: interpreter.PrimitiveStaticTypeInt,
@@ -710,7 +709,6 @@ func TestInterpretGetType(t *testing.T) {
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						Authorization: interpreter.EntitlementSetAuthorization{
-							Kind:         sema.Conjunction,
 							Entitlements: []common.TypeID{"X"},
 						},
 						BorrowedType: interpreter.PrimitiveStaticTypeInt,
@@ -762,7 +760,6 @@ func TestInterpretGetType(t *testing.T) {
 				func(invocation interpreter.Invocation) interpreter.Value {
 					return &interpreter.StorageReferenceValue{
 						Authorization: interpreter.EntitlementSetAuthorization{
-							Kind:         sema.Conjunction,
 							Entitlements: []common.TypeID{"X"},
 						},
 						TargetStorageAddress: storageAddress,

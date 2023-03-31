@@ -3464,7 +3464,6 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
 				Authorization: EntitlementSetAuthorization{
-					Kind:         sema.Conjunction,
 					Entitlements: []common.TypeID{"foo", "bar"},
 				},
 				BorrowedType: PrimitiveStaticTypeBool,
@@ -3482,64 +3481,6 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 			// authorization
 			// tag
 			0xd8, CBORTagEntitlementSetStaticAuthorization,
-			// array, 2 items follow
-			0x82,
-			// Conjunction
-			0x0,
-			// array, length 2
-			0x82,
-			// UTF-8 string, 3 bytes follow
-			0x63,
-			// f, o, o
-			0x66, 0x6f, 0x6f,
-			// UTF-8 string, 3 bytes follow
-			0x63,
-			// b, a, r
-			0x62, 0x61, 0x72,
-
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x6,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("reference type, disjunction entitlement set, bool", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := PathLinkValue{
-			TargetPath: publicPathValue,
-			Type: ReferenceStaticType{
-				Authorization: EntitlementSetAuthorization{
-					Kind:         sema.Disjunction,
-					Entitlements: []common.TypeID{"foo", "bar"},
-				},
-				BorrowedType: PrimitiveStaticTypeBool,
-			},
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagReferenceStaticType,
-			// array, 2 items follow
-			0x82,
-
-			// authorization
-			// tag
-			0xd8, CBORTagEntitlementSetStaticAuthorization,
-			// array, 2 items follow
-			0x82,
-			// Disjunction
-			0x01,
 			// array, length 2
 			0x82,
 			// UTF-8 string, 3 bytes follow

@@ -539,7 +539,10 @@ func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorizat
 	case cadence.EntitlementMapAuthorization:
 		return interpreter.NewEntitlementMapAuthorization(memoryGauge, auth.TypeID)
 	case cadence.EntitlementSetAuthorization:
-		return interpreter.NewEntitlementSetAuthorization(memoryGauge, auth.Entitlements, sema.EntitlementSetKind(auth.Kind))
+		if auth.Kind == cadence.Disjunction {
+			panic(fmt.Sprintf("cannot import disjunctive entitlement set of type %T", auth))
+		}
+		return interpreter.NewEntitlementSetAuthorization(memoryGauge, auth.Entitlements)
 	}
 	panic(fmt.Sprintf("cannot import type of type %T", auth))
 }

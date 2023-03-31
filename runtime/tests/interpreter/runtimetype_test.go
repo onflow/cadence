@@ -521,7 +521,6 @@ func TestInterpretReferenceType(t *testing.T) {
 				},
 				Authorization: interpreter.EntitlementSetAuthorization{
 					Entitlements: []common.TypeID{"S.test.X"},
-					Kind:         sema.Conjunction,
 				},
 			},
 		},
@@ -548,7 +547,6 @@ func TestInterpretReferenceType(t *testing.T) {
 				},
 				Authorization: interpreter.EntitlementSetAuthorization{
 					Entitlements: []common.TypeID{"S.test.X"},
-					Kind:         sema.Conjunction,
 				},
 			},
 		},

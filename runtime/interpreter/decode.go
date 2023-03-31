@@ -1382,36 +1382,6 @@ func (d TypeDecoder) decodeStaticAuthorization() (Authorization, error) {
 		}
 		return NewEntitlementMapAuthorization(d.memoryGauge, common.TypeID(typeID)), nil
 	case CBORTagEntitlementSetStaticAuthorization:
-		const expectedLength = encodedEntitlementSetStaticAuthorizationLength
-
-		arraySize, err := d.decoder.DecodeArrayHead()
-		if err != nil {
-			if e, ok := err.(*cbor.WrongTypeError); ok {
-				return nil, errors.NewUnexpectedError(
-					"invalid entitlement set static authorization encoding: expected [%d]any, got %s",
-					expectedLength,
-					e.ActualType.String(),
-				)
-			}
-			return nil, err
-		}
-
-		if arraySize != expectedLength {
-			return nil, errors.NewUnexpectedError(
-				"invalid entitlement set static authorization encoding: expected [%d]any, got [%d]any",
-				expectedLength,
-				arraySize,
-			)
-		}
-
-		// Decode set kind at array index encodedEntitlementSetKindFieldKey
-		kindUInt, err := d.decoder.DecodeUint64()
-		if err != nil {
-			return nil, err
-		}
-		setKind := sema.EntitlementSetKind(kindUInt)
-
-		// Decode entitlements at array index encodedEntitlementSetEntitlementsFieldKey
 		entitlementsSize, err := d.decoder.DecodeArrayHead()
 		if err != nil {
 			if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1433,7 +1403,7 @@ func (d TypeDecoder) decodeStaticAuthorization() (Authorization, error) {
 				entitlements[i] = common.TypeID(typeID)
 			}
 		}
-		return NewEntitlementSetAuthorization(d.memoryGauge, entitlements, setKind), nil
+		return NewEntitlementSetAuthorization(d.memoryGauge, entitlements), nil
 	}
 	return nil, errors.NewUnexpectedError("invalid static authorization encoding tag: %d", number)
 }

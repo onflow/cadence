@@ -502,16 +502,15 @@ func (Unauthorized) Equal(auth Authorization) bool {
 
 type EntitlementSetAuthorization struct {
 	Entitlements []common.TypeID
-	Kind         sema.EntitlementSetKind
 }
 
-func NewEntitlementSetAuthorization(memoryGauge common.MemoryGauge, entitlements []common.TypeID, kind sema.EntitlementSetKind) EntitlementSetAuthorization {
+func NewEntitlementSetAuthorization(memoryGauge common.MemoryGauge, entitlements []common.TypeID) EntitlementSetAuthorization {
 	common.UseMemory(memoryGauge, common.MemoryUsage{
 		Kind:   common.MemoryKindEntitlementSetStaticAccess,
 		Amount: uint64(len(entitlements)),
 	})
 
-	return EntitlementSetAuthorization{Entitlements: entitlements, Kind: kind}
+	return EntitlementSetAuthorization{Entitlements: entitlements}
 }
 
 func (EntitlementSetAuthorization) isAuthorization() {}
@@ -519,18 +518,11 @@ func (EntitlementSetAuthorization) isAuthorization() {}
 func (e EntitlementSetAuthorization) String() string {
 	var builder strings.Builder
 	builder.WriteString("auth(")
-	var separator string
-
-	if e.Kind == sema.Conjunction {
-		separator = ", "
-	} else if e.Kind == sema.Disjunction {
-		separator = " | "
-	}
 
 	for i, entitlement := range e.Entitlements {
 		builder.WriteString(string(entitlement))
 		if i < len(e.Entitlements) {
-			builder.WriteString(separator)
+			builder.WriteString(", ")
 		}
 	}
 	builder.WriteString(") ")
@@ -545,7 +537,7 @@ func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
 				return false
 			}
 		}
-		return e.Kind == auth.Kind
+		return true
 	}
 	return false
 }
@@ -792,11 +784,15 @@ func ConvertSemaAccesstoStaticAuthorization(
 		}
 
 	case sema.EntitlementSetAccess:
+		if access.SetKind != sema.Conjunction {
+			// disjoint entitlement sets cannot exist at runtime
+			panic(errors.NewUnreachableError())
+		}
 		var entitlements []common.TypeID
 		access.Entitlements.Foreach(func(key *sema.EntitlementType, _ struct{}) {
 			entitlements = append(entitlements, key.Location.TypeID(memoryGauge, key.QualifiedIdentifier()))
 		})
-		return NewEntitlementSetAuthorization(memoryGauge, entitlements, access.SetKind)
+		return NewEntitlementSetAuthorization(memoryGauge, entitlements)
 
 	case sema.EntitlementMapAccess:
 		return NewEntitlementMapAuthorization(memoryGauge, access.Type.Location.TypeID(memoryGauge, access.Type.QualifiedIdentifier()))
@@ -847,7 +843,8 @@ func ConvertStaticAuthorizationToSemaAccess(
 			}
 			entitlements = append(entitlements, entitlement)
 		}
-		return sema.NewEntitlementSetAccess(entitlements, auth.Kind), nil
+		// only conjunction sets can actually exist at runtime
+		return sema.NewEntitlementSetAccess(entitlements, sema.Conjunction), nil
 	}
 	panic(errors.NewUnreachableError())
 }

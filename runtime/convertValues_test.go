@@ -1195,7 +1195,6 @@ func TestImportRuntimeType(t *testing.T) {
 			},
 			expected: interpreter.ReferenceStaticType{
 				Authorization: interpreter.EntitlementSetAuthorization{
-					Kind:         sema.Conjunction,
 					Entitlements: []common.TypeID{"E", "F"},
 				},
 				BorrowedType: interpreter.PrimitiveStaticTypeInt,
