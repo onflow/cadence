@@ -1008,6 +1008,7 @@ func (e *Encoder) encodeCapability(capability cadence.StorageCapability) error {
 //	return-type: type-value
 //
 // ]
+// TODO: handle function type's type parameters
 func (e *Encoder) encodeFunction(typ *cadence.FunctionType, visited ccfTypeIDByCadenceType) error {
 	// Encode array head of length 2.
 	err := e.enc.EncodeRawBytes([]byte{

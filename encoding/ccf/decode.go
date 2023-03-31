@@ -1863,6 +1863,7 @@ func (d *Decoder) decodeParameterTypeValue(visited *cadenceTypeByCCFTypeID) (cad
 //	return-type: type-value
 //
 // ]
+// TODO: handle function type's type parameters
 func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
 	// Decode array head of length 2
 	err := decodeCBORArrayWithKnownSize(d.dec, 2)
@@ -1888,7 +1889,7 @@ func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cade
 
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
-		"",
+		nil,
 		parameters,
 		returnType,
 	), nil

@@ -586,7 +586,6 @@ func (d *Decoder) decodeRestrictedType(
 
 	return cadence.NewMeteredRestrictedType(
 		d.gauge,
-		"",
 		typ,
 		restrictions,
 	), nil

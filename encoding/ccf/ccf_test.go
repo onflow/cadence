@@ -6265,7 +6265,6 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 	)
 
 	countSumRestrictedType := cadence.NewRestrictedType(
-		"",
 		statsType,
 		[]cadence.Type{
 			hasCountInterfaceType,
@@ -6293,7 +6292,6 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 	)
 
 	expectedCountSumRestrictedType := cadence.NewRestrictedType(
-		"",
 		expectedStatsType,
 		[]cadence.Type{
 			hasSumInterfaceType,
@@ -8204,7 +8202,7 @@ func TestEncodeType(t *testing.T) {
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},
 					ReturnType: cadence.IntType{},
-				}).WithID("((String):Int)"),
+				}),
 			},
 			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType": { "kind" : "Function", "typeID":"((String):Int)", "return" : {"kind" : "Int"}, "parameters" : [ {"label" : "qux", "id" : "baz", "type": {"kind" : "String"}} ]} } }
@@ -8303,7 +8301,7 @@ func TestEncodeType(t *testing.T) {
 				StaticType: (&cadence.RestrictedType{
 					Restrictions: []cadence.Type{},
 					Type:         cadence.IntType{},
-				}).WithID("Int{String}"),
+				}),
 			},
 			[]byte{ // language=json, format=json-cdc
 				// {"value":{"staticType":{"kind":"Restriction","typeID":"Int{String}","type":{"kind":"Int"},"restrictions":[]}},"type":"Type"}
@@ -8351,7 +8349,7 @@ func TestEncodeType(t *testing.T) {
 						cadence.StringType{},
 					},
 					Type: cadence.IntType{},
-				}).WithID("Int{String}"),
+				}),
 			},
 			[]byte{ // language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType": { "kind": "Restriction", "typeID":"Int{String}", "type" : {"kind" : "Int"}, "restrictions" : [ {"kind" : "String"} ]} } }
@@ -8407,7 +8405,7 @@ func TestEncodeType(t *testing.T) {
 						cadence.StringType{},
 					},
 					Type: cadence.IntType{},
-				}).WithID("Int{AnyStruct, String}"),
+				}),
 			},
 			[]byte{ // language=json, format=json-cdc
 				// {"value":{"staticType":{"kind":"Restriction","typeID":"Int{AnyStruct, String}","type":{"kind":"Int"},"restrictions":[{"kind":"AnyStruct"},{"kind":"String"}]}},"type":"Type"}
@@ -10271,7 +10269,7 @@ func TestExportFunctionValue(t *testing.T) {
 			FunctionType: (&cadence.FunctionType{
 				Parameters: []cadence.Parameter{},
 				ReturnType: cadence.VoidType{},
-			}).WithID("(():Void)"),
+			}),
 		},
 		[]byte{ // language=json, format=json-cdc
 			// { "type": "Function", "value": { "functionType": { "kind": "Function", "typeID": "(():Void)", "parameters": [], "return": { "kind": "Void" } } } }
@@ -12371,7 +12369,7 @@ func TestEncodeValueOfRestrictedInterface(t *testing.T) {
 		[]cadence.Field{
 			{
 				Type: cadence.NewRestrictedType(
-					"", cadence.TheAnyStructType, []cadence.Type{interfaceType}),
+					cadence.TheAnyStructType, []cadence.Type{interfaceType}),
 				Identifier: "field",
 			},
 		},
