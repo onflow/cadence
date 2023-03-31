@@ -3077,7 +3077,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		struct S {
 			access(M) let x: auth(M) &Int
 			init() {
-				self.x = &1 as auth(Y | Z) &Int
+				self.x = (&1 as auth(Y) &Int) as auth(Y | Z) &Int
 			}
 		}
 		let ref = &S() as auth(X) &S
@@ -3669,7 +3669,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 			access(Y, Z, F, G) fun foo() {}
 		}
 		let s = attach A() to S()
-		let ref = &s as auth(X | E) &S
+		let ref = (&s as auth(X) &S) as auth(X | E) &S
 		let a1 = ref[A]!
 		`)
 
@@ -3854,6 +3854,82 @@ func TestCheckAttachmentEntitlementConditions(t *testing.T) {
 			}
 			return <-r
 		}
+		`)
+
+		assert.NoError(t, err)
+	})
+}
+
+func TestCheckDisjointEntitlementSetCreation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("fail with cast", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		let x = &1 as auth(X | Y) &Int
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.ExplicitDisjointEntitlementSetReferenceCreationError{}, errs[0])
+	})
+
+	t.Run("fail with annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		let x: auth(X | Y) &Int = &1
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.ExplicitDisjointEntitlementSetReferenceCreationError{}, errs[0])
+	})
+
+	t.Run("success with cast and annot", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		let x: auth(X | Y) &Int = &1 as auth(X) &Int
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("success with double cast", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		let x = (&1 as auth(X) &Int) as auth(X | Y) &Int
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("failure as param", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		fun foo(_ x: auth(X | Y) &Int) {}
+		let x = foo(&1)
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.ExplicitDisjointEntitlementSetReferenceCreationError{}, errs[0])
+	})
+
+	t.Run("success as param", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		fun foo(_ x: auth(X | Y) &Int) {}
+		let x = foo(&1 as auth(Y) &Int)
 		`)
 
 		assert.NoError(t, err)
