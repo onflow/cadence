@@ -339,4 +339,33 @@ func TestInterpretDisjointSetRuntimeCreation(t *testing.T) {
 		require.ErrorAs(t, err, &disjointErr)
 
 	})
+
+	t.Run("cannot link with disjoint entitlement set", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			entitlement Y
+			resource R {}
+			fun test(): Capability<&R>? {
+				let r <- create R()
+				account.save(<-r, to: /storage/foo)
+				return account.link<auth(X | Y) &R>(/public/foo, target: /storage/foo)
+			}
+			`,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		var disjointErr interpreter.InvalidDisjointRuntimeEntitlementSetCreationError
+		require.ErrorAs(t, err, &disjointErr)
+
+	})
 }

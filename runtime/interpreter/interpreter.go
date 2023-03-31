@@ -3704,6 +3704,15 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 				panic(errors.NewUnreachableError())
 			}
 
+			if entitlementSet, ok := borrowType.Authorization.(sema.EntitlementSetAccess); ok {
+				if entitlementSet.SetKind == sema.Disjunction {
+					panic(InvalidDisjointRuntimeEntitlementSetCreationError{
+						Authorization: borrowType.Authorization,
+						LocationRange: invocation.LocationRange,
+					})
+				}
+			}
+
 			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
