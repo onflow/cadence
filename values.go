@@ -1872,7 +1872,7 @@ func NewPathLink(targetPath Path, borrowType string) PathLink {
 	}
 }
 
-func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) PathLink {
+func NewMeteredPathLink(gauge common.MemoryGauge, targetPath Path, borrowType string) PathLink {
 	common.UseMemory(gauge, common.CadencePathLinkValueMemoryUsage)
 	return NewPathLink(targetPath, borrowType)
 }
@@ -1896,6 +1896,39 @@ func (v PathLink) String() string {
 		v.BorrowType,
 		v.TargetPath.String(),
 	)
+}
+
+// AccountLink
+
+type AccountLink struct{}
+
+var _ Value = AccountLink{}
+
+func NewAccountLink() AccountLink {
+	return AccountLink{}
+}
+
+func NewMeteredAccountLink(gauge common.MemoryGauge) AccountLink {
+	common.UseMemory(gauge, common.CadenceAccountLinkValueMemoryUsage)
+	return NewAccountLink()
+}
+
+func (AccountLink) isValue() {}
+
+func (v AccountLink) Type() Type {
+	return nil
+}
+
+func (v AccountLink) MeteredType(_ common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v AccountLink) ToGoValue() any {
+	return nil
+}
+
+func (v AccountLink) String() string {
+	return format.AccountLink
 }
 
 // Path

@@ -144,7 +144,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 			formatLiteral := func(integer, fractional *big.Int) string {
 				var builder strings.Builder
 				builder.WriteString(integer.String())
-				builder.WriteRune('.')
+				builder.WriteByte('.')
 				builder.WriteString(format.PadLeft(fractional.String(), '0', ranged.Scale()))
 				return builder.String()
 			}

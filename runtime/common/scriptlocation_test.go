@@ -105,10 +105,10 @@ func TestDecodeScriptLocationTypeID(t *testing.T) {
 			ScriptLocation{0x1, 0x2},
 			location,
 		)
-		assert.Empty(t, qualifiedIdentifier)
+		assert.Equal(t, "", qualifiedIdentifier)
 	})
 
-	t.Run("missing qualified identifier", func(t *testing.T) {
+	t.Run("invalid prefix", func(t *testing.T) {
 
 		t.Parallel()
 

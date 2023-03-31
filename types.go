@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type Type interface {
@@ -1053,6 +1054,23 @@ func NewParameter(
 	}
 }
 
+// TypeParameter
+
+type TypeParameter struct {
+	Name      string
+	TypeBound Type
+}
+
+func NewTypeParameter(
+	name string,
+	typeBound Type,
+) TypeParameter {
+	return TypeParameter{
+		Name:      name,
+		TypeBound: typeBound,
+	}
+}
+
 // CompositeType
 
 type CompositeType interface {
@@ -1694,44 +1712,67 @@ func (t *ContractInterfaceType) Equal(other Type) bool {
 
 // Function
 
-// TODO: type parameters
 type FunctionType struct {
-	ReturnType Type
-	typeID     string
-	Parameters []Parameter
+	TypeParameters []TypeParameter
+	Parameters     []Parameter
+	ReturnType     Type
+	typeID         string
 }
 
 func NewFunctionType(
-	typeID string,
+	typeParameters []TypeParameter,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	return &FunctionType{
-		typeID:     typeID,
-		Parameters: parameters,
-		ReturnType: returnType,
+		TypeParameters: typeParameters,
+		Parameters:     parameters,
+		ReturnType:     returnType,
 	}
 }
 
 func NewMeteredFunctionType(
 	gauge common.MemoryGauge,
-	typeID string,
+	typeParameters []TypeParameter,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	common.UseMemory(gauge, common.CadenceFunctionTypeMemoryUsage)
-	return NewFunctionType(typeID, parameters, returnType)
+	return NewFunctionType(typeParameters, parameters, returnType)
 }
 
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) ID() string {
-	return t.typeID
-}
+	if t.typeID == "" {
 
-func (t *FunctionType) WithID(id string) *FunctionType {
-	t.typeID = id
-	return t
+		typeParameterCount := len(t.TypeParameters)
+		var typeParameters []string
+		if typeParameterCount > 0 {
+			typeParameters = make([]string, typeParameterCount)
+			for i, typeParameter := range t.TypeParameters {
+				typeParameters[i] = typeParameter.Name
+			}
+		}
+
+		parameterCount := len(t.Parameters)
+		var parameters []string
+		if parameterCount > 0 {
+			parameters = make([]string, parameterCount)
+			for i, parameter := range t.Parameters {
+				parameters[i] = parameter.Type.ID()
+			}
+		}
+
+		returnType := t.ReturnType.ID()
+
+		t.typeID = sema.FormatFunctionTypeID(
+			typeParameters,
+			parameters,
+			returnType,
+		)
+	}
+	return t.typeID
 }
 
 func (t *FunctionType) Equal(other Type) bool {
@@ -1739,6 +1780,28 @@ func (t *FunctionType) Equal(other Type) bool {
 	if !ok {
 		return false
 	}
+
+	// Type parameters
+
+	if len(t.TypeParameters) != len(otherType.TypeParameters) {
+		return false
+	}
+
+	for i, typeParameter := range t.TypeParameters {
+		otherTypeParameter := otherType.TypeParameters[i]
+
+		if typeParameter.TypeBound == nil {
+			if otherTypeParameter.TypeBound != nil {
+				return false
+			}
+		} else if otherTypeParameter.TypeBound == nil ||
+			!typeParameter.TypeBound.Equal(otherTypeParameter.TypeBound) {
+
+			return false
+		}
+	}
+
+	// Parameters
 
 	if len(t.Parameters) != len(otherType.Parameters) {
 		return false
@@ -1786,12 +1849,8 @@ func NewMeteredReferenceType(
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) ID() string {
-	if len(t.typeID) == 0 {
-		var prefix string
-		if t.Authorized {
-			prefix = "auth"
-		}
-		t.typeID = fmt.Sprintf("%s&%s", prefix, t.Type.ID())
+	if t.typeID == "" {
+		t.typeID = sema.FormatReferenceTypeID(t.Authorized, t.Type.ID())
 	}
 	return t.typeID
 }
@@ -1808,23 +1867,21 @@ func (t *ReferenceType) Equal(other Type) bool {
 
 // RestrictedType
 
-type restrictionSet = map[Type]struct{}
+type RestrictionSet = map[Type]struct{}
 
 type RestrictedType struct {
 	typeID             string
 	Type               Type
 	Restrictions       []Type
-	restrictionSet     restrictionSet
+	restrictionSet     RestrictionSet
 	restrictionSetOnce sync.Once
 }
 
 func NewRestrictedType(
-	typeID string,
 	typ Type,
 	restrictions []Type,
 ) *RestrictedType {
 	return &RestrictedType{
-		typeID:       typeID,
 		Type:         typ,
 		Restrictions: restrictions,
 	}
@@ -1832,23 +1889,28 @@ func NewRestrictedType(
 
 func NewMeteredRestrictedType(
 	gauge common.MemoryGauge,
-	typeID string,
 	typ Type,
 	restrictions []Type,
 ) *RestrictedType {
 	common.UseMemory(gauge, common.CadenceRestrictedTypeMemoryUsage)
-	return NewRestrictedType(typeID, typ, restrictions)
+	return NewRestrictedType(typ, restrictions)
 }
 
 func (*RestrictedType) isType() {}
 
 func (t *RestrictedType) ID() string {
+	if t.typeID == "" {
+		var restrictionStrings []string
+		restrictionCount := len(t.Restrictions)
+		if restrictionCount > 0 {
+			restrictionStrings = make([]string, 0, restrictionCount)
+			for _, restriction := range t.Restrictions {
+				restrictionStrings = append(restrictionStrings, restriction.ID())
+			}
+		}
+		t.typeID = sema.FormatRestrictedTypeID(t.Type.ID(), restrictionStrings)
+	}
 	return t.typeID
-}
-
-func (t *RestrictedType) WithID(id string) *RestrictedType {
-	t.typeID = id
-	return t
 }
 
 func (t *RestrictedType) Equal(other Type) bool {
@@ -1861,15 +1923,15 @@ func (t *RestrictedType) Equal(other Type) bool {
 		return false
 	}
 
-	t.initializeRestrictionSet()
-	otherType.initializeRestrictionSet()
+	restrictionSet := t.RestrictionSet()
+	otherRestrictionSet := otherType.RestrictionSet()
 
-	if len(t.restrictionSet) != len(otherType.restrictionSet) {
+	if len(restrictionSet) != len(otherRestrictionSet) {
 		return false
 	}
 
-	for restriction := range t.restrictionSet { //nolint:maprange
-		_, ok := otherType.restrictionSet[restriction]
+	for restriction := range restrictionSet { //nolint:maprange
+		_, ok := otherRestrictionSet[restriction]
 		if !ok {
 			return false
 		}
@@ -1880,11 +1942,16 @@ func (t *RestrictedType) Equal(other Type) bool {
 
 func (t *RestrictedType) initializeRestrictionSet() {
 	t.restrictionSetOnce.Do(func() {
-		t.restrictionSet = restrictionSet{}
+		t.restrictionSet = make(RestrictionSet, len(t.Restrictions))
 		for _, restriction := range t.Restrictions {
 			t.restrictionSet[restriction] = struct{}{}
 		}
 	})
+}
+
+func (t *RestrictedType) RestrictionSet() RestrictionSet {
+	t.initializeRestrictionSet()
+	return t.restrictionSet
 }
 
 // BlockType
@@ -2031,12 +2098,13 @@ func NewMeteredCapabilityType(
 func (*CapabilityType) isType() {}
 
 func (t *CapabilityType) ID() string {
-	if len(t.typeID) == 0 {
-		if t.BorrowType != nil {
-			t.typeID = fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
-		} else {
-			t.typeID = "Capability"
+	if t.typeID == "" {
+		var borrowTypeString string
+		borrowType := t.BorrowType
+		if borrowType != nil {
+			borrowTypeString = borrowType.ID()
 		}
+		t.typeID = sema.FormatCapabilityTypeID(borrowTypeString)
 	}
 	return t.typeID
 }

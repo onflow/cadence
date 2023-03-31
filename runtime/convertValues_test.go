@@ -133,7 +133,11 @@ func TestExportValue(t *testing.T) {
 		},
 	}
 
-	testFunctionType := cadence.NewFunctionType("(():Void)", []cadence.Parameter{}, cadence.VoidType{})
+	testFunctionType := cadence.NewFunctionType(
+		nil,
+		nil,
+		cadence.VoidType{},
+	)
 
 	for _, tt := range []exportTest{
 		{
@@ -818,7 +822,7 @@ func TestImportValue(t *testing.T) {
 			},
 		},
 		{
-			label: "Link (invalid)",
+			label: "Path Link (invalid)",
 			value: cadence.PathLink{
 				TargetPath: cadence.Path{
 					Domain:     "storage",
@@ -826,6 +830,11 @@ func TestImportValue(t *testing.T) {
 				},
 				BorrowType: "Int",
 			},
+			expected: nil,
+		},
+		{
+			label:    "Account Link (invalid)",
+			value:    cadence.AccountLink{},
 			expected: nil,
 		},
 		{
@@ -1822,6 +1831,78 @@ func TestExportReferenceValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run("storage, recursive, same reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(): &AnyStruct {
+                var acct = getAuthAccount(0x01)
+	            var v:[AnyStruct] = []
+	            acct.save(v, to: /storage/x)
+
+                var ref = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+	            ref.append(ref)
+	            return ref
+            }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cannot store non-storable value")
+	})
+
+	t.Run("storage, recursive, two references", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(): &AnyStruct {
+                var acct = getAuthAccount(0x01)
+	            var v:[AnyStruct] = []
+	            acct.save(v, to: /storage/x)
+
+                var ref1 = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+                var ref2 = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+
+	            ref1.append(ref2)
+	            return ref1
+            }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cannot store non-storable value")
+	})
 }
 
 func TestExportTypeValue(t *testing.T) {
@@ -1954,7 +2035,7 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.TypeValue{
-				StaticType: (&cadence.RestrictedType{
+				StaticType: &cadence.RestrictedType{
 					Type: &cadence.StructType{
 						QualifiedIdentifier: "S",
 						Location:            TestLocation,
@@ -1967,7 +2048,7 @@ func TestExportTypeValue(t *testing.T) {
 							Fields:              []cadence.Field{},
 						},
 					},
-				}).WithID("S.test.S{S.test.SI}"),
+				},
 			},
 			actual,
 		)
@@ -2183,6 +2264,25 @@ func TestExportPathLinkValue(t *testing.T) {
 	})
 }
 
+func TestExportAccountLinkValue(t *testing.T) {
+
+	t.Parallel()
+
+	link := interpreter.AccountLinkValue{}
+
+	actual, err := exportValueWithInterpreter(
+		link,
+		newTestInterpreter(t),
+		interpreter.EmptyLocationRange,
+		seenReferences{},
+	)
+	require.NoError(t, err)
+
+	expected := cadence.AccountLink{}
+
+	assert.Equal(t, expected, actual)
+}
+
 func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 
 	t.Parallel()
@@ -2213,10 +2313,9 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 			},
 			{
 				Identifier: "f",
-				Type: (&cadence.FunctionType{
-					Parameters: []cadence.Parameter{},
+				Type: &cadence.FunctionType{
 					ReturnType: cadence.VoidType{},
-				}).WithID("(():Void)"),
+				},
 			},
 		},
 	}
@@ -2225,10 +2324,9 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 	expected := cadence.NewStruct([]cadence.Value{
 		cadence.NewInt(42),
 		cadence.Function{
-			FunctionType: (&cadence.FunctionType{
-				Parameters: []cadence.Parameter{},
+			FunctionType: &cadence.FunctionType{
 				ReturnType: cadence.VoidType{},
-			}).WithID("(():Void)"),
+			},
 		},
 	}).WithType(fooStructType)
 

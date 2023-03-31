@@ -1645,11 +1645,11 @@ func TestEncodeContract(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
 }
 
-func TestEncodeLink(t *testing.T) {
+func TestEncodePathLink(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(
+	testEncode(
 		t,
 		cadence.NewPathLink(
 			cadence.NewPath("storage", "foo"),
@@ -1669,6 +1669,22 @@ func TestEncodeLink(t *testing.T) {
               },
               "borrowType": "Bar"
             }
+          }
+        `,
+	)
+}
+
+func TestEncodeAccountLink(t *testing.T) {
+
+	t.Parallel()
+
+	testEncode(
+		t,
+		cadence.NewAccountLink(),
+		// language=json
+		`
+          {
+            "type": "AccountLink"
           }
         `,
 	)
@@ -2383,12 +2399,15 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: (&cadence.FunctionType{
+				StaticType: &cadence.FunctionType{
+					TypeParameters: []cadence.TypeParameter{
+						{Name: "T", TypeBound: cadence.AnyStructType{}},
+					},
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},
 					ReturnType: cadence.IntType{},
-				}).WithID("Foo"),
+				},
 			},
 			// language=json
 			`
@@ -2397,10 +2416,17 @@ func TestEncodeType(t *testing.T) {
                 "value": {
                   "staticType": {
                     "kind": "Function",
-                    "typeID": "Foo",
                     "return": {
                       "kind": "Int"
                     },
+                    "typeParameters": [
+                      {
+                        "name": "T",
+                        "typeBound": {
+                          "kind": "AnyStruct"
+                        }
+                      }
+                    ],
                     "parameters": [
                       {
                         "label": "qux",
@@ -2450,12 +2476,12 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: (&cadence.RestrictedType{
+				StaticType: &cadence.RestrictedType{
 					Restrictions: []cadence.Type{
 						cadence.StringType{},
 					},
 					Type: cadence.IntType{},
-				}).WithID("Int{String}"),
+				},
 			},
 			// language=json
 			`
@@ -2464,7 +2490,6 @@ func TestEncodeType(t *testing.T) {
                 "value": {
                   "staticType": {
                     "kind": "Restriction",
-                    "typeID": "Int{String}",
                     "type": {
                       "kind": "Int"
                     },
@@ -2972,7 +2997,7 @@ func TestDecodeInvalidType(t *testing.T) {
 		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: ``", err.Error())
 	})
 
-	t.Run("undefined type", func(t *testing.T) {
+	t.Run("invalid type ID", func(t *testing.T) {
 		t.Parallel()
 
 		// language=json
@@ -2980,14 +3005,14 @@ func TestDecodeInvalidType(t *testing.T) {
           {
             "type": "Struct",
             "value": {
-              "id": "I.Foo",
+              "id": "I",
               "fields": []
             }
           }
         `
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
-		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID `I.Foo`: invalid identifier location type ID: missing qualified identifier", err.Error())
+		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID `I`: invalid identifier location type ID: missing location", err.Error())
 	})
 
 	t.Run("unknown location prefix", func(t *testing.T) {
@@ -3241,10 +3266,10 @@ func TestExportFunctionValue(t *testing.T) {
 	testEncode(
 		t,
 		cadence.Function{
-			FunctionType: (&cadence.FunctionType{
+			FunctionType: &cadence.FunctionType{
 				Parameters: []cadence.Parameter{},
 				ReturnType: cadence.VoidType{},
-			}).WithID("(():Void)"),
+			},
 		},
 		// language=json
 		`
@@ -3253,8 +3278,8 @@ func TestExportFunctionValue(t *testing.T) {
             "value": {
               "functionType": {
                 "kind": "Function",
-                "typeID": "(():Void)",
                 "parameters": [],
+                "typeParameters": [],
                 "return": {
                   "kind": "Void"
                 }

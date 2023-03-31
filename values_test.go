@@ -45,7 +45,7 @@ func newValueTestCases() map[string]valueTestCase {
 	fix64, _ := NewFix64("-32.11")
 
 	testFunctionType := NewFunctionType(
-		"((String):UInt8)",
+		nil,
 		[]Parameter{
 			{
 				Type: StringType{},
@@ -330,7 +330,7 @@ func newValueTestCases() map[string]valueTestCase {
 			},
 			string: "S.test.FooAttachment(bar: 1)",
 		},
-		"Link": {
+		"PathLink": {
 			value: NewPathLink(
 				Path{
 					Domain:     "storage",
@@ -339,6 +339,11 @@ func newValueTestCases() map[string]valueTestCase {
 				"Int",
 			),
 			string: "PathLink<Int>(/storage/foo)",
+			noType: true,
+		},
+		"AccountLink": {
+			value:  NewAccountLink(),
+			string: "AccountLink()",
 			noType: true,
 		},
 		"Path": {
@@ -764,10 +769,12 @@ func TestValue_Type(t *testing.T) {
 				require.Equal(t, exampleType, returnedType)
 			}
 
-			// Check if the type is not a duplicate of some other type
-			// i.e: two values can't return the same type.
-			require.NotContains(t, checkedTypes, returnedType)
-			checkedTypes[returnedType] = struct{}{}
+			if !testCase.noType {
+				// Check if the type is not a duplicate of some other type
+				// i.e: two values can't return the same type.
+				require.NotContains(t, checkedTypes, returnedType)
+				checkedTypes[returnedType] = struct{}{}
+			}
 		})
 	}
 

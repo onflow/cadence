@@ -169,8 +169,28 @@ func TestType_ID(t *testing.T) {
 			"S.test.BarI",
 		},
 		{
-			(&RestrictedType{}).WithID("S.test.Foo{S.test.FooI}"),
+			&RestrictedType{
+				Type: &ResourceType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "Foo",
+				},
+				Restrictions: []Type{
+					&ResourceInterfaceType{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "FooI",
+					},
+				},
+			},
 			"S.test.Foo{S.test.FooI}",
+		},
+		{
+			&FunctionType{
+				Parameters: []Parameter{
+					{Type: IntType{}},
+				},
+				ReturnType: StringType{},
+			},
+			"((Int):String)",
 		},
 		{
 			&EventType{
@@ -1400,6 +1420,200 @@ func TestTypeEquality(t *testing.T) {
 				},
 			}
 			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type param count", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name: "T",
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			target := &FunctionType{
+				TypeParameters: []TypeParameter{},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type param name", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name: "T",
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			target := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name: "U",
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different type param bound: nil, some", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name: "T",
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			target := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name:      "T",
+						TypeBound: AnyStructType{},
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type param bound: some, nil", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name:      "T",
+						TypeBound: AnyStructType{},
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			target := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name: "T",
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type param bounds", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name:      "T",
+						TypeBound: AnyResourceType{},
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			target := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name:      "T",
+						TypeBound: AnyStructType{},
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("same type param bounds", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name:      "T",
+						TypeBound: AnyResourceType{},
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			target := &FunctionType{
+				TypeParameters: []TypeParameter{
+					{
+						Name:      "T",
+						TypeBound: AnyResourceType{},
+					},
+				},
+				Parameters: []Parameter{
+					{
+						Type: IntType{},
+					},
+				},
+				ReturnType: StringType{},
+			}
+			assert.True(t, source.Equal(target))
 		})
 
 		t.Run("different type", func(t *testing.T) {

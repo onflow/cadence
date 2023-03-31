@@ -22,6 +22,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 const TestTypeNothingFunctionName = "nothing"
@@ -41,9 +42,12 @@ const TestTypeParamsFunctionName = "params"
 var TestTypeParamsFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
+			Identifier:     "a",
 			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 		{
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "b",
 			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
@@ -73,9 +77,12 @@ const TestTypeParamsAndReturnFunctionName = "paramsAndReturn"
 var TestTypeParamsAndReturnFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
+			Identifier:     "a",
 			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 		{
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "b",
 			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
@@ -141,6 +148,7 @@ var TestTypeTypeParamWithBoundAndParamFunctionType = &FunctionType{
 	},
 	Parameters: []Parameter{
 		{
+			Identifier: "t",
 			TypeAnnotation: NewTypeAnnotation(&GenericType{
 				TypeParameter: TestTypeTypeParamWithBoundAndParamFunctionTypeParameterT,
 			}),
