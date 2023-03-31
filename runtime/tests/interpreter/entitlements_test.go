@@ -127,6 +127,125 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("auth <: auth supertype", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Bool {
+			return Type<auth(X, Y) &R>().isSubtype(of: Type<auth(X) &R>())
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("cannot create invalid runtime type", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Type {
+			return Type<auth(X | Y) &R>()
+        }
+    `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		var disjointErr interpreter.InvalidDisjointRuntimeEntitlementSetCreationError
+		require.ErrorAs(t, err, &disjointErr)
+	})
+
+	t.Run("created auth <: auth", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+        resource R {}
+
+        fun test(): Bool {
+			return ReferenceType(entitlements: ["S.test.X"], type: Type<@R>())!.isSubtype(of: Type<auth(X) &R>())
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("created superset auth <: auth", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Bool {
+			return ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())!.isSubtype(of: Type<auth(X) &R>())
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("created different auth <: auth", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Bool {
+			return ReferenceType(entitlements: ["S.test.Y"], type: Type<@R>())!.isSubtype(of: Type<auth(X) &R>())
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			value,
+		)
+	})
 }
 
 func TestInterpretEntitledReferences(t *testing.T) {
@@ -305,6 +424,162 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			value,
 		)
 	})
+}
+
+func TestInterpretCapabilityEntitlements(t *testing.T) {
+	t.Parallel()
+
+	t.Run("can borrow with supertype", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			entitlement Y
+			resource R {}
+			fun test(): &R {
+				let r <- create R()
+				account.save(<-r, to: /storage/foo)
+				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
+				return cap.borrow<auth(X | Y) &R>()!
+			}
+			`,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("can borrow with supertype then downcast", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			entitlement Y
+			resource R {}
+			fun test(): &R {
+				let r <- create R()
+				account.save(<-r, to: /storage/foo)
+				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
+				return cap.borrow<auth(X | Y) &R>()! as! auth(X, Y) &R
+			}
+			`,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("can check with supertype", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			entitlement Y
+			resource R {}
+			fun test(): Bool {
+				let r <- create R()
+				account.save(<-r, to: /storage/foo)
+				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
+				return cap.check<auth(X | Y) &R>()
+			}
+			`,
+			sema.Config{},
+		)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("cannot borrow with subtype", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			entitlement Y
+			resource R {}
+			fun test(): &R {
+				let r <- create R()
+				account.save(<-r, to: /storage/foo)
+				account.link<auth(X) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
+				return cap.borrow<auth(X, Y) &R>()!
+			}
+			`,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		var nilErr interpreter.ForceNilError
+		require.ErrorAs(t, err, &nilErr)
+	})
+
+	t.Run("cannot check with subtype", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			entitlement Y
+			resource R {}
+			fun test(): Bool {
+				let r <- create R()
+				account.save(<-r, to: /storage/foo)
+				account.link<auth(X) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
+				return cap.check<auth(X, Y) &R>()
+			}
+			`,
+			sema.Config{},
+		)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			value,
+		)
+	})
+
 }
 
 func TestInterpretDisjointSetRuntimeCreation(t *testing.T) {

@@ -505,10 +505,11 @@ func TestInterpretReferenceType(t *testing.T) {
       struct S {}
 	  entitlement X
 
-      let a = ReferenceType(authorized: true, type: Type<@R>())
-      let b = ReferenceType(authorized: false, type: Type<String>())
-      let c = ReferenceType(authorized: true, type: Type<S>())
+      let a = ReferenceType(entitlements: ["S.test.X"], type: Type<@R>())!
+      let b = ReferenceType(entitlements: [], type: Type<String>())!
+      let c = ReferenceType(entitlements: ["S.test.X"], type: Type<S>())!
       let d = Type<auth(X) &R>()
+	  let e = ReferenceType(entitlements: ["S.test.Y"], type: Type<S>())
     `)
 
 	assert.Equal(t,
@@ -556,6 +557,11 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		inter.Globals.Get("a").GetValue(),
 		inter.Globals.Get("d").GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("e").GetValue(),
 	)
 }
 

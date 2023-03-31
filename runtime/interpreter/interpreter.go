@@ -2711,6 +2711,21 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 	return typ, nil
 }
 
+func lookupEntitlement(interpreter *Interpreter, typeID string) (*sema.EntitlementType, error) {
+	_, _, err := common.DecodeTypeID(interpreter, typeID)
+	// if the typeID is invalid, return nil
+	if err != nil {
+		return nil, err
+	}
+
+	typ, err := interpreter.getEntitlement(common.TypeID(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	return typ, nil
+}
+
 func init() {
 
 	converterNames := make(map[string]struct{}, len(ConverterDeclarations))
@@ -2758,6 +2773,15 @@ func init() {
 		NewUnmeteredHostFunctionValue(
 			sema.CompositeTypeFunctionType,
 			compositeTypeFunction,
+		),
+	)
+
+	defineBaseValue(
+		BaseActivation,
+		"ReferenceType",
+		NewUnmeteredHostFunctionValue(
+			sema.ReferenceTypeFunctionType,
+			referenceTypeFunction,
 		),
 	)
 
@@ -2817,6 +2841,60 @@ func dictionaryTypeFunction(invocation Invocation) Value {
 				invocation.Interpreter,
 				keyType,
 				valueType,
+			),
+		),
+	)
+}
+
+func referenceTypeFunction(invocation Invocation) Value {
+	entitlementValues, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	typeValue, ok := invocation.Arguments[1].(TypeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	var authorization Authorization = UnauthorizedAccess
+	var entitlements []common.TypeID = make([]common.TypeID, 0, entitlementValues.Count())
+	errInIteration := false
+
+	entitlementValues.Iterate(invocation.Interpreter, func(element Value) (resume bool) {
+		entitlementString, isString := element.(*StringValue)
+		if !isString {
+			errInIteration = true
+			return false
+		}
+
+		_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
+		if err != nil {
+			errInIteration = true
+			return false
+		}
+		entitlements = append(entitlements, common.TypeID(entitlementString.Str))
+
+		return true
+	})
+
+	if errInIteration {
+		return Nil
+	}
+
+	if len(entitlements) > 0 {
+		authorization = NewEntitlementSetAuthorization(invocation.Interpreter, entitlements)
+	}
+
+	return NewSomeValueNonCopying(
+		invocation.Interpreter,
+		NewTypeValue(
+			invocation.Interpreter,
+			NewReferenceStaticType(
+				invocation.Interpreter,
+				authorization,
+				typeValue.Type,
+				nil,
 			),
 		),
 	)
@@ -3128,34 +3206,6 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 						invocation.Interpreter,
 						typeValue.Type,
 						int64(sizeValue.ToInt(invocation.LocationRange)),
-					),
-				)
-			},
-		),
-	},
-	{
-		name: "ReferenceType",
-		converter: NewUnmeteredHostFunctionValue(
-			sema.ReferenceTypeFunctionType,
-			func(invocation Invocation) Value {
-				_, ok := invocation.Arguments[0].(BoolValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				typeValue, ok := invocation.Arguments[1].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return NewTypeValue(
-					invocation.Interpreter,
-					NewReferenceStaticType(
-						invocation.Interpreter,
-						// ENTITLEMENTS TODO: this should take a set of entitlements and produce a reference based on those
-						UnauthorizedAccess,
-						typeValue.Type,
-						nil,
 					),
 				)
 			},
@@ -4136,6 +4186,8 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 			if !sema.IsSubType(allowedType, wantedBorrowType) {
 				return nil, UnauthorizedAccess, nil
 			}
+
+			wantedReferenceType = allowedType.(*sema.ReferenceType)
 
 			targetPath := value.TargetPath
 			paths = append(paths, targetPath)

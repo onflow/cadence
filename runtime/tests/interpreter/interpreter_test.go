@@ -9758,8 +9758,9 @@ func TestInterpretOptionalReference(t *testing.T) {
 	require.Equal(
 		t,
 		&interpreter.EphemeralReferenceValue{
-			Value:        interpreter.NewUnmeteredIntValueFromInt64(1),
-			BorrowedType: sema.IntType,
+			Value:         interpreter.NewUnmeteredIntValueFromInt64(1),
+			BorrowedType:  sema.IntType,
+			Authorization: interpreter.UnauthorizedAccess,
 		},
 		value,
 	)
@@ -9874,8 +9875,9 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	require.Equal(
 		t,
 		&interpreter.EphemeralReferenceValue{
-			Value:        interpreter.NewUnmeteredIntValueFromInt64(2),
-			BorrowedType: sema.IntType,
+			Value:         interpreter.NewUnmeteredIntValueFromInt64(2),
+			BorrowedType:  sema.IntType,
+			Authorization: interpreter.UnauthorizedAccess,
 		},
 		variable.GetValue(),
 	)
