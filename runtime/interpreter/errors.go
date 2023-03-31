@@ -945,6 +945,23 @@ func (e AttachmentIterationMutationError) Error() string {
 	)
 }
 
+// InvalidDisjointRuntimeEntitlementSetCreationError
+type InvalidDisjointRuntimeEntitlementSetCreationError struct {
+	Authorization sema.Access
+	LocationRange
+}
+
+var _ errors.UserError = InvalidDisjointRuntimeEntitlementSetCreationError{}
+
+func (InvalidDisjointRuntimeEntitlementSetCreationError) IsUserError() {}
+
+func (e InvalidDisjointRuntimeEntitlementSetCreationError) Error() string {
+	return fmt.Sprintf(
+		"cannot create a reference value with disjoint entitlement set %s",
+		e.Authorization.AuthKeyword(),
+	)
+}
+
 // InvalidAttachmentOperationTargetError
 type InvalidAttachmentOperationTargetError struct {
 	Value Value

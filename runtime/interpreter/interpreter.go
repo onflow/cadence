@@ -1803,11 +1803,13 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	case *sema.ReferenceType:
 		if !valueType.Equal(unwrappedTargetType) {
+			// transferring a reference at runtime does not change its entitlements; this is so that an upcast reference
+			// can later be downcast back to its original entitlement set
 			switch ref := value.(type) {
 			case *EphemeralReferenceValue:
 				return NewEphemeralReferenceValue(
 					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					ref.Authorization,
 					ref.Value,
 					unwrappedTargetType.Type,
 				)
@@ -1815,7 +1817,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *StorageReferenceValue:
 				return NewStorageReferenceValue(
 					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					ref.Authorization,
 					ref.TargetStorageAddress,
 					ref.TargetPath,
 					unwrappedTargetType.Type,
@@ -3274,18 +3276,6 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 				return false
 			}
 
-			// If the reference value is authorized it may be downcasted
-
-			// ENTITLEMENTS TODO: Don't restrict downcasting based on authorization
-			authorized := subType.Authorization != UnauthorizedAccess
-
-			if authorized {
-				return true
-			}
-
-			// If the reference value is not authorized,
-			// it may not be down-casted
-
 			borrowType := interpreter.MustConvertStaticToSemaType(subType.BorrowedType)
 
 			return sema.IsSubType(
@@ -3657,6 +3647,15 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			referenceType, ok := ty.(*sema.ReferenceType)
 			if !ok {
 				panic(errors.NewUnreachableError())
+			}
+
+			if entitlementSet, ok := referenceType.Authorization.(sema.EntitlementSetAccess); ok {
+				if entitlementSet.SetKind == sema.Disjunction {
+					panic(InvalidDisjointRuntimeEntitlementSetCreationError{
+						Authorization: referenceType.Authorization,
+						LocationRange: invocation.LocationRange,
+					})
+				}
 			}
 
 			reference := NewStorageReferenceValue(

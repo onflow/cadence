@@ -21,7 +21,9 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/require"
 
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -39,11 +41,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
         resource R {}
 
         fun test(): Bool {
-            let r <- create R()
-            let ref = &r as &R
-            let isSub = ref.getType().isSubtype(of: Type<&R>())
-            destroy r
-            return isSub
+            return Type<&R>().isSubtype(of: Type<&R>())
         }
     `)
 
@@ -67,11 +65,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
         resource R {}
 
         fun test(): Bool {
-            let r <- create R()
-            let ref = &r as &R
-            let isSub = ref.getType().isSubtype(of: Type<auth(X) &R>())
-            destroy r
-            return isSub
+            return Type<&R>().isSubtype(of: Type<auth(X) &R>())
         }
     `)
 
@@ -95,11 +89,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
         resource R {}
 
         fun test(): Bool {
-            let r <- create R()
-            let ref = &r as auth(X) &R
-            let isSub = ref.getType().isSubtype(of: Type<&R>())
-            destroy r
-            return isSub
+			return Type<auth(X) &R>().isSubtype(of: Type<&R>())
         }
     `)
 
@@ -123,11 +113,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
         resource R {}
 
         fun test(): Bool {
-            let r <- create R()
-            let ref = &r as auth(X) &R
-            let isSub = ref.getType().isSubtype(of: Type<auth(X) &R>())
-            destroy r
-            return isSub
+			return Type<auth(X) &R>().isSubtype(of: Type<auth(X) &R>())
         }
     `)
 
@@ -147,23 +133,210 @@ func TestInterpretEntitledReferences(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-	   entitlement X
-	   resource R {}
-       fun test(): &R {
-	      let r <- create R()
-		  let ref = &r as auth(X) &R
-		  return ref 
-       }
-    `)
+	t.Run("upcasting does not change static entitlements", func(t *testing.T) {
 
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
+		t.Parallel()
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(10),
-		value,
-	)
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			entitlement Y
+			resource R {}
+			fun test(): &R {
+				let r <- create R()
+				account.save(<-r, to: /storage/foo)
+				return account.borrow<auth(X) &R>(from: /storage/foo)!
+			}
+			`,
+			sema.Config{},
+		)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Equal(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.X"},
+			),
+			value.(*interpreter.StorageReferenceValue).Authorization,
+		)
+	})
+}
+
+func TestInterpretEntitledReferenceCasting(t *testing.T) {
+	t.Parallel()
+
+	t.Run("subset downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y
+
+			fun test(): Bool {
+				let ref = &1 as auth(X, Y) &Int
+				let upRef = ref as auth(X) &Int
+				let downRef = ref as? auth(X, Y) &Int
+				return downRef != nil
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("disjoint downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y
+
+			fun test(): Bool {
+				let ref = &1 as auth(X, Y) &Int
+				let upRef = ref as auth(X | Y) &Int
+				let downRef = ref as? auth(X) &Int
+				return downRef != nil
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("wrong entitlement downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y
+
+			fun test(): Bool {
+				let ref = &1 as auth(X) &Int
+				let upRef = ref as auth(X | Y) &Int
+				let downRef = ref as? auth(Y) &Int
+				return downRef != nil
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			value,
+		)
+	})
+
+	t.Run("correct entitlement downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y
+
+			fun test(): Bool {
+				let ref = &1 as auth(X) &Int
+				let upRef = ref as auth(X | Y) &Int
+				let downRef = ref as? auth(X) &Int
+				return downRef != nil
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("superset downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y
+
+			fun test(): Bool {
+				let ref = &1 as auth(X) &Int
+				let downRef = ref as? auth(X, Y) &Int
+				return downRef != nil
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			value,
+		)
+	})
+}
+
+func TestInterpretDisjointSetRuntimeCreation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("cannot borrow with disjoint entitlement set", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			entitlement Y
+			resource R {}
+			fun test(): &R {
+				let r <- create R()
+				account.save(<-r, to: /storage/foo)
+				return account.borrow<auth(X | Y) &R>(from: /storage/foo)!
+			}
+			`,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		var disjointErr interpreter.InvalidDisjointRuntimeEntitlementSetCreationError
+		require.ErrorAs(t, err, &disjointErr)
+
+	})
 }
