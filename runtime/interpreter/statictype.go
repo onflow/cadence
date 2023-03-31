@@ -785,7 +785,7 @@ func ConvertSemaAccesstoStaticAuthorization(
 
 	case sema.EntitlementSetAccess:
 		if access.SetKind != sema.Conjunction {
-			// disjoint entitlement sets cannot exist at runtime
+			// disjoint entitlement sets cannot exist at runtime; this should be unreachable
 			panic(InvalidDisjointRuntimeEntitlementSetCreationError{
 				Authorization: access,
 			})
