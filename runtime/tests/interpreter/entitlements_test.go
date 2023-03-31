@@ -644,3 +644,71 @@ func TestInterpretDisjointSetRuntimeCreation(t *testing.T) {
 
 	})
 }
+
+func TestInterpretEntitledResult(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid upcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+		resource R {
+			view access(X, Y) fun foo(): Bool {
+				return true
+			}
+		}
+		fun bar(_ r: @R): @R {
+			post {
+				result as? auth(X | Y) &R != nil : "beep"
+			}
+			return <-r
+		}
+		fun test() {
+			destroy bar(<-create R())
+		}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Void,
+			value,
+		)
+	})
+
+	t.Run("invalid downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+		resource R {
+			view access(X) fun foo(): Bool {
+				return true
+			}
+		}
+		fun bar(_ r: @R): @R {
+			post {
+				result as? auth(X, Y) &R != nil : "beep"
+			}
+			return <-r
+		}
+		fun test() {
+			destroy bar(<-create R())
+		}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var conditionError interpreter.ConditionError
+		require.ErrorAs(t, err, &conditionError)
+	})
+}

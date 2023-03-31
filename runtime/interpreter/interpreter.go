@@ -755,8 +755,20 @@ func (interpreter *Interpreter) visitFunctionBody(
 	if returnType != sema.VoidType {
 		var resultValue Value
 		if returnType.IsResourceType() {
+			var auth Authorization = UnauthorizedAccess
+			// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
+			if entitlementSupportingType, ok := returnType.(sema.EntitlementSupportingType); ok {
+				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+				if supportedEntitlements.Len() > 0 {
+					access := sema.EntitlementSetAccess{
+						SetKind:      sema.Conjunction,
+						Entitlements: supportedEntitlements,
+					}
+					auth = ConvertSemaAccesstoStaticAuthorization(interpreter, access)
+				}
+			}
 			// ENTITLEMENTS TODO: the result value should be fully qualified to the return type, since it is created from an existing resource in scope
-			resultValue = NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, returnValue, returnType)
+			resultValue = NewEphemeralReferenceValue(interpreter, auth, returnValue, returnType)
 		} else {
 			resultValue = returnValue
 		}
