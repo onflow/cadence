@@ -573,12 +573,6 @@ func TestInterpretGetType(t *testing.T) {
 
 	t.Parallel()
 
-	storageAddress := common.MustBytesToAddress([]byte{0x42})
-	storagePath := interpreter.PathValue{
-		Domain:     common.PathDomainStorage,
-		Identifier: "test",
-	}
-
 	cases := []struct {
 		name   string
 		code   string
@@ -628,9 +622,10 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. EphemeralReferenceValue.StaticType is tested
 			name: "optional ephemeral reference, auth to unauth",
 			code: `
+			  entitlement X
               fun test(): Type {
                   let value = 1
-                  let ref = &value as auth &Int
+                  let ref = &value as auth(X) &Int
                   let optRef: &Int? = ref
                   return optRef.getType()
               }
@@ -638,8 +633,8 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						// Reference was converted from authorized to unauthorized
-						Authorization: interpreter.UnauthorizedAccess,
+						// Reference was not converted
+						Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
 						BorrowedType:  interpreter.PrimitiveStaticTypeInt,
 					},
 				},
@@ -662,10 +657,8 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorization: interpreter.EntitlementSetAuthorization{
-							Entitlements: []common.TypeID{"X"},
-						},
-						BorrowedType: interpreter.PrimitiveStaticTypeInt,
+						Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
+						BorrowedType:  interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -676,6 +669,11 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. StorageReferenceValue.StaticType is tested
 			name: "optional storage reference, auth to unauth",
 			code: `
+			  entitlement X
+			  fun getStorageReference(): auth(X) &Int {
+				account.save(1, to: /storage/foo)
+				return account.borrow<auth(X) &Int>(from: /storage/foo)!
+			}
               fun test(): Type {
                   let ref = getStorageReference()
                   let optRef: &Int? = ref
@@ -685,8 +683,8 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						// Reference was converted from authorized to unauthorized
-						Authorization: interpreter.UnauthorizedAccess,
+						// Reference was not converted
+						Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
 						BorrowedType:  interpreter.PrimitiveStaticTypeInt,
 					},
 				},
@@ -699,6 +697,10 @@ func TestInterpretGetType(t *testing.T) {
 			name: "optional storage reference, auth to auth",
 			code: `
 			  entitlement X
+			  fun getStorageReference(): auth(X) &Int {
+			      account.save(1, to: /storage/foo)
+				  return account.borrow<auth(X) &Int>(from: /storage/foo)!
+			  }
               fun test(): Type {
                   let ref = getStorageReference()
                   let optRef: auth(X) &Int? = ref
@@ -708,10 +710,8 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorization: interpreter.EntitlementSetAuthorization{
-							Entitlements: []common.TypeID{"X"},
-						},
-						BorrowedType: interpreter.PrimitiveStaticTypeInt,
+						Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
+						BorrowedType:  interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -732,70 +732,13 @@ func TestInterpretGetType(t *testing.T) {
 	}
 
 	for _, testCase := range cases {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 		t.Run(testCase.name, func(t *testing.T) {
-
-			// Inject a function that returns a storage reference value,
-			// which is borrowed as: `auth &Int`
-
-			getStorageReferenceFunctionType := &sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					&sema.ReferenceType{
-						Authorization: sema.NewEntitlementSetAccess(
-							[]*sema.EntitlementType{
-								{
-									Location:   TestLocation,
-									Identifier: "X",
-								},
-							},
-							sema.Conjunction),
-						Type: sema.IntType,
-					},
-				),
-			}
-
-			valueDeclaration := stdlib.NewStandardLibraryFunction(
-				"getStorageReference",
-				getStorageReferenceFunctionType,
-				"",
-				func(invocation interpreter.Invocation) interpreter.Value {
-					return &interpreter.StorageReferenceValue{
-						Authorization: interpreter.EntitlementSetAuthorization{
-							Entitlements: []common.TypeID{"X"},
-						},
-						TargetStorageAddress: storageAddress,
-						TargetPath:           storagePath,
-						BorrowedType:         sema.IntType,
-					}
-				},
-			)
-
-			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-			baseValueActivation.DeclareValue(valueDeclaration)
-
-			baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-			interpreter.Declare(baseActivation, valueDeclaration)
-
-			storage := newUnmeteredInMemoryStorage()
-
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			inter, _ := testAccount(t,
+				address,
+				true,
 				testCase.code,
-				ParseCheckAndInterpretOptions{
-					CheckerConfig: &sema.Config{
-						BaseValueActivation: baseValueActivation,
-					},
-					Config: &interpreter.Config{
-						Storage:        storage,
-						BaseActivation: baseActivation,
-					},
-				},
-			)
-			require.NoError(t, err)
-
-			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
-			storageMap.WriteValue(
-				inter,
-				storagePath.Identifier,
-				interpreter.NewUnmeteredIntValueFromInt64(2),
+				sema.Config{},
 			)
 
 			result, err := inter.Invoke("test")
