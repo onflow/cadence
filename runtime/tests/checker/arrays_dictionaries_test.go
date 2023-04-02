@@ -317,6 +317,91 @@ func TestCheckDictionaryValues(t *testing.T) {
 	)
 }
 
+func TestCheckDictionaryEqual(t *testing.T) {
+	t.Parallel()
+
+	testValid := func(name, code string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+			require.NoError(t, err)
+		})
+	}
+
+	assertInvalid := func(name, code string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+		})
+	}
+
+	for _, opStr := range []string{"==", "!="} {
+		testValid("self_dict_equality", fmt.Sprintf(`
+			fun test(): Bool {
+				let d = {"abc": 1, "def": 2}
+				return d %s d
+			}`, opStr))
+
+		testValid("self_dict_equality_nested_1", fmt.Sprintf(`
+			fun test(): Bool {
+				let d = {"abc": {1: 100, 2: 200}, "def": {4: 400, 5: 500}}
+				return d %s d
+			}`, opStr))
+
+		testValid("self_dict_equality_nested_2", fmt.Sprintf(`
+			fun test(): Bool {
+				let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+				return d %s d
+			}`, opStr))
+
+		testValid("dict_equality_true", fmt.Sprintf(`
+			fun test(): Bool {
+				let d = {"abc": 1, "def": 2}
+				let d2 = {"abc": 1, "def": 2}
+				return d %s d2
+			}`, opStr))
+
+		testValid("dict_equality_true_nested", fmt.Sprintf(`
+			fun test(): Bool {
+				let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+				let d2 = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+				return d %s d2
+			}`, opStr))
+
+		testValid("dict_equality_false", fmt.Sprintf(`
+			fun test(): Bool {
+				let d = {"abc": 1, "def": 2}
+				let d2 = {"abc": 1, "def": 2, "xyz": 4}
+				return d %s d2
+			}`, opStr))
+
+		testValid("dict_equality_false_nested", fmt.Sprintf(`
+			fun test(): Bool {
+				let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+				let d2 = {"abc": {1: {"a": 1000}, 2: {"c": 1000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+				return d %s d2
+			}`, opStr))
+
+		assertInvalid("dict_equality_invalid", fmt.Sprintf(`
+			fun test(): Bool {
+				let d = {"abc": 1, "def": 2}
+				let d2 = {1: "abc", 2: "def"}
+				return d %s d2
+			}`, opStr))
+
+		assertInvalid("dict_equality_invalid_nested", fmt.Sprintf(`
+			fun test(): Bool {
+				let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+				let d2 = {"abc": {1: {1000: "a"}, 2: {2000: "b"}}, "def": {4: {1000: "c"}, 5: {2000: "d"}}}
+				return d %s d2
+			}`, opStr))
+	}
+}
+
 func TestCheckLength(t *testing.T) {
 
 	t.Parallel()

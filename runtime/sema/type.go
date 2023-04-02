@@ -4420,9 +4420,9 @@ func (t *DictionaryType) IsImportable(results map[*Member]bool) bool {
 		t.ValueType.IsImportable(results)
 }
 
-func (*DictionaryType) IsEquatable() bool {
-	// TODO:
-	return false
+func (t *DictionaryType) IsEquatable() bool {
+	return t.KeyType.IsEquatable() &&
+		t.ValueType.IsEquatable()
 }
 
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
