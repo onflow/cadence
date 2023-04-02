@@ -4574,6 +4574,65 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	)
 }
 
+func TestInterpretDictionaryEquality(t *testing.T) {
+	t.Parallel()
+
+	testBooleanFunction := func(t *testing.T, name string, expected bool, innerCode string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.Equal(t, bool(boolVal), expected)
+		})
+
+	}
+
+	for _, opStr := range []string{"==", "!="} {
+		testBooleanFunction(t, "dictionary should be equal to itself", opStr == "==", fmt.Sprintf(`
+			let d = {"abc": 1, "def": 2}
+			return d %s d
+		`, opStr))
+
+		testBooleanFunction(t, "nested dictionary should be equal to itself", opStr == "==", fmt.Sprintf(`
+			let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+			return d %s d
+		`, opStr))
+
+		testBooleanFunction(t, "simple dictionary equality", opStr == "==", fmt.Sprintf(`
+			let d = {"abc": 1, "def": 2}
+			let d2 = {"abc": 1, "def": 2}
+			return d %s d2
+		`, opStr))
+
+		testBooleanFunction(t, "nested dictionary equality check", opStr == "==", fmt.Sprintf(`
+			let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+			let d2 = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+			return d %s d2
+		`, opStr))
+
+		testBooleanFunction(t, "simple dictionary unequal", opStr == "!=", fmt.Sprintf(`
+			let d = {"abc": 1, "def": 2}
+			let d2 = {"abc": 1, "def": 2, "xyz": 4}
+			return d %s d2
+		`, opStr))
+
+		testBooleanFunction(t, "nested dictionary unequal", opStr == "!=", fmt.Sprintf(`
+			let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+			let d2 = {"abc": {1: {"a": 1000}, 2: {"c": 1000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+			return d %s d2
+		`, opStr))
+	}
+}
+
 func TestInterpretOptionalAnyStruct(t *testing.T) {
 
 	t.Parallel()
