@@ -24,7 +24,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
-	"github.com/onflow/cadence/runtime/errors"
 	"golang.org/x/exp/maps"
 )
 
@@ -331,8 +330,7 @@ func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, 
 			SetKind:      inputs.SetKind,
 		}, nil
 	}
-	// it should be impossible to obtain a concrete reference with a mapped entitlement authorization
-	panic(errors.NewUnreachableError())
+	return UnauthorizedAccess, nil
 }
 
 // Preimage applies all the entitlements in the `argumentAccess` to the inverse of the function
@@ -379,8 +377,7 @@ func (e EntitlementMapAccess) Preimage(outputs Access, astRange ast.Range) (Acce
 			SetKind:      setKind,
 		}, nil
 	}
-	// it should be impossible to obtain a concrete reference with a mapped entitlement authorization
-	panic(errors.NewUnreachableError())
+	return UnauthorizedAccess, nil
 }
 
 type PrimitiveAccess ast.PrimitiveAccess

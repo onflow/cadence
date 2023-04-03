@@ -660,12 +660,10 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 			}
 		`)
 
-		// one error for each appearance of M
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[1])
-		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[2])
 	})
 
 	t.Run("accessor function", func(t *testing.T) {
@@ -678,6 +676,36 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		`)
 
 		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function non mapped return", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement mapping M {}
+			struct interface S {
+				access(M) fun foo(): auth(X) &Int 
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("accessor function non mapped access", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement mapping M {}
+			struct interface S {
+				access(X) fun foo(): auth(M) &Int 
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
 	})
 
 	t.Run("accessor function optional", func(t *testing.T) {
@@ -702,6 +730,429 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 				}
 			}
 		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function with impl wrong mapping", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			entitlement mapping N {}
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(N) &Int
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("accessor function with impl subtype", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement Z
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+			}
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(Y, Z) &Int
+				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function with impl supertype", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement Z
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+			}
+			var x: [auth(Y) &Int] = []
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					let r =  &1 as auth(M) &Int
+					x[0] = r
+					return r
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("accessor function with complex impl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			var x: [AnyStruct] = []
+			struct S {
+				access(M) fun foo(cond: Bool): auth(M) &Int {
+					if(cond) {
+						let r = x[0]
+						if let ref = x as? auth(M) &Int {
+							return ref
+						} else {
+							return &2 as auth(M) &Int
+						}
+					} else {
+						let r = &3 as auth(M) &Int
+						x.append(r)
+						return r
+					}
+				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function with downcast impl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement Z
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+			}
+			struct T {
+				access(Y) fun foo() {}
+			}
+			struct S {
+				access(M) fun foo(cond: Bool): auth(M) &T {
+					let x = &T() as auth(M) &T
+					if let y = x as? auth(Y) &T {
+						y.foo()
+					} 
+					return x
+				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function with no downcast impl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Y
+			}
+			struct T {
+				access(Y) fun foo() {}
+			}
+			struct S {
+				access(M) fun foo(cond: Bool): auth(M) &T {
+					let x = &T() as auth(M) &T
+					x.foo()
+					return x
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("accessor function with object access impl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Y
+			}
+			struct T {
+				access(Y) fun getRef(): auth(Y) &Int {
+					return &1 as auth(Y) &Int
+				}
+			}
+			struct S {
+				access(M) let t: auth(M) &T
+				access(M) fun foo(cond: Bool): auth(M) &Int {
+					// success because we have self is fully entitled to the domain of M
+					return self.t.getRef() 
+				}
+				init() {
+					self.t = &T() as auth(Y) &T
+				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function with invalid object access impl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement Z
+			entitlement mapping M {
+				X -> Y
+			}
+			struct T {
+				access(Z) fun getRef(): auth(Y) &Int {
+					return &1 as auth(Y) &Int
+				}
+			}
+			struct S {
+				access(M) let t: auth(M) &T
+				access(M) fun foo(cond: Bool): auth(M) &Int {
+					// invalid bc we have no Z entitlement
+					return self.t.getRef() 
+				}
+				init() {
+					self.t = &T() as auth(Y) &T
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("accessor function with mapped object access impl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement Z
+			entitlement mapping M {
+				X -> Y
+			}
+			entitlement mapping N {
+				Y -> Z
+			}
+			struct T {
+				access(N) fun getRef(): auth(N) &Int {
+					return &1 as auth(N) &Int
+				}
+			}
+			struct S {
+				access(M) let t: auth(M) &T
+				access(X) fun foo(cond: Bool): auth(Z) &Int {
+					return self.t.getRef() 
+				}
+				init() {
+					self.t = &T() as auth(Y) &T
+				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function with composed mapping object access impl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement Z
+			entitlement mapping M {
+				X -> Y
+			}
+			entitlement mapping N {
+				Y -> Z
+			}
+			entitlement mapping NM {
+				X -> Z
+			}
+			struct T {
+				access(N) fun getRef(): auth(N) &Int {
+					return &1 as auth(N) &Int
+				}
+			}
+			struct S {
+				access(M) let t: auth(M) &T
+				access(NM) fun foo(cond: Bool): auth(NM) &Int {
+					return self.t.getRef() 
+				}
+				init() {
+					self.t = &T() as auth(Y) &T
+				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function with invalid composed mapping object access impl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement Z
+			entitlement Q
+			entitlement mapping M {
+				X -> Y
+			}
+			entitlement mapping N {
+				Y -> Z
+			}
+			entitlement mapping NM {
+				X -> Q
+			}
+			struct T {
+				access(N) fun getRef(): auth(N) &Int {
+					return &1 as auth(N) &Int
+				}
+			}
+			struct S {
+				access(M) let t: auth(M) &T
+				access(NM) fun foo(cond: Bool): auth(NM) &Int {
+					return self.t.getRef() 
+				}
+				init() {
+					self.t = &T() as auth(Y) &T
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(NM) &Int")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Z) &Int")
+	})
+
+	t.Run("accessor function with superset composed mapping object access input", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement Z
+			entitlement A 
+			entitlement B
+			entitlement mapping M {
+				X -> Y
+				A -> B
+			}
+			entitlement mapping N {
+				Y -> Z
+			}
+			entitlement mapping NM {
+				X -> Z
+			}
+			struct T {
+				access(N) fun getRef(): auth(N) &Int {
+					return &1 as auth(N) &Int
+				}
+			}
+			struct S {
+				access(M) let t: auth(M) &T
+				access(NM) fun foo(cond: Bool): auth(NM) &Int {
+					return self.t.getRef() 
+				}
+				init() {
+					self.t = &T() as auth(Y, B) &T
+				}
+			}`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function with composed mapping object access skipped step", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement Z
+			entitlement A 
+			entitlement B
+			entitlement mapping M {
+				X -> Y
+				A -> B
+			}
+			entitlement mapping N {
+				Y -> Z
+			}
+			entitlement mapping NM {
+				X -> Z
+				A -> B
+			}
+			struct T {
+				access(N) fun getRef(): auth(N) &Int {
+					return &1 as auth(N) &Int
+				}
+			}
+			struct S {
+				access(M) let t: auth(M) &T
+				access(NM) fun foo(cond: Bool): auth(NM) &Int {
+					// the B entitlement doesn't pass through the mapping N
+					return self.t.getRef() 
+				}
+				init() {
+					self.t = &T() as auth(Y, B) &T
+				}
+			}`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(NM) &Int")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Z) &Int")
+	})
+
+	t.Run("accessor function with composed mapping object access included intermediate step", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement Z
+			entitlement A 
+			entitlement B
+			entitlement mapping M {
+				X -> Y
+				A -> B
+			}
+			entitlement mapping N {
+				Y -> Z
+				B -> B
+			}
+			entitlement mapping NM {
+				X -> Z
+				A -> B
+			}
+			struct T {
+				access(N) fun getRef(): auth(N) &Int {
+					return &1 as auth(N) &Int
+				}
+			}
+			struct S {
+				access(M) let t: auth(M) &T
+				access(NM) fun foo(cond: Bool): auth(NM) &Int {
+					// the B entitlement doesn't pass through the mapping N
+					return self.t.getRef() 
+				}
+				init() {
+					self.t = &T() as auth(Y, B) &T
+				}
+			}`)
 
 		assert.NoError(t, err)
 	})

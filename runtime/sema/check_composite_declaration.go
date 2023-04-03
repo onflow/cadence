@@ -2205,6 +2205,7 @@ func (checker *Checker) checkSpecialFunction(
 	checker.checkFunction(
 		specialFunction.FunctionDeclaration.ParameterList,
 		nil,
+		fnAccess,
 		functionType,
 		specialFunction.FunctionDeclaration.FunctionBlock,
 		true,

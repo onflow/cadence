@@ -106,6 +106,7 @@ func (checker *Checker) visitFunctionDeclaration(
 	checker.checkFunction(
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
+		access,
 		functionType,
 		declaration.FunctionBlock,
 		options.mustExit,
@@ -141,6 +142,7 @@ func (checker *Checker) declareFunctionDeclaration(
 func (checker *Checker) checkFunction(
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
+	access Access,
 	functionType *FunctionType,
 	functionBlock *ast.FunctionBlock,
 	mustExit bool,
@@ -185,6 +187,10 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
+				if mappedAccess, isMappedAccess := access.(EntitlementMapAccess); isMappedAccess {
+					checker.entitlementMappingInScope = mappedAccess.Type
+				}
+
 				checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
 					checker.visitFunctionBlock(
 						functionBlock,
@@ -192,6 +198,8 @@ func (checker *Checker) checkFunction(
 						checkResourceLoss,
 					)
 				})
+
+				checker.entitlementMappingInScope = nil
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type
@@ -443,6 +451,7 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 	checker.checkFunction(
 		expression.ParameterList,
 		expression.ReturnTypeAnnotation,
+		UnauthorizedAccess,
 		functionType,
 		expression.FunctionBlock,
 		true,
