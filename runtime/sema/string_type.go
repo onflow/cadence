@@ -19,8 +19,6 @@
 package sema
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -62,80 +60,44 @@ var StringType = &SimpleType{
 
 func init() {
 	StringType.Members = func(t *SimpleType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			"concat": {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						StringTypeConcatFunctionType,
-						stringTypeConcatFunctionDocString,
-					)
-				},
-			},
-			"slice": {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						StringTypeSliceFunctionType,
-						stringTypeSliceFunctionDocString,
-					)
-				},
-			},
-			"decodeHex": {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						StringTypeDecodeHexFunctionType,
-						stringTypeDecodeHexFunctionDocString,
-					)
-				},
-			},
-			"utf8": {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						ByteArrayType,
-						stringTypeUtf8FieldDocString,
-					)
-				},
-			},
-			"length": {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						IntType,
-						stringTypeLengthFieldDocString,
-					)
-				},
-			},
-			"toLower": {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						StringTypeToLowerFunctionType,
-						stringTypeToLowerFunctionDocString,
-					)
-				},
-			},
-		}
+		return MembersAsResolvers([]*Member{
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeConcatFunctionName,
+				StringTypeConcatFunctionType,
+				stringTypeConcatFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeSliceFunctionName,
+				StringTypeSliceFunctionType,
+				stringTypeSliceFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeDecodeHexFunctionName,
+				StringTypeDecodeHexFunctionType,
+				stringTypeDecodeHexFunctionDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				StringTypeUtf8FieldName,
+				ByteArrayType,
+				stringTypeUtf8FieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				StringTypeLengthFieldName,
+				IntType,
+				stringTypeLengthFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				StringTypeToLowerFunctionName,
+				StringTypeToLowerFunctionType,
+				stringTypeToLowerFunctionDocString,
+			),
+		})
 	}
 }
 
@@ -151,6 +113,8 @@ var StringTypeConcatFunctionType = &FunctionType{
 		StringType,
 	),
 }
+
+const StringTypeConcatFunctionName = "concat"
 
 const stringTypeConcatFunctionDocString = `
 Returns a new string which contains the given string concatenated to the end of the original string, but does not modify the original string
@@ -171,6 +135,8 @@ var StringTypeSliceFunctionType = &FunctionType{
 		StringType,
 	),
 }
+
+const StringTypeSliceFunctionName = "slice"
 
 const stringTypeSliceFunctionDocString = `
 Returns a new string containing the slice of the characters in the given string from start index ` + "`from`" + ` up to, but not including, the end index ` + "`upTo`" + `.
@@ -194,6 +160,8 @@ var StringTypeDecodeHexFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(ByteArrayType),
 }
 
+const StringTypeDecodeHexFunctionName = "decodeHex"
+
 const stringTypeDecodeHexFunctionDocString = `
 Returns an array containing the bytes represented by the given hexadecimal string.
 
@@ -201,9 +169,13 @@ The given string must only contain hexadecimal characters and must have an even 
 If the string is malformed, the program aborts
 `
 
+const StringTypeLengthFieldName = "length"
+
 const stringTypeLengthFieldDocString = `
 The number of characters in the string
 `
+
+const StringTypeUtf8FieldName = "utf8"
 
 const stringTypeUtf8FieldDocString = `
 The byte array of the UTF-8 encoding
@@ -212,6 +184,8 @@ The byte array of the UTF-8 encoding
 var StringTypeToLowerFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(StringType),
 }
+
+const StringTypeToLowerFunctionName = "toLower"
 
 const stringTypeToLowerFunctionDocString = `
 Returns the string with upper case letters replaced with lowercase
