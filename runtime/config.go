@@ -33,9 +33,6 @@ type Config struct {
 	TracingEnabled bool
 	// ResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled
 	ResourceOwnerChangeHandlerEnabled bool
-	// CoverageReportingEnabled configures if coverage reporting is enabled
-	// Deprecated: Use the `CoverageReport` field instead
-	CoverageReportingEnabled bool
 	// CoverageReport enables and collects coverage reporting metrics
 	CoverageReport *CoverageReport
 	// AccountLinkingEnabled specifies if account linking is enabled
