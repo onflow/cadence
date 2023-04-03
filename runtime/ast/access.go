@@ -88,7 +88,7 @@ func (EntitlementAccess) Description() string {
 	return "entitled access"
 }
 
-func (e EntitlementAccess) entitlementsString(prefix strings.Builder) strings.Builder {
+func (e EntitlementAccess) entitlementsString(prefix *strings.Builder) *strings.Builder {
 	for i, entitlement := range e.EntitlementSet.Entitlements() {
 		prefix.WriteString(entitlement.String())
 		if i < len(e.EntitlementSet.Entitlements())-1 {
@@ -99,14 +99,14 @@ func (e EntitlementAccess) entitlementsString(prefix strings.Builder) strings.Bu
 }
 
 func (e EntitlementAccess) String() string {
-	str := strings.Builder{}
+	str := &strings.Builder{}
 	str.WriteString("ConjunctiveEntitlementAccess ")
 	str = e.entitlementsString(str)
 	return str.String()
 }
 
 func (e EntitlementAccess) Keyword() string {
-	str := strings.Builder{}
+	str := &strings.Builder{}
 	str.WriteString("access(")
 	str = e.entitlementsString(str)
 	str.WriteString(")")
