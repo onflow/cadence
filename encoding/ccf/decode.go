@@ -1649,7 +1649,7 @@ func (d *Decoder) decodeCompositeTypeValue(
 //	    ]
 //	]
 //	initializers: [
-//	    * [
+//	    ? [
 //	        * [
 //	            label: tstr,
 //	            identifier: tstr,
@@ -1710,7 +1710,7 @@ func (d *Decoder) _decodeCompositeTypeValue(visited *cadenceTypeByCCFTypeID) (*c
 // language=CDDL
 //
 //	initializers: [
-//	    * [
+//	    ? [
 //	        * [
 //	            label: tstr,
 //	            identifier: tstr,
@@ -1723,6 +1723,10 @@ func (d *Decoder) decodeInitializerTypeValues(visited *cadenceTypeByCCFTypeID) (
 	count, err := d.dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
+	}
+
+	if count > 1 {
+		return nil, fmt.Errorf("expect 0 or 1 initializer, got %d initializers", count)
 	}
 
 	// Unmetered because this is created as an array of nil arrays, not Parameter structs.

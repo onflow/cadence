@@ -1442,7 +1442,7 @@ func (e *Encoder) encodeContractInterfaceTypeValue(typ *cadence.ContractInterfac
 //	    ]
 //	]
 //	initializers: [
-//	    * [
+//	    ? [
 //	        * [
 //	            label: tstr,
 //	            identifier: tstr,
@@ -1591,7 +1591,7 @@ func (e *Encoder) encodeFieldTypeValue(fieldType cadence.Field, visited ccfTypeI
 // language=CDDL
 //
 //	initializers: [
-//	    * [
+//	    ? [
 //	        * [
 //	            label: tstr,
 //	            identifier: tstr,
@@ -1600,6 +1600,10 @@ func (e *Encoder) encodeFieldTypeValue(fieldType cadence.Field, visited ccfTypeI
 //	    ]
 //	]
 func (e *Encoder) encodeInitializerTypeValues(initializerTypes [][]cadence.Parameter, visited ccfTypeIDByCadenceType) error {
+	if len(initializerTypes) > 1 {
+		return fmt.Errorf("got %d initializers, want 0 or 1 initializer", len(initializerTypes))
+	}
+
 	// Encode CBOR array head with number of initializers.
 	err := e.enc.EncodeArrayHead(uint64(len(initializerTypes)))
 	if err != nil {

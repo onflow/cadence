@@ -7257,16 +7257,18 @@ func TestEncodeType(t *testing.T) {
 						{Identifier: "foo", Type: cadence.IntType{}},
 					},
 					Initializers: [][]cadence.Parameter{
-						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
-						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+						{
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						},
 					},
 				},
 			},
 			[]byte{ // language=json, format=json-cdc
-				// {"type":"Type", "value": {"staticType": {"kind": "Struct", "type" : "", "typeID" : "S.test.S", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
+				// {"value":{"staticType":{"type":"","kind":"Struct","typeID":"S.test.S","fields":[{"type":{"kind":"Int"},"id":"foo"}],"initializers":[[{"type":{"kind":"Int"},"label":"foo","id":"bar"},{"type":{"kind":"String"},"label":"qux","id":"baz"}]]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 208([h'', "S.test.S", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)]], [["qux", "baz", 185(1)]]]])])
+				// 130([137(41), 208([h'', "S.test.S", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -7303,10 +7305,10 @@ func TestEncodeType(t *testing.T) {
 				// Int type (4)
 				0x04,
 				// initializers
-				// array, 2 elements follow
-				0x82,
-				// array, 1 element follows
+				// array, 1 elements follow
 				0x81,
+				// array, 2 element follows
+				0x82,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7321,8 +7323,6 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type (4)
 				0x04,
-				// array, 1 element follows
-				0x81,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7490,16 +7490,18 @@ func TestEncodeType(t *testing.T) {
 						{Identifier: "foo", Type: cadence.IntType{}},
 					},
 					Initializers: [][]cadence.Parameter{
-						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
-						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+						{
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						},
 					},
 				},
 			},
 			[]byte{ // language=json, format=json-cdc
-				// {"type":"Type", "value": {"staticType": {"kind": "Resource", "type" : "", "typeID" : "S.test.R", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
+				// {"value":{"staticType":{"type":"","kind":"Resource","typeID":"S.test.R","fields":[{"type":{"kind":"Int"},"id":"foo"}],"initializers":[[{"type":{"kind":"Int"},"label":"foo","id":"bar"},{"type":{"kind":"String"},"label":"qux","id":"baz"}]]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 209([h'', "S.test.R", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)]], [["qux", "baz", 185(1)]]]])])
+				// 130([137(41), 209([h'', "S.test.R", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -7536,10 +7538,10 @@ func TestEncodeType(t *testing.T) {
 				// Int type (4)
 				0x04,
 				// initializers
-				// array, 2 elements follow
-				0x82,
-				// array, 1 element follows
+				// array, 1 elements follow
 				0x81,
+				// array, 2 element follows
+				0x82,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7554,8 +7556,6 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type (4)
 				0x04,
-				// array, 1 element follows
-				0x81,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7586,16 +7586,18 @@ func TestEncodeType(t *testing.T) {
 						{Identifier: "foo", Type: cadence.IntType{}},
 					},
 					Initializers: [][]cadence.Parameter{
-						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
-						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+						{
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						},
 					},
 				},
 			},
 			[]byte{ // language=json, format=json-cdc
-				// {"type":"Type", "value": {"staticType": {"kind": "Contract", "type" : "", "typeID" : "S.test.C", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
+				// {"value":{"staticType":{"type":"","kind":"Contract","typeID":"S.test.C","fields":[{"type":{"kind":"Int"},"id":"foo"}],"initializers":[[{"type":{"kind":"Int"},"label":"foo","id":"bar"}],[{"type":{"kind":"String"},"label":"qux","id":"baz"}]]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 211([h'', "S.test.C", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)]], [["qux", "baz", 185(1)]]]])])
+				// 130([137(41), 211([h'', "S.test.C", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -7632,10 +7634,10 @@ func TestEncodeType(t *testing.T) {
 				// Int type (4)
 				0x04,
 				// initializers
-				// array, 2 elements follow
-				0x82,
-				// array, 1 element follows
+				// array, 1 elements follow
 				0x81,
+				// array, 2 element follows
+				0x82,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7650,8 +7652,6 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type (4)
 				0x04,
-				// array, 1 element follows
-				0x81,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7682,16 +7682,18 @@ func TestEncodeType(t *testing.T) {
 						{Identifier: "foo", Type: cadence.IntType{}},
 					},
 					Initializers: [][]cadence.Parameter{
-						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
-						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+						{
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						},
 					},
 				},
 			},
 			[]byte{ // language=json, format=json-cdc
-				// {"type":"Type", "value": {"staticType": {"kind": "StructInterface", "type" : "", "typeID" : "S.test.S", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
+				// {"value":{"staticType":{"type":"","kind":"StructInterface","typeID":"S.test.S","fields":[{"type":{"kind":"Int"},"id":"foo"}],"initializers":[[{"type":{"kind":"Int"},"label":"foo","id":"bar"}],[{"type":{"kind":"String"},"label":"qux","id":"baz"}]]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 224([h'', "S.test.S", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)]], [["qux", "baz", 185(1)]]]])])
+				// 130([137(41), 224([h'', "S.test.S", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -7728,10 +7730,10 @@ func TestEncodeType(t *testing.T) {
 				// Int type (4)
 				0x04,
 				// initializers
-				// array, 2 elements follow
-				0x82,
-				// array, 1 element follows
+				// array, 1 elements follow
 				0x81,
+				// array, 2 element follows
+				0x82,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7746,8 +7748,6 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type (4)
 				0x04,
-				// array, 1 element follows
-				0x81,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7778,16 +7778,18 @@ func TestEncodeType(t *testing.T) {
 						{Identifier: "foo", Type: cadence.IntType{}},
 					},
 					Initializers: [][]cadence.Parameter{
-						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
-						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+						{
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						},
 					},
 				},
 			},
 			[]byte{ // language=json, format=json-cdc
-				// {"type":"Type", "value": {"staticType": {"kind": "ResourceInterface", "type" : "", "typeID" : "S.test.R", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
+				// {"value":{"staticType":{"type":"","kind":"ResourceInterface","typeID":"S.test.R","fields":[{"type":{"kind":"Int"},"id":"foo"}],"initializers":[[{"type":{"kind":"Int"},"label":"foo","id":"bar"}],[{"type":{"kind":"String"},"label":"qux","id":"baz"}]]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 225([h'', "S.test.R", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)]], [["qux", "baz", 185(1)]]]])])
+				// 130([137(41), 225([h'', "S.test.R", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -7824,10 +7826,10 @@ func TestEncodeType(t *testing.T) {
 				// Int type (4)
 				0x04,
 				// initializers
-				// array, 2 elements follow
-				0x82,
-				// array, 1 element follows
+				// array, 1 elements follow
 				0x81,
+				// array, 2 element follows
+				0x82,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7842,8 +7844,6 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type (4)
 				0x04,
-				// array, 1 element follows
-				0x81,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7874,16 +7874,18 @@ func TestEncodeType(t *testing.T) {
 						{Identifier: "foo", Type: cadence.IntType{}},
 					},
 					Initializers: [][]cadence.Parameter{
-						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
-						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+						{
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						},
 					},
 				},
 			},
 			[]byte{ // language=json, format=json-cdc
-				// {"type":"Type", "value": {"staticType": {"kind": "ContractInterface", "type" : "", "typeID" : "S.test.C", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
+				// {"value":{"staticType":{"type":"","kind":"ContractInterface","typeID":"S.test.C","fields":[{"type":{"kind":"Int"},"id":"foo"}],"initializers":[[{"type":{"kind":"Int"},"label":"foo","id":"bar"}],[{"type":{"kind":"String"},"label":"qux","id":"baz"}]]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 226([h'', "S.test.C", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)]], [["qux", "baz", 185(1)]]]])])
+				// 130([137(41), 226([h'', "S.test.C", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -7920,10 +7922,10 @@ func TestEncodeType(t *testing.T) {
 				// Int type (4)
 				0x04,
 				// initializers
-				// array, 2 elements follow
-				0x82,
-				// array, 1 element follows
+				// array, 1 elements follow
 				0x81,
+				// array, 2 element follows
+				0x82,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -7938,8 +7940,6 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type (4)
 				0x04,
-				// array, 1 element follows
-				0x81,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -8065,16 +8065,18 @@ func TestEncodeType(t *testing.T) {
 						{Identifier: "foo", Type: cadence.IntType{}},
 					},
 					Initializers: [][]cadence.Parameter{
-						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
-						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+						{
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						},
 					},
 				},
 			},
 			[]byte{ // language=json, format=json-cdc
-				// {"type":"Type", "value": {"staticType": {"kind": "Enum", "type" : {"kind" : "String"}, "typeID" : "S.test.E", "fields" : [ {"id" : "foo", "type": {"kind" : "Int"} } ], "initializers" : [ [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}], [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}] ] } } }
+				// {"value":{"staticType":{"type":{"kind":"String"},"kind":"Enum","typeID":"S.test.E","fields":[{"type":{"kind":"Int"},"id":"foo"}],"initializers":[[{"type":{"kind":"Int"},"label":"foo","id":"bar"}],[{"type":{"kind":"String"},"label":"qux","id":"baz"}]]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 212([h'', "S.test.E", 185(1), [["foo", 185(4)]], [[["foo", "bar", 185(4)]], [["qux", "baz", 185(1)]]]])])
+				// 130([137(41), 212([h'', "S.test.E", 185(1), [["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -8113,10 +8115,10 @@ func TestEncodeType(t *testing.T) {
 				// Int type (4)
 				0x04,
 				// initializers
-				// array, 2 elements follow
-				0x82,
-				// array, 1 element follows
+				// array, 1 elements follow
 				0x81,
+				// array, 2 element follows
+				0x82,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -8131,8 +8133,6 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type (4)
 				0x04,
-				// array, 1 element follows
-				0x81,
 				// array, 3 elements follow
 				0x83,
 				// string, 3 bytes follow
@@ -9465,15 +9465,13 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				{
 					cadence.Parameter{
 						Type:       &cadence.OptionalType{Type: fooTy},
-						Label:      "aaa",
-						Identifier: "aaa",
-					},
-				},
-				{
-					cadence.Parameter{
-						Type:       fooTy2,
 						Label:      "bbb",
 						Identifier: "bbb",
+					},
+					cadence.Parameter{
+						Type:       fooTy2,
+						Label:      "aaa",
+						Identifier: "aaa",
 					},
 				},
 			},
@@ -9485,10 +9483,10 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				StaticType: barTy,
 			},
 			[]byte{ // language=json, format=json-cdc
-				// {"value":{"staticType":{"type":"","kind":"Resource","typeID":"S.test.Bar","fields":[{"type":{"type":"","kind":"Resource","typeID":"S.test.Foo","fields":[],"initializers":[]},"id":"foo1"},{"type":"S.test.Foo","id":"foo2"}],"initializers":[[{"type":{"type":"S.test.Foo","kind":"Optional"},"label":"aaa","id":"aaa"}],[{"type":{"type":"","kind":"Resource","typeID":"S.test.Foo2","fields":[],"initializers":[]},"label":"bbb","id":"bbb"}]]}},"type":"Type"}
+				// {"value":{"staticType":{"type":"","kind":"Resource","typeID":"S.test.Bar","fields":[{"type":{"type":"","kind":"Resource","typeID":"S.test.Foo","fields":[],"initializers":[]},"id":"foo1"},{"type":"S.test.Foo","id":"foo2"}],"initializers":[[{"type":{"type":"S.test.Foo","kind":"Optional"},"label":"bbb","id":"bbb"},{"type":{"type":"","kind":"Resource","typeID":"S.test.Foo2","fields":[],"initializers":[]},"label":"aaa","id":"aaa"}]]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 209([h'', "S.test.Bar", null, [["foo1", 209([h'01', "S.test.Foo", null, [], []])], ["foo2", 184(h'01')]], [[["aaa", "aaa", 186(184(h'01'))]], [["bbb", "bbb", 209([h'02', "S.test.Foo2", null, [], []])]]]])])
+				// 130([137(41), 209([h'', "S.test.Bar", null, [["foo1", 209([h'01', "S.test.Foo", null, [], []])], ["foo2", 184(h'01')]], [[["bbb", "bbb", 186(184(h'01'))], ["aaa", "aaa", 209([h'02', "S.test.Foo2", null, [], []])]]]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -9553,20 +9551,20 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				// 1
 				0x01,
 				// initializers
+				// array, 1 element follow
+				0x81,
 				// array, 2 elements follow
 				0x82,
-				// array, 1 elements follow
-				0x81,
 				// array, 3 elements follow
 				0x83,
 				// text, 3 bytes follow
 				0x63,
-				// aaa
-				0x61, 0x61, 0x61,
+				// bbb
+				0x62, 0x62, 0x62,
 				// text, 3 bytes follow
 				0x63,
-				// aaa
-				0x61, 0x61, 0x61,
+				// bbb
+				0x62, 0x62, 0x62,
 				// tag
 				0xd8, ccf.CBORTagOptionalTypeValue,
 				// tag
@@ -9575,18 +9573,16 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				0x41,
 				// 1
 				0x01,
-				// array, 1 elements follow
-				0x81,
 				// array, 3 elements follow
 				0x83,
 				// text, 3 bytes follow
 				0x63,
-				// bbb
-				0x62, 0x62, 0x62,
+				// aaa
+				0x61, 0x61, 0x61,
 				// text, 3 bytes follow
 				0x63,
-				// bbb
-				0x62, 0x62, 0x62,
+				// aaa
+				0x61, 0x61, 0x61,
 				// tag
 				0xd8, ccf.CBORTagResourceTypeValue,
 				// array, 5 elements follow
