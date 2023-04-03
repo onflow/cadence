@@ -662,7 +662,6 @@ func functionTypeExpr(
 					// and code generation will still succeed
 					if parameter.Label == "_" {
 						lit = &dst.Ident{
-							Path: "github.com/onflow/cadence/runtime/sema",
 							Name: "ArgumentLabelNotRequired",
 						}
 					} else {
