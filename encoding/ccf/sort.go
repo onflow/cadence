@@ -71,53 +71,6 @@ func (x bytewiseFieldSorter) Less(i, j int) bool {
 	return iIdentifier <= jIdentifier
 }
 
-// bytewiseParameterSorter
-
-// bytewiseParameterSorter is used to sort parameters by identifier.
-// NOTE: in order to avoid making a copy of parameters for sorting,
-//   - create sorter by calling newBytewiseParameterSorter()
-//   - sort by calling sort.Sort(sorter)
-//   - iterate sorted fields by
-//     for _, index := range sorter.indexes {
-//     // process sorted field at parameters[index]
-//     }
-type bytewiseParameterSorter struct {
-	// NOTE: DON'T sort parameters in place because it isn't a copy.
-	// Instead, sort indexes by parameter identifier.
-	parameters []cadence.Parameter
-	// indexes represents sorted indexes of fields
-	indexes []int
-}
-
-func newBytewiseParameterSorter(parameters []cadence.Parameter) bytewiseParameterSorter {
-	indexes := make([]int, len(parameters))
-	for i := 0; i < len(indexes); i++ {
-		indexes[i] = i
-	}
-	return bytewiseParameterSorter{parameters: parameters, indexes: indexes}
-}
-
-func (x bytewiseParameterSorter) Len() int {
-	return len(x.indexes)
-}
-
-func (x bytewiseParameterSorter) Swap(i, j int) {
-	x.indexes[i], x.indexes[j] = x.indexes[j], x.indexes[i]
-}
-
-func (x bytewiseParameterSorter) Less(i, j int) bool {
-	i = x.indexes[i]
-	j = x.indexes[j]
-
-	iIdentifier := x.parameters[i].Identifier
-	jIdentifier := x.parameters[j].Identifier
-
-	if len(iIdentifier) != len(jIdentifier) {
-		return len(iIdentifier) < len(jIdentifier)
-	}
-	return iIdentifier <= jIdentifier
-}
-
 // bytewiseKeyValuePairSorter
 
 type encodedKeyValuePair struct {

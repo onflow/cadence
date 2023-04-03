@@ -1761,7 +1761,6 @@ func (d *Decoder) decodeParameterTypeValues(visited *cadenceTypeByCCFTypeID) ([]
 	parameterTypes := make([]cadence.Parameter, count)
 	parameterLabels := make(map[string]struct{}, count)
 	parameterIdentifiers := make(map[string]struct{}, count)
-	var previousParameterIdentifier string
 
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceParameter,
@@ -1786,20 +1785,8 @@ func (d *Decoder) decodeParameterTypeValues(visited *cadenceTypeByCCFTypeID) ([]
 			return nil, fmt.Errorf("found duplicate parameter identifier %s", param.Identifier)
 		}
 
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		// "composite-type-value.initializers MUST be sorted by identifier."
-		if !stringsAreSortedBytewise(previousParameterIdentifier, param.Identifier) {
-			return nil, fmt.Errorf(
-				"parameter identifiers are not sorted (%s, %s)",
-				previousParameterIdentifier,
-				param.Identifier,
-			)
-		}
-
 		parameterLabels[param.Label] = struct{}{}
 		parameterIdentifiers[param.Identifier] = struct{}{}
-		previousParameterIdentifier = param.Identifier
 
 		parameterTypes[i] = param
 	}

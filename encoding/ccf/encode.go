@@ -1634,37 +1634,15 @@ func (e *Encoder) encodeParameterTypeValues(parameterTypes []cadence.Parameter, 
 		return err
 	}
 
-	switch len(parameterTypes) {
-	case 0:
-		// Short-circuit if there is no parameter type.
-		return nil
-
-	case 1:
-		// Avoid overhead of sorting if there is only one parameter type.
-		return e.encodeParameterTypeValue(parameterTypes[0], visited)
-
-	default:
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "composite-type-value.initializers MUST be sorted by identifier."
-
-		// NOTE: bytewiseParmaeterSorter doesn't sort parameterTypes in place.
-		// bytewiseParmaeterSorter.indexes is used as sorted parameterTypes
-		// index.
-		sorter := newBytewiseParameterSorter(parameterTypes)
-
-		sort.Sort(sorter)
-
-		// Encode sorted parameter types.
-		for _, index := range sorter.indexes {
-			err = e.encodeParameterTypeValue(parameterTypes[index], visited)
-			if err != nil {
-				return err
-			}
+	// Encode parameter types.
+	for _, param := range parameterTypes {
+		err = e.encodeParameterTypeValue(param, visited)
+		if err != nil {
+			return err
 		}
-
-		return nil
 	}
+
+	return nil
 }
 
 // encodeParameterTypeValue encodes composite initializer parameter as
