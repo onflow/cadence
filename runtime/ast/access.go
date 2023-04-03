@@ -92,7 +92,7 @@ func (EntitlementAccess) Description() string {
 func (e EntitlementAccess) entitlementsString() string {
 	str := strings.Builder{}
 	for i, entitlement := range e.EntitlementSet.Entitlements() {
-		str.Write([]byte(entitlement.String()))
+		str.WriteString(entitlement.String())
 		if i < len(e.EntitlementSet.Entitlements())-1 {
 			str.Write([]byte(e.EntitlementSet.Separator()))
 		}
@@ -113,8 +113,9 @@ func (e EntitlementAccess) MarshalJSON() ([]byte, error) {
 }
 
 func (e EntitlementAccess) subset(other EntitlementAccess) bool {
-	otherSet := make(map[*NominalType]struct{})
-	for _, entitlement := range other.EntitlementSet.Entitlements() {
+	otherEntitlements := other.EntitlementSet.Entitlements()
+	otherSet := make(map[*NominalType]struct{}, len(otherEntitlements))
+	for _, entitlement := range otherEntitlements {
 		otherSet[entitlement] = struct{}{}
 	}
 
