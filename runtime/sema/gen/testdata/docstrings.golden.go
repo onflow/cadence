@@ -111,7 +111,10 @@ var DocstringsType = &SimpleType{
 	Equatable:     false,
 	Exportable:    false,
 	Importable:    false,
-	Members: func(t *SimpleType) map[string]MemberResolver {
+}
+
+func init() {
+	DocstringsType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredPublicConstantFieldMember(
 				t,
@@ -150,5 +153,5 @@ var DocstringsType = &SimpleType{
 				DocstringsTypeRunningOutOfIdeasFunctionDocString,
 			),
 		})
-	},
+	}
 }

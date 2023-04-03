@@ -126,7 +126,10 @@ var TestType = &SimpleType{
 	Equatable:     false,
 	Exportable:    false,
 	Importable:    false,
-	Members: func(t *SimpleType) map[string]MemberResolver {
+}
+
+func init() {
+	TestType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredPublicConstantFieldMember(
 				t,
@@ -189,5 +192,5 @@ var TestType = &SimpleType{
 				TestTypeTestCapIntFieldDocString,
 			),
 		})
-	},
+	}
 }
