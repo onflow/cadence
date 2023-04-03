@@ -161,7 +161,7 @@ type generator struct {
 
 var _ ast.DeclarationVisitor[struct{}] = &generator{}
 
-func (g *generator) addDecls(decls ...*dst.GenDecl) {
+func (g *generator) addDecls(decls ...dst.Decl) {
 	for _, decl := range decls {
 		g.decls = append(g.decls, decl)
 	}
@@ -424,16 +424,85 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		typeVarDecl = compositeTypeExpr(typeDecl)
 	}
 
+	tyVarName := typeVarName(typeDecl.fullTypeName)
+
 	g.addDecls(
 		goConstDecl(
 			typeNameVarName(typeDecl.fullTypeName),
 			goStringLit(typeName),
 		),
 		goVarDecl(
-			typeVarName(typeDecl.fullTypeName),
+			tyVarName,
 			typeVarDecl,
 		),
 	)
+
+	memberDeclarations := typeDecl.memberDeclarations
+
+	if !canGenerateSimpleType &&
+		len(memberDeclarations) > 0 {
+
+		// func init() {
+		//   members := []*Member{...}
+		//   t.Members = MembersAsMap(members)
+		//   t.Fields = MembersFieldNames(members)
+		// }
+
+		members := membersExpr(typeDecl.fullTypeName, tyVarName, memberDeclarations)
+
+		const membersVariableIdentifier = "members"
+
+		g.addDecls(
+			&dst.FuncDecl{
+				Name: dst.NewIdent("init"),
+				Type: &dst.FuncType{},
+				Body: &dst.BlockStmt{
+					List: []dst.Stmt{
+						&dst.DeclStmt{
+							Decl: goVarDecl(
+								membersVariableIdentifier,
+								members,
+							),
+						},
+						&dst.AssignStmt{
+							Lhs: []dst.Expr{
+								&dst.SelectorExpr{
+									X:   dst.NewIdent(tyVarName),
+									Sel: dst.NewIdent("Members"),
+								},
+							},
+							Tok: token.ASSIGN,
+							Rhs: []dst.Expr{
+								&dst.CallExpr{
+									Fun: dst.NewIdent("MembersAsMap"),
+									Args: []dst.Expr{
+										dst.NewIdent(membersVariableIdentifier),
+									},
+								},
+							},
+						},
+						&dst.AssignStmt{
+							Lhs: []dst.Expr{
+								&dst.SelectorExpr{
+									X:   dst.NewIdent(tyVarName),
+									Sel: dst.NewIdent("Fields"),
+								},
+							},
+							Tok: token.ASSIGN,
+							Rhs: []dst.Expr{
+								&dst.CallExpr{
+									Fun: dst.NewIdent("MembersFieldNames"),
+									Args: []dst.Expr{
+										dst.NewIdent(membersVariableIdentifier),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		)
+	}
 
 	return
 }
@@ -1179,60 +1248,6 @@ func compositeTypeExpr(ty *typeDecl) dst.Expr {
 				compositeTypeLiteral(ty),
 			),
 		},
-	}
-
-	if len(ty.memberDeclarations) > 0 {
-		// members := []*Member{...}
-		// t.Members = MembersAsMap(members)
-		// t.Fields = MembersFieldNames(members)
-
-		members := membersExpr(ty.fullTypeName, typeVarName, ty.memberDeclarations)
-
-		const membersVariableIdentifier = "members"
-
-		statements = append(
-			statements,
-			&dst.DeclStmt{
-				Decl: goVarDecl(
-					membersVariableIdentifier,
-					members,
-				),
-			},
-			&dst.AssignStmt{
-				Lhs: []dst.Expr{
-					&dst.SelectorExpr{
-						X:   dst.NewIdent(typeVarName),
-						Sel: dst.NewIdent("Members"),
-					},
-				},
-				Tok: token.ASSIGN,
-				Rhs: []dst.Expr{
-					&dst.CallExpr{
-						Fun: dst.NewIdent("MembersAsMap"),
-						Args: []dst.Expr{
-							dst.NewIdent(membersVariableIdentifier),
-						},
-					},
-				},
-			},
-			&dst.AssignStmt{
-				Lhs: []dst.Expr{
-					&dst.SelectorExpr{
-						X:   dst.NewIdent(typeVarName),
-						Sel: dst.NewIdent("Fields"),
-					},
-				},
-				Tok: token.ASSIGN,
-				Rhs: []dst.Expr{
-					&dst.CallExpr{
-						Fun: dst.NewIdent("MembersFieldNames"),
-						Args: []dst.Expr{
-							dst.NewIdent(membersVariableIdentifier),
-						},
-					},
-				},
-			},
-		)
 	}
 
 	for _, nestedType := range ty.nestedTypes {
