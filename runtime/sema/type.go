@@ -3872,18 +3872,7 @@ func (t *CompositeType) GetMembers() map[string]MemberResolver {
 
 func (t *CompositeType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
-		members := make(map[string]MemberResolver, t.Members.Len())
-
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
+		memberResolvers := MembersMapAsResolvers(t.Members)
 
 		// Check conformances.
 		// If this composite type results from a normal composite declaration,
@@ -3894,13 +3883,13 @@ func (t *CompositeType) initializeMemberResolvers() {
 		t.ExplicitInterfaceConformanceSet().
 			ForEach(func(conformance *InterfaceType) {
 				for name, resolver := range conformance.GetMembers() { //nolint:maprange
-					if _, ok := members[name]; !ok {
-						members[name] = resolver
+					if _, ok := memberResolvers[name]; !ok {
+						memberResolvers[name] = resolver
 					}
 				}
 			})
 
-		t.memberResolvers = withBuiltinMembers(t, members)
+		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
 	})
 }
 
@@ -6799,6 +6788,36 @@ func GetFieldNames(members []*Member) []string {
 	}
 
 	return fields
+}
+
+func MembersMapAsResolvers(members *StringMemberOrderedMap) map[string]MemberResolver {
+	resolvers := make(map[string]MemberResolver, members.Len())
+
+	members.Foreach(func(name string, member *Member) {
+		resolvers[name] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
+	})
+	return resolvers
+}
+
+func MembersAsResolvers(members []*Member) map[string]MemberResolver {
+	resolvers := make(map[string]MemberResolver, len(members))
+
+	for _, loopMember := range members {
+		// NOTE: don't capture loop variable
+		member := loopMember
+		resolvers[member.Identifier.Identifier] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
+	}
+	return resolvers
 }
 
 func isNumericSuperType(typ Type) bool {

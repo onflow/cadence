@@ -994,31 +994,33 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 }
 
 func simpleTypeMembers(fullTypeName string, declarations []ast.Declaration) dst.Expr {
+	// func(t *SimpleType) map[string]MemberResolver {
+	//   return  MembersAsResolvers([]*Member{
+	//     ...
+	//   })
+	// }
+
+	const typeVarName = "t"
 
 	elements := make([]dst.Expr, 0, len(declarations))
 
 	for _, declaration := range declarations {
-		var memberName string
-		var kind dst.Expr
+		var memberVarName string
+		memberName := declaration.DeclarationIdentifier().Identifier
 
 		declarationKind := declaration.DeclarationKind()
-
-		memberName = declaration.DeclarationIdentifier().Identifier
-
 		switch declarationKind {
 		case common.DeclarationKindField:
-			memberName = fieldNameVarName(
+			memberVarName = fieldNameVarName(
 				fullTypeName,
 				memberName,
 			)
-			kind = declarationKindExpr("Field")
 
 		case common.DeclarationKindFunction:
-			memberName = functionNameVarName(
+			memberVarName = functionNameVarName(
 				fullTypeName,
 				memberName,
 			)
-			kind = declarationKindExpr("Function")
 
 		case common.DeclarationKindStructureInterface,
 			common.DeclarationKindStructure,
@@ -1034,33 +1036,25 @@ func simpleTypeMembers(fullTypeName string, declarations []ast.Declaration) dst.
 			))
 		}
 
-		resolve := simpleTypeMemberResolver(fullTypeName, declaration)
+		element := newDeclarationMember(fullTypeName, typeVarName, memberVarName, declaration)
+		element.Decorations().Before = dst.NewLine
+		element.Decorations().After = dst.NewLine
 
-		elements = append(
-			elements,
-			goKeyValue(
-				memberName,
-				&dst.CompositeLit{
-					Elts: []dst.Expr{
-						goKeyValue("Kind", kind),
-						goKeyValue("Resolve", resolve),
-					},
-				},
-			),
-		)
+		elements = append(elements, element)
 	}
-
-	// func(t *SimpleType) map[string]MemberResolver {
-	//   return map[string]MemberResolver{
-	//     ...
-	//   }
-	// }
 
 	returnStatement := &dst.ReturnStmt{
 		Results: []dst.Expr{
-			&dst.CompositeLit{
-				Type: stringMemberResolverMapType(),
-				Elts: elements,
+			&dst.CallExpr{
+				Fun: dst.NewIdent("MembersAsResolvers"),
+				Args: []dst.Expr{
+					&dst.CompositeLit{
+						Type: &dst.ArrayType{
+							Elt: &dst.StarExpr{X: dst.NewIdent("Member")},
+						},
+						Elts: elements,
+					},
+				},
 			},
 		},
 	}
@@ -1072,7 +1066,7 @@ func simpleTypeMembers(fullTypeName string, declarations []ast.Declaration) dst.
 			Func: true,
 			Params: &dst.FieldList{
 				List: []*dst.Field{
-					goField("t", &dst.StarExpr{X: dst.NewIdent("SimpleType")}),
+					goField(typeVarName, simpleType()),
 				},
 			},
 			Results: &dst.FieldList{
@@ -1091,78 +1085,24 @@ func simpleTypeMembers(fullTypeName string, declarations []ast.Declaration) dst.
 	}
 }
 
-func simpleTypeMemberResolver(fullTypeName string, declaration ast.Declaration) dst.Expr {
+func simpleType() *dst.StarExpr {
+	return &dst.StarExpr{X: dst.NewIdent("SimpleType")}
+}
 
-	// func(
-	//     memoryGauge common.MemoryGauge,
-	//     identifier string,
-	//     targetRange ast.Range,
-	//     report func(error),
-	// ) *Member
-
-	parameters := []*dst.Field{
-		goField(
-			"memoryGauge",
-			&dst.Ident{
-				Path: "github.com/onflow/cadence/runtime/common",
-				Name: "MemoryGauge",
-			},
-		),
-		goField("identifier", dst.NewIdent("string")),
-		goField(
-			"targetRange",
-			&dst.Ident{
-				Path: "github.com/onflow/cadence/runtime/ast",
-				Name: "Range",
-			},
-		),
-		goField(
-			"report",
-			&dst.FuncType{
-				Params: &dst.FieldList{
-					List: []*dst.Field{
-						{Type: dst.NewIdent("error")},
-					},
-				},
-			},
-		),
-	}
-
-	// TODO: bug: does not add newline before first and after last.
-	//   Neither does setting decorations on the parameter field list
-	//   or the function type work. Likely a problem in dst.
-	for _, parameter := range parameters {
-		parameter.Decorations().Before = dst.NewLine
-		parameter.Decorations().After = dst.NewLine
-	}
-
-	functionType := &dst.FuncType{
-		Func: true,
-		Params: &dst.FieldList{
-			List: parameters,
-		},
-		Results: &dst.FieldList{
-			List: []*dst.Field{
-				{
-					Type: &dst.StarExpr{
-						X: dst.NewIdent("Member"),
-					},
-				},
-			},
-		},
-	}
-
+func newDeclarationMember(
+	fullTypeName string,
+	containerTypeVariableIdentifier string,
+	memberNameVariableIdentifier string,
+	declaration ast.Declaration,
+) dst.Expr {
 	declarationKind := declaration.DeclarationKind()
 	declarationName := declaration.DeclarationIdentifier().Identifier
-
-	var result dst.Expr
 
 	switch declarationKind {
 	case common.DeclarationKindField:
 		args := []dst.Expr{
-			dst.NewIdent("memoryGauge"),
-			dst.NewIdent("t"),
-			dst.NewIdent("identifier"),
+			dst.NewIdent(containerTypeVariableIdentifier),
+			dst.NewIdent(memberNameVariableIdentifier),
 			dst.NewIdent(fieldTypeVarName(fullTypeName, declarationName)),
 			dst.NewIdent(fieldDocStringVarName(fullTypeName, declarationName)),
 		}
@@ -1173,16 +1113,15 @@ func simpleTypeMemberResolver(fullTypeName string, declaration ast.Declaration) 
 		}
 
 		// TODO: add support for var
-		result = &dst.CallExpr{
-			Fun:  dst.NewIdent("NewPublicConstantFieldMember"),
+		return &dst.CallExpr{
+			Fun:  dst.NewIdent("NewUnmeteredPublicConstantFieldMember"),
 			Args: args,
 		}
 
 	case common.DeclarationKindFunction:
 		args := []dst.Expr{
-			dst.NewIdent("memoryGauge"),
-			dst.NewIdent("t"),
-			dst.NewIdent("identifier"),
+			dst.NewIdent(containerTypeVariableIdentifier),
+			dst.NewIdent(memberNameVariableIdentifier),
 			dst.NewIdent(functionTypeVarName(fullTypeName, declarationName)),
 			dst.NewIdent(functionDocStringVarName(fullTypeName, declarationName)),
 		}
@@ -1192,8 +1131,8 @@ func simpleTypeMemberResolver(fullTypeName string, declaration ast.Declaration) 
 			arg.Decorations().After = dst.NewLine
 		}
 
-		result = &dst.CallExpr{
-			Fun:  dst.NewIdent("NewPublicFunctionMember"),
+		return &dst.CallExpr{
+			Fun:  dst.NewIdent("NewUnmeteredPublicFunctionMember"),
 			Args: args,
 		}
 
@@ -1204,21 +1143,6 @@ func simpleTypeMemberResolver(fullTypeName string, declaration ast.Declaration) 
 		))
 	}
 
-	returnStatement := &dst.ReturnStmt{
-		Results: []dst.Expr{
-			result,
-		},
-	}
-	returnStatement.Decorations().Before = dst.EmptyLine
-
-	return &dst.FuncLit{
-		Type: functionType,
-		Body: &dst.BlockStmt{
-			List: []dst.Stmt{
-				returnStatement,
-			},
-		},
-	}
 }
 
 func stringMemberResolverMapType() *dst.MapType {

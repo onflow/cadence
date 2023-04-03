@@ -19,11 +19,6 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
-
 const TestTypeNothingFunctionName = "nothing"
 
 var TestTypeNothingFunctionType = &FunctionType{
@@ -175,119 +170,49 @@ var TestType = &SimpleType{
 	Exportable:    false,
 	Importable:    false,
 	Members: func(t *SimpleType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			TestTypeNothingFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeNothingFunctionType,
-						TestTypeNothingFunctionDocString,
-					)
-				},
-			},
-			TestTypeParamsFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeParamsFunctionType,
-						TestTypeParamsFunctionDocString,
-					)
-				},
-			},
-			TestTypeReturnFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeReturnFunctionType,
-						TestTypeReturnFunctionDocString,
-					)
-				},
-			},
-			TestTypeParamsAndReturnFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeParamsAndReturnFunctionType,
-						TestTypeParamsAndReturnFunctionDocString,
-					)
-				},
-			},
-			TestTypeTypeParamFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTypeParamFunctionType,
-						TestTypeTypeParamFunctionDocString,
-					)
-				},
-			},
-			TestTypeTypeParamWithBoundFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTypeParamWithBoundFunctionType,
-						TestTypeTypeParamWithBoundFunctionDocString,
-					)
-				},
-			},
-			TestTypeTypeParamWithBoundAndParamFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTypeParamWithBoundAndParamFunctionType,
-						TestTypeTypeParamWithBoundAndParamFunctionDocString,
-					)
-				},
-			},
-		}
+		return MembersAsResolvers([]*Member{
+			NewUnmeteredPublicFunctionMember(
+				t,
+				TestTypeNothingFunctionName,
+				TestTypeNothingFunctionType,
+				TestTypeNothingFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				TestTypeParamsFunctionName,
+				TestTypeParamsFunctionType,
+				TestTypeParamsFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				TestTypeReturnFunctionName,
+				TestTypeReturnFunctionType,
+				TestTypeReturnFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				TestTypeParamsAndReturnFunctionName,
+				TestTypeParamsAndReturnFunctionType,
+				TestTypeParamsAndReturnFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				TestTypeTypeParamFunctionName,
+				TestTypeTypeParamFunctionType,
+				TestTypeTypeParamFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				TestTypeTypeParamWithBoundFunctionName,
+				TestTypeTypeParamWithBoundFunctionType,
+				TestTypeTypeParamWithBoundFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				TestTypeTypeParamWithBoundAndParamFunctionName,
+				TestTypeTypeParamWithBoundAndParamFunctionType,
+				TestTypeTypeParamWithBoundAndParamFunctionDocString,
+			),
+		})
 	},
 }

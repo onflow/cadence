@@ -19,11 +19,6 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
-
 const TestTypeTestIntFieldName = "testInt"
 
 var TestTypeTestIntFieldType = UInt64Type
@@ -132,167 +127,67 @@ var TestType = &SimpleType{
 	Exportable:    false,
 	Importable:    false,
 	Members: func(t *SimpleType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			TestTypeTestIntFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTestIntFieldType,
-						TestTypeTestIntFieldDocString,
-					)
-				},
-			},
-			TestTypeTestOptIntFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTestOptIntFieldType,
-						TestTypeTestOptIntFieldDocString,
-					)
-				},
-			},
-			TestTypeTestRefIntFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTestRefIntFieldType,
-						TestTypeTestRefIntFieldDocString,
-					)
-				},
-			},
-			TestTypeTestVarIntsFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTestVarIntsFieldType,
-						TestTypeTestVarIntsFieldDocString,
-					)
-				},
-			},
-			TestTypeTestConstIntsFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTestConstIntsFieldType,
-						TestTypeTestConstIntsFieldDocString,
-					)
-				},
-			},
-			TestTypeTestParamFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTestParamFieldType,
-						TestTypeTestParamFieldDocString,
-					)
-				},
-			},
-			TestTypeTestAddressFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTestAddressFieldType,
-						TestTypeTestAddressFieldDocString,
-					)
-				},
-			},
-			TestTypeTestTypeFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTestTypeFieldType,
-						TestTypeTestTypeFieldDocString,
-					)
-				},
-			},
-			TestTypeTestCapFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTestCapFieldType,
-						TestTypeTestCapFieldDocString,
-					)
-				},
-			},
-			TestTypeTestCapIntFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TestTypeTestCapIntFieldType,
-						TestTypeTestCapIntFieldDocString,
-					)
-				},
-			},
-		}
+		return MembersAsResolvers([]*Member{
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestIntFieldName,
+				TestTypeTestIntFieldType,
+				TestTypeTestIntFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestOptIntFieldName,
+				TestTypeTestOptIntFieldType,
+				TestTypeTestOptIntFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestRefIntFieldName,
+				TestTypeTestRefIntFieldType,
+				TestTypeTestRefIntFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestVarIntsFieldName,
+				TestTypeTestVarIntsFieldType,
+				TestTypeTestVarIntsFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestConstIntsFieldName,
+				TestTypeTestConstIntsFieldType,
+				TestTypeTestConstIntsFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestParamFieldName,
+				TestTypeTestParamFieldType,
+				TestTypeTestParamFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestAddressFieldName,
+				TestTypeTestAddressFieldType,
+				TestTypeTestAddressFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestTypeFieldName,
+				TestTypeTestTypeFieldType,
+				TestTypeTestTypeFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestCapFieldName,
+				TestTypeTestCapFieldType,
+				TestTypeTestCapFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestCapIntFieldName,
+				TestTypeTestCapIntFieldType,
+				TestTypeTestCapIntFieldDocString,
+			),
+		})
 	},
 }
