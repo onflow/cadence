@@ -75,8 +75,8 @@ var AuthAccountContractsType = func() *CompositeType {
 		),
 	}
 
-	authAccountContractsType.Members = GetMembersAsMap(members)
-	authAccountContractsType.Fields = GetFieldNames(members)
+	authAccountContractsType.Members = MembersAsMap(members)
+	authAccountContractsType.Fields = MembersFieldNames(members)
 	return authAccountContractsType
 }()
 

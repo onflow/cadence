@@ -995,16 +995,61 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 
 func simpleTypeMembers(fullTypeName string, declarations []ast.Declaration) dst.Expr {
 	// func(t *SimpleType) map[string]MemberResolver {
-	//   return  MembersAsResolvers([]*Member{
-	//     ...
-	//   })
+	//   return MembersAsResolvers(...)
 	// }
 
 	const typeVarName = "t"
 
-	elements := make([]dst.Expr, 0, len(declarations))
+	returnStatement := &dst.ReturnStmt{
+		Results: []dst.Expr{
+			&dst.CallExpr{
+				Fun: dst.NewIdent("MembersAsResolvers"),
+				Args: []dst.Expr{
+					membersExpr(fullTypeName, typeVarName, declarations),
+				},
+			},
+		},
+	}
+	returnStatement.Decorations().Before = dst.NewLine
+	returnStatement.Decorations().After = dst.NewLine
 
-	for _, declaration := range declarations {
+	return &dst.FuncLit{
+		Type: &dst.FuncType{
+			Func: true,
+			Params: &dst.FieldList{
+				List: []*dst.Field{
+					goField(typeVarName, simpleType()),
+				},
+			},
+			Results: &dst.FieldList{
+				List: []*dst.Field{
+					{
+						Type: stringMemberResolverMapType(),
+					},
+				},
+			},
+		},
+		Body: &dst.BlockStmt{
+			List: []dst.Stmt{
+				returnStatement,
+			},
+		},
+	}
+}
+
+func membersExpr(
+	fullTypeName string,
+	typeVarName string,
+	memberDeclarations []ast.Declaration,
+) dst.Expr {
+
+	// []*Member{
+	//   ...
+	// }
+
+	elements := make([]dst.Expr, 0, len(memberDeclarations))
+
+	for _, declaration := range memberDeclarations {
 		var memberVarName string
 		memberName := declaration.DeclarationIdentifier().Identifier
 
@@ -1043,45 +1088,11 @@ func simpleTypeMembers(fullTypeName string, declarations []ast.Declaration) dst.
 		elements = append(elements, element)
 	}
 
-	returnStatement := &dst.ReturnStmt{
-		Results: []dst.Expr{
-			&dst.CallExpr{
-				Fun: dst.NewIdent("MembersAsResolvers"),
-				Args: []dst.Expr{
-					&dst.CompositeLit{
-						Type: &dst.ArrayType{
-							Elt: &dst.StarExpr{X: dst.NewIdent("Member")},
-						},
-						Elts: elements,
-					},
-				},
-			},
+	return &dst.CompositeLit{
+		Type: &dst.ArrayType{
+			Elt: &dst.StarExpr{X: dst.NewIdent("Member")},
 		},
-	}
-	returnStatement.Decorations().Before = dst.NewLine
-	returnStatement.Decorations().After = dst.NewLine
-
-	return &dst.FuncLit{
-		Type: &dst.FuncType{
-			Func: true,
-			Params: &dst.FieldList{
-				List: []*dst.Field{
-					goField(typeVarName, simpleType()),
-				},
-			},
-			Results: &dst.FieldList{
-				List: []*dst.Field{
-					{
-						Type: stringMemberResolverMapType(),
-					},
-				},
-			},
-		},
-		Body: &dst.BlockStmt{
-			List: []dst.Stmt{
-				returnStatement,
-			},
-		},
+		Elts: elements,
 	}
 }
 
@@ -1175,6 +1186,60 @@ func compositeTypeExpr(ty *typeDecl) dst.Expr {
 				compositeTypeLiteral(ty),
 			),
 		},
+	}
+
+	if len(ty.memberDeclarations) > 0 {
+		// members := []*Member{...}
+		// t.Members = MembersAsMap(members)
+		// t.Fields = MembersFieldNames(members)
+
+		members := membersExpr(ty.fullTypeName, typeVarName, ty.memberDeclarations)
+
+		const membersVariableIdentifier = "members"
+
+		statements = append(
+			statements,
+			&dst.DeclStmt{
+				Decl: goVarDecl(
+					membersVariableIdentifier,
+					members,
+				),
+			},
+			&dst.AssignStmt{
+				Lhs: []dst.Expr{
+					&dst.SelectorExpr{
+						X:   dst.NewIdent(typeVarName),
+						Sel: dst.NewIdent("Members"),
+					},
+				},
+				Tok: token.ASSIGN,
+				Rhs: []dst.Expr{
+					&dst.CallExpr{
+						Fun: dst.NewIdent("MembersAsMap"),
+						Args: []dst.Expr{
+							dst.NewIdent(membersVariableIdentifier),
+						},
+					},
+				},
+			},
+			&dst.AssignStmt{
+				Lhs: []dst.Expr{
+					&dst.SelectorExpr{
+						X:   dst.NewIdent(typeVarName),
+						Sel: dst.NewIdent("Fields"),
+					},
+				},
+				Tok: token.ASSIGN,
+				Rhs: []dst.Expr{
+					&dst.CallExpr{
+						Fun: dst.NewIdent("MembersFieldNames"),
+						Args: []dst.Expr{
+							dst.NewIdent(membersVariableIdentifier),
+						},
+					},
+				},
+			},
+		)
 	}
 
 	for _, nestedType := range ty.nestedTypes {

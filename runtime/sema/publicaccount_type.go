@@ -117,8 +117,8 @@ var PublicAccountType = func() *CompositeType {
 		),
 	}
 
-	publicAccountType.Members = GetMembersAsMap(members)
-	publicAccountType.Fields = GetFieldNames(members)
+	publicAccountType.Members = MembersAsMap(members)
+	publicAccountType.Fields = MembersFieldNames(members)
 	return publicAccountType
 }()
 
@@ -199,8 +199,8 @@ var PublicAccountKeysType = func() *CompositeType {
 		),
 	}
 
-	accountKeys.Members = GetMembersAsMap(members)
-	accountKeys.Fields = GetFieldNames(members)
+	accountKeys.Members = MembersAsMap(members)
+	accountKeys.Fields = MembersFieldNames(members)
 	return accountKeys
 }()
 

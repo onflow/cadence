@@ -54,7 +54,7 @@ var PublicAccountContractsType = func() *CompositeType {
 		),
 	}
 
-	publicAccountContractsType.Members = GetMembersAsMap(members)
-	publicAccountContractsType.Fields = GetFieldNames(members)
+	publicAccountContractsType.Members = MembersAsMap(members)
+	publicAccountContractsType.Fields = MembersFieldNames(members)
 	return publicAccountContractsType
 }()

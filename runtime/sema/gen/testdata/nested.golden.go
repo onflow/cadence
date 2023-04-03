@@ -55,6 +55,17 @@ var FooBarType = func() *CompositeType {
 		hasComputedMembers: true,
 	}
 
+	var members = []*Member{
+		NewUnmeteredPublicFunctionMember(
+			t,
+			FooBarTypeBarFunctionName,
+			FooBarTypeBarFunctionType,
+			FooBarTypeBarFunctionDocString,
+		),
+	}
+
+	t.Members = MembersAsMap(members)
+	t.Fields = MembersFieldNames(members)
 	return t
 }()
 
@@ -68,6 +79,17 @@ var FooType = func() *CompositeType {
 		hasComputedMembers: true,
 	}
 
+	var members = []*Member{
+		NewUnmeteredPublicFunctionMember(
+			t,
+			FooTypeFooFunctionName,
+			FooTypeFooFunctionType,
+			FooTypeFooFunctionDocString,
+		),
+	}
+
+	t.Members = MembersAsMap(members)
+	t.Fields = MembersFieldNames(members)
 	t.SetNestedType(FooBarTypeName, FooBarType)
 	return t
 }()

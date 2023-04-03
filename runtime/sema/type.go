@@ -6641,8 +6641,8 @@ var AccountKeyType = func() *CompositeType {
 		),
 	}
 
-	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = GetFieldNames(members)
+	accountKeyType.Members = MembersAsMap(members)
+	accountKeyType.Fields = MembersFieldNames(members)
 	return accountKeyType
 }()
 
@@ -6709,8 +6709,8 @@ var PublicKeyType = func() *CompositeType {
 		),
 	}
 
-	publicKeyType.Members = GetMembersAsMap(members)
-	publicKeyType.Fields = GetFieldNames(members)
+	publicKeyType.Members = MembersAsMap(members)
+	publicKeyType.Fields = MembersFieldNames(members)
 
 	return publicKeyType
 }()
@@ -6766,7 +6766,7 @@ type CryptoAlgorithm interface {
 	DocString() string
 }
 
-func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
+func MembersAsMap(members []*Member) *StringMemberOrderedMap {
 	membersMap := &StringMemberOrderedMap{}
 	for _, member := range members {
 		name := member.Identifier.Identifier
@@ -6779,7 +6779,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	return membersMap
 }
 
-func GetFieldNames(members []*Member) []string {
+func MembersFieldNames(members []*Member) []string {
 	fields := make([]string, 0)
 	for _, member := range members {
 		if member.DeclarationKind == common.DeclarationKindField {

@@ -254,8 +254,8 @@ var AuthAccountType = func() *CompositeType {
 		),
 	}
 
-	authAccountType.Members = GetMembersAsMap(members)
-	authAccountType.Fields = GetFieldNames(members)
+	authAccountType.Members = MembersAsMap(members)
+	authAccountType.Fields = MembersFieldNames(members)
 	return authAccountType
 }()
 
@@ -712,8 +712,8 @@ var AuthAccountKeysType = func() *CompositeType {
 		),
 	}
 
-	accountKeys.Members = GetMembersAsMap(members)
-	accountKeys.Fields = GetFieldNames(members)
+	accountKeys.Members = MembersAsMap(members)
+	accountKeys.Fields = MembersFieldNames(members)
 	return accountKeys
 }()
 
@@ -975,7 +975,7 @@ var AuthAccountInboxType = func() *CompositeType {
 		),
 	}
 
-	accountInbox.Members = GetMembersAsMap(members)
-	accountInbox.Fields = GetFieldNames(members)
+	accountInbox.Members = MembersAsMap(members)
+	accountInbox.Fields = MembersFieldNames(members)
 	return accountInbox
 }()
