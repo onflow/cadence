@@ -582,10 +582,11 @@ func (t *ReferenceType) Doc() prettier.Doc {
 	if t.Authorization != nil {
 		doc = append(doc, referenceTypeAuthKeywordDoc)
 		if t.Authorization.EntitlementSet != nil && len(t.Authorization.EntitlementSet.Entitlements()) > 0 {
+			entitlements := t.Authorization.EntitlementSet.Entitlements()
 			doc = append(doc, prettier.Text("("))
-			for i, entitlement := range t.Authorization.EntitlementSet.Entitlements() {
+			for i, entitlement := range entitlements {
 				doc = append(doc, entitlement.Doc())
-				if i < len(t.Authorization.EntitlementSet.Entitlements())-1 {
+				if i < len(entitlements)-1 {
 					doc = append(doc, prettier.Text(t.Authorization.EntitlementSet.Separator()), prettier.Space)
 				}
 			}
