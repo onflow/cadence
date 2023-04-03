@@ -11754,7 +11754,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// language=edn, format=ccf
 				// 130([138(null), null])
 				//
-				// language=cbor, format=ccf, format=ccf
+				// language=cbor, format=ccf
 				// tag
 				0xd8, ccf.CBORTagTypeAndValue,
 				// array, 2 items follow
