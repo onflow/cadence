@@ -162,9 +162,7 @@ type generator struct {
 var _ ast.DeclarationVisitor[struct{}] = &generator{}
 
 func (g *generator) addDecls(decls ...dst.Decl) {
-	for _, decl := range decls {
-		g.decls = append(g.decls, decl)
-	}
+	g.decls = append(g.decls, decls...)
 }
 
 func (*generator) VisitVariableDeclaration(_ *ast.VariableDeclaration) struct{} {
