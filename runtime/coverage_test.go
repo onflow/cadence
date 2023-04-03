@@ -1150,10 +1150,6 @@ func TestRuntimeCoverage(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime(Config{
-		CoverageReportingEnabled: true,
-	})
-
 	importedScript := []byte(`
 	  pub let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
@@ -1234,6 +1230,7 @@ func TestRuntimeCoverage(t *testing.T) {
 	  }
 	`)
 
+	coverageReport := NewCoverageReport()
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -1244,8 +1241,9 @@ func TestRuntimeCoverage(t *testing.T) {
 			}
 		},
 	}
-
-	coverageReport := NewCoverageReport()
+	runtime := NewInterpreterRuntime(Config{
+		CoverageReport: coverageReport,
+	})
 
 	value, err := runtime.ExecuteScript(
 		Script{
@@ -1326,10 +1324,6 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime(Config{
-		CoverageReportingEnabled: true,
-	})
-
 	importedScript := []byte(`
 	  pub let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
@@ -1390,6 +1384,10 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 	  }
 	`)
 
+	coverageReport := NewCoverageReport()
+	scriptlocation := common.ScriptLocation{}
+	coverageReport.ExcludeLocation(scriptlocation)
+
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -1400,10 +1398,9 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 			}
 		},
 	}
-
-	coverageReport := NewCoverageReport()
-	scriptlocation := common.ScriptLocation{}
-	coverageReport.ExcludeLocation(scriptlocation)
+	runtime := NewInterpreterRuntime(Config{
+		CoverageReport: coverageReport,
+	})
 
 	value, err := runtime.ExecuteScript(
 		Script{
