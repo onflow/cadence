@@ -49,6 +49,7 @@ const (
 	DeclarationKindResourceInterface
 	DeclarationKindContractInterface
 	DeclarationKindEntitlement
+	DeclarationKindEntitlementMapping
 	DeclarationKindImport
 	DeclarationKindSelf
 	DeclarationKindBase
