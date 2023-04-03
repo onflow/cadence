@@ -208,24 +208,6 @@ to the `prepare` phase of the transaction.
         fun claim<T: &Any>(_ name: String, provider: Address): Capability<T>?
     }
   }
-
-  struct DeployedContract {
-      let name: String
-      let code: [UInt8]
-
-      // Returns an array of `Type` objects representing all the public type declarations in this contract (e.g. structs, resources, enums)
-      // 
-      // For example, given a contract
-      // ```
-      // contract Foo {
-      //       pub struct Bar {...}
-      //       pub resource Qux {...}
-      // }
-      // ```
-      // then `.publicTypes()` will return an array equivalent to the expression `[Type<Bar>(), Type<Qux>()]`
-    
-      fun publicTypes(): [Type]
-  }
   ```
 
   A script can get the `AuthAccount` for an account address using the built-in `getAuthAccount` function:
