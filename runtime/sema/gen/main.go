@@ -30,13 +30,12 @@ import (
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver/guess"
 
+	"github.com/dave/dst"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
-	"github.com/onflow/cadence/runtime/sema"
-
-	"github.com/dave/dst"
 )
 
 const headerTemplate = `// Code generated from {{ . }}. DO NOT EDIT.
@@ -658,7 +657,10 @@ func functionTypeExpr(
 
 				if parameter.Label != "" {
 					var lit dst.Expr
-					if parameter.Label == sema.ArgumentLabelNotRequired {
+					// NOTE: avoid import of sema (ArgumentLabelNotRequired),
+					// so sema can be in a non-buildable state
+					// and code generation will still succeed
+					if parameter.Label == "_" {
 						lit = &dst.Ident{
 							Path: "github.com/onflow/cadence/runtime/sema",
 							Name: "ArgumentLabelNotRequired",
