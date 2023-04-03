@@ -1741,6 +1741,86 @@ func (d *Decoder) decodeInitializerTypeValues(visited *cadenceTypeByCCFTypeID) (
 	return initializerTypes, nil
 }
 
+// decodeTypeParameterTypeValues decodes type parameters as
+// language=CDDL
+//
+//	 type-parameters: [
+//		* [
+//			name: tstr,
+//			type-bound: type-value
+//		  ]
+//	 ]
+func (d *Decoder) decodeTypeParameterTypeValues(visited *cadenceTypeByCCFTypeID) ([]cadence.TypeParameter, error) {
+	// Decode number of parameters.
+	count, err := d.dec.DecodeArrayHead()
+	if err != nil {
+		return nil, err
+	}
+
+	if count == 0 {
+		return []cadence.TypeParameter{}, nil
+	}
+
+	typeParameterTypes := make([]cadence.TypeParameter, count)
+	typeParameterNames := make(map[string]struct{}, count)
+
+	common.UseMemory(d.gauge, common.MemoryUsage{
+		Kind:   common.MemoryKindCadenceTypeParameter,
+		Amount: count,
+	})
+
+	for i := 0; i < int(count); i++ {
+		// Decode type parameter.
+		typeParam, err := d.decodeTypeParameterTypeValue(visited)
+		if err != nil {
+			return nil, err
+		}
+
+		// "Valid CCF Encoding Requirements" in CCF specs:
+		//
+		//   "All parameter lists MUST have unique identifier"
+		if _, ok := typeParameterNames[typeParam.Name]; ok {
+			return nil, fmt.Errorf("found duplicate type parameter name %s", typeParam.Name)
+		}
+
+		typeParameterNames[typeParam.Name] = struct{}{}
+		typeParameterTypes[i] = typeParam
+	}
+
+	return typeParameterTypes, nil
+}
+
+// decodeTypeParameterTypeValue decodes type parameter as
+// language=CDDL
+//
+//	 [
+//		name: tstr,
+//		type-bound: type-value
+//	 ]
+func (d *Decoder) decodeTypeParameterTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.TypeParameter, error) {
+	// Decode array head of length 2
+	err := decodeCBORArrayWithKnownSize(d.dec, 2)
+	if err != nil {
+		return cadence.TypeParameter{}, err
+	}
+
+	// element 0: name
+	name, err := d.dec.DecodeString()
+	if err != nil {
+		return cadence.TypeParameter{}, err
+	}
+
+	// element 2: type
+	t, err := d._decodeTypeValue(visited)
+	if err != nil {
+		return cadence.TypeParameter{}, err
+	}
+
+	// Unmetered because decodeTypeParamTypeValue is metered in decodeTypeParamTypeValues and called nowhere else
+	// Type is metered.
+	return cadence.NewTypeParameter(name, t), nil
+}
+
 // decodeParameterTypeValues decodes composite initializer parameter types as
 // language=CDDL
 //
@@ -1844,6 +1924,12 @@ func (d *Decoder) decodeParameterTypeValue(visited *cadenceTypeByCCFTypeID) (cad
 // language=CDDL
 // function-value = [
 //
+//	 type-parameters: [
+//		* [
+//			name: tstr,
+//			type-bound: type-value
+//		  ]
+//	 ]
 //	parameters: [
 //	    * [
 //	        label: tstr,
@@ -1854,21 +1940,26 @@ func (d *Decoder) decodeParameterTypeValue(visited *cadenceTypeByCCFTypeID) (cad
 //	return-type: type-value
 //
 // ]
-// TODO: handle function type's type parameters
 func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
-	// Decode array head of length 2
-	err := decodeCBORArrayWithKnownSize(d.dec, 2)
+	// Decode array head of length 3
+	err := decodeCBORArrayWithKnownSize(d.dec, 3)
 	if err != nil {
 		return nil, err
 	}
 
-	// element 0: parameters
+	// element 0: type parameters
+	typeParameters, err := d.decodeTypeParameterTypeValues(visited)
+	if err != nil {
+		return nil, err
+	}
+
+	// element 1: parameters
 	parameters, err := d.decodeParameterTypeValues(visited)
 	if err != nil {
 		return nil, err
 	}
 
-	// element 1: return-type
+	// element 2: return-type
 	returnType, err := d._decodeTypeValue(visited)
 	if err != nil {
 		return nil, err
@@ -1880,7 +1971,7 @@ func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cade
 
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
-		nil,
+		typeParameters,
 		parameters,
 		returnType,
 	), nil

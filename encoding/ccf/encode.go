@@ -998,34 +998,45 @@ func (e *Encoder) encodeCapability(capability cadence.StorageCapability) error {
 // language=CDDL
 // function-value = [
 //
-//	parameters: [
-//	    * [
-//	        label: tstr,
-//	        identifier: tstr,
-//	        type: type-value
-//	    ]
-//	]
-//	return-type: type-value
+//	 type-parameters: [
+//		* [
+//			name: tstr,
+//			type-bound: type-value
+//		  ]
+//	 ]
+//	 parameters: [
+//		    * [
+//		        label: tstr,
+//		        identifier: tstr,
+//		        type: type-value
+//		    ]
+//	 ]
+//	 return-type: type-value
 //
 // ]
-// TODO: handle function type's type parameters
 func (e *Encoder) encodeFunction(typ *cadence.FunctionType, visited ccfTypeIDByCadenceType) error {
-	// Encode array head of length 2.
+	// Encode array head of length 3.
 	err := e.enc.EncodeRawBytes([]byte{
-		// array, 2 items follow
-		0x82,
+		// array, 3 items follow
+		0x83,
 	})
 	if err != nil {
 		return err
 	}
 
-	// element 0: parameters as array.
+	// element 0: type parameters as array.
+	err = e.encodeTypeParameterTypeValues(typ.TypeParameters, visited)
+	if err != nil {
+		return err
+	}
+
+	// element 1: parameters as array.
 	err = e.encodeParameterTypeValues(typ.Parameters, visited)
 	if err != nil {
 		return err
 	}
 
-	// element 1: return type as type-value.
+	// element 2: return type as type-value.
 	return e.encodeTypeValue(typ.ReturnType, visited)
 }
 
@@ -1619,6 +1630,62 @@ func (e *Encoder) encodeInitializerTypeValues(initializerTypes [][]cadence.Param
 	}
 
 	return nil
+}
+
+// encodeTypeParameterTypeValues encodes type parameters as
+// language=CDDL
+//
+// type-parameters: [
+//
+//	*[
+//	  name: tstr,
+//	  type-bound: type-value
+//	  ]
+//
+// ]
+func (e *Encoder) encodeTypeParameterTypeValues(typeParameters []cadence.TypeParameter, visited ccfTypeIDByCadenceType) error {
+	// Encode CBOR array head with number of type parameters.
+	err := e.enc.EncodeArrayHead(uint64(len(typeParameters)))
+	if err != nil {
+		return err
+	}
+
+	// Encode type parameters.
+	for _, param := range typeParameters {
+		err = e.encodeTypeParameterTypeValue(param, visited)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// encodeTypeParameterTypeValue encodes type parameter as
+// language=CDDL
+//
+//	[
+//	     name: tstr,
+//	     type-bound: type-value
+//	]
+func (e *Encoder) encodeTypeParameterTypeValue(typeParameter cadence.TypeParameter, visited ccfTypeIDByCadenceType) error {
+	// Encode CBOR array head with length 2
+	err := e.enc.EncodeRawBytes([]byte{
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	// element 0: name as tstr.
+	err = e.enc.EncodeString(typeParameter.Name)
+	if err != nil {
+		return err
+	}
+
+	// element 1: type as type-bound.
+	return e.encodeTypeValue(typeParameter.TypeBound, visited)
 }
 
 // encodeParameterTypeValues encodes composite initializer parameter types as
