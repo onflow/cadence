@@ -1840,14 +1840,17 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		fieldNames = append(fieldNames, identifier)
 
-		checker.inFieldAnnotation = true
+		fieldAccess := checker.accessFromAstAccess(field.Access)
+
+		if entitlementMapAccess, ok := fieldAccess.(EntitlementMapAccess); ok {
+			checker.entitlementMappingInScope = entitlementMapAccess.Type
+		}
 		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
-		checker.inFieldAnnotation = false
+		checker.entitlementMappingInScope = nil
 		checker.checkTypeAnnotation(fieldTypeAnnotation, field.TypeAnnotation)
 
 		const declarationKind = common.DeclarationKindField
 
-		fieldAccess := checker.accessFromAstAccess(field.Access)
 		effectiveAccess := checker.effectiveMemberAccess(fieldAccess, containerKind)
 
 		if requireNonPrivateMemberAccess &&
@@ -1907,7 +1910,11 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		identifier := function.Identifier.Identifier
 
-		functionType := checker.functionType(function.Purity, function.ParameterList, function.ReturnTypeAnnotation)
+		functionAccess := checker.accessFromAstAccess(function.Access)
+
+		functionType := checker.functionType(function.Purity, functionAccess, function.ParameterList, function.ReturnTypeAnnotation)
+
+		checker.Elaboration.SetFunctionDeclarationFunctionType(function, functionType)
 
 		argumentLabels := function.ParameterList.EffectiveArgumentLabels()
 
@@ -1915,7 +1922,6 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		const declarationKind = common.DeclarationKindFunction
 
-		functionAccess := checker.accessFromAstAccess(function.Access)
 		effectiveAccess := checker.effectiveMemberAccess(functionAccess, containerKind)
 
 		if requireNonPrivateMemberAccess &&

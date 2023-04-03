@@ -552,6 +552,18 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("optional valid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface S {
+				access(M) let foo: auth(M) &String?
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("non-reference field", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -590,9 +602,10 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[1])
 	})
 
 	t.Run("mismatched entitlement mapping to set", func(t *testing.T) {
@@ -622,6 +635,103 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("accessor function in contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			contract interface S {
+				access(M) fun foo(): auth(M) &Int 
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("accessor function no container", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			access(M) fun foo(): auth(M) &Int {
+				return &1 as auth(M) &Int
+			}
+		`)
+
+		// one error for each appearance of M
+		errs := RequireCheckerErrors(t, err, 3)
+
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[1])
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[2])
+	})
+
+	t.Run("accessor function", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface S {
+				access(M) fun foo(): auth(M) &Int 
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function optional", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface S {
+				access(M) fun foo(): auth(M) &Int? 
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function with impl", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(M) &Int
+				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("accessor function array", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface S {
+				access(M) fun foo(): [auth(M) &Int]
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("accessor function with invalid mapped ref arg", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface S {
+				access(M) fun foo(arg: auth(M) &Int): auth(M) &Int 
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
 	})
 
 	t.Run("multiple mappings conjunction", func(t *testing.T) {
@@ -956,10 +1066,9 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[1])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("capability field", func(t *testing.T) {
@@ -971,10 +1080,9 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[1])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("optional ref field", func(t *testing.T) {
@@ -999,11 +1107,9 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
-		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[1])
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[2])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("optional fun ref field", func(t *testing.T) {
@@ -1015,10 +1121,9 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[1])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("mapped ref unmapped field", func(t *testing.T) {
@@ -1036,7 +1141,7 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
 	})
 
 	t.Run("mapped nonref unmapped field", func(t *testing.T) {
@@ -1091,9 +1196,10 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[1])
 	})
 }
 

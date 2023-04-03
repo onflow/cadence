@@ -4014,7 +4014,7 @@ func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
 func (*InvalidMappedEntitlementMemberError) IsUserError() {}
 
 func (e *InvalidMappedEntitlementMemberError) Error() string {
-	return "mapped entitlement access modifiers may only be used for fields with a reference type authorized with the same mapped entitlement"
+	return "mapped entitlement access modifiers may only be used for fields or accessors with a reference type authorized with the same mapped entitlement"
 }
 
 func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
@@ -4109,6 +4109,7 @@ func (e *ExplicitDisjointEntitlementSetReferenceCreationError) EndPosition(commo
 
 // InvalidMappedAuthorizationOutsideOfFieldError
 type InvalidMappedAuthorizationOutsideOfFieldError struct {
+	Map *EntitlementMapType
 	ast.Range
 }
 
@@ -4120,7 +4121,10 @@ func (*InvalidMappedAuthorizationOutsideOfFieldError) isSemanticError() {}
 func (*InvalidMappedAuthorizationOutsideOfFieldError) IsUserError() {}
 
 func (e *InvalidMappedAuthorizationOutsideOfFieldError) Error() string {
-	return "cannot use mapped entitlement authorization outside of a reference in a composite field"
+	return fmt.Sprintf(
+		"cannot use mapped entitlement authorization for %s outside of a field or accessor function using the same entitlement access",
+		e.Map.QualifiedIdentifier(),
+	)
 }
 
 func (e *InvalidMappedAuthorizationOutsideOfFieldError) StartPosition() ast.Position {

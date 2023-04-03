@@ -115,10 +115,10 @@ type Checker struct {
 	errors                             []error
 	functionActivations                *FunctionActivations
 	purityCheckScopes                  []PurityCheckScope
+	entitlementMappingInScope          *EntitlementMapType
 	inCondition                        bool
 	allowSelfResourceFieldInvalidation bool
 	inAssignment                       bool
-	inFieldAnnotation                  bool
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
@@ -508,6 +508,7 @@ func (checker *Checker) checkTopLevelDeclarationValidity(
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
 	functionType := checker.functionType(
 		declaration.Purity,
+		UnauthorizedAccess,
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
 	)
@@ -849,12 +850,6 @@ func (checker *Checker) findAndCheckValueVariable(identifierExpression *ast.Iden
 	return variable
 }
 
-// ConvertNestedType converts a nested AST type representation to a sema type
-func (checker *Checker) ConvertNestedType(t ast.Type) Type {
-	checker.inFieldAnnotation = false
-	return checker.ConvertType(t)
-}
-
 // ConvertType converts an AST type representation to a sema type
 func (checker *Checker) ConvertType(t ast.Type) Type {
 	switch t := t.(type) {
@@ -1075,7 +1070,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 	// Convert the restricted type, if any
 
 	if t.Type != nil {
-		restrictedType = checker.ConvertNestedType(t.Type)
+		restrictedType = checker.ConvertType(t.Type)
 	}
 
 	// Convert the restrictions
@@ -1083,7 +1078,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 	var restrictions []*InterfaceType
 
 	for _, restriction := range t.Restrictions {
-		restrictionResult := checker.ConvertNestedType(restriction)
+		restrictionResult := checker.ConvertType(restriction)
 
 		// The restriction must be a resource or structure interface type
 
@@ -1132,19 +1127,20 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 
 	if t.Authorization != nil {
 		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet})
-		switch access.(type) {
+		switch mapAccess := access.(type) {
 		case EntitlementMapAccess:
 			// mapped auth types are only allowed in the annotations of composite fields
-			if !checker.inFieldAnnotation {
+			if checker.entitlementMappingInScope == nil || !checker.entitlementMappingInScope.Equal(mapAccess.Type) {
 				checker.report(&InvalidMappedAuthorizationOutsideOfFieldError{
 					Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
+					Map:   mapAccess.Type,
 				})
 				access = UnauthorizedAccess
 			}
 		}
 	}
 
-	ty = checker.ConvertNestedType(t.Type)
+	ty = checker.ConvertType(t.Type)
 
 	return &ReferenceType{
 		Authorization: access,
@@ -1153,8 +1149,8 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 }
 
 func (checker *Checker) convertDictionaryType(t *ast.DictionaryType) Type {
-	keyType := checker.ConvertNestedType(t.KeyType)
-	valueType := checker.ConvertNestedType(t.ValueType)
+	keyType := checker.ConvertType(t.KeyType)
+	valueType := checker.ConvertType(t.ValueType)
 
 	if !IsValidDictionaryKeyType(keyType) {
 		checker.report(
@@ -1192,7 +1188,7 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 		parameters = make([]Parameter, 0, parameterCount)
 
 		for _, parameterTypeAnnotation := range parameterTypeAnnotations {
-			convertedParameterTypeAnnotation := checker.ConvertNestedTypeAnnotation(parameterTypeAnnotation)
+			convertedParameterTypeAnnotation := checker.ConvertTypeAnnotation(parameterTypeAnnotation)
 			parameters = append(
 				parameters,
 				Parameter{
@@ -1202,7 +1198,7 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 		}
 	}
 
-	returnTypeAnnotation := checker.ConvertNestedTypeAnnotation(t.ReturnTypeAnnotation)
+	returnTypeAnnotation := checker.ConvertTypeAnnotation(t.ReturnTypeAnnotation)
 
 	purity := PurityFromAnnotation(t.PurityAnnotation)
 
@@ -1214,7 +1210,7 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 }
 
 func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type {
-	elementType := checker.ConvertNestedType(t.Type)
+	elementType := checker.ConvertType(t.Type)
 
 	size := t.Size.Value
 
@@ -1260,7 +1256,7 @@ func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type 
 }
 
 func (checker *Checker) convertVariableSizedType(t *ast.VariableSizedType) Type {
-	elementType := checker.ConvertNestedType(t.Type)
+	elementType := checker.ConvertType(t.Type)
 	return &VariableSizedType{
 		Type: elementType,
 	}
@@ -1346,11 +1342,6 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 // to a sema type annotation
 //
 // NOTE: type annotations are *NOT* checked!
-func (checker *Checker) ConvertNestedTypeAnnotation(typeAnnotation *ast.TypeAnnotation) TypeAnnotation {
-	checker.inFieldAnnotation = false
-	return checker.ConvertTypeAnnotation(typeAnnotation)
-}
-
 func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation) TypeAnnotation {
 	convertedType := checker.ConvertType(typeAnnotation.Type)
 	return TypeAnnotation{
@@ -1361,6 +1352,7 @@ func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation
 
 func (checker *Checker) functionType(
 	purity ast.FunctionPurity,
+	access Access,
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
@@ -1368,8 +1360,12 @@ func (checker *Checker) functionType(
 
 	convertedReturnTypeAnnotation := VoidTypeAnnotation
 	if returnTypeAnnotation != nil {
+		if mapAccess, isMapAccess := access.(EntitlementMapAccess); isMapAccess {
+			checker.entitlementMappingInScope = mapAccess.Type
+		}
 		convertedReturnTypeAnnotation =
-			checker.ConvertNestedTypeAnnotation(returnTypeAnnotation)
+			checker.ConvertTypeAnnotation(returnTypeAnnotation)
+		checker.entitlementMappingInScope = nil
 	}
 
 	return &FunctionType{
@@ -1387,7 +1383,7 @@ func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter
 	if len(parameterList.Parameters) > 0 {
 
 		for i, parameter := range parameterList.Parameters {
-			convertedParameterType := checker.ConvertNestedType(parameter.TypeAnnotation.Type)
+			convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)
 
 			// NOTE: copying resource annotation from source type annotation as-is,
 			// so a potential error is properly reported
@@ -1899,8 +1895,8 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				return
 			}
 
-			// otherwise, mapped entitlements may only be used on fields in structs and resources
-			if declarationKind != common.DeclarationKindField || containerKind == nil ||
+			// otherwise, mapped entitlements may only be used in structs and resources
+			if containerKind == nil ||
 				(*containerKind != common.CompositeKindResource &&
 					*containerKind != common.CompositeKindStructure) {
 				checker.report(
@@ -1911,26 +1907,39 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				return
 			}
 
-			// mapped entitlement fields must be references that are authorized to the same mapped entitlement,
-			// or optional references that are authorized to the same mapped entitlement
-			switch ty := declarationType.(type) {
-			case *ReferenceType:
-				if ty.Authorization.Equal(access) {
-					return
-				}
-			case *OptionalType:
-				switch optionalType := ty.Type.(type) {
+			// mapped entitlement fields must be (optional) references that are authorized to the same mapped entitlement,
+			// or functions that return an (optional) reference authorized to the same mapped entitlement
+			requireIsPotentiallyOptionalReference := func(typ Type) {
+				switch ty := typ.(type) {
 				case *ReferenceType:
-					if optionalType.Authorization.Equal(access) {
+					if ty.Authorization.Equal(access) {
 						return
 					}
+				case *OptionalType:
+					switch optionalType := ty.Type.(type) {
+					case *ReferenceType:
+						if optionalType.Authorization.Equal(access) {
+							return
+						}
+					}
 				}
+				checker.report(
+					&InvalidMappedEntitlementMemberError{
+						Pos: startPos,
+					},
+				)
 			}
-			checker.report(
-				&InvalidMappedEntitlementMemberError{
-					Pos: startPos,
-				},
-			)
+
+			switch ty := declarationType.(type) {
+			case *FunctionType:
+				if declarationKind == common.DeclarationKindFunction {
+					requireIsPotentiallyOptionalReference(ty.ReturnTypeAnnotation.Type)
+				} else {
+					requireIsPotentiallyOptionalReference(ty)
+				}
+			default:
+				requireIsPotentiallyOptionalReference(ty)
+			}
 
 		case EntitlementSetAccess:
 			if containerKind == nil ||
@@ -2405,7 +2414,7 @@ func (checker *Checker) effectiveCompositeMemberAccess(access Access) Access {
 
 func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type {
 
-	ty := checker.ConvertNestedType(t.Type)
+	ty := checker.ConvertType(t.Type)
 
 	// Always convert (check) the type arguments,
 	// even if the instantiated type is invalid
@@ -2416,7 +2425,7 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 		typeArgumentAnnotations = make([]TypeAnnotation, typeArgumentCount)
 
 		for i, rawTypeArgument := range t.TypeArguments {
-			typeArgument := checker.ConvertNestedTypeAnnotation(rawTypeArgument)
+			typeArgument := checker.ConvertTypeAnnotation(rawTypeArgument)
 			checker.checkTypeAnnotation(typeArgument, rawTypeArgument)
 			typeArgumentAnnotations[i] = typeArgument
 		}

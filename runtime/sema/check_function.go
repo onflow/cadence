@@ -82,8 +82,10 @@ func (checker *Checker) visitFunctionDeclaration(
 	// global functions were previously declared, see `declareFunctionDeclaration`
 
 	functionType := checker.Elaboration.FunctionDeclarationFunctionType(declaration)
+	access := checker.accessFromAstAccess(declaration.Access)
+
 	if functionType == nil {
-		functionType = checker.functionType(declaration.Purity, declaration.ParameterList, declaration.ReturnTypeAnnotation)
+		functionType = checker.functionType(declaration.Purity, access, declaration.ParameterList, declaration.ReturnTypeAnnotation)
 
 		if options.declareFunction {
 			checker.declareFunctionDeclaration(declaration, functionType)
@@ -91,7 +93,7 @@ func (checker *Checker) visitFunctionDeclaration(
 	}
 
 	checker.checkDeclarationAccessModifier(
-		checker.accessFromAstAccess(declaration.Access),
+		access,
 		declaration.DeclarationKind(),
 		functionType,
 		containerKind,
@@ -431,6 +433,7 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 	// TODO: infer
 	functionType := checker.functionType(
 		expression.Purity,
+		UnauthorizedAccess,
 		expression.ParameterList,
 		expression.ReturnTypeAnnotation,
 	)

@@ -762,7 +762,7 @@ func TestCheckInferenceWithCheckerErrors(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 4)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		for _, err := range errs {
 			require.IsType(t, &sema.NotDeclaredError{}, err)
