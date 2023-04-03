@@ -2554,6 +2554,8 @@ type FunctionType struct {
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
 	Parameters               []Parameter
+	memberResolvers          map[string]MemberResolver
+	memberResolversOnce      sync.Once
 	IsConstructor            bool
 }
 
@@ -2999,22 +3001,18 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 }
 
 func (t *FunctionType) GetMembers() map[string]MemberResolver {
-	// TODO: optimize
-	var members map[string]MemberResolver
-	if t.Members != nil {
-		members = make(map[string]MemberResolver, t.Members.Len())
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
-	}
-	return withBuiltinMembers(t, members)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *FunctionType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		var memberResolvers map[string]MemberResolver
+		if t.Members != nil {
+			memberResolvers = MembersMapAsResolvers(t.Members)
+		}
+		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
+	})
 }
 
 type ArgumentExpressionsCheck func(
@@ -4207,17 +4205,7 @@ func (t *InterfaceType) GetMembers() map[string]MemberResolver {
 
 func (t *InterfaceType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
-		members := make(map[string]MemberResolver, t.Members.Len())
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
+		members := MembersMapAsResolvers(t.Members)
 
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
@@ -5860,10 +5848,12 @@ func IsNilType(ty Type) bool {
 }
 
 type TransactionType struct {
-	Members           *StringMemberOrderedMap
-	Fields            []string
-	PrepareParameters []Parameter
-	Parameters        []Parameter
+	Fields              []string
+	PrepareParameters   []Parameter
+	Parameters          []Parameter
+	Members             *StringMemberOrderedMap
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ Type = &TransactionType{}
@@ -5947,22 +5937,18 @@ func (t *TransactionType) RewriteWithRestrictedTypes() (Type, bool) {
 }
 
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
-	// TODO: optimize
-	var members map[string]MemberResolver
-	if t.Members != nil {
-		members = make(map[string]MemberResolver, t.Members.Len())
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
-	}
-	return withBuiltinMembers(t, members)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *TransactionType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		var memberResolvers map[string]MemberResolver
+		if t.Members != nil {
+			memberResolvers = MembersMapAsResolvers(t.Members)
+		}
+		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
+	})
 }
 
 func (*TransactionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
