@@ -3058,6 +3058,8 @@ func init() {
 		PublicKeyType,
 		SignatureAlgorithmType,
 		HashAlgorithmType,
+		StorageCapabilityControllerType,
+		AccountCapabilityControllerType,
 	)
 
 	for _, ty := range types {

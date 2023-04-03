@@ -218,6 +218,8 @@ const (
 	transactionTypeMask
 	anyResourceAttachmentMask
 	anyStructAttachmentMask
+	storageCapabilityControllerTypeMask
+	accountCapabilityControllerTypeMask
 
 	invalidTypeMask
 )
@@ -327,12 +329,14 @@ var (
 	FunctionTypeTag      = newTypeTagFromLowerMask(functionTypeMask)
 	InterfaceTypeTag     = newTypeTagFromLowerMask(interfaceTypeMask)
 
-	RestrictedTypeTag            = newTypeTagFromUpperMask(restrictedTypeMask)
-	CapabilityTypeTag            = newTypeTagFromUpperMask(capabilityTypeMask)
-	InvalidTypeTag               = newTypeTagFromUpperMask(invalidTypeMask)
-	TransactionTypeTag           = newTypeTagFromUpperMask(transactionTypeMask)
-	AnyResourceAttachmentTypeTag = newTypeTagFromUpperMask(anyResourceAttachmentMask)
-	AnyStructAttachmentTypeTag   = newTypeTagFromUpperMask(anyStructAttachmentMask)
+	RestrictedTypeTag                  = newTypeTagFromUpperMask(restrictedTypeMask)
+	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
+	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
+	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
+	AnyResourceAttachmentTypeTag       = newTypeTagFromUpperMask(anyResourceAttachmentMask)
+	AnyStructAttachmentTypeTag         = newTypeTagFromUpperMask(anyStructAttachmentMask)
+	StorageCapabilityControllerTypeTag = newTypeTagFromUpperMask(storageCapabilityControllerTypeMask)
+	AccountCapabilityControllerTypeTag = newTypeTagFromUpperMask(accountCapabilityControllerTypeMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -355,7 +359,9 @@ var (
 				Or(BlockTypeTag).
 				Or(DeployedContractTypeTag).
 				Or(CapabilityTypeTag).
-				Or(FunctionTypeTag)
+				Or(FunctionTypeTag).
+				Or(StorageCapabilityControllerTypeTag).
+				Or(AccountCapabilityControllerTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)
@@ -655,10 +661,19 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 		restrictedTypeMask,
 		transactionTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
+
 	case anyResourceAttachmentMask:
 		return AnyResourceAttachmentType
+
 	case anyStructAttachmentMask:
 		return AnyStructAttachmentType
+
+	case storageCapabilityControllerTypeMask:
+		return StorageCapabilityControllerType
+
+	case accountCapabilityControllerTypeMask:
+		return AccountCapabilityControllerType
+
 	default:
 		return nil
 	}
