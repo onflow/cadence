@@ -388,7 +388,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		case "Storable":
 			if !canGenerateSimpleType {
 				panic(fmt.Errorf(
-					"composite types cannot be explictly marked as storable: %s",
+					"composite types cannot be explicitly marked as storable: %s",
 					g.currentTypeID(),
 				))
 			}
@@ -397,7 +397,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		case "Equatable":
 			if !canGenerateSimpleType {
 				panic(fmt.Errorf(
-					"composite types cannot be explictly marked as equatable: %s",
+					"composite types cannot be explicitly marked as equatable: %s",
 					g.currentTypeID(),
 				))
 			}
@@ -406,7 +406,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		case "Exportable":
 			if !canGenerateSimpleType {
 				panic(fmt.Errorf(
-					"composite types cannot be explictly marked as exportable: %s",
+					"composite types cannot be explicitly marked as exportable: %s",
 					g.currentTypeID(),
 				))
 			}
@@ -874,13 +874,6 @@ func goBoolLit(b bool) dst.Expr {
 		return dst.NewIdent(strconv.FormatBool(true))
 	}
 	return dst.NewIdent(strconv.FormatBool(false))
-}
-
-func declarationKindExpr(kind string) *dst.Ident {
-	return &dst.Ident{
-		Path: "github.com/onflow/cadence/runtime/common",
-		Name: fmt.Sprintf("DeclarationKind%s", kind),
-	}
 }
 
 func compositeKindExpr(compositeKind common.CompositeKind) *dst.Ident {
