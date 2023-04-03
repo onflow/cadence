@@ -124,13 +124,21 @@ func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 			var innerPredicate func(eKey *EntitlementType) bool
 			switch e.SetKind {
 			case Disjunction:
-				// e permits other if e is a superset of other when both are disjunctions,
-				// or equivalently if other is a subset of e, i.e. whichever entitlement other has,
-				// it is guaranteed to be a valid entitlement for e
+				// `e` permits `other` if `e` is a superset of `other` when both are disjunctions,
+				// or equivalently if `other` is a subset of `e`, i.e. whichever entitlement `other` has,
+				// it is guaranteed to be a valid entitlement for `e`.
+				//
+				// For example, given some `access(X | Y | Z) fun foo()` member on `R`, `foo` is callable by a value `ref` of type `auth(X | Y) &R`
+				// because regardless of whether `ref` actually possesses an `X` or `Y`, that is one of the entitlements accepted by `foo`.
+				//
+				// Concretely: `auth (U1 | U2 | ... ) &X` <: `auth (T1 | T2 | ... ) &X` whenever `{U1, U2, ...}` is a subset of `{T1, T2, ...}`,
+				// or equivalently `∀U ∈ {U1, U2, ...}, ∃T ∈ {T1, T2, ...}, T = U`
 				innerPredicate = e.Entitlements.Contains
 			case Conjunction:
-				// when e is a conjunction and other is a disjunction, e permits other only when the two sets contain
-				// exactly the same elements
+				// when `e` is a conjunction and `other` is a disjunction, `e` permits other only when the two sets contain
+				// exactly the same elements, or in practice when each set contains exactly one equivalent element
+				//
+				// Concretely: `auth (U1 | U2 | ... ) &X <: auth (T1, T2,  ... ) &X` whenever `∀U ∈ {U1, U2, ...}, ∀T ∈ {T1, T2, ...}, T = U`.
 				innerPredicate = func(eKey *EntitlementType) bool {
 					return e.Entitlements.ForAllKeys(func(otherKey *EntitlementType) bool {
 						return eKey.Equal(otherKey)
@@ -142,12 +150,24 @@ func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 			var outerPredicate func(func(eKey *EntitlementType) bool) bool
 			switch e.SetKind {
 			case Conjunction:
-				// e permits other whenever e is a subset of other (when other possesses more entitlements than e)
-				// when both are conjunctions
+				// `e` permits other whenever `e` is a subset of `other` (when `other` possesses more entitlements than `e`)
+				// when both are conjunctions.
+				//
+				// For example given some `access(X, Y) fun foo()` member on `R`, `foo` is callable by a value `ref` of type `auth(X, Y, Z) &R`
+				// because `ref` possesses all the entitlements required by `foo` (and more)
+				//
+				// Concretely: `auth (U1, U2, ... ) &X <: auth (T1, T2, ... ) &X` whenever `{U1, U2, ...}` is a superset of `{T1, T2, ...}`,
+				// or equivalently `∀T ∈ {T1, T2, ...}, ∃U ∈ {U1, U2, ...}, T = U`
 				outerPredicate = e.Entitlements.ForAllKeys
 			case Disjunction:
-				// when e is a disjunction and other is a conjunction, e permits other when any of other's entitlements appear in e,
+				// when `e` is a disjunction and `other` is a conjunction, `e` permits other when any of `other`'s entitlements appear in `e`,
 				// or equivalently, when the two sets are not disjoint
+				//
+				// For example, given some `access(X | Y) fun foo()` member on `R`, `foo` is callable by a value `ref` of type `auth(X, Z) &R`
+				// because `ref` possesses one the entitlements required by `foo`
+				//
+				// Concretely: `auth (U1, U2, ... ) &X <: auth (T1 | T2 | ... ) &X` whenever `{U1, U2, ...}` is not disjoint from `{T1, T2, ...}`,
+				// or equivalently `∃U ∈ {U1, U2, ...}, ∃T ∈ {T1, T2, ...}, T = U`
 				outerPredicate = e.Entitlements.ForAnyKey
 			}
 			return outerPredicate(otherAccess.Entitlements.Contains)
