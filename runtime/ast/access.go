@@ -88,23 +88,29 @@ func (EntitlementAccess) Description() string {
 	return "entitled access"
 }
 
-func (e EntitlementAccess) entitlementsString() string {
-	str := strings.Builder{}
+func (e EntitlementAccess) entitlementsString(prefix *strings.Builder) *strings.Builder {
 	for i, entitlement := range e.EntitlementSet.Entitlements() {
-		str.Write([]byte(entitlement.String()))
+		prefix.WriteString(entitlement.String())
 		if i < len(e.EntitlementSet.Entitlements())-1 {
-			str.Write([]byte(e.EntitlementSet.Separator()))
+			prefix.Write([]byte(e.EntitlementSet.Separator()))
 		}
 	}
-	return str.String()
+	return prefix
 }
 
 func (e EntitlementAccess) String() string {
-	return "ConjunctiveEntitlementAccess " + e.entitlementsString()
+	str := &strings.Builder{}
+	str.WriteString("ConjunctiveEntitlementAccess ")
+	str = e.entitlementsString(str)
+	return str.String()
 }
 
 func (e EntitlementAccess) Keyword() string {
-	return "access(" + e.entitlementsString() + ")"
+	str := &strings.Builder{}
+	str.WriteString("access(")
+	str = e.entitlementsString(str)
+	str.WriteString(")")
+	return str.String()
 }
 
 func (e EntitlementAccess) MarshalJSON() ([]byte, error) {
@@ -112,8 +118,9 @@ func (e EntitlementAccess) MarshalJSON() ([]byte, error) {
 }
 
 func (e EntitlementAccess) subset(other EntitlementAccess) bool {
-	otherSet := make(map[*NominalType]struct{})
-	for _, entitlement := range other.EntitlementSet.Entitlements() {
+	otherEntitlements := other.EntitlementSet.Entitlements()
+	otherSet := make(map[*NominalType]struct{}, len(otherEntitlements))
+	for _, entitlement := range otherEntitlements {
 		otherSet[entitlement] = struct{}{}
 	}
 
