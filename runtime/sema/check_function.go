@@ -82,8 +82,10 @@ func (checker *Checker) visitFunctionDeclaration(
 	// global functions were previously declared, see `declareFunctionDeclaration`
 
 	functionType := checker.Elaboration.FunctionDeclarationFunctionType(declaration)
+	access := checker.accessFromAstAccess(declaration.Access)
+
 	if functionType == nil {
-		functionType = checker.functionType(declaration.Purity, declaration.ParameterList, declaration.ReturnTypeAnnotation)
+		functionType = checker.functionType(declaration.Purity, access, declaration.ParameterList, declaration.ReturnTypeAnnotation)
 
 		if options.declareFunction {
 			checker.declareFunctionDeclaration(declaration, functionType)
@@ -91,7 +93,7 @@ func (checker *Checker) visitFunctionDeclaration(
 	}
 
 	checker.checkDeclarationAccessModifier(
-		checker.accessFromAstAccess(declaration.Access),
+		access,
 		declaration.DeclarationKind(),
 		functionType,
 		containerKind,
@@ -104,6 +106,7 @@ func (checker *Checker) visitFunctionDeclaration(
 	checker.checkFunction(
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
+		access,
 		functionType,
 		declaration.FunctionBlock,
 		options.mustExit,
@@ -139,6 +142,7 @@ func (checker *Checker) declareFunctionDeclaration(
 func (checker *Checker) checkFunction(
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
+	access Access,
 	functionType *FunctionType,
 	functionBlock *ast.FunctionBlock,
 	mustExit bool,
@@ -183,6 +187,10 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
+				if mappedAccess, isMappedAccess := access.(EntitlementMapAccess); isMappedAccess {
+					checker.entitlementMappingInScope = mappedAccess.Type
+				}
+
 				checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
 					checker.visitFunctionBlock(
 						functionBlock,
@@ -190,6 +198,8 @@ func (checker *Checker) checkFunction(
 						checkResourceLoss,
 					)
 				})
+
+				checker.entitlementMappingInScope = nil
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type
@@ -431,6 +441,7 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 	// TODO: infer
 	functionType := checker.functionType(
 		expression.Purity,
+		UnauthorizedAccess,
 		expression.ParameterList,
 		expression.ReturnTypeAnnotation,
 	)
@@ -440,6 +451,7 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 	checker.checkFunction(
 		expression.ParameterList,
 		expression.ReturnTypeAnnotation,
+		UnauthorizedAccess,
 		functionType,
 		expression.FunctionBlock,
 		true,

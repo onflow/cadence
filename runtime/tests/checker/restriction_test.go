@@ -1185,12 +1185,9 @@ func TestCheckRestrictedTypeConformanceOrder(t *testing.T) {
           }
         `)
 
-		// TODO: remove duplicate
-
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[0])
-		assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
 	})
 
 }

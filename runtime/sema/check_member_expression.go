@@ -279,16 +279,29 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 
 		// the resulting authorization was mapped through an entitlement map, so we need to substitute this new authorization into the resulting type
-		if !member.Access.Equal(resultingAuthorization) {
+		substituteConcreteAuthorization := func(resultingType Type) Type {
 			switch ty := resultingType.(type) {
 			case *ReferenceType:
-				resultingType = NewReferenceType(checker.memoryGauge, ty.Type, resultingAuthorization)
+				return NewReferenceType(checker.memoryGauge, ty.Type, resultingAuthorization)
 			case *OptionalType:
 				switch innerTy := ty.Type.(type) {
 				case *ReferenceType:
-					resultingType = NewOptionalType(checker.memoryGauge,
+					return NewOptionalType(checker.memoryGauge,
 						NewReferenceType(checker.memoryGauge, innerTy.Type, resultingAuthorization))
 				}
+			}
+			return resultingType
+		}
+		if !member.Access.Equal(resultingAuthorization) {
+			switch ty := resultingType.(type) {
+			case *FunctionType:
+				resultingType = NewSimpleFunctionType(
+					ty.Purity,
+					ty.Parameters,
+					NewTypeAnnotation(substituteConcreteAuthorization(ty.ReturnTypeAnnotation.Type)),
+				)
+			default:
+				resultingType = substituteConcreteAuthorization(resultingType)
 			}
 		}
 
@@ -316,8 +329,30 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 // isReadableMember returns true if the given member can be read from
 // in the current location of the checker, along with the authorzation with which the result can be used
 func (checker *Checker) isReadableMember(accessedType Type, member *Member, accessRange ast.Range) (bool, Access) {
+	mapAccess := func(mappedAccess EntitlementMapAccess) (bool, Access) {
+		switch ty := accessedType.(type) {
+		case *ReferenceType:
+			// when accessing a member on a reference, the read is allowed, but the
+			// granted entitlements are based on the image through the map of the reference's entitlements
+			grantedAccess, err := mappedAccess.Image(ty.Authorization, accessRange)
+			if err != nil {
+				checker.report(err)
+				return false, member.Access
+			}
+			return true, grantedAccess
+		default:
+			// when accessing a member on a non-reference, the resulting mapped entitlement
+			// should be the entire codomain of the map
+			return true, mappedAccess.Codomain()
+		}
+	}
+
 	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType] {
+
+		if mappedAccess, isMappedAccess := member.Access.(EntitlementMapAccess); isMappedAccess {
+			return mapAccess(mappedAccess)
+		}
 
 		return true, member.Access
 	}
@@ -360,21 +395,7 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 			return true, member.Access
 		}
 	case EntitlementMapAccess:
-		switch ty := accessedType.(type) {
-		case *ReferenceType:
-			// when accessing a member on a reference, the read is allowed, but the
-			// granted entitlements are based on the image through the map of the reference's entitlements
-			grantedAccess, err := access.Image(ty.Authorization, accessRange)
-			if err != nil {
-				checker.report(err)
-				return false, member.Access
-			}
-			return true, grantedAccess
-		default:
-			// when accessing a member on a non-reference, the resulting mapped entitlement
-			// should be the entire codomain of the map
-			return true, access.Codomain()
-		}
+		return mapAccess(access)
 	}
 
 	return false, member.Access
