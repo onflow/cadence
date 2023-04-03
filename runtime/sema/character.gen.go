@@ -1,3 +1,4 @@
+// Code generated from character.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -18,18 +19,24 @@
 
 package sema
 
-import (
-	"github.com/rivo/uniseg"
+const CharacterTypeToStringFunctionName = "toString"
 
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
+var CharacterTypeToStringFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		StringType,
+	),
+}
 
-// CharacterType represents the character type
+const CharacterTypeToStringFunctionDocString = `
+Returns this character as a String
+`
+
+const CharacterTypeName = "Character"
+
 var CharacterType = &SimpleType{
-	Name:          "Character",
-	QualifiedName: "Character",
-	TypeID:        "Character",
+	Name:          CharacterTypeName,
+	QualifiedName: CharacterTypeName,
+	TypeID:        CharacterTypeName,
 	tag:           CharacterTypeTag,
 	IsResource:    false,
 	Storable:      true,
@@ -38,27 +45,15 @@ var CharacterType = &SimpleType{
 	Importable:    true,
 }
 
-func IsValidCharacter(s string) bool {
-	graphemes := uniseg.NewGraphemes(s)
-	// a valid character must have exactly one grapheme cluster
-	return graphemes.Next() && !graphemes.Next()
-}
-
 func init() {
 	CharacterType.Members = func(t *SimpleType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			ToStringFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						ToStringFunctionType,
-						toStringFunctionDocString,
-					)
-				},
-			},
-		}
+		return MembersAsResolvers([]*Member{
+			NewUnmeteredPublicFunctionMember(
+				t,
+				CharacterTypeToStringFunctionName,
+				CharacterTypeToStringFunctionType,
+				CharacterTypeToStringFunctionDocString,
+			),
+		})
 	}
 }
