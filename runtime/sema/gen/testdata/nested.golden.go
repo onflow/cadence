@@ -33,6 +33,14 @@ const FooTypeFooFunctionDocString = `
 foo
 `
 
+const FooTypeBarFieldName = "bar"
+
+var FooTypeBarFieldType = FooBarType
+
+const FooTypeBarFieldDocString = `
+Bar
+`
+
 const FooBarTypeBarFunctionName = "bar"
 
 var FooBarTypeBarFunctionType = &FunctionType{
@@ -93,6 +101,12 @@ func init() {
 			FooTypeFooFunctionName,
 			FooTypeFooFunctionType,
 			FooTypeFooFunctionDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			FooType,
+			FooTypeBarFieldName,
+			FooTypeBarFieldType,
+			FooTypeBarFieldDocString,
 		),
 	}
 

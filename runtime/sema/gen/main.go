@@ -578,6 +578,10 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 					Type: dst.NewIdent("CapabilityType"),
 				},
 			}
+		default:
+			for _, nestedIdentifier := range t.NestedIdentifiers {
+				identifier += nestedIdentifier.Identifier
+			}
 		}
 
 		return typeVarIdent(identifier)
