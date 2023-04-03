@@ -3918,6 +3918,14 @@ func (t *CompositeType) FieldPosition(name string, declaration ast.CompositeLike
 	return pos
 }
 
+func (t *CompositeType) SetNestedType(name string, nestedType ContainedType) {
+	if t.NestedTypes == nil {
+		t.NestedTypes = &StringTypeOrderedMap{}
+	}
+	t.NestedTypes.Set(name, nestedType)
+	nestedType.SetContainerType(t)
+}
+
 // Member
 
 type Member struct {

@@ -68,14 +68,11 @@ var AuthAccountType = func() *CompositeType {
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
 		importable:         false,
-		NestedTypes: func() *StringTypeOrderedMap {
-			nestedTypes := &StringTypeOrderedMap{}
-			nestedTypes.Set(AuthAccountContractsTypeName, AuthAccountContractsType)
-			nestedTypes.Set(AccountKeysTypeName, AuthAccountKeysType)
-			nestedTypes.Set(AuthAccountInboxTypeName, AuthAccountInboxType)
-			return nestedTypes
-		}(),
 	}
+
+	authAccountType.SetNestedType(AuthAccountContractsTypeName, AuthAccountContractsType)
+	authAccountType.SetNestedType(AccountKeysTypeName, AuthAccountKeysType)
+	authAccountType.SetNestedType(AuthAccountInboxTypeName, AuthAccountInboxType)
 
 	AuthAccountTypeLinkAccountFunctionType = &FunctionType{
 		Parameters: []Parameter{
@@ -785,11 +782,6 @@ var AuthAccountKeysTypeRevokeFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
 	RequiredArgumentCount: RequiredArgumentCount(1),
-}
-
-func init() {
-	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
-	AuthAccountKeysType.SetContainerType(AuthAccountType)
 }
 
 const AccountKeysTypeName = "Keys"

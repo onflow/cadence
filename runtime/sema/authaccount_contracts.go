@@ -80,11 +80,6 @@ var AuthAccountContractsType = func() *CompositeType {
 	return authAccountContractsType
 }()
 
-func init() {
-	// Set the container type after initializing the `AuthAccountContractsType`, to avoid initializing loop.
-	AuthAccountContractsType.SetContainerType(AuthAccountType)
-}
-
 const authAccountContractsTypeAddFunctionDocString = `
 Adds the given contract to the account.
 

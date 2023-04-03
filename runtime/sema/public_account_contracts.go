@@ -58,8 +58,3 @@ var PublicAccountContractsType = func() *CompositeType {
 	publicAccountContractsType.Fields = GetFieldNames(members)
 	return publicAccountContractsType
 }()
-
-func init() {
-	// Set the container type after initializing the `PublicAccountContractsType`, to avoid initializing loop.
-	PublicAccountContractsType.SetContainerType(PublicAccountType)
-}
