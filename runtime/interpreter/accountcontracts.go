@@ -45,11 +45,11 @@ func NewAuthAccountContractsValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountContractsTypeAddFunctionName:                addFunction,
-		sema.AccountContractsTypeGetFunctionName:                    getFunction,
-		sema.AccountContractsTypeBorrowFunctionName:                 borrowFunction,
-		sema.AuthAccountContractsTypeRemoveFunctionName:             removeFunction,
-		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName: updateFunction,
+		sema.AuthAccountContractsTypeAddFunctionName:                  addFunction,
+		sema.AccountContractsTypeGetFunctionName:                      getFunction,
+		sema.AccountContractsTypeBorrowFunctionName:                   borrowFunction,
+		sema.AuthAccountContractsTypeRemoveFunctionName:               removeFunction,
+		sema.AuthAccountContractsTypeUpdate__experimentalFunctionName: updateFunction,
 	}
 
 	computeField := func(
