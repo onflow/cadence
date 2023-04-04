@@ -2264,3 +2264,130 @@ func TestCheckAccountClaim(t *testing.T) {
 		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
 	})
 }
+
+func TestCheckStorageCapabilities(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("AuthAccount.storageCapabilities", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          fun test() {
+		      let capabilities: &AuthAccount.StorageCapabilities = authAccount.storageCapabilities
+
+              let cap: Capability<&Int>? = capabilities.get<&Int>(/public/foo)
+
+              let ref: &Int? = capabilities.borrow<&Int>(/public/foo)
+
+              let controller: &StorageCapabilityController? = capabilities.getController(byCapabilityID: 1)
+
+              let controllers: [&StorageCapabilityController] = capabilities.getControllers(forPath: /storage/foo)
+
+              capabilities.forEachController(
+                  forPath: /storage/bar,
+                  function: fun (controller: &StorageCapabilityController): Bool {
+                      return true
+                  }
+              )
+
+              let cap2: Capability<&String> = capabilities.issue<&String>(/storage/baz)
+          }
+		`)
+		require.NoError(t, err)
+	})
+
+	t.Run("AuthAccount.accountCapabilities", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          fun test() {
+		      let capabilities: &AuthAccount.AccountCapabilities = authAccount.accountCapabilities
+
+              let controller: &AccountCapabilityController? = capabilities.getController(byCapabilityID: 1)
+
+              let controllers: [&AccountCapabilityController] = capabilities.getControllers()
+
+              capabilities.forEachController(fun (controller: &AccountCapabilityController): Bool {
+                  return true
+              })
+
+              let cap: Capability<&AuthAccount> = capabilities.issue<&AuthAccount>()
+          }
+		`)
+		require.NoError(t, err)
+	})
+
+	t.Run("PublicAccount.storageCapabilities", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          fun test() {
+		      let capabilities: &PublicAccount.StorageCapabilities = publicAccount.storageCapabilities
+
+              let cap: Capability<&Int>? = capabilities.get<&Int>(/public/foo)
+
+              let ref: &Int? = capabilities.borrow<&Int>(/public/foo)
+          }
+		`)
+		require.NoError(t, err)
+	})
+
+	t.Run("PublicAccount.storageCapabilities: invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          fun test() {
+		      let capabilities: &PublicAccount.StorageCapabilities = publicAccount.storageCapabilities
+
+              capabilities.getController(byCapabilityID: 1)
+
+              capabilities.getControllers(forPath: /storage/foo)
+
+              capabilities.forEachController(
+                  forPath: /storage/bar,
+                  function: fun (controller: &StorageCapabilityController): Bool {
+                      return true
+                  }
+              )
+
+              capabilities.issue<&String>(/storage/baz)
+          }
+		`)
+		require.Error(t, err)
+		errors := RequireCheckerErrors(t, err, 4)
+
+		var err1 *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errors[0], &err1)
+		assert.Equal(t, "getController", err1.Name)
+
+		var err2 *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errors[1], &err2)
+		assert.Equal(t, "getControllers", err2.Name)
+
+		var err3 *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errors[2], &err3)
+		assert.Equal(t, "forEachController", err3.Name)
+
+		var err4 *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errors[3], &err4)
+		assert.Equal(t, "issue", err4.Name)
+	})
+
+	t.Run("PublicAccount.accountCapabilities", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+		  let capabilitiesRef: &PublicAccount.AccountCapabilities = publicAccount.accountCapabilities
+		`)
+		require.Error(t, err)
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.NotDeclaredError{}, errors[0])
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[1])
+	})
+}
