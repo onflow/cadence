@@ -4709,3 +4709,139 @@ func TestCheckDisjointEntitlementSetCreation(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic owned", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			struct S {
+				access(E) var x: Int
+				init() {
+					self.x = 1
+				}
+			}
+			fun foo() {
+				let s = S()
+				s.x = 3
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
+	})
+
+	t.Run("basic authorized", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			struct S {
+				access(E) var x: Int
+				init() {
+					self.x = 1
+				}
+			}
+			fun foo() {
+				let s = S()
+				let ref = &s as auth(E) &S
+				ref.x = 3
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
+	})
+
+	t.Run("mapped owned", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Y
+			}
+			struct S {
+				access(M) var x: auth(M) &Int
+				init() {
+					self.x = &1 as auth(Y) &Int
+				}
+			}
+			fun foo() {
+				let s = S()
+				s.x = &1 as auth(Y) &Int
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
+	})
+
+	t.Run("mapped authorized", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {
+			access(M) var x: auth(M) &Int
+			init() {
+				self.x = &1 as auth(Y) &Int
+			}
+		}
+		fun foo() {
+			let s = S()
+			let ref = &s as auth(X) &S
+			ref.x = &1 as auth(Y) &Int
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
+	})
+
+	t.Run("basic mutate", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			struct S {
+				access(E) var x: [Int]
+				init() {
+					self.x = [1]
+				}
+			}
+			fun foo() {
+				let s = S()
+				s.x.append(3)
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.ExternalMutationError{}, errs[0])
+	})
+
+	t.Run("basic authorized", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			struct S {
+				access(E) var x: [Int]
+				init() {
+					self.x = [1]
+				}
+			}
+			fun foo() {
+				let s = S()
+				let ref = &s as auth(E) &S
+				ref.x.append(3)
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.ExternalMutationError{}, errs[0])
+	})
+}
