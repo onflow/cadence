@@ -18,4 +18,12 @@
 
 package sema
 
-//go:generate go run ./gen block.cdc block.gen.go
+//go:generate go run ./gen character.cdc character.gen.go
+
+import "github.com/rivo/uniseg"
+
+func IsValidCharacter(s string) bool {
+	graphemes := uniseg.NewGraphemes(s)
+	// a valid character must have exactly one grapheme cluster
+	return graphemes.Next() && !graphemes.Next()
+}
