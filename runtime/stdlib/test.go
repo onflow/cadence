@@ -125,6 +125,7 @@ func NewTestContract(
 	compositeValue.Functions[newMatcherFunctionName] = newMatcherFunction
 	compositeValue.Functions[equalMatcherFunctionName] = equalMatcherFunction
 	compositeValue.Functions[beEmptyMatcherFunctionName] = beEmptyMatcherFunction
+	compositeValue.Functions[haveElementCountMatcherFunctionName] = haveElementCountMatcherFunction
 
 	return compositeValue, nil
 }
@@ -297,6 +298,17 @@ func init() {
 			beEmptyMatcherFunctionName,
 			beEmptyMatcherFunctionType,
 			beEmptyMatcherFunctionDocString,
+		),
+	)
+
+	// Test.haveElementCount()
+	testContractType.Members.Set(
+		haveElementCountMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			haveElementCountMatcherFunctionName,
+			haveElementCountMatcherFunctionType,
+			haveElementCountMatcherFunctionDocString,
 		),
 	)
 
@@ -1417,6 +1429,60 @@ var beEmptyMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 		)
 
 		return newMatcherWithGenericTestFunction(invocation, beEmptyTestFunc)
+	},
+)
+
+const haveElementCountMatcherFunctionName = "haveElementCount"
+
+const haveElementCountMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is an array or dictionary,
+and has the given number of elements.
+`
+
+var haveElementCountMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "count",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.IntType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var haveElementCountMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	haveElementCountMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		count, ok := invocation.Arguments[0].(interpreter.IntValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		haveElementCountTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				var matchingCount bool
+				switch value := invocation.Arguments[0].(type) {
+				case *interpreter.ArrayValue:
+					matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+				case *interpreter.DictionaryValue:
+					matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+				default:
+					panic(errors.NewUnreachableError())
+				}
+
+				return interpreter.AsBoolValue(matchingCount)
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, haveElementCountTestFunc)
 	},
 )
 
