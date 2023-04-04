@@ -5961,9 +5961,11 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 type RestrictedType struct {
 	Type Type
 	// an internal set of field `Restrictions`
-	restrictionSet     *InterfaceSet
-	Restrictions       []*InterfaceType
-	restrictionSetOnce sync.Once
+	restrictionSet      *InterfaceSet
+	Restrictions        []*InterfaceType
+	restrictionSetOnce  sync.Once
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ Type = &RestrictedType{}
@@ -6517,44 +6519,27 @@ const CapabilityTypeAddressFieldName = "address"
 
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			CapabilityTypeBorrowFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						CapabilityTypeBorrowFunctionType(t.BorrowType),
-						capabilityTypeBorrowFunctionDocString,
-					)
-				},
-			},
-			CapabilityTypeCheckFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						CapabilityTypeCheckFunctionType(t.BorrowType),
-						capabilityTypeCheckFunctionDocString,
-					)
-				},
-			},
-			CapabilityTypeAddressFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TheAddressType,
-						capabilityTypeAddressFieldDocString,
-					)
-				},
-			},
+		members := MembersAsResolvers([]*Member{
+			NewUnmeteredPublicFunctionMember(
+				t,
+				CapabilityTypeBorrowFunctionName,
+				CapabilityTypeBorrowFunctionType(t.BorrowType),
+				capabilityTypeBorrowFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				CapabilityTypeCheckFunctionName,
+				CapabilityTypeCheckFunctionType(t.BorrowType),
+				capabilityTypeCheckFunctionDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				CapabilityTypeAddressFieldName,
+				TheAddressType,
+				capabilityTypeAddressFieldDocString,
+			),
 		})
+		t.memberResolvers = withBuiltinMembers(t, members)
 	})
 }
 
