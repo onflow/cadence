@@ -930,7 +930,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 		fun test(): &Int {
 			let s = S()
 			let ref = &s as auth(X) &S?
-			let i: auth(F, Y) &Int? = ref?.foo
+			let i = ref?.foo
 			return i!
 		}
 		`)
