@@ -6155,54 +6155,66 @@ func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
 }
 
 func (t *RestrictedType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
 
-	members := map[string]MemberResolver{}
+func (t *RestrictedType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
 
-	// Return the members of all restrictions.
-	// The invariant that restrictions may not have overlapping members is not checked here,
-	// but implicitly when the resource declaration's conformances are checked.
+		memberResolvers := map[string]MemberResolver{}
 
-	for _, restriction := range t.Restrictions {
-		for name, resolver := range restriction.GetMembers() { //nolint:maprange
-			if _, ok := members[name]; !ok {
-				members[name] = resolver
+		// Return the members of all restrictions.
+		// The invariant that restrictions may not have overlapping members is not checked here,
+		// but implicitly when the resource declaration's conformances are checked.
+
+		for _, restriction := range t.Restrictions {
+			for name, resolver := range restriction.GetMembers() { //nolint:maprange
+				if _, ok := memberResolvers[name]; !ok {
+					memberResolvers[name] = resolver
+				}
 			}
 		}
-	}
 
-	// Also include members of the restricted type for convenience,
-	// to help check the rest of the program and improve the developer experience,
-	// *but* also report an error that this access is invalid when the entry is resolved.
-	//
-	// The restricted type may be `AnyResource`, in which case there are no members.
+		// Also include members of the restricted type for convenience,
+		// to help check the rest of the program and improve the developer experience,
+		// *but* also report an error that this access is invalid when the entry is resolved.
+		//
+		// The restricted type may be `AnyResource`, in which case there are no members.
 
-	for name, loopResolver := range t.Type.GetMembers() { //nolint:maprange
+		for name, loopResolver := range t.Type.GetMembers() { //nolint:maprange
 
-		if _, ok := members[name]; ok {
-			continue
+			if _, ok := memberResolvers[name]; ok {
+				continue
+			}
+
+			// NOTE: don't capture loop variable
+			resolver := loopResolver
+
+			memberResolvers[name] = MemberResolver{
+				Kind: resolver.Kind,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error),
+				) *Member {
+					member := resolver.Resolve(memoryGauge, identifier, targetRange, report)
+
+					report(
+						&InvalidRestrictedTypeMemberAccessError{
+							Name:  identifier,
+							Range: targetRange,
+						},
+					)
+
+					return member
+				},
+			}
 		}
 
-		// NOTE: don't capture loop variable
-		resolver := loopResolver
-
-		members[name] = MemberResolver{
-			Kind: resolver.Kind,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
-				member := resolver.Resolve(memoryGauge, identifier, targetRange, report)
-
-				report(
-					&InvalidRestrictedTypeMemberAccessError{
-						Name:  identifier,
-						Range: targetRange,
-					},
-				)
-
-				return member
-			},
-		}
-	}
-
-	return members
+		t.memberResolvers = memberResolvers
+	})
 }
 
 func (*RestrictedType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
