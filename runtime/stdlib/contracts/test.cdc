@@ -275,4 +275,20 @@ pub contract Test {
         })
     }
 
+    /// Returns a new matcher that checks if the given test value is either
+    /// a ScriptResult or TransactionResult and the ResultStatus is failed.
+    /// Returns false in any other case.
+    ///
+    pub fun beFailed(): Matcher {
+        return Matcher(test: fun (value: AnyStruct): Bool {
+            if let result = value as? TransactionResult {
+                return result.status == ResultStatus.failed
+            } else if let result = value as? ScriptResult {
+                return result.status == ResultStatus.failed
+            } else {
+                return false
+            }
+        })
+    }
+
 }
