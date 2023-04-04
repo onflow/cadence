@@ -712,3 +712,191 @@ func TestInterpretEntitledResult(t *testing.T) {
 		require.ErrorAs(t, err, &conditionError)
 	})
 }
+
+func TestInterpretEntitlementMappingFields(t *testing.T) {
+	t.Parallel()
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {
+			access(M) let foo: auth(M) &Int
+			init() {
+				self.foo = &2 as auth(Y) &Int
+			}
+		}
+		fun test(): &Int {
+			let s = S()
+			let ref = &s as auth(X) &S
+			let i = ref.foo
+			return i
+		}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		var refType *interpreter.EphemeralReferenceValue
+		require.IsType(t, value, refType)
+
+		require.Equal(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.Y"},
+			),
+			value.(*interpreter.EphemeralReferenceValue).Authorization,
+		)
+
+		require.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			value.(*interpreter.EphemeralReferenceValue).Value,
+		)
+	})
+
+	t.Run("map applies to dynamic types at runtime", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+		entitlement E
+		entitlement F
+		entitlement mapping M {
+			X -> Y
+			E -> F
+		}
+		struct S {
+			access(M) let foo: auth(M) &Int
+			init() {
+				self.foo = &3 as auth(F, Y) &Int
+			}
+		}
+		fun test(): &Int {
+			let s = S()
+			let ref = &s as auth(X, E) &S
+			let upref = ref as auth(X) &S
+			let i = upref.foo
+			return i
+		}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		var refType *interpreter.EphemeralReferenceValue
+		require.IsType(t, value, refType)
+
+		require.Equal(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.F", "S.test.Y"},
+			),
+			value.(*interpreter.EphemeralReferenceValue).Authorization,
+		)
+
+		require.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value.(*interpreter.EphemeralReferenceValue).Value,
+		)
+	})
+
+	t.Run("does not generate types with no input", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+		entitlement E
+		entitlement F
+		entitlement mapping M {
+			X -> Y
+			E -> F
+		}
+		struct S {
+			access(M) let foo: auth(M) &Int
+			init() {
+				self.foo = &3 as auth(F, Y) &Int
+			}
+		}
+		fun test(): &Int {
+			let s = S()
+			let ref = &s as auth(X) &S
+			let i = ref.foo
+			return i
+		}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		var refType *interpreter.EphemeralReferenceValue
+		require.IsType(t, value, refType)
+
+		require.Equal(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.Y"},
+			),
+			value.(*interpreter.EphemeralReferenceValue).Authorization,
+		)
+
+		require.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value.(*interpreter.EphemeralReferenceValue).Value,
+		)
+	})
+}
+
+func TestInterpretEntitlementMappingAccessors(t *testing.T) {
+
+	t.Parallel()
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {
+			access(M) fun foo(): auth(M) &Int {
+				return &1 as auth(M) &Int
+			}
+		}
+		fun test(): &Int {
+			let s = S()
+			let ref = &s as auth(X) &S
+			let i = ref.foo()
+			return i
+		}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Equal(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.Y"},
+			),
+			value.(*interpreter.EphemeralReferenceValue).Authorization,
+		)
+	})
+}
