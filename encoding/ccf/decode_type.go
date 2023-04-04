@@ -22,6 +22,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
@@ -73,10 +75,10 @@ func (d *Decoder) decodeInlineType(types *cadenceTypeByCCFTypeID) (cadence.Type,
 		return d.decodeReferenceType(types, d.decodeInlineType)
 
 	case CBORTagRestrictedType:
-		return d.decodeRestrictedType(types, d.decodeInlineType)
+		return d.decodeRestrictedType(types, d.decodeNullableInlineType, d.decodeInlineType)
 
 	case CBORTagCapabilityType:
-		return d.decodeCapabilityType(types, d.decodeInlineType)
+		return d.decodeCapabilityType(types, d.decodeNullableInlineType)
 
 	case CBORTagTypeRef:
 		return d.decodeTypeRef(types)
@@ -84,6 +86,19 @@ func (d *Decoder) decodeInlineType(types *cadenceTypeByCCFTypeID) (cadence.Type,
 	default:
 		return nil, fmt.Errorf("unsupported encoded inline type with CBOR tag number %d", tagNum)
 	}
+}
+
+// decodeNullableInlineType decodes encoded inline-type or nil.
+func (d *Decoder) decodeNullableInlineType(types *cadenceTypeByCCFTypeID) (cadence.Type, error) {
+	cborType, err := d.dec.NextType()
+	if err != nil {
+		return nil, err
+	}
+	if cborType == cbor.NilType {
+		err = d.dec.DecodeNil()
+		return nil, err
+	}
+	return d.decodeInlineType(types)
 }
 
 // decodeSimpleTypeID decodes encoded simple-type-id.
@@ -417,7 +432,7 @@ func (d *Decoder) decodeDictType(
 //	; use an array as an extension point
 //	#6.144([
 //	    ; borrow-type
-//	    inline-type
+//	    inline-type / nil
 //	])
 //
 // capability-type-value =
@@ -426,7 +441,7 @@ func (d *Decoder) decodeDictType(
 //	; use an array as an extension point
 //	#6.192([
 //	  ; borrow-type
-//	  type-value
+//	  type-value / nil
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
@@ -444,10 +459,6 @@ func (d *Decoder) decodeCapabilityType(
 	borrowType, err := decodeTypeFn(types)
 	if err != nil {
 		return nil, err
-	}
-
-	if borrowType == nil {
-		return nil, errors.New("unexpected nil type as capability borrow type")
 	}
 
 	return cadence.NewMeteredCapabilityType(d.gauge, borrowType), nil
@@ -507,7 +518,7 @@ func (d *Decoder) decodeReferenceType(
 //
 //	; cbor-tag-restricted-type
 //	#6.143([
-//	  type: inline-type,
+//	  type: inline-type / nil,
 //	  restrictions: [* inline-type]
 //	])
 //
@@ -515,7 +526,7 @@ func (d *Decoder) decodeReferenceType(
 //
 //	; cbor-tag-restricted-type-value
 //	#6.191([
-//	  type: type-value,
+//	  type: type-value / nil,
 //	  restrictions: [* type-value]
 //	])
 //
@@ -523,6 +534,7 @@ func (d *Decoder) decodeReferenceType(
 func (d *Decoder) decodeRestrictedType(
 	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
+	decodeRestrictionTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
 	// Decode array of length 2.
 	err := decodeCBORArrayWithKnownSize(d.dec, 2)
@@ -534,10 +546,6 @@ func (d *Decoder) decodeRestrictedType(
 	typ, err := decodeTypeFn(types)
 	if err != nil {
 		return nil, err
-	}
-
-	if typ == nil {
-		return nil, errors.New("unexpected nil type as restricted type")
 	}
 
 	// element 1: restrictions
@@ -552,7 +560,7 @@ func (d *Decoder) decodeRestrictedType(
 	restrictions := make([]cadence.Type, restrictionCount)
 	for i := 0; i < int(restrictionCount); i++ {
 		// Decode restriction.
-		restrictedType, err := decodeTypeFn(types)
+		restrictedType, err := decodeRestrictionTypeFn(types)
 		if err != nil {
 			return nil, err
 		}

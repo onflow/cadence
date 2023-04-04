@@ -369,10 +369,10 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 		return d.decodePath()
 
 	case cadence.MetaType:
-		return d.decodeTypeValue()
+		return d.decodeNullableTypeValue()
 
 	case *cadence.CapabilityType:
-		return d.decodeCapability(typ)
+		return d.decodeCapability(typ, types)
 
 	case *cadence.EnumType:
 		return d.decodeEnum(typ, types)
@@ -1150,9 +1150,28 @@ func (d *Decoder) decodePath() (cadence.Value, error) {
 //	path: path-value
 //
 // ]
-func (d *Decoder) decodeCapability(typ *cadence.CapabilityType) (cadence.Value, error) {
+func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
+	// typ can be different from runtime CapabilityType because borrow type can be nil.
+	// In this case, runtime type is encoded with the value (as tag content for tag CBORTagTypeAndValue).
+
+	// Check next encoded CBOR type.
+	nextType, err := d.dec.NextType()
+	if err != nil {
+		return nil, err
+	}
+
+	if nextType == cbor.TagType {
+		err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %s", typ.ID(), typ, err.Error())
+		}
+
+		// Decode ccf-type-and-value-message.
+		return d.decodeTypeAndValue(types)
+	}
+
 	// Decode array head of length 2.
-	err := decodeCBORArrayWithKnownSize(d.dec, 2)
+	err = decodeCBORArrayWithKnownSize(d.dec, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -1176,10 +1195,10 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType) (cadence.Value, 
 		typ.BorrowType), nil
 }
 
-// decodeTypeValue decodes encoded type-value.
-// See _decodeTypeValue() for details.
-func (d *Decoder) decodeTypeValue() (cadence.Value, error) {
-	t, err := d._decodeTypeValue(newCadenceTypeByCCFTypeID())
+// decodeNullableTypeValue decodes encoded type-value / nil.
+// See _decodeNullableTypeValue() for details.
+func (d *Decoder) decodeNullableTypeValue() (cadence.Value, error) {
+	t, err := d._decodeNullableTypeValue(newCadenceTypeByCCFTypeID())
 	if err != nil {
 		return nil, err
 	}
@@ -1188,10 +1207,8 @@ func (d *Decoder) decodeTypeValue() (cadence.Value, error) {
 
 // _decodeTypeValue decodes encoded type-value as
 // language=CDDL
-// type-value =
+// type-value = simple-type-value
 //
-//	nil
-//	/ simple-type-value
 //	/ optional-type-value
 //	/ varsized-array-type-value
 //	/ constsized-array-type-value
@@ -1213,11 +1230,6 @@ func (d *Decoder) _decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Typ
 	// Decode tag number.
 	tagNum, err := d.dec.DecodeTagNumber()
 	if err != nil {
-		if _, ok := err.(*cbor.WrongTypeError); ok {
-			// Decode nil.
-			err = d.dec.DecodeNil()
-			return nil, err
-		}
 		return nil, err
 	}
 
@@ -1242,13 +1254,13 @@ func (d *Decoder) _decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Typ
 		return d.decodeDictType(visited, d._decodeTypeValue)
 
 	case CBORTagCapabilityTypeValue:
-		return d.decodeCapabilityType(visited, d._decodeTypeValue)
+		return d.decodeCapabilityType(visited, d._decodeNullableTypeValue)
 
 	case CBORTagReferenceTypeValue:
 		return d.decodeReferenceType(visited, d._decodeTypeValue)
 
 	case CBORTagRestrictedTypeValue:
-		return d.decodeRestrictedType(visited, d._decodeTypeValue)
+		return d.decodeRestrictedType(visited, d._decodeNullableTypeValue, d._decodeTypeValue)
 
 	case CBORTagFunctionTypeValue:
 		return d.decodeFunctionTypeValue(visited)
@@ -1280,6 +1292,19 @@ func (d *Decoder) _decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Typ
 	default:
 		return nil, fmt.Errorf("unsupported type-value with CBOR tag number %d", tagNum)
 	}
+}
+
+// _decodeNullableTypeValue decodes encoded type-value or nil.
+func (d *Decoder) _decodeNullableTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
+	cborType, err := d.dec.NextType()
+	if err != nil {
+		return nil, err
+	}
+	if cborType == cbor.NilType {
+		err = d.dec.DecodeNil()
+		return nil, err
+	}
+	return d._decodeTypeValue(visited)
 }
 
 // decodeStructTypeValue decodes struct-type-value as
@@ -1679,7 +1704,7 @@ func (d *Decoder) _decodeCompositeTypeValue(visited *cadenceTypeByCCFTypeID) (*c
 	}
 
 	// element 2: type (only used by enum type value)
-	typ, err := d._decodeTypeValue(visited)
+	typ, err := d._decodeNullableTypeValue(visited)
 	if err != nil {
 		return nil, err
 	}
@@ -1747,7 +1772,7 @@ func (d *Decoder) decodeInitializerTypeValues(visited *cadenceTypeByCCFTypeID) (
 //	 type-parameters: [
 //		* [
 //			name: tstr,
-//			type-bound: type-value
+//			type-bound: type-value / nil
 //		  ]
 //	 ]
 func (d *Decoder) decodeTypeParameterTypeValues(visited *cadenceTypeByCCFTypeID) ([]cadence.TypeParameter, error) {
@@ -1795,7 +1820,7 @@ func (d *Decoder) decodeTypeParameterTypeValues(visited *cadenceTypeByCCFTypeID)
 //
 //	 [
 //		name: tstr,
-//		type-bound: type-value
+//		type-bound: type-value / nil
 //	 ]
 func (d *Decoder) decodeTypeParameterTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.TypeParameter, error) {
 	// Decode array head of length 2
@@ -1811,7 +1836,7 @@ func (d *Decoder) decodeTypeParameterTypeValue(visited *cadenceTypeByCCFTypeID) 
 	}
 
 	// element 2: type
-	t, err := d._decodeTypeValue(visited)
+	t, err := d._decodeNullableTypeValue(visited)
 	if err != nil {
 		return cadence.TypeParameter{}, err
 	}
@@ -1927,7 +1952,7 @@ func (d *Decoder) decodeParameterTypeValue(visited *cadenceTypeByCCFTypeID) (cad
 //	 type-parameters: [
 //		* [
 //			name: tstr,
-//			type-bound: type-value
+//			type-bound: type-value / nil
 //		  ]
 //	 ]
 //	parameters: [

@@ -86,6 +86,13 @@ func (e *Encoder) encodeInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType
 	}
 }
 
+func (e *Encoder) encodeNullableInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType) error {
+	if typ == nil {
+		return e.enc.EncodeNil()
+	}
+	return e.encodeInlineType(typ, tids)
+}
+
 // encodeSimpleType encodes cadence simple type as
 // language=CDDL
 // simple-type =
@@ -347,7 +354,7 @@ func (e *Encoder) encodeReferenceTypeWithRawTag(
 //
 //	; cbor-tag-restricted-type
 //	#6.143([
-//	  type: inline-type,
+//	  type: inline-type / nil,
 //	  restrictions: [* inline-type]
 //	])
 func (e *Encoder) encodeRestrictedType(typ *cadence.RestrictedType, tids ccfTypeIDByCadenceType) error {
@@ -355,6 +362,7 @@ func (e *Encoder) encodeRestrictedType(typ *cadence.RestrictedType, tids ccfType
 	return e.encodeRestrictedTypeWithRawTag(
 		typ,
 		tids,
+		e.encodeNullableInlineType,
 		e.encodeInlineType,
 		rawTagNum,
 	)
@@ -366,6 +374,7 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 	typ *cadence.RestrictedType,
 	tids ccfTypeIDByCadenceType,
 	encodeTypeFn encodeTypeFn,
+	encodeRestrictionTypeFn encodeTypeFn,
 	rawTagNumber []byte,
 ) error {
 	// Encode CBOR tag number.
@@ -416,7 +425,7 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 
 		for _, index := range sorter.indexes {
 			// Encode restriction type with given encodeTypeFn.
-			err = encodeTypeFn(restrictions[index], tids)
+			err = encodeRestrictionTypeFn(restrictions[index], tids)
 			if err != nil {
 				return err
 			}
@@ -434,7 +443,7 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 //	; use an array as an extension point
 //	#6.144([
 //	    ; borrow-type
-//	    inline-type
+//	    inline-type / nil
 //	])
 func (e *Encoder) encodeCapabilityType(
 	typ *cadence.CapabilityType,
@@ -444,7 +453,7 @@ func (e *Encoder) encodeCapabilityType(
 	return e.encodeCapabilityTypeWithRawTag(
 		typ,
 		tids,
-		e.encodeInlineType,
+		e.encodeNullableInlineType,
 		rawTagNum,
 	)
 }
