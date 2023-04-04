@@ -25,7 +25,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/k0kubun/pp"
+	"github.com/k0kubun/pp/v3"
 
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 )
