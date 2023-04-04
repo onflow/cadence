@@ -126,6 +126,7 @@ func NewTestContract(
 	compositeValue.Functions[equalMatcherFunctionName] = equalMatcherFunction
 	compositeValue.Functions[beEmptyMatcherFunctionName] = beEmptyMatcherFunction
 	compositeValue.Functions[haveElementCountMatcherFunctionName] = haveElementCountMatcherFunction
+	compositeValue.Functions[containMatcherFunctionName] = containMatcherFunction
 
 	return compositeValue, nil
 }
@@ -309,6 +310,17 @@ func init() {
 			haveElementCountMatcherFunctionName,
 			haveElementCountMatcherFunctionType,
 			haveElementCountMatcherFunctionDocString,
+		),
+	)
+
+	// Test.contain()
+	testContractType.Members.Set(
+		containMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			containMatcherFunctionName,
+			containMatcherFunctionType,
+			containMatcherFunctionDocString,
 		),
 	)
 
@@ -1483,6 +1495,71 @@ var haveElementCountMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 		)
 
 		return newMatcherWithGenericTestFunction(invocation, haveElementCountTestFunc)
+	},
+)
+
+const containMatcherFunctionName = "contain"
+
+const containMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is an array that contains
+a value that is equal to the given value, or the tested value is a dictionary
+that contains an entry where the value is equal to the given value.
+`
+
+var containMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "element",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.AnyStructType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var containMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	containMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		element, ok := invocation.Arguments[0].(interpreter.EquatableValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		containTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				var elementFound interpreter.BoolValue
+				switch value := invocation.Arguments[0].(type) {
+				case *interpreter.ArrayValue:
+					elementFound = value.Contains(
+						inter,
+						invocation.LocationRange,
+						element,
+					)
+				case *interpreter.DictionaryValue:
+					elementFound = value.ContainsKey(
+						inter,
+						invocation.LocationRange,
+						element,
+					)
+				default:
+					panic(errors.NewUnreachableError())
+				}
+
+				return elementFound
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, containTestFunc)
 	},
 )
 

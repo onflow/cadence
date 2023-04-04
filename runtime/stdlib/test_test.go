@@ -1065,6 +1065,95 @@ func TestTestHaveElementCountMatcher(t *testing.T) {
 	})
 }
 
+func TestTestContainMatcher(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("matcher contain with Array", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testMatch(): Bool {
+		        let containsTwenty = Test.contain(20)
+
+		        return containsTwenty.test([42, 20, 31])
+		    }
+
+		    pub fun testNoMatch(): Bool {
+		        let containsTwenty = Test.contain(20)
+
+		        return containsTwenty.test([42])
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("testMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+
+		result, err = inter.Invoke("testNoMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.FalseValue, result)
+	})
+
+	t.Run("matcher contain with Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testMatch(): Bool {
+		        let containsFalse = Test.contain(false)
+		        let dict: {Bool: Int} = {true: 1, false: 0}
+
+		        return containsFalse.test(dict)
+		    }
+
+		    pub fun testNoMatch(): Bool {
+		        let containsFive = Test.contain(5)
+		        let dict: {Int: Bool} = {1: true, 0: false}
+
+		        return containsFive.test(dict)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("testMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+
+		result, err = inter.Invoke("testNoMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.FalseValue, result)
+	})
+
+	t.Run("matcher contain with type mismatch", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test(): Bool {
+		        let containsFalse = Test.contain(false)
+
+		        return containsFalse.test("false")
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+	})
+}
+
 func TestTestExpect(t *testing.T) {
 
 	t.Parallel()
