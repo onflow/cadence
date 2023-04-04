@@ -896,7 +896,56 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.F", "S.test.Y"},
+				[]common.TypeID{"S.test.Y", "S.test.F"},
+			),
+			value.(*interpreter.EphemeralReferenceValue).Authorization,
+		)
+
+		require.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value.(*interpreter.EphemeralReferenceValue).Value,
+		)
+	})
+
+	t.Run("fully entitled but less than initialized", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+		entitlement E
+		entitlement F
+		entitlement Q
+		entitlement mapping M {
+			X -> Y
+			E -> F
+		}
+		struct S {
+			access(M) let foo: auth(M) &Int
+			init() {
+				self.foo = &3 as auth(F, Y, Q) &Int
+			}
+		}
+		fun test(): &Int {
+			let s = S()
+			let i = s.foo
+			return i
+		}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		var refType *interpreter.EphemeralReferenceValue
+		require.IsType(t, value, refType)
+
+		require.Equal(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.Y", "S.test.F"},
 			),
 			value.(*interpreter.EphemeralReferenceValue).Authorization,
 		)

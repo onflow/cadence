@@ -4452,35 +4452,47 @@ func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKin
 }
 
 func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string) *sema.Access {
-	semaCompositeType, isComposite := interpreter.MustConvertStaticToSemaType(self.StaticType(interpreter)).(*sema.CompositeType)
-	if !isComposite {
-		return nil
-	}
-	memberAccess, hasMember := semaCompositeType.Members.Get(identifier)
-	if !hasMember {
-		return nil
-	}
-	return &memberAccess.Access
+	typ := interpreter.MustSemaTypeOfValue(self)
+	member := typ.GetMembers()[identifier].Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {})
+	return &member.Access
 }
 
-func (interpreter *Interpreter) mapMemberValueAuthorization(auth Authorization, memberAccess *sema.Access, resultValue Value) Value {
+func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAccess *sema.Access, resultValue Value) Value {
 	if memberAccess == nil {
 		return resultValue
 	}
 	if mappedAccess, isMappedAccess := (*memberAccess).(sema.EntitlementMapAccess); isMappedAccess {
-		mappedAccess, err := mappedAccess.Image(interpreter.MustConvertStaticAuthorizationToSemaAccess(auth), ast.EmptyRange)
-		if err != nil {
-			panic(err)
+		var auth Authorization
+		switch selfValue := self.(type) {
+		case AuthorizedValue:
+			mappedAccess, err := mappedAccess.Image(interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization()), ast.EmptyRange)
+			if err != nil {
+				panic(err)
+			}
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess)
+		default:
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess.Codomain())
 		}
-		mappedAuth := ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess)
+
 		switch refValue := resultValue.(type) {
 		case *EphemeralReferenceValue:
-			return NewEphemeralReferenceValue(interpreter, mappedAuth, refValue.Value, refValue.BorrowedType)
+			return NewEphemeralReferenceValue(interpreter, auth, refValue.Value, refValue.BorrowedType)
 		case *StorageReferenceValue:
-			return NewStorageReferenceValue(interpreter, mappedAuth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
+			return NewStorageReferenceValue(interpreter, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
 		}
 	}
 	return resultValue
+}
+
+func (interpreter *Interpreter) getMemberWithAuthMapping(self Value, locationRange LocationRange, identifier string) Value {
+	result := interpreter.getMember(self, locationRange, identifier)
+	if result == nil {
+		return nil
+	}
+	// once we have obtained the member, if it was declared with entitlement-mapped access, we must compute the output of the map based
+	// on the runtime authorizations of the acccessing reference or composite
+	memberAccess := interpreter.getAccessOfMember(self, identifier)
+	return interpreter.mapMemberValueAuthorization(self, memberAccess, result)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.

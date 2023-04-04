@@ -16968,8 +16968,11 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
-// StorageReferenceValue
+type AuthorizedValue interface {
+	GetAuthorization() Authorization
+}
 
+// StorageReferenceValue
 type StorageReferenceValue struct {
 	BorrowedType         sema.Type
 	TargetPath           PathValue
@@ -16982,6 +16985,7 @@ var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
 var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
+var _ AuthorizedValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
 	authorization Authorization,
@@ -17051,6 +17055,10 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 		ConvertSemaToStaticType(inter, v.BorrowedType),
 		self.StaticType(inter),
 	)
+}
+
+func (v *StorageReferenceValue) GetAuthorization() Authorization {
+	return v.Authorization
 }
 
 func (*StorageReferenceValue) IsImportable(_ *Interpreter) bool {
@@ -17128,10 +17136,8 @@ func (v *StorageReferenceValue) GetMember(
 	name string,
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
-	memberAccess := interpreter.getAccessOfMember(self, name)
 
-	memberValue := interpreter.getMember(self, locationRange, name)
-	return interpreter.mapMemberValueAuthorization(v.Authorization, memberAccess, memberValue)
+	return interpreter.getMember(self, locationRange, name)
 }
 
 func (v *StorageReferenceValue) RemoveMember(
@@ -17332,6 +17338,7 @@ var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
+var _ AuthorizedValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
 	authorization Authorization,
@@ -17404,6 +17411,10 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 	)
 }
 
+func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
+	return v.Authorization
+}
+
 func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
 	return false
 }
@@ -17450,10 +17461,8 @@ func (v *EphemeralReferenceValue) GetMember(
 	name string,
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
-	memberAccess := interpreter.getAccessOfMember(self, name)
 
-	memberValue := interpreter.getMember(self, locationRange, name)
-	return interpreter.mapMemberValueAuthorization(v.Authorization, memberAccess, memberValue)
+	return interpreter.getMember(self, locationRange, name)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(

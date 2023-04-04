@@ -194,7 +194,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 			if isNestedResourceMove {
 				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, identifier)
 			} else {
-				resultValue = interpreter.getMember(target, locationRange, identifier)
+				resultValue = interpreter.getMemberWithAuthMapping(target, locationRange, identifier)
 			}
 			if resultValue == nil && !allowMissing {
 				panic(UseBeforeInitializationError{
