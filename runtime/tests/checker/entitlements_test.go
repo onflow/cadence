@@ -3642,6 +3642,57 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("basic with update", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct S {
+			access(M) var x: auth(M) &Int
+			init() {
+				self.x = &1 as auth(Y, Z) &Int
+			}
+			fun updateX(x: auth(Y, Z) &Int) {
+				self.x = x
+			}
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic with update error", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct S {
+			access(M) var x: auth(M) &Int
+			init() {
+				self.x = &1 as auth(Y, Z) &Int
+			}
+			fun updateX(x: auth(Z) &Int) {
+				self.x = x
+			}
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// init of map needs full authorization of codomain
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
 	t.Run("basic with unauthorized init", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `

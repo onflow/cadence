@@ -4451,6 +4451,38 @@ func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKin
 	}
 }
 
+func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string) *sema.Access {
+	semaCompositeType, isComposite := interpreter.MustConvertStaticToSemaType(self.StaticType(interpreter)).(*sema.CompositeType)
+	if !isComposite {
+		return nil
+	}
+	memberAccess, hasMember := semaCompositeType.Members.Get(identifier)
+	if !hasMember {
+		return nil
+	}
+	return &memberAccess.Access
+}
+
+func (interpreter *Interpreter) mapMemberValueAuthorization(auth Authorization, memberAccess *sema.Access, resultValue Value) Value {
+	if memberAccess == nil {
+		return resultValue
+	}
+	if mappedAccess, isMappedAccess := (*memberAccess).(sema.EntitlementMapAccess); isMappedAccess {
+		mappedAccess, err := mappedAccess.Image(interpreter.MustConvertStaticAuthorizationToSemaAccess(auth), ast.EmptyRange)
+		if err != nil {
+			panic(err)
+		}
+		mappedAuth := ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess)
+		switch refValue := resultValue.(type) {
+		case *EphemeralReferenceValue:
+			return NewEphemeralReferenceValue(interpreter, mappedAuth, refValue.Value, refValue.BorrowedType)
+		case *StorageReferenceValue:
+			return NewStorageReferenceValue(interpreter, mappedAuth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
+		}
+	}
+	return resultValue
+}
+
 // getMember gets the member value by the given identifier from the given Value depending on its type.
 // May return nil if the member does not exist.
 func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string) Value {

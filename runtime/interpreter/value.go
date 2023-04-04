@@ -17128,8 +17128,10 @@ func (v *StorageReferenceValue) GetMember(
 	name string,
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
+	memberAccess := interpreter.getAccessOfMember(self, name)
 
-	return interpreter.getMember(self, locationRange, name)
+	memberValue := interpreter.getMember(self, locationRange, name)
+	return interpreter.mapMemberValueAuthorization(v.Authorization, memberAccess, memberValue)
 }
 
 func (v *StorageReferenceValue) RemoveMember(
@@ -17448,8 +17450,10 @@ func (v *EphemeralReferenceValue) GetMember(
 	name string,
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
+	memberAccess := interpreter.getAccessOfMember(self, name)
 
-	return interpreter.getMember(self, locationRange, name)
+	memberValue := interpreter.getMember(self, locationRange, name)
+	return interpreter.mapMemberValueAuthorization(v.Authorization, memberAccess, memberValue)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(
