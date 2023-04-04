@@ -3222,6 +3222,65 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("basic with optional full entitled map", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		entitlement E
+		entitlement F
+		entitlement mapping M {
+			X -> Y
+			E -> F
+		}
+		struct S {
+			access(M) let foo: auth(M) &Int
+			init() {
+				self.foo = &3 as auth(F, Y) &Int
+			}
+		}
+		fun test(): &Int {
+			let s: S? = S()
+			let i: auth(F, Y) &Int? = s?.foo
+			return i!
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic with optional partial map", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		entitlement E
+		entitlement F
+		entitlement mapping M {
+			X -> Y
+			E -> F
+		}
+		struct S {
+			access(M) let foo: auth(M) &Int
+			init() {
+				self.foo = &3 as auth(F, Y) &Int
+			}
+		}
+		fun test(): &Int {
+			let s = S()
+			let ref = &s as auth(X) &S?
+			let i: auth(F, Y) &Int? = ref?.foo
+			return i!
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F, Y) &Int?")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &Int?")
+	})
+
 	t.Run("basic with optional access return invalid", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -3640,6 +3699,57 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		`)
 
 		assert.NoError(t, err)
+	})
+
+	t.Run("basic with update", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct S {
+			access(M) var x: auth(M) &Int
+			init() {
+				self.x = &1 as auth(Y, Z) &Int
+			}
+			fun updateX(x: auth(Y, Z) &Int) {
+				self.x = x
+			}
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic with update error", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+			X -> Z
+		}
+		struct S {
+			access(M) var x: auth(M) &Int
+			init() {
+				self.x = &1 as auth(Y, Z) &Int
+			}
+			fun updateX(x: auth(Z) &Int) {
+				self.x = x
+			}
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// init of map needs full authorization of codomain
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("basic with unauthorized init", func(t *testing.T) {

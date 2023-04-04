@@ -329,7 +329,8 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 // isReadableMember returns true if the given member can be read from
 // in the current location of the checker, along with the authorzation with which the result can be used
 func (checker *Checker) isReadableMember(accessedType Type, member *Member, accessRange ast.Range) (bool, Access) {
-	mapAccess := func(mappedAccess EntitlementMapAccess) (bool, Access) {
+	var mapAccess func(EntitlementMapAccess, Type) (bool, Access)
+	mapAccess = func(mappedAccess EntitlementMapAccess, accessedType Type) (bool, Access) {
 		switch ty := accessedType.(type) {
 		case *ReferenceType:
 			// when accessing a member on a reference, the read is allowed, but the
@@ -340,6 +341,8 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 				return false, member.Access
 			}
 			return true, grantedAccess
+		case *OptionalType:
+			return mapAccess(mappedAccess, ty.Type)
 		default:
 			// when accessing a member on a non-reference, the resulting mapped entitlement
 			// should be the entire codomain of the map
@@ -351,7 +354,7 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 		checker.containerTypes[member.ContainerType] {
 
 		if mappedAccess, isMappedAccess := member.Access.(EntitlementMapAccess); isMappedAccess {
-			return mapAccess(mappedAccess)
+			return mapAccess(mappedAccess, accessedType)
 		}
 
 		return true, member.Access
@@ -395,7 +398,7 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 			return true, member.Access
 		}
 	case EntitlementMapAccess:
-		return mapAccess(access)
+		return mapAccess(access, accessedType)
 	}
 
 	return false, member.Access
