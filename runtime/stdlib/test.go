@@ -128,6 +128,7 @@ func NewTestContract(
 	compositeValue.Functions[haveElementCountMatcherFunctionName] = haveElementCountMatcherFunction
 	compositeValue.Functions[containMatcherFunctionName] = containMatcherFunction
 	compositeValue.Functions[beGreaterThanMatcherFunctionName] = beGreaterThanMatcherFunction
+	compositeValue.Functions[beLessThanMatcherFunctionName] = beLessThanMatcherFunction
 
 	return compositeValue, nil
 }
@@ -333,6 +334,17 @@ func init() {
 			beGreaterThanMatcherFunctionName,
 			beGreaterThanMatcherFunctionType,
 			beGreaterThanMatcherFunctionDocString,
+		),
+	)
+
+	// Test.beLessThan()
+	testContractType.Members.Set(
+		beLessThanMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			beLessThanMatcherFunctionName,
+			beLessThanMatcherFunctionType,
+			beLessThanMatcherFunctionDocString,
 		),
 	)
 
@@ -1629,6 +1641,63 @@ var beGreaterThanMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 		)
 
 		return newMatcherWithGenericTestFunction(invocation, beGreaterThanTestFunc)
+	},
+)
+
+const beLessThanMatcherFunctionName = "beLessThan"
+
+const beLessThanMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is a number and
+less than the given number.
+`
+
+var beLessThanMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.NumberType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var beLessThanMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	beLessThanMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		beLessThanTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				thisValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				isLessThan := thisValue.Less(
+					inter,
+					otherValue,
+					invocation.LocationRange,
+				)
+
+				return isLessThan
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, beLessThanTestFunc)
 	},
 )
 
