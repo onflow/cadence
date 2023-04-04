@@ -9157,6 +9157,28 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunctionValue,
 			)
 		},
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountStorageCapabilitiesValue(
+				gauge,
+				addressValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+			)
+		},
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountAccountCapabilitiesValue(
+				gauge,
+				addressValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+			)
+		},
 	)
 }
 
@@ -9201,6 +9223,14 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 						common.ZeroAddress,
 					)
 				},
+			)
+		},
+		func() interpreter.Value {
+			return interpreter.NewPublicAccountStorageCapabilitiesValue(
+				gauge,
+				addressValue,
+				panicFunctionValue,
+				panicFunctionValue,
 			)
 		},
 	)

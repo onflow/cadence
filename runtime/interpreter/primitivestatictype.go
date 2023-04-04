@@ -202,6 +202,9 @@ const (
 	PrimitiveStaticTypeAuthAccountInbox
 	PrimitiveStaticTypeStorageCapabilityController
 	PrimitiveStaticTypeAccountCapabilityController
+	PrimitiveStaticTypeAuthAccountStorageCapabilities
+	PrimitiveStaticTypeAuthAccountAccountCapabilities
+	PrimitiveStaticTypePublicAccountStorageCapabilities
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -284,7 +287,10 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypePublicAccountKeys,
 		PrimitiveStaticTypeAccountKey,
 		PrimitiveStaticTypeStorageCapabilityController,
-		PrimitiveStaticTypeAccountCapabilityController:
+		PrimitiveStaticTypeAccountCapabilityController,
+		PrimitiveStaticTypeAuthAccountStorageCapabilities,
+		PrimitiveStaticTypeAuthAccountAccountCapabilities,
+		PrimitiveStaticTypePublicAccountStorageCapabilities:
 		return UnknownElementSize
 	}
 	return UnknownElementSize
@@ -431,6 +437,12 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.StorageCapabilityControllerType
 	case PrimitiveStaticTypeAccountCapabilityController:
 		return sema.AccountCapabilityControllerType
+	case PrimitiveStaticTypeAuthAccountStorageCapabilities:
+		return sema.AuthAccountStorageCapabilitiesType
+	case PrimitiveStaticTypeAuthAccountAccountCapabilities:
+		return sema.AuthAccountAccountCapabilitiesType
+	case PrimitiveStaticTypePublicAccountStorageCapabilities:
+		return sema.PublicAccountStorageCapabilitiesType
 	default:
 		panic(errors.NewUnexpectedError("missing case for %s", i))
 	}
@@ -567,6 +579,12 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeStorageCapabilityController
 	case sema.AccountCapabilityControllerType:
 		typ = PrimitiveStaticTypeAccountCapabilityController
+	case sema.AuthAccountStorageCapabilitiesType:
+		typ = PrimitiveStaticTypeAuthAccountStorageCapabilities
+	case sema.AuthAccountAccountCapabilitiesType:
+		typ = PrimitiveStaticTypeAuthAccountAccountCapabilities
+	case sema.PublicAccountStorageCapabilitiesType:
+		typ = PrimitiveStaticTypePublicAccountStorageCapabilities
 	}
 
 	switch t.(type) {

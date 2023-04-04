@@ -215,6 +215,18 @@ func NewAuthAccountValue(
 				addressValue,
 			)
 		},
+		func() interpreter.Value {
+			return newAuthAccountStorageCapabilitiesValue(
+				gauge,
+				addressValue,
+			)
+		},
+		func() interpreter.Value {
+			return newAuthAccountAccountCapabilitiesValue(
+				gauge,
+				addressValue,
+			)
+		},
 	)
 }
 
@@ -2081,10 +2093,24 @@ func NewPublicAccountValue(
 		newStorageUsedGetFunction(handler, addressValue),
 		newStorageCapacityGetFunction(handler, addressValue),
 		func() interpreter.Value {
-			return newPublicAccountKeysValue(gauge, handler, addressValue)
+			return newPublicAccountKeysValue(
+				gauge,
+				handler,
+				addressValue,
+			)
 		},
 		func() interpreter.Value {
-			return newPublicAccountContractsValue(gauge, handler, addressValue)
+			return newPublicAccountContractsValue(
+				gauge,
+				handler,
+				addressValue,
+			)
+		},
+		func() interpreter.Value {
+			return newPublicAccountStorageCapabilitiesValue(
+				gauge,
+				addressValue,
+			)
 		},
 	)
 }
@@ -2145,4 +2171,49 @@ func NewHashAlgorithmFromValue(
 func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {
 	codeHash := sha3.Sum256(code)
 	return interpreter.ByteSliceToByteArrayValue(inter, codeHash[:])
+}
+
+func newAuthAccountStorageCapabilitiesValue(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	// TODO:
+	return interpreter.NewAuthAccountStorageCapabilitiesValue(
+		gauge,
+		addressValue,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+}
+
+func newAuthAccountAccountCapabilitiesValue(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	// TODO:
+	return interpreter.NewAuthAccountAccountCapabilitiesValue(
+		gauge,
+		addressValue,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+}
+
+func newPublicAccountStorageCapabilitiesValue(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	// TODO:
+	return interpreter.NewPublicAccountStorageCapabilitiesValue(
+		gauge,
+		addressValue,
+		nil,
+		nil,
+	)
 }

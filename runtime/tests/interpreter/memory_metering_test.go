@@ -9128,29 +9128,21 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 	t.Run("Primitive static types", func(t *testing.T) {
 		t.Parallel()
 
-		for staticType, typeName := range interpreter.PrimitiveStaticTypes {
-			switch staticType {
-			case interpreter.PrimitiveStaticTypeUnknown,
-				interpreter.PrimitiveStaticTypeAny,
-				interpreter.PrimitiveStaticTypeAuthAccountContracts,
-				interpreter.PrimitiveStaticTypePublicAccountContracts,
-				interpreter.PrimitiveStaticTypeAuthAccountKeys,
-				interpreter.PrimitiveStaticTypePublicAccountKeys,
-				interpreter.PrimitiveStaticTypeAuthAccountInbox,
-				interpreter.PrimitiveStaticTypeAccountKey,
+		for primitiveStaticType := range interpreter.PrimitiveStaticTypes {
+
+			switch primitiveStaticType {
+			case interpreter.PrimitiveStaticTypeAny,
+				interpreter.PrimitiveStaticTypeUnknown,
 				interpreter.PrimitiveStaticType_Count:
 				continue
-			case interpreter.PrimitiveStaticTypeAnyResource:
-				typeName = "@" + typeName
-			case interpreter.PrimitiveStaticTypeMetaType:
-				typeName = "Type"
 			}
 
 			script := fmt.Sprintf(`
                 pub fun main() {
                     log(Type<%s>())
                 }`,
-				typeName,
+				sema.NewTypeAnnotation(primitiveStaticType.SemaType()).
+					QualifiedString(),
 			)
 
 			testStaticTypeStringConversion(t, script)
