@@ -631,6 +631,116 @@ func TestTestEqualMatcher(t *testing.T) {
 	})
 }
 
+func TestTestBeSucceededMatcher(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("matcher beSucceeded with ScriptResult", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testMatch(): Bool {
+		        let successful = Test.beSucceeded()
+
+		        let scriptResult = Test.ScriptResult(
+		            status: Test.ResultStatus.succeeded,
+		            returnValue: 42,
+		            error: nil
+		        )
+
+		        return successful.test(scriptResult)
+		    }
+
+		    pub fun testNoMatch(): Bool {
+		        let successful = Test.beSucceeded()
+
+		        let scriptResult = Test.ScriptResult(
+		            status: Test.ResultStatus.failed,
+		            returnValue: nil,
+		            error: Test.Error("Exceeding limit")
+		        )
+
+		        return successful.test(scriptResult)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("testMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+
+		result, err = inter.Invoke("testNoMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.FalseValue, result)
+	})
+
+	t.Run("matcher beSucceeded with TransactionResult", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testMatch(): Bool {
+		        let successful = Test.beSucceeded()
+
+		        let transactionResult = Test.TransactionResult(
+		            status: Test.ResultStatus.succeeded,
+		            error: nil
+		        )
+
+		        return successful.test(transactionResult)
+		    }
+
+		    pub fun testNoMatch(): Bool {
+		        let successful = Test.beSucceeded()
+
+		        let transactionResult = Test.TransactionResult(
+		            status: Test.ResultStatus.failed,
+		            error: Test.Error("Exceeded Limit")
+		        )
+
+		        return successful.test(transactionResult)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("testMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+
+		result, err = inter.Invoke("testNoMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.FalseValue, result)
+	})
+
+	t.Run("matcher beSucceeded with type mismatch", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test(): Bool {
+		        let successful = Test.beSucceeded()
+
+		        return successful.test("hello")
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.FalseValue, result)
+	})
+}
+
 func TestTestExpect(t *testing.T) {
 
 	t.Parallel()

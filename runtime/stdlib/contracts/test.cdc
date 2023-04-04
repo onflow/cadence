@@ -138,7 +138,7 @@ pub contract Test {
         pub let status: ResultStatus
         pub let error: Error?
 
-        init(status: ResultStatus, error: Error) {
+        init(status: ResultStatus, error: Error?) {
             self.status = status
             self.error = error
         }
@@ -256,6 +256,22 @@ pub contract Test {
     pub fun not(_ matcher: Matcher): Matcher {
         return Matcher(test: fun (value: AnyStruct): Bool {
             return !matcher.test(value)
+        })
+    }
+
+    /// Returns a new matcher that checks if the given test value is either
+    /// a ScriptResult or TransactionResult and the ResultStatus is succeeded.
+    /// Returns false in any other case.
+    ///
+    pub fun beSucceeded(): Matcher {
+        return Matcher(test: fun (value: AnyStruct): Bool {
+            if let result = value as? TransactionResult {
+                return result.status == ResultStatus.succeeded
+            } else if let result = value as? ScriptResult {
+                return result.status == ResultStatus.succeeded
+            } else {
+                return false
+            }
         })
     }
 
