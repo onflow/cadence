@@ -127,6 +127,7 @@ func NewTestContract(
 	compositeValue.Functions[beEmptyMatcherFunctionName] = beEmptyMatcherFunction
 	compositeValue.Functions[haveElementCountMatcherFunctionName] = haveElementCountMatcherFunction
 	compositeValue.Functions[containMatcherFunctionName] = containMatcherFunction
+	compositeValue.Functions[beGreaterThanMatcherFunctionName] = beGreaterThanMatcherFunction
 
 	return compositeValue, nil
 }
@@ -321,6 +322,17 @@ func init() {
 			containMatcherFunctionName,
 			containMatcherFunctionType,
 			containMatcherFunctionDocString,
+		),
+	)
+
+	// Test.beGreaterThan()
+	testContractType.Members.Set(
+		beGreaterThanMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			beGreaterThanMatcherFunctionName,
+			beGreaterThanMatcherFunctionType,
+			beGreaterThanMatcherFunctionDocString,
 		),
 	)
 
@@ -1560,6 +1572,63 @@ var containMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 		)
 
 		return newMatcherWithGenericTestFunction(invocation, containTestFunc)
+	},
+)
+
+const beGreaterThanMatcherFunctionName = "beGreaterThan"
+
+const beGreaterThanMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is a number and
+greater than the given number.
+`
+
+var beGreaterThanMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.NumberType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var beGreaterThanMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	beGreaterThanMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		beGreaterThanTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				thisValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				isGreaterThan := thisValue.Greater(
+					inter,
+					otherValue,
+					invocation.LocationRange,
+				)
+
+				return isGreaterThan
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, beGreaterThanTestFunc)
 	},
 )
 

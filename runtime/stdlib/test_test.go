@@ -1154,6 +1154,62 @@ func TestTestContainMatcher(t *testing.T) {
 	})
 }
 
+func TestTestBeGreaterThanMatcher(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("matcher beGreaterThan", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testMatch(): Bool {
+		        let greaterThanFive = Test.beGreaterThan(5)
+
+		        return greaterThanFive.test(7)
+		    }
+
+		    pub fun testNoMatch(): Bool {
+		        let greaterThanFive = Test.beGreaterThan(5)
+
+		        return greaterThanFive.test(2)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("testMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+
+		result, err = inter.Invoke("testNoMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.FalseValue, result)
+	})
+
+	t.Run("matcher beGreaterThan with type mismatch", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test(): Bool {
+		        let greaterThanFive = Test.beGreaterThan(5)
+
+		        return greaterThanFive.test("7")
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+	})
+}
+
 func TestTestExpect(t *testing.T) {
 
 	t.Parallel()
