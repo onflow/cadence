@@ -3163,15 +3163,87 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		_, err := ParseAndCheck(t, `
 		entitlement X
 		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
 		struct Q {
 			access(Y) fun foo() {}
 		}
 		struct interface S {
-			access(Y) let x: auth(Y) &Q
+			access(M) let x: auth(M) &Q
+		}
+		fun foo(s: auth(X) &{S}) {
+			s.x.foo()
 		}
 		`)
 
 		assert.NoError(t, err)
+	})
+
+	t.Run("basic with optional access", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct Q {
+			access(Y) fun foo() {}
+		}
+		struct interface S {
+			access(M) let x: auth(M) &Q
+		}
+		fun foo(s: auth(X) &{S}?) {
+			s?.x?.foo()
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic with optional access return", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct Q {}
+		struct interface S {
+			access(M) let x: auth(M) &Q
+		}
+		fun foo(s: auth(X) &{S}?): auth(Y) &Q? {
+			return s?.x
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic with optional access return invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct Q {}
+		struct interface S {
+			access(M) let x: auth(M) &Q
+		}
+		fun foo(s: auth(X) &{S}?): auth(X, Y) &Q? {
+			return s?.x
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X, Y) &Q?")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &Q?")
 	})
 
 	t.Run("multiple outputs", func(t *testing.T) {
