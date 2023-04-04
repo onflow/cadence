@@ -887,6 +887,95 @@ func TestTestBeNilMatcher(t *testing.T) {
 	})
 }
 
+func TestTestBeEmptyMatcher(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("matcher beEmpty with Array", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testMatch(): Bool {
+		        let emptyArray = Test.beEmpty()
+
+		        return emptyArray.test([])
+		    }
+
+		    pub fun testNoMatch(): Bool {
+		        let emptyArray = Test.beEmpty()
+
+		        return emptyArray.test([42, 23, 31])
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("testMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+
+		result, err = inter.Invoke("testNoMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.FalseValue, result)
+	})
+
+	t.Run("matcher beEmpty with Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testMatch(): Bool {
+		        let emptyDict = Test.beEmpty()
+		        let dict: {Bool: Int} = {}
+
+		        return emptyDict.test(dict)
+		    }
+
+		    pub fun testNoMatch(): Bool {
+		        let emptyDict = Test.beEmpty()
+		        let dict: {Bool: Int} = {true: 1, false: 0}
+
+		        return emptyDict.test(dict)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("testMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+
+		result, err = inter.Invoke("testNoMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.FalseValue, result)
+	})
+
+	t.Run("matcher beEmpty with type mismatch", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test(): Bool {
+		        let emptyDict = Test.beEmpty()
+
+		        return emptyDict.test("empty")
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMatch")
+		require.Error(t, err)
+	})
+}
+
 func TestTestExpect(t *testing.T) {
 
 	t.Parallel()

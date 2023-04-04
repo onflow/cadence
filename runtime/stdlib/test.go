@@ -124,6 +124,7 @@ func NewTestContract(
 	// Inject natively implemented matchers
 	compositeValue.Functions[newMatcherFunctionName] = newMatcherFunction
 	compositeValue.Functions[equalMatcherFunctionName] = equalMatcherFunction
+	compositeValue.Functions[beEmptyMatcherFunctionName] = beEmptyMatcherFunction
 
 	return compositeValue, nil
 }
@@ -277,7 +278,7 @@ func init() {
 		),
 	)
 
-	// Matcher functions
+	// Test.equal()
 	testContractType.Members.Set(
 		equalMatcherFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -285,6 +286,17 @@ func init() {
 			equalMatcherFunctionName,
 			equalMatcherFunctionType,
 			equalMatcherFunctionDocString,
+		),
+	)
+
+	// Test.beEmpty()
+	testContractType.Members.Set(
+		beEmptyMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			beEmptyMatcherFunctionName,
+			beEmptyMatcherFunctionType,
+			beEmptyMatcherFunctionDocString,
 		),
 	)
 
@@ -316,7 +328,7 @@ var blockchainType = func() sema.Type {
 	return typ
 }()
 
-// Functions belong to the 'Test' contract
+// Functions belonging to the 'Test' contract
 
 // 'Test.assert' function
 
@@ -1364,6 +1376,47 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 		)
 
 		return newMatcherWithGenericTestFunction(invocation, equalTestFunc)
+	},
+)
+
+const beEmptyMatcherFunctionName = "beEmpty"
+
+const beEmptyMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is an array or dictionary,
+and the tested value contains no elements.
+`
+
+var beEmptyMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:        false,
+		TypeParameters:       []*sema.TypeParameter{},
+		Parameters:           []sema.Parameter{},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var beEmptyMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	beEmptyMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		beEmptyTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				var isEmpty bool
+				switch value := invocation.Arguments[0].(type) {
+				case *interpreter.ArrayValue:
+					isEmpty = value.Count() == 0
+				case *interpreter.DictionaryValue:
+					isEmpty = value.Count() == 0
+				default:
+					panic(errors.NewUnreachableError())
+				}
+
+				return interpreter.AsBoolValue(isEmpty)
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, beEmptyTestFunc)
 	},
 )
 
