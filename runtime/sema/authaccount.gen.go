@@ -1264,7 +1264,7 @@ borrow gets the storage capability at the given path, and borrows the capability
 
 Returns nil if the capability does not exist or cannot be borrowed using the given type.
 
-The function is equivalent to ` + "`getCapability(path)?.borrow()`" + `.
+The function is equivalent to ` + "`get(path)?.borrow()`" + `.
 `
 
 const AuthAccountStorageCapabilitiesTypeGetControllerFunctionName = "getController"

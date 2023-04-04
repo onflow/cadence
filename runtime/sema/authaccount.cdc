@@ -26,10 +26,10 @@ pub struct AuthAccount {
     pub let inbox: AuthAccount.Inbox
 
     /// The storage capabilities of the account.
-    let storageCapabilities: &AuthAccount.StorageCapabilities
+    pub let storageCapabilities: &AuthAccount.StorageCapabilities
 
     /// The account capabilities of the account.
-    let accountCapabilities: &AuthAccount.AccountCapabilities
+    pub let accountCapabilities: &AuthAccount.AccountCapabilities
 
     /// All public paths of this account.
     pub let publicPaths: [PublicPath]
@@ -309,7 +309,7 @@ pub struct AuthAccount {
         ///
         /// Returns nil if the capability does not exist or cannot be borrowed using the given type.
         ///
-        /// The function is equivalent to `getCapability(path)?.borrow()`.
+        /// The function is equivalent to `get(path)?.borrow()`.
         pub fun borrow<T: &Any>(_ path: PublicPath): T?
 
         /// Get the storage capability controller for the capability with the specified ID.
