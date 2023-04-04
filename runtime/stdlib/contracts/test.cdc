@@ -291,4 +291,12 @@ pub contract Test {
         })
     }
 
+    /// Returns a new matcher that checks if the given test value is nil.
+    ///
+    pub fun beNil(): Matcher {
+        return Matcher(test: fun (value: AnyStruct): Bool {
+            return value == nil
+        })
+    }
+
 }

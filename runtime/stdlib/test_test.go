@@ -851,6 +851,42 @@ func TestTestBeFailedMatcher(t *testing.T) {
 	})
 }
 
+func TestTestBeNilMatcher(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("matcher beNil", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testMatch(): Bool {
+		        let isNil = Test.beNil()
+
+		        return isNil.test(nil)
+		    }
+
+		    pub fun testNoMatch(): Bool {
+		        let isNil = Test.beNil()
+
+		        return isNil.test([1, 2])
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("testMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+
+		result, err = inter.Invoke("testNoMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.FalseValue, result)
+	})
+}
+
 func TestTestExpect(t *testing.T) {
 
 	t.Parallel()
