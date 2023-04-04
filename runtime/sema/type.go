@@ -5062,20 +5062,15 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 
 func (t *AddressType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			AddressTypeToBytesFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						AddressTypeToBytesFunctionType,
-						addressTypeToBytesFunctionDocString,
-					)
-				},
-			},
+		memberResolvers := MembersAsResolvers([]*Member{
+			NewUnmeteredPublicFunctionMember(
+				t,
+				AddressTypeToBytesFunctionName,
+				AddressTypeToBytesFunctionType,
+				addressTypeToBytesFunctionDocString,
+			),
 		})
+		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
 	})
 }
 
