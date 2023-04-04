@@ -216,15 +216,27 @@ func NewAuthAccountValue(
 			)
 		},
 		func() interpreter.Value {
-			return newAuthAccountStorageCapabilitiesValue(
+			storageCapabilities := newAuthAccountStorageCapabilitiesValue(
 				gauge,
 				addressValue,
 			)
+			return interpreter.NewEphemeralReferenceValue(
+				gauge,
+				false,
+				storageCapabilities,
+				sema.AuthAccountTypeStorageCapabilitiesFieldType,
+			)
 		},
 		func() interpreter.Value {
-			return newAuthAccountAccountCapabilitiesValue(
+			accountCapabilities := newAuthAccountAccountCapabilitiesValue(
 				gauge,
 				addressValue,
+			)
+			return interpreter.NewEphemeralReferenceValue(
+				gauge,
+				false,
+				accountCapabilities,
+				sema.AuthAccountTypeAccountCapabilitiesFieldType,
 			)
 		},
 	)
@@ -2107,9 +2119,15 @@ func NewPublicAccountValue(
 			)
 		},
 		func() interpreter.Value {
-			return newPublicAccountStorageCapabilitiesValue(
+			storageCapabilities := newPublicAccountStorageCapabilitiesValue(
 				gauge,
 				addressValue,
+			)
+			return interpreter.NewEphemeralReferenceValue(
+				gauge,
+				false,
+				storageCapabilities,
+				sema.PublicAccountTypeStorageCapabilitiesFieldType,
 			)
 		},
 	)
