@@ -508,6 +508,41 @@ func TestTestEqualMatcher(t *testing.T) {
 		assert.Equal(t, interpreter.FalseValue, result)
 	})
 
+	t.Run("matcher not", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testMatch(): Bool {
+		        let one = Test.equal(1)
+
+		        let notOne = Test.not(one)
+
+		        return notOne.test(2)
+		    }
+
+		    pub fun testNoMatch(): Bool {
+		        let one = Test.equal(1)
+
+		        let notOne = Test.not(one)
+
+		        return notOne.test(1)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("testMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+
+		result, err = inter.Invoke("testNoMatch")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.FalseValue, result)
+	})
+
 	t.Run("chained matchers", func(t *testing.T) {
 		t.Parallel()
 

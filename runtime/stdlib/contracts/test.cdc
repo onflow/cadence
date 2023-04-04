@@ -250,4 +250,13 @@ pub contract Test {
         ///
         pub fun useConfiguration(_ configuration: Configuration)
     }
+
+    /// Returns a new matcher that negates the test of the given matcher.
+    ///
+    pub fun not(_ matcher: Matcher): Matcher {
+        return Matcher(test: fun (value: AnyStruct): Bool {
+            return !matcher.test(value)
+        })
+    }
+
 }
