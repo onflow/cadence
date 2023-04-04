@@ -1146,7 +1146,6 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 			struct S {
 				access(M) let t: auth(M) &T
 				access(NM) fun foo(cond: Bool): auth(NM) &Int {
-					// the B entitlement doesn't pass through the mapping N
 					return self.t.getRef() 
 				}
 				init() {
