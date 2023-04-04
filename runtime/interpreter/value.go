@@ -14095,6 +14095,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			nil,
 			nil,
 			nil,
+			nil,
 			locationRange,
 		)
 
@@ -14224,7 +14225,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		if v.Kind == common.CompositeKindAttachment {
 			base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
 		}
-		return NewBoundFunctionValue(interpreter, function, &self, base)
+		return NewBoundFunctionValue(interpreter, function, &self, base, nil)
 	}
 
 	return nil
@@ -15536,6 +15537,7 @@ func (v *DictionaryValue) ForEachKey(
 			interpreter,
 			nil,
 			nil,
+			nil,
 			[]Value{key},
 			[]sema.Type{keyType},
 			nil,
@@ -16744,6 +16746,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRa
 				f := func(v Value) Value {
 					transformInvocation := NewInvocation(
 						invocation.Interpreter,
+						nil,
 						nil,
 						nil,
 						[]Value{v},

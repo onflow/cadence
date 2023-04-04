@@ -1112,6 +1112,25 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
 	}
 
+	makeReference := func(value Value, typ *sema.ReferenceType) *EphemeralReferenceValue {
+		var auth Authorization
+
+		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
+		// of that mapped access in the body of the function should be replaced with the computed output of the map
+		if interpreter.SharedState.currentEntitlementMappedValue != nil {
+			auth = *interpreter.SharedState.currentEntitlementMappedValue
+		} else {
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, typ.Authorization)
+		}
+
+		return NewEphemeralReferenceValue(
+			interpreter,
+			auth,
+			value,
+			typ.Type,
+		)
+	}
+
 	switch typ := borrowType.(type) {
 	case *sema.OptionalType:
 		innerBorrowType, ok := typ.Type.(*sema.ReferenceType)
@@ -1137,12 +1156,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				NewEphemeralReferenceValue(
-					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, innerBorrowType.Authorization),
-					innerValue,
-					innerBorrowType.Type,
-				),
+				makeReference(innerValue, innerBorrowType),
 			)
 
 		case NilValue:
@@ -1160,18 +1174,13 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			return interpreter.BoxOptional(
 				locationRange,
-				NewEphemeralReferenceValue(
-					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, innerBorrowType.Authorization),
-					result,
-					innerBorrowType.Type,
-				),
+				makeReference(result, innerBorrowType),
 				borrowType,
 			)
 		}
 
 	case *sema.ReferenceType:
-		return NewEphemeralReferenceValue(interpreter, ConvertSemaAccesstoStaticAuthorization(interpreter, typ.Authorization), result, typ.Type)
+		return makeReference(result, typ)
 	}
 	panic(errors.NewUnreachableError())
 }

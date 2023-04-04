@@ -28,6 +28,7 @@ type Invocation struct {
 	LocationRange      LocationRange
 	Self               *MemberAccessibleValue
 	Base               *EphemeralReferenceValue
+	BoundAuthorization *EntitlementSetAuthorization
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
 	Interpreter        *Interpreter
 	Arguments          []Value
@@ -38,6 +39,7 @@ func NewInvocation(
 	interpreter *Interpreter,
 	self *MemberAccessibleValue,
 	base *EphemeralReferenceValue,
+	boundAuth *EntitlementSetAuthorization,
 	arguments []Value,
 	argumentTypes []sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
@@ -48,6 +50,7 @@ func NewInvocation(
 	return Invocation{
 		Self:               self,
 		Base:               base,
+		BoundAuthorization: boundAuth,
 		Arguments:          arguments,
 		ArgumentTypes:      argumentTypes,
 		TypeParameterTypes: typeParameterTypes,

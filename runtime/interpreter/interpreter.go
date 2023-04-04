@@ -426,9 +426,11 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	var self *MemberAccessibleValue
 	var base *EphemeralReferenceValue
+	var boundAuth *EntitlementSetAuthorization
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.Self
 		base = boundFunc.Base
+		boundAuth = boundFunc.BoundAuthorization
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
@@ -436,6 +438,7 @@ func (interpreter *Interpreter) InvokeExternally(
 		interpreter,
 		self,
 		base,
+		boundAuth,
 		preparedArguments,
 		nil,
 		nil,
@@ -3460,6 +3463,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 					inter,
 					nil,
 					nil,
+					nil,
 					[]Value{pathValue, runtimeType},
 					invocationTypeParams,
 					nil,
@@ -4462,16 +4466,16 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 		return resultValue
 	}
 	if mappedAccess, isMappedAccess := (*memberAccess).(sema.EntitlementMapAccess); isMappedAccess {
-		var auth Authorization
+		var auth EntitlementSetAuthorization
 		switch selfValue := self.(type) {
 		case AuthorizedValue:
-			mappedAccess, err := mappedAccess.Image(interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization()), ast.EmptyRange)
+			imageAccess, err := mappedAccess.Image(interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization()), ast.EmptyRange)
 			if err != nil {
 				panic(err)
 			}
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess)
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, imageAccess).(EntitlementSetAuthorization)
 		default:
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess.Codomain())
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess.Codomain()).(EntitlementSetAuthorization)
 		}
 
 		switch refValue := resultValue.(type) {
@@ -4479,6 +4483,8 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 			return NewEphemeralReferenceValue(interpreter, auth, refValue.Value, refValue.BorrowedType)
 		case *StorageReferenceValue:
 			return NewStorageReferenceValue(interpreter, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
+		case BoundFunctionValue:
+			return NewBoundFunctionValue(interpreter, refValue.Function, refValue.Self, refValue.Base, &auth)
 		}
 	}
 	return resultValue

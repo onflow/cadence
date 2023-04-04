@@ -98,6 +98,7 @@ func TestFunctionStaticType(t *testing.T) {
 			hostFunctionValue,
 			&self,
 			nil,
+			nil,
 		)
 
 		staticType := boundFunctionValue.StaticType(inter)
