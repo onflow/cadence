@@ -69,6 +69,7 @@ var TestContractChecker = func() *sema.Checker {
 
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(AssertFunction)
+	activation.DeclareValue(PanicFunction)
 
 	var checker *sema.Checker
 	checker, err = sema.NewChecker(

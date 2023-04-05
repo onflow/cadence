@@ -270,8 +270,9 @@ pub contract Test {
             } else if let result = value as? ScriptResult {
                 return result.status == ResultStatus.succeeded
             } else {
-                return false
+                panic("Only TransactionResult & ScriptResult types are supported.")
             }
+            return false
         })
     }
 
@@ -286,8 +287,9 @@ pub contract Test {
             } else if let result = value as? ScriptResult {
                 return result.status == ResultStatus.failed
             } else {
-                return false
+                panic("Only TransactionResult & ScriptResult types are supported.")
             }
+            return false
         })
     }
 

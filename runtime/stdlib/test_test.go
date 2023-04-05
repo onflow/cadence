@@ -42,12 +42,17 @@ func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpr
 	)
 	require.NoError(t, err)
 
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(AssertFunction)
+	activation.DeclareValue(PanicFunction)
+
 	checker, err := sema.NewChecker(
 		program,
 		utils.TestLocation,
 		nil,
 		&sema.Config{
-			AccessCheckMode: sema.AccessCheckModeStrict,
+			BaseValueActivation: activation,
+			AccessCheckMode:     sema.AccessCheckModeStrict,
 			ImportHandler: func(
 				checker *sema.Checker,
 				importedLocation common.Location,
@@ -735,9 +740,8 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		inter, err := newTestContractInterpreter(t, script)
 		require.NoError(t, err)
 
-		result, err := inter.Invoke("test")
-		require.NoError(t, err)
-		assert.Equal(t, interpreter.FalseValue, result)
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
 	})
 }
 
@@ -845,9 +849,8 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		inter, err := newTestContractInterpreter(t, script)
 		require.NoError(t, err)
 
-		result, err := inter.Invoke("test")
-		require.NoError(t, err)
-		assert.Equal(t, interpreter.FalseValue, result)
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
 	})
 }
 
