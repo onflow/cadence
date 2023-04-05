@@ -7025,7 +7025,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 			cadence.StorageCapability{
 				Address: cadence.BytesToAddress([]byte{0x1}),
 				Path: cadence.Path{
-					Domain:     "public",
+					Domain:     common.PathDomainPublic,
 					Identifier: "xxx",
 				},
 			},
@@ -7355,7 +7355,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		_, err = runtime.ReadStored(
 			address,
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "test",
 			},
 			Context{
@@ -7388,7 +7388,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		_, err = runtime.ReadLinked(
 			address,
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "test",
 			},
 			Context{

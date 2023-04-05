@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -333,7 +334,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"PathLink": {
 			value: NewPathLink(
 				Path{
-					Domain:     "storage",
+					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
 				"Int",
@@ -346,9 +347,9 @@ func newValueTestCases() map[string]valueTestCase {
 			string: "AccountLink()",
 			noType: true,
 		},
-		"Path": {
+		"StoragePath": {
 			value: Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			expectedType: PathType{},
@@ -361,7 +362,10 @@ func newValueTestCases() map[string]valueTestCase {
 		},
 		"Capability": {
 			value: StorageCapability{
-				Path:       Path{Domain: "storage", Identifier: "foo"},
+				Path: Path{
+					Domain:     common.PathDomainStorage,
+					Identifier: "foo",
+				},
 				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				BorrowType: IntType{},
 			},
