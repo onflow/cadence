@@ -8825,8 +8825,9 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 	})
 
 	t.Run("in casting expression", func(t *testing.T) {
