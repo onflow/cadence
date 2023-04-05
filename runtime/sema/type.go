@@ -170,6 +170,11 @@ type Type interface {
 	Resolve(typeArguments *TypeParameterTypeOrderedMap) Type
 
 	GetMembers() map[string]MemberResolver
+
+	// applies `f` to all the types syntactically comprising this type.
+	// i.e. `[T]` would map to `f([f(T)])`, but the internals of composite types are not
+	// inspected, as they appear simply as nominal types in annotations
+	Map(memoryGauge common.MemoryGauge, f func(Type) Type) Type
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
@@ -332,6 +337,10 @@ func NewTypeAnnotation(ty Type) TypeAnnotation {
 		IsResource: ty.IsResourceType(),
 		Type:       ty,
 	}
+}
+
+func (a TypeAnnotation) Map(gauge common.MemoryGauge, f func(Type) Type) TypeAnnotation {
+	return NewTypeAnnotation(a.Type.Map(gauge, f))
 }
 
 // isInstance
@@ -652,11 +661,15 @@ Returns nil if this optional is nil
 
 const OptionalTypeMapFunctionName = "map"
 
+func (t *OptionalType) Map(memoryGauge common.MemoryGauge, f func(Type) Type) Type {
+	return f(NewOptionalType(memoryGauge, t.Type.Map(memoryGauge, f)))
+}
+
 func (t *OptionalType) GetMembers() map[string]MemberResolver {
 	t.initializeMembers()
 	return t.memberResolvers
-
 }
+
 func (t *OptionalType) initializeMembers() {
 	t.memberResolversOnce.Do(func() {
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
@@ -846,6 +859,10 @@ func (t *GenericType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 		return nil
 	}
 	return ty
+}
+
+func (t *GenericType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+	return f(t)
 }
 
 func (t *GenericType) GetMembers() map[string]MemberResolver {
@@ -1101,6 +1118,10 @@ func (t *NumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+func (t *NumericType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+	return f(t)
+}
+
 func (t *NumericType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
@@ -1303,6 +1324,10 @@ func (*FixedPointNumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ fu
 
 func (t *FixedPointNumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func (t *FixedPointNumericType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+	return f(t)
 }
 
 func (t *FixedPointNumericType) GetMembers() map[string]MemberResolver {
@@ -2240,6 +2265,10 @@ func (t *VariableSizedType) Equal(other Type) bool {
 	return t.Type.Equal(otherArray.Type)
 }
 
+func (t *VariableSizedType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+	return f(NewVariableSizedType(gauge, t.Type.Map(gauge, f)))
+}
+
 func (t *VariableSizedType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
@@ -2380,6 +2409,10 @@ func (t *ConstantSizedType) Equal(other Type) bool {
 
 	return t.Type.Equal(otherArray.Type) &&
 		t.Size == otherArray.Size
+}
+
+func (t *ConstantSizedType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+	return f(NewConstantSizedType(gauge, t.Type.Map(gauge, f), t.Size))
 }
 
 func (t *ConstantSizedType) GetMembers() map[string]MemberResolver {
@@ -3126,6 +3159,42 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 		RequiredArgumentCount: t.RequiredArgumentCount,
 	}
 
+}
+
+func (t *FunctionType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+	returnType := t.ReturnTypeAnnotation.Map(gauge, f)
+
+	var newParameters []Parameter = make([]Parameter, 0, len(t.Parameters))
+	for _, parameter := range t.Parameters {
+		newParameterTypeAnnot := parameter.TypeAnnotation.Map(gauge, f)
+
+		newParameters = append(
+			newParameters,
+			Parameter{
+				Label:          parameter.Label,
+				Identifier:     parameter.Identifier,
+				TypeAnnotation: newParameterTypeAnnot,
+			},
+		)
+	}
+
+	var newTypeParameters []*TypeParameter = make([]*TypeParameter, 0, len(t.TypeParameters))
+	for _, parameter := range t.TypeParameters {
+		newTypeParameterTypeBound := parameter.TypeBound.Map(gauge, f)
+
+		newTypeParameters = append(
+			newTypeParameters,
+			&TypeParameter{
+				Name:      parameter.Name,
+				Optional:  parameter.Optional,
+				TypeBound: newTypeParameterTypeBound,
+			},
+		)
+	}
+
+	functionType := NewSimpleFunctionType(t.Purity, newParameters, returnType)
+	functionType.TypeParameters = newTypeParameters
+	return f(functionType)
 }
 
 func (t *FunctionType) GetMembers() map[string]MemberResolver {
@@ -4029,6 +4098,10 @@ func (t *CompositeType) IsValidIndexingType(ty Type) bool {
 		attachmentType.IsResourceType() == t.IsResourceType()
 }
 
+func (t *CompositeType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+	return f(t)
+}
+
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
@@ -4389,6 +4462,10 @@ func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	return set
 }
 
+func (t *InterfaceType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+	return f(t)
+}
+
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
@@ -4674,6 +4751,14 @@ Removes the value for the given key from the dictionary.
 
 Returns the value as an optional if the dictionary contained the key, or nil if the dictionary did not contain the key
 `
+
+func (t *DictionaryType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+	return f(NewDictionaryType(
+		gauge,
+		t.KeyType.Map(gauge, f),
+		t.ValueType.Map(gauge, f),
+	))
+}
 
 func (t *DictionaryType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
@@ -5065,6 +5150,10 @@ func (t *ReferenceType) RewriteWithRestrictedTypes() (Type, bool) {
 	}
 }
 
+func (t *ReferenceType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+	return f(NewReferenceType(gauge, t.Type.Map(gauge, f), t.Authorization))
+}
+
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {
 	return t.Type.GetMembers()
 }
@@ -5274,6 +5363,10 @@ var AddressTypeToBytesFunctionType = NewSimpleFunctionType(
 const addressTypeToBytesFunctionDocString = `
 Returns an array containing the byte representation of the address
 `
+
+func (t *AddressType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+	return f(t)
+}
 
 func (t *AddressType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
@@ -5955,6 +6048,10 @@ func (t *TransactionType) RewriteWithRestrictedTypes() (Type, bool) {
 	return t, false
 }
 
+func (t *TransactionType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+	return f(t)
+}
+
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
 	var members map[string]MemberResolver
@@ -6164,6 +6261,10 @@ func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
 	// Even though the restrictions should be resource interfaces,
 	// they are not on the "first level", i.e. not the restricted type
 	return t, false
+}
+
+func (t *RestrictedType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+	return f(NewRestrictedType(gauge, t.Type.Map(gauge, f), t.Restrictions))
 }
 
 func (t *RestrictedType) GetMembers() map[string]MemberResolver {
@@ -6518,6 +6619,10 @@ const capabilityTypeAddressFieldDocString = `
 The address of the capability
 `
 
+func (t *CapabilityType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+	return f(NewCapabilityType(gauge, t.BorrowType.Map(gauge, f)))
+}
+
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
@@ -6863,6 +6968,10 @@ func (t *EntitlementType) Equal(other Type) bool {
 	return otherEntitlement.ID() == t.ID()
 }
 
+func (t *EntitlementType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+	return f(t)
+}
+
 func (t *EntitlementType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
@@ -6971,6 +7080,10 @@ func (t *EntitlementMapType) Equal(other Type) bool {
 	}
 
 	return otherEntitlement.ID() == t.ID()
+}
+
+func (t *EntitlementMapType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+	return f(t)
 }
 
 func (t *EntitlementMapType) GetMembers() map[string]MemberResolver {

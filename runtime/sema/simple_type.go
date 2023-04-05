@@ -117,6 +117,10 @@ func (t *SimpleType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+func (t *SimpleType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+	return f(t)
+}
+
 func (t *SimpleType) GetMembers() map[string]MemberResolver {
 	t.initializeMembers()
 	return t.memberResolvers
