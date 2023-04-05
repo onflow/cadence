@@ -966,14 +966,16 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredStorageCapabilityValue(
+							// TODO:
+							interpreter.TodoCapabilityID,
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "rCap",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1015,14 +1017,16 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredStorageCapabilityValue(
+							// TODO:
+							interpreter.TodoCapabilityID,
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "rCap2",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1119,14 +1123,16 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredStorageCapabilityValue(
+							// TODO:
+							interpreter.TodoCapabilityID,
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "sCap",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1169,14 +1175,16 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredStorageCapabilityValue(
+							// TODO:
+							interpreter.TodoCapabilityID,
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "sCap2",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1276,14 +1284,16 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.StorageCapabilityValue{
-						Address: address,
-						Path: interpreter.PathValue{
+					interpreter.NewUnmeteredStorageCapabilityValue(
+						// TODO:
+						interpreter.TodoCapabilityID,
+						address,
+						interpreter.PathValue{
 							Domain:     capabilityDomain,
 							Identifier: "sCap",
 						},
-						BorrowType: expectedBorrowType,
-					},
+						expectedBorrowType,
+					),
 					capability,
 				)
 			})
@@ -1358,14 +1368,16 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.StorageCapabilityValue{
-						Address: address,
-						Path: interpreter.PathValue{
+					interpreter.NewUnmeteredStorageCapabilityValue(
+						// TODO:
+						interpreter.TodoCapabilityID,
+						address,
+						interpreter.PathValue{
 							Domain:     capabilityDomain,
 							Identifier: "s2Cap",
 						},
-						BorrowType: expectedBorrowType,
-					},
+						expectedBorrowType,
+					),
 					capability,
 				)
 
@@ -1387,14 +1399,16 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.StorageCapabilityValue{
-						Address: address,
-						Path: interpreter.PathValue{
+					interpreter.NewUnmeteredStorageCapabilityValue(
+						// TODO:
+						interpreter.TodoCapabilityID,
+						address,
+						interpreter.PathValue{
 							Domain:     capabilityDomain,
 							Identifier: "s1Cap",
 						},
-						BorrowType: expectedBorrowType,
-					},
+						expectedBorrowType,
+					),
 					capability,
 				)
 			})

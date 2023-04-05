@@ -2525,11 +2525,12 @@ func TestEncodeCapability(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.StorageCapability{
-			Path:       cadence.NewPath("storage", "foo"),
-			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			BorrowType: cadence.IntType{},
-		},
+		cadence.NewStorageCapability(
+			6,
+			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			cadence.NewPath("storage", "foo"),
+			cadence.IntType{},
+		),
 		// language=json
 		`
           {
@@ -2545,7 +2546,8 @@ func TestEncodeCapability(t *testing.T) {
               "borrowType": {
                 "kind": "Int"
               },
-              "address": "0x0000000102030405"
+              "address": "0x0000000102030405",
+              "id": "6"
             }
           }
         `,

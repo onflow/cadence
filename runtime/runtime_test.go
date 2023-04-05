@@ -7022,13 +7022,16 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.StorageCapability{
-				Address: cadence.BytesToAddress([]byte{0x1}),
-				Path: cadence.Path{
+			cadence.NewStorageCapability(
+				// TODO:
+				interpreter.TodoCapabilityID,
+				cadence.BytesToAddress([]byte{0x1}),
+				cadence.Path{
 					Domain:     "public",
 					Identifier: "xxx",
 				},
-			},
+				nil,
+			),
 			res,
 		)
 	})

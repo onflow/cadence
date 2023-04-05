@@ -250,7 +250,7 @@ var (
 	PublicAccountStorageCapabilitiesStringMemoryUsage = NewRawStringMemoryUsage(len("PublicAccount.StorageCapabilities()"))
 	AuthAccountAccountCapabilitiesStringMemoryUsage   = NewRawStringMemoryUsage(len("AuthAccount.AccountCapabilities()"))
 	AuthAccountInboxStringMemoryUsage                 = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
-	StorageCapabilityValueStringMemoryUsage           = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
+	StorageCapabilityValueStringMemoryUsage           = NewRawStringMemoryUsage(len("Capability<>(id: , address: , path: )"))
 	StorageCapabilityControllerStringMemoryUsage      = NewRawStringMemoryUsage(len("StorageCapabilityController(borrowType: , capabilityID: )"))
 	AccountCapabilityControllerStringMemoryUsage      = NewRawStringMemoryUsage(len("AccountCapabilityController(borrowType: , capabilityID: )"))
 	PathLinkValueStringMemoryUsage                    = NewRawStringMemoryUsage(len("PathLink<>()"))

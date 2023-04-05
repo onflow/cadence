@@ -208,6 +208,7 @@ type jsonStorageCapabilityValue struct {
 	Path       jsonValue `json:"path"`
 	BorrowType jsonValue `json:"borrowType"`
 	Address    string    `json:"address"`
+	ID         string    `json:"id"`
 }
 
 type jsonFunctionValue struct {
@@ -905,6 +906,7 @@ func prepareCapability(capability cadence.StorageCapability) jsonValue {
 	return jsonValueObject{
 		Type: capabilityTypeStr,
 		Value: jsonStorageCapabilityValue{
+			ID:         encodeUInt(uint64(capability.ID)),
 			Path:       preparePath(capability.Path),
 			Address:    encodeBytes(capability.Address.Bytes()),
 			BorrowType: prepareType(capability.BorrowType, typePreparationResults{}),

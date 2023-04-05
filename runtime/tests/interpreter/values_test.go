@@ -1143,14 +1143,15 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 	case Composite:
 		return randomCompositeValue(inter, common.CompositeKindStructure, currentDepth)
 	case Capability:
-		return &interpreter.StorageCapabilityValue{
-			Address: randomAddressValue(),
-			Path:    randomPathValue(),
-			BorrowType: interpreter.ReferenceStaticType{
+		return interpreter.NewUnmeteredStorageCapabilityValue(
+			interpreter.UInt64Value(randomInt(math.MaxInt)),
+			randomAddressValue(),
+			randomPathValue(),
+			interpreter.ReferenceStaticType{
 				Authorized:   false,
 				BorrowedType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-		}
+		)
 	case Some:
 		return interpreter.NewUnmeteredSomeValueNonCopying(
 			randomStorableValue(inter, currentDepth+1),

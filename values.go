@@ -2006,21 +2006,39 @@ type StorageCapability struct {
 	BorrowType Type
 	Path       Path
 	Address    Address
+	ID         UInt64
 }
 
 var _ Value = StorageCapability{}
 
-func NewStorageCapability(path Path, address Address, borrowType Type) StorageCapability {
+func NewStorageCapability(
+	id UInt64,
+	address Address,
+	path Path,
+	borrowType Type,
+) StorageCapability {
 	return StorageCapability{
+		ID:         id,
 		Path:       path,
 		Address:    address,
 		BorrowType: borrowType,
 	}
 }
 
-func NewMeteredStorageCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) StorageCapability {
+func NewMeteredStorageCapability(
+	gauge common.MemoryGauge,
+	id UInt64,
+	address Address,
+	path Path,
+	borrowType Type,
+) StorageCapability {
 	common.UseMemory(gauge, common.CadenceStorageCapabilityValueMemoryUsage)
-	return NewStorageCapability(path, address, borrowType)
+	return NewStorageCapability(
+		id,
+		address,
+		path,
+		borrowType,
+	)
 }
 
 func (StorageCapability) isValue() {}
@@ -2040,6 +2058,7 @@ func (StorageCapability) ToGoValue() any {
 func (v StorageCapability) String() string {
 	return format.StorageCapability(
 		v.BorrowType.ID(),
+		v.ID.String(),
 		v.Address.String(),
 		v.Path.String(),
 	)

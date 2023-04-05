@@ -1443,14 +1443,16 @@ func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 				value, err := runtime.ReadStored(signer, storagePath, context)
 				require.NoError(t, err)
 
-				expected := cadence.StorageCapability{
-					Path: cadence.Path{
+				expected := cadence.NewStorageCapability(
+					// TODO:
+					interpreter.TodoCapabilityID,
+					cadence.Address(signer),
+					cadence.Path{
 						Domain:     domain.Identifier(),
 						Identifier: "test",
 					},
-					Address:    cadence.Address(signer),
-					BorrowType: ty,
-				}
+					ty,
+				)
 
 				actual := cadence.ValueWithCachedTypeID(value)
 				require.Equal(t, expected, actual)

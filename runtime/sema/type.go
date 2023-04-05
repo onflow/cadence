@@ -6493,6 +6493,8 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 	}
 }
 
+const CapabilityTypeBorrowFunctionName = "borrow"
+
 const capabilityTypeBorrowFunctionDocString = `
 Returns a reference to the object targeted by the capability.
 
@@ -6502,22 +6504,32 @@ If there is an object stored, a reference is returned as an optional, provided i
 If the stored object cannot be borrowed using the given type, the function panics.
 `
 
+const CapabilityTypeCheckFunctionName = "check"
+
 const capabilityTypeCheckFunctionDocString = `
 Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
 `
 
+var CapabilityTypeAddressFieldType = TheAddressType
+
+const CapabilityTypeAddressFieldName = "address"
+
 const capabilityTypeAddressFieldDocString = `
 The address of the capability
+`
+
+var CapabilityTypeIDFieldType = UInt64Type
+
+const CapabilityTypeIDFieldName = "id"
+
+const capabilityTypeIDFieldDocString = `
+The ID of the capability
 `
 
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
 }
-
-const CapabilityTypeBorrowFunctionName = "borrow"
-const CapabilityTypeCheckFunctionName = "check"
-const CapabilityTypeAddressFieldName = "address"
 
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
@@ -6537,8 +6549,14 @@ func (t *CapabilityType) initializeMemberResolvers() {
 			NewUnmeteredPublicConstantFieldMember(
 				t,
 				CapabilityTypeAddressFieldName,
-				TheAddressType,
+				CapabilityTypeAddressFieldType,
 				capabilityTypeAddressFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				CapabilityTypeIDFieldName,
+				CapabilityTypeIDFieldType,
+				capabilityTypeIDFieldDocString,
 			),
 		})
 		t.memberResolvers = withBuiltinMembers(t, members)

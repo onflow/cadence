@@ -943,7 +943,23 @@ func (d StorableDecoder) decodeStorageCapability() (*StorageCapabilityValue, err
 		return nil, errors.NewUnexpectedError("invalid capability borrow type encoding: %w", err)
 	}
 
-	return NewStorageCapabilityValue(d.memoryGauge, address, pathValue, borrowType), nil
+	// Decode ID at array index encodedStorageCapabilityValueIDFieldKey
+
+	id, err := d.decoder.DecodeUint64()
+	if err != nil {
+		return nil, errors.NewUnexpectedError(
+			"invalid capability ID: %w",
+			err,
+		)
+	}
+
+	return NewStorageCapabilityValue(
+		d.memoryGauge,
+		UInt64Value(id),
+		address,
+		pathValue,
+		borrowType,
+	), nil
 }
 
 func (d StorableDecoder) decodePathLink() (PathLinkValue, error) {

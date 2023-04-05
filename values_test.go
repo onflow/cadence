@@ -360,13 +360,14 @@ func newValueTestCases() map[string]valueTestCase {
 			string:       "Type<Int>()",
 		},
 		"Capability": {
-			value: StorageCapability{
-				Path:       Path{Domain: "storage", Identifier: "foo"},
-				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				BorrowType: IntType{},
-			},
+			value: NewStorageCapability(
+				3,
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Path{Domain: "storage", Identifier: "foo"},
+				IntType{},
+			),
 			expectedType: NewCapabilityType(IntType{}),
-			string:       "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
+			string:       "Capability<Int>(id: 3, address: 0x0000000102030405, path: /storage/foo)",
 		},
 		"Function": {
 			value: NewFunction(

@@ -725,12 +725,13 @@ const (
 	// encodedStorageCapabilityValueAddressFieldKey    uint64 = 0
 	// encodedStorageCapabilityValuePathFieldKey       uint64 = 1
 	// encodedStorageCapabilityValueBorrowTypeFieldKey uint64 = 2
+	// encodedStorageCapabilityValueIDFieldKey         uint64 = 3
 
 	// !!! *WARNING* !!!
 	//
 	// encodedStorageCapabilityValueLength MUST be updated when new element is added.
 	// It is used to verify encoded capability length during decoding.
-	encodedStorageCapabilityValueLength = 3
+	encodedStorageCapabilityValueLength = 4
 )
 
 // Encode encodes CapabilityStorable as
@@ -741,6 +742,7 @@ const (
 //						encodedStorageCapabilityValueAddressFieldKey:    AddressValue(v.Address),
 //						encodedStorageCapabilityValuePathFieldKey:       PathValue(v.Path),
 //						encodedStorageCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
+//						encodedStorageCapabilityValueIDFieldKey:         v.ID,
 //					},
 //	}
 func (v *StorageCapabilityValue) Encode(e *atree.Encoder) error {
@@ -748,8 +750,8 @@ func (v *StorageCapabilityValue) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagStorageCapabilityValue,
-		// array, 3 items follow
-		0x83,
+		// array, 4 items follow
+		0x84,
 	})
 	if err != nil {
 		return err
@@ -768,7 +770,18 @@ func (v *StorageCapabilityValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode borrow type at array index encodedStorageCapabilityValueBorrowTypeFieldKey
-	return EncodeStaticType(e.CBOR, v.BorrowType)
+	err = EncodeStaticType(e.CBOR, v.BorrowType)
+	if err != nil {
+		return err
+	}
+
+	// Encode ID at array index encodedStorageCapabilityValueIDFieldKey
+	err = e.CBOR.EncodeUint64(uint64(v.ID))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
