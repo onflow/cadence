@@ -43,13 +43,10 @@ var PublicAccountType = func() *CompositeType {
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
 		importable:         false,
-		NestedTypes: func() *StringTypeOrderedMap {
-			nestedTypes := &StringTypeOrderedMap{}
-			nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
-			nestedTypes.Set(PublicAccountContractsTypeName, PublicAccountContractsType)
-			return nestedTypes
-		}(),
 	}
+
+	publicAccountType.SetNestedType(AccountKeysTypeName, PublicAccountKeysType)
+	publicAccountType.SetNestedType(PublicAccountContractsTypeName, PublicAccountContractsType)
 
 	var members = []*Member{
 		NewUnmeteredPublicConstantFieldMember(
@@ -120,8 +117,8 @@ var PublicAccountType = func() *CompositeType {
 		),
 	}
 
-	publicAccountType.Members = GetMembersAsMap(members)
-	publicAccountType.Fields = GetFieldNames(members)
+	publicAccountType.Members = MembersAsMap(members)
+	publicAccountType.Fields = MembersFieldNames(members)
 	return publicAccountType
 }()
 
@@ -202,15 +199,10 @@ var PublicAccountKeysType = func() *CompositeType {
 		),
 	}
 
-	accountKeys.Members = GetMembersAsMap(members)
-	accountKeys.Fields = GetFieldNames(members)
+	accountKeys.Members = MembersAsMap(members)
+	accountKeys.Fields = MembersFieldNames(members)
 	return accountKeys
 }()
-
-func init() {
-	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
-	PublicAccountKeysType.SetContainerType(PublicAccountType)
-}
 
 var PublicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 

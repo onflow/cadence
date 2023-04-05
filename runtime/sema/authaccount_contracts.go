@@ -75,15 +75,10 @@ var AuthAccountContractsType = func() *CompositeType {
 		),
 	}
 
-	authAccountContractsType.Members = GetMembersAsMap(members)
-	authAccountContractsType.Fields = GetFieldNames(members)
+	authAccountContractsType.Members = MembersAsMap(members)
+	authAccountContractsType.Fields = MembersFieldNames(members)
 	return authAccountContractsType
 }()
-
-func init() {
-	// Set the container type after initializing the `AuthAccountContractsType`, to avoid initializing loop.
-	AuthAccountContractsType.SetContainerType(AuthAccountType)
-}
 
 const authAccountContractsTypeAddFunctionDocString = `
 Adds the given contract to the account.

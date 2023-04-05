@@ -3872,18 +3872,7 @@ func (t *CompositeType) GetMembers() map[string]MemberResolver {
 
 func (t *CompositeType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
-		members := make(map[string]MemberResolver, t.Members.Len())
-
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
+		memberResolvers := MembersMapAsResolvers(t.Members)
 
 		// Check conformances.
 		// If this composite type results from a normal composite declaration,
@@ -3894,13 +3883,13 @@ func (t *CompositeType) initializeMemberResolvers() {
 		t.ExplicitInterfaceConformanceSet().
 			ForEach(func(conformance *InterfaceType) {
 				for name, resolver := range conformance.GetMembers() { //nolint:maprange
-					if _, ok := members[name]; !ok {
-						members[name] = resolver
+					if _, ok := memberResolvers[name]; !ok {
+						memberResolvers[name] = resolver
 					}
 				}
 			})
 
-		t.memberResolvers = withBuiltinMembers(t, members)
+		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
 	})
 }
 
@@ -3916,6 +3905,14 @@ func (t *CompositeType) FieldPosition(name string, declaration ast.CompositeLike
 		pos = declaration.DeclarationMembers().FieldPosition(name, declaration.Kind())
 	}
 	return pos
+}
+
+func (t *CompositeType) SetNestedType(name string, nestedType ContainedType) {
+	if t.NestedTypes == nil {
+		t.NestedTypes = &StringTypeOrderedMap{}
+	}
+	t.NestedTypes.Set(name, nestedType)
+	nestedType.SetContainerType(t)
 }
 
 // Member
@@ -6644,8 +6641,8 @@ var AccountKeyType = func() *CompositeType {
 		),
 	}
 
-	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = GetFieldNames(members)
+	accountKeyType.Members = MembersAsMap(members)
+	accountKeyType.Fields = MembersFieldNames(members)
 	return accountKeyType
 }()
 
@@ -6712,8 +6709,8 @@ var PublicKeyType = func() *CompositeType {
 		),
 	}
 
-	publicKeyType.Members = GetMembersAsMap(members)
-	publicKeyType.Fields = GetFieldNames(members)
+	publicKeyType.Members = MembersAsMap(members)
+	publicKeyType.Fields = MembersFieldNames(members)
 
 	return publicKeyType
 }()
@@ -6769,7 +6766,7 @@ type CryptoAlgorithm interface {
 	DocString() string
 }
 
-func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
+func MembersAsMap(members []*Member) *StringMemberOrderedMap {
 	membersMap := &StringMemberOrderedMap{}
 	for _, member := range members {
 		name := member.Identifier.Identifier
@@ -6782,7 +6779,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	return membersMap
 }
 
-func GetFieldNames(members []*Member) []string {
+func MembersFieldNames(members []*Member) []string {
 	fields := make([]string, 0)
 	for _, member := range members {
 		if member.DeclarationKind == common.DeclarationKindField {
@@ -6791,6 +6788,36 @@ func GetFieldNames(members []*Member) []string {
 	}
 
 	return fields
+}
+
+func MembersMapAsResolvers(members *StringMemberOrderedMap) map[string]MemberResolver {
+	resolvers := make(map[string]MemberResolver, members.Len())
+
+	members.Foreach(func(name string, member *Member) {
+		resolvers[name] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
+	})
+	return resolvers
+}
+
+func MembersAsResolvers(members []*Member) map[string]MemberResolver {
+	resolvers := make(map[string]MemberResolver, len(members))
+
+	for _, loopMember := range members {
+		// NOTE: don't capture loop variable
+		member := loopMember
+		resolvers[member.Identifier.Identifier] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
+	}
+	return resolvers
 }
 
 func isNumericSuperType(typ Type) bool {
