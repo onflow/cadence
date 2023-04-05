@@ -1706,6 +1706,23 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			expectedLogs: []string{`"bar"`},
 		},
+		{
+			name: "Path subtype",
+			script: `
+                pub fun main(x: StoragePath) {
+                    log(x)
+                }
+            `,
+			args: [][]byte{
+				jsoncdc.MustEncode(cadence.Path{
+					Domain:     common.PathDomainStorage,
+					Identifier: "foo",
+				}),
+			},
+			expectedLogs: []string{
+				"/storage/foo",
+			},
+		},
 	}
 
 	test := func(tt testCase) {
