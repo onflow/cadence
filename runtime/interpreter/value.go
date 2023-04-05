@@ -21,6 +21,7 @@ package interpreter
 import (
 	"encoding/binary"
 	"encoding/hex"
+	goerrors "errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -1728,7 +1729,8 @@ func (v *ArrayValue) GetKey(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, locationRange LocationRange) {
-	if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
+	var indexOutOfBoundsError *atree.IndexOutOfBoundsError
+	if goerrors.As(err, &indexOutOfBoundsError) {
 		panic(ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
@@ -2629,16 +2631,18 @@ func (v *ArrayValue) Slice(
 	iterator, err := v.array.RangeIterator(uint64(fromIndex), uint64(toIndex))
 	if err != nil {
 
-		switch err.(type) {
-		case *atree.SliceOutOfBoundsError:
+		var sliceOutOfBoundsError *atree.SliceOutOfBoundsError
+		if goerrors.As(err, &sliceOutOfBoundsError) {
 			panic(ArraySliceIndicesError{
 				FromIndex:     fromIndex,
 				UpToIndex:     toIndex,
 				Size:          v.Count(),
 				LocationRange: locationRange,
 			})
+		}
 
-		case *atree.InvalidSliceIndexError:
+		var invalidSliceIndexError *atree.InvalidSliceIndexError
+		if goerrors.As(err, &invalidSliceIndexError) {
 			panic(InvalidSliceIndexError{
 				FromIndex:     fromIndex,
 				UpToIndex:     toIndex,
@@ -14185,7 +14189,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); !ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if !goerrors.As(err, &keyNotFoundError) {
 			panic(errors.NewExternalError(err))
 		}
 	}
@@ -14328,7 +14333,8 @@ func (v *CompositeValue) RemoveMember(
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return nil
 		}
 		panic(errors.NewExternalError(err))
@@ -14506,7 +14512,8 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return nil
 		}
 		panic(errors.NewExternalError(err))
@@ -15061,7 +15068,8 @@ func (v *CompositeValue) RemoveField(
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return
 		}
 		panic(errors.NewExternalError(err))
@@ -15569,7 +15577,8 @@ func (v *DictionaryValue) ContainsKey(
 		keyValue,
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return FalseValue
 		}
 		panic(errors.NewExternalError(err))
@@ -15593,7 +15602,8 @@ func (v *DictionaryValue) Get(
 		keyValue,
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return nil, false
 		}
 		panic(errors.NewExternalError(err))
@@ -15918,7 +15928,8 @@ func (v *DictionaryValue) Remove(
 		keyValue,
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return NilOptionalValue
 		}
 		panic(errors.NewExternalError(err))
