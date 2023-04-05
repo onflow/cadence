@@ -1032,7 +1032,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		HasPosition: expression.Expression,
 	}
 
-	expectedType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType
+	expectedType := interpreter.substituteMappedEntitlements(interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType)
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1117,7 +1117,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
 		// of that mapped access in the body of the function should be replaced with the computed output of the map
-		if interpreter.SharedState.currentEntitlementMappedValue != nil {
+		if _, isMapped := typ.Authorization.(sema.EntitlementMapAccess); isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
 			auth = *interpreter.SharedState.currentEntitlementMappedValue
 		} else {
 			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, typ.Authorization)
