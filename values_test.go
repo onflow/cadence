@@ -352,8 +352,24 @@ func newValueTestCases() map[string]valueTestCase {
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
-			expectedType: PathType{},
+			expectedType: TheStoragePathType,
 			string:       "/storage/foo",
+		},
+		"PrivatePath": {
+			value: Path{
+				Domain:     common.PathDomainPrivate,
+				Identifier: "foo",
+			},
+			expectedType: ThePrivatePathType,
+			string:       "/private/foo",
+		},
+		"PublicPath": {
+			value: Path{
+				Domain:     common.PathDomainPublic,
+				Identifier: "foo",
+			},
+			expectedType: ThePublicPathType,
+			string:       "/public/foo",
 		},
 		"Type": {
 			value:        TypeValue{StaticType: IntType{}},

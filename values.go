@@ -1948,8 +1948,17 @@ func NewMeteredPath(gauge common.MemoryGauge, domain common.PathDomain, identifi
 
 func (Path) isValue() {}
 
-func (Path) Type() Type {
-	return ThePathType
+func (v Path) Type() Type {
+	switch v.Domain {
+	case common.PathDomainStorage:
+		return TheStoragePathType
+	case common.PathDomainPrivate:
+		return ThePrivatePathType
+	case common.PathDomainPublic:
+		return ThePublicPathType
+	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func (v Path) MeteredType(common.MemoryGauge) Type {
