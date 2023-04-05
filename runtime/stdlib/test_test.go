@@ -974,8 +974,9 @@ func TestTestBeEmptyMatcher(t *testing.T) {
 		inter, err := newTestContractInterpreter(t, script)
 		require.NoError(t, err)
 
-		_, err = inter.Invoke("testMatch")
+		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		assert.ErrorContains(t, err, "expected Array or Dictionary argument")
 	})
 }
 
@@ -1065,6 +1066,7 @@ func TestTestHaveElementCountMatcher(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		assert.ErrorContains(t, err, "expected Array or Dictionary argument")
 	})
 }
 
@@ -1154,6 +1156,7 @@ func TestTestContainMatcher(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		assert.ErrorContains(t, err, "expected Array or Dictionary argument")
 	})
 }
 
