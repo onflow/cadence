@@ -16,45 +16,14 @@
  * limitations under the License.
  */
 
-package main
+package sema
 
-import (
-	"bufio"
-	"bytes"
-	"fmt"
-	"io"
-	"os"
+//go:generate go run ./gen authaccount.cdc authaccount.gen.go
 
-	"github.com/k0kubun/pp/v3"
+var AuthAccountTypeLinkAccountFunctionTypePathParameterTypeAnnotation = AuthAccountTypeLinkAccountFunctionType.Parameters[0].TypeAnnotation
 
-	jsoncdc "github.com/onflow/cadence/encoding/json"
-)
-
-func main() {
-	if len(os.Args) < 2 {
-		_, _ = fmt.Fprintf(os.Stderr, "expected command\n")
-		os.Exit(1)
-	}
-
-	command := os.Args[1]
-	switch command {
-	case "decode":
-		var data bytes.Buffer
-		reader := bufio.NewReader(os.Stdin)
-		_, err := io.Copy(&data, reader)
-		if err != nil {
-			panic(err)
-		}
-
-		value, err := jsoncdc.Decode(nil, data.Bytes())
-		if err != nil {
-			panic(err)
-		}
-
-		_, _ = pp.Print(value)
-
-	default:
-		_, _ = fmt.Fprintf(os.Stderr, "unsupported command: %s", command)
-		os.Exit(1)
-	}
+func init() {
+	AuthAccountContractsTypeAddFunctionType.RequiredArgumentCount = RequiredArgumentCount(2)
+	AuthAccountTypeGetCapabilityFunctionType.TypeParameters[0].Optional = true
+	PublicAccountTypeGetCapabilityFunctionType.TypeParameters[0].Optional = true
 }
