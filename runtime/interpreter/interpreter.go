@@ -3356,21 +3356,9 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 			// First, check that the static type of the referenced value
 			// is a subtype of the super type
 
-			if subType.ReferencedType == nil ||
-				!interpreter.IsSubTypeOfSemaType(subType.ReferencedType, superType.Type) {
-
-				return false
-			}
-
-			borrowType := interpreter.MustConvertStaticToSemaType(subType.BorrowedType)
-
-			return sema.IsSubType(
-				&sema.ReferenceType{
-					Authorization: interpreter.MustConvertStaticAuthorizationToSemaAccess(subType.Authorization),
-					Type:          borrowType,
-				},
-				superType,
-			)
+			return subType.ReferencedType != nil &&
+				interpreter.IsSubTypeOfSemaType(subType.ReferencedType, superType.Type) &&
+				superType.Authorization.PermitsAccess(interpreter.MustConvertStaticAuthorizationToSemaAccess(subType.Authorization))
 		}
 
 		return superType == sema.AnyStructType

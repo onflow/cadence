@@ -24,6 +24,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
+	"golang.org/x/exp/slices"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -530,10 +531,16 @@ func (e EntitlementSetAuthorization) String() string {
 }
 
 func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
+	// sets are equivalent if they contain the same elements, regardless of order
 	switch auth := auth.(type) {
 	case EntitlementSetAuthorization:
-		for i, entitlement := range e.Entitlements {
-			if auth.Entitlements[i] != entitlement {
+		for _, entitlement := range e.Entitlements {
+			if !slices.Contains(auth.Entitlements, entitlement) {
+				return false
+			}
+		}
+		for _, entitlement := range auth.Entitlements {
+			if !slices.Contains(e.Entitlements, entitlement) {
 				return false
 			}
 		}

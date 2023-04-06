@@ -277,13 +277,12 @@ func TestInterpretEntitledReferences(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.X"},
-			),
-			value.(*interpreter.StorageReferenceValue).Authorization,
+			).Equal(value.(*interpreter.StorageReferenceValue).Authorization),
 		)
 	})
 }
@@ -777,13 +776,12 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 		var refType *interpreter.EphemeralReferenceValue
 		require.IsType(t, value, refType)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 
 		require.Equal(
@@ -827,13 +825,12 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 		var refType *interpreter.EphemeralReferenceValue
 		require.IsType(t, value, refType)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y", "S.test.F"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 
 		require.Equal(
@@ -876,13 +873,12 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 		var refType *interpreter.EphemeralReferenceValue
 		require.IsType(t, value, refType)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 
 		require.Equal(
@@ -924,13 +920,12 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 		var refType *interpreter.EphemeralReferenceValue
 		require.IsType(t, value, refType)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y", "S.test.F"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 
 		require.Equal(
@@ -973,13 +968,12 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 		var refType *interpreter.EphemeralReferenceValue
 		require.IsType(t, value, refType)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y", "S.test.F"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 
 		require.Equal(
@@ -1022,13 +1016,12 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 		var refType *interpreter.EphemeralReferenceValue
 		require.IsType(t, value, refType)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 
 		require.Equal(
@@ -1068,13 +1061,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
@@ -1105,13 +1097,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y", "S.test.Z"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
@@ -1142,13 +1133,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y", "S.test.Z"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
@@ -1181,13 +1171,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y", "S.test.Z"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
@@ -1225,13 +1214,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.F"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
@@ -1311,13 +1299,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Y"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
@@ -1359,13 +1346,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Z"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
@@ -1410,13 +1396,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Z"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
@@ -1464,13 +1449,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.Z"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
@@ -1520,13 +1504,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(
+		require.True(
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				[]common.TypeID{"S.test.B", "S.test.Z"},
-			),
-			value.(*interpreter.EphemeralReferenceValue).Authorization,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 }

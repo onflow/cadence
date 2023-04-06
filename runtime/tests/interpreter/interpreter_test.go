@@ -9972,6 +9972,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
                       struct S {}
 
+					  entitlement E
+
                       fun getRef(): &AnyStruct  {
                          %[2]s
                          return ref
@@ -9989,9 +9991,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 			)
 
 			_, err := inter.Invoke("test")
-			RequireError(t, err)
-
-			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+			require.NoError(t, err)
 		})
 	}
 
@@ -10010,6 +10010,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
                       struct S {}
 
+					  entitlement E
+
                       fun test(): &%[1]s {
                           %[2]s
                           let ref2: &AnyStruct = ref
@@ -10023,9 +10025,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 			)
 
 			_, err := inter.Invoke("test")
-			RequireError(t, err)
-
-			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+			require.NoError(t, err)
 		})
 	}
 
@@ -10044,7 +10044,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 		var authKeyword, testNameSuffix string
 		if authorized {
-			authKeyword = "auth"
+			authKeyword = "auth(E)"
 			testNameSuffix = ", auth"
 		}
 

@@ -8024,7 +8024,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(18), meter.getMemory(common.MemoryKindIdentifier))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
@@ -8143,7 +8143,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFunctionStaticType))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionStaticType))
 	})
 }
 
