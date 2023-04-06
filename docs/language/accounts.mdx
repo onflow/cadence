@@ -175,7 +175,7 @@ pub struct AuthAccount {
     /// If there is an object stored, the type of the object is returned without modifying the stored object.
     ///
     /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-    pub fun type(at path: StoragePath): Type?
+    pub fun type(at: StoragePath): Type?
 
     /// Loads an object from the account's storage which is stored under the given path,
     /// or nil if no object is stored under the given path.
@@ -712,7 +712,7 @@ The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 
 ```cadence
-fun type(at path: StoragePath): Type?
+fun type(at: StoragePath): Type?
 ```
 
 Reads the type of an object from the account's storage which is stored under the given path, or nil if no object is stored under the given path.
