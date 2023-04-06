@@ -19,11 +19,6 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
-
 const DocstringsTypeOwoFieldName = "owo"
 
 var DocstringsTypeOwoFieldType = IntType
@@ -116,104 +111,47 @@ var DocstringsType = &SimpleType{
 	Equatable:     false,
 	Exportable:    false,
 	Importable:    false,
-	Members: func(t *SimpleType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			DocstringsTypeOwoFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
+}
 
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						DocstringsTypeOwoFieldType,
-						DocstringsTypeOwoFieldDocString,
-					)
-				},
-			},
-			DocstringsTypeUwuFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						DocstringsTypeUwuFieldType,
-						DocstringsTypeUwuFieldDocString,
-					)
-				},
-			},
-			DocstringsTypeNwnFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						DocstringsTypeNwnFunctionType,
-						DocstringsTypeNwnFunctionDocString,
-					)
-				},
-			},
-			DocstringsTypeWithBlanksFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						DocstringsTypeWithBlanksFieldType,
-						DocstringsTypeWithBlanksFieldDocString,
-					)
-				},
-			},
-			DocstringsTypeIsSmolBeanFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						DocstringsTypeIsSmolBeanFunctionType,
-						DocstringsTypeIsSmolBeanFunctionDocString,
-					)
-				},
-			},
-			DocstringsTypeRunningOutOfIdeasFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						DocstringsTypeRunningOutOfIdeasFunctionType,
-						DocstringsTypeRunningOutOfIdeasFunctionDocString,
-					)
-				},
-			},
-		}
-	},
+func init() {
+	DocstringsType.Members = func(t *SimpleType) map[string]MemberResolver {
+		return MembersAsResolvers([]*Member{
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				DocstringsTypeOwoFieldName,
+				DocstringsTypeOwoFieldType,
+				DocstringsTypeOwoFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				DocstringsTypeUwuFieldName,
+				DocstringsTypeUwuFieldType,
+				DocstringsTypeUwuFieldDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				DocstringsTypeNwnFunctionName,
+				DocstringsTypeNwnFunctionType,
+				DocstringsTypeNwnFunctionDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				DocstringsTypeWithBlanksFieldName,
+				DocstringsTypeWithBlanksFieldType,
+				DocstringsTypeWithBlanksFieldDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				DocstringsTypeIsSmolBeanFunctionName,
+				DocstringsTypeIsSmolBeanFunctionType,
+				DocstringsTypeIsSmolBeanFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				DocstringsTypeRunningOutOfIdeasFunctionName,
+				DocstringsTypeRunningOutOfIdeasFunctionType,
+				DocstringsTypeRunningOutOfIdeasFunctionDocString,
+			),
+		})
+	}
 }

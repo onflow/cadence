@@ -42,15 +42,15 @@ func NewAuthAccountKeysValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysTypeAddFunctionName:     addFunction,
-		sema.AccountKeysTypeGetFunctionName:     getFunction,
-		sema.AccountKeysTypeRevokeFunctionName:  revokeFunction,
-		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
+		sema.AuthAccountKeysTypeAddFunctionName:     addFunction,
+		sema.AuthAccountKeysTypeGetFunctionName:     getFunction,
+		sema.AuthAccountKeysTypeRevokeFunctionName:  revokeFunction,
+		sema.AuthAccountKeysTypeForEachFunctionName: forEachFunction,
 	}
 
 	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
-		case sema.AccountKeysTypeCountFieldName:
+		case sema.AuthAccountKeysTypeCountFieldName:
 			return getKeysCount()
 		}
 		return nil
@@ -93,13 +93,13 @@ func NewPublicAccountKeysValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysTypeGetFunctionName:     getFunction,
-		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
+		sema.PublicAccountKeysTypeGetFunctionName:     getFunction,
+		sema.PublicAccountKeysTypeForEachFunctionName: forEachFunction,
 	}
 
 	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
-		case sema.AccountKeysTypeCountFieldName:
+		case sema.PublicAccountKeysTypeCountFieldName:
 			return getKeysCount()
 		}
 		return nil
