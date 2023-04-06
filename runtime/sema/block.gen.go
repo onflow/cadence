@@ -73,7 +73,10 @@ var BlockType = &SimpleType{
 	Equatable:     false,
 	Exportable:    false,
 	Importable:    false,
-	Members: func(t *SimpleType) map[string]MemberResolver {
+}
+
+func init() {
+	BlockType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredPublicConstantFieldMember(
 				t,
@@ -100,5 +103,5 @@ var BlockType = &SimpleType{
 				BlockTypeIdFieldDocString,
 			),
 		})
-	},
+	}
 }
