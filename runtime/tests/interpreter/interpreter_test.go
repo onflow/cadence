@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/assert"
@@ -4697,7 +4698,9 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
           resource R: RI {}
 
-          fun testInvalidUnauthorized(): Bool {
+		  entitlement E
+
+          fun testValidUnauthorized(): Bool {
               let r  <- create R()
               let ref: AnyStruct = &r as &R{RI}
               let ref2 = ref as? &R
@@ -4708,7 +4711,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
           fun testValidAuthorized(): Bool {
               let r  <- create R()
-              let ref: AnyStruct = &r as auth &R{RI}
+              let ref: AnyStruct = &r as auth(E) &R{RI}
               let ref2 = ref as? &R
               let isNil = ref2 == nil
               destroy r
@@ -4725,13 +4728,13 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
           }
         `)
 
-		result, err := inter.Invoke("testInvalidUnauthorized")
+		result, err := inter.Invoke("testValidUnauthorized")
 		require.NoError(t, err)
 
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.TrueValue,
+			interpreter.FalseValue,
 			result,
 		)
 
@@ -4752,85 +4755,97 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		)
 	})
 
-	// ENTITLEMENTS TODO: uncomment this test
-	/*t.Run("storage", func(t *testing.T) {
+	t.Run("storage", func(t *testing.T) {
 
-			t.Parallel()
+		t.Parallel()
 
-			var inter *interpreter.Interpreter
+		var inter *interpreter.Interpreter
 
-			getType := func(name string) sema.Type {
-				variable, ok := inter.Program.Elaboration.GetGlobalType(name)
-				require.True(t, ok, "missing global type %s", name)
-				return variable.Type
-			}
+		getType := func(name string) sema.Type {
+			variable, ok := inter.Program.Elaboration.GetGlobalType(name)
+			require.True(t, ok, "missing global type %s", name)
+			return variable.Type
+		}
 
-			// Inject a function that returns a storage reference value,
-			// which is borrowed as:
-			// - `&R{RI}` (unauthorized, if argument for parameter `authorized` == false)
-			// - `auth &R{RI}` (authorized, if argument for parameter `authorized` == true)
+		// Inject a function that returns a storage reference value,
+		// which is borrowed as:
+		// - `&R{RI}` (unauthorized, if argument for parameter `authorized` == false)
+		// - `auth(E) &R{RI}` (authorized, if argument for parameter `authorized` == true)
 
-			storageAddress := common.MustBytesToAddress([]byte{0x42})
-			storagePath := interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "test",
-			}
+		storageAddress := common.MustBytesToAddress([]byte{0x42})
+		storagePath := interpreter.PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: "test",
+		}
 
-			getStorageReferenceFunctionType := &sema.FunctionType{
-				Parameters: []sema.Parameter{
-					{
-						Label:          "authorized",
-						Identifier:     "authorized",
-						TypeAnnotation: sema.BoolTypeAnnotation,
-					},
+		getStorageReferenceFunctionType := &sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          "authorized",
+					Identifier:     "authorized",
+					TypeAnnotation: sema.BoolTypeAnnotation,
 				},
-				ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
-			}
+			},
+			ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
+		}
 
-			valueDeclaration := stdlib.NewStandardLibraryFunction(
-				"getStorageReference",
-				getStorageReferenceFunctionType,
-				"",
-				func(invocation interpreter.Invocation) interpreter.Value {
-					authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"getStorageReference",
+			getStorageReferenceFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
 
-					riType := getType("RI").(*sema.InterfaceType)
-					rType := getType("R")
+				var auth interpreter.Authorization = interpreter.UnauthorizedAccess
+				if authorized {
+					auth = interpreter.ConvertSemaAccesstoStaticAuthorization(
+						invocation.Interpreter,
+						sema.NewEntitlementSetAccess(
+							[]*sema.EntitlementType{getType("E").(*sema.EntitlementType)},
+							sema.Conjunction,
+						),
+					)
+				}
 
-					return &interpreter.StorageReferenceValue{
-						Authorized:           authorized,
-						TargetStorageAddress: storageAddress,
-						TargetPath:           storagePath,
-						BorrowedType: &sema.RestrictedType{
-							Type: rType,
-							Restrictions: []*sema.InterfaceType{
-								riType,
-							},
+				riType := getType("RI").(*sema.InterfaceType)
+				rType := getType("R")
+
+				return &interpreter.StorageReferenceValue{
+					Authorization:        auth,
+					TargetStorageAddress: storageAddress,
+					TargetPath:           storagePath,
+					BorrowedType: &sema.RestrictedType{
+						Type: rType,
+						Restrictions: []*sema.InterfaceType{
+							riType,
 						},
-					}
-				},
-			)
+					},
+				}
+			},
+		)
 
-			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-			baseValueActivation.DeclareValue(valueDeclaration)
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
 
-			baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-			interpreter.Declare(baseActivation, valueDeclaration)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
-			storage := newUnmeteredInMemoryStorage()
+		storage := newUnmeteredInMemoryStorage()
 
-			var err error
-			inter, err = parseCheckAndInterpretWithOptions(t,
-				`
+		var err error
+		inter, err = parseCheckAndInterpretWithOptions(t,
+			`
 	              resource interface RI {}
 
 	              resource R: RI {}
+
+				  entitlement E
 
 	              fun createR(): @R {
 	                  return <- create R()
 	              }
 
-	              fun testInvalidUnauthorized(): &R? {
+	              fun testValidUnauthorized(): &R? {
 	                  let ref: AnyStruct = getStorageReference(authorized: false)
 	                  return ref as? &R
 	              }
@@ -4845,58 +4860,56 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 	                  return ref as? &R{RI}
 	              }
 	            `,
-				ParseCheckAndInterpretOptions{
-					CheckerConfig: &sema.Config{
-						BaseValueActivation: baseValueActivation,
-					},
-					Config: &interpreter.Config{
-						Storage:        storage,
-						BaseActivation: baseActivation,
-					},
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
-			)
-			require.NoError(t, err)
+				Config: &interpreter.Config{
+					Storage:        storage,
+					BaseActivation: baseActivation,
+				},
+			},
+		)
+		require.NoError(t, err)
 
-			r, err := inter.Invoke("createR")
-			require.NoError(t, err)
+		r, err := inter.Invoke("createR")
+		require.NoError(t, err)
 
-			r = r.Transfer(
-				inter,
-				interpreter.EmptyLocationRange,
-				atree.Address(storageAddress),
-				true,
-				nil,
-			)
+		r = r.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(storageAddress),
+			true,
+			nil,
+		)
 
-			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
-			storageMap.WriteValue(inter, storagePath.Identifier, r)
+		storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
+		storageMap.WriteValue(inter, storagePath.Identifier, r)
 
-			result, err := inter.Invoke("testInvalidUnauthorized")
-			require.NoError(t, err)
+		result, err := inter.Invoke("testValidUnauthorized")
+		require.NoError(t, err)
 
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				result,
-			)
+		assert.IsType(t,
+			&interpreter.SomeValue{},
+			result,
+		)
 
-			result, err = inter.Invoke("testValidAuthorized")
-			require.NoError(t, err)
+		result, err = inter.Invoke("testValidAuthorized")
+		require.NoError(t, err)
 
-			assert.IsType(t,
-				&interpreter.SomeValue{},
-				result,
-			)
+		assert.IsType(t,
+			&interpreter.SomeValue{},
+			result,
+		)
 
-			result, err = inter.Invoke("testValidRestricted")
-			require.NoError(t, err)
+		result, err = inter.Invoke("testValidRestricted")
+		require.NoError(t, err)
 
-			assert.IsType(t,
-				&interpreter.SomeValue{},
-				result,
-			)
-		})*/
+		assert.IsType(t,
+			&interpreter.SomeValue{},
+			result,
+		)
+	})
 }
 
 func TestInterpretArrayLength(t *testing.T) {

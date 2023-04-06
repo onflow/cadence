@@ -424,6 +424,38 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("entitled to nonentitled downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			resource interface RI {}
+
+			resource R: RI {}
+
+			entitlement E
+
+			fun test(): Bool {
+				let x <- create R()
+				let r = &x as auth(E) &AnyResource{RI}
+				let r2 = r as! &R{RI}
+				let isSuccess = r2 != nil
+				destroy x
+				return isSuccess
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
 }
 
 func TestInterpretCapabilityEntitlements(t *testing.T) {

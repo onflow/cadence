@@ -4477,9 +4477,19 @@ func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKin
 }
 
 func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string) *sema.Access {
-	typ := interpreter.MustSemaTypeOfValue(self)
-	member := typ.GetMembers()[identifier].Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {})
-	return &member.Access
+	typ, err := interpreter.ConvertStaticToSemaType(self.StaticType(interpreter))
+	// some values (like transactions) do not have types that can be looked up this way. These types
+	// do not support entitled members, so their access is always unauthorized
+	if err != nil {
+		return &sema.UnauthorizedAccess
+	}
+	member, hasMember := typ.GetMembers()[identifier]
+	// certain values (like functions) have builtin members that are not present on the type
+	// in such cases the access is always unauthorized
+	if !hasMember {
+		return &sema.UnauthorizedAccess
+	}
+	return &member.Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {}).Access
 }
 
 func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAccess *sema.Access, resultValue Value) Value {
