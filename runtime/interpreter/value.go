@@ -14816,13 +14816,6 @@ func (v *CompositeValue) Transfer(
 				// and does not need to be converted or copied
 
 				value := MustConvertStoredValue(interpreter, atreeValue)
-				// the base of an attachment is not stored in the atree, so in order to make the
-				// transfer happen properly, we set the base value here if this field is an attachment
-				if compositeValue, ok := value.(*CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
-					// ENTITLEMENTS TODO: is this necessary?
-					// compositeValue.setBaseValue(interpreter, v)
-				}
-
 				value = value.Transfer(interpreter, locationRange, address, remove, nil)
 
 				return atreeKey, value, nil

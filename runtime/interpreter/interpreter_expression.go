@@ -1295,10 +1295,6 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		panic(errors.NewUnreachableError())
 	}
 
-	// when `v[A]` is executed, we set `A`'s base to `&v`
-	// ENTITLEMENTS TODO: remove this?
-	attachment.setBaseValue(interpreter, base, auth)
-
 	base.SetTypeKey(
 		interpreter,
 		locationRange,
