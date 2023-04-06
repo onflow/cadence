@@ -61,7 +61,7 @@ func ExportValue(
 
 // NOTE: Do not generalize to map[interpreter.Value],
 // as not all values are Go hashable, i.e. this might lead to run-time panics
-type seenReferences map[*interpreter.EphemeralReferenceValue]struct{}
+type seenReferences map[interpreter.ReferenceValue]struct{}
 
 // exportValueWithInterpreter exports the given internal (interpreter) value to an external value.
 //
@@ -213,6 +213,8 @@ func exportValueWithInterpreter(
 		return cadence.NewMeteredAddress(inter, v), nil
 	case interpreter.PathLinkValue:
 		return exportPathLinkValue(v, inter), nil
+	case interpreter.AccountLinkValue:
+		return exportAccountLinkValue(inter), nil
 	case interpreter.PathValue:
 		return exportPathValue(inter, v), nil
 	case interpreter.TypeValue:
@@ -220,7 +222,7 @@ func exportValueWithInterpreter(
 	case *interpreter.StorageCapabilityValue:
 		return exportStorageCapabilityValue(v, inter), nil
 	case *interpreter.EphemeralReferenceValue:
-		// Break recursion through ephemeral references
+		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
 			return nil, nil
 		}
@@ -233,6 +235,13 @@ func exportValueWithInterpreter(
 			seenReferences,
 		)
 	case *interpreter.StorageReferenceValue:
+		// Break recursion through references
+		if _, ok := seenReferences[v]; ok {
+			return nil, nil
+		}
+		defer delete(seenReferences, v)
+		seenReferences[v] = struct{}{}
+
 		referencedValue := v.ReferencedValue(inter, interpreter.EmptyLocationRange, true)
 		if referencedValue == nil {
 			return nil, nil
@@ -588,7 +597,11 @@ func exportDictionaryValue(
 func exportPathLinkValue(v interpreter.PathLinkValue, inter *interpreter.Interpreter) cadence.PathLink {
 	path := exportPathValue(inter, v.TargetPath)
 	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
-	return cadence.NewMeteredLink(inter, path, ty)
+	return cadence.NewMeteredPathLink(inter, path, ty)
+}
+
+func exportAccountLinkValue(inter *interpreter.Interpreter) cadence.AccountLink {
+	return cadence.NewMeteredAccountLink(inter)
 }
 
 func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) cadence.Path {
@@ -811,7 +824,9 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 	case cadence.Function:
 		return nil, errors.NewDefaultUserError("cannot import function")
 	case cadence.PathLink:
-		return nil, errors.NewDefaultUserError("cannot import link")
+		return nil, errors.NewDefaultUserError("cannot import path link")
+	case cadence.AccountLink:
+		return nil, errors.NewDefaultUserError("cannot import account link")
 	default:
 		// This means the implementation has unhandled types.
 		// Hence, return an internal error

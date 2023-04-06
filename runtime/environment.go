@@ -606,7 +606,7 @@ func (e *interpreterEnvironment) newInterpreter(
 }
 
 func (e *interpreterEnvironment) newOnStatementHandler() interpreter.OnStatementFunc {
-	if !e.config.CoverageReportingEnabled {
+	if e.config.CoverageReport == nil {
 		return nil
 	}
 

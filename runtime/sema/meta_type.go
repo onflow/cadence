@@ -18,16 +18,15 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
+const MetaTypeIdentifierFieldName = "identifier"
 
-const metaTypeIdentifierDocString = `
+const metaTypeIdentifierFieldDocString = `
 The fully-qualified identifier of the type
 `
 
-const metaTypeSubtypeDocString = `
+const MetaTypeIsSubtypeFunctionName = "isSubtype"
+
+const metaTypeIsSubtypeFunctionDocString = `
 Returns true if this type is a subtype of the given type at run-time
 `
 
@@ -61,31 +60,19 @@ var MetaTypeIsSubtypeFunctionType = &FunctionType{
 
 func init() {
 	MetaType.Members = func(t *SimpleType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			"identifier": {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						StringType,
-						metaTypeIdentifierDocString,
-					)
-				},
-			},
-			"isSubtype": {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						MetaTypeIsSubtypeFunctionType,
-						metaTypeSubtypeDocString,
-					)
-				},
-			},
-		}
+		return MembersAsResolvers([]*Member{
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				MetaTypeIdentifierFieldName,
+				StringType,
+				metaTypeIdentifierFieldDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				MetaTypeIsSubtypeFunctionName,
+				MetaTypeIsSubtypeFunctionType,
+				metaTypeIsSubtypeFunctionDocString,
+			),
+		})
 	}
 }

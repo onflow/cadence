@@ -3341,6 +3341,7 @@ func (interpreter *Interpreter) recordStorageMutation() {
 }
 
 func (interpreter *Interpreter) newStorageIterationFunction(
+	functionType *sema.FunctionType,
 	addressValue AddressValue,
 	domain common.PathDomain,
 	pathType sema.Type,
@@ -3351,7 +3352,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AccountForEachFunctionType(pathType),
+		functionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3834,14 +3835,17 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 	)
 }
 
-func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) accountGetLinkTargetFunction(
+	functionType *sema.FunctionType,
+	addressValue AddressValue,
+) *HostFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AccountTypeGetLinkTargetFunctionType,
+		functionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 

@@ -774,8 +774,8 @@ var EmulatorBackendType = func() *sema.CompositeType {
 		),
 	}
 
-	ty.Members = sema.GetMembersAsMap(members)
-	ty.Fields = sema.GetFieldNames(members)
+	ty.Members = sema.MembersAsMap(members)
+	ty.Fields = sema.MembersFieldNames(members)
 
 	return ty
 }()

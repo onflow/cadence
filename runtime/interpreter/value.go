@@ -21,6 +21,7 @@ package interpreter
 import (
 	"encoding/binary"
 	"encoding/hex"
+	goerrors "errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -350,7 +351,7 @@ func (v TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 
 func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
-	case "identifier":
+	case sema.MetaTypeIdentifierFieldName:
 		var typeID string
 		staticType := v.Type
 		if staticType != nil {
@@ -363,7 +364,8 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		return NewStringValue(interpreter, memoryUsage, func() string {
 			return typeID
 		})
-	case "isSubtype":
+
+	case sema.MetaTypeIsSubtypeFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.MetaTypeIsSubtypeFunctionType,
@@ -1121,14 +1123,14 @@ func (*StringValue) RemoveKey(_ *Interpreter, _ LocationRange, _ Value) Value {
 
 func (v *StringValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	switch name {
-	case "length":
+	case sema.StringTypeLengthFieldName:
 		length := v.Length()
 		return NewIntValueFromInt64(interpreter, int64(length))
 
-	case "utf8":
+	case sema.StringTypeUtf8FieldName:
 		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
 
-	case "concat":
+	case sema.StringTypeConcatFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeConcatFunctionType,
@@ -1142,7 +1144,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
-	case "slice":
+	case sema.StringTypeSliceFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeSliceFunctionType,
@@ -1161,7 +1163,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
-	case "decodeHex":
+	case sema.StringTypeDecodeHexFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeDecodeHexFunctionType,
@@ -1173,7 +1175,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
-	case "toLower":
+	case sema.StringTypeToLowerFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeToLowerFunctionType,
@@ -1728,7 +1730,8 @@ func (v *ArrayValue) GetKey(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, locationRange LocationRange) {
-	if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
+	var indexOutOfBoundsError *atree.IndexOutOfBoundsError
+	if goerrors.As(err, &indexOutOfBoundsError) {
 		panic(ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
@@ -2629,16 +2632,18 @@ func (v *ArrayValue) Slice(
 	iterator, err := v.array.RangeIterator(uint64(fromIndex), uint64(toIndex))
 	if err != nil {
 
-		switch err.(type) {
-		case *atree.SliceOutOfBoundsError:
+		var sliceOutOfBoundsError *atree.SliceOutOfBoundsError
+		if goerrors.As(err, &sliceOutOfBoundsError) {
 			panic(ArraySliceIndicesError{
 				FromIndex:     fromIndex,
 				UpToIndex:     toIndex,
 				Size:          v.Count(),
 				LocationRange: locationRange,
 			})
+		}
 
-		case *atree.InvalidSliceIndexError:
+		var invalidSliceIndexError *atree.InvalidSliceIndexError
+		if goerrors.As(err, &invalidSliceIndexError) {
 			panic(InvalidSliceIndexError{
 				FromIndex:     fromIndex,
 				UpToIndex:     toIndex,
@@ -14185,7 +14190,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); !ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if !goerrors.As(err, &keyNotFoundError) {
 			panic(errors.NewExternalError(err))
 		}
 	}
@@ -14328,7 +14334,8 @@ func (v *CompositeValue) RemoveMember(
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return nil
 		}
 		panic(errors.NewExternalError(err))
@@ -14506,7 +14513,8 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return nil
 		}
 		panic(errors.NewExternalError(err))
@@ -15061,7 +15069,8 @@ func (v *CompositeValue) RemoveField(
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return
 		}
 		panic(errors.NewExternalError(err))
@@ -15569,7 +15578,8 @@ func (v *DictionaryValue) ContainsKey(
 		keyValue,
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return FalseValue
 		}
 		panic(errors.NewExternalError(err))
@@ -15593,7 +15603,8 @@ func (v *DictionaryValue) Get(
 		keyValue,
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return nil, false
 		}
 		panic(errors.NewExternalError(err))
@@ -15918,7 +15929,8 @@ func (v *DictionaryValue) Remove(
 		keyValue,
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return NilOptionalValue
 		}
 		panic(errors.NewExternalError(err))
@@ -16963,6 +16975,10 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
+type ReferenceValue interface {
+	isReference()
+}
+
 // StorageReferenceValue
 
 type StorageReferenceValue struct {
@@ -16977,6 +16993,7 @@ var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
 var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
+var _ ReferenceValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
 	authorized bool,
@@ -17312,6 +17329,8 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
+func (*StorageReferenceValue) isReference() {}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
@@ -17325,6 +17344,7 @@ var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
+var _ ReferenceValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
 	authorized bool,
@@ -17646,6 +17666,8 @@ func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
+
+func (*EphemeralReferenceValue) isReference() {}
 
 // AddressValue
 type AddressValue common.Address
