@@ -104,5 +104,7 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 		}
 	}
 
+	checker.Elaboration.SetAttachTypes(expression, attachmentCompositeType)
+
 	return baseType
 }

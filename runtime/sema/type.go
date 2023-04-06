@@ -3699,7 +3699,7 @@ type CompositeType struct {
 	// Alas, this is Go, so for now these fields are only non-nil when Kind is CompositeKindAttachment
 	baseType                    Type
 	baseTypeDocString           string
-	attachmentEntitlementAccess *EntitlementMapAccess
+	AttachmentEntitlementAccess *EntitlementMapAccess
 
 	cachedIdentifiers *struct {
 		TypeID              TypeID
@@ -4078,8 +4078,8 @@ func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ ast.Range) 
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
-		if attachment.attachmentEntitlementAccess != nil {
-			access = (*attachment.attachmentEntitlementAccess).Codomain()
+		if attachment.AttachmentEntitlementAccess != nil {
+			access = (*attachment.AttachmentEntitlementAccess).Codomain()
 		}
 	}
 
@@ -5180,9 +5180,9 @@ func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange ast.
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
-		if attachment.attachmentEntitlementAccess != nil {
+		if attachment.AttachmentEntitlementAccess != nil {
 			var err error
-			access, err = (*attachment.attachmentEntitlementAccess).Image(t.Authorization, astRange)
+			access, err = (*attachment.AttachmentEntitlementAccess).Image(t.Authorization, astRange)
 			if err != nil {
 				return nil, err
 			}
@@ -6355,8 +6355,8 @@ func (t *RestrictedType) TypeIndexingElementType(indexingType Type, _ ast.Range)
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
-		if attachment.attachmentEntitlementAccess != nil {
-			access = (*attachment.attachmentEntitlementAccess).Codomain()
+		if attachment.AttachmentEntitlementAccess != nil {
+			access = (*attachment.AttachmentEntitlementAccess).Codomain()
 		}
 	}
 

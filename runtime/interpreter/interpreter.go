@@ -770,7 +770,6 @@ func (interpreter *Interpreter) visitFunctionBody(
 					auth = ConvertSemaAccesstoStaticAuthorization(interpreter, access)
 				}
 			}
-			// ENTITLEMENTS TODO: the result value should be fully qualified to the return type, since it is created from an existing resource in scope
 			resultValue = NewEphemeralReferenceValue(interpreter, auth, returnValue, returnType)
 		} else {
 			resultValue = returnValue
@@ -1228,9 +1227,17 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				var self MemberAccessibleValue = value
 				if declaration.Kind() == common.CompositeKindAttachment {
-					// ENTITLEMENTS TODO: self's type in the constructor should be the image of the attachment's entitlement map, since
+
+					var auth Authorization = UnauthorizedAccess
+					attachmentType := interpreter.MustSemaTypeOfValue(value).(*sema.CompositeType)
+					// Self's type in the constructor is codomain of the attachment's entitlement map, since
 					// the constructor can only be called when in possession of the base resource
-					self = NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, interpreter.MustSemaTypeOfValue(value))
+					// if the attachment is declared with pub access, then self is unauthorized
+					if attachmentType.AttachmentEntitlementAccess != nil {
+						auth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
+					}
+					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType)
+
 					// set the base to the implicitly provided value, and remove this implicit argument from the list
 					implicitArgumentPos := len(invocation.Arguments) - 1
 					invocation.Base = invocation.Arguments[implicitArgumentPos].(*EphemeralReferenceValue)

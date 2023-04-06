@@ -67,8 +67,8 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 	// codomain of the attachment's entitlement map
 
 	var attachmentAccess Access = UnauthorizedAccess
-	if attachmentType.attachmentEntitlementAccess != nil {
-		attachmentAccess = *attachmentType.attachmentEntitlementAccess
+	if attachmentType.AttachmentEntitlementAccess != nil {
+		attachmentAccess = *attachmentType.AttachmentEntitlementAccess
 	}
 
 	attachmentType.Members.Foreach(func(_ string, member *Member) {
@@ -605,7 +605,7 @@ func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclara
 	attachmentAccess := checker.accessFromAstAccess(declaration.Access)
 	switch attachmentAccess := attachmentAccess.(type) {
 	case EntitlementMapAccess:
-		composite.attachmentEntitlementAccess = &attachmentAccess
+		composite.AttachmentEntitlementAccess = &attachmentAccess
 	}
 	return composite
 }
@@ -2179,7 +2179,7 @@ func (checker *Checker) checkSpecialFunction(
 	checker.enterValueScope()
 	defer checker.leaveValueScope(specialFunction.EndPosition, checkResourceLoss)
 
-	fnAccess := checker.accessFromAstAccess(specialFunction.FunctionDeclaration.Access)
+	fnAccess := checker.effectiveMemberAccess(checker.accessFromAstAccess(specialFunction.FunctionDeclaration.Access), containerKind)
 
 	checker.declareSelfValue(containerType, fnAccess, containerDocString)
 	if containerType.GetCompositeKind() == common.CompositeKindAttachment {
@@ -2190,7 +2190,7 @@ func (checker *Checker) checkSpecialFunction(
 		}
 		checker.declareBaseValue(
 			attachmentType.baseType,
-			attachmentType.attachmentEntitlementAccess,
+			attachmentType.AttachmentEntitlementAccess,
 			fnAccess,
 			ast.NewRangeFromPositioned(checker.memoryGauge, specialFunction),
 			attachmentType.baseTypeDocString)
@@ -2247,13 +2247,13 @@ func (checker *Checker) checkCompositeFunctions(
 			checker.enterValueScope()
 			defer checker.leaveValueScope(function.EndPosition, true)
 
-			fnAccess := checker.accessFromAstAccess(function.Access)
+			fnAccess := checker.effectiveMemberAccess(checker.accessFromAstAccess(function.Access), ContainerKindComposite)
 
 			checker.declareSelfValue(selfType, fnAccess, selfDocString)
 			if selfType.GetCompositeKind() == common.CompositeKindAttachment {
 				checker.declareBaseValue(
 					selfType.baseType,
-					selfType.attachmentEntitlementAccess,
+					selfType.AttachmentEntitlementAccess,
 					fnAccess,
 					ast.NewRangeFromPositioned(checker.memoryGauge, function),
 					selfType.baseTypeDocString,

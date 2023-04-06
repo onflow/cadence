@@ -191,7 +191,11 @@ func (checker *Checker) checkInterfaceFunctions(
 			checker.enterValueScope()
 			defer checker.leaveValueScope(function.EndPosition, false)
 
-			checker.declareSelfValue(selfType, checker.accessFromAstAccess(function.Access), selfDocString)
+			checker.declareSelfValue(
+				selfType,
+				checker.effectiveMemberAccess(checker.accessFromAstAccess(function.Access), ContainerKindInterface),
+				selfDocString,
+			)
 
 			mustExit := false
 			checkResourceLoss := false

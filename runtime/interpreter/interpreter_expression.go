@@ -1253,11 +1253,18 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
 	// we create an implicit constructor argument containing a reference to the base
 
-	// ENTITLEMENTS TODO: the entitlements of the base value should be fully qualified for the preimage
-	// of the map for this attachment
+	var auth Authorization = UnauthorizedAccess
+	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
+	// if the attachment is declared with entitlement map access, the base reference inside the attachment constructor
+	// should be fully qualified for the domain of the map, since the attacher must own the actual base value
+	// if the attachment is declared with pub access, then the base reference is unauthorized
+	if attachmentType.AttachmentEntitlementAccess != nil {
+		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Domain())
+	}
+
 	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
-		UnauthorizedAccess,
+		auth,
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
@@ -1289,12 +1296,13 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	}
 
 	// when `v[A]` is executed, we set `A`'s base to `&v`
-	attachment.setBaseValue(interpreter, base)
+	// ENTITLEMENTS TODO: remove this?
+	attachment.setBaseValue(interpreter, base, auth)
 
 	base.SetTypeKey(
 		interpreter,
 		locationRange,
-		interpreter.MustSemaTypeOfValue(attachment),
+		attachmentType,
 		attachment,
 	)
 
