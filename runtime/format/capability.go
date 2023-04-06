@@ -35,3 +35,19 @@ func StorageCapability(borrowType string, address string, path string) string {
 		path,
 	)
 }
+
+func StorageCapabilityController(borrowType string, capabilityID string) string {
+	return fmt.Sprintf(
+		"StorageCapabilityController(borrowType: %s, capabilityID: %s)",
+		borrowType,
+		capabilityID,
+	)
+}
+
+func AccountCapabilityController(borrowType string, capabilityID string) string {
+	return fmt.Sprintf(
+		"AccountCapabilityController(borrowType: %s, capabilityID: %s)",
+		borrowType,
+		capabilityID,
+	)
+}
