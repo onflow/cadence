@@ -3425,7 +3425,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 				Authorization: EntitlementMapAuthorization{
 					TypeID: "foo",
 				},
-				BorrowedType: PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
 
@@ -3466,7 +3466,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 				Authorization: EntitlementSetAuthorization{
 					Entitlements: []common.TypeID{"foo", "bar"},
 				},
-				BorrowedType: PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
 
@@ -3512,8 +3512,8 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorization: UnauthorizedAccess,
-				BorrowedType:  PrimitiveStaticTypeBool,
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
 

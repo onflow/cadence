@@ -1147,8 +1147,8 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 			Address: randomAddressValue(),
 			Path:    randomPathValue(),
 			BorrowType: interpreter.ReferenceStaticType{
-				Authorization: interpreter.UnauthorizedAccess,
-				BorrowedType:  interpreter.PrimitiveStaticTypeAnyStruct,
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 		}
 	case Some:

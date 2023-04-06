@@ -2930,7 +2930,6 @@ func referenceTypeFunction(invocation Invocation) Value {
 				invocation.Interpreter,
 				authorization,
 				typeValue.Type,
-				nil,
 			),
 		),
 	)
@@ -3838,7 +3837,6 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 }
 
 var authAccountReferenceStaticType = ReferenceStaticType{
-	BorrowedType:   PrimitiveStaticTypeAuthAccount,
 	ReferencedType: PrimitiveStaticTypeAuthAccount,
 	Authorization:  UnauthorizedAccess,
 }

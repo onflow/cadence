@@ -1457,7 +1457,6 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		d.memoryGauge,
 		authorized,
 		staticType,
-		nil,
 	), nil
 }
 

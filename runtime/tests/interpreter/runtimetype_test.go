@@ -515,7 +515,7 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.CompositeStaticType{
+				ReferencedType: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "R",
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.R",
@@ -531,8 +531,8 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				BorrowedType:  interpreter.PrimitiveStaticTypeString,
-				Authorization: interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeString,
+				Authorization:  interpreter.UnauthorizedAccess,
 			},
 		},
 		inter.Globals.Get("b").GetValue(),
@@ -541,7 +541,7 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.CompositeStaticType{
+				ReferencedType: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "S",
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.S",
@@ -719,8 +719,8 @@ func TestInterpretCapabilityType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.CapabilityStaticType{
 				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType:  interpreter.PrimitiveStaticTypeString,
-					Authorization: interpreter.UnauthorizedAccess,
+					ReferencedType: interpreter.PrimitiveStaticTypeString,
+					Authorization:  interpreter.UnauthorizedAccess,
 				},
 			},
 		},
@@ -731,8 +731,8 @@ func TestInterpretCapabilityType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.CapabilityStaticType{
 				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType:  interpreter.PrimitiveStaticTypeInt,
-					Authorization: interpreter.UnauthorizedAccess,
+					ReferencedType: interpreter.PrimitiveStaticTypeInt,
+					Authorization:  interpreter.UnauthorizedAccess,
 				},
 			},
 		},
@@ -743,7 +743,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.CapabilityStaticType{
 				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.CompositeStaticType{
+					ReferencedType: interpreter.CompositeStaticType{
 						QualifiedIdentifier: "R",
 						Location:            utils.TestLocation,
 						TypeID:              "S.test.R",

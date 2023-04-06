@@ -4057,7 +4057,6 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					ReferenceStaticType{
 						Authorization:  UnauthorizedAccess,
-						BorrowedType:   PrimitiveStaticTypeBool,
 						ReferencedType: PrimitiveStaticTypeBool,
 					},
 				)

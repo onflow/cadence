@@ -1180,8 +1180,8 @@ func TestImportRuntimeType(t *testing.T) {
 				Type:          cadence.IntType{},
 			},
 			expected: interpreter.ReferenceStaticType{
-				Authorization: interpreter.UnauthorizedAccess,
-				BorrowedType:  interpreter.PrimitiveStaticTypeInt,
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
@@ -1197,7 +1197,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Authorization: interpreter.EntitlementSetAuthorization{
 					Entitlements: []common.TypeID{"E", "F"},
 				},
-				BorrowedType: interpreter.PrimitiveStaticTypeInt,
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
@@ -1212,7 +1212,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Authorization: interpreter.EntitlementMapAuthorization{
 					TypeID: "M",
 				},
-				BorrowedType: interpreter.PrimitiveStaticTypeInt,
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{

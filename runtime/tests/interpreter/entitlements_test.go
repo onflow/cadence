@@ -455,6 +455,33 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("order of entitlements doesn't matter", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement E
+			entitlement F
+
+			fun test(): Bool {
+				let r = &1 as auth(E, F) &Int
+				let r2 = r as!auth(F, E) &Int
+				let isSuccess = r2 != nil
+				return isSuccess
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
 }
 
 func TestInterpretCapabilityEntitlements(t *testing.T) {

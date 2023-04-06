@@ -652,7 +652,6 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			memoryGauge,
 			importAuthorization(memoryGauge, t.Authorization),
 			ImportType(memoryGauge, t.Type),
-			nil,
 		)
 	case *cadence.RestrictedType:
 		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))

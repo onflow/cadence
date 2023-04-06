@@ -17055,7 +17055,6 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 	return NewReferenceStaticType(
 		inter,
 		v.Authorization,
-		ConvertSemaToStaticType(inter, v.BorrowedType),
 		self.StaticType(inter),
 	)
 }
@@ -17409,7 +17408,6 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 	return NewReferenceStaticType(
 		inter,
 		v.Authorization,
-		ConvertSemaToStaticType(inter, v.BorrowedType),
 		self.StaticType(inter),
 	)
 }
@@ -18765,7 +18763,6 @@ func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewCapabilityStaticType(
 		interpreter,
 		ReferenceStaticType{
-			BorrowedType:   authAccountStaticType,
 			ReferencedType: authAccountStaticType,
 			// ENTITLEMENTS TODO: eventually account types should support entitlements
 			Authorization: UnauthorizedAccess,

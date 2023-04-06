@@ -91,7 +91,7 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 				BorrowType: PrimitiveStaticTypeString,
 			}.Equal(
 				ReferenceStaticType{
-					BorrowedType: PrimitiveStaticTypeString,
+					ReferencedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -108,12 +108,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			ReferenceStaticType{
-				Authorization: UnauthorizedAccess,
-				BorrowedType:  PrimitiveStaticTypeString,
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeString,
 			}.Equal(
 				ReferenceStaticType{
-					Authorization: UnauthorizedAccess,
-					BorrowedType:  PrimitiveStaticTypeString,
+					Authorization:  UnauthorizedAccess,
+					ReferencedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -125,12 +125,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorization: UnauthorizedAccess,
-				BorrowedType:  PrimitiveStaticTypeInt,
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorization: UnauthorizedAccess,
-					BorrowedType:  PrimitiveStaticTypeString,
+					Authorization:  UnauthorizedAccess,
+					ReferencedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -142,12 +142,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorization: UnauthorizedAccess,
-				BorrowedType:  PrimitiveStaticTypeInt,
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorization: EntitlementMapAuthorization{TypeID: "Foo"},
-					BorrowedType:  PrimitiveStaticTypeInt,
+					Authorization:  EntitlementMapAuthorization{TypeID: "Foo"},
+					ReferencedType: PrimitiveStaticTypeInt,
 				},
 			),
 		)
@@ -159,7 +159,7 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				BorrowedType: PrimitiveStaticTypeString,
+				ReferencedType: PrimitiveStaticTypeString,
 			}.Equal(
 				CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
@@ -953,7 +953,7 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 				},
 			}).Equal(
 				ReferenceStaticType{
-					BorrowedType: PrimitiveStaticTypeInt,
+					ReferencedType: PrimitiveStaticTypeInt,
 				},
 			),
 		)

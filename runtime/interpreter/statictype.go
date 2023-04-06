@@ -576,8 +576,6 @@ func (e EntitlementMapAuthorization) Equal(auth Authorization) bool {
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
-	// BorrowedType is the type of the usage (T in &T)
-	BorrowedType StaticType
 	// ReferencedType is type of the referenced value (the type of the target)
 	ReferencedType StaticType
 	Authorization  Authorization
@@ -588,14 +586,12 @@ var _ StaticType = ReferenceStaticType{}
 func NewReferenceStaticType(
 	memoryGauge common.MemoryGauge,
 	authorization Authorization,
-	borrowedType StaticType,
 	referencedType StaticType,
 ) ReferenceStaticType {
 	common.UseMemory(memoryGauge, common.ReferenceStaticTypeMemoryUsage)
 
 	return ReferenceStaticType{
 		Authorization:  authorization,
-		BorrowedType:   borrowedType,
 		ReferencedType: referencedType,
 	}
 }
@@ -608,12 +604,12 @@ func (ReferenceStaticType) elementSize() uint {
 
 func (t ReferenceStaticType) String() string {
 	auth := t.Authorization.String()
-	return fmt.Sprintf("%s&%s", auth, t.BorrowedType)
+	return fmt.Sprintf("%s&%s", auth, t.ReferencedType)
 }
 
 func (t ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 
-	typeStr := t.BorrowedType.MeteredString(memoryGauge)
+	typeStr := t.ReferencedType.MeteredString(memoryGauge)
 	authString := t.Authorization.String()
 	memoryGauge.MeterMemory(common.NewRawStringMemoryUsage(len(authString)))
 	return fmt.Sprintf("%s&%s", authString, typeStr)
@@ -626,7 +622,7 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 	}
 
 	return t.Authorization.Equal(otherReferenceType.Authorization) &&
-		t.BorrowedType.Equal(otherReferenceType.BorrowedType)
+		t.ReferencedType.Equal(otherReferenceType.ReferencedType)
 }
 
 // CapabilityStaticType
@@ -817,7 +813,6 @@ func ConvertSemaReferenceTypeToStaticReferenceType(
 		memoryGauge,
 		ConvertSemaAccesstoStaticAuthorization(memoryGauge, t.Authorization),
 		ConvertSemaToStaticType(memoryGauge, t.Type),
-		nil,
 	)
 }
 
@@ -943,7 +938,7 @@ func ConvertStaticToSemaType(
 		), nil
 
 	case ReferenceStaticType:
-		ty, err := ConvertStaticToSemaType(memoryGauge, t.BorrowedType, getInterface, getComposite, getEntitlement, getEntitlementMapType)
+		ty, err := ConvertStaticToSemaType(memoryGauge, t.ReferencedType, getInterface, getComposite, getEntitlement, getEntitlementMapType)
 		if err != nil {
 			return nil, err
 		}

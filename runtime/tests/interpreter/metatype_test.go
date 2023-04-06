@@ -634,8 +634,8 @@ func TestInterpretGetType(t *testing.T) {
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						// Reference was not converted
-						Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
-						BorrowedType:  interpreter.PrimitiveStaticTypeInt,
+						Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
+						ReferencedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -657,8 +657,8 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
-						BorrowedType:  interpreter.PrimitiveStaticTypeInt,
+						Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
+						ReferencedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -684,8 +684,8 @@ func TestInterpretGetType(t *testing.T) {
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						// Reference was not converted
-						Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
-						BorrowedType:  interpreter.PrimitiveStaticTypeInt,
+						Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
+						ReferencedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -710,8 +710,8 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
-						BorrowedType:  interpreter.PrimitiveStaticTypeInt,
+						Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}),
+						ReferencedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},

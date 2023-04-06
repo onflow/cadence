@@ -1314,7 +1314,7 @@ func (t ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 	// Encode type at array index encodedReferenceStaticTypeTypeFieldKey
-	return EncodeStaticType(e, t.BorrowedType)
+	return EncodeStaticType(e, t.ReferencedType)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
