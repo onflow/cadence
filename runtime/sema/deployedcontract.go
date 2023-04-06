@@ -18,4 +18,4 @@
 
 package sema
 
-//go:generate go run ./gen block.cdc block.gen.go
+//go:generate go run ./gen deployedcontract.cdc deployedcontract.gen.go

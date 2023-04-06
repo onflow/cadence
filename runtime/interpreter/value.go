@@ -350,7 +350,7 @@ func (v TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 
 func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
-	case "identifier":
+	case sema.MetaTypeIdentifierFieldName:
 		var typeID string
 		staticType := v.Type
 		if staticType != nil {
@@ -363,7 +363,8 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		return NewStringValue(interpreter, memoryUsage, func() string {
 			return typeID
 		})
-	case "isSubtype":
+
+	case sema.MetaTypeIsSubtypeFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.MetaTypeIsSubtypeFunctionType,
@@ -1121,14 +1122,14 @@ func (*StringValue) RemoveKey(_ *Interpreter, _ LocationRange, _ Value) Value {
 
 func (v *StringValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	switch name {
-	case "length":
+	case sema.StringTypeLengthFieldName:
 		length := v.Length()
 		return NewIntValueFromInt64(interpreter, int64(length))
 
-	case "utf8":
+	case sema.StringTypeUtf8FieldName:
 		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
 
-	case "concat":
+	case sema.StringTypeConcatFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeConcatFunctionType,
@@ -1142,7 +1143,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
-	case "slice":
+	case sema.StringTypeSliceFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeSliceFunctionType,
@@ -1161,7 +1162,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
-	case "decodeHex":
+	case sema.StringTypeDecodeHexFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeDecodeHexFunctionType,
@@ -1173,7 +1174,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
-	case "toLower":
+	case sema.StringTypeToLowerFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeToLowerFunctionType,

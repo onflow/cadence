@@ -437,69 +437,104 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 
 	memberDeclarations := typeDecl.memberDeclarations
 
-	if !canGenerateSimpleType &&
-		len(memberDeclarations) > 0 {
+	if len(memberDeclarations) > 0 {
 
-		// func init() {
-		//   members := []*Member{...}
-		//   t.Members = MembersAsMap(members)
-		//   t.Fields = MembersFieldNames(members)
-		// }
+		if canGenerateSimpleType {
 
-		members := membersExpr(typeDecl.fullTypeName, tyVarName, memberDeclarations)
+			// func init() {
+			//   t.Members = func(t *SimpleType) map[string]MemberResolver {
+			//     return MembersAsResolvers(...)
+			//   }
+			// }
 
-		const membersVariableIdentifier = "members"
+			memberResolversFunc := simpleTypeMemberResolversFunc(typeDecl.fullTypeName, memberDeclarations)
 
-		g.addDecls(
-			&dst.FuncDecl{
-				Name: dst.NewIdent("init"),
-				Type: &dst.FuncType{},
-				Body: &dst.BlockStmt{
-					List: []dst.Stmt{
-						&dst.DeclStmt{
-							Decl: goVarDecl(
-								membersVariableIdentifier,
-								members,
-							),
-						},
-						&dst.AssignStmt{
-							Lhs: []dst.Expr{
-								&dst.SelectorExpr{
-									X:   dst.NewIdent(tyVarName),
-									Sel: dst.NewIdent("Members"),
+			g.addDecls(
+				&dst.FuncDecl{
+					Name: dst.NewIdent("init"),
+					Type: &dst.FuncType{},
+					Body: &dst.BlockStmt{
+						List: []dst.Stmt{
+							&dst.AssignStmt{
+								Lhs: []dst.Expr{
+									&dst.SelectorExpr{
+										X:   dst.NewIdent(tyVarName),
+										Sel: dst.NewIdent("Members"),
+									},
+								},
+								Tok: token.ASSIGN,
+								Rhs: []dst.Expr{
+									memberResolversFunc,
 								},
 							},
-							Tok: token.ASSIGN,
-							Rhs: []dst.Expr{
-								&dst.CallExpr{
-									Fun: dst.NewIdent("MembersAsMap"),
-									Args: []dst.Expr{
-										dst.NewIdent(membersVariableIdentifier),
+						},
+					},
+				},
+			)
+
+		} else {
+
+			// func init() {
+			//   members := []*Member{...}
+			//   t.Members = MembersAsMap(members)
+			//   t.Fields = MembersFieldNames(members)
+			// }
+
+			members := membersExpr(typeDecl.fullTypeName, tyVarName, memberDeclarations)
+
+			const membersVariableIdentifier = "members"
+
+			g.addDecls(
+				&dst.FuncDecl{
+					Name: dst.NewIdent("init"),
+					Type: &dst.FuncType{},
+					Body: &dst.BlockStmt{
+						List: []dst.Stmt{
+							&dst.DeclStmt{
+								Decl: goVarDecl(
+									membersVariableIdentifier,
+									members,
+								),
+							},
+							&dst.AssignStmt{
+								Lhs: []dst.Expr{
+									&dst.SelectorExpr{
+										X:   dst.NewIdent(tyVarName),
+										Sel: dst.NewIdent("Members"),
+									},
+								},
+								Tok: token.ASSIGN,
+								Rhs: []dst.Expr{
+									&dst.CallExpr{
+										Fun: dst.NewIdent("MembersAsMap"),
+										Args: []dst.Expr{
+											dst.NewIdent(membersVariableIdentifier),
+										},
 									},
 								},
 							},
-						},
-						&dst.AssignStmt{
-							Lhs: []dst.Expr{
-								&dst.SelectorExpr{
-									X:   dst.NewIdent(tyVarName),
-									Sel: dst.NewIdent("Fields"),
+							&dst.AssignStmt{
+								Lhs: []dst.Expr{
+									&dst.SelectorExpr{
+										X:   dst.NewIdent(tyVarName),
+										Sel: dst.NewIdent("Fields"),
+									},
 								},
-							},
-							Tok: token.ASSIGN,
-							Rhs: []dst.Expr{
-								&dst.CallExpr{
-									Fun: dst.NewIdent("MembersFieldNames"),
-									Args: []dst.Expr{
-										dst.NewIdent(membersVariableIdentifier),
+								Tok: token.ASSIGN,
+								Rhs: []dst.Expr{
+									&dst.CallExpr{
+										Fun: dst.NewIdent("MembersFieldNames"),
+										Args: []dst.Expr{
+											dst.NewIdent(membersVariableIdentifier),
+										},
 									},
 								},
 							},
 						},
 					},
 				},
-			},
-		)
+			)
+		}
 	}
 
 	return
@@ -1039,15 +1074,6 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 		goKeyValue("Importable", goBoolLit(ty.importable)),
 	}
 
-	if len(ty.memberDeclarations) > 0 {
-		members := simpleTypeMembers(ty.fullTypeName, ty.memberDeclarations)
-
-		elements = append(
-			elements,
-			goKeyValue("Members", members),
-		)
-	}
-
 	return &dst.UnaryExpr{
 		Op: token.AND,
 		X: &dst.CompositeLit{
@@ -1057,7 +1083,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 	}
 }
 
-func simpleTypeMembers(fullTypeName string, declarations []ast.Declaration) dst.Expr {
+func simpleTypeMemberResolversFunc(fullTypeName string, declarations []ast.Declaration) dst.Expr {
 	// func(t *SimpleType) map[string]MemberResolver {
 	//   return MembersAsResolvers(...)
 	// }
