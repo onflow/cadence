@@ -17274,12 +17274,12 @@ func (v *StorageReferenceValue) GetTypeKey(
 	self := v.mustReferencedValue(interpreter, locationRange)
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
-		var access sema.Access = sema.UnauthorizedAccess
-		attachmentTyp, isAttachmentType := key.(*sema.CompositeType)
-		if isAttachmentType && attachmentTyp.AttachmentEntitlementAccess != nil {
-			access = attachmentTyp.AttachmentEntitlementAccess.Domain()
-		}
-		return selfComposite.getTypeKey(interpreter, locationRange, key, access)
+		return selfComposite.getTypeKey(
+			interpreter,
+			locationRange,
+			key,
+			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+		)
 	}
 
 	return self.(TypeIndexableValue).
@@ -17611,12 +17611,12 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 	self := v.mustReferencedValue(interpreter, locationRange)
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
-		var access sema.Access = sema.UnauthorizedAccess
-		attachmentTyp, isAttachmentType := key.(*sema.CompositeType)
-		if isAttachmentType && attachmentTyp.AttachmentEntitlementAccess != nil {
-			access = attachmentTyp.AttachmentEntitlementAccess.Domain()
-		}
-		return selfComposite.getTypeKey(interpreter, locationRange, key, access)
+		return selfComposite.getTypeKey(
+			interpreter,
+			locationRange,
+			key,
+			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+		)
 	}
 
 	return self.(TypeIndexableValue).

@@ -1540,3 +1540,459 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretEntitledAttachments(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic access", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+			}
+			struct S {}
+			access(M) attachment A for S {}
+			fun test(): &A {
+				let s = attach A() to S()
+				return s[A]!
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.Y", "S.test.Z"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("basic call", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+			}
+			struct S {}
+			access(M) attachment A for S {
+				access(Y | Z) fun entitled(): &A {
+					return self
+				} 
+			}
+			fun test(): &A {
+				let s = attach A() to S()
+				return s[A]!.entitled()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.Y", "S.test.Z"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("basic call return base", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+			}
+			struct S {}
+			access(M) attachment A for S {
+				access(Y | Z) fun entitled(): &S {
+					return base
+				} 
+			}
+			fun test(): &S {
+				let s = attach A() to S()
+				return s[A]!.entitled()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.X"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("basic ref access", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement E
+			entitlement F
+			entitlement G
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+				E -> F
+				X -> F
+				E -> G
+			}
+			struct S {}
+			access(M) attachment A for S {}
+			fun test(): &A {
+				let s = attach A() to S()
+				let ref = &s as auth(E) &S
+				return ref[A]!
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.F", "S.test.G"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("basic ref call", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement E
+			entitlement F
+			entitlement G
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+				E -> F
+				X -> F
+				E -> G
+			}
+			struct S {}
+			access(M) attachment A for S {
+				access(F | Z) fun entitled(): &A {
+					return self
+				} 
+			}
+			fun test(): &A {
+				let s = attach A() to S()
+				let ref = &s as auth(E) &S
+				return ref[A]!.entitled()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.F", "S.test.G"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("basic ref call return base", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement E
+			entitlement F
+			entitlement G
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+				E -> F
+				X -> F
+				E -> G
+			}
+			struct S {}
+			access(M) attachment A for S {
+				access(F | Z) fun entitled(): &S {
+					return base
+				} 
+			}
+			fun test(): &S {
+				let s = attach A() to S()
+				let ref = &s as auth(E) &S
+				return ref[A]!.entitled()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.E"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("basic restricted access", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement E
+			entitlement F
+			entitlement G
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+				E -> F
+				X -> F
+				E -> G
+			}
+			struct S: I {}
+			struct interface I {}
+			access(M) attachment A for I {}
+			fun test(): &A {
+				let s = attach A() to S()
+				let ref = &s as auth(E) &{I}
+				return ref[A]!
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.F", "S.test.G"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("storage ref access", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement E
+			entitlement F
+			entitlement G
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+				E -> F
+				X -> F
+				E -> G
+			}
+			resource R {}
+			access(M) attachment A for R {}
+			fun test(): &A {
+				let r <- attach A() to <-create R()
+				account.save(<-r, to: /storage/foo)
+				let ref = account.borrow<auth(E) &R>(from: /storage/foo)!
+				return ref[A]!
+			}
+		`, sema.Config{
+			AttachmentsEnabled: true,
+		})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.F", "S.test.G"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("storage ref call", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement E
+			entitlement F
+			entitlement G
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+				E -> F
+				X -> F
+				E -> G
+			}
+			resource R {}
+			access(M) attachment A for R {
+				access(F | Z) fun entitled(): &A {
+					return self
+				} 
+			}
+			fun test(): &A {
+				let r <- attach A() to <-create R()
+				account.save(<-r, to: /storage/foo)
+				let ref = account.borrow<auth(E) &R>(from: /storage/foo)!
+				return ref[A]!.entitled()
+			}
+		`, sema.Config{
+			AttachmentsEnabled: true,
+		})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.F", "S.test.G"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("storage ref call", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement E
+			entitlement F
+			entitlement G
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+				E -> F
+				X -> F
+				E -> G
+			}
+			resource R {}
+			access(M) attachment A for R {
+				access(F | Z) fun entitled(): &R {
+					return base
+				} 
+			}
+			fun test(): &R {
+				let r <- attach A() to <-create R()
+				account.save(<-r, to: /storage/foo)
+				let ref = account.borrow<auth(E) &R>(from: /storage/foo)!
+				return ref[A]!.entitled()
+			}
+		`, sema.Config{
+			AttachmentsEnabled: true,
+		})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.E"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("fully entitled in init and destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement E
+			entitlement F
+			entitlement G
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+				E -> F
+				X -> F
+				E -> G
+			}
+			resource R {}
+			access(M) attachment A for R {
+				init() {
+					let x = self as! auth(Y, Z, F, G) &A
+					let y = base as! auth(X, E) &R
+				}
+				destroy() {
+					let x = self as! auth(Y, Z, F, G) &A
+					let y = base as! auth(X, E) &R
+				}
+			}
+			fun test() {
+				let r <- attach A() to <-create R()
+				destroy r
+			}
+		`, sema.Config{
+			AttachmentsEnabled: true,
+		})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}

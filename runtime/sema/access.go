@@ -260,7 +260,7 @@ func (e EntitlementMapAccess) Domain() EntitlementSetAccess {
 	for _, relation := range e.Type.Relations {
 		domain[relation.Input] = struct{}{}
 	}
-	return NewEntitlementSetAccess(maps.Keys(domain), Disjunction)
+	return NewEntitlementSetAccess(maps.Keys(domain), Conjunction)
 }
 
 func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
