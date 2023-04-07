@@ -648,6 +648,74 @@ func (v BoolValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	return bool(v) == bool(otherBool)
 }
 
+func (v BoolValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	if v {
+		return false
+	} else {
+		return o
+	}
+}
+
+func (v BoolValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	if v {
+		return o
+	} else {
+		return true
+	}
+}
+
+func (v BoolValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	if v {
+		return !o
+	} else {
+		return false
+	}
+}
+
+func (v BoolValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	if v {
+		return true
+	} else {
+		return !o
+	}
+}
+
 // HashInput returns a byte slice containing:
 // - HashInputTypeBool (1 byte)
 // - 1/0 (1 byte)
