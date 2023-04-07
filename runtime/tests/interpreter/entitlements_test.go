@@ -1250,6 +1250,76 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 		)
 	})
 
+	t.Run("downcasting nested success", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+		entitlement E
+		entitlement F
+		entitlement mapping M {
+			X -> Y
+			E -> F
+		}
+		struct S {
+			access(M) fun foo(): auth(M) &Int? {
+				let x = [&1 as auth(Y) &Int]
+				let y = x as! [auth(M) &Int]
+				return y[0]
+			}
+		}
+		fun test(): Bool {
+			let s = S()
+			let refX = &s as auth(X) &S
+			return refX.foo() != nil
+		}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Equal(
+			t,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("downcasting nested fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+		entitlement E
+		entitlement F
+		entitlement mapping M {
+			X -> Y
+			E -> F
+		}
+		struct S {
+			access(M) fun foo(): auth(M) &Int? {
+				let x = [&1 as auth(Y) &Int]
+				let y = x as! [auth(M) &Int]
+				return y[0]
+			}
+		}
+		fun test(): Bool {
+			let s = S()
+			let refE = &s as auth(E) &S
+			return refE.foo() != nil
+		}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		var forceCastErr interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastErr)
+	})
+
 	t.Run("downcasting fail", func(t *testing.T) {
 
 		t.Parallel()
@@ -1905,7 +1975,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		)
 	})
 
-	t.Run("storage ref call", func(t *testing.T) {
+	t.Run("storage ref call base", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1957,9 +2027,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t, address, true, `
+		inter := parseCheckAndInterpret(t, `
 			entitlement X
 			entitlement Y 
 			entitlement Z 
@@ -1988,11 +2056,47 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 				let r <- attach A() to <-create R()
 				destroy r
 			}
-		`, sema.Config{
-			AttachmentsEnabled: true,
-		})
+		`)
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("composed mapped attachment access", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			entitlement E
+			entitlement F
+			entitlement mapping M {
+				X -> Y
+				E -> F
+			}
+			struct S {
+				fun getA(): auth(F) &A? {
+					return self[A]
+				}
+			}
+			access(M) attachment A for S {}
+			fun test(): &A {
+				let s = attach A() to S()
+				let ref = &s as &S
+				return ref.getA()!
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.Y", "S.test.F"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
 	})
 }
