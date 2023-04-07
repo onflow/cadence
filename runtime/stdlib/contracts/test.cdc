@@ -132,9 +132,18 @@ pub contract Test {
         pub case failed
     }
 
+    /// Result is the interface to be implemented by the various execution
+    /// operations, such as transactions and scripts.
+    ///
+    pub struct interface Result {
+        /// The resulted status of an executed operation.
+        ///
+        pub let status: ResultStatus
+    }
+
     /// The result of a transaction execution.
     ///
-    pub struct TransactionResult {
+    pub struct TransactionResult: Result {
         pub let status: ResultStatus
         pub let error: Error?
 
@@ -146,7 +155,7 @@ pub contract Test {
 
     /// The result of a script execution.
     ///
-    pub struct ScriptResult {
+    pub struct ScriptResult: Result {
         pub let status: ResultStatus
         pub let returnValue: AnyStruct?
         pub let error: Error?
@@ -265,14 +274,7 @@ pub contract Test {
     ///
     pub fun beSucceeded(): Matcher {
         return Matcher(test: fun (value: AnyStruct): Bool {
-            if let result = value as? TransactionResult {
-                return result.status == ResultStatus.succeeded
-            } else if let result = value as? ScriptResult {
-                return result.status == ResultStatus.succeeded
-            } else {
-                panic("expected TransactionResult or ScriptResult argument")
-            }
-            return false
+            return (value as! {Result}).status == ResultStatus.succeeded
         })
     }
 
@@ -282,14 +284,7 @@ pub contract Test {
     ///
     pub fun beFailed(): Matcher {
         return Matcher(test: fun (value: AnyStruct): Bool {
-            if let result = value as? TransactionResult {
-                return result.status == ResultStatus.failed
-            } else if let result = value as? ScriptResult {
-                return result.status == ResultStatus.failed
-            } else {
-                panic("expected TransactionResult or ScriptResult argument")
-            }
-            return false
+            return (value as! {Result}).status == ResultStatus.failed
         })
     }
 
