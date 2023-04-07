@@ -186,6 +186,15 @@ func newValueComparator(interpreter *Interpreter, locationRange LocationRange) a
 	}
 }
 
+// ComparableValue
+type ComparableValue interface {
+	Value
+	Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+}
+
 // ResourceKindedValue
 
 type ResourceKindedValue interface {
@@ -2690,6 +2699,7 @@ func (v *ArrayValue) Slice(
 // NumberValue
 type NumberValue interface {
 	EquatableValue
+	ComparableValue
 	ToInt(locationRange LocationRange) int
 	Negate(*Interpreter, LocationRange) NumberValue
 	Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
@@ -2701,10 +2711,6 @@ type NumberValue interface {
 	SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
 	Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
 	SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
-	LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
-	Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
-	GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
 	ToBigEndianBytes() []byte
 }
 
@@ -3146,7 +3152,7 @@ func (v IntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue, loc
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v IntValue) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3160,7 +3166,7 @@ func (v IntValue) Less(interpreter *Interpreter, other NumberValue, locationRang
 	return AsBoolValue(cmp == -1)
 }
 
-func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3174,7 +3180,7 @@ func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v IntValue) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3189,7 +3195,7 @@ func (v IntValue) Greater(interpreter *Interpreter, other NumberValue, locationR
 
 }
 
-func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3749,7 +3755,7 @@ func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3762,7 +3768,7 @@ func (v Int8Value) Less(interpreter *Interpreter, other NumberValue, locationRan
 	return AsBoolValue(v < o)
 }
 
-func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3775,7 +3781,7 @@ func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v <= o)
 }
 
-func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3788,7 +3794,7 @@ func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(v > o)
 }
 
-func (v Int8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4335,7 +4341,7 @@ func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4348,7 +4354,7 @@ func (v Int16Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4361,7 +4367,7 @@ func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4374,7 +4380,7 @@ func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Int16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4924,7 +4930,7 @@ func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4937,7 +4943,7 @@ func (v Int32Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4950,7 +4956,7 @@ func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4963,7 +4969,7 @@ func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Int32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5512,7 +5518,7 @@ func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5525,7 +5531,7 @@ func (v Int64Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5538,7 +5544,7 @@ func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5552,7 +5558,7 @@ func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 
 }
 
-func (v Int64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6161,7 +6167,7 @@ func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6175,7 +6181,7 @@ func (v Int128Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(cmp == -1)
 }
 
-func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6189,7 +6195,7 @@ func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6203,7 +6209,7 @@ func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(cmp == 1)
 }
 
-func (v Int128Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6847,7 +6853,7 @@ func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6861,7 +6867,7 @@ func (v Int256Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(cmp == -1)
 }
 
-func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6875,7 +6881,7 @@ func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6889,7 +6895,7 @@ func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(cmp == 1)
 }
 
-func (v Int256Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7455,7 +7461,7 @@ func (v UIntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UIntValue) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7469,7 +7475,7 @@ func (v UIntValue) Less(interpreter *Interpreter, other NumberValue, locationRan
 	return AsBoolValue(cmp == -1)
 }
 
-func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7483,7 +7489,7 @@ func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7497,7 +7503,7 @@ func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(cmp == 1)
 }
 
-func (v UIntValue) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7981,7 +7987,7 @@ func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7994,7 +8000,7 @@ func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8007,7 +8013,7 @@ func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8020,7 +8026,7 @@ func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8534,7 +8540,7 @@ func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8547,7 +8553,7 @@ func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8560,7 +8566,7 @@ func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8573,7 +8579,7 @@ func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9046,7 +9052,7 @@ func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9059,7 +9065,7 @@ func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9072,7 +9078,7 @@ func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9085,7 +9091,7 @@ func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9585,7 +9591,7 @@ func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9598,7 +9604,7 @@ func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9611,7 +9617,7 @@ func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9624,7 +9630,7 @@ func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10171,7 +10177,7 @@ func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue,
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10185,7 +10191,7 @@ func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(cmp == -1)
 }
 
-func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10199,7 +10205,7 @@ func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue, loc
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10213,7 +10219,7 @@ func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(cmp == 1)
 }
 
-func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10804,7 +10810,7 @@ func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue,
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10818,7 +10824,7 @@ func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(cmp == -1)
 }
 
-func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10832,7 +10838,7 @@ func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue, loc
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10846,7 +10852,7 @@ func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(cmp == 1)
 }
 
-func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11276,7 +11282,7 @@ func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Numb
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11289,7 +11295,7 @@ func (v Word8Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11302,7 +11308,7 @@ func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11315,7 +11321,7 @@ func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Word8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11692,7 +11698,7 @@ func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11705,7 +11711,7 @@ func (v Word16Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11718,7 +11724,7 @@ func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11731,7 +11737,7 @@ func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v Word16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12111,7 +12117,7 @@ func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12124,7 +12130,7 @@ func (v Word32Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12137,7 +12143,7 @@ func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12150,7 +12156,7 @@ func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v Word32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12554,7 +12560,7 @@ func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12567,7 +12573,7 @@ func (v Word64Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12580,7 +12586,7 @@ func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12593,7 +12599,7 @@ func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v Word64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13138,7 +13144,7 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 	)
 }
 
-func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13151,7 +13157,7 @@ func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13164,7 +13170,7 @@ func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13177,7 +13183,7 @@ func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13635,7 +13641,7 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 	)
 }
 
-func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13648,7 +13654,7 @@ func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13661,7 +13667,7 @@ func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13674,7 +13680,7 @@ func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
