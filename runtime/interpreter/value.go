@@ -2919,6 +2919,7 @@ var _ atree.Storable = IntValue{}
 var _ NumberValue = IntValue{}
 var _ IntegerValue = IntValue{}
 var _ EquatableValue = IntValue{}
+var _ ComparableValue = IntValue{}
 var _ HashableValue = IntValue{}
 var _ MemberAccessibleValue = IntValue{}
 
@@ -3447,6 +3448,7 @@ var _ atree.Storable = Int8Value(0)
 var _ NumberValue = Int8Value(0)
 var _ IntegerValue = Int8Value(0)
 var _ EquatableValue = Int8Value(0)
+var _ ComparableValue = Int8Value(0)
 var _ HashableValue = Int8Value(0)
 
 func (Int8Value) IsValue() {}
@@ -4033,6 +4035,7 @@ var _ atree.Storable = Int16Value(0)
 var _ NumberValue = Int16Value(0)
 var _ IntegerValue = Int16Value(0)
 var _ EquatableValue = Int16Value(0)
+var _ ComparableValue = Int16Value(0)
 var _ HashableValue = Int16Value(0)
 var _ MemberAccessibleValue = Int16Value(0)
 
@@ -4621,6 +4624,7 @@ var _ atree.Storable = Int32Value(0)
 var _ NumberValue = Int32Value(0)
 var _ IntegerValue = Int32Value(0)
 var _ EquatableValue = Int32Value(0)
+var _ ComparableValue = Int32Value(0)
 var _ HashableValue = Int32Value(0)
 var _ MemberAccessibleValue = Int32Value(0)
 
@@ -5207,6 +5211,7 @@ var _ atree.Storable = Int64Value(0)
 var _ NumberValue = Int64Value(0)
 var _ IntegerValue = Int64Value(0)
 var _ EquatableValue = Int64Value(0)
+var _ ComparableValue = Int64Value(0)
 var _ HashableValue = Int64Value(0)
 var _ MemberAccessibleValue = Int64Value(0)
 
@@ -5808,6 +5813,7 @@ var _ atree.Storable = Int128Value{}
 var _ NumberValue = Int128Value{}
 var _ IntegerValue = Int128Value{}
 var _ EquatableValue = Int128Value{}
+var _ ComparableValue = Int128Value{}
 var _ HashableValue = Int128Value{}
 var _ MemberAccessibleValue = Int128Value{}
 
@@ -6496,6 +6502,7 @@ var _ atree.Storable = Int256Value{}
 var _ NumberValue = Int256Value{}
 var _ IntegerValue = Int256Value{}
 var _ EquatableValue = Int256Value{}
+var _ ComparableValue = Int256Value{}
 var _ HashableValue = Int256Value{}
 var _ MemberAccessibleValue = Int256Value{}
 
@@ -7218,6 +7225,7 @@ var _ atree.Storable = UIntValue{}
 var _ NumberValue = UIntValue{}
 var _ IntegerValue = UIntValue{}
 var _ EquatableValue = UIntValue{}
+var _ ComparableValue = UIntValue{}
 var _ HashableValue = UIntValue{}
 var _ MemberAccessibleValue = UIntValue{}
 
@@ -7741,6 +7749,7 @@ var _ atree.Storable = UInt8Value(0)
 var _ NumberValue = UInt8Value(0)
 var _ IntegerValue = UInt8Value(0)
 var _ EquatableValue = UInt8Value(0)
+var _ ComparableValue = UInt8Value(0)
 var _ HashableValue = UInt8Value(0)
 var _ MemberAccessibleValue = UInt8Value(0)
 
@@ -8289,6 +8298,7 @@ var _ atree.Storable = UInt16Value(0)
 var _ NumberValue = UInt16Value(0)
 var _ IntegerValue = UInt16Value(0)
 var _ EquatableValue = UInt16Value(0)
+var _ ComparableValue = UInt16Value(0)
 var _ HashableValue = UInt16Value(0)
 var _ MemberAccessibleValue = UInt16Value(0)
 
@@ -8812,6 +8822,7 @@ var _ atree.Storable = UInt32Value(0)
 var _ NumberValue = UInt32Value(0)
 var _ IntegerValue = UInt32Value(0)
 var _ EquatableValue = UInt32Value(0)
+var _ ComparableValue = UInt32Value(0)
 var _ HashableValue = UInt32Value(0)
 var _ MemberAccessibleValue = UInt32Value(0)
 
@@ -9312,6 +9323,7 @@ var _ atree.Storable = UInt64Value(0)
 var _ NumberValue = UInt64Value(0)
 var _ IntegerValue = UInt64Value(0)
 var _ EquatableValue = UInt64Value(0)
+var _ ComparableValue = UInt64Value(0)
 var _ HashableValue = UInt64Value(0)
 var _ MemberAccessibleValue = UInt64Value(0)
 
@@ -9880,6 +9892,7 @@ var _ atree.Storable = UInt128Value{}
 var _ NumberValue = UInt128Value{}
 var _ IntegerValue = UInt128Value{}
 var _ EquatableValue = UInt128Value{}
+var _ ComparableValue = UInt128Value{}
 var _ HashableValue = UInt128Value{}
 var _ MemberAccessibleValue = UInt128Value{}
 
@@ -10511,6 +10524,7 @@ var _ atree.Storable = UInt256Value{}
 var _ NumberValue = UInt256Value{}
 var _ IntegerValue = UInt256Value{}
 var _ EquatableValue = UInt256Value{}
+var _ ComparableValue = UInt256Value{}
 var _ HashableValue = UInt256Value{}
 var _ MemberAccessibleValue = UInt256Value{}
 
@@ -11112,6 +11126,7 @@ var _ atree.Storable = Word8Value(0)
 var _ NumberValue = Word8Value(0)
 var _ IntegerValue = Word8Value(0)
 var _ EquatableValue = Word8Value(0)
+var _ ComparableValue = Word8Value(0)
 var _ HashableValue = Word8Value(0)
 var _ MemberAccessibleValue = Word8Value(0)
 
@@ -11529,6 +11544,7 @@ var _ atree.Storable = Word16Value(0)
 var _ NumberValue = Word16Value(0)
 var _ IntegerValue = Word16Value(0)
 var _ EquatableValue = Word16Value(0)
+var _ ComparableValue = Word16Value(0)
 var _ HashableValue = Word16Value(0)
 var _ MemberAccessibleValue = Word16Value(0)
 
@@ -11947,6 +11963,7 @@ var _ atree.Storable = Word32Value(0)
 var _ NumberValue = Word32Value(0)
 var _ IntegerValue = Word32Value(0)
 var _ EquatableValue = Word32Value(0)
+var _ ComparableValue = Word32Value(0)
 var _ HashableValue = Word32Value(0)
 var _ MemberAccessibleValue = Word32Value(0)
 
@@ -12366,6 +12383,7 @@ var _ atree.Storable = Word64Value(0)
 var _ NumberValue = Word64Value(0)
 var _ IntegerValue = Word64Value(0)
 var _ EquatableValue = Word64Value(0)
+var _ ComparableValue = Word64Value(0)
 var _ HashableValue = Word64Value(0)
 var _ MemberAccessibleValue = Word64Value(0)
 
@@ -12848,6 +12866,7 @@ var _ atree.Storable = Fix64Value(0)
 var _ NumberValue = Fix64Value(0)
 var _ FixedPointValue = Fix64Value(0)
 var _ EquatableValue = Fix64Value(0)
+var _ ComparableValue = Fix64Value(0)
 var _ HashableValue = Fix64Value(0)
 var _ MemberAccessibleValue = Fix64Value(0)
 
@@ -13383,6 +13402,7 @@ var _ atree.Storable = UFix64Value(0)
 var _ NumberValue = UFix64Value(0)
 var _ FixedPointValue = Fix64Value(0)
 var _ EquatableValue = UFix64Value(0)
+var _ ComparableValue = UFix64Value(0)
 var _ HashableValue = UFix64Value(0)
 var _ MemberAccessibleValue = UFix64Value(0)
 
