@@ -1458,7 +1458,7 @@ var beEmptyMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 				case *interpreter.DictionaryValue:
 					isEmpty = value.Count() == 0
 				default:
-					panic(errors.NewUnexpectedError("expected Array or Dictionary argument"))
+					panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
 				}
 
 				return interpreter.AsBoolValue(isEmpty)
@@ -1512,7 +1512,7 @@ var haveElementCountMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 				case *interpreter.DictionaryValue:
 					matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
 				default:
-					panic(errors.NewUnexpectedError("expected Array or Dictionary argument"))
+					panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
 				}
 
 				return interpreter.AsBoolValue(matchingCount)
@@ -1577,7 +1577,7 @@ var containMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 						element,
 					)
 				default:
-					panic(errors.NewUnexpectedError("expected Array or Dictionary argument"))
+					panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
 				}
 
 				return elementFound

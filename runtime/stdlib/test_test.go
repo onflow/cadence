@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	cdcErrors "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
@@ -976,6 +977,7 @@ func TestTestBeEmptyMatcher(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		assert.ErrorAs(t, err, &cdcErrors.DefaultUserError{})
 		assert.ErrorContains(t, err, "expected Array or Dictionary argument")
 	})
 }
@@ -1066,6 +1068,7 @@ func TestTestHaveElementCountMatcher(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		assert.ErrorAs(t, err, &cdcErrors.DefaultUserError{})
 		assert.ErrorContains(t, err, "expected Array or Dictionary argument")
 	})
 }
@@ -1156,6 +1159,7 @@ func TestTestContainMatcher(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		assert.ErrorAs(t, err, &cdcErrors.DefaultUserError{})
 		assert.ErrorContains(t, err, "expected Array or Dictionary argument")
 	})
 }
