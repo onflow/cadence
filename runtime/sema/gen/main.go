@@ -1067,7 +1067,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 	//	IsResource:    true,
 	//	Storable:      false,
 	//	Equatable:     false,
-	//  Comparable:    false,
+	//	Comparable:    false,
 	//	Exportable:    false,
 	//	Importable:    false,
 	//}
