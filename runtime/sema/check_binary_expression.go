@@ -308,7 +308,6 @@ func (checker *Checker) checkBinaryExpressionNonEquality(
 ) (resultType Type) {
 	resultType = BoolType
 
-	// TODO: Do we want to use IsSameTypeKind for comparing leftType and rightType?
 	if !(leftType.Equal(rightType) && leftType.IsComparable() && rightType.IsComparable()) {
 		if !anyInvalid {
 			checker.report(
