@@ -186,7 +186,6 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 				{sema.BoolType, "1", "2", nil},
 				{sema.BoolType, "1.2", "3.4", nil},
 				{sema.BoolType, "true", "2", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "1.2", "3", []error{
@@ -196,20 +195,15 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "true", "1.2", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "1", "true", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "1.2", "true", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{sema.BoolType, "true", "false", []error{
-					&sema.InvalidBinaryOperandsError{},
-				}},
+				{sema.BoolType, "true", "false", nil},
 			},
 		},
 		{
