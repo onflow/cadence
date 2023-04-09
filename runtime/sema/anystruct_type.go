@@ -28,6 +28,7 @@ var AnyStructType = &SimpleType{
 	// The actual storability of a value is checked at run-time
 	Storable:   true,
 	Equatable:  false,
+	Comparable: false,
 	Exportable: true,
 	// The actual importability is checked at runtime
 	Importable: true,

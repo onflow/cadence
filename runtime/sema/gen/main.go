@@ -149,6 +149,7 @@ type typeDecl struct {
 	storable           bool
 	equatable          bool
 	exportable         bool
+	comparable         bool
 	importable         bool
 	memberDeclarations []ast.Declaration
 	nestedTypes        []*typeDecl
@@ -400,6 +401,15 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 				))
 			}
 			typeDecl.equatable = true
+
+		case "Comparable":
+			if !canGenerateSimpleType {
+				panic(fmt.Errorf(
+					"composite types cannot be explicitly marked as comparable: %s",
+					g.currentTypeID(),
+				))
+			}
+			typeDecl.comparable = true
 
 		case "Exportable":
 			if !canGenerateSimpleType {
@@ -1057,6 +1067,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 	//	IsResource:    true,
 	//	Storable:      false,
 	//	Equatable:     false,
+	//  Comparable:    false,
 	//	Exportable:    false,
 	//	Importable:    false,
 	//}
@@ -1070,6 +1081,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 		goKeyValue("IsResource", goBoolLit(isResource)),
 		goKeyValue("Storable", goBoolLit(ty.storable)),
 		goKeyValue("Equatable", goBoolLit(ty.equatable)),
+		goKeyValue("Comparable", goBoolLit(ty.comparable)),
 		goKeyValue("Exportable", goBoolLit(ty.exportable)),
 		goKeyValue("Importable", goBoolLit(ty.importable)),
 	}

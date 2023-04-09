@@ -1,3 +1,4 @@
+// Code generated from testdata/comparable.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -18,16 +19,17 @@
 
 package sema
 
-// BoolType represents the boolean type
-var BoolType = &SimpleType{
-	Name:          "Bool",
-	QualifiedName: "Bool",
-	TypeID:        "Bool",
-	tag:           BoolTypeTag,
+const TestTypeName = "Test"
+
+var TestType = &SimpleType{
+	Name:          TestTypeName,
+	QualifiedName: TestTypeName,
+	TypeID:        TestTypeName,
+	tag:           TestTypeTag,
 	IsResource:    false,
-	Storable:      true,
-	Equatable:     true,
+	Storable:      false,
+	Equatable:     false,
 	Comparable:    true,
-	Exportable:    true,
-	Importable:    true,
+	Exportable:    false,
+	Importable:    false,
 }
