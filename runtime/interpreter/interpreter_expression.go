@@ -383,37 +383,11 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		}
 		return left.BitwiseRightShift(interpreter, right, locationRange)
 
-	case ast.OperationLess:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.Less(interpreter, right, locationRange)
-
-	case ast.OperationLessEqual:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.LessEqual(interpreter, right, locationRange)
-
-	case ast.OperationGreater:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.Greater(interpreter, right, locationRange)
-
-	case ast.OperationGreaterEqual:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.GreaterEqual(interpreter, right, locationRange)
+	case ast.OperationLess,
+		ast.OperationLessEqual,
+		ast.OperationGreater,
+		ast.OperationGreaterEqual:
+		return interpreter.testComparison(leftValue, rightValue(), expression)
 
 	case ast.OperationEqual:
 		return interpreter.testEqual(leftValue, rightValue(), expression)
@@ -521,6 +495,83 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 			right,
 		),
 	)
+}
+
+func (interpreter *Interpreter) testComparison(left, right Value, expression *ast.BinaryExpression) BoolValue {
+	left = interpreter.Unbox(
+		LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression.Left,
+		},
+		left,
+	)
+
+	right = interpreter.Unbox(
+		LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression.Right,
+		},
+		right,
+	)
+
+	leftComparable, ok := left.(ComparableValue)
+	if !ok {
+		return FalseValue
+	}
+
+	rightComparable, ok := right.(ComparableValue)
+	if !ok {
+		return FalseValue
+	}
+
+	switch expression.Operation {
+	case ast.OperationLess:
+		return leftComparable.Less(
+			interpreter,
+			rightComparable,
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+		)
+
+	case ast.OperationLessEqual:
+		return leftComparable.LessEqual(
+			interpreter,
+			rightComparable,
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+		)
+
+	case ast.OperationGreater:
+		return leftComparable.Greater(
+			interpreter,
+			rightComparable,
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+		)
+
+	case ast.OperationGreaterEqual:
+		return leftComparable.GreaterEqual(
+			interpreter,
+			rightComparable,
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+		)
+
+	default:
+		panic(&unsupportedOperation{
+			kind:      common.OperationKindBinary,
+			operation: expression.Operation,
+			Range:     ast.NewUnmeteredRangeFromPositioned(expression),
+		})
+	}
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) Value {
