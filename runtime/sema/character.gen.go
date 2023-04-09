@@ -41,7 +41,7 @@ var CharacterType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
-	Comparable:    true,
+	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
 }
