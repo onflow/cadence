@@ -9264,6 +9264,40 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunctionValue,
 			)
 		},
+		func() interpreter.Value {
+			storageCapabilities := interpreter.NewAuthAccountStorageCapabilitiesValue(
+				gauge,
+				addressValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+			)
+			return interpreter.NewEphemeralReferenceValue(
+				gauge,
+				false,
+				storageCapabilities,
+				sema.AuthAccountTypeStorageCapabilitiesFieldType,
+			)
+		},
+		func() interpreter.Value {
+			accountCapabilities := interpreter.NewAuthAccountAccountCapabilitiesValue(
+				gauge,
+				addressValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+			)
+			return interpreter.NewEphemeralReferenceValue(
+				gauge,
+				false,
+				accountCapabilities,
+				sema.AuthAccountTypeAccountCapabilitiesFieldType,
+			)
+		},
 	)
 }
 
@@ -9308,6 +9342,20 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 						common.ZeroAddress,
 					)
 				},
+			)
+		},
+		func() interpreter.Value {
+			storageCapabilities := interpreter.NewPublicAccountStorageCapabilitiesValue(
+				gauge,
+				addressValue,
+				panicFunctionValue,
+				panicFunctionValue,
+			)
+			return interpreter.NewEphemeralReferenceValue(
+				gauge,
+				false,
+				storageCapabilities,
+				sema.PublicAccountTypeStorageCapabilitiesFieldType,
 			)
 		},
 	)

@@ -77,6 +77,16 @@ const PublicAccountTypeKeysFieldDocString = `
 The keys assigned to the account.
 `
 
+const PublicAccountTypeStorageCapabilitiesFieldName = "storageCapabilities"
+
+var PublicAccountTypeStorageCapabilitiesFieldType = &ReferenceType{
+	Type: PublicAccountStorageCapabilitiesType,
+}
+
+const PublicAccountTypeStorageCapabilitiesFieldDocString = `
+The storage capabilities of the account.
+`
+
 const PublicAccountTypePublicPathsFieldName = "publicPaths"
 
 var PublicAccountTypePublicPathsFieldType = &VariableSizedType{
@@ -391,6 +401,111 @@ func init() {
 	PublicAccountKeysType.Fields = MembersFieldNames(members)
 }
 
+const PublicAccountStorageCapabilitiesTypeGetFunctionName = "get"
+
+var PublicAccountStorageCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
+	Name: "T",
+	TypeBound: &ReferenceType{
+		Type: AnyType,
+	},
+}
+
+var PublicAccountStorageCapabilitiesTypeGetFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		PublicAccountStorageCapabilitiesTypeGetFunctionTypeParameterT,
+	},
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(PublicPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MustInstantiate(
+				&CapabilityType{},
+				&GenericType{
+					TypeParameter: PublicAccountStorageCapabilitiesTypeGetFunctionTypeParameterT,
+				},
+			),
+		},
+	),
+}
+
+const PublicAccountStorageCapabilitiesTypeGetFunctionDocString = `
+get returns the storage capability at the given path, if one was stored there.
+`
+
+const PublicAccountStorageCapabilitiesTypeBorrowFunctionName = "borrow"
+
+var PublicAccountStorageCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
+	Name: "T",
+	TypeBound: &ReferenceType{
+		Type: AnyType,
+	},
+}
+
+var PublicAccountStorageCapabilitiesTypeBorrowFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		PublicAccountStorageCapabilitiesTypeBorrowFunctionTypeParameterT,
+	},
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(PublicPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: &GenericType{
+				TypeParameter: PublicAccountStorageCapabilitiesTypeBorrowFunctionTypeParameterT,
+			},
+		},
+	),
+}
+
+const PublicAccountStorageCapabilitiesTypeBorrowFunctionDocString = `
+borrow gets the storage capability at the given path, and borrows the capability if it exists.
+
+Returns nil if the capability does not exist or cannot be borrowed using the given type.
+The function is equivalent to ` + "`get(path)?.borrow()`" + `.
+`
+
+const PublicAccountStorageCapabilitiesTypeName = "StorageCapabilities"
+
+var PublicAccountStorageCapabilitiesType = func() *CompositeType {
+	var t = &CompositeType{
+		Identifier:         PublicAccountStorageCapabilitiesTypeName,
+		Kind:               common.CompositeKindStructure,
+		importable:         false,
+		hasComputedMembers: true,
+	}
+
+	return t
+}()
+
+func init() {
+	var members = []*Member{
+		NewUnmeteredPublicFunctionMember(
+			PublicAccountStorageCapabilitiesType,
+			PublicAccountStorageCapabilitiesTypeGetFunctionName,
+			PublicAccountStorageCapabilitiesTypeGetFunctionType,
+			PublicAccountStorageCapabilitiesTypeGetFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			PublicAccountStorageCapabilitiesType,
+			PublicAccountStorageCapabilitiesTypeBorrowFunctionName,
+			PublicAccountStorageCapabilitiesTypeBorrowFunctionType,
+			PublicAccountStorageCapabilitiesTypeBorrowFunctionDocString,
+		),
+	}
+
+	PublicAccountStorageCapabilitiesType.Members = MembersAsMap(members)
+	PublicAccountStorageCapabilitiesType.Fields = MembersFieldNames(members)
+}
+
 const PublicAccountTypeName = "PublicAccount"
 
 var PublicAccountType = func() *CompositeType {
@@ -403,6 +518,7 @@ var PublicAccountType = func() *CompositeType {
 
 	t.SetNestedType(PublicAccountContractsTypeName, PublicAccountContractsType)
 	t.SetNestedType(PublicAccountKeysTypeName, PublicAccountKeysType)
+	t.SetNestedType(PublicAccountStorageCapabilitiesTypeName, PublicAccountStorageCapabilitiesType)
 	return t
 }()
 
@@ -449,6 +565,12 @@ func init() {
 			PublicAccountTypeKeysFieldName,
 			PublicAccountTypeKeysFieldType,
 			PublicAccountTypeKeysFieldDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			PublicAccountType,
+			PublicAccountTypeStorageCapabilitiesFieldName,
+			PublicAccountTypeStorageCapabilitiesFieldType,
+			PublicAccountTypeStorageCapabilitiesFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			PublicAccountType,

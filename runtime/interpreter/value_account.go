@@ -34,6 +34,8 @@ var authAccountFieldNames = []string{
 	sema.AuthAccountTypeContractsFieldName,
 	sema.AuthAccountTypeKeysFieldName,
 	sema.AuthAccountTypeInboxFieldName,
+	sema.AuthAccountTypeStorageCapabilitiesFieldName,
+	sema.AuthAccountTypeAccountCapabilitiesFieldName,
 }
 
 // NewAuthAccountValue constructs an auth account value.
@@ -49,6 +51,8 @@ func NewAuthAccountValue(
 	contractsConstructor func() Value,
 	keysConstructor func() Value,
 	inboxConstructor func() Value,
+	storageCapabilitiesConstructor func() Value,
+	accountCapabilitiesConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
@@ -66,6 +70,8 @@ func NewAuthAccountValue(
 	var contracts Value
 	var keys Value
 	var inbox Value
+	var storageCapabilities Value
+	var accountCapabilities Value
 	var forEachStoredFunction *HostFunctionValue
 	var forEachPublicFunction *HostFunctionValue
 	var forEachPrivateFunction *HostFunctionValue
@@ -86,16 +92,30 @@ func NewAuthAccountValue(
 				contracts = contractsConstructor()
 			}
 			return contracts
+
 		case sema.AuthAccountTypeKeysFieldName:
 			if keys == nil {
 				keys = keysConstructor()
 			}
 			return keys
+
 		case sema.AuthAccountTypeInboxFieldName:
 			if inbox == nil {
 				inbox = inboxConstructor()
 			}
 			return inbox
+
+		case sema.AuthAccountTypeStorageCapabilitiesFieldName:
+			if storageCapabilities == nil {
+				storageCapabilities = storageCapabilitiesConstructor()
+			}
+			return storageCapabilities
+
+		case sema.AuthAccountTypeAccountCapabilitiesFieldName:
+			if accountCapabilities == nil {
+				accountCapabilities = accountCapabilitiesConstructor()
+			}
+			return accountCapabilities
 
 		case sema.AuthAccountTypePublicPathsFieldName:
 			return inter.publicAccountPaths(address, locationRange)
@@ -243,6 +263,7 @@ var publicAccountFieldNames = []string{
 	sema.PublicAccountTypeAddressFieldName,
 	sema.PublicAccountTypeContractsFieldName,
 	sema.PublicAccountTypeKeysFieldName,
+	sema.PublicAccountTypeStorageCapabilitiesFieldName,
 }
 
 // NewPublicAccountValue constructs a public account value.
@@ -255,6 +276,7 @@ func NewPublicAccountValue(
 	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
 	keysConstructor func() Value,
 	contractsConstructor func() Value,
+	storageCapabilitiesConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
@@ -269,6 +291,7 @@ func NewPublicAccountValue(
 
 	var keys Value
 	var contracts Value
+	var storageCapabilities Value
 	var forEachPublicFunction *HostFunctionValue
 	var getLinkTargetFunction *HostFunctionValue
 
@@ -285,6 +308,12 @@ func NewPublicAccountValue(
 				contracts = contractsConstructor()
 			}
 			return contracts
+
+		case sema.PublicAccountTypeStorageCapabilitiesFieldName:
+			if storageCapabilities == nil {
+				storageCapabilities = storageCapabilitiesConstructor()
+			}
+			return storageCapabilities
 
 		case sema.PublicAccountTypePublicPathsFieldName:
 			return inter.publicAccountPaths(address, locationRange)

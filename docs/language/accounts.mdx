@@ -33,6 +33,9 @@ pub struct PublicAccount {
     /// The keys assigned to the account.
     pub let keys: PublicAccount.Keys
 
+    /// The storage capabilities of the account.
+    pub let storageCapabilities: &PublicAccount.StorageCapabilities
+
     /// All public paths of this account.
     pub let publicPaths: [PublicPath]
 
@@ -90,6 +93,17 @@ pub struct PublicAccount {
         /// The total number of unrevoked keys in this account.
         pub let count: UInt64
     }
+
+    pub struct StorageCapabilities {
+        /// get returns the storage capability at the given path, if one was stored there.
+        fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+
+        /// borrow gets the storage capability at the given path, and borrows the capability if it exists.
+        ///
+        /// Returns nil if the capability does not exist or cannot be borrowed using the given type.
+        /// The function is equivalent to `get(path)?.borrow()`.
+        fun borrow<T: &Any>(_ path: PublicPath): T?
+    }
 }
 ```
 
@@ -138,6 +152,12 @@ pub struct AuthAccount {
 
     /// The inbox allows bootstrapping (sending and receiving) capabilities.
     pub let inbox: AuthAccount.Inbox
+
+    /// The storage capabilities of the account.
+    pub let storageCapabilities: &AuthAccount.StorageCapabilities
+
+    /// The account capabilities of the account.
+    pub let accountCapabilities: &AuthAccount.AccountCapabilities
 
     /// All public paths of this account.
     pub let publicPaths: [PublicPath]
@@ -407,6 +427,52 @@ pub struct AuthAccount {
         ///
         /// Errors if the Capability under that name does not match the provided type.
         pub fun claim<T: &Any>(_ name: String, provider: Address): Capability<T>?
+    }
+
+    pub struct StorageCapabilities {
+        /// get returns the storage capability at the given path, if one was stored there.
+        pub fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+
+        /// borrow gets the storage capability at the given path, and borrows the capability if it exists.
+        ///
+        /// Returns nil if the capability does not exist or cannot be borrowed using the given type.
+        ///
+        /// The function is equivalent to `get(path)?.borrow()`.
+        pub fun borrow<T: &Any>(_ path: PublicPath): T?
+
+        /// Get the storage capability controller for the capability with the specified ID.
+        ///
+        /// Returns nil if the ID does not reference an existing storage capability.
+        pub fun getController(byCapabilityID: UInt64): &StorageCapabilityController?
+
+        /// Get all storage capability controllers for capabilities that target this storage path
+        pub fun getControllers(forPath: StoragePath): [&StorageCapabilityController]
+
+        /// Iterate through all storage capability controllers for capabilities that target this storage path.
+        ///
+        /// Returning false from the function stops the iteration.
+        pub fun forEachController(forPath: StoragePath, function: ((&StorageCapabilityController): Bool))
+
+        /// Issue/create a new storage capability.
+        pub fun issue<T: &Any>(_ path: StoragePath): Capability<T>
+    }
+
+    pub struct AccountCapabilities {
+        /// Get capability controller for capability with the specified ID.
+        ///
+        /// Returns nil if the ID does not reference an existing account capability.
+        pub fun getController(byCapabilityID: UInt64): &AccountCapabilityController?
+
+        /// Get all capability controllers for all account capabilities.
+        pub fun getControllers(): [&AccountCapabilityController]
+
+        /// Iterate through all account capability controllers for all account capabilities.
+        ///
+        /// Returning false from the function stops the iteration.
+        pub fun forEachController(_ function: ((&AccountCapabilityController): Bool))
+
+        /// Issue/create a new account capability.
+        pub fun issue<T: &AuthAccount>(): Capability<T>
     }
 }
 ```

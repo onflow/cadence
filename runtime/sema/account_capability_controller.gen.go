@@ -19,11 +19,6 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
-
 const AccountCapabilityControllerTypeBorrowTypeFieldName = "borrowType"
 
 var AccountCapabilityControllerTypeBorrowTypeFieldType = MetaType
@@ -74,56 +69,29 @@ var AccountCapabilityControllerType = &SimpleType{
 	Equatable:     false,
 	Exportable:    false,
 	Importable:    false,
-	Members: func(t *SimpleType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			AccountCapabilityControllerTypeBorrowTypeFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
+}
 
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						AccountCapabilityControllerTypeBorrowTypeFieldType,
-						AccountCapabilityControllerTypeBorrowTypeFieldDocString,
-					)
-				},
-			},
-			AccountCapabilityControllerTypeCapabilityIDFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						AccountCapabilityControllerTypeCapabilityIDFieldType,
-						AccountCapabilityControllerTypeCapabilityIDFieldDocString,
-					)
-				},
-			},
-			AccountCapabilityControllerTypeDeleteFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						AccountCapabilityControllerTypeDeleteFunctionType,
-						AccountCapabilityControllerTypeDeleteFunctionDocString,
-					)
-				},
-			},
-		}
-	},
+func init() {
+	AccountCapabilityControllerType.Members = func(t *SimpleType) map[string]MemberResolver {
+		return MembersAsResolvers([]*Member{
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				AccountCapabilityControllerTypeBorrowTypeFieldName,
+				AccountCapabilityControllerTypeBorrowTypeFieldType,
+				AccountCapabilityControllerTypeBorrowTypeFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				AccountCapabilityControllerTypeCapabilityIDFieldName,
+				AccountCapabilityControllerTypeCapabilityIDFieldType,
+				AccountCapabilityControllerTypeCapabilityIDFieldDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				AccountCapabilityControllerTypeDeleteFunctionName,
+				AccountCapabilityControllerTypeDeleteFunctionType,
+				AccountCapabilityControllerTypeDeleteFunctionDocString,
+			),
+		})
+	}
 }

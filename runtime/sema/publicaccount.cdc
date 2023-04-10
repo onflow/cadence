@@ -22,6 +22,9 @@ pub struct PublicAccount {
     /// The keys assigned to the account.
     pub let keys: PublicAccount.Keys
 
+    /// The storage capabilities of the account.
+    pub let storageCapabilities: &PublicAccount.StorageCapabilities
+
     /// All public paths of this account.
     pub let publicPaths: [PublicPath]
 
@@ -78,5 +81,16 @@ pub struct PublicAccount {
 
         /// The total number of unrevoked keys in this account.
         pub let count: UInt64
+    }
+
+    pub struct StorageCapabilities {
+        /// get returns the storage capability at the given path, if one was stored there.
+        fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+
+        /// borrow gets the storage capability at the given path, and borrows the capability if it exists.
+        ///
+        /// Returns nil if the capability does not exist or cannot be borrowed using the given type.
+        /// The function is equivalent to `get(path)?.borrow()`.
+        fun borrow<T: &Any>(_ path: PublicPath): T?
     }
 }

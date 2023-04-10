@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// AuthAccountKeys
+// AuthAccount.Keys
 
 var authAccountKeysTypeID = sema.AuthAccountKeysType.ID()
 var authAccountKeysStaticType StaticType = PrimitiveStaticTypeAuthAccountKeys

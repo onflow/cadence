@@ -19,11 +19,6 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
-
 const StorageCapabilityControllerTypeBorrowTypeFieldName = "borrowType"
 
 var StorageCapabilityControllerTypeBorrowTypeFieldType = MetaType
@@ -105,88 +100,41 @@ var StorageCapabilityControllerType = &SimpleType{
 	Equatable:     false,
 	Exportable:    false,
 	Importable:    false,
-	Members: func(t *SimpleType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			StorageCapabilityControllerTypeBorrowTypeFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
+}
 
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						StorageCapabilityControllerTypeBorrowTypeFieldType,
-						StorageCapabilityControllerTypeBorrowTypeFieldDocString,
-					)
-				},
-			},
-			StorageCapabilityControllerTypeCapabilityIDFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						StorageCapabilityControllerTypeCapabilityIDFieldType,
-						StorageCapabilityControllerTypeCapabilityIDFieldDocString,
-					)
-				},
-			},
-			StorageCapabilityControllerTypeDeleteFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						StorageCapabilityControllerTypeDeleteFunctionType,
-						StorageCapabilityControllerTypeDeleteFunctionDocString,
-					)
-				},
-			},
-			StorageCapabilityControllerTypeTargetFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						StorageCapabilityControllerTypeTargetFunctionType,
-						StorageCapabilityControllerTypeTargetFunctionDocString,
-					)
-				},
-			},
-			StorageCapabilityControllerTypeRetargetFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						StorageCapabilityControllerTypeRetargetFunctionType,
-						StorageCapabilityControllerTypeRetargetFunctionDocString,
-					)
-				},
-			},
-		}
-	},
+func init() {
+	StorageCapabilityControllerType.Members = func(t *SimpleType) map[string]MemberResolver {
+		return MembersAsResolvers([]*Member{
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				StorageCapabilityControllerTypeBorrowTypeFieldName,
+				StorageCapabilityControllerTypeBorrowTypeFieldType,
+				StorageCapabilityControllerTypeBorrowTypeFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				StorageCapabilityControllerTypeCapabilityIDFieldName,
+				StorageCapabilityControllerTypeCapabilityIDFieldType,
+				StorageCapabilityControllerTypeCapabilityIDFieldDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StorageCapabilityControllerTypeDeleteFunctionName,
+				StorageCapabilityControllerTypeDeleteFunctionType,
+				StorageCapabilityControllerTypeDeleteFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StorageCapabilityControllerTypeTargetFunctionName,
+				StorageCapabilityControllerTypeTargetFunctionType,
+				StorageCapabilityControllerTypeTargetFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StorageCapabilityControllerTypeRetargetFunctionName,
+				StorageCapabilityControllerTypeRetargetFunctionType,
+				StorageCapabilityControllerTypeRetargetFunctionDocString,
+			),
+		})
+	}
 }

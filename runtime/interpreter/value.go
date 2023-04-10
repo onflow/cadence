@@ -17359,12 +17359,12 @@ func NewUnmeteredEphemeralReferenceValue(
 }
 
 func NewEphemeralReferenceValue(
-	interpreter *Interpreter,
+	gauge common.MemoryGauge,
 	authorized bool,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
+	common.UseMemory(gauge, common.EphemeralReferenceValueMemoryUsage)
 	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
 }
 
