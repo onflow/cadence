@@ -113,9 +113,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -128,9 +129,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("attachment", func(t *testing.T) {
@@ -143,9 +145,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("interface", func(t *testing.T) {
@@ -158,9 +161,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("contract", func(t *testing.T) {
@@ -173,9 +177,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("event", func(t *testing.T) {
@@ -188,9 +193,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("enum", func(t *testing.T) {
@@ -203,9 +209,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("simple type", func(t *testing.T) {
@@ -2985,8 +2992,14 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		contract C {
-			entitlement mapping E {}
-			access(E) attachment A for AnyStruct {}
+			entitlement X 
+			entitlement Y
+			entitlement mapping E {
+				X -> Y
+			}	
+			access(E) attachment A for AnyStruct {
+				access(Y) fun foo() {}
+			}
 		}
 		`)
 

@@ -466,19 +466,6 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 		)
 	}
 
-	checker.Elaboration.SetEntitlementMapDeclarationType(declaration, entitlementMapType)
-	checker.Elaboration.SetEntitlementMapTypeDeclaration(entitlementMapType, declaration)
-
-	return entitlementMapType
-}
-
-func (checker *Checker) declareEntitlementMappingElements(declaration *ast.EntitlementMappingDeclaration) {
-
-	entitlementMapType := checker.Elaboration.EntitlementMapDeclarationType(declaration)
-	if entitlementMapType == nil {
-		panic(errors.NewUnreachableError())
-	}
-
 	entitlementRelations := make([]EntitlementRelation, 0, len(declaration.Associations))
 
 	for _, association := range declaration.Associations {
@@ -504,6 +491,11 @@ func (checker *Checker) declareEntitlementMappingElements(declaration *ast.Entit
 	}
 
 	entitlementMapType.Relations = entitlementRelations
+
+	checker.Elaboration.SetEntitlementMapDeclarationType(declaration, entitlementMapType)
+	checker.Elaboration.SetEntitlementMapTypeDeclaration(entitlementMapType, declaration)
+
+	return entitlementMapType
 }
 
 func (checker *Checker) VisitEntitlementMappingDeclaration(declaration *ast.EntitlementMappingDeclaration) (_ struct{}) {
