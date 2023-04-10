@@ -776,12 +776,7 @@ func (v *StorageCapabilityValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode ID at array index encodedStorageCapabilityValueIDFieldKey
-	err = e.CBOR.EncodeUint64(uint64(v.ID))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return e.CBOR.EncodeUint64(uint64(v.ID))
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
