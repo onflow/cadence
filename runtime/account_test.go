@@ -2645,7 +2645,10 @@ func TestRuntimeAccountLink(t *testing.T) {
 		require.Equal(t,
 			[]cadence.Value{
 				cadence.NewAddress(common.MustBytesToAddress([]byte{0x1})),
-				cadence.NewPath("private", "foo"),
+				cadence.Path{
+					Domain:     common.PathDomainPrivate,
+					Identifier: "foo",
+				},
 			},
 			events[0].Fields,
 		)
@@ -2886,7 +2889,10 @@ func TestRuntimeAccountLink(t *testing.T) {
 		require.Equal(t,
 			[]cadence.Value{
 				cadence.NewAddress(common.MustBytesToAddress([]byte{0x1})),
-				cadence.NewPath("private", "foo"),
+				cadence.Path{
+					Domain:     common.PathDomainPrivate,
+					Identifier: "foo",
+				},
 			},
 			events[0].Fields,
 		)
@@ -2993,7 +2999,10 @@ func TestRuntimeAccountLink(t *testing.T) {
 		require.Equal(t,
 			[]cadence.Value{
 				cadence.NewAddress(common.MustBytesToAddress([]byte{0x1})),
-				cadence.NewPath("private", "foo"),
+				cadence.Path{
+					Domain:     common.PathDomainPrivate,
+					Identifier: "foo",
+				},
 			},
 			events[0].Fields,
 		)
