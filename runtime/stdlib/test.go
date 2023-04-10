@@ -1528,7 +1528,7 @@ const containMatcherFunctionName = "contain"
 const containMatcherFunctionDocString = `
 Returns a matcher that succeeds if the tested value is an array that contains
 a value that is equal to the given value, or the tested value is a dictionary
-that contains an entry where the value is equal to the given value.
+that contains an entry where the key is equal to the given value.
 `
 
 var containMatcherFunctionType = func() *sema.FunctionType {
