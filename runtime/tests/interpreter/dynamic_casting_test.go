@@ -3507,16 +3507,18 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		sema.AnyStructType,
 	}
 
-	capabilityValue := &interpreter.StorageCapabilityValue{
-		Address: interpreter.AddressValue{},
-		Path:    interpreter.EmptyPathValue,
-		BorrowType: interpreter.ConvertSemaToStaticType(
+	capabilityValue := interpreter.NewUnmeteredStorageCapabilityValue(
+		// TODO:
+		interpreter.TodoCapabilityID,
+		interpreter.AddressValue{},
+		interpreter.EmptyPathValue,
+		interpreter.ConvertSemaToStaticType(
 			nil,
 			&sema.ReferenceType{
 				Type: structType,
 			},
 		),
-	}
+	)
 
 	capabilityValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "cap",

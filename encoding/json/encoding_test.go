@@ -2527,16 +2527,17 @@ func TestEncodeCapability(t *testing.T) {
 
 	t.Parallel()
 
+	path, err := cadence.NewPath(common.PathDomainStorage, "foo")
+	require.NoError(t, err)
+
 	testEncodeAndDecode(
 		t,
-		cadence.StorageCapability{
-			Path: cadence.Path{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			BorrowType: cadence.IntType{},
-		},
+		cadence.NewStorageCapability(
+			6,
+			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			path,
+			cadence.IntType{},
+		),
 		// language=json
 		`
           {
@@ -2552,7 +2553,8 @@ func TestEncodeCapability(t *testing.T) {
               "borrowType": {
                 "kind": "Int"
               },
-              "address": "0x0000000102030405"
+              "address": "0x0000000102030405",
+              "id": "6"
             }
           }
         `,

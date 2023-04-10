@@ -17943,6 +17943,8 @@ func accountGetCapabilityFunction(
 
 			return NewStorageCapabilityValue(
 				gauge,
+				// TODO:
+				TodoCapabilityID,
 				addressValue,
 				path,
 				borrowStaticType,
@@ -18212,14 +18214,17 @@ type StorageCapabilityValue struct {
 	BorrowType StaticType
 	Path       PathValue
 	Address    AddressValue
+	ID         UInt64Value
 }
 
 func NewUnmeteredStorageCapabilityValue(
+	id UInt64Value,
 	address AddressValue,
 	path PathValue,
 	borrowType StaticType,
 ) *StorageCapabilityValue {
 	return &StorageCapabilityValue{
+		ID:         id,
 		Address:    address,
 		Path:       path,
 		BorrowType: borrowType,
@@ -18228,13 +18233,14 @@ func NewUnmeteredStorageCapabilityValue(
 
 func NewStorageCapabilityValue(
 	memoryGauge common.MemoryGauge,
+	id UInt64Value,
 	address AddressValue,
 	path PathValue,
 	borrowType StaticType,
 ) *StorageCapabilityValue {
 	// Constant because its constituents are already metered.
 	common.UseMemory(memoryGauge, common.StorageCapabilityValueMemoryUsage)
-	return NewUnmeteredStorageCapabilityValue(address, path, borrowType)
+	return NewUnmeteredStorageCapabilityValue(id, address, path, borrowType)
 }
 
 var _ Value = &StorageCapabilityValue{}
@@ -18249,6 +18255,7 @@ func (v *StorageCapabilityValue) Accept(interpreter *Interpreter, visitor Visito
 }
 
 func (v *StorageCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+	walkChild(v.ID)
 	walkChild(v.Address)
 	walkChild(v.Path)
 }
@@ -18275,6 +18282,7 @@ func (v *StorageCapabilityValue) RecursiveString(seenReferences SeenReferences) 
 	}
 	return format.StorageCapability(
 		borrowType,
+		v.ID.RecursiveString(seenReferences),
 		v.Address.RecursiveString(seenReferences),
 		v.Path.RecursiveString(seenReferences),
 	)
@@ -18290,6 +18298,7 @@ func (v *StorageCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, s
 
 	return format.StorageCapability(
 		borrowType,
+		v.ID.MeteredString(memoryGauge, seenReferences),
 		v.Address.MeteredString(memoryGauge, seenReferences),
 		v.Path.MeteredString(memoryGauge, seenReferences),
 	)
@@ -18315,6 +18324,9 @@ func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationR
 
 	case sema.CapabilityTypeAddressFieldName:
 		return v.Address
+
+	case sema.CapabilityTypeIDFieldName:
+		return v.ID
 	}
 
 	return nil
@@ -18354,7 +18366,8 @@ func (v *StorageCapabilityValue) Equal(interpreter *Interpreter, locationRange L
 		return false
 	}
 
-	return otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
+	return otherCapability.ID == v.ID &&
+		otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
 		otherCapability.Path.Equal(interpreter, locationRange, v.Path)
 }
 
@@ -18398,11 +18411,12 @@ func (v *StorageCapabilityValue) Transfer(
 }
 
 func (v *StorageCapabilityValue) Clone(interpreter *Interpreter) Value {
-	return &StorageCapabilityValue{
-		Address:    v.Address.Clone(interpreter).(AddressValue),
-		Path:       v.Path.Clone(interpreter).(PathValue),
-		BorrowType: v.BorrowType,
-	}
+	return NewUnmeteredStorageCapabilityValue(
+		v.ID,
+		v.Address.Clone(interpreter).(AddressValue),
+		v.Path.Clone(interpreter).(PathValue),
+		v.BorrowType,
+	)
 }
 
 func (v *StorageCapabilityValue) DeepRemove(interpreter *Interpreter) {

@@ -642,8 +642,9 @@ func exportStorageCapabilityValue(
 
 	return cadence.NewMeteredStorageCapability(
 		inter,
-		path,
+		cadence.NewMeteredUInt64(inter, uint64(v.ID)),
 		cadence.NewMeteredAddress(inter, v.Address),
+		path,
 		ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{}),
 	), nil
 }
@@ -819,8 +820,9 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		return i.importTypeValue(v.StaticType)
 	case cadence.StorageCapability:
 		return i.importStorageCapability(
-			v.Path,
+			v.ID,
 			v.Address,
+			v.Path,
 			v.BorrowType,
 		)
 	case cadence.Contract:
@@ -1089,8 +1091,9 @@ func (i valueImporter) importTypeValue(v cadence.Type) (interpreter.TypeValue, e
 }
 
 func (i valueImporter) importStorageCapability(
-	path cadence.Path,
+	id cadence.UInt64,
 	address cadence.Address,
+	path cadence.Path,
 	borrowType cadence.Type,
 ) (
 	*interpreter.StorageCapabilityValue,
@@ -1108,6 +1111,7 @@ func (i valueImporter) importStorageCapability(
 
 	return interpreter.NewStorageCapabilityValue(
 		inter,
+		i.importUInt64(id),
 		interpreter.NewAddressValue(
 			inter,
 			common.Address(address),
@@ -1115,7 +1119,6 @@ func (i valueImporter) importStorageCapability(
 		i.importPathValue(path),
 		ImportType(inter, borrowType),
 	), nil
-
 }
 
 func (i valueImporter) importOptionalValue(

@@ -3671,6 +3671,9 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 	)
 }
 
+// TODO:
+const TodoCapabilityID = 0
+
 func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) *HostFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
@@ -3731,6 +3734,8 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 				interpreter,
 				NewStorageCapabilityValue(
 					interpreter,
+					// TODO:
+					TodoCapabilityID,
 					addressValue,
 					newCapabilityPath,
 					borrowStaticType,
@@ -3825,6 +3830,8 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 				interpreter,
 				NewStorageCapabilityValue(
 					interpreter,
+					// TODO:
+					TodoCapabilityID,
 					addressValue,
 					newCapabilityPath,
 					authAccountReferenceStaticType,

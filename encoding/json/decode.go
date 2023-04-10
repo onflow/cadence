@@ -1279,8 +1279,9 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.StorageCapability {
 
 	return cadence.NewMeteredStorageCapability(
 		d.gauge,
-		path,
+		d.decodeUInt64(obj.Get(idKey)),
 		d.decodeAddress(obj.Get(addressKey)),
+		path,
 		d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
 	)
 }

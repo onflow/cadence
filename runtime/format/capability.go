@@ -22,15 +22,16 @@ import (
 	"fmt"
 )
 
-func StorageCapability(borrowType string, address string, path string) string {
+func StorageCapability(borrowType string, id string, address string, path string) string {
 	var typeArgument string
 	if borrowType != "" {
 		typeArgument = fmt.Sprintf("<%s>", borrowType)
 	}
 
 	return fmt.Sprintf(
-		"Capability%s(address: %s, path: %s)",
+		"Capability%s(id: %s, address: %s, path: %s)",
 		typeArgument,
+		id,
 		address,
 		path,
 	)

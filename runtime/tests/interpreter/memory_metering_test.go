@@ -9039,6 +9039,8 @@ func TestInterpretValueStringConversion(t *testing.T) {
 
 		testValueStringConversion(t, script,
 			interpreter.NewUnmeteredStorageCapabilityValue(
+				// TODO:
+				interpreter.TodoCapabilityID,
 				interpreter.AddressValue{1},
 				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
