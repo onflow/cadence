@@ -383,7 +383,7 @@ func TestExportValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			expected: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 		},
@@ -813,7 +813,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label: "Path",
 			value: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			expected: interpreter.PathValue{
@@ -825,7 +825,7 @@ func TestImportValue(t *testing.T) {
 			label: "Path Link (invalid)",
 			value: cadence.PathLink{
 				TargetPath: cadence.Path{
-					Domain:     "storage",
+					Domain:     common.PathDomainStorage,
 					Identifier: "test",
 				},
 				BorrowType: "Int",
@@ -843,7 +843,7 @@ func TestImportValue(t *testing.T) {
 				3,
 				cadence.Address{0x1},
 				cadence.Path{
-					Domain:     "public",
+					Domain:     common.PathDomainPublic,
 					Identifier: "test",
 				},
 				cadence.IntType{},
@@ -2086,7 +2086,7 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 			3,
 			cadence.Address{0x1},
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			cadence.IntType{},
@@ -2142,7 +2142,7 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 			3,
 			cadence.Address{0x1},
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			&cadence.StructType{
@@ -2179,7 +2179,7 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 			3,
 			cadence.Address{0x1},
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			nil,
@@ -2213,7 +2213,7 @@ func TestExportPathLinkValue(t *testing.T) {
 
 		expected := cadence.PathLink{
 			TargetPath: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			BorrowType: "Int",
@@ -2264,7 +2264,7 @@ func TestExportPathLinkValue(t *testing.T) {
 
 		expected := cadence.PathLink{
 			TargetPath: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			BorrowType: "S.test.S",
@@ -2694,7 +2694,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "StoragePath",
 			typeSignature: "StoragePath",
 			exportedValue: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			skipExport: true,
@@ -2703,7 +2703,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "PrivatePath",
 			typeSignature: "PrivatePath",
 			exportedValue: cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			skipExport: true,
@@ -2712,7 +2712,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "PublicPath",
 			typeSignature: "PublicPath",
 			exportedValue: cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			skipExport: true,
@@ -2859,15 +2859,15 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
 			cadence.NewBool(true),
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			cadence.String("foo"),
@@ -2990,7 +2990,7 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 				Size:        2,
 			}),
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 		},
@@ -4025,7 +4025,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainPublic.Identifier(),
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 		}
@@ -4079,7 +4079,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			3,
 			cadence.Address{0x1},
 			cadence.Path{
-				Domain:     common.PathDomainPublic.Identifier(),
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			cadence.IntType{},
@@ -4126,7 +4126,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 		capabilityValue := cadence.StorageCapability{
 			Address: cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainPrivate.Identifier(),
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			BorrowType: &cadence.ReferenceType{
@@ -4176,7 +4176,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainStorage.Identifier(),
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 		}
@@ -4232,7 +4232,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			BorrowType: borrowType,
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainPublic.Identifier(),
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 		}

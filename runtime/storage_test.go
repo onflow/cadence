@@ -664,7 +664,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 		value, err := runtime.ReadStored(
 			signer,
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "test",
 			},
 			Context{
@@ -681,7 +681,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 		value, err := runtime.ReadStored(
 			signer,
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "other",
 			},
 			Context{
@@ -698,7 +698,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 		value, err := runtime.ReadLinked(
 			signer,
 			cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "test",
 			},
 			Context{
@@ -715,7 +715,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 		value, err := runtime.ReadLinked(
 			signer,
 			cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "other",
 			},
 			Context{
@@ -1402,7 +1402,7 @@ func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 			t.Run(fmt.Sprintf("%s %s", domain.Identifier(), typeDescription), func(t *testing.T) {
 
 				storagePath := cadence.Path{
-					Domain: "storage",
+					Domain: common.PathDomainStorage,
 					Identifier: fmt.Sprintf(
 						"test%s%s",
 						typeDescription,
@@ -1448,7 +1448,7 @@ func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 					interpreter.TodoCapabilityID,
 					cadence.Address(signer),
 					cadence.Path{
-						Domain:     domain.Identifier(),
+						Domain:     domain,
 						Identifier: "test",
 					},
 					ty,

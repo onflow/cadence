@@ -826,26 +826,20 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 	obj := toObject(valueJSON)
 
-	domain := obj.GetString(domainKey)
-
-	common.UseMemory(d.gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// no need to add 1 to account for empty string: string is metered in Path struct
-		Amount: uint64(len(domain)),
-	})
+	domain := common.PathDomainFromIdentifier(obj.GetString(domainKey))
 
 	identifier := obj.GetString(identifierKey)
-	common.UseMemory(d.gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// no need to add 1 to account for empty string: string is metered in Path struct
-		Amount: uint64(len(identifier)),
-	})
+	common.UseMemory(d.gauge, common.NewRawStringMemoryUsage(len(identifier)))
 
-	return cadence.NewMeteredPath(
+	path, err := cadence.NewMeteredPath(
 		d.gauge,
 		domain,
 		identifier,
 	)
+	if err != nil {
+		panic(errors.NewDefaultUserError("failed to decode path: %w", err))
+	}
+	return path
 }
 
 func (d *Decoder) decodeTypeParameter(valueJSON any, results typeDecodingResults) cadence.TypeParameter {

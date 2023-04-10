@@ -628,7 +628,7 @@ func preparePath(x cadence.Path) jsonValue {
 	return jsonValueObject{
 		Type: pathTypeStr,
 		Value: jsonPathValue{
-			Domain:     x.Domain,
+			Domain:     x.Domain.Identifier(),
 			Identifier: x.Identifier,
 		},
 	}

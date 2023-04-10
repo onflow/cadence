@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -333,7 +334,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"PathLink": {
 			value: NewPathLink(
 				Path{
-					Domain:     "storage",
+					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
 				"Int",
@@ -346,13 +347,29 @@ func newValueTestCases() map[string]valueTestCase {
 			string: "AccountLink()",
 			noType: true,
 		},
-		"Path": {
+		"StoragePath": {
 			value: Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
-			expectedType: PathType{},
+			expectedType: TheStoragePathType,
 			string:       "/storage/foo",
+		},
+		"PrivatePath": {
+			value: Path{
+				Domain:     common.PathDomainPrivate,
+				Identifier: "foo",
+			},
+			expectedType: ThePrivatePathType,
+			string:       "/private/foo",
+		},
+		"PublicPath": {
+			value: Path{
+				Domain:     common.PathDomainPublic,
+				Identifier: "foo",
+			},
+			expectedType: ThePublicPathType,
+			string:       "/public/foo",
 		},
 		"Type": {
 			value:        TypeValue{StaticType: IntType{}},
@@ -363,7 +380,10 @@ func newValueTestCases() map[string]valueTestCase {
 			value: NewStorageCapability(
 				3,
 				BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				Path{Domain: "storage", Identifier: "foo"},
+				Path{
+					Domain: common.PathDomainStorage,
+					Identifier: "foo",
+				},
 				IntType{},
 			),
 			expectedType: NewCapabilityType(IntType{}),
