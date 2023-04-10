@@ -381,7 +381,7 @@ func newValueTestCases() map[string]valueTestCase {
 				3,
 				BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				Path{
-					Domain: common.PathDomainStorage,
+					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
 				IntType{},
