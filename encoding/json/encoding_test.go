@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/checker"
 
@@ -1652,7 +1653,10 @@ func TestEncodePathLink(t *testing.T) {
 	testEncode(
 		t,
 		cadence.NewPathLink(
-			cadence.NewPath("storage", "foo"),
+			cadence.Path{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
 			"Bar",
 		),
 		// language=json
@@ -2526,7 +2530,10 @@ func TestEncodeCapability(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.StorageCapability{
-			Path:       cadence.NewPath("storage", "foo"),
+			Path: cadence.Path{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		},
@@ -2950,12 +2957,57 @@ func TestEncodePath(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(
-		t,
-		cadence.NewPath("storage", "foo"),
-		// language=json
-		`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
-	)
+	t.Run("storage", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.Path{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+			// language=json
+			`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
+		)
+	})
+
+	t.Run("private", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.Path{
+				Domain:     common.PathDomainPrivate,
+				Identifier: "foo",
+			},
+			// language=json
+			`{"type":"Path","value":{"domain":"private","identifier":"foo"}}`,
+		)
+	})
+
+	t.Run("public", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.Path{
+				Domain:     common.PathDomainPublic,
+				Identifier: "foo",
+			},
+			// language=json
+			`{"type":"Path","value":{"domain":"public","identifier":"foo"}}`,
+		)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := json.Decode(nil, []byte(
+			// language=json
+			`{"type":"Path","value":{"domain":"Storage","identifier":"foo"}}`,
+		))
+		require.ErrorContains(t, err, "unknown domain in path")
+	})
 }
 
 func testAllEncodeAndDecode(t *testing.T, tests ...encodeTest) {
