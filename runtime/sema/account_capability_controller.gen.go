@@ -69,7 +69,10 @@ var AccountCapabilityControllerType = &SimpleType{
 	Equatable:     false,
 	Exportable:    false,
 	Importable:    false,
-	Members: func(t *SimpleType) map[string]MemberResolver {
+}
+
+func init() {
+	AccountCapabilityControllerType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredPublicConstantFieldMember(
 				t,
@@ -90,5 +93,5 @@ var AccountCapabilityControllerType = &SimpleType{
 				AccountCapabilityControllerTypeDeleteFunctionDocString,
 			),
 		})
-	},
+	}
 }

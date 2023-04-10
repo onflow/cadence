@@ -100,7 +100,10 @@ var StorageCapabilityControllerType = &SimpleType{
 	Equatable:     false,
 	Exportable:    false,
 	Importable:    false,
-	Members: func(t *SimpleType) map[string]MemberResolver {
+}
+
+func init() {
+	StorageCapabilityControllerType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredPublicConstantFieldMember(
 				t,
@@ -133,5 +136,5 @@ var StorageCapabilityControllerType = &SimpleType{
 				StorageCapabilityControllerTypeRetargetFunctionDocString,
 			),
 		})
-	},
+	}
 }
