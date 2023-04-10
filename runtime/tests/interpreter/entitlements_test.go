@@ -2112,3 +2112,61 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretEntitledReferenceCollections(t *testing.T) {
+	t.Parallel()
+
+	t.Run("arrays", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			fun test(): &Int {
+				let arr: [auth(X) &Int] = [&1 as auth(X) &Int]
+				arr.append(&2 as auth(X, Y) &Int)
+				arr.append(&3 as auth(X) &Int)
+				return arr[1]
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.Y", "S.test.X"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("dict", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			fun test(): &Int {
+				let dict: {String: auth(X) &Int} = {"one": &1 as auth(X) &Int}
+				dict.insert(key: "two", &2 as auth(X, Y) &Int)
+				dict.insert(key: "three", &3 as auth(X) &Int)
+				return dict["two"]!
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.Y", "S.test.X"},
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+}
