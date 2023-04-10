@@ -825,6 +825,7 @@ func NewCharacterValue(
 var _ Value = CharacterValue("a")
 var _ atree.Storable = CharacterValue("a")
 var _ EquatableValue = CharacterValue("a")
+var _ ComparableValue = CharacterValue("a")
 var _ HashableValue = CharacterValue("a")
 var _ MemberAccessibleValue = CharacterValue("a")
 
@@ -870,6 +871,38 @@ func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool
 		return false
 	}
 	return v.NormalForm() == otherChar.NormalForm()
+}
+
+func (v CharacterValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		return false
+	}
+	return v.NormalForm() < otherChar.NormalForm()
+}
+
+func (v CharacterValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		return false
+	}
+	return v.NormalForm() <= otherChar.NormalForm()
+}
+
+func (v CharacterValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		return false
+	}
+	return v.NormalForm() > otherChar.NormalForm()
+}
+
+func (v CharacterValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		return false
+	}
+	return v.NormalForm() >= otherChar.NormalForm()
 }
 
 func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
