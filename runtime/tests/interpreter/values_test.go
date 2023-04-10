@@ -1144,7 +1144,7 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 		return randomCompositeValue(inter, common.CompositeKindStructure, currentDepth)
 	case Capability:
 		return interpreter.NewUnmeteredStorageCapabilityValue(
-			interpreter.UInt64Value(randomInt(math.MaxInt)),
+			interpreter.UInt64Value(randomInt(math.MaxInt-1)),
 			randomAddressValue(),
 			randomPathValue(),
 			interpreter.ReferenceStaticType{
