@@ -54,6 +54,7 @@ const (
 	SetField
 
 	Invoke
+	InvokeDynamic
 	Destroy
 	Transfer
 	Cast

@@ -633,22 +633,40 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 	case *ast.MemberExpression:
 		memberInfo := c.Elaboration.MemberExpressionMemberInfos[invokedExpr]
 		typeName := memberInfo.AccessedType.QualifiedString()
-		funcName := commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
+		var funcName string
 
 		invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 		if invocationType.IsConstructor {
+			funcName = commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
+
 			// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
 			// Load arguments
 			c.loadArguments(expression)
 			// Load function value
 			c.emitVariableLoad(funcName)
 			c.emit(opcode.Invoke)
+			return
+		}
+
+		// Receiver is loaded first. So 'self' is always the zero-th argument.
+		c.compileExpression(invokedExpr.Expression)
+		// Load arguments
+		c.loadArguments(expression)
+
+		if _, ok := memberInfo.AccessedType.(*sema.RestrictedType); ok {
+			funcName = invokedExpr.Identifier.Identifier
+			funcNameSizeFirst, funcNameSizeSecond := encodeUint16(uint16(len(funcName)))
+
+			argsCountFirst, argsCountSecond := encodeUint16(uint16(len(expression.Arguments)))
+
+			args := []byte{funcNameSizeFirst, funcNameSizeSecond}
+			args = append(args, []byte(funcName)...)
+			args = append(args, argsCountFirst, argsCountSecond)
+
+			c.emit(opcode.InvokeDynamic, args...)
 		} else {
-			// Receiver is loaded first. So 'self' is always the zero-th argument.
-			c.compileExpression(invokedExpr.Expression)
-			// Load arguments
-			c.loadArguments(expression)
 			// Load function value
+			funcName = commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
 			c.emitVariableLoad(funcName)
 			c.emit(opcode.Invoke)
 		}
@@ -897,6 +915,11 @@ func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration
 
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
 	c.compileFunctionBlock(declaration.FunctionBlock)
+
+	if !declaration.FunctionBlock.HasStatements() {
+		c.emit(opcode.Return)
+	}
+
 	return
 }
 

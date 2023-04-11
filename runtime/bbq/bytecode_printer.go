@@ -102,6 +102,11 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 			identifier, i = p.getStringOperand(codes, i)
 			p.stringBuilder.WriteString(" " + fmt.Sprint(int8(domain)) + " " + identifier)
 
+		case opcode.InvokeDynamic:
+			var funcName string
+			funcName, i = p.getStringOperand(codes, i)
+			p.stringBuilder.WriteString(" " + " " + funcName)
+
 		// opcodes with no operands
 		default:
 			// do nothing

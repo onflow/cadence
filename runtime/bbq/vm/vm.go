@@ -32,10 +32,11 @@ import (
 )
 
 type VM struct {
-	globals   map[string]Value
-	callFrame *callFrame
-	stack     []Value
-	config    *Config
+	globals            map[string]Value
+	callFrame          *callFrame
+	stack              []Value
+	config             *Config
+	linkedGlobalsCache map[common.Location]LinkedGlobals
 }
 
 func NewVM(program *bbq.Program, conf *Config) *VM {
@@ -60,8 +61,9 @@ func NewVM(program *bbq.Program, conf *Config) *VM {
 	linkedGlobals := LinkGlobals(program, conf, linkedGlobalsCache)
 
 	return &VM{
-		globals: linkedGlobals.indexedGlobals,
-		config:  conf,
+		globals:            linkedGlobals.indexedGlobals,
+		linkedGlobalsCache: linkedGlobalsCache,
+		config:             conf,
 	}
 }
 
@@ -191,6 +193,13 @@ func opReturnValue(vm *VM) {
 	vm.push(value)
 }
 
+var voidValue = VoidValue{}
+
+func opReturn(vm *VM) {
+	vm.popCallFrame()
+	vm.push(voidValue)
+}
+
 func opJump(vm *VM) {
 	callFrame := vm.callFrame
 	target := callFrame.getUint16()
@@ -295,6 +304,24 @@ func opInvoke(vm *VM) {
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func opInvokeDynamic(vm *VM) {
+	callframe := vm.callFrame
+	funcName := callframe.getString()
+	argsCount := callframe.getUint16()
+
+	stackHeight := len(vm.stack)
+	receiver := vm.stack[stackHeight-int(argsCount)-1]
+
+	compositeValue := receiver.(*CompositeValue)
+	qualifiedFuncName := commons.TypeQualifiedName(compositeValue.QualifiedIdentifier, funcName)
+	var functionValue = vm.lookupFunction(compositeValue.Location, qualifiedFuncName)
+
+	parameterCount := int(functionValue.Function.ParameterCount)
+	arguments := vm.stack[stackHeight-parameterCount:]
+	vm.pushCallFrame(functionValue.Context, functionValue.Function, arguments)
+	vm.dropN(parameterCount)
 }
 
 func opDrop(vm *VM) {
@@ -410,6 +437,8 @@ func (vm *VM) run() {
 		switch op {
 		case opcode.ReturnValue:
 			opReturnValue(vm)
+		case opcode.Return:
+			opReturn(vm)
 		case opcode.Jump:
 			opJump(vm)
 		case opcode.JumpIfFalse:
@@ -438,6 +467,8 @@ func (vm *VM) run() {
 			opSetGlobal(vm)
 		case opcode.Invoke:
 			opInvoke(vm)
+		case opcode.InvokeDynamic:
+			opInvokeDynamic(vm)
 		case opcode.Drop:
 			opDrop(vm)
 		case opcode.Dup:
@@ -505,6 +536,44 @@ func (vm *VM) initializeType(index uint16) interpreter.StaticType {
 
 	ctx.StaticTypes[index] = staticType
 	return staticType
+}
+
+func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {
+	// First check in current program.
+	value, ok := vm.globals[name]
+	if ok {
+		return value.(FunctionValue)
+	}
+
+	// If not found, check in already linked imported functions.
+	linkedGlobals, ok := vm.linkedGlobalsCache[location]
+	if ok {
+		value, ok := linkedGlobals.indexedGlobals[name]
+		if ok {
+			return value.(FunctionValue)
+		}
+	}
+
+	// If not found, link the function now, dynamically.
+
+	// TODO: This currently link all functions in program, unnecessarily. Link only yhe requested function.
+	program := vm.config.ImportHandler(location)
+	ctx := NewContext(program, nil)
+
+	indexedGlobals := make(map[string]Value, len(program.Functions))
+	for _, function := range program.Functions {
+		indexedGlobals[function.Name] = FunctionValue{
+			Function: function,
+			Context:  ctx,
+		}
+	}
+
+	vm.linkedGlobalsCache[location] = LinkedGlobals{
+		context:        ctx,
+		indexedGlobals: indexedGlobals,
+	}
+
+	return indexedGlobals[name].(FunctionValue)
 }
 
 func decodeLocation(locationBytes []byte) common.Location {
