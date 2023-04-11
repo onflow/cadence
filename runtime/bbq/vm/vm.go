@@ -127,9 +127,13 @@ func (vm *VM) Invoke(name string, arguments ...Value) (Value, error) {
 		return nil, errors.NewDefaultUserError("unknown function '%s'", name)
 	}
 
+	return vm.invoke(function, arguments)
+}
+
+func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
 	functionValue, ok := function.(FunctionValue)
 	if !ok {
-		return nil, errors.NewDefaultUserError("not invocable: %s", name)
+		return nil, errors.NewDefaultUserError("not invocable")
 	}
 
 	if len(arguments) != int(functionValue.Function.ParameterCount) {
@@ -165,26 +169,33 @@ func (vm *VM) InitializeContract(arguments ...Value) (*CompositeValue, error) {
 	return contractValue, nil
 }
 
-func (vm *VM) ExecuteTransaction() error {
+func (vm *VM) ExecuteTransaction(signers ...Value) error {
 	// Create transaction value
 	transaction, err := vm.Invoke(commons.TransactionWrapperCompositeName)
 	if err != nil {
 		return err
 	}
 
-	// Invoke 'prepare'
-	_, err = vm.Invoke(commons.TransactionPrepareFunctionName, transaction)
-	if err != nil {
-		return err
+	args := []Value{transaction}
+	args = append(args, signers...)
+
+	// Invoke 'prepare', if exists.
+	if prepare, ok := vm.globals[commons.TransactionPrepareFunctionName]; ok {
+		_, err = vm.invoke(prepare, args)
+		if err != nil {
+			return err
+		}
 	}
 
 	// TODO: Invoke pre/post conditions
 
-	// Invoke 'execute'
-	// TODO: pass auth accounts
-	_, err = vm.Invoke(commons.TransactionExecuteFunctionName, transaction)
+	// Invoke 'execute', if exists.
+	if execute, ok := vm.globals[commons.TransactionExecuteFunctionName]; ok {
+		_, err = vm.invoke(execute, args)
+		return err
+	}
 
-	return err
+	return nil
 }
 
 func opReturnValue(vm *VM) {
@@ -420,6 +431,28 @@ func opPath(vm *VM) {
 	vm.push(value)
 }
 
+func opCast(vm *VM) {
+	callframe := vm.callFrame
+	value := vm.pop()
+	targetType := vm.loadType()
+	castType := commons.CastType(callframe.getByte())
+
+	// TODO:
+	_ = castType
+	_ = targetType
+
+	vm.push(value)
+}
+
+func opNil(vm *VM) {
+	vm.push(NilValue{})
+}
+
+func opEqual(vm *VM) {
+	left, right := vm.peekPop()
+	vm.replaceTop(BoolValue(left == right))
+}
+
 func (vm *VM) run() {
 	for {
 
@@ -485,8 +518,14 @@ func (vm *VM) run() {
 			opDestroy(vm)
 		case opcode.Path:
 			opPath(vm)
+		case opcode.Cast:
+			opCast(vm)
+		case opcode.Nil:
+			opNil(vm)
+		case opcode.Equal:
+			opEqual(vm)
 		default:
-			panic(errors.NewUnreachableError())
+			panic(errors.NewUnexpectedError("cannot execute opcode '%s'", op.String()))
 		}
 
 		// Faster in Go <1.19:

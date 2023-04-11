@@ -43,16 +43,16 @@ type Compiler struct {
 	currentFunction    *function
 	compositeTypeStack *Stack[*sema.CompositeType]
 
-	functions              []*function
-	constants              []*constant
-	globals                map[string]*global
-	indexedImportedGlobals map[string]*global
-	importedGlobals        []*global
-	loops                  []*loop
-	currentLoop            *loop
-	staticTypes            [][]byte
-	typesInPool            map[sema.Type]uint16
-	exportedImports        []*bbq.Import
+	functions           []*function
+	constants           []*constant
+	globals             map[string]*global
+	importedGlobals     map[string]*global
+	usedImportedGlobals []*global
+	loops               []*loop
+	currentLoop         *loop
+	staticTypes         [][]byte
+	typesInPool         map[sema.Type]uint16
+	exportedImports     []*bbq.Import
 
 	// TODO: initialize
 	memoryGauge common.MemoryGauge
@@ -67,14 +67,13 @@ func NewCompiler(
 	elaboration *sema.Elaboration,
 ) *Compiler {
 	return &Compiler{
-		Program:                program,
-		Elaboration:            elaboration,
-		Config:                 &Config{},
-		globals:                map[string]*global{},
-		indexedImportedGlobals: indexedNativeFunctions,
-		importedGlobals:        nativeFunctions,
-		exportedImports:        make([]*bbq.Import, 0),
-		typesInPool:            map[sema.Type]uint16{},
+		Program:         program,
+		Elaboration:     elaboration,
+		Config:          &Config{},
+		globals:         map[string]*global{},
+		importedGlobals: indexedNativeFunctions,
+		exportedImports: make([]*bbq.Import, 0),
+		typesInPool:     map[sema.Type]uint16{},
 		compositeTypeStack: &Stack[*sema.CompositeType]{
 			elements: make([]*sema.CompositeType, 0),
 		},
@@ -99,13 +98,14 @@ func (c *Compiler) findGlobal(name string) *global {
 		}
 	}
 
-	importedGlobal, ok := c.indexedImportedGlobals[name]
+	importedGlobal, ok := c.importedGlobals[name]
 	if !ok {
 		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", name))
 	}
 
 	// Add the 'importedGlobal' to 'globals' when they are used for the first time.
 	// This way, the 'globals' would eventually have only the used imports.
+	// This is important since global indexes rely on this.
 	//
 	// If a global is found in imported globals, that means the index is not set.
 	// So set an index and add it to the 'globals'.
@@ -115,6 +115,17 @@ func (c *Compiler) findGlobal(name string) *global {
 	}
 	importedGlobal.index = uint16(count)
 	c.globals[name] = importedGlobal
+
+	// Also add it to the usedImportedGlobals.
+	// This is later used to export the imports, which is eventually used by the linker.
+	// Linker will link the imports in the same order as they are added here.
+	// i.e: same order as their indexes (preceded by globals defined in the current program).
+	// e.g: [global1, global2, ... [importedGlobal1, importedGlobal2, ...]].
+	// Earlier we already reserved the indexes for the globals defined in the current program.
+	// (`reserveGlobalVars`)
+
+	c.usedImportedGlobals = append(c.usedImportedGlobals, importedGlobal)
+
 	return importedGlobal
 }
 
@@ -136,8 +147,7 @@ func (c *Compiler) addImportedGlobal(location common.Location, name string) *glo
 		location: location,
 		name:     name,
 	}
-	c.importedGlobals = append(c.importedGlobals, global)
-	c.indexedImportedGlobals[name] = global
+	c.importedGlobals[name] = global
 	return global
 }
 
@@ -253,6 +263,7 @@ func (c *Compiler) Compile() *bbq.Program {
 	// Reserve globals for functions/types before visiting their implementations.
 	c.reserveGlobalVars(
 		"",
+		nil,
 		c.Program.FunctionDeclarations(),
 		compositeDeclarations,
 	)
@@ -282,10 +293,22 @@ func (c *Compiler) Compile() *bbq.Program {
 
 func (c *Compiler) reserveGlobalVars(
 	compositeTypeName string,
-	funcDecls []*ast.FunctionDeclaration,
+	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
+	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 ) {
-	for _, declaration := range funcDecls {
+	for _, declaration := range specialFunctionDecls {
+		switch declaration.Kind {
+		case common.DeclarationKindDestructor,
+			common.DeclarationKindPrepare:
+			// Important: All special functions visited within `VisitSpecialFunctionDeclaration`
+			// must be also visited here. And must be visited only them. e.g: Don't visit inits.
+			funcName := commons.TypeQualifiedName(compositeTypeName, declaration.FunctionDeclaration.Identifier.Identifier)
+			c.addGlobal(funcName)
+		}
+	}
+
+	for _, declaration := range functionDecls {
 		funcName := commons.TypeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
 		c.addGlobal(funcName)
 	}
@@ -308,6 +331,7 @@ func (c *Compiler) reserveGlobalVars(
 		// Define globals for functions before visiting function bodies
 		c.reserveGlobalVars(
 			qualifiedTypeName,
+			declaration.Members.SpecialFunctions(),
 			declaration.Members.Functions(),
 			declaration.Members.Composites(),
 		)
@@ -338,20 +362,11 @@ func (c *Compiler) exportTypes() [][]byte {
 
 func (c *Compiler) exportImports() []*bbq.Import {
 	exportedImports := make([]*bbq.Import, 0)
-
-	for _, importedGlobal := range c.importedGlobals {
-		name := importedGlobal.name
-
-		// Export only used imports
-		if _, ok := c.globals[name]; !ok {
-			continue
-		}
-
+	for _, importedGlobal := range c.usedImportedGlobals {
 		bbqImport := &bbq.Import{
 			Location: importedGlobal.location,
-			Name:     name,
+			Name:     importedGlobal.name,
 		}
-
 		exportedImports = append(exportedImports, bbqImport)
 	}
 
@@ -563,8 +578,8 @@ func (c *Compiler) VisitBoolExpression(expression *ast.BoolExpression) (_ struct
 }
 
 func (c *Compiler) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+	c.emit(opcode.Nil)
+	return
 }
 
 func (c *Compiler) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
@@ -728,7 +743,7 @@ var intBinaryOpcodes = [...]opcode.Opcode{
 	ast.OperationMul:          opcode.IntMultiply,
 	ast.OperationDiv:          opcode.IntDivide,
 	ast.OperationMod:          opcode.IntMod,
-	ast.OperationEqual:        opcode.IntEqual,
+	ast.OperationEqual:        opcode.Equal,
 	ast.OperationNotEqual:     opcode.IntNotEqual,
 	ast.OperationLess:         opcode.IntLess,
 	ast.OperationLessEqual:    opcode.IntLessOrEqual,
@@ -1117,8 +1132,10 @@ func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) *
 	//  i.e: Modifies the elaboration.
 	//  Handle this properly for cached transactions.
 
-	members := []ast.Declaration{
-		transaction.Execute.FunctionDeclaration,
+	var members []ast.Declaration
+
+	if transaction.Execute != nil {
+		members = append(members, transaction.Execute.FunctionDeclaration)
 	}
 
 	if transaction.Prepare != nil {

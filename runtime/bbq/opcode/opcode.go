@@ -42,6 +42,8 @@ const (
 	IntLessOrEqual
 	IntGreaterOrEqual
 
+	Equal
+
 	GetConstant
 	True
 	False
@@ -61,6 +63,7 @@ const (
 
 	New
 	Path
+	Nil
 
 	Drop
 	Dup

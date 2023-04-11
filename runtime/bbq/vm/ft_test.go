@@ -23,6 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -49,6 +50,7 @@ func TestFTTransfer(t *testing.T) {
 	//require.NoError(t, err)
 
 	// Deploy FlowToken Contract
+
 	flowTokenLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "FlowToken")
 	flowTokenChecker, err := ParseAndCheckWithOptions(t, realFlowContract,
 		ParseAndCheckOptions{
@@ -92,26 +94,28 @@ func TestFTTransfer(t *testing.T) {
 	flowTokenContractValue, err := vm.InitializeContract(authAcount)
 	require.NoError(t, err)
 
-	// Run script
+	// Run setup account transaction
 
-	checker, err := ParseAndCheckWithOptions(t, `
-      import FungibleToken from 0x01
-
-      fun test(): String {
-          return "hello"
-      }
-  `,
+	checker, err := ParseAndCheckWithOptions(t, realSetupFlowTokenAccountTransaction,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-					switch location {
+					require.IsType(t, common.AddressLocation{}, location)
+					addressLocation := location.(common.AddressLocation)
+					var elaboration *sema.Elaboration
+
+					switch addressLocation {
+					case ftLocation:
+						elaboration = ftChecker.Elaboration
 					case flowTokenLocation:
-						return sema.ElaborationImport{
-							Elaboration: flowTokenChecker.Elaboration,
-						}, nil
+						elaboration = flowTokenChecker.Elaboration
 					default:
-						return nil, fmt.Errorf("cannot find contract in location %s", location)
+						assert.FailNow(t, "invalid location")
 					}
+
+					return sema.ElaborationImport{
+						Elaboration: elaboration,
+					}, nil
 				},
 				LocationHandler: singleIdentifierLocationResolver(t),
 			},
@@ -120,26 +124,53 @@ func TestFTTransfer(t *testing.T) {
 	require.NoError(t, err)
 
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+	comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
 	comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
-		return flowTokenProgram
+		switch location {
+		case ftLocation:
+			return ftProgram
+		case flowTokenLocation:
+			return flowTokenProgram
+		default:
+			assert.FailNow(t, "invalid location")
+			return nil
+		}
 	}
 
 	program := comp.Compile()
+	printProgram(program)
 
 	vmConfig := &Config{
 		ImportHandler: func(location common.Location) *bbq.Program {
-			return ftProgram
+			switch location {
+			case ftLocation:
+				return ftProgram
+			case flowTokenLocation:
+				return flowTokenProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
 		},
-		ContractValueHandler: func(*Config, common.Location) *CompositeValue {
-			return flowTokenContractValue
+		ContractValueHandler: func(_ *Config, location common.Location) *CompositeValue {
+			switch location {
+			case ftLocation:
+				// interface
+				return nil
+			case flowTokenLocation:
+				return flowTokenContractValue
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
 		},
 	}
 
 	vm = NewVM(program, vmConfig)
 
-	result, err := vm.Invoke("test")
+	authorizer := NewAuthAccountValue()
+	err = vm.ExecuteTransaction(authorizer)
 	require.NoError(t, err)
-	require.Equal(t, StringValue{Str: []byte("global function of the imported program")}, result)
 }
 
 const realFungibleTokenContractInterface = `
@@ -395,7 +426,7 @@ pub contract FlowToken: FungibleToken {
     // and store the returned Vault in their storage in order to allow their
     // account to be able to receive deposits of this token type.
     //
-    pub fun createEmptyVault(): @FungibleToken.Vault {
+    pub fun createEmptyVault(): @Vault {
         return <-create Vault(balance: 0)
     }
 
@@ -500,6 +531,36 @@ pub contract FlowToken: FungibleToken {
 
         // Emit an event that shows that the contract was initialized
         // emit TokensInitialized(initialSupply: self.totalSupply)
+    }
+}
+`
+
+const realSetupFlowTokenAccountTransaction = `
+import FungibleToken from 0x1
+import FlowToken from 0x1
+
+transaction {
+
+    prepare(signer: AuthAccount) {
+
+        if signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
+            // Create a new flowToken Vault and put it in storage
+            signer.save(<-FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
+
+            // Create a public capability to the Vault that only exposes
+            // the deposit function through the Receiver interface
+            signer.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+                /public/flowTokenReceiver,
+                target: /storage/flowTokenVault
+            )
+
+            // Create a public capability to the Vault that only exposes
+            // the balance field through the Balance interface
+            signer.link<&FlowToken.Vault{FungibleToken.Balance}>(
+                /public/flowTokenBalance,
+                target: /storage/flowTokenVault
+            )
+        }
     }
 }
 `

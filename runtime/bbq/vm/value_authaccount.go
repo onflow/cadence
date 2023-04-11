@@ -19,9 +19,20 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
+
+func NewAuthAccountValue() *CompositeValue {
+	return &CompositeValue{
+		Location:            nil,
+		QualifiedIdentifier: sema.AuthAccountType.QualifiedIdentifier(),
+		typeID:              sema.AuthAccountType.ID(),
+		staticType:          interpreter.PrimitiveStaticTypeAuthAccount,
+		Kind:                common.CompositeKindStructure,
+	}
+}
 
 // members
 
@@ -39,6 +50,15 @@ func init() {
 
 	// AuthAccount.save
 	RegisterTypeBoundFunction(typeName, sema.AuthAccountSaveField, NativeFunctionValue{
+		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
+		Function: func(value ...Value) Value {
+			// TODO:
+			return NilValue{}
+		},
+	})
+
+	// AuthAccount.borrow
+	RegisterTypeBoundFunction(typeName, sema.AuthAccountBorrowField, NativeFunctionValue{
 		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
 		Function: func(value ...Value) Value {
 			// TODO:

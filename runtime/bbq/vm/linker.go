@@ -113,6 +113,7 @@ func LinkGlobals(
 
 	// Globals of the current program are added first.
 	// This is the same order as they are added in the compiler.
+	// e.g: [global1, global2, ... [importedGlobal1, importedGlobal2, ...]]
 	ctx.Globals = globals
 	ctx.Globals = append(ctx.Globals, importedGlobals...)
 
