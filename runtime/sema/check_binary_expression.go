@@ -308,17 +308,15 @@ func (checker *Checker) checkBinaryExpressionNonEquality(
 ) (resultType Type) {
 	resultType = BoolType
 
-	if !(leftType.Equal(rightType) && leftType.IsComparable() && rightType.IsComparable()) {
-		if !anyInvalid {
-			checker.report(
-				&InvalidBinaryOperandsError{
-					Operation: operation,
-					LeftType:  leftType,
-					RightType: rightType,
-					Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
-				},
-			)
-		}
+	if !(leftType.Equal(rightType) && leftType.IsComparable() && rightType.IsComparable()) && !anyInvalid {
+		checker.report(
+			&InvalidBinaryOperandsError{
+				Operation: operation,
+				LeftType:  leftType,
+				RightType: rightType,
+				Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+			},
+		)
 	}
 
 	return
