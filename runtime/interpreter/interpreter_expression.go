@@ -514,19 +514,21 @@ func (interpreter *Interpreter) testComparison(left, right Value, expression *as
 		right,
 	)
 
-	leftComparable, ok := left.(ComparableValue)
-	if !ok {
-		return FalseValue
-	}
-
-	rightComparable, ok := right.(ComparableValue)
-	if !ok {
-		return FalseValue
-	}
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: expression,
+	}
+
+	leftComparable, leftOk := left.(ComparableValue)
+	rightComparable, rightOk := right.(ComparableValue)
+
+	if !leftOk || !rightOk {
+		panic(InvalidOperandsError{
+			Operation:     expression.Operation,
+			LeftType:      left.StaticType(interpreter),
+			RightType:     right.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
 	}
 
 	switch expression.Operation {
