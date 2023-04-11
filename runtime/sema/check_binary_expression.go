@@ -282,7 +282,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrBitwise(
 			return true
 		}
 
-		// Arithmetic, bitwise are not supported for numeric supertypes.
+		// Arithmetic and bitwise operations are not supported for numeric supertypes.
 		return isNumericSuperType(leftType)
 	}
 
