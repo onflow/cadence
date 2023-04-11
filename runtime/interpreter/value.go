@@ -188,7 +188,7 @@ func newValueComparator(interpreter *Interpreter, locationRange LocationRange) a
 
 // ComparableValue
 type ComparableValue interface {
-	Value
+	EquatableValue
 	Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
 	LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
 	Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
