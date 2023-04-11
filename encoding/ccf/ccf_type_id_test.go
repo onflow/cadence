@@ -29,6 +29,9 @@ import (
 )
 
 func TestCCFTypeID(t *testing.T) {
+
+	t.Parallel()
+
 	testCases := []struct {
 		name         string
 		input        uint64
@@ -66,6 +69,9 @@ func TestCCFTypeID(t *testing.T) {
 }
 
 func TestCCFTypeIDByCadenceType(t *testing.T) {
+
+	t.Parallel()
+
 	// Create ccfTypeIDByCadenceType map
 	ccfIDs := make(ccfTypeIDByCadenceType)
 
@@ -84,6 +90,9 @@ func TestCCFTypeIDByCadenceType(t *testing.T) {
 }
 
 func TestCadenceTypeByCCFTypeID(t *testing.T) {
+
+	t.Parallel()
+
 	cadenceTypes := newCadenceTypeByCCFTypeID()
 
 	// Add new entry.
