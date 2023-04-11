@@ -1267,7 +1267,7 @@ func NewMeteredFix64(gauge common.MemoryGauge, constructor func() (string, error
 	return NewFix64(value)
 }
 
-func NewMeteredFix64FromInt64(gauge common.MemoryGauge, n int64) (Fix64, error) {
+func NewMeteredFix64FromRawFixedPointNumber(gauge common.MemoryGauge, n int64) (Fix64, error) {
 	common.UseMemory(gauge, fix64MemoryUsage)
 	return Fix64(n), nil
 }
@@ -1341,7 +1341,7 @@ func ParseUFix64(s string) (uint64, error) {
 	return v.Uint64(), nil
 }
 
-func NewMeteredUFix64FromUint64(gauge common.MemoryGauge, n uint64) (UFix64, error) {
+func NewMeteredUFix64FromRawFixedPointNumber(gauge common.MemoryGauge, n uint64) (UFix64, error) {
 	common.UseMemory(gauge, ufix64MemoryUsage)
 	return UFix64(n), nil
 }
