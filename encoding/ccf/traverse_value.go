@@ -76,39 +76,39 @@ func (ct *compositeTypes) traverseValue(v cadence.Value) {
 	// Traverse v's elements for runtime types.
 	// Note: don't need to traverse fields of cadence.Enum
 	// because enum's field is an integer subtype.
-	switch x := v.(type) {
+	switch v := v.(type) {
 
 	case cadence.Optional:
-		ct.traverseValue(x.Value)
+		ct.traverseValue(v.Value)
 
 	case cadence.Array:
-		for _, element := range x.Values {
+		for _, element := range v.Values {
 			ct.traverseValue(element)
 		}
 
 	case cadence.Dictionary:
-		for _, pair := range x.Pairs {
+		for _, pair := range v.Pairs {
 			ct.traverseValue(pair.Key)
 			ct.traverseValue(pair.Value)
 		}
 
 	case cadence.Struct:
-		for _, field := range x.Fields {
+		for _, field := range v.Fields {
 			ct.traverseValue(field)
 		}
 
 	case cadence.Resource:
-		for _, field := range x.Fields {
+		for _, field := range v.Fields {
 			ct.traverseValue(field)
 		}
 
 	case cadence.Event:
-		for _, field := range x.Fields {
+		for _, field := range v.Fields {
 			ct.traverseValue(field)
 		}
 
 	case cadence.Contract:
-		for _, field := range x.Fields {
+		for _, field := range v.Fields {
 			ct.traverseValue(field)
 		}
 
@@ -121,41 +121,41 @@ func (ct *compositeTypes) traverseValue(v cadence.Value) {
 // such as OptionalType.
 // Runtime needs to be checked when typ contains any abstract type.
 func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool) {
-	switch t := typ.(type) {
+	switch typ := typ.(type) {
 
 	case *cadence.OptionalType:
-		return ct.traverseType(t.Type)
+		return ct.traverseType(typ.Type)
 
 	case cadence.ArrayType:
-		return ct.traverseType(t.Element())
+		return ct.traverseType(typ.Element())
 
 	case *cadence.DictionaryType:
-		checkKeyRuntimeType := ct.traverseType(t.KeyType)
-		checkValueRuntimeType := ct.traverseType(t.ElementType)
+		checkKeyRuntimeType := ct.traverseType(typ.KeyType)
+		checkValueRuntimeType := ct.traverseType(typ.ElementType)
 		return checkKeyRuntimeType || checkValueRuntimeType
 
 	case *cadence.CapabilityType:
-		return ct.traverseType(t.BorrowType)
+		return ct.traverseType(typ.BorrowType)
 
 	case *cadence.ReferenceType:
-		return ct.traverseType(t.Type)
+		return ct.traverseType(typ.Type)
 
 	case *cadence.RestrictedType:
-		check := ct.traverseType(t.Type)
-		for _, restriction := range t.Restrictions {
+		check := ct.traverseType(typ.Type)
+		for _, restriction := range typ.Restrictions {
 			checkRestriction := ct.traverseType(restriction)
 			check = check || checkRestriction
 		}
 		return check
 
 	case cadence.CompositeType: // struct, resource, event, contract, enum
-		newType := ct.add(t)
+		newType := ct.add(typ)
 		if !newType {
-			return ct.abstractTypes[t.ID()]
+			return ct.abstractTypes[typ.ID()]
 		}
 
 		check := false
-		fields := t.CompositeFields()
+		fields := typ.CompositeFields()
 		for _, field := range fields {
 			checkField := ct.traverseType(field.Type)
 			check = check || checkField
@@ -164,12 +164,12 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		// Don't need to traverse initializers because
 		// they are not encoded and their types aren't needed.
 
-		ct.abstractTypes[t.ID()] = check
+		ct.abstractTypes[typ.ID()] = check
 
 		return check
 
 	case cadence.InterfaceType: // struct interface, resource interface, contract interface
-		ct.add(t)
+		ct.add(typ)
 		// Don't need to traverse fields or initializers because
 		// they are not encoded and their types aren't needed.
 

@@ -120,12 +120,12 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 			return nil, err
 		}
 
-		switch t := typ.(type) {
+		switch typ := typ.(type) {
 		case cadence.CompositeType:
-			t.SetCompositeFields(fields)
+			typ.SetCompositeFields(fields)
 
 		default:
-			return nil, fmt.Errorf("unsupported type %s (%T) in composite-typedef", t.ID(), t)
+			return nil, fmt.Errorf("unsupported type %s (%T) in composite-typedef", typ.ID(), typ)
 		}
 	}
 

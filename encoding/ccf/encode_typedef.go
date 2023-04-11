@@ -72,7 +72,7 @@ func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDB
 
 	var cborTagNum uint64
 
-	switch t := typ.(type) {
+	switch typ := typ.(type) {
 	case *cadence.StructType:
 		cborTagNum = CBORTagStructType
 
@@ -89,7 +89,7 @@ func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDB
 		cborTagNum = CBORTagEnumType
 
 	default:
-		panic(cadenceErrors.NewUnexpectedError("unexpected composite type %s (%T)", t.ID(), t))
+		panic(cadenceErrors.NewUnexpectedError("unexpected composite type %s (%T)", typ.ID(), typ))
 	}
 
 	// Encode tag number indicating composite type.
@@ -220,7 +220,7 @@ func (e *Encoder) encodeInterfaceType(typ cadence.InterfaceType, tids ccfTypeIDB
 
 	var cborTagNum uint64
 
-	switch t := typ.(type) {
+	switch typ := typ.(type) {
 	case *cadence.StructInterfaceType:
 		cborTagNum = CBORTagStructInterfaceType
 
@@ -231,7 +231,7 @@ func (e *Encoder) encodeInterfaceType(typ cadence.InterfaceType, tids ccfTypeIDB
 		cborTagNum = CBORTagContractInterfaceType
 
 	default:
-		panic(cadenceErrors.NewUnexpectedError("unexpected interface type %s (%T)", t.ID(), t))
+		panic(cadenceErrors.NewUnexpectedError("unexpected interface type %s (%T)", typ.ID(), typ))
 	}
 
 	// Encode tag number indicating interface type.

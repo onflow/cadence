@@ -265,12 +265,12 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	// If type t for the value to be decoded is a concrete type (e.g. IntType),
 	// value MUST NOT be ccf-type-and-value-message.
 
-	switch typ := t.(type) {
+	switch t := t.(type) {
 	case cadence.VoidType:
 		return d.decodeVoid()
 
 	case *cadence.OptionalType:
-		return d.decodeOptional(typ, types)
+		return d.decodeOptional(t, types)
 
 	case cadence.BoolType:
 		return d.decodeBool()
@@ -345,25 +345,25 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 		return d.decodeUFix64()
 
 	case *cadence.VariableSizedArrayType:
-		return d.decodeArray(typ, false, 0, types)
+		return d.decodeArray(t, false, 0, types)
 
 	case *cadence.ConstantSizedArrayType:
-		return d.decodeArray(typ, true, uint64(typ.Size), types)
+		return d.decodeArray(t, true, uint64(t.Size), types)
 
 	case *cadence.DictionaryType:
-		return d.decodeDictionary(typ, types)
+		return d.decodeDictionary(t, types)
 
 	case *cadence.ResourceType:
-		return d.decodeResource(typ, types)
+		return d.decodeResource(t, types)
 
 	case *cadence.StructType:
-		return d.decodeStruct(typ, types)
+		return d.decodeStruct(t, types)
 
 	case *cadence.EventType:
-		return d.decodeEvent(typ, types)
+		return d.decodeEvent(t, types)
 
 	case *cadence.ContractType:
-		return d.decodeContract(typ, types)
+		return d.decodeContract(t, types)
 
 	case cadence.StoragePathType:
 		return d.decodePath()
@@ -375,26 +375,26 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 		return d.decodePath()
 
 	case cadence.MetaType:
-		t, err := d.decodeNullableTypeValue(newCadenceTypeByCCFTypeID())
+		typeValue, err := d.decodeNullableTypeValue(newCadenceTypeByCCFTypeID())
 		if err != nil {
 			return nil, err
 		}
-		return cadence.NewMeteredTypeValue(d.gauge, t), nil
+		return cadence.NewMeteredTypeValue(d.gauge, typeValue), nil
 
 	case *cadence.CapabilityType:
-		return d.decodeCapability(typ, types)
+		return d.decodeCapability(t, types)
 
 	case *cadence.EnumType:
-		return d.decodeEnum(typ, types)
+		return d.decodeEnum(t, types)
 
 	case *cadence.ReferenceType:
 		// When static type is a reference type, encoded value is its deferenced type.
-		return d.decodeValue(typ.Type, types)
+		return d.decodeValue(t.Type, types)
 
 	default:
 		err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
 		if err != nil {
-			return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %s", typ.ID(), typ, err.Error())
+			return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %s", t.ID(), t, err.Error())
 		}
 
 		// Decode ccf-type-and-value-message.
@@ -1189,10 +1189,11 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 	}
 
 	return cadence.NewMeteredStorageCapability(
-		d.gauge,
-		path.(cadence.Path),
-		address.(cadence.Address),
-		typ.BorrowType), nil
+			d.gauge,
+			path.(cadence.Path),
+			address.(cadence.Address),
+			typ.BorrowType),
+		nil
 }
 
 // decodeTypeValue decodes encoded type-value as
@@ -1606,14 +1607,14 @@ func (d *Decoder) decodeCompositeTypeValue(
 		return nil, err
 	}
 
-	switch typ := compositeType.(type) {
+	switch compositeType := compositeType.(type) {
 	case *cadence.StructType:
-		typ.Fields = fields
-		typ.Initializers = initializers
+		compositeType.Fields = fields
+		compositeType.Initializers = initializers
 
 	case *cadence.ResourceType:
-		typ.Fields = fields
-		typ.Initializers = initializers
+		compositeType.Fields = fields
+		compositeType.Initializers = initializers
 
 	case *cadence.EventType:
 		if len(initializers) != 1 {
@@ -1622,28 +1623,28 @@ func (d *Decoder) decodeCompositeTypeValue(
 				len(initializers),
 			)
 		}
-		typ.Fields = fields
-		typ.Initializer = initializers[0]
+		compositeType.Fields = fields
+		compositeType.Initializer = initializers[0]
 
 	case *cadence.ContractType:
-		typ.Fields = fields
-		typ.Initializers = initializers
+		compositeType.Fields = fields
+		compositeType.Initializers = initializers
 
 	case *cadence.EnumType:
-		typ.Fields = fields
-		typ.Initializers = initializers
+		compositeType.Fields = fields
+		compositeType.Initializers = initializers
 
 	case *cadence.StructInterfaceType:
-		typ.Fields = fields
-		typ.Initializers = initializers
+		compositeType.Fields = fields
+		compositeType.Initializers = initializers
 
 	case *cadence.ResourceInterfaceType:
-		typ.Fields = fields
-		typ.Initializers = initializers
+		compositeType.Fields = fields
+		compositeType.Initializers = initializers
 
 	case *cadence.ContractInterfaceType:
-		typ.Fields = fields
-		typ.Initializers = initializers
+		compositeType.Fields = fields
+		compositeType.Initializers = initializers
 	}
 
 	return compositeType, nil
