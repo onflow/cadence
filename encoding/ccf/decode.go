@@ -365,7 +365,13 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	case *cadence.ContractType:
 		return d.decodeContract(typ, types)
 
-	case cadence.PathType:
+	case cadence.StoragePathType:
+		return d.decodePath()
+
+	case cadence.PublicPathType:
+		return d.decodePath()
+
+	case cadence.PrivatePathType:
 		return d.decodePath()
 
 	case cadence.MetaType:
@@ -1117,16 +1123,6 @@ func (d *Decoder) decodePath() (cadence.Value, error) {
 		return nil, err
 	}
 
-	// Get domain identifier.
-	// Identifier() panics if pathDomain is invalid.
-	domain := common.PathDomain(pathDomain).Identifier()
-
-	common.UseMemory(d.gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// No need to add 1 to account for empty string: string is metered in Path struct.
-		Amount: uint64(len(domain)),
-	})
-
 	// Decode identifier.
 	identifier, err := d.dec.DecodeString()
 	if err != nil {
@@ -1139,7 +1135,7 @@ func (d *Decoder) decodePath() (cadence.Value, error) {
 		Amount: uint64(len(identifier)),
 	})
 
-	return cadence.NewMeteredPath(d.gauge, domain, identifier), nil
+	return cadence.NewMeteredPath(d.gauge, common.PathDomain(pathDomain), identifier)
 }
 
 // decodeCapability decodes encoded capability-value as

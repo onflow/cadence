@@ -8999,10 +8999,13 @@ func TestEncodeCapability(t *testing.T) {
 
 	t.Run("Capability<null>", func(t *testing.T) {
 
+		path, err := cadence.NewPath(1, "foo")
+		require.NoError(t, err)
+
 		testEncodeAndDecode(
 			t,
 			cadence.StorageCapability{
-				Path:    cadence.NewPath("storage", "foo"),
+				Path:    path,
 				Address: cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			},
 			[]byte{ // language=json, format=json-cdc
@@ -9053,14 +9056,20 @@ func TestEncodeCapability(t *testing.T) {
 			},
 		}
 
+		path1, err := cadence.NewPath(1, "foo")
+		require.NoError(t, err)
+
+		path2, err := cadence.NewPath(1, "bar")
+		require.NoError(t, err)
+
 		capability1 := cadence.StorageCapability{
-			Path:       cadence.NewPath("storage", "foo"),
+			Path:       path1,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		}
 
 		capability2 := cadence.StorageCapability{
-			Path:       cadence.NewPath("storage", "bar"),
+			Path:       path2,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: simpleStructType,
 		}
@@ -9188,10 +9197,13 @@ func TestEncodeCapability(t *testing.T) {
 	})
 
 	t.Run("Capability<Int>", func(t *testing.T) {
+		path, err := cadence.NewPath(1, "foo")
+		require.NoError(t, err)
+
 		testEncodeAndDecode(
 			t,
 			cadence.StorageCapability{
-				Path:       cadence.NewPath("storage", "foo"),
+				Path:       path,
 				Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				BorrowType: cadence.IntType{},
 			},
@@ -9234,13 +9246,20 @@ func TestEncodeCapability(t *testing.T) {
 	})
 
 	t.Run("array of Capability<Int>", func(t *testing.T) {
+
+		path1, err := cadence.NewPath(1, "foo")
+		require.NoError(t, err)
+
+		path2, err := cadence.NewPath(1, "bar")
+		require.NoError(t, err)
+
 		capability1 := cadence.StorageCapability{
-			Path:       cadence.NewPath("storage", "foo"),
+			Path:       path1,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		}
 		capability2 := cadence.StorageCapability{
-			Path:       cadence.NewPath("storage", "bar"),
+			Path:       path2,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		}
@@ -10241,34 +10260,269 @@ func TestEncodePath(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(
-		t,
-		cadence.NewPath("storage", "foo"),
-		[]byte{ // language=json, format=json-cdc
-			// {"type":"Path","value":{"domain":"storage","identifier":"foo"}}
-			//
-			// language=edn, format=ccf
-			// 130([137(24), [1, "foo"]])
-			//
-			// language=cbor, format=ccf
-			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
-			// array, 2 elements follow
-			0x82,
-			// tag
-			0xd8, ccf.CBORTagSimpleType,
-			// Path type ID (24)
-			0x18, 0x18,
-			// array, 2 elements follow
-			0x82,
-			// 1
-			0x01,
-			// string, 3 bytes follow
-			0x63,
-			// foo
-			0x66, 0x6f, 0x6f,
-		},
-	)
+	t.Run("Storage", func(t *testing.T) {
+		path, err := cadence.NewPath(1, "foo")
+		require.NoError(t, err)
+
+		testEncodeAndDecode(
+			t,
+			path,
+			[]byte{ // language=json, format=json-cdc
+				// {"value":{"domain":"storage","identifier":"foo"},"type":"Path"}
+				//
+				// language=edn, format=ccf
+				// 130([137(26), [1, "foo"]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// StoragePath type ID (26)
+				0x18, 0x1a,
+				// array, 2 elements follow
+				0x82,
+				// 1
+				0x01,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+			},
+		)
+	})
+
+	t.Run("Private", func(t *testing.T) {
+		path, err := cadence.NewPath(2, "foo")
+		require.NoError(t, err)
+
+		testEncodeAndDecode(
+			t,
+			path,
+			[]byte{ // language=json, format=json-cdc
+				// {"type":"Path","value":{"domain":"private","identifier":"foo"}}
+				//
+				// language=edn, format=ccf
+				// 130([137(28), [2, "foo"]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// PrivatePath type ID (28)
+				0x18, 0x1c,
+				// array, 2 elements follow
+				0x82,
+				// 2
+				0x02,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+			},
+		)
+	})
+
+	t.Run("Public", func(t *testing.T) {
+		path, err := cadence.NewPath(3, "foo")
+		require.NoError(t, err)
+
+		testEncodeAndDecode(
+			t,
+			path,
+			[]byte{ // language=json, format=json-cdc
+				// {"type":"Path","value":{"domain":"public","identifier":"foo"}}
+				//
+				// language=edn, format=ccf
+				// 130([137(27), [3, "foo"]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// PublicPath type ID (27)
+				0x18, 0x1b,
+				// array, 2 elements follow
+				0x82,
+				// 3
+				0x03,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+			},
+		)
+	})
+
+	t.Run("Array of StoragePath", func(t *testing.T) {
+		storagePath, err := cadence.NewPath(1, "foo")
+		require.NoError(t, err)
+
+		privatePath, err := cadence.NewPath(1, "bar")
+		require.NoError(t, err)
+
+		publicPath, err := cadence.NewPath(1, "baz")
+		require.NoError(t, err)
+
+		arrayOfPaths := cadence.NewArray([]cadence.Value{
+			storagePath,
+			privatePath,
+			publicPath,
+		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewStoragePathType()))
+
+		testEncodeAndDecode(
+			t,
+			arrayOfPaths,
+			[]byte{ // language=json, format=json-cdc
+				// {"value":[{"value":{"domain":"storage","identifier":"foo"},"type":"Path"},{"value":{"domain":"private","identifier":"bar"},"type":"Path"},{"value":{"domain":"public","identifier":"baz"},"type":"Path"}],"type":"Array"}
+				//
+				// language=edn, format=ccf
+				// 130([139(137(26)), [[1, "foo"], [1, "bar"], [1, "baz"]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// StoragePath type ID (26)
+				0x18, 0x1a,
+				// array, 3 elements follow
+				0x83,
+				// element 0: storage path
+				// array, 2 elements follow
+				0x82,
+				// 1
+				0x01,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+				// element 1: storage path
+				// array, 2 elements follow
+				0x82,
+				// 1
+				0x01,
+				// string, 3 bytes follow
+				0x63,
+				// bar
+				0x62, 0x61, 0x72,
+				// element 2: storage path
+				// array, 2 elements follow
+				0x82,
+				// 1
+				0x01,
+				// string, 3 bytes follow
+				0x63,
+				// baz
+				0x62, 0x61, 0x7a,
+			},
+		)
+	})
+
+	t.Run("Array of Path", func(t *testing.T) {
+		storagePath, err := cadence.NewPath(1, "foo")
+		require.NoError(t, err)
+
+		privatePath, err := cadence.NewPath(2, "bar")
+		require.NoError(t, err)
+
+		publicPath, err := cadence.NewPath(3, "baz")
+		require.NoError(t, err)
+
+		arrayOfPaths := cadence.NewArray([]cadence.Value{
+			storagePath,
+			privatePath,
+			publicPath,
+		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewPathType()))
+
+		testEncodeAndDecode(
+			t,
+			arrayOfPaths,
+			[]byte{ // language=json, format=json-cdc
+				// {"value":[{"value":{"domain":"storage","identifier":"foo"},"type":"Path"},{"value":{"domain":"private","identifier":"bar"},"type":"Path"},{"value":{"domain":"public","identifier":"baz"},"type":"Path"}],"type":"Array"}
+				//
+				// language=edn, format=ccf
+				// 130([139(137(24)), [130([137(26), [1, "foo"]]), 130([137(28), [2, "bar"]]), 130([137(27), [3, "baz"]])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayType,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Path type ID (24)
+				0x18, 0x18,
+				// array, 3 elements follow
+				0x83,
+				// element 0: storage path
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// StoragePath type ID (26)
+				0x18, 0x1a,
+				// array, 2 elements follow
+				0x82,
+				// 1
+				0x01,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+				// element 1: private path
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// PrivatePath type ID (28)
+				0x18, 0x1c,
+				// array, 2 elements follow
+				0x82,
+				// 2
+				0x02,
+				// string, 3 bytes follow
+				0x63,
+				// bar
+				0x62, 0x61, 0x72,
+				// element 2: public path
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// PublicPath type ID (27)
+				0x18, 0x1b,
+				// array, 2 elements follow
+				0x82,
+				// 3
+				0x03,
+				// string, 3 bytes follow
+				0x63,
+				// baz
+				0x62, 0x61, 0x7a,
+			},
+		)
+	})
 }
 
 func testAllEncodeAndDecode(t *testing.T, tests ...encodeTest) {

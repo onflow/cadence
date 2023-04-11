@@ -29,7 +29,6 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
 	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
@@ -229,9 +228,9 @@ func (e *Encoder) encodeInlineTypeAndValue(value cadence.Value, tids ccfTypeIDBy
 // language=CDDL
 // composite-typedef = [
 //
-//  ; one-or-more instead of zero-or-more because:
-//  ; - when encoding a primitive type, such as boolean or string, `ccf-type-and-value-message` is used (no `composite-typedef` at all)
-//  ; - when encoding a composite type, such as event, `ccf-typedef-and-value-message` is used, which encodes at least one `composite-typedef`
+//	; one-or-more instead of zero-or-more because:
+//	; - when encoding a primitive type, such as boolean or string, `ccf-type-and-value-message` is used (no `composite-typedef` at all)
+//	; - when encoding a composite type, such as event, `ccf-typedef-and-value-message` is used, which encodes at least one `composite-typedef`
 //	+ (
 //	  struct-type
 //	  / resource-type
@@ -961,8 +960,7 @@ func (e *Encoder) encodePath(x cadence.Path) error {
 	}
 
 	// element 0: domain as CBOR uint.
-	domain := common.PathDomainFromIdentifier(x.Domain)
-	err = e.enc.EncodeUint8(uint8(domain))
+	err = e.enc.EncodeUint8(uint8(x.Domain))
 	if err != nil {
 		return err
 	}
