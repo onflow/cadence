@@ -556,6 +556,24 @@ func ParseStatements(
 	)
 }
 
+func ParseStatementsFromTokenStream(
+	memoryGauge common.MemoryGauge,
+	tokens lexer.TokenStream,
+	config Config,
+) (
+	statements []ast.Statement,
+	errs []error,
+) {
+	return ParseTokenStream(
+		memoryGauge,
+		tokens,
+		func(p *parser) ([]ast.Statement, error) {
+			return parseStatements(p, nil)
+		},
+		config,
+	)
+}
+
 func ParseType(memoryGauge common.MemoryGauge, input []byte, config Config) (ty ast.Type, errs []error) {
 	return Parse(
 		memoryGauge,
