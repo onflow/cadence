@@ -498,22 +498,6 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 }
 
 func (interpreter *Interpreter) testComparison(left, right Value, expression *ast.BinaryExpression) BoolValue {
-	left = interpreter.Unbox(
-		LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: expression.Left,
-		},
-		left,
-	)
-
-	right = interpreter.Unbox(
-		LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: expression.Right,
-		},
-		right,
-	)
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: expression,
