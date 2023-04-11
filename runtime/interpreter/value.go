@@ -2799,7 +2799,6 @@ func (v *ArrayValue) Slice(
 
 // NumberValue
 type NumberValue interface {
-	EquatableValue
 	ComparableValue
 	ToInt(locationRange LocationRange) int
 	Negate(*Interpreter, LocationRange) NumberValue
