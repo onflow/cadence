@@ -524,45 +524,38 @@ func (interpreter *Interpreter) testComparison(left, right Value, expression *as
 		return FalseValue
 	}
 
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
+
 	switch expression.Operation {
 	case ast.OperationLess:
 		return leftComparable.Less(
 			interpreter,
 			rightComparable,
-			LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: expression,
-			},
+			locationRange,
 		)
 
 	case ast.OperationLessEqual:
 		return leftComparable.LessEqual(
 			interpreter,
 			rightComparable,
-			LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: expression,
-			},
+			locationRange,
 		)
 
 	case ast.OperationGreater:
 		return leftComparable.Greater(
 			interpreter,
 			rightComparable,
-			LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: expression,
-			},
+			locationRange,
 		)
 
 	case ast.OperationGreaterEqual:
 		return leftComparable.GreaterEqual(
 			interpreter,
 			rightComparable,
-			LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: expression,
-			},
+			locationRange,
 		)
 
 	default:
