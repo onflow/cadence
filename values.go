@@ -1934,28 +1934,41 @@ func (v AccountLink) String() string {
 // Path
 
 type Path struct {
-	Domain     string
+	Domain     common.PathDomain
 	Identifier string
 }
 
 var _ Value = Path{}
 
-func NewPath(domain, identifier string) Path {
+func NewPath(domain common.PathDomain, identifier string) (Path, error) {
+	if domain == common.PathDomainUnknown {
+		return Path{}, errors.NewDefaultUserError("unknown domain in path")
+	}
+
 	return Path{
 		Domain:     domain,
 		Identifier: identifier,
-	}
+	}, nil
 }
 
-func NewMeteredPath(gauge common.MemoryGauge, domain, identifier string) Path {
+func NewMeteredPath(gauge common.MemoryGauge, domain common.PathDomain, identifier string) (Path, error) {
 	common.UseMemory(gauge, common.CadencePathValueMemoryUsage)
 	return NewPath(domain, identifier)
 }
 
 func (Path) isValue() {}
 
-func (Path) Type() Type {
-	return ThePathType
+func (v Path) Type() Type {
+	switch v.Domain {
+	case common.PathDomainStorage:
+		return TheStoragePathType
+	case common.PathDomainPrivate:
+		return ThePrivatePathType
+	case common.PathDomainPublic:
+		return ThePublicPathType
+	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func (v Path) MeteredType(common.MemoryGauge) Type {
@@ -1968,7 +1981,7 @@ func (Path) ToGoValue() any {
 
 func (v Path) String() string {
 	return format.Path(
-		v.Domain,
+		v.Domain.Identifier(),
 		v.Identifier,
 	)
 }

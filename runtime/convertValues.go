@@ -212,15 +212,15 @@ func exportValueWithInterpreter(
 	case interpreter.AddressValue:
 		return cadence.NewMeteredAddress(inter, v), nil
 	case interpreter.PathLinkValue:
-		return exportPathLinkValue(v, inter), nil
+		return exportPathLinkValue(v, inter)
 	case interpreter.AccountLinkValue:
 		return exportAccountLinkValue(inter), nil
 	case interpreter.PathValue:
-		return exportPathValue(inter, v), nil
+		return exportPathValue(inter, v)
 	case interpreter.TypeValue:
 		return exportTypeValue(v, inter), nil
 	case *interpreter.StorageCapabilityValue:
-		return exportStorageCapabilityValue(v, inter), nil
+		return exportStorageCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
@@ -594,27 +594,23 @@ func exportDictionaryValue(
 	return dictionary.WithType(exportType), err
 }
 
-func exportPathLinkValue(v interpreter.PathLinkValue, inter *interpreter.Interpreter) cadence.PathLink {
-	path := exportPathValue(inter, v.TargetPath)
+func exportPathLinkValue(v interpreter.PathLinkValue, inter *interpreter.Interpreter) (cadence.PathLink, error) {
+	path, err := exportPathValue(inter, v.TargetPath)
+	if err != nil {
+		return cadence.PathLink{}, err
+	}
 	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
-	return cadence.NewMeteredPathLink(inter, path, ty)
+	return cadence.NewMeteredPathLink(inter, path, ty), nil
 }
 
 func exportAccountLinkValue(inter *interpreter.Interpreter) cadence.AccountLink {
 	return cadence.NewMeteredAccountLink(inter)
 }
 
-func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) cadence.Path {
-	domain := v.Domain.Identifier()
-	common.UseMemory(gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// no need to add 1 to account for empty string: string is metered in Path struct
-		Amount: uint64(len(domain)),
-	})
-
+func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) (cadence.Path, error) {
 	return cadence.NewMeteredPath(
 		gauge,
-		domain,
+		v.Domain,
 		v.Identifier,
 	)
 }
@@ -630,18 +626,26 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 	)
 }
 
-func exportStorageCapabilityValue(v *interpreter.StorageCapabilityValue, inter *interpreter.Interpreter) cadence.StorageCapability {
+func exportStorageCapabilityValue(
+	v *interpreter.StorageCapabilityValue,
+	inter *interpreter.Interpreter,
+) (cadence.StorageCapability, error) {
 	var borrowType sema.Type
 	if v.BorrowType != nil {
 		borrowType = inter.MustConvertStaticToSemaType(v.BorrowType)
 	}
 
+	path, err := exportPathValue(inter, v.Path)
+	if err != nil {
+		return cadence.StorageCapability{}, err
+	}
+
 	return cadence.NewMeteredStorageCapability(
 		inter,
-		exportPathValue(inter, v.Path),
+		path,
 		cadence.NewMeteredAddress(inter, v.Address),
 		ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{}),
-	)
+	), nil
 }
 
 // exportEvent converts a runtime event to its native Go representation.
@@ -1059,7 +1063,7 @@ func (i valueImporter) importPathValue(v cadence.Path) interpreter.PathValue {
 
 	return interpreter.NewPathValue(
 		inter,
-		common.PathDomainFromIdentifier(v.Domain),
+		v.Domain,
 		v.Identifier,
 	)
 }
