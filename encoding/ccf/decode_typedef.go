@@ -30,7 +30,10 @@ import (
 // language=CDDL
 // composite-typedef = [
 //
-//	+(
+//  ; one-or-more instead of zero-or-more because:
+//  ; - when encoding a primitive type, such as boolean or string, `ccf-type-and-value-message` is used (no `composite-typedef` at all)
+//  ; - when encoding a composite type, such as event, `ccf-typedef-and-value-message` is used, which encodes at least one `composite-typedef`
+//	+ (
 //	  struct-type
 //	  / resource-type
 //	  / contract-type
@@ -339,6 +342,7 @@ func (d *Decoder) decodeCompositeType(
 		return ccfTypeID(0), cadenceTypeID(""), err
 	}
 
+	// The return value can be ignored, because its non-existence was already checked above
 	_ = types.add(ccfID, constructor(location, identifier))
 	rawFields[ccfID] = rawField
 	return ccfID, cadenceID, nil
@@ -472,6 +476,7 @@ func (d *Decoder) decodeInterfaceType(
 		return ccfTypeID(0), cadenceTypeID(""), err
 	}
 
+	// The return value can be ignored, because its non-existence was already checked above
 	_ = types.add(ccfID, constructor(location, identifier))
 	return ccfID, cadenceID, nil
 }

@@ -44,6 +44,8 @@ func (id ccfTypeID) Equal(other ccfTypeID) bool {
 	return id == other
 }
 
+// ccfTypeIDByCadenceType maps a Cadence type ID to a CCF type ID
+//
 // IMPORTANT: Don't use cadence.Type as map key because all Cadence composite/interface
 // types are pointers, and different instance of the same type will be treated as
 // different map key.
