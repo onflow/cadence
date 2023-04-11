@@ -1481,7 +1481,7 @@ func (e *Encoder) encodeCompositeTypeValue(
 ) error {
 	ccfID, ok := visited[cadenceTypeID]
 	if !ok {
-		return fmt.Errorf("CCF type ID not found for composite type value %s", cadenceTypeID)
+		panic(cadenceErrors.NewUnexpectedError("CCF type ID not found for composite type value %s", cadenceTypeID))
 	}
 
 	// Encode given tag number indicating cadence type value.

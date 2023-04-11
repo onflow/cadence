@@ -19,8 +19,6 @@
 package ccf
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence"
 	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
@@ -67,7 +65,7 @@ import (
 func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDByCadenceType) error {
 	ccfID, err := tids.id(typ)
 	if err != nil {
-		return fmt.Errorf("CCF type ID not found for composite type %s (%T)", typ.ID(), typ)
+		panic(cadenceErrors.NewUnexpectedError("CCF type ID not found for composite type %s (%T)", typ.ID(), typ))
 	}
 
 	var cborTagNum uint64
@@ -215,7 +213,7 @@ func (e *Encoder) encodeCompositeTypeField(typ cadence.Field, tids ccfTypeIDByCa
 func (e *Encoder) encodeInterfaceType(typ cadence.InterfaceType, tids ccfTypeIDByCadenceType) error {
 	ccfID, err := tids.id(typ)
 	if err != nil {
-		return fmt.Errorf("CCF type ID not found for interface type %s (%T)", typ.ID(), typ)
+		panic(cadenceErrors.NewUnexpectedError("CCF type ID not found for interface type %s (%T)", typ.ID(), typ))
 	}
 
 	var cborTagNum uint64

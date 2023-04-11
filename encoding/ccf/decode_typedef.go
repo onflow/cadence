@@ -24,6 +24,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
 // decodeTypeDefs decodes composite/interface type definitions as
@@ -111,7 +112,7 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 	for id, raw := range rawFields { //nolint:maprange
 		typ, err := types.typ(id)
 		if err != nil {
-			return nil, err
+			panic(cadenceErrors.NewUnexpectedErrorFromCause(err))
 		}
 
 		dec := NewDecoder(d.gauge, raw)
