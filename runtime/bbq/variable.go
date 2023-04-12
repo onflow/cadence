@@ -18,11 +18,6 @@
 
 package bbq
 
-type Program struct {
-	Contract  *Contract
-	Imports   []*Import
-	Functions []*Function
-	Constants []*Constant
-	Variables []*Variable
-	Types     [][]byte
+type Variable struct {
+	Name string
 }

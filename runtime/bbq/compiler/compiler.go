@@ -253,23 +253,30 @@ func (c *Compiler) Compile() *bbq.Program {
 	}
 
 	compositeDeclarations := c.Program.CompositeDeclarations()
+	variableDeclarations := c.Program.VariableDeclarations()
+	functionDeclarations := c.Program.FunctionDeclarations()
 
 	transaction := c.Program.SoleTransactionDeclaration()
 	if transaction != nil {
-		desugaredTransaction := c.desugarTransaction(transaction)
+		desugaredTransaction, desugaredTransactionParams, initFunction := c.desugarTransaction(transaction)
 		compositeDeclarations = append(compositeDeclarations, desugaredTransaction)
+		variableDeclarations = append(variableDeclarations, desugaredTransactionParams...)
+		if initFunction != nil {
+			functionDeclarations = append(functionDeclarations, initFunction)
+		}
 	}
 
 	// Reserve globals for functions/types before visiting their implementations.
 	c.reserveGlobalVars(
 		"",
+		variableDeclarations,
 		nil,
-		c.Program.FunctionDeclarations(),
+		functionDeclarations,
 		compositeDeclarations,
 	)
 
 	// Compile declarations
-	for _, declaration := range c.Program.FunctionDeclarations() {
+	for _, declaration := range functionDeclarations {
 		c.compileDeclaration(declaration)
 	}
 	for _, declaration := range compositeDeclarations {
@@ -281,6 +288,7 @@ func (c *Compiler) Compile() *bbq.Program {
 	types := c.exportTypes()
 	imports := c.exportImports()
 	contract := c.exportContract()
+	variables := c.exportVariables(variableDeclarations)
 
 	return &bbq.Program{
 		Functions: functions,
@@ -288,15 +296,21 @@ func (c *Compiler) Compile() *bbq.Program {
 		Types:     types,
 		Imports:   imports,
 		Contract:  contract,
+		Variables: variables,
 	}
 }
 
 func (c *Compiler) reserveGlobalVars(
 	compositeTypeName string,
+	variableDecls []*ast.VariableDeclaration,
 	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 ) {
+	for _, declaration := range variableDecls {
+		c.addGlobal(declaration.Identifier.Identifier)
+	}
+
 	for _, declaration := range specialFunctionDecls {
 		switch declaration.Kind {
 		case common.DeclarationKindDestructor,
@@ -331,6 +345,7 @@ func (c *Compiler) reserveGlobalVars(
 		// Define globals for functions before visiting function bodies
 		c.reserveGlobalVars(
 			qualifiedTypeName,
+			nil,
 			declaration.Members.SpecialFunctions(),
 			declaration.Members.Functions(),
 			declaration.Members.Composites(),
@@ -388,6 +403,19 @@ func (c *Compiler) exportFunctions() []*bbq.Function {
 		)
 	}
 	return functions
+}
+
+func (c *Compiler) exportVariables(variableDecls []*ast.VariableDeclaration) []*bbq.Variable {
+	variables := make([]*bbq.Variable, 0, len(c.functions))
+	for _, varDecl := range variableDecls {
+		variables = append(
+			variables,
+			&bbq.Variable{
+				Name: varDecl.Identifier.Identifier,
+			},
+		)
+	}
+	return variables
 }
 
 func (c *Compiler) exportContract() *bbq.Contract {
@@ -537,9 +565,17 @@ func (c *Compiler) VisitAssignmentStatement(statement *ast.AssignmentStatement) 
 
 	switch target := statement.Target.(type) {
 	case *ast.IdentifierExpression:
-		local := c.currentFunction.findLocal(target.Identifier.Identifier)
-		first, second := encodeUint16(local.index)
-		c.emit(opcode.SetLocal, first, second)
+		varName := target.Identifier.Identifier
+		local := c.currentFunction.findLocal(varName)
+		if local != nil {
+			first, second := encodeUint16(local.index)
+			c.emit(opcode.SetLocal, first, second)
+			return
+		}
+
+		global := c.findGlobal(varName)
+		first, second := encodeUint16(global.index)
+		c.emit(opcode.SetGlobal, first, second)
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
 		c.stringConstLoad(target.Identifier.Identifier)
@@ -637,7 +673,7 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 		typ := c.Elaboration.IdentifierInInvocationTypes[invokedExpr]
 		invocationType := typ.(*sema.FunctionType)
 		if invocationType.IsConstructor {
-
+			// TODO:
 		}
 
 		// Load arguments
@@ -647,7 +683,7 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 		c.emit(opcode.Invoke)
 	case *ast.MemberExpression:
 		memberInfo := c.Elaboration.MemberExpressionMemberInfos[invokedExpr]
-		typeName := memberInfo.AccessedType.QualifiedString()
+		typeName := TypeName(memberInfo.AccessedType)
 		var funcName string
 
 		invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
@@ -668,7 +704,7 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 		// Load arguments
 		c.loadArguments(expression)
 
-		if _, ok := memberInfo.AccessedType.(*sema.RestrictedType); ok {
+		if isInterfaceMethodInvocation(memberInfo.AccessedType) {
 			funcName = invokedExpr.Identifier.Identifier
 			funcNameSizeFirst, funcNameSizeSecond := encodeUint16(uint16(len(funcName)))
 
@@ -690,6 +726,31 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 	}
 
 	return
+}
+
+func isInterfaceMethodInvocation(accessedType sema.Type) bool {
+	switch typ := accessedType.(type) {
+	case *sema.ReferenceType:
+		return isInterfaceMethodInvocation(typ.Type)
+	case *sema.RestrictedType:
+		// TODO: If the concrete type is known (other than AnyStruct/AnyResource), can
+		//  this be treated as a concrete type method invocation (instead of the restriction interface)?
+		return true
+	default:
+		return false
+	}
+}
+
+func TypeName(typ sema.Type) string {
+	switch typ := typ.(type) {
+	case *sema.ReferenceType:
+		return TypeName(typ.Type)
+	case *sema.RestrictedType:
+		// TODO: Revisit. Probably this is not needed here?
+		return TypeName(typ.Restrictions[0])
+	default:
+		return typ.QualifiedString()
+	}
 }
 
 func (c *Compiler) loadArguments(expression *ast.InvocationExpression) {
@@ -1137,20 +1198,102 @@ func (c *Compiler) declareParameters(function *function, paramList *ast.Paramete
 
 // desugarTransaction Convert a transaction into a composite type declaration,
 // so the code-gen would seamlessly work without having special-case anything in compiler/vm.
-func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) (*ast.CompositeDeclaration, []*ast.VariableDeclaration) {
-
+// Transaction parameters are converted into global variables.
+// An initializer is generated to set parameters to above generated global variables.
+func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) (
+	*ast.CompositeDeclaration,
+	[]*ast.VariableDeclaration,
+	*ast.FunctionDeclaration,
+) {
 	// TODO: This assumes the transaction program/elaboration is not cached.
 	//   i.e: Modifies the elaboration.
 	//   Handle this properly for cached transactions.
 
 	// TODO: add pre/post conditions
 
-	var members []ast.Declaration
+	var varDeclarations []*ast.VariableDeclaration
+	var initFunction *ast.FunctionDeclaration
 
+	if transaction.ParameterList != nil {
+		varDeclarations = make([]*ast.VariableDeclaration, 0, len(transaction.ParameterList.Parameters))
+		statements := make([]ast.Statement, 0, len(transaction.ParameterList.Parameters))
+		parameters := make([]*ast.Parameter, 0, len(transaction.ParameterList.Parameters))
+
+		for index, parameter := range transaction.ParameterList.Parameters {
+			// Create global variables
+			// i.e: `var a: Type`
+			field := &ast.VariableDeclaration{
+				Access:         ast.AccessPrivate,
+				IsConstant:     false,
+				Identifier:     parameter.Identifier,
+				TypeAnnotation: parameter.TypeAnnotation,
+			}
+			varDeclarations = append(varDeclarations, field)
+
+			// Create assignment from param to global var.
+			// i.e: `a = $param_a`
+			modifiedParamName := commons.TransactionGeneratedParamPrefix + parameter.Identifier.Identifier
+			modifiedParameter := &ast.Parameter{
+				Label: "",
+				Identifier: ast.Identifier{
+					Identifier: modifiedParamName,
+				},
+				TypeAnnotation: parameter.TypeAnnotation,
+			}
+			parameters = append(parameters, modifiedParameter)
+
+			assignment := &ast.AssignmentStatement{
+				Target: &ast.IdentifierExpression{
+					Identifier: parameter.Identifier,
+				},
+				Value: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: modifiedParamName,
+					},
+				},
+				Transfer: &ast.Transfer{
+					Operation: ast.TransferOperationCopy,
+				},
+			}
+			statements = append(statements, assignment)
+
+			transactionTypes := c.Elaboration.TransactionDeclarationTypes[transaction]
+			paramType := transactionTypes.Parameters[index].TypeAnnotation.Type
+			assignmentTypes := sema.AssignmentStatementTypes{
+				ValueType:  paramType,
+				TargetType: paramType,
+			}
+
+			c.Elaboration.AssignmentStatementTypes[assignment] = assignmentTypes
+		}
+
+		// Create an init function.
+		// func $init($param_a: Type, $param_b: Type, ...) {
+		//     a = $param_a
+		//     b = $param_b
+		//     ...
+		// }
+		initFunction = &ast.FunctionDeclaration{
+			Access: 0,
+			Identifier: ast.Identifier{
+				Identifier: commons.ProgramInitFunctionName,
+			},
+			ParameterList: &ast.ParameterList{
+				Parameters: parameters,
+			},
+			ReturnTypeAnnotation: nil,
+			FunctionBlock: &ast.FunctionBlock{
+				Block: &ast.Block{
+					Statements: statements,
+				},
+			},
+		}
+	}
+
+	var members []ast.Declaration
 	if transaction.Execute != nil {
 		members = append(members, transaction.Execute.FunctionDeclaration)
 	}
-
 	if transaction.Prepare != nil {
 		members = append(members, transaction.Prepare)
 	}
@@ -1178,7 +1321,7 @@ func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) (
 
 	c.Elaboration.CompositeDeclarationTypes[compositeDecl] = compositeType
 
-	return compositeDecl
+	return compositeDecl, varDeclarations, initFunction
 }
 
 var emptyInitializer = func() *ast.SpecialFunctionDeclaration {

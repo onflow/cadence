@@ -177,7 +177,7 @@ func TestFTTransfer(t *testing.T) {
 	setupTxVM := NewVM(program, vmConfig)
 
 	authorizer := NewAuthAccountValue()
-	err = setupTxVM.ExecuteTransaction(authorizer)
+	err = setupTxVM.ExecuteTransaction(nil, authorizer)
 	require.NoError(t, err)
 
 	// ----- Run token transfer transaction -----
@@ -215,7 +215,13 @@ func TestFTTransfer(t *testing.T) {
 	printProgram(tokenTransferTxProgram)
 
 	tokenTransferTxVM := NewVM(tokenTransferTxProgram, vmConfig)
-	err = tokenTransferTxVM.ExecuteTransaction(authorizer)
+
+	args := []Value{
+		IntValue{1},
+		AddressValue(common.Address{0x01}),
+	}
+
+	err = tokenTransferTxVM.ExecuteTransaction(args, authorizer)
 	require.NoError(t, err)
 }
 

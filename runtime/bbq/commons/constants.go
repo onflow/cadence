@@ -30,6 +30,12 @@ const (
 	TransactionPrepareFunctionName  = "transaction.prepare"
 	LogFunctionName                 = "log"
 	PanicFunctionName               = "panic"
+	GetAccountFunctionName          = "getAccount"
+
+	// Names used by generated constructs
+
+	ProgramInitFunctionName         = "$_init_"
+	TransactionGeneratedParamPrefix = "$_param_"
 )
 
 type CastType byte

@@ -169,14 +169,22 @@ func (vm *VM) InitializeContract(arguments ...Value) (*CompositeValue, error) {
 	return contractValue, nil
 }
 
-func (vm *VM) ExecuteTransaction(signers ...Value) error {
+func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) error {
 	// Create transaction value
 	transaction, err := vm.Invoke(commons.TransactionWrapperCompositeName)
 	if err != nil {
 		return err
 	}
 
-	args := []Value{transaction}
+	if initializer, ok := vm.globals[commons.ProgramInitFunctionName]; ok {
+		_, err = vm.invoke(initializer, transactionArgs)
+		if err != nil {
+			return err
+		}
+	}
+
+	args := make([]Value, 0, len(signers)+1)
+	args = append(args, transaction)
 	args = append(args, signers...)
 
 	// Invoke 'prepare', if exists.
@@ -409,7 +417,7 @@ func opTransfer(vm *VM) {
 
 	valueType := transferredValue.StaticType(vm.config.MemoryGauge)
 	if !IsSubType(valueType, targetType) {
-		panic("invalid transfer")
+		panic(errors.NewUnexpectedError("invalid transfer: expected '%s', found '%s'", targetType, valueType))
 	}
 
 	vm.replaceTop(transferredValue)

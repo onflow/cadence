@@ -34,6 +34,7 @@ var NativeFunctions = map[string]Value{}
 var BuiltInLocation common.Location = nil
 
 func RegisterFunction(functionName string, functionValue NativeFunctionValue) {
+	functionValue.Name = functionName
 	NativeFunctions[functionName] = functionValue
 }
 
@@ -64,6 +65,14 @@ func init() {
 			}
 
 			panic(string(messageValue.Str))
+		},
+	})
+
+	RegisterFunction(commons.GetAccountFunctionName, NativeFunctionValue{
+		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
+		Function: func(arguments ...Value) Value {
+			// TODO: Properly implement
+			return VoidValue{}
 		},
 	})
 }

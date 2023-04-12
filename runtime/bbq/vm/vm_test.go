@@ -1508,7 +1508,62 @@ func TestTransaction(t *testing.T) {
 
 		vm := NewVM(program, nil)
 
-		err = vm.ExecuteTransaction()
+		err = vm.ExecuteTransaction(nil)
+		require.NoError(t, err)
+
+		// Rerun the same again using internal functions, to get the access to the transaction value.
+
+		transaction, err := vm.Invoke(commons.TransactionWrapperCompositeName)
+		require.NoError(t, err)
+
+		require.IsType(t, &CompositeValue{}, transaction)
+		compositeValue := transaction.(*CompositeValue)
+
+		// At the beginning, 'a' is uninitialized
+		assert.Nil(t, compositeValue.GetMember(vm.config, "a"))
+
+		// Invoke 'prepare'
+		_, err = vm.Invoke(commons.TransactionPrepareFunctionName, transaction)
+		require.NoError(t, err)
+
+		// Once 'prepare' is called, 'a' is initialized to "Hello!"
+		assert.Equal(t, StringValue{Str: []byte("Hello!")}, compositeValue.GetMember(vm.config, "a"))
+
+		// Invoke 'execute'
+		_, err = vm.Invoke(commons.TransactionExecuteFunctionName, transaction)
+		require.NoError(t, err)
+
+		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
+		assert.Equal(t, StringValue{Str: []byte("Hello again!")}, compositeValue.GetMember(vm.config, "a"))
+	})
+
+	t.Run("with params", func(t *testing.T) {
+
+		checker, err := ParseAndCheck(t, `
+            transaction(param1: String, param2: String) {
+				var a: String
+                prepare() {
+                    self.a = param1
+                }
+                execute {
+                    self.a = param2
+                }
+            }`,
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+		printProgram(program)
+
+		vm := NewVM(program, nil)
+
+		args := []Value{
+			StringValue{[]byte("Hello!")},
+			StringValue{[]byte("Hello again!")},
+		}
+
+		err = vm.ExecuteTransaction(args)
 		require.NoError(t, err)
 
 		// Rerun the same again using internal functions, to get the access to the transaction value.

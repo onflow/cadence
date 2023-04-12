@@ -30,11 +30,14 @@ var nativeFunctions []*global
 var builtinTypes = []sema.Type{
 	sema.StringType,
 	sema.AuthAccountType,
+	sema.PublicAccountType,
+	&sema.CapabilityType{},
 }
 
 var stdlibFunctions = []string{
 	commons.LogFunctionName,
 	commons.PanicFunctionName,
+	commons.GetAccountFunctionName,
 }
 
 func init() {

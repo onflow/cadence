@@ -98,6 +98,10 @@ func LinkGlobals(
 		globals = append(globals, nil)
 	}
 
+	for range program.Variables {
+		globals = append(globals, nil)
+	}
+
 	// Iterate through `program.Functions` to be deterministic.
 	// Order of globals must be same as index set at `Compiler.addGlobal()`.
 	// TODO: include non-function globals

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,30 @@
  * limitations under the License.
  */
 
-package bbq
+package vm
 
-type Program struct {
-	Contract  *Contract
-	Imports   []*Import
-	Functions []*Function
-	Constants []*Constant
-	Variables []*Variable
-	Types     [][]byte
+import (
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/format"
+	"github.com/onflow/cadence/runtime/interpreter"
+)
+
+type AddressValue common.Address
+
+var _ Value = AddressValue{}
+
+func (AddressValue) isValue() {}
+
+func (AddressValue) StaticType(common.MemoryGauge) StaticType {
+	return interpreter.PrimitiveStaticTypeAddress
+}
+
+func (v AddressValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+	return v
+}
+
+func (v AddressValue) String() string {
+	return format.Address(common.Address(v))
 }

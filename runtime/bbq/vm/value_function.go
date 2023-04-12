@@ -49,6 +49,7 @@ func (v FunctionValue) String() string {
 }
 
 type NativeFunctionValue struct {
+	Name           string
 	ParameterCount int
 	Function       func(arguments ...Value) Value
 }
