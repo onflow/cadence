@@ -27,6 +27,11 @@ import (
 	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
+type rawFieldsWithCCFTypeID struct {
+	typeID    ccfTypeID
+	rawFields []byte
+}
+
 // decodeTypeDefs decodes composite/interface type definitions as
 // language=CDDL
 // composite-typedef = [
@@ -59,7 +64,7 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 
 	// NOTE: composite fields are not decoded while composite types are decoded
 	// because field type might reference composite type that hasn't decoded yet.
-	rawFields := make(map[ccfTypeID][]byte, count)
+	rawFieldsOfTypes := make([]rawFieldsWithCCFTypeID, 0, count)
 
 	// cadenceTypeIDs is used to check if cadence type IDs are unique in type definitions.
 	cadenceTypeIDs := make(map[cadenceTypeID]struct{}, count)
@@ -68,7 +73,7 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 	var previousCadenceID cadenceTypeID
 
 	for i := uint64(0); i < count; i++ {
-		ccfID, cadenceID, err := d.decodeTypeDef(types, rawFields)
+		ccfID, cadenceID, rawFields, err := d.decodeTypeDef(types)
 		if err != nil {
 			return nil, err
 		}
@@ -104,18 +109,22 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 			)
 		}
 
+		if len(rawFields) > 0 {
+			rawFieldsOfTypes = append(rawFieldsOfTypes, rawFieldsWithCCFTypeID{typeID: ccfID, rawFields: rawFields})
+		}
+
 		cadenceTypeIDs[cadenceID] = struct{}{}
 		previousCadenceID = cadenceID
 	}
 
 	// Decode fields after all high-level type definitions are resolved.
-	for id, raw := range rawFields { //nolint:maprange
-		typ, err := types.typ(id)
+	for _, rawFields := range rawFieldsOfTypes {
+		typ, err := types.typ(rawFields.typeID)
 		if err != nil {
 			panic(cadenceErrors.NewUnexpectedErrorFromCause(err))
 		}
 
-		dec := NewDecoder(d.gauge, raw)
+		dec := NewDecoder(d.gauge, rawFields.rawFields)
 		fields, err := dec.decodeCompositeFields(types, dec.decodeInlineType)
 		if err != nil {
 			return nil, err
@@ -176,15 +185,15 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 //	#6.178(interface-type)
 func (d *Decoder) decodeTypeDef(
 	types *cadenceTypeByCCFTypeID,
-	rawFields map[ccfTypeID][]byte,
 ) (
 	ccfTypeID,
 	cadenceTypeID,
+	[]byte,
 	error,
 ) {
 	tagNum, err := d.dec.DecodeTagNumber()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), err
+		return ccfTypeID(0), cadenceTypeID(""), nil, err
 	}
 
 	switch tagNum {
@@ -198,7 +207,7 @@ func (d *Decoder) decodeTypeDef(
 				nil,
 			)
 		}
-		return d.decodeCompositeType(types, rawFields, ctr)
+		return d.decodeCompositeType(types, ctr)
 
 	case CBORTagResourceType:
 		ctr := func(location common.Location, identifier string) cadence.Type {
@@ -210,7 +219,7 @@ func (d *Decoder) decodeTypeDef(
 				nil,
 			)
 		}
-		return d.decodeCompositeType(types, rawFields, ctr)
+		return d.decodeCompositeType(types, ctr)
 
 	case CBORTagEventType:
 		ctr := func(location common.Location, identifier string) cadence.Type {
@@ -222,7 +231,7 @@ func (d *Decoder) decodeTypeDef(
 				nil,
 			)
 		}
-		return d.decodeCompositeType(types, rawFields, ctr)
+		return d.decodeCompositeType(types, ctr)
 
 	case CBORTagContractType:
 		ctr := func(location common.Location, identifier string) cadence.Type {
@@ -234,7 +243,7 @@ func (d *Decoder) decodeTypeDef(
 				nil,
 			)
 		}
-		return d.decodeCompositeType(types, rawFields, ctr)
+		return d.decodeCompositeType(types, ctr)
 
 	case CBORTagEnumType:
 		ctr := func(location common.Location, identifier string) cadence.Type {
@@ -247,7 +256,7 @@ func (d *Decoder) decodeTypeDef(
 				nil,
 			)
 		}
-		return d.decodeCompositeType(types, rawFields, ctr)
+		return d.decodeCompositeType(types, ctr)
 
 	case CBORTagStructInterfaceType:
 		ctr := func(location common.Location, identifier string) cadence.Type {
@@ -288,6 +297,7 @@ func (d *Decoder) decodeTypeDef(
 	default:
 		return ccfTypeID(0),
 			cadenceTypeID(""),
+			nil,
 			fmt.Errorf("unsupported type definition with CBOR tag number %d", tagNum)
 	}
 }
@@ -308,45 +318,49 @@ func (d *Decoder) decodeTypeDef(
 // ]
 func (d *Decoder) decodeCompositeType(
 	types *cadenceTypeByCCFTypeID,
-	rawFields map[ccfTypeID][]byte,
 	constructor func(common.Location, string) cadence.Type,
-) (ccfTypeID, cadenceTypeID, error) {
+) (
+	ccfTypeID,
+	cadenceTypeID,
+	[]byte,
+	error,
+) {
 
 	// Decode array head of length 3.
 	err := decodeCBORArrayWithKnownSize(d.dec, 3)
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), err
+		return ccfTypeID(0), cadenceTypeID(""), nil, err
 	}
 
 	// element 0: id
 	ccfID, err := d.decodeCCFTypeID()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), err
+		return ccfTypeID(0), cadenceTypeID(""), nil, err
 	}
 
 	// "Valid CCF Encoding Requirements" in CCF specs:
 	//
 	//   "composite-type.id MUST be unique in ccf-typedef-message or ccf-typedef-and-value-message."
 	if types.has(ccfID) {
-		return ccfTypeID(0), cadenceTypeID(""), fmt.Errorf("found duplicate CCF type ID %d in composite-type", ccfID)
+		return ccfTypeID(0), cadenceTypeID(""), nil, fmt.Errorf("found duplicate CCF type ID %d in composite-type", ccfID)
 	}
 
 	// element 1: cadence-type-id
 	cadenceID, location, identifier, err := d.decodeCadenceTypeID()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), err
+		return ccfTypeID(0), cadenceTypeID(""), nil, err
 	}
 
 	// element 2: fields
 	rawField, err := d.dec.DecodeRawBytes()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), err
+		return ccfTypeID(0), cadenceTypeID(""), nil, err
 	}
 
 	// The return value can be ignored, because its non-existence was already checked above
 	_ = types.add(ccfID, constructor(location, identifier))
-	rawFields[ccfID] = rawField
-	return ccfID, cadenceID, nil
+
+	return ccfID, cadenceID, rawField, nil
 }
 
 // decodeCompositeFields decodes field types as
@@ -450,34 +464,40 @@ func (d *Decoder) decodeCompositeField(types *cadenceTypeByCCFTypeID, decodeType
 func (d *Decoder) decodeInterfaceType(
 	types *cadenceTypeByCCFTypeID,
 	constructor func(common.Location, string) cadence.Type,
-) (ccfTypeID, cadenceTypeID, error) {
+) (
+	ccfTypeID,
+	cadenceTypeID,
+	[]byte, // always nil since interface type definition doesn't contain fields
+	error,
+) {
 
 	// Decode array head of length 2.
 	err := decodeCBORArrayWithKnownSize(d.dec, 2)
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), err
+		return ccfTypeID(0), cadenceTypeID(""), nil, err
 	}
 
 	// element 0: id
 	ccfID, err := d.decodeCCFTypeID()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), err
+		return ccfTypeID(0), cadenceTypeID(""), nil, err
 	}
 
 	// "Valid CCF Encoding Requirements" in CCF specs:
 	//
 	//   "composite-type.id MUST be unique in ccf-typedef-message or ccf-typedef-and-value-message."
 	if types.has(ccfID) {
-		return ccfTypeID(0), cadenceTypeID(""), fmt.Errorf("found duplicate CCF type ID %d in interface-type", ccfID)
+		return ccfTypeID(0), cadenceTypeID(""), nil, fmt.Errorf("found duplicate CCF type ID %d in interface-type", ccfID)
 	}
 
 	// element 1: cadence-type-id
 	cadenceID, location, identifier, err := d.decodeCadenceTypeID()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), err
+		return ccfTypeID(0), cadenceTypeID(""), nil, err
 	}
 
 	// The return value can be ignored, because its non-existence was already checked above
 	_ = types.add(ccfID, constructor(location, identifier))
-	return ccfID, cadenceID, nil
+
+	return ccfID, cadenceID, nil, nil
 }
