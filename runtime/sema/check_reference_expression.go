@@ -71,7 +71,9 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	referencedExpression := referenceExpression.Expression
 
-	_, _ = checker.visitExpression(referencedExpression, targetType)
+	referencedType := checker.VisitExpression(referencedExpression, targetType)
+
+	checker.checkUnusedExpressionResourceLoss(referencedType, referencedExpression)
 
 	if referenceType == nil {
 		return InvalidType

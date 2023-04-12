@@ -721,6 +721,27 @@ func TestCheckInvalidReferenceResourceLoss(t *testing.T) {
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
 
+func TestCheckInvalidReferenceResourceLoss2(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun f(): @R {
+          return <- create R()
+      }
+
+      fun test() {
+          let ref = &f() as &R
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+}
+
 func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 
 	t.Parallel()
