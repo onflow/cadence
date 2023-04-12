@@ -36,11 +36,20 @@ import (
 //
 // See https://github.com/fxamacker/cbor:
 // "For best performance, reuse EncMode and DecMode after creating them."
+//
+// Security Considerations in Section 10 of RFC 8949 states:
+//
+//	"Hostile input may be constructed to overrun buffers, to overflow or underflow integer arithmetic,
+//	or to cause other decoding disruption. CBOR data items might have lengths or sizes that are
+//	intentionally extremely large or too short. Resource exhaustion attacks might attempt to lure a
+//	decoder into allocating very big data items (strings, arrays, maps, or even arbitrary precision numbers)
+//	or exhaust the stack depth by setting up deeply nested items. Decoders need to have appropriate resource
+//	management to mitigate these attacks."
 var CBORDecMode = func() cbor.DecMode {
 	decMode, err := cbor.DecOptions{
 		IntDec:           cbor.IntDecConvertNone,
-		MaxArrayElements: math.MaxInt64,
-		MaxMapPairs:      math.MaxInt64,
+		MaxArrayElements: 20_000_000, // 20 MB is current grpc size limit so this is more than enough
+		MaxMapPairs:      20_000_000, // 20 MB is current grpc size limit so this is more than enough
 		MaxNestedLevels:  math.MaxInt16,
 	}.DecMode()
 	if err != nil {
@@ -49,7 +58,10 @@ var CBORDecMode = func() cbor.DecMode {
 	return decMode
 }()
 
-// A Decoder decodes CCF-encoded representations of Cadence values.
+// Decoder decodes CCF-encoded representations of Cadence values.
+// Since CBOR security considerations apply to CCF, the CBOR
+// codec used by CCF Decoder uses limits (e.g. MaxArrayElements,
+// MaxMapPairs, MaxNestedLevels) specified by CBORDecMode.
 type Decoder struct {
 	// CCF codec uses CBOR codec under the hood.
 	dec   *cbor.StreamDecoder
