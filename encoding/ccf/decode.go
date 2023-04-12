@@ -47,6 +47,7 @@ import (
 //	management to mitigate these attacks."
 var CBORDecMode = func() cbor.DecMode {
 	decMode, err := cbor.DecOptions{
+		IndefLength:      cbor.IndefLengthForbidden,
 		IntDec:           cbor.IntDecConvertNone,
 		MaxArrayElements: 20_000_000, // 20 MB is current grpc size limit so this is more than enough
 		MaxMapPairs:      20_000_000, // 20 MB is current grpc size limit so this is more than enough
