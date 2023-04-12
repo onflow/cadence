@@ -1872,7 +1872,7 @@ const getAccountFunctionDocString = `
 Returns the public account for the given address
 `
 
-var getAccountFunctionType = &sema.FunctionType{
+var GetAccountFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -1899,7 +1899,7 @@ type PublicAccountHandler interface {
 func NewGetAccountFunction(handler PublicAccountHandler) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		"getAccount",
-		getAccountFunctionType,
+		GetAccountFunctionType,
 		getAccountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)

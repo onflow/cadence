@@ -731,9 +731,20 @@ func (c *Compiler) VisitUnaryExpression(expression *ast.UnaryExpression) (_ stru
 
 func (c *Compiler) VisitBinaryExpression(expression *ast.BinaryExpression) (_ struct{}) {
 	c.compileExpression(expression.Left)
-	c.compileExpression(expression.Right)
 	// TODO: add support for other types
-	c.emit(intBinaryOpcodes[expression.Operation])
+
+	switch expression.Operation {
+	case ast.OperationNilCoalesce:
+		c.emit(opcode.Nil)
+		c.emit(opcode.Equal)
+		jumpToEnd := c.emitUndefinedJump(opcode.JumpIfFalse)
+		c.compileExpression(expression.Right)
+		c.patchJump(jumpToEnd)
+	default:
+		c.compileExpression(expression.Right)
+		c.emit(intBinaryOpcodes[expression.Operation])
+	}
+
 	return
 }
 
@@ -1126,11 +1137,13 @@ func (c *Compiler) declareParameters(function *function, paramList *ast.Paramete
 
 // desugarTransaction Convert a transaction into a composite type declaration,
 // so the code-gen would seamlessly work without having special-case anything in compiler/vm.
-func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) *ast.CompositeDeclaration {
+func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) (*ast.CompositeDeclaration, []*ast.VariableDeclaration) {
 
 	// TODO: This assumes the transaction program/elaboration is not cached.
-	//  i.e: Modifies the elaboration.
-	//  Handle this properly for cached transactions.
+	//   i.e: Modifies the elaboration.
+	//   Handle this properly for cached transactions.
+
+	// TODO: add pre/post conditions
 
 	var members []ast.Declaration
 

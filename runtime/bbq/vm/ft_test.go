@@ -23,6 +23,8 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/stretchr/testify/assert"
 	"testing"
 
@@ -35,7 +37,8 @@ import (
 
 func TestFTTransfer(t *testing.T) {
 
-	// Deploy FT Contract
+	// ---- Deploy FT Contract -----
+
 	ftLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "FungibleToken")
 	ftChecker, err := ParseAndCheckWithOptions(t, realFungibleTokenContractInterface,
 		ParseAndCheckOptions{Location: ftLocation},
@@ -49,7 +52,7 @@ func TestFTTransfer(t *testing.T) {
 	//importedContractValue, err := vm.InitializeContract()
 	//require.NoError(t, err)
 
-	// Deploy FlowToken Contract
+	// ----- Deploy FlowToken Contract -----
 
 	flowTokenLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "FlowToken")
 	flowTokenChecker, err := ParseAndCheckWithOptions(t, realFlowContract,
@@ -78,54 +81,43 @@ func TestFTTransfer(t *testing.T) {
 	}
 
 	flowTokenProgram := flowTokenCompiler.Compile()
+	printProgram(flowTokenProgram)
 
-	vm := NewVM(flowTokenProgram, nil)
+	flowTokenVM := NewVM(flowTokenProgram, nil)
 
 	authAcount := NewCompositeValue(
 		nil,
 		"AuthAccount",
 		common.CompositeKindStructure,
 		common.Address{},
-		vm.config.Storage,
+		flowTokenVM.config.Storage,
 	)
 
-	printProgram(flowTokenProgram)
-
-	flowTokenContractValue, err := vm.InitializeContract(authAcount)
+	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAcount)
 	require.NoError(t, err)
 
-	// Run setup account transaction
+	// ----- Run setup account transaction -----
 
-	checker, err := ParseAndCheckWithOptions(t, realSetupFlowTokenAccountTransaction,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-					require.IsType(t, common.AddressLocation{}, location)
-					addressLocation := location.(common.AddressLocation)
-					var elaboration *sema.Elaboration
+	checkerImportHandler := func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+		require.IsType(t, common.AddressLocation{}, location)
+		addressLocation := location.(common.AddressLocation)
+		var elaboration *sema.Elaboration
 
-					switch addressLocation {
-					case ftLocation:
-						elaboration = ftChecker.Elaboration
-					case flowTokenLocation:
-						elaboration = flowTokenChecker.Elaboration
-					default:
-						assert.FailNow(t, "invalid location")
-					}
+		switch addressLocation {
+		case ftLocation:
+			elaboration = ftChecker.Elaboration
+		case flowTokenLocation:
+			elaboration = flowTokenChecker.Elaboration
+		default:
+			assert.FailNow(t, "invalid location")
+		}
 
-					return sema.ElaborationImport{
-						Elaboration: elaboration,
-					}, nil
-				},
-				LocationHandler: singleIdentifierLocationResolver(t),
-			},
-		},
-	)
-	require.NoError(t, err)
+		return sema.ElaborationImport{
+			Elaboration: elaboration,
+		}, nil
+	}
 
-	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-	comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
-	comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
+	compilerImportHandler := func(location common.Location) *bbq.Program {
 		switch location {
 		case ftLocation:
 			return ftProgram
@@ -136,9 +128,6 @@ func TestFTTransfer(t *testing.T) {
 			return nil
 		}
 	}
-
-	program := comp.Compile()
-	printProgram(program)
 
 	vmConfig := &Config{
 		ImportHandler: func(location common.Location) *bbq.Program {
@@ -166,10 +155,67 @@ func TestFTTransfer(t *testing.T) {
 		},
 	}
 
-	vm = NewVM(program, vmConfig)
+	setupTxChecker, err := ParseAndCheckWithOptions(
+		t,
+		realSetupFlowTokenAccountTransaction,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler:   checkerImportHandler,
+				LocationHandler: singleIdentifierLocationResolver(t),
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	setupTxCompiler := compiler.NewCompiler(setupTxChecker.Program, setupTxChecker.Elaboration)
+	setupTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+	setupTxCompiler.Config.ImportHandler = compilerImportHandler
+
+	program := setupTxCompiler.Compile()
+	printProgram(program)
+
+	setupTxVM := NewVM(program, vmConfig)
 
 	authorizer := NewAuthAccountValue()
-	err = vm.ExecuteTransaction(authorizer)
+	err = setupTxVM.ExecuteTransaction(authorizer)
+	require.NoError(t, err)
+
+	// ----- Run token transfer transaction -----
+
+	// Only need for to make the checker happy
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryFunction(
+		"getAccount",
+		stdlib.GetAccountFunctionType,
+		"",
+		func(invocation interpreter.Invocation) interpreter.Value {
+			return nil
+		},
+	))
+
+	tokenTransferTxChecker, err := ParseAndCheckWithOptions(
+		t,
+		realFlowTokenTransferTransaction,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler:       checkerImportHandler,
+				BaseValueActivation: baseValueActivation,
+				LocationHandler:     singleIdentifierLocationResolver(t),
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	tokenTransferTxCompiler := compiler.NewCompiler(tokenTransferTxChecker.Program, tokenTransferTxChecker.Elaboration)
+	tokenTransferTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+	tokenTransferTxCompiler.Config.ImportHandler = compilerImportHandler
+
+	tokenTransferTxProgram := tokenTransferTxCompiler.Compile()
+	printProgram(tokenTransferTxProgram)
+
+	tokenTransferTxVM := NewVM(tokenTransferTxProgram, vmConfig)
+	err = tokenTransferTxVM.ExecuteTransaction(authorizer)
 	require.NoError(t, err)
 }
 
@@ -561,6 +607,39 @@ transaction {
                 target: /storage/flowTokenVault
             )
         }
+    }
+}
+`
+
+const realFlowTokenTransferTransaction = `
+import FungibleToken from 0x1
+import FlowToken from 0x1
+
+transaction(amount: Int, to: Address) {
+
+    // The Vault resource that holds the tokens that are being transferred
+    let sentVault: @FungibleToken.Vault
+
+    prepare(signer: AuthAccount) {
+
+        // Get a reference to the signer's stored vault
+        let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+			?? panic("Could not borrow reference to the owner's Vault!")
+
+        // Withdraw tokens from the signer's stored vault
+        self.sentVault <- vaultRef.withdraw(amount: amount)
+    }
+
+    execute {
+
+        // Get a reference to the recipient's Receiver
+        let receiverRef =  getAccount(to)
+            .getCapability(/public/flowTokenReceiver)
+            .borrow<&{FungibleToken.Receiver}>()
+			?? panic("Could not borrow receiver reference to the recipient's Vault")
+
+        // Deposit the withdrawn tokens in the recipient's receiver
+        receiverRef.deposit(from: <-self.sentVault)
     }
 }
 `

@@ -32,9 +32,9 @@ var builtinTypes = []sema.Type{
 	sema.AuthAccountType,
 }
 
-// TODO: Maybe
 var stdlibFunctions = []string{
 	commons.LogFunctionName,
+	commons.PanicFunctionName,
 }
 
 func init() {

@@ -20,8 +20,8 @@ package vm
 
 import (
 	"fmt"
-
 	"github.com/onflow/cadence/runtime/bbq/commons"
+	"github.com/onflow/cadence/runtime/errors"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -51,6 +51,19 @@ func init() {
 			// TODO: Properly implement
 			fmt.Println(arguments[0].String())
 			return VoidValue{}
+		},
+	})
+
+	RegisterFunction(commons.PanicFunctionName, NativeFunctionValue{
+		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
+		Function: func(arguments ...Value) Value {
+			// TODO: Properly implement
+			messageValue, ok := arguments[0].(StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			panic(string(messageValue.Str))
 		},
 	})
 }

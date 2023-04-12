@@ -29,6 +29,7 @@ const (
 	TransactionExecuteFunctionName  = "transaction.execute"
 	TransactionPrepareFunctionName  = "transaction.prepare"
 	LogFunctionName                 = "log"
+	PanicFunctionName               = "panic"
 )
 
 type CastType byte
