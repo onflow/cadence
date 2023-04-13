@@ -4740,11 +4740,7 @@ func TestInterpretComparison(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test // capture range variable
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			runBooleanTest(t, test.name, test.expected, test.inner)
-		})
+		runBooleanTest(t, test.name, test.expected, test.inner)
 	}
 }
 
