@@ -1828,26 +1828,30 @@ func needToEncodeRuntimeType(staticType cadence.Type, runtimeType cadence.Type) 
 // removing redundant type info that is present in staticType because
 // staticType is already encoded at higher level.
 func getTypeToEncodeAsCCFInlineType(staticType cadence.Type, runtimeType cadence.Type) cadence.Type {
-	switch staticType := staticType.(type) {
-	case *cadence.OptionalType:
-		rot, ok := runtimeType.(*cadence.OptionalType)
-		if !ok {
-			// staticType is optional type while runtime type isn't.
-			panic(cadenceErrors.NewUnexpectedError("static type (%T) is optional type while runtime type (%T) isn't", staticType, runtimeType))
+	for {
+		switch st := staticType.(type) {
+		case *cadence.OptionalType:
+			rot, ok := runtimeType.(*cadence.OptionalType)
+			if !ok {
+				// staticType is optional type while runtime type isn't.
+				panic(cadenceErrors.NewUnexpectedError("static type (%T) is optional type while runtime type (%T) isn't", staticType, runtimeType))
+			}
+
+			// Unwrap optional type container from both staticType and runtimeType.
+			// Static type is encoded at higher level, so encoded runtime type shouldn't repeat
+			// the same info. Here, inline type is runtime type after unwrapping optional type
+			// that is present in both static and runtime types.
+			staticType = st.Type
+			runtimeType = rot.Type
+
+		case *cadence.ReferenceType:
+			// Unwrap reference type from static type and try again.
+			staticType = st.Type
+
+		default:
+			return runtimeType
 		}
-
-		// Unwrap optional type container from both staticType and runtimeType.
-		// Static type is encoded at higher level, so encoded runtime type shouldn't repeat
-		// the same info. Here, inline type is runtime type after unwrapping optional type
-		// that is present in both static and runtime types.
-		return getTypeToEncodeAsCCFInlineType(staticType.Type, rot.Type)
-
-	case *cadence.ReferenceType:
-		// Unwrap reference type from static type and try again.
-		return getTypeToEncodeAsCCFInlineType(staticType.Type, runtimeType)
 	}
-
-	return runtimeType
 }
 
 // isOptionalNeverType returns true if t is (nested) optional never type.
