@@ -684,11 +684,7 @@ func (v BoolValue) Greater(interpreter *Interpreter, other ComparableValue, loca
 		})
 	}
 
-	if v {
-		return !o
-	} else {
-		return false
-	}
+	return v && !o
 }
 
 func (v BoolValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
