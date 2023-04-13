@@ -4098,6 +4098,45 @@ func (t *CompositeType) IsValidIndexingType(ty Type) bool {
 		attachmentType.IsResourceType() == t.IsResourceType()
 }
 
+const CompositeForEachAttachmentFunctionName = "forEachAttachment"
+
+const compositeForEachAttachmentFunctionDocString = `
+Iterates over the attachments present on the receiver, applying the function argument to each.
+The order of iteration is undefined.
+`
+
+func CompositeForEachAttachmentFunctionType(t common.CompositeKind) *FunctionType {
+	attachmentSuperType := AnyStructAttachmentType
+	if t == common.CompositeKindResource {
+		attachmentSuperType = AnyResourceAttachmentType
+	}
+
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:      ArgumentLabelNotRequired,
+				Identifier: "f",
+				TypeAnnotation: NewTypeAnnotation(
+					&FunctionType{
+						Parameters: []Parameter{
+							{
+								TypeAnnotation: NewTypeAnnotation(
+									&ReferenceType{
+										Type:          attachmentSuperType,
+										Authorization: UnauthorizedAccess,
+									},
+								),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+	}
+}
+
 func (t *CompositeType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
 	return f(t)
 }
@@ -4136,6 +4175,22 @@ func (t *CompositeType) initializeMemberResolvers() {
 					}
 				}
 			})
+
+		// resource and struct composites have the ability to iterate over their attachments
+		if t.Kind.SupportsAttachments() {
+			members[CompositeForEachAttachmentFunctionName] = MemberResolver{
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						CompositeForEachAttachmentFunctionType(t.GetCompositeKind()),
+						compositeForEachAttachmentFunctionDocString,
+					)
+				},
+			}
+		}
 
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})

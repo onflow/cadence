@@ -162,7 +162,7 @@ type TypeIndexableValue interface {
 
 type MemberAccessibleValue interface {
 	Value
-	GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
+	GetMember(interpreter *Interpreter, locationRange LocationRange, name string, auth Authorization) Value
 	RemoveMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
 	// returns whether a value previously existed with this name
 	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) bool
@@ -349,7 +349,7 @@ func (v TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string, _ Authorization) Value {
 	switch name {
 	case "identifier":
 		var typeID string
@@ -862,7 +862,7 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, name string, _ Authorization) Value {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
@@ -1120,7 +1120,7 @@ func (*StringValue) RemoveKey(_ *Interpreter, _ LocationRange, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *StringValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	switch name {
 	case "length":
 		length := v.Length()
@@ -2043,7 +2043,7 @@ func (v *ArrayValue) Contains(
 	return AsBoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -3329,7 +3329,7 @@ func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue
 	)
 }
 
-func (v IntValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v IntValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.IntType, locationRange)
 }
 
@@ -3915,7 +3915,7 @@ func (v Int8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Int8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Int8Type, locationRange)
 }
 
@@ -4501,7 +4501,7 @@ func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Int16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Int16Type, locationRange)
 }
 
@@ -5089,7 +5089,7 @@ func (v Int32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Int32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Int32Type, locationRange)
 }
 
@@ -5673,7 +5673,7 @@ func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Int64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Int64Type, locationRange)
 }
 
@@ -6363,7 +6363,7 @@ func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Int128Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Int128Type, locationRange)
 }
 
@@ -7048,7 +7048,7 @@ func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Int256Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Int256Type, locationRange)
 }
 
@@ -7637,7 +7637,7 @@ func (v UIntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 	)
 }
 
-func (v UIntValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v UIntValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.UIntType, locationRange)
 }
 
@@ -8185,7 +8185,7 @@ func (v UInt8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 	)
 }
 
-func (v UInt8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v UInt8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.UInt8Type, locationRange)
 }
 
@@ -8690,7 +8690,7 @@ func (v UInt16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	)
 }
 
-func (v UInt16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v UInt16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.UInt16Type, locationRange)
 }
 
@@ -9202,7 +9202,7 @@ func (v UInt32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	)
 }
 
-func (v UInt32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v UInt32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.UInt32Type, locationRange)
 }
 
@@ -9741,7 +9741,7 @@ func (v UInt64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	)
 }
 
-func (v UInt64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v UInt64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.UInt64Type, locationRange)
 }
 
@@ -10374,7 +10374,7 @@ func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 	)
 }
 
-func (v UInt128Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v UInt128Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.UInt128Type, locationRange)
 }
 
@@ -11005,7 +11005,7 @@ func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 	)
 }
 
-func (v UInt256Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v UInt256Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.UInt256Type, locationRange)
 }
 
@@ -11421,7 +11421,7 @@ func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Word8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Word8Type, locationRange)
 }
 
@@ -11837,7 +11837,7 @@ func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Word16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Word16Type, locationRange)
 }
 
@@ -12256,7 +12256,7 @@ func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Word32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Word32Type, locationRange)
 }
 
@@ -12699,7 +12699,7 @@ func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Word64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Word64Type, locationRange)
 }
 
@@ -13238,7 +13238,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 	}
 }
 
-func (v Fix64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v Fix64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.Fix64Type, locationRange)
 }
 
@@ -13742,7 +13742,7 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 	}
 }
 
-func (v UFix64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v UFix64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	return getNumberValueMember(interpreter, v, name, sema.UFix64Type, locationRange)
 }
 
@@ -14134,19 +14134,23 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	)
 }
 
-func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string, auth Authorization) Value {
 
 	switch name {
 	case sema.ResourceOwnerFieldName:
 		if v.Kind == common.CompositeKindResource {
 			return v.OwnerValue(interpreter, locationRange)
 		}
+	case sema.CompositeForEachAttachmentFunctionName:
+		if v.Kind.SupportsAttachments() {
+			return v.forEachAttachmentFunction(interpreter, auth, locationRange)
+		}
 	}
 
 	return nil
 }
 
-func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, auth Authorization) Value {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -14171,7 +14175,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		}()
 	}
 
-	if builtin := v.getBuiltinMember(interpreter, locationRange, name); builtin != nil {
+	if builtin := v.getBuiltinMember(interpreter, locationRange, name, auth); builtin != nil {
 		return builtin
 	}
 
@@ -15138,7 +15142,7 @@ func attachmentMemberName(ty sema.Type) string {
 }
 
 func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
-	if attachment := v.GetMember(interpreter, locationRange, attachmentMemberName(ty)); attachment != nil {
+	if attachment := v.GetMember(interpreter, locationRange, attachmentMemberName(ty), UnauthorizedAccess); attachment != nil {
 		return attachment.(*CompositeValue)
 	}
 	return nil
@@ -15154,6 +15158,77 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 		attachments = append(attachments, attachment)
 	})
 	return attachments
+}
+
+func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, baseAuthorization Authorization, locationRange LocationRange) Value {
+	return NewHostFunctionValue(
+		interpreter,
+		sema.CompositeForEachAttachmentFunctionType(interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType).GetCompositeKind()),
+		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
+			functionValue, ok := invocation.Arguments[0].(FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			fn := func(attachment *CompositeValue) {
+
+				attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
+
+				var baseAccess sema.Access
+
+				// if we have no specific authorization associate with this call to `forEachAttachment`, we assume we
+				// possess the fully entitled value, and thus use the domain of the attachment map in each case
+				if baseAuthorization == nil {
+					if attachmentType.AttachmentEntitlementAccess != nil {
+						baseAccess = attachmentType.AttachmentEntitlementAccess.Domain()
+						baseAuthorization = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
+					} else {
+						baseAccess = sema.UnauthorizedAccess
+						baseAuthorization = UnauthorizedAccess
+					}
+				} else {
+					baseAccess = interpreter.MustConvertStaticAuthorizationToSemaAccess(baseAuthorization)
+				}
+
+				attachment.setBaseValue(interpreter, v, baseAuthorization)
+
+				var attachmentReferenceAccess sema.Access = sema.UnauthorizedAccess
+				var err error
+				if attachmentType.AttachmentEntitlementAccess != nil {
+					attachmentReferenceAccess, err = attachmentType.AttachmentEntitlementAccess.Image(baseAccess, ast.EmptyRange)
+					if err != nil {
+						panic(err)
+					}
+				}
+
+				attachmentReferenceAuth := ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentReferenceAccess)
+
+				attachmentReference := NewEphemeralReferenceValue(
+					interpreter,
+					attachmentReferenceAuth,
+					attachment,
+					attachmentType,
+				)
+
+				invocation := NewInvocation(
+					interpreter,
+					nil,
+					nil,
+					nil,
+					[]Value{attachmentReference},
+					[]sema.Type{sema.NewReferenceType(interpreter, attachmentType, attachmentReferenceAccess)},
+					nil,
+					locationRange,
+				)
+				functionValue.invoke(invocation)
+			}
+
+			v.forEachAttachment(interpreter, locationRange, fn)
+			return Void
+		},
+	)
 }
 
 func attachmentReferenceAuthorization(
@@ -15762,6 +15837,7 @@ func (v *DictionaryValue) GetMember(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	name string,
+	_ Authorization,
 ) Value {
 	config := interpreter.SharedState.Config
 
@@ -16584,7 +16660,7 @@ var nilValueMapFunction = NewUnmeteredHostFunctionValue(
 	},
 )
 
-func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string, _ Authorization) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		return nilValueMapFunction
@@ -16764,7 +16840,7 @@ func (v SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences 
 	return v.value.MeteredString(memoryGauge, seenReferences)
 }
 
-func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -17186,10 +17262,11 @@ func (v *StorageReferenceValue) GetMember(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	name string,
+	_ Authorization,
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
 
-	return interpreter.getMember(self, locationRange, name)
+	return interpreter.getMember(self, locationRange, name, v.Authorization)
 }
 
 func (v *StorageReferenceValue) RemoveMember(
@@ -17519,10 +17596,11 @@ func (v *EphemeralReferenceValue) GetMember(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	name string,
+	_ Authorization,
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
 
-	return interpreter.getMember(self, locationRange, name)
+	return interpreter.getMember(self, locationRange, name, v.Authorization)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(
@@ -17858,7 +17936,7 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v AddressValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -18100,7 +18178,7 @@ func (v PathValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReference
 	return v.String()
 }
 
-func (v PathValue) GetMember(inter *Interpreter, locationRange LocationRange, name string) Value {
+func (v PathValue) GetMember(inter *Interpreter, locationRange LocationRange, name string, _ Authorization) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -18362,7 +18440,7 @@ func (v *StorageCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, s
 	)
 }
 
-func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string, _ Authorization) Value {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		var borrowType *sema.ReferenceType

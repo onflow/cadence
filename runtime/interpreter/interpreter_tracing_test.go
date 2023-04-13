@@ -140,7 +140,7 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Equal(t, len(traceOps), 3)
 		require.Equal(t, traceOps[2], "composite.setMember.abc")
 
-		value.GetMember(inter, interpreter.EmptyLocationRange, "abc")
+		value.GetMember(inter, interpreter.EmptyLocationRange, "abc", nil)
 		require.Equal(t, len(traceOps), 4)
 		require.Equal(t, traceOps[3], "composite.getMember.abc")
 

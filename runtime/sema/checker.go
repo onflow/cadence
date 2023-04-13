@@ -2207,6 +2207,17 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 				resourceUUIDFieldDocString,
 			)
 		}
+
+		if compositeKindedType.GetCompositeKind().SupportsAttachments() {
+			addPredeclaredMember(
+				CompositeForEachAttachmentFunctionName,
+				CompositeForEachAttachmentFunctionType(compositeKindedType.GetCompositeKind()),
+				common.DeclarationKindFunction,
+				ast.AccessPublic,
+				true,
+				compositeForEachAttachmentFunctionDocString,
+			)
+		}
 	}
 
 	return predeclaredMembers

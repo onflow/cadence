@@ -137,6 +137,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 			inter,
 			interpreter.EmptyLocationRange,
 			sema.ResourceUUIDFieldName,
+			nil,
 		)
 
 		RequireValuesEqual(

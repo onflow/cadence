@@ -97,6 +97,7 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				inter,
 				locationRange,
 				sema.AuthAccountTypeAddressFieldName,
+				nil,
 			)
 			if payerValue == nil {
 				panic(errors.NewUnexpectedError("payer address is not set"))
@@ -2001,7 +2002,7 @@ func NewHashAlgorithmFromValue(
 ) sema.HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.SimpleCompositeValue)
 
-	rawValue := hashAlgoValue.GetMember(inter, locationRange, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetMember(inter, locationRange, sema.EnumRawValueFieldName, nil)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}

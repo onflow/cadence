@@ -199,6 +199,7 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		inter,
 		invocation.LocationRange,
 		executor.functionName,
+		nil,
 	)
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)

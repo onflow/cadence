@@ -839,7 +839,7 @@ func TestOwnerCompositeSet(t *testing.T) {
 
 	composite.SetMember(inter, EmptyLocationRange, fieldName, value)
 
-	value = composite.GetMember(inter, EmptyLocationRange, fieldName).(*CompositeValue)
+	value = composite.GetMember(inter, EmptyLocationRange, fieldName, nil).(*CompositeValue)
 
 	assert.Equal(t, newOwner, composite.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -877,6 +877,7 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		inter,
 		EmptyLocationRange,
 		fieldName,
+		nil,
 	).(*CompositeValue)
 
 	assert.Equal(t, common.ZeroAddress, composite.GetOwner())

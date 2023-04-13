@@ -8003,7 +8003,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
 	})
 
 	t.Run("member resolvers", func(t *testing.T) {
