@@ -4698,7 +4698,7 @@ func TestInterpretComparison(t *testing.T) {
 			boolVal, ok := res.(interpreter.BoolValue)
 			require.True(t, ok)
 
-			require.Equal(t, bool(boolVal), expected)
+			require.Equal(t, expected, bool(boolVal))
 		})
 	}
 
