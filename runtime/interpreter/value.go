@@ -15181,19 +15181,18 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, bas
 				// if we have no specific authorization associate with this call to `forEachAttachment`, we assume we
 				// possess the fully entitled value, and thus use the domain of the attachment map in each case
 				if baseAuthorization == nil {
+					baseAccess = sema.UnauthorizedAccess
 					if attachmentType.AttachmentEntitlementAccess != nil {
 						baseAccess = attachmentType.AttachmentEntitlementAccess.Domain()
-						baseAuthorization = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
-					} else {
-						baseAccess = sema.UnauthorizedAccess
-						baseAuthorization = UnauthorizedAccess
 					}
+					baseAuthorization = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
 				} else {
 					baseAccess = interpreter.MustConvertStaticAuthorizationToSemaAccess(baseAuthorization)
 				}
 
 				attachment.setBaseValue(interpreter, v, baseAuthorization)
 
+				// the access given to each attachment in the iteration is the specific image of the base's access through that attachment's map
 				var attachmentReferenceAccess sema.Access = sema.UnauthorizedAccess
 				var err error
 				if attachmentType.AttachmentEntitlementAccess != nil {
