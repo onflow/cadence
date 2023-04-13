@@ -697,11 +697,7 @@ func (v BoolValue) GreaterEqual(interpreter *Interpreter, other ComparableValue,
 		})
 	}
 
-	if v {
-		return true
-	} else {
-		return !o
-	}
+	return v || !o
 }
 
 // HashInput returns a byte slice containing:
