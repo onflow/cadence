@@ -671,11 +671,7 @@ func (v BoolValue) LessEqual(interpreter *Interpreter, other ComparableValue, lo
 		})
 	}
 
-	if v {
-		return o
-	} else {
-		return true
-	}
+	return !v || o
 }
 
 func (v BoolValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
