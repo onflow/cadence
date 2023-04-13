@@ -7136,7 +7136,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// {"value":[{"value":{"value":"a","type":"String"},"type":"Optional"},{"value":{"value":{"value":"b","type":"String"},"type":"Optional"},"type":"Optional"},{"value":null,"type":"Optional"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
-			// 130([139(142([false, 138(137(39))])), [130([137(1), "a"]), null]])
+			// 130([139(142([false, 138(137(39))])), [130([137(1), "a"]), 130([138(137(1)), "b"]), null]])
 			//
 			// language=cbor, format=ccf
 			// tag
