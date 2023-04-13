@@ -1824,30 +1824,27 @@ func needToEncodeRuntimeType(staticType cadence.Type, runtimeType cadence.Type) 
 	return true
 }
 
+// getTypeToEncodeAsCCFInlineType returns runtime type to be encoded after
+// removing redundant type info that is present in staticType because
+// staticType is already encoded at higher level.
 func getTypeToEncodeAsCCFInlineType(staticType cadence.Type, runtimeType cadence.Type) cadence.Type {
-	if _, ok := staticType.(*cadence.OptionalType); ok {
-		return getOptionalInnerTypeToEncodeAsCCFInlineType(staticType, runtimeType)
-	}
-	return runtimeType
-}
-
-// getOptionalInnerTypeToEncodeAsCCFInlineType returns cadence.Type that needs to be encoded as CCF inline type.
-// Since static type is encoded at higher level, inline type shouldn't repeat encoded static type.
-// So inline type is runtime type after removing OptionalType wrappers that are present in static type.
-func getOptionalInnerTypeToEncodeAsCCFInlineType(staticType cadence.Type, runtimeType cadence.Type) cadence.Type {
-	for {
-		sot, ok := staticType.(*cadence.OptionalType)
-		if !ok {
-			break
-		}
+	switch staticType := staticType.(type) {
+	case *cadence.OptionalType:
 		rot, ok := runtimeType.(*cadence.OptionalType)
 		if !ok {
-			// static type is optional type while runtime type isn't.
+			// staticType is optional type while runtime type isn't.
 			panic(cadenceErrors.NewUnexpectedError("static type (%T) is optional type while runtime type (%T) isn't", staticType, runtimeType))
 		}
 
-		staticType = sot.Type
-		runtimeType = rot.Type
+		// Unwrap optional type container from both staticType and runtimeType.
+		// Static type is encoded at higher level, so encoded runtime type shouldn't repeat
+		// the same info. Here, inline type is runtime type after unwrapping optional type
+		// that is present in both static and runtime types.
+		return getTypeToEncodeAsCCFInlineType(staticType.Type, rot.Type)
+
+	case *cadence.ReferenceType:
+		// Unwrap reference type from static type and try again.
+		return getTypeToEncodeAsCCFInlineType(staticType.Type, runtimeType)
 	}
 
 	return runtimeType

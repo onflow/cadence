@@ -7120,13 +7120,232 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 		},
 	}
 
+	// ["a", "b", nil] with type array of reference to optional AnyStruct
+	referenceToOptionalAnyStructType := encodeTest{
+		name: "array of reference to optional AnyStruct",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewOptional(cadence.String("a")),
+			cadence.NewOptional(cadence.NewOptional(cadence.String("b"))),
+			cadence.NewOptional(nil),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				false,
+				cadence.NewOptionalType(cadence.NewAnyStructType()),
+			))),
+		expected: []byte{ // language=json, format=json-cdc
+			// {"value":[{"value":{"value":"a","type":"String"},"type":"Optional"},{"value":{"value":{"value":"b","type":"String"},"type":"Optional"},"type":"Optional"},{"value":null,"type":"Optional"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([false, 138(137(39))])), [130([137(1), "a"]), null]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// false
+			0xf4,
+			// tag
+			0xd8, ccf.CBORTagOptionalType,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+			// array data
+			// array, 3 items follow
+			0x83,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// string, 1 byte follows
+			0x61,
+			// "a"
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagOptionalType,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// string, 1 byte follows
+			0x61,
+			// "b"
+			0x62,
+			// null
+			0xf6,
+		},
+	}
+
+	optionalReferenceToAnyStructType := encodeTest{
+		name: "array of optional reference to AnyStruct",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewOptional(cadence.String("a")),
+			cadence.NewOptional(cadence.NewOptional(cadence.String("b"))),
+			cadence.NewOptional(nil),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewOptionalType(
+				cadence.NewReferenceType(
+					false,
+					cadence.NewAnyStructType(),
+				)))),
+		expected: []byte{ // language=json, format=json-cdc
+			// {"value":[{"value":{"value":"a","type":"String"},"type":"Optional"},{"value":{"value":{"value":"b","type":"String"},"type":"Optional"},"type":"Optional"},{"value":null,"type":"Optional"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(138(142([false, 137(39)]))), [130([137(1), "a"]), 130([138(137(1)), "b"]), null]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagOptionalType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// false
+			0xf4,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+			// array data
+			// array, 3 items follow
+			0x83,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// string, 1 byte follows
+			0x61,
+			// "a"
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagOptionalType,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// string, 1 byte follows
+			0x61,
+			// "b"
+			0x62,
+			// null
+			0xf6,
+		},
+	}
+
+	optionalReferenceToOptionalAnyStructType := encodeTest{
+		name: "array of optional reference to optional AnyStruct",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewOptional(cadence.NewOptional(cadence.String("a"))),
+			cadence.NewOptional(cadence.NewOptional(cadence.NewOptional(cadence.String("b")))),
+			cadence.NewOptional(nil),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewOptionalType(
+				cadence.NewReferenceType(
+					false,
+					cadence.NewOptionalType(
+						cadence.NewAnyStructType(),
+					))))),
+		expected: []byte{ // language=json, format=json-cdc
+			//  {"value":[{"value":{"value":{"value":"a","type":"String"},"type":"Optional"},"type":"Optional"},{"value":{"value":{"value":{"value":"b","type":"String"},"type":"Optional"},"type":"Optional"},"type":"Optional"},{"value":null,"type":"Optional"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(138(142([false, 138(137(39))]))), [130([137(1), "a"]), 130([138(137(1)), "b"]), null]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagOptionalType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// false
+			0xf4,
+			// tag
+			0xd8, ccf.CBORTagOptionalType,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+			// array data
+			// array, 3 items follow
+			0x83,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// string, 1 byte follows
+			0x61,
+			// "a"
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagOptionalType,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// string, 1 byte follows
+			0x61,
+			// "b"
+			0x62,
+			// null
+			0xf6,
+		},
+	}
+
 	testAllEncodeAndDecode(t,
 		referenceToSimpleType,
 		referenceToOptionalSimpleType,
-		optionalReferenceToSimpleType,
 		referenceToStructType,
 		referenceToAnyStructWithSimpleTypes,
 		referenceToAnyStructWithStructType,
+		referenceToOptionalAnyStructType,
+		optionalReferenceToSimpleType,
+		optionalReferenceToAnyStructType,
+		optionalReferenceToOptionalAnyStructType,
 	)
 }
 
