@@ -860,7 +860,7 @@ func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool
 func (v CharacterValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
-		return false
+		panic(errors.NewUnreachableError())
 	}
 	return v.NormalForm() < otherChar.NormalForm()
 }
@@ -868,7 +868,7 @@ func (v CharacterValue) Less(interpreter *Interpreter, other ComparableValue, lo
 func (v CharacterValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
-		return false
+		panic(errors.NewUnreachableError())
 	}
 	return v.NormalForm() <= otherChar.NormalForm()
 }
@@ -876,7 +876,7 @@ func (v CharacterValue) LessEqual(interpreter *Interpreter, other ComparableValu
 func (v CharacterValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
-		return false
+		panic(errors.NewUnreachableError())
 	}
 	return v.NormalForm() > otherChar.NormalForm()
 }
@@ -884,7 +884,7 @@ func (v CharacterValue) Greater(interpreter *Interpreter, other ComparableValue,
 func (v CharacterValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
-		return false
+		panic(errors.NewUnreachableError())
 	}
 	return v.NormalForm() >= otherChar.NormalForm()
 }
