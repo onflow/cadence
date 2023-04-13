@@ -1908,7 +1908,11 @@ func (t *RestrictedType) ID() string {
 				restrictionStrings = append(restrictionStrings, restriction.ID())
 			}
 		}
-		t.typeID = sema.FormatRestrictedTypeID(t.Type.ID(), restrictionStrings)
+		var typeString string
+		if t.Type != nil {
+			typeString = t.Type.ID()
+		}
+		t.typeID = sema.FormatRestrictedTypeID(typeString, restrictionStrings)
 	}
 	return t.typeID
 }
@@ -1919,7 +1923,13 @@ func (t *RestrictedType) Equal(other Type) bool {
 		return false
 	}
 
-	if !t.Type.Equal(otherType.Type) {
+	if t.Type == nil && otherType.Type != nil {
+		return false
+	}
+	if t.Type != nil && otherType.Type == nil {
+		return false
+	}
+	if t.Type != nil && !t.Type.Equal(otherType.Type) {
 		return false
 	}
 
@@ -2198,8 +2208,7 @@ func (t *EnumType) Equal(other Type) bool {
 	}
 
 	return t.Location == otherType.Location &&
-		t.QualifiedIdentifier == otherType.QualifiedIdentifier &&
-		t.RawType.Equal(otherType.RawType)
+		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
 // AuthAccountType
@@ -2386,6 +2395,11 @@ func TypeWithCachedTypeID(t Type) Type {
 			for _, p := range params {
 				TypeWithCachedTypeID(p.Type)
 			}
+		}
+
+	case *RestrictedType:
+		for _, restriction := range t.Restrictions {
+			TypeWithCachedTypeID(restriction)
 		}
 	}
 
