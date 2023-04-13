@@ -755,7 +755,25 @@ func (interpreter *Interpreter) visitFunctionBody(
 	if returnType != sema.VoidType {
 		var resultValue Value
 		if returnType.IsResourceType() {
-			resultValue = NewEphemeralReferenceValue(interpreter, false, returnValue, returnType)
+			switch returnValue := returnValue.(type) {
+			// If this value is an optional value (T?), then transform it into an optional reference (&T)?.
+			case *SomeValue:
+				optionalType, ok := returnType.(*sema.OptionalType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				innerValue := NewEphemeralReferenceValue(
+					interpreter,
+					false,
+					returnValue.value,
+					optionalType.Type,
+				)
+				resultValue = NewSomeValueNonCopying(interpreter, innerValue)
+			case NilValue:
+				resultValue = NilValue{}
+			default:
+				resultValue = NewEphemeralReferenceValue(interpreter, false, returnValue, returnType)
+			}
 		} else {
 			resultValue = returnValue
 		}
