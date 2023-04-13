@@ -35,6 +35,12 @@ package ccf
 // DO *NOT* REPLACE EXISTING TAG NUMBERS!
 // DO *NOT* ADD NEW TAG NUMBERS IN BETWEEN!
 // DO *NOT* APPEND NEW TAG NUMBERS AT END!
+//
+// By not appending tag numbers to the end, we have larger block of
+// unused tag numbers if needed.  Tag numbers in 128-255 are
+// unassigned in CBOR, and we currently use 128-231.  Since each
+// group of tags in this range have reserved space available,
+// there is no need to append new tag numbers in 232-255.
 
 const (
 	// CBOR tag numbers (128-135) for root objects (131-135 are reserved)

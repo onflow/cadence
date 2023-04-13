@@ -1779,7 +1779,7 @@ func (e *Encoder) encodeNilTypeValue() error {
 	return e.enc.EncodeNil()
 }
 
-// needToEncodeType returns true if runtimeType needs to be encoded because:
+// needToEncodeRuntimeType returns true if runtimeType needs to be encoded because:
 // - static type is missing (top level value doesn't have static type)
 // - static type is different from runtime type (static type is abstract type)
 func needToEncodeRuntimeType(staticType cadence.Type, runtimeType cadence.Type) bool {
@@ -1805,8 +1805,12 @@ func needToEncodeRuntimeType(staticType cadence.Type, runtimeType cadence.Type) 
 			return false
 		}
 
-		// Handle special case of static type being OptionalType{ReferenceType}
-		// since runtime type is optional type of the deferenced type.
+		// If both staticType and runtimeType are optional types, check again
+		// with unwrapped inner types.  For example, runtimeType shouldn't be
+		// encoded if staticType is optional reference to string type and
+		// runtimeType is optional string type.  After unwrapping optional
+		// types, needToEncodeRuntimeType returns false because staticType is
+		// reference to string type and runtimeType is string type.
 		if or, ok := runtimeType.(*cadence.OptionalType); ok {
 			return needToEncodeRuntimeType(staticType.Type, or.Type)
 		}

@@ -388,6 +388,11 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 		return d.decodePath()
 
 	case cadence.MetaType:
+		// cadenceTypeByCCFTypeID uses a map with CCF type ID as keys.
+		// CCF type ID can collide if we reuse types (the variable)
+		// for type values because:
+		// - CCF type IDs are zero-based for composite TypeValue.
+		// - CCF type IDs are zero-based for composite type definitions.
 		typeValue, err := d.decodeNullableTypeValue(newCadenceTypeByCCFTypeID())
 		if err != nil {
 			return nil, err
