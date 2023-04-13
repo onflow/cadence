@@ -658,11 +658,7 @@ func (v BoolValue) Less(interpreter *Interpreter, other ComparableValue, locatio
 		})
 	}
 
-	if v {
-		return false
-	} else {
-		return o
-	}
+	return !v && o
 }
 
 func (v BoolValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
