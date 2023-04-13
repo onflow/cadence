@@ -651,11 +651,7 @@ func (v BoolValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 func (v BoolValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
+		panic(errors.NewUnreachableError())
 	}
 
 	return !v && o
@@ -664,11 +660,7 @@ func (v BoolValue) Less(interpreter *Interpreter, other ComparableValue, locatio
 func (v BoolValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
+		panic(errors.NewUnreachableError())
 	}
 
 	return !v || o
@@ -677,11 +669,7 @@ func (v BoolValue) LessEqual(interpreter *Interpreter, other ComparableValue, lo
 func (v BoolValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
+		panic(errors.NewUnreachableError())
 	}
 
 	return v && !o
@@ -690,11 +678,7 @@ func (v BoolValue) Greater(interpreter *Interpreter, other ComparableValue, loca
 func (v BoolValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
+		panic(errors.NewUnreachableError())
 	}
 
 	return v || !o
