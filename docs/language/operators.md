@@ -443,6 +443,8 @@ Comparison operators work with boolean and integer values.
   "a" < "b"    // is `true`
 
   "z" < "a"    // is `false`
+
+  "a" < "A"    // is `false`
   ```
 
 - Less or equal than: `<=`, for integers, booleans and characters
@@ -463,6 +465,8 @@ Comparison operators work with boolean and integer values.
   "c"  <= "a"   // is `false`
 
   "z"  <= "z"   // is `true`
+
+  "a" <= "A"    // is `false`
   ```
 
 - Greater than: `>`, for integers, booleans and characters
@@ -483,6 +487,8 @@ Comparison operators work with boolean and integer values.
   "c"  > "a"   // is `true`
 
   "g"  > "g"   // is `false`
+
+  "a" > "A"    // is `true`
   ```
 
 - Greater or equal than: `>=`, for integers, booleans and characters
@@ -503,6 +509,8 @@ Comparison operators work with boolean and integer values.
   "c"  >= "a"   // is `true`
 
   "q"  >= "q"   // is `true`
+
+  "a" >= "A"    // is `true`
   ```
 
 ### Comparing number super-types
