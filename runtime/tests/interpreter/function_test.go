@@ -167,4 +167,116 @@ func TestInterpretResultVariable(t *testing.T) {
 			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 		)
 	})
+
+	t.Run("reference invalidation, optional type", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            pub resource R {
+                pub(set) var id: UInt64
+                init() {
+                    self.id = 1
+                }
+            }
+
+            var ref: &R? = nil
+
+            pub fun main(): @R? {
+                var r <- createAndStoreRef()
+                if var r <- r {
+                    r.id = 2
+                    return <- r
+                }
+
+                return <- r
+            }
+
+            pub fun createAndStoreRef(): @R? {
+                post {
+                    storeRef(result)
+                }
+                return <- create R()
+            }
+
+            pub fun storeRef(_ r: &R?): Bool {
+                ref = r
+                return r != nil
+            }
+
+            pub fun getRef(): &R {
+                return ref!
+            }`,
+		)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("getRef")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, result)
+		referenceValue := result.(*interpreter.EphemeralReferenceValue)
+
+		// Get the field via the reference. Must have the updated field value.
+		utils.AssertValuesEqual(
+			t,
+			inter,
+			interpreter.UInt64Value(2),
+			referenceValue.GetMember(inter, interpreter.EmptyLocationRange, "id"),
+		)
+	})
+
+	t.Run("reference invalidation, non optional", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            pub resource R {
+                pub(set) var id: UInt64
+                init() {
+                    self.id = 1
+                }
+            }
+
+            var ref: &R? = nil
+
+            pub fun main(): @R {
+                var r <- createAndStoreRef()
+                r.id = 2
+                return <- r
+            }
+
+            pub fun createAndStoreRef(): @R {
+                post {
+                    storeRef(result)
+                }
+                return <- create R()
+            }
+
+            pub fun storeRef(_ r: &R): Bool {
+                ref = r
+                return r != nil
+            }
+
+            pub fun getRef(): &R {
+                return ref!
+            }`,
+		)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("getRef")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, result)
+		referenceValue := result.(*interpreter.EphemeralReferenceValue)
+
+		// Get the field via the reference. Must have the updated field value.
+		utils.AssertValuesEqual(
+			t,
+			inter,
+			interpreter.UInt64Value(2),
+			referenceValue.GetMember(inter, interpreter.EmptyLocationRange, "id"),
+		)
+	})
 }

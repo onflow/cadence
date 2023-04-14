@@ -1108,9 +1108,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	if result, ok := result.(ReferenceTrackedResourceKindedValue); ok {
-		interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
-	}
+	interpreter.maybeTrackReferencedResourceKindedValue(result)
 
 	switch typ := borrowType.(type) {
 	case *sema.OptionalType:
@@ -1131,9 +1129,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			}
 
 			innerValue := result.InnerValue(interpreter, locationRange)
-			if result, ok := innerValue.(ReferenceTrackedResourceKindedValue); ok {
-				interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
-			}
+			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
 
 			return NewSomeValueNonCopying(
 				interpreter,
