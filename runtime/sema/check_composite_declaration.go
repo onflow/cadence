@@ -63,9 +63,31 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 
 func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeType) {
 
-	// all the access modifiers for attachment members must be supertypes of the
-	// codomain of the attachment's entitlement map
-
+	// all the access modifiers for attachment members must be elements of the
+	// codomain of the attachment's entitlement map. This is because the codomain
+	// of the attachment's declared map specifies all the entitlements one can possibly
+	// have to that attachment, since the only way to obtain an attachment reference
+	// is to access it off of a base (and hence through the map).
+	// ---------------------------------------------------
+	// entitlement map M {
+	//     E -> F
+	//     X -> Y
+	//     U -> V
+	// }
+	//
+	// access(M) attachment A for R {
+	//	  access(F) fun foo() {}
+	//	  access(Y | F) fun bar() {}
+	//	  access(V & Y) fun baz() {}
+	//
+	//    access(V | Q) fun qux() {}
+	// }
+	// ---------------------------------------------------
+	//
+	// in this example, the only entitlements one can ever obtain to an &A reference are
+	// `F`, `Y` and `V`, and as such these are the only entitlements that may be used
+	// in `A`'s definition.  Thus the definitions of `foo`, `bar`, and `baz` are valid,
+	// while the definition of `qux` is not.
 	var attachmentAccess Access = UnauthorizedAccess
 	if attachmentType.attachmentEntitlementAccess != nil {
 		attachmentAccess = *attachmentType.attachmentEntitlementAccess
@@ -2316,8 +2338,19 @@ func (checker *Checker) declareSelfValue(selfType Type, selfAccess Access, selfD
 	if typedSelfType, ok := selfType.(*CompositeType); ok && typedSelfType.Kind == common.CompositeKindAttachment {
 		// the `self` value in an attachment function has the set of entitlements with which that function was declared. Consider
 		// that a function will only be callable on a reference type that possesses the required entitlements, so within that
-		// function the `self` value will necessarily possess those entitlements.
-		// note also that this will never be a mapped entitlement; these are only valid on field declarations which do not have a self declared
+		// function the `self` value will necessarily possess those entitlements. e.g.
+		//
+		// entitlement map M {
+		//     E -> F
+		//     X -> Y
+		// }
+		//
+		// access(M) attachment A for R {
+		//	  access(Y | F) fun foo() {}
+		// }
+		//
+		// within the body of `foo`, `self` would have a `(Y | F)` entitlement, since we know for sure the reference to `A` that
+		// was used to call `foo` (and hence the value of `self`) must have had either `Y` or `F`.
 		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, selfAccess)
 	}
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)

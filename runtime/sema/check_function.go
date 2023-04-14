@@ -367,7 +367,23 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 		var resultType Type
 		if returnType.IsResourceType() {
 			var auth Access = UnauthorizedAccess
-			// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
+			// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned.
+			// To create a "fully authorized" reference, we scan the resource type and produce a conjunction of all the entitlements mentioned within.
+			// So, for example,
+			//
+			// resource R {
+			//		access(E) let x: Int
+			//      access(X | Y) fun foo() {}
+			// }
+			//
+			// fun test(): @R {
+			//    post {
+			//	      // do something with result here
+			//    }
+			//    return <- create R()
+			// }
+			//
+			// here the `result` value in the `post` block will have type `auth(E, X, Y) &R`
 			if entitlementSupportingType, ok := returnType.(EntitlementSupportingType); ok {
 				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
 				if supportedEntitlements.Len() > 0 {

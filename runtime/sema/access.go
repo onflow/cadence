@@ -236,6 +236,25 @@ func (e EntitlementMapAccess) PermitsAccess(other Access) bool {
 	// of the map. That is, for some field declared `access(M) let x: auth(M) &T`, when `x` is intialized
 	// by `self.x = y`, `y` must be a reference of type `auth(X, Y, Z, ...) &T` where `{X, Y, Z, ...}` is
 	// a superset of all the possible output types of `M` (all the possible entitlements `x` may have)
+	//
+	// as an example:
+	//
+	// entitlement mapping M {
+	//    X -> Y
+	//    E -> F
+	// }
+	// resource R {
+	//    access(M) let x: auth(M) &T
+	//    init(tref: auth(Y, F) &T) {
+	//        self.x = tref
+	//    }
+	// }
+	//
+	// the tref value used to initialize `x` must be entitled to the full output of `M` (in this case)
+	// `(Y, F)`, because the mapped access of `x` may provide either (or both) `Y` and `F` depending on
+	// the input entitlement. It is only safe for `R` to give out these entitlements if it actually
+	// possesses them, so we require the initializing value to have every possible entitlement that may
+	// be produced by the map
 	case EntitlementSetAccess:
 		return e.Codomain().PermitsAccess(otherAccess)
 	default:
@@ -271,6 +290,8 @@ func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
 	return NewEntitlementSetAccess(maps.Keys(codomain), Conjunction)
 }
 
+// produces the image set of a single entitlement through a map
+// the image set of one element is always a conjunction
 func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (output *EntitlementOrderedSet) {
 	output = orderedmap.New[EntitlementOrderedSet](0)
 	for _, relation := range e.Type.Relations {
@@ -281,6 +302,8 @@ func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (ou
 	return
 }
 
+// produces the preimage set of a single entitlement through a map
+// the preimage set of one element is always a disjunction
 func (e EntitlementMapAccess) entitlementPreImage(entitlement *EntitlementType) (input *EntitlementOrderedSet) {
 	input = orderedmap.New[EntitlementOrderedSet](0)
 	for _, relation := range e.Type.Relations {
@@ -293,7 +316,7 @@ func (e EntitlementMapAccess) entitlementPreImage(entitlement *EntitlementType) 
 
 // Image applies all the entitlements in the `argumentAccess` to the function
 // defined by the map in `e`, producing a new entitlement set of the image of the
-// arguments
+// arguments.
 func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, error) {
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map
@@ -335,7 +358,7 @@ func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, 
 
 // Preimage applies all the entitlements in the `argumentAccess` to the inverse of the function
 // defined by the map in `e`, producing a new entitlement set of the preimage of the
-// arguments
+// arguments. The preimage of a set is always a disjunction
 func (e EntitlementMapAccess) Preimage(outputs Access, astRange ast.Range) (Access, error) {
 	switch outputs := outputs.(type) {
 	// primitive access always passes trivially through the map
