@@ -1365,6 +1365,8 @@ func newAccountContractsBorrowFunction(
 				return interpreter.Nil
 			}
 
+			// No need to track the referenced value, since the reference is taken to a contract value.
+			// A contract value would never be moved or destroyed, within the execution of a program.
 			reference := interpreter.NewEphemeralReferenceValue(
 				inter,
 				false,
