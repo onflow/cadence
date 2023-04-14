@@ -33,7 +33,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("resource", func(t *testing.T) {
+	t.Run("resource type, resource value", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -66,7 +66,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		)
 	})
 
-	t.Run("optional resource", func(t *testing.T) {
+	t.Run("optional resource type, resource value", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -104,7 +104,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		)
 	})
 
-	t.Run("optional nil resource", func(t *testing.T) {
+	t.Run("optional resource type, nil value", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -126,5 +126,45 @@ func TestInterpretResultVariable(t *testing.T) {
 		result, err := inter.Invoke("main")
 		require.NoError(t, err)
 		require.Equal(t, interpreter.NilValue{}, result)
+	})
+
+	t.Run("any resource type, optional value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            pub resource R {
+                pub let id: UInt64
+                init() {
+                    self.id = 1
+                }
+            }
+
+            pub fun main(): @AnyResource  {
+                post {
+                    result != nil: "invalid value"
+                }
+
+                var value: @R? <- create R()
+                return <- value
+            }`,
+		)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.SomeValue{}, result)
+		someValue := result.(*interpreter.SomeValue)
+
+		innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+		require.IsType(t, &interpreter.CompositeValue{}, innerValue)
+
+		resource := innerValue.(*interpreter.CompositeValue)
+		assert.Equal(t, common.CompositeKindResource, resource.Kind)
+		utils.AssertValuesEqual(
+			t,
+			inter,
+			interpreter.UInt64Value(1),
+			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
+		)
 	})
 }
