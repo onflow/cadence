@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -34,8 +35,7 @@ var authAccountFieldNames = []string{
 	sema.AuthAccountTypeContractsFieldName,
 	sema.AuthAccountTypeKeysFieldName,
 	sema.AuthAccountTypeInboxFieldName,
-	sema.AuthAccountTypeStorageCapabilitiesFieldName,
-	sema.AuthAccountTypeAccountCapabilitiesFieldName,
+	sema.AuthAccountTypeCapabilitiesFieldName,
 }
 
 // NewAuthAccountValue constructs an auth account value.
@@ -51,27 +51,19 @@ func NewAuthAccountValue(
 	contractsConstructor func() Value,
 	keysConstructor func() Value,
 	inboxConstructor func() Value,
-	storageCapabilitiesConstructor func() Value,
-	accountCapabilitiesConstructor func() Value,
+	capabilitiesConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
 		sema.AuthAccountTypeAddressFieldName:            address,
 		sema.AuthAccountTypeAddPublicKeyFunctionName:    addPublicKeyFunction,
 		sema.AuthAccountTypeRemovePublicKeyFunctionName: removePublicKeyFunction,
-		sema.AuthAccountTypeGetCapabilityFunctionName: accountGetCapabilityFunction(
-			gauge,
-			address,
-			sema.CapabilityPathType,
-			sema.AuthAccountTypeGetCapabilityFunctionType,
-		),
 	}
 
 	var contracts Value
 	var keys Value
 	var inbox Value
-	var storageCapabilities Value
-	var accountCapabilities Value
+	var capabilities Value
 	var forEachStoredFunction *HostFunctionValue
 	var forEachPublicFunction *HostFunctionValue
 	var forEachPrivateFunction *HostFunctionValue
@@ -84,6 +76,7 @@ func NewAuthAccountValue(
 	var linkAccountFunction *HostFunctionValue
 	var unlinkFunction *HostFunctionValue
 	var getLinkTargetFunction *HostFunctionValue
+	var getCapabilityFunction *HostFunctionValue
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -105,17 +98,11 @@ func NewAuthAccountValue(
 			}
 			return inbox
 
-		case sema.AuthAccountTypeStorageCapabilitiesFieldName:
-			if storageCapabilities == nil {
-				storageCapabilities = storageCapabilitiesConstructor()
+		case sema.AuthAccountTypeCapabilitiesFieldName:
+			if capabilities == nil {
+				capabilities = capabilitiesConstructor()
 			}
-			return storageCapabilities
-
-		case sema.AuthAccountTypeAccountCapabilitiesFieldName:
-			if accountCapabilities == nil {
-				accountCapabilities = accountCapabilitiesConstructor()
-			}
-			return accountCapabilities
+			return capabilities
 
 		case sema.AuthAccountTypePublicPathsFieldName:
 			return inter.publicAccountPaths(address, locationRange)
@@ -228,6 +215,16 @@ func NewAuthAccountValue(
 			}
 			return getLinkTargetFunction
 
+		case sema.AuthAccountTypeGetCapabilityFunctionName:
+			if getCapabilityFunction == nil {
+				getCapabilityFunction = accountGetCapabilityFunction(
+					gauge,
+					address,
+					sema.CapabilityPathType,
+					sema.AuthAccountTypeGetCapabilityFunctionType,
+				)
+			}
+			return getCapabilityFunction
 		}
 
 		return nil
@@ -263,7 +260,7 @@ var publicAccountFieldNames = []string{
 	sema.PublicAccountTypeAddressFieldName,
 	sema.PublicAccountTypeContractsFieldName,
 	sema.PublicAccountTypeKeysFieldName,
-	sema.PublicAccountTypeStorageCapabilitiesFieldName,
+	sema.PublicAccountTypeCapabilitiesFieldName,
 }
 
 // NewPublicAccountValue constructs a public account value.
@@ -276,24 +273,19 @@ func NewPublicAccountValue(
 	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
 	keysConstructor func() Value,
 	contractsConstructor func() Value,
-	storageCapabilitiesConstructor func() Value,
+	capabilitiesConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
 		sema.PublicAccountTypeAddressFieldName: address,
-		sema.PublicAccountTypeGetCapabilityFunctionName: accountGetCapabilityFunction(
-			gauge,
-			address,
-			sema.PublicPathType,
-			sema.PublicAccountTypeGetCapabilityFunctionType,
-		),
 	}
 
 	var keys Value
 	var contracts Value
-	var storageCapabilities Value
+	var capabilities Value
 	var forEachPublicFunction *HostFunctionValue
 	var getLinkTargetFunction *HostFunctionValue
+	var getCapabilityFunction *HostFunctionValue
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -309,11 +301,11 @@ func NewPublicAccountValue(
 			}
 			return contracts
 
-		case sema.PublicAccountTypeStorageCapabilitiesFieldName:
-			if storageCapabilities == nil {
-				storageCapabilities = storageCapabilitiesConstructor()
+		case sema.PublicAccountTypeCapabilitiesFieldName:
+			if capabilities == nil {
+				capabilities = capabilitiesConstructor()
 			}
-			return storageCapabilities
+			return capabilities
 
 		case sema.PublicAccountTypePublicPathsFieldName:
 			return inter.publicAccountPaths(address, locationRange)
@@ -349,6 +341,17 @@ func NewPublicAccountValue(
 				)
 			}
 			return getLinkTargetFunction
+
+		case sema.PublicAccountTypeGetCapabilityFunctionName:
+			if getCapabilityFunction == nil {
+				getCapabilityFunction = accountGetCapabilityFunction(
+					gauge,
+					address,
+					sema.PublicPathType,
+					sema.PublicAccountTypeGetCapabilityFunctionType,
+				)
+			}
+			return getCapabilityFunction
 		}
 
 		return nil
@@ -373,5 +376,63 @@ func NewPublicAccountValue(
 		computeField,
 		nil,
 		stringer,
+	)
+}
+
+func accountGetCapabilityFunction(
+	gauge common.MemoryGauge,
+	addressValue AddressValue,
+	pathType sema.Type,
+	funcType *sema.FunctionType,
+) *HostFunctionValue {
+
+	return NewHostFunctionValue(
+		gauge,
+		funcType,
+		func(invocation Invocation) Value {
+
+			path, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			interpreter := invocation.Interpreter
+
+			pathStaticType := path.StaticType(interpreter)
+
+			if !interpreter.IsSubTypeOfSemaType(pathStaticType, pathType) {
+				pathSemaType := interpreter.MustConvertStaticToSemaType(pathStaticType)
+
+				panic(TypeMismatchError{
+					ExpectedType:  pathType,
+					ActualType:    pathSemaType,
+					LocationRange: invocation.LocationRange,
+				})
+			}
+
+			// NOTE: the type parameter is optional, for backwards compatibility
+
+			var borrowType *sema.ReferenceType
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				// we handle the nil case for this below
+				borrowType, _ = ty.(*sema.ReferenceType)
+			}
+
+			var borrowStaticType StaticType
+			if borrowType != nil {
+				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
+			}
+
+			return NewStorageCapabilityValue(
+				gauge,
+				// TODO:
+				TodoCapabilityID,
+				addressValue,
+				path,
+				borrowStaticType,
+			)
+		},
 	)
 }

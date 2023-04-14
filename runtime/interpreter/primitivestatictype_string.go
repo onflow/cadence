@@ -65,11 +65,12 @@ func _() {
 	_ = x[PrimitiveStaticTypeAccountCapabilityController-100]
 	_ = x[PrimitiveStaticTypeAuthAccountStorageCapabilities-101]
 	_ = x[PrimitiveStaticTypeAuthAccountAccountCapabilities-102]
-	_ = x[PrimitiveStaticTypePublicAccountStorageCapabilities-103]
-	_ = x[PrimitiveStaticType_Count-104]
+	_ = x[PrimitiveStaticTypeAuthAccountCapabilities-103]
+	_ = x[PrimitiveStaticTypePublicAccountCapabilities-104]
+	_ = x[PrimitiveStaticType_Count-105]
 }
 
-const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesPublicAccountStorageCapabilities_Count"
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilities_Count"
 
 var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	0:   _PrimitiveStaticType_name[0:7],
@@ -129,8 +130,9 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	100: _PrimitiveStaticType_name[478:505],
 	101: _PrimitiveStaticType_name[505:535],
 	102: _PrimitiveStaticType_name[535:565],
-	103: _PrimitiveStaticType_name[565:597],
-	104: _PrimitiveStaticType_name[597:603],
+	103: _PrimitiveStaticType_name[565:588],
+	104: _PrimitiveStaticType_name[588:613],
+	105: _PrimitiveStaticType_name[613:619],
 }
 
 func (i PrimitiveStaticType) String() string {

@@ -22,15 +22,19 @@ pub struct PublicAccount {
     /// The keys assigned to the account.
     pub let keys: PublicAccount.Keys
 
-    /// The storage capabilities of the account.
-    pub let storageCapabilities: &PublicAccount.StorageCapabilities
+    /// The capabilities of the account.
+    pub let capabilities: &PublicAccount.Capabilities
 
     /// All public paths of this account.
     pub let publicPaths: [PublicPath]
 
+    /// **DEPRECATED**: Use `capabilities.get` instead.
+    ///
     /// Returns the capability at the given public path.
     pub fun getCapability<T: &Any>(_ path: PublicPath): Capability<T>
 
+    /// **DEPRECATED**
+    ///
     /// Returns the target path of the capability at the given public or private path,
     /// or nil if there exists no capability at the given path.
     pub fun getLinkTarget(_ path: CapabilityPath): Path?
@@ -83,7 +87,7 @@ pub struct PublicAccount {
         pub let count: UInt64
     }
 
-    pub struct StorageCapabilities {
+    pub struct Capabilities {
         /// get returns the storage capability at the given path, if one was stored there.
         fun get<T: &Any>(_ path: PublicPath): Capability<T>?
 

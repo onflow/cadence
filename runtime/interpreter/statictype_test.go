@@ -969,6 +969,6 @@ func TestPrimitiveStaticTypeCount(t *testing.T) {
 	// (before the PrimitiveStaticType_Count of course).
 	// Only update this test if you are certain your change to this enum was to append new types to the end.
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(104), byte(PrimitiveStaticType_Count))
+		require.Equal(t, byte(105), byte(PrimitiveStaticType_Count))
 	})
 }

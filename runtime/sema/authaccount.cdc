@@ -25,11 +25,8 @@ pub struct AuthAccount {
     /// The inbox allows bootstrapping (sending and receiving) capabilities.
     pub let inbox: AuthAccount.Inbox
 
-    /// The storage capabilities of the account.
-    pub let storageCapabilities: &AuthAccount.StorageCapabilities
-
-    /// The account capabilities of the account.
-    pub let accountCapabilities: &AuthAccount.AccountCapabilities
+    /// The capabilities of the account.
+    pub let capabilities: &AuthAccount.Capabilities
 
     /// All public paths of this account.
     pub let publicPaths: [PublicPath]
@@ -112,6 +109,8 @@ pub struct AuthAccount {
     /// The path must be a storage path, i.e., only the domain `storage` is allowed
     pub fun borrow<T: &Any>(from: StoragePath): T?
 
+    /// **DEPRECATED**: Instead, use `capabilities.storage.issue`, and `capabilities.publish` if the path is public.
+    ///
     /// Creates a capability at the given public or private path,
     /// which targets the given public, private, or storage path.
     ///
@@ -132,18 +131,26 @@ pub struct AuthAccount {
     /// and the target value might be moved out after the link has been created.
     pub fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?
 
+    /// **DEPRECATED**: Use `capabilities.account.issue` instead.
+    ///
     /// Creates a capability at the given public or private path which targets this account.
     ///
     /// Returns nil if a link for the given capability path already exists, or the newly created capability if not.
     pub fun linkAccount(_ newCapabilityPath: PrivatePath): Capability<&AuthAccount>?
 
+    /// **DEPRECATED**: Use `capabilities.get` instead.
+    ///
     /// Returns the capability at the given private or public path.
     pub fun getCapability<T: &Any>(_ path: CapabilityPath): Capability<T>
 
+    /// **DEPRECATED**
+    ///
     /// Returns the target path of the capability at the given public or private path,
     /// or nil if there exists no capability at the given path.
     pub fun getLinkTarget(_ path: CapabilityPath): Path?
 
+    /// **DEPRECATED**: Use `capabilities.unpublish` instead if the path is public.
+    ///
     /// Removes the capability at the given public or private path.
     pub fun unlink(_ path: CapabilityPath)
 
@@ -301,16 +308,39 @@ pub struct AuthAccount {
         pub fun claim<T: &Any>(_ name: String, provider: Address): Capability<T>?
     }
 
-    pub struct StorageCapabilities {
-        /// get returns the storage capability at the given path, if one was stored there.
+    pub struct Capabilities {
+
+        /// The storage capabilities of the account.
+        pub let storage: &AuthAccount.StorageCapabilities
+
+        /// The account capabilities of the account.
+        pub let account: &AuthAccount.AccountCapabilities
+
+        /// Returns the capability at the given public path.
+        /// Returns nil if the capability does not exist,
+        /// or if the given type is not a supertype of the capability's borrow type.
         pub fun get<T: &Any>(_ path: PublicPath): Capability<T>?
 
-        /// borrow gets the storage capability at the given path, and borrows the capability if it exists.
-        ///
-        /// Returns nil if the capability does not exist or cannot be borrowed using the given type.
-        ///
+        /// Borrows the capability at the given public path.
+        /// Returns nil if the capability does not exist, or cannot be borrowed using the given type.
         /// The function is equivalent to `get(path)?.borrow()`.
         pub fun borrow<T: &Any>(_ path: PublicPath): T?
+
+        /// Publish the capability at the given public path.
+        ///
+        /// If there is already a capability published under the given path, the program aborts.
+        ///
+        /// The path must be a public path, i.e., only the domain `public` is allowed.
+        pub fun publish(_ capability: Capability, at: PublicPath)
+
+        /// Unpublish the capability published at the given path.
+        ///
+        /// Returns the capability if one was published at the path.
+        /// Returns nil if no capability was published at the path.
+        pub fun unpublish(_ path: PublicPath): Capability?
+    }
+
+    pub struct StorageCapabilities {
 
         /// Get the storage capability controller for the capability with the specified ID.
         ///

@@ -17895,64 +17895,6 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func accountGetCapabilityFunction(
-	gauge common.MemoryGauge,
-	addressValue AddressValue,
-	pathType sema.Type,
-	funcType *sema.FunctionType,
-) *HostFunctionValue {
-
-	return NewHostFunctionValue(
-		gauge,
-		funcType,
-		func(invocation Invocation) Value {
-
-			path, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			interpreter := invocation.Interpreter
-
-			pathStaticType := path.StaticType(interpreter)
-
-			if !interpreter.IsSubTypeOfSemaType(pathStaticType, pathType) {
-				pathSemaType := interpreter.MustConvertStaticToSemaType(pathStaticType)
-
-				panic(TypeMismatchError{
-					ExpectedType:  pathType,
-					ActualType:    pathSemaType,
-					LocationRange: invocation.LocationRange,
-				})
-			}
-
-			// NOTE: the type parameter is optional, for backwards compatibility
-
-			var borrowType *sema.ReferenceType
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				// we handle the nil case for this below
-				borrowType, _ = ty.(*sema.ReferenceType)
-			}
-
-			var borrowStaticType StaticType
-			if borrowType != nil {
-				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
-			}
-
-			return NewStorageCapabilityValue(
-				gauge,
-				// TODO:
-				TodoCapabilityID,
-				addressValue,
-				path,
-				borrowStaticType,
-			)
-		},
-	)
-}
-
 // PathValue
 
 type PathValue struct {

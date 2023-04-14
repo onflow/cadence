@@ -9250,9 +9250,9 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunctionValue,
 				panicFunctionValue,
 				panicFunctionValue,
-				interpreter.AccountKeysCountGetter(func() interpreter.UInt64Value {
+				func() interpreter.UInt64Value {
 					panic(errors.NewUnreachableError())
-				}),
+				},
 			)
 		},
 		func() interpreter.Value {
@@ -9265,37 +9265,51 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 			)
 		},
 		func() interpreter.Value {
-			storageCapabilities := interpreter.NewAuthAccountStorageCapabilitiesValue(
+			capabilities := interpreter.NewAuthAccountCapabilitiesValue(
 				gauge,
 				addressValue,
 				panicFunctionValue,
 				panicFunctionValue,
 				panicFunctionValue,
 				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
+				func() interpreter.Value {
+					storageCapabilities := interpreter.NewAuthAccountStorageCapabilitiesValue(
+						gauge,
+						addressValue,
+						panicFunctionValue,
+						panicFunctionValue,
+						panicFunctionValue,
+						panicFunctionValue,
+					)
+					return interpreter.NewEphemeralReferenceValue(
+						gauge,
+						false,
+						storageCapabilities,
+						sema.AuthAccountCapabilitiesTypeStorageFieldType,
+					)
+				},
+				func() interpreter.Value {
+					accountCapabilities := interpreter.NewAuthAccountAccountCapabilitiesValue(
+						gauge,
+						addressValue,
+						panicFunctionValue,
+						panicFunctionValue,
+						panicFunctionValue,
+						panicFunctionValue,
+					)
+					return interpreter.NewEphemeralReferenceValue(
+						gauge,
+						false,
+						accountCapabilities,
+						sema.AuthAccountCapabilitiesTypeAccountFieldType,
+					)
+				},
 			)
 			return interpreter.NewEphemeralReferenceValue(
 				gauge,
 				false,
-				storageCapabilities,
-				sema.AuthAccountTypeStorageCapabilitiesFieldType,
-			)
-		},
-		func() interpreter.Value {
-			accountCapabilities := interpreter.NewAuthAccountAccountCapabilitiesValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				accountCapabilities,
-				sema.AuthAccountTypeAccountCapabilitiesFieldType,
+				capabilities,
+				sema.AuthAccountTypeCapabilitiesFieldType,
 			)
 		},
 	)
@@ -9345,7 +9359,7 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 			)
 		},
 		func() interpreter.Value {
-			storageCapabilities := interpreter.NewPublicAccountStorageCapabilitiesValue(
+			capabilities := interpreter.NewPublicAccountCapabilitiesValue(
 				gauge,
 				addressValue,
 				panicFunctionValue,
@@ -9354,8 +9368,8 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 			return interpreter.NewEphemeralReferenceValue(
 				gauge,
 				false,
-				storageCapabilities,
-				sema.PublicAccountTypeStorageCapabilitiesFieldType,
+				capabilities,
+				sema.PublicAccountTypeCapabilitiesFieldType,
 			)
 		},
 	)
