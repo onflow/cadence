@@ -171,7 +171,7 @@ func readHistory() ([]string, error) {
 			return nil, fmt.Errorf("failed to read history: %w", err)
 		}
 
-		if len(row) <= 0 {
+		if len(row) == 0 {
 			return nil, fmt.Errorf("failed to read history: invalid row %d", len(result)+1)
 		}
 
