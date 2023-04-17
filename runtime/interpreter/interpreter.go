@@ -3395,7 +3395,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			}
 			storageIterator := storageMap.Iterator(interpreter)
 
-			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
+			invocationArgumentTypes := []sema.Type{pathType, sema.MetaType}
 
 			inIteration := inter.SharedState.inStorageIteration
 			inter.SharedState.inStorageIteration = true
@@ -3421,7 +3421,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 					nil,
 					nil,
 					[]Value{pathValue, runtimeType},
-					invocationTypeParams,
+					invocationArgumentTypes,
 					nil,
 					locationRange,
 				)
