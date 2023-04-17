@@ -224,7 +224,7 @@ func NewAuthAccountValue(
 				gauge,
 				false,
 				capabilities,
-				sema.AuthAccountTypeCapabilitiesFieldType,
+				sema.AuthAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)
@@ -2115,7 +2115,7 @@ func NewPublicAccountValue(
 				gauge,
 				false,
 				capabilities,
-				sema.PublicAccountTypeCapabilitiesFieldType,
+				sema.PublicAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)
@@ -2230,7 +2230,7 @@ func newAuthAccountCapabilitiesValue(
 				gauge,
 				false,
 				storageCapabilities,
-				sema.AuthAccountCapabilitiesTypeStorageFieldType,
+				sema.AuthAccountCapabilitiesTypeStorageFieldType.Type,
 			)
 		},
 		func() interpreter.Value {
@@ -2242,7 +2242,7 @@ func newAuthAccountCapabilitiesValue(
 				gauge,
 				false,
 				accountCapabilities,
-				sema.AuthAccountCapabilitiesTypeAccountFieldType,
+				sema.AuthAccountCapabilitiesTypeAccountFieldType.Type,
 			)
 		},
 	)
