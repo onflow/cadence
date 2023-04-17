@@ -33,8 +33,8 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -113,8 +113,8 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -190,8 +190,8 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -272,8 +272,8 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -359,8 +359,8 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -481,8 +481,8 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -575,8 +575,8 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -669,8 +669,8 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -765,8 +765,8 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -887,8 +887,8 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {

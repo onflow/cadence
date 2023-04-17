@@ -40,8 +40,8 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -151,8 +151,8 @@ func TestAccountAttachmentExport(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -234,8 +234,8 @@ func TestAccountAttachedExport(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -315,8 +315,8 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -429,8 +429,8 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`

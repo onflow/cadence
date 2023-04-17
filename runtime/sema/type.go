@@ -6758,7 +6758,7 @@ func MembersAsMap(members []*Member) *StringMemberOrderedMap {
 }
 
 func MembersFieldNames(members []*Member) []string {
-	fields := make([]string, 0)
+	var fields []string
 	for _, member := range members {
 		if member.DeclarationKind == common.DeclarationKindField {
 			fields = append(fields, member.Identifier.Identifier)
