@@ -142,7 +142,7 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.Equal(t, logs[0], "3")
+	require.Equal(t, []string{"3"}, logs)
 }
 
 func TestAccountAttachmentExport(t *testing.T) {
@@ -420,7 +420,7 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.Equal(t, logs[0], "3")
+	require.Equal(t, []string{"3"}, logs)
 }
 
 func TestAccountAttachmentCapability(t *testing.T) {
@@ -559,5 +559,5 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.Equal(t, logs[0], "3")
+	require.Equal(t, []string{"3"}, logs)
 }
