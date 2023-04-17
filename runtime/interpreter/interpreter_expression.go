@@ -1221,7 +1221,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	attachTarget := interpreter.evalExpression(attachExpression.Base)
 	base, ok := attachTarget.(*CompositeValue)
 
-	// we enforce this in the checker, but check defensively anyways
+	// we enforce this in the checker, but check defensively anyway
 	if !ok || !base.Kind.SupportsAttachments() {
 		panic(InvalidAttachmentOperationTargetError{
 			Value:         attachTarget,
@@ -1237,8 +1237,8 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	}
 
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
-	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
-	// we create an implicit constructor argument containing a reference to the base
+	// set it on the attachment's `CompositeValue` yet, because the value does not exist.
+	// Instead, we create an implicit constructor argument containing a reference to the base.
 	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
 		false,
