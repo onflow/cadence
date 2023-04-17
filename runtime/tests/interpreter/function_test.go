@@ -38,7 +38,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             pub resource R {
-                pub let id: UInt64
+                pub let id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -61,7 +61,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		utils.AssertValuesEqual(
 			t,
 			inter,
-			interpreter.UInt64Value(1),
+			interpreter.UInt8Value(1),
 			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 		)
 	})
@@ -71,7 +71,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             pub resource R {
-                pub let id: UInt64
+                pub let id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -99,7 +99,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		utils.AssertValuesEqual(
 			t,
 			inter,
-			interpreter.UInt64Value(1),
+			interpreter.UInt8Value(1),
 			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 		)
 	})
@@ -109,7 +109,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             pub resource R {
-                pub let id: UInt64
+                pub let id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -133,7 +133,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             pub resource R {
-                pub let id: UInt64
+                pub let id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -163,7 +163,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		utils.AssertValuesEqual(
 			t,
 			inter,
-			interpreter.UInt64Value(1),
+			interpreter.UInt8Value(1),
 			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 		)
 	})
@@ -173,7 +173,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             pub resource R {
-                pub(set) var id: UInt64
+                pub(set) var id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -203,27 +203,17 @@ func TestInterpretResultVariable(t *testing.T) {
                 return r != nil
             }
 
-            pub fun getRef(): &R {
-                return ref!
+            pub fun getID(): UInt8 {
+                return ref!.id
             }`,
 		)
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		result, err := inter.Invoke("getRef")
+		result, err := inter.Invoke("getID")
 		require.NoError(t, err)
-
-		require.IsType(t, &interpreter.EphemeralReferenceValue{}, result)
-		referenceValue := result.(*interpreter.EphemeralReferenceValue)
-
-		// Get the field via the reference. Must have the updated field value.
-		utils.AssertValuesEqual(
-			t,
-			inter,
-			interpreter.UInt64Value(2),
-			referenceValue.GetMember(inter, interpreter.EmptyLocationRange, "id"),
-		)
+		utils.AssertValuesEqual(t, inter, interpreter.UInt8Value(2), result)
 	})
 
 	t.Run("reference invalidation, non optional", func(t *testing.T) {
@@ -231,7 +221,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             pub resource R {
-                pub(set) var id: UInt64
+                pub(set) var id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -257,26 +247,16 @@ func TestInterpretResultVariable(t *testing.T) {
                 return r != nil
             }
 
-            pub fun getRef(): &R {
-                return ref!
+            pub fun getID(): UInt8 {
+                return ref!.id
             }`,
 		)
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		result, err := inter.Invoke("getRef")
+		result, err := inter.Invoke("getID")
 		require.NoError(t, err)
-
-		require.IsType(t, &interpreter.EphemeralReferenceValue{}, result)
-		referenceValue := result.(*interpreter.EphemeralReferenceValue)
-
-		// Get the field via the reference. Must have the updated field value.
-		utils.AssertValuesEqual(
-			t,
-			inter,
-			interpreter.UInt64Value(2),
-			referenceValue.GetMember(inter, interpreter.EmptyLocationRange, "id"),
-		)
+		utils.AssertValuesEqual(t, inter, interpreter.UInt8Value(2), result)
 	})
 }

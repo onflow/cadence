@@ -1610,7 +1610,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 let a = r2[A]!
 
 
-                // Move the resource after the taking a reference to the attachment.
+                // Move the resource after taking a reference to the attachment.
                 // Then update the field of the attachment.
                 var r3 <- r2
                 let a2 = r3[A]!
@@ -1659,7 +1659,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 let r2 <- create R2(r: <-attach A() to <-create R())
                 let a = r2.r[A]!
 
-                // Move the resource after the taking a reference to the attachment.
+                // Move the resource after taking a reference to the attachment.
                 // Then update the field of the attachment.
                 var r3 <- r2
                 let a2 = r3.r[A]!
