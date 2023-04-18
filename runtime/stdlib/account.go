@@ -2219,7 +2219,7 @@ func newAuthAccountCapabilitiesValue(
 		addressValue,
 		nil,
 		nil,
-		nil,
+		newAuthAccountCapabilitiesPublishFunction(gauge, addressValue),
 		nil,
 		func() interpreter.Value {
 			storageCapabilities := newAuthAccountStorageCapabilitiesValue(
@@ -2244,6 +2244,67 @@ func newAuthAccountCapabilitiesValue(
 				accountCapabilities,
 				sema.AuthAccountCapabilitiesTypeAccountFieldType.Type,
 			)
+		},
+	)
+}
+
+func newAuthAccountCapabilitiesPublishFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountCapabilitiesTypePublishFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
+			capabilityValue, ok := invocation.Arguments[0].(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			pathValue, ok := invocation.Arguments[1].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainPublic {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+			// Prevent an overwrite
+
+			locationRange := invocation.LocationRange
+
+			if inter.StoredValueExists(
+				address,
+				domain,
+				identifier,
+			) {
+				panic(
+					interpreter.OverwriteError{
+						Address:       addressValue,
+						Path:          pathValue,
+						LocationRange: locationRange,
+					},
+				)
+			}
+
+			capabilityValue, ok = capabilityValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(address),
+				true,
+				nil,
+			).(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Write new value
+
+			inter.WriteStored(address, domain, identifier, capabilityValue)
+
+			return interpreter.Void
 		},
 	)
 }
