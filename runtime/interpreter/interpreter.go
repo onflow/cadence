@@ -2229,7 +2229,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 	)
 }
 
-func (interpreter *Interpreter) storedValueExists(
+func (interpreter *Interpreter) StoredValueExists(
 	storageAddress common.Address,
 	domain string,
 	identifier string,
@@ -3471,7 +3471,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			locationRange := invocation.LocationRange
 
-			if interpreter.storedValueExists(
+			if interpreter.StoredValueExists(
 				address,
 				domain,
 				identifier,
@@ -3708,7 +3708,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
 			newCapabilityIdentifier := newCapabilityPath.Identifier
 
-			if interpreter.storedValueExists(
+			if interpreter.StoredValueExists(
 				address,
 				newCapabilityDomain,
 				newCapabilityIdentifier,
@@ -3796,7 +3796,7 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
 			newCapabilityIdentifier := newCapabilityPath.Identifier
 
-			if interpreter.storedValueExists(
+			if interpreter.StoredValueExists(
 				address,
 				newCapabilityDomain,
 				newCapabilityIdentifier,
