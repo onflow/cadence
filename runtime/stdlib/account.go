@@ -970,12 +970,12 @@ func newPublicAccountContractsValue(
 
 const inboxStorageDomain = "inbox"
 
-func accountInboxPublishFunction(
+func newAuthAccountInboxPublishFunction(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
-	address common.Address,
 	providerValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
+	provider := providerValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		sema.AuthAccountInboxTypePublishFunctionType,
@@ -1013,27 +1013,27 @@ func accountInboxPublishFunction(
 			publishedValue := interpreter.NewPublishedValue(inter, recipientValue, value).Transfer(
 				inter,
 				locationRange,
-				atree.Address(address),
+				atree.Address(provider),
 				true,
 				nil,
 			)
 
-			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, publishedValue)
+			inter.WriteStored(provider, inboxStorageDomain, nameValue.Str, publishedValue)
 
 			return interpreter.Void
 		},
 	)
 }
 
-func accountInboxUnpublishFunction(
+func newAuthAccountInboxUnpublishFunction(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
-	address common.Address,
 	providerValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
+	provider := providerValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountInboxTypePublishFunctionType,
+		sema.AuthAccountInboxTypeUnpublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -1043,7 +1043,7 @@ func accountInboxUnpublishFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
-			readValue := inter.ReadStored(address, inboxStorageDomain, nameValue.Str)
+			readValue := inter.ReadStored(provider, inboxStorageDomain, nameValue.Str)
 			if readValue == nil {
 				return interpreter.Nil
 			}
@@ -1075,7 +1075,7 @@ func accountInboxUnpublishFunction(
 				nil,
 			)
 
-			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, nil)
+			inter.WriteStored(provider, inboxStorageDomain, nameValue.Str, nil)
 
 			handler.EmitEvent(
 				inter,
@@ -1092,7 +1092,7 @@ func accountInboxUnpublishFunction(
 	)
 }
 
-func accountInboxClaimFunction(
+func newAuthAccountInboxClaimFunction(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
 	recipientValue interpreter.AddressValue,
@@ -1176,13 +1176,12 @@ func newAuthAccountInboxValue(
 	handler EventEmitter,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	address := addressValue.ToAddress()
 	return interpreter.NewAuthAccountInboxValue(
 		gauge,
 		addressValue,
-		accountInboxPublishFunction(gauge, handler, address, addressValue),
-		accountInboxUnpublishFunction(gauge, handler, address, addressValue),
-		accountInboxClaimFunction(gauge, handler, addressValue),
+		newAuthAccountInboxPublishFunction(gauge, handler, addressValue),
+		newAuthAccountInboxUnpublishFunction(gauge, handler, addressValue),
+		newAuthAccountInboxClaimFunction(gauge, handler, addressValue),
 	)
 }
 
