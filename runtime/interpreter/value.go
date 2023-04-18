@@ -17996,6 +17996,22 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func AddressFromBytes(invocation Invocation) Value {
+	argument, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	inter := invocation.Interpreter
+
+	bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+	if err != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
+}
+
 func accountGetCapabilityFunction(
 	gauge common.MemoryGauge,
 	addressValue AddressValue,
