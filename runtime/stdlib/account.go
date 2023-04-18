@@ -2220,7 +2220,7 @@ func newAuthAccountCapabilitiesValue(
 		nil,
 		nil,
 		newAuthAccountCapabilitiesPublishFunction(gauge, addressValue),
-		nil,
+		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
 		func() interpreter.Value {
 			storageCapabilities := newAuthAccountStorageCapabilitiesValue(
 				gauge,
@@ -2271,6 +2271,7 @@ func newAuthAccountCapabilitiesPublishFunction(
 
 			domain := pathValue.Domain.Identifier()
 			identifier := pathValue.Identifier
+
 			// Prevent an overwrite
 
 			locationRange := invocation.LocationRange
@@ -2305,6 +2306,55 @@ func newAuthAccountCapabilitiesPublishFunction(
 			inter.WriteStored(address, domain, identifier, capabilityValue)
 
 			return interpreter.Void
+		},
+	)
+}
+
+func newAuthAccountCapabilitiesUnpublishFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountCapabilitiesTypeUnpublishFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainPublic {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			readValue := inter.ReadStored(address, domain, identifier)
+			if readValue == nil {
+				return interpreter.Nil
+			}
+
+			capabilityValue := readValue.(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityValue, ok = capabilityValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address{},
+				true,
+				nil,
+			).(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter.WriteStored(address, domain, identifier, nil)
+
+			return interpreter.NewSomeValueNonCopying(inter, capabilityValue)
 		},
 	)
 }
