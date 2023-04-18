@@ -2217,7 +2217,7 @@ func newAuthAccountCapabilitiesValue(
 	return interpreter.NewAuthAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		nil,
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountCapabilitiesTypeGetFunctionType),
 		nil,
 		newAuthAccountCapabilitiesPublishFunction(gauge, addressValue),
 		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
@@ -2367,7 +2367,96 @@ func newPublicAccountCapabilitiesValue(
 	return interpreter.NewPublicAccountCapabilitiesValue(
 		gauge,
 		addressValue,
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountCapabilitiesTypeGetFunctionType),
 		nil,
-		nil,
+	)
+}
+
+func newAccountCapabilitiesGetFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+	funcType *sema.FunctionType,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		funcType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainPublic {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			// Get borrow type type argument
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			wantedBorrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Read stored capability, if any
+
+			readValue := inter.ReadStored(address, domain, identifier)
+			if readValue == nil {
+				return interpreter.Nil
+			}
+
+			capabilityValue := readValue.(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			allowedBorrowType, ok := inter.MustConvertStaticToSemaType(capabilityValue.BorrowType).(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Ensure requested borrow type is not more permissive
+
+			if !sema.IsSubType(allowedBorrowType, wantedBorrowType) {
+				return interpreter.Nil
+			}
+
+			// Return capability value
+
+			capabilityValue, ok = capabilityValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+			).(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			wantedBorrowStaticType :=
+				interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, wantedBorrowType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				interpreter.NewStorageCapabilityValue(
+					inter,
+					capabilityValue.ID,
+					capabilityValue.Address,
+					capabilityValue.Path,
+					wantedBorrowStaticType,
+				),
+			)
+		},
 	)
 }
