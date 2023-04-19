@@ -2234,8 +2234,7 @@ func (interpreter *Interpreter) StoredValueExists(
 	domain string,
 	identifier string,
 ) bool {
-	config := interpreter.SharedState.Config
-	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
 	}
@@ -2247,8 +2246,7 @@ func (interpreter *Interpreter) ReadStored(
 	domain string,
 	identifier string,
 ) Value {
-	config := interpreter.SharedState.Config
-	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return nil
 	}
@@ -2261,8 +2259,7 @@ func (interpreter *Interpreter) WriteStored(
 	identifier string,
 	value Value,
 ) {
-	config := interpreter.SharedState.Config
-	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, true)
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, true)
 	accountStorage.WriteValue(interpreter, identifier, value)
 	interpreter.recordStorageMutation()
 }
@@ -3292,8 +3289,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	config := interpreter.SharedState.Config
-	storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
+	storageMap := interpreter.Storage().GetStorageMap(address, domain.Identifier(), false)
 	if storageMap == nil {
 		return []Value{}
 	}
