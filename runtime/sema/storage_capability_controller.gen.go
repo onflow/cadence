@@ -84,8 +84,8 @@ var StorageCapabilityControllerTypeRetargetFunctionType = &FunctionType{
 }
 
 const StorageCapabilityControllerTypeRetargetFunctionDocString = `
-Retarget the capability.
-This moves the CapCon from one CapCon array to another.
+Retarget the controlled capability to the given storage path.
+The path may be different or the same as the current path.
 `
 
 const StorageCapabilityControllerTypeName = "StorageCapabilityController"
