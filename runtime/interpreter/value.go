@@ -15144,6 +15144,8 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 
 	// the base reference can only be borrowed with the declared type of the attachment's base
 	v.base = NewEphemeralReferenceValue(interpreter, false, base, baseType)
+
+	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 }
 
 func attachmentMemberName(ty sema.Type) string {
@@ -15173,6 +15175,7 @@ func attachmentBaseAndSelfValues(
 	base = v.getBaseValue(interpreter, locationRange)
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
+	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
 	return
 }
 
@@ -15221,7 +15224,11 @@ func (v *CompositeValue) GetTypeKey(
 	}
 	// dynamically set the attachment's base to this composite
 	attachment.setBaseValue(interpreter, v)
-	return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, false, attachment, ty))
+
+	attachmentRef := NewEphemeralReferenceValue(interpreter, false, attachment, ty)
+	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
+
+	return NewSomeValueNonCopying(interpreter, attachmentRef)
 }
 
 func (v *CompositeValue) SetTypeKey(

@@ -38,7 +38,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             pub resource R {
-                pub let id: UInt64
+                pub let id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -61,7 +61,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		utils.AssertValuesEqual(
 			t,
 			inter,
-			interpreter.UInt64Value(1),
+			interpreter.UInt8Value(1),
 			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 		)
 	})
@@ -71,7 +71,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             pub resource R {
-                pub let id: UInt64
+                pub let id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -99,7 +99,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		utils.AssertValuesEqual(
 			t,
 			inter,
-			interpreter.UInt64Value(1),
+			interpreter.UInt8Value(1),
 			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 		)
 	})
@@ -109,7 +109,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             pub resource R {
-                pub let id: UInt64
+                pub let id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -133,7 +133,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             pub resource R {
-                pub let id: UInt64
+                pub let id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -163,8 +163,100 @@ func TestInterpretResultVariable(t *testing.T) {
 		utils.AssertValuesEqual(
 			t,
 			inter,
-			interpreter.UInt64Value(1),
+			interpreter.UInt8Value(1),
 			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 		)
+	})
+
+	t.Run("reference invalidation, optional type", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            pub resource R {
+                pub(set) var id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            var ref: &R? = nil
+
+            pub fun main(): @R? {
+                var r <- createAndStoreRef()
+                if var r <- r {
+                    r.id = 2
+                    return <- r
+                }
+
+                return <- r
+            }
+
+            pub fun createAndStoreRef(): @R? {
+                post {
+                    storeRef(result)
+                }
+                return <- create R()
+            }
+
+            pub fun storeRef(_ r: &R?): Bool {
+                ref = r
+                return r != nil
+            }
+
+            pub fun getID(): UInt8 {
+                return ref!.id
+            }`,
+		)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("getID")
+		require.NoError(t, err)
+		utils.AssertValuesEqual(t, inter, interpreter.UInt8Value(2), result)
+	})
+
+	t.Run("reference invalidation, non optional", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            pub resource R {
+                pub(set) var id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            var ref: &R? = nil
+
+            pub fun main(): @R {
+                var r <- createAndStoreRef()
+                r.id = 2
+                return <- r
+            }
+
+            pub fun createAndStoreRef(): @R {
+                post {
+                    storeRef(result)
+                }
+                return <- create R()
+            }
+
+            pub fun storeRef(_ r: &R): Bool {
+                ref = r
+                return r != nil
+            }
+
+            pub fun getID(): UInt8 {
+                return ref!.id
+            }`,
+		)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("getID")
+		require.NoError(t, err)
+		utils.AssertValuesEqual(t, inter, interpreter.UInt8Value(2), result)
 	})
 }
