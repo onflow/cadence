@@ -2217,8 +2217,8 @@ func newAuthAccountCapabilitiesValue(
 	return interpreter.NewAuthAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountCapabilitiesTypeGetFunctionType),
-		nil,
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountCapabilitiesTypeGetFunctionType, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountCapabilitiesTypeBorrowFunctionType, true),
 		newAuthAccountCapabilitiesPublishFunction(gauge, addressValue),
 		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
 		func() interpreter.Value {
@@ -2407,8 +2407,8 @@ func newPublicAccountCapabilitiesValue(
 	return interpreter.NewPublicAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountCapabilitiesTypeGetFunctionType),
-		nil,
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountCapabilitiesTypeGetFunctionType, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountCapabilitiesTypeBorrowFunctionType, true),
 	)
 }
 
@@ -2416,6 +2416,7 @@ func newAccountCapabilitiesGetFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 	funcType *sema.FunctionType,
+	borrow bool,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
 
@@ -2452,12 +2453,12 @@ func newAccountCapabilitiesGetFunction(
 				return interpreter.Nil
 			}
 
-			capabilityValue := readValue.(*interpreter.StorageCapabilityValue)
+			readCapabilityValue := readValue.(*interpreter.StorageCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			allowedBorrowType, ok := inter.MustConvertStaticToSemaType(capabilityValue.BorrowType).(*sema.ReferenceType)
+			allowedBorrowType, ok := inter.MustConvertStaticToSemaType(readCapabilityValue.BorrowType).(*sema.ReferenceType)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -2470,7 +2471,7 @@ func newAccountCapabilitiesGetFunction(
 
 			// Return capability value
 
-			capabilityValue, ok = capabilityValue.Transfer(
+			readCapabilityValue, ok = readCapabilityValue.Transfer(
 				inter,
 				locationRange,
 				atree.Address{},
@@ -2487,15 +2488,27 @@ func newAccountCapabilitiesGetFunction(
 				panic(errors.NewUnreachableError())
 			}
 
+			var resultValue interpreter.Value
+			if borrow {
+				resultValue = inter.BorrowCapability(
+					readCapabilityValue.Address.ToAddress(),
+					readCapabilityValue.Path,
+					wantedBorrowType,
+					locationRange,
+				)
+			} else {
+				resultValue = interpreter.NewStorageCapabilityValue(
+					inter,
+					readCapabilityValue.ID,
+					readCapabilityValue.Address,
+					readCapabilityValue.Path,
+					wantedBorrowStaticType,
+				)
+			}
+
 			return interpreter.NewSomeValueNonCopying(
 				inter,
-				interpreter.NewStorageCapabilityValue(
-					inter,
-					capabilityValue.ID,
-					capabilityValue.Address,
-					capabilityValue.Path,
-					wantedBorrowStaticType,
-				),
+				resultValue,
 			)
 		},
 	)
