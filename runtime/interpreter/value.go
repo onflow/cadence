@@ -18649,7 +18649,7 @@ func (v *PublishedValue) Transfer(
 func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
 	return &PublishedValue{
 		Recipient: v.Recipient,
-		Value:     v.Value,
+		Value:     v.Value.Clone(interpreter).(*StorageCapabilityValue),
 	}
 }
 
