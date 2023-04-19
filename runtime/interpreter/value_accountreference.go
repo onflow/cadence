@@ -39,6 +39,7 @@ var _ Value = &AccountReferenceValue{}
 var _ EquatableValue = &AccountReferenceValue{}
 var _ ValueIndexableValue = &AccountReferenceValue{}
 var _ MemberAccessibleValue = &AccountReferenceValue{}
+var _ ReferenceValue = &AccountReferenceValue{}
 
 func NewUnmeteredAccountReferenceValue(
 	address common.Address,
@@ -67,6 +68,8 @@ func NewAccountReferenceValue(
 }
 
 func (*AccountReferenceValue) IsValue() {}
+
+func (*AccountReferenceValue) isReference() {}
 
 func (v *AccountReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAccountReferenceValue(interpreter, v)

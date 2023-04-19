@@ -16976,6 +16976,7 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 }
 
 type ReferenceValue interface {
+	Value
 	isReference()
 }
 
