@@ -40,8 +40,8 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -142,7 +142,7 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.Equal(t, logs[0], "3")
+	require.Equal(t, []string{"3"}, logs)
 }
 
 func TestAccountAttachmentExport(t *testing.T) {
@@ -151,8 +151,8 @@ func TestAccountAttachmentExport(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -238,8 +238,8 @@ func TestAccountAttachedExport(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -319,8 +319,8 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -424,7 +424,7 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.Equal(t, logs[0], "3")
+	require.Equal(t, []string{"3"}, logs)
 }
 
 func TestAccountAttachmentCapability(t *testing.T) {
@@ -433,8 +433,8 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -563,5 +563,5 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.Equal(t, logs[0], "3")
+	require.Equal(t, []string{"3"}, logs)
 }
