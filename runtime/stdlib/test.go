@@ -533,7 +533,9 @@ var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
 		)
 
 		if !result {
-			panic(AssertionError{})
+			panic(AssertionError{
+				LocationRange: locationRange,
+			})
 		}
 
 		return interpreter.Void
@@ -1456,7 +1458,7 @@ var beEmptyMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 			},
 		)
 
-		return newMatcherWithGenericTestFunction(invocation, beEmptyTestFunc)
+		return newMatcherWithAnyStructTestFunction(invocation, beEmptyTestFunc)
 	},
 )
 
@@ -1510,7 +1512,7 @@ var haveElementCountMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 			},
 		)
 
-		return newMatcherWithGenericTestFunction(invocation, haveElementCountTestFunc)
+		return newMatcherWithAnyStructTestFunction(invocation, haveElementCountTestFunc)
 	},
 )
 
@@ -1575,7 +1577,7 @@ var containMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 			},
 		)
 
-		return newMatcherWithGenericTestFunction(invocation, containTestFunc)
+		return newMatcherWithAnyStructTestFunction(invocation, containTestFunc)
 	},
 )
 
@@ -1632,7 +1634,7 @@ var beGreaterThanMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 			},
 		)
 
-		return newMatcherWithGenericTestFunction(invocation, beGreaterThanTestFunc)
+		return newMatcherWithAnyStructTestFunction(invocation, beGreaterThanTestFunc)
 	},
 )
 
@@ -1689,7 +1691,7 @@ var beLessThanMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 			},
 		)
 
-		return newMatcherWithGenericTestFunction(invocation, beLessThanTestFunc)
+		return newMatcherWithAnyStructTestFunction(invocation, beLessThanTestFunc)
 	},
 )
 
@@ -1828,12 +1830,38 @@ func (e TestFailedError) Error() string {
 	return fmt.Sprintf("test failed: %s", e.Err.Error())
 }
 
-func newMatcherWithGenericTestFunction(
+// Creates a matcher using a function that accepts an `AnyStruct` typed parameter.
+// i.e: invokes `newMatcher(fun (value: AnyStruct): Bool)`.
+func newMatcherWithAnyStructTestFunction(
 	invocation interpreter.Invocation,
 	testFunc interpreter.FunctionValue,
 ) interpreter.Value {
 
-	inter := invocation.Interpreter
+	matcherConstructor := getNestedTypeConstructorValue(
+		*invocation.Self,
+		matcherTypeName,
+	)
+	matcher, err := invocation.Interpreter.InvokeExternally(
+		matcherConstructor,
+		matcherConstructor.Type,
+		[]interpreter.Value{
+			testFunc,
+		},
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return matcher
+}
+
+// Creates a matcher using a function that accepts a generic `T` typed parameter.
+// NOTE: Use this function only if the matcher function has a generic type.
+func newMatcherWithGenericTestFunction(
+	invocation interpreter.Invocation,
+	testFunc interpreter.FunctionValue,
+) interpreter.Value {
 
 	typeParameterPair := invocation.TypeParameterTypes.Oldest()
 	if typeParameterPair == nil {
@@ -1882,23 +1910,7 @@ func newMatcherWithGenericTestFunction(
 		},
 	)
 
-	matcherConstructor := getNestedTypeConstructorValue(
-		*invocation.Self,
-		matcherTypeName,
-	)
-	matcher, err := inter.InvokeExternally(
-		matcherConstructor,
-		matcherConstructor.Type,
-		[]interpreter.Value{
-			matcherTestFunction,
-		},
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return matcher
+	return newMatcherWithAnyStructTestFunction(invocation, matcherTestFunction)
 }
 
 func TestCheckerContractValueHandler(
