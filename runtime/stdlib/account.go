@@ -2190,7 +2190,7 @@ func newAuthAccountStorageCapabilitiesValue(
 		nil,
 		nil,
 		nil,
-		nil,
+		newAuthAccountStorageCapabilitiesIssueFunction(gauge, addressValue),
 	)
 }
 
@@ -2243,6 +2243,46 @@ func newAuthAccountCapabilitiesValue(
 				false,
 				accountCapabilities,
 				sema.AuthAccountCapabilitiesTypeAccountFieldType.Type,
+			)
+		},
+	)
+}
+
+func newAuthAccountStorageCapabilitiesIssueFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountStorageCapabilitiesTypeIssueFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			// Get path argument
+
+			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainStorage {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get borrow type type argument
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// TODO: create and write StorageCapabilityController
+
+			borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(gauge, borrowType)
+
+			return interpreter.NewStorageCapabilityValue(
+				gauge,
+				// TODO:
+				interpreter.TodoCapabilityID,
+				addressValue,
+				pathValue,
+				borrowStaticType,
 			)
 		},
 	)
