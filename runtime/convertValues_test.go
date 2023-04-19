@@ -5326,3 +5326,35 @@ func TestNestedStructArgPassing(t *testing.T) {
 		require.ErrorAs(t, err, &argErr)
 	})
 }
+
+func TestDestroyedResourceReferenceExport(t *testing.T) {
+	t.Parallel()
+
+	rt := newTestInterpreterRuntimeWithAttachments()
+
+	script := []byte(`
+        pub resource S {}
+
+        pub fun main(): &S  {
+            var s <- create S()
+            var ref = &s as &S
+            destroy s
+            return ref
+        }
+	 `)
+
+	runtimeInterface := &testRuntimeInterface{}
+
+	nextScriptLocation := newScriptLocationGenerator()
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+}

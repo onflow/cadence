@@ -17439,7 +17439,7 @@ func (v *EphemeralReferenceValue) ReferencedValue(
 	}
 }
 
-func (v *EphemeralReferenceValue) mustReferencedValue(
+func (v *EphemeralReferenceValue) MustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 ) Value {
@@ -17462,7 +17462,7 @@ func (v *EphemeralReferenceValue) GetMember(
 	locationRange LocationRange,
 	name string,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return interpreter.getMember(self, locationRange, name)
 }
@@ -17472,7 +17472,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	locationRange LocationRange,
 	identifier string,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
@@ -17487,7 +17487,7 @@ func (v *EphemeralReferenceValue) SetMember(
 	name string,
 	value Value,
 ) bool {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return interpreter.setMember(self, locationRange, name, value)
 }
@@ -17497,7 +17497,7 @@ func (v *EphemeralReferenceValue) GetKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, locationRange, key)
@@ -17509,7 +17509,7 @@ func (v *EphemeralReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, locationRange, key, value)
@@ -17521,7 +17521,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, locationRange, key, value)
@@ -17532,7 +17532,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, locationRange, key)
@@ -17543,7 +17543,7 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(TypeIndexableValue).
 		GetTypeKey(interpreter, locationRange, key)
@@ -17555,7 +17555,7 @@ func (v *EphemeralReferenceValue) SetTypeKey(
 	key sema.Type,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	self.(TypeIndexableValue).
 		SetTypeKey(interpreter, locationRange, key, value)
@@ -17566,7 +17566,7 @@ func (v *EphemeralReferenceValue) RemoveTypeKey(
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(TypeIndexableValue).
 		RemoveTypeKey(interpreter, locationRange, key)
