@@ -59,7 +59,13 @@ type EventEmitter interface {
 	)
 }
 
+type AccountIDGenerator interface {
+	// GenerateAccountID generates a new unique ID for the given account.
+	GenerateAccountID(address common.Address) (uint64, error)
+}
+
 type AuthAccountHandler interface {
+	AccountIDGenerator
 	BalanceProvider
 	AvailableBalanceProvider
 	StorageUsedProvider
@@ -218,6 +224,7 @@ func NewAuthAccountValue(
 		func() interpreter.Value {
 			capabilities := newAuthAccountCapabilitiesValue(
 				gauge,
+				handler,
 				addressValue,
 			)
 			return interpreter.NewEphemeralReferenceValue(
@@ -2181,6 +2188,7 @@ func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.A
 
 func newAuthAccountStorageCapabilitiesValue(
 	gauge common.MemoryGauge,
+	accountIDGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 	// TODO:
@@ -2190,7 +2198,7 @@ func newAuthAccountStorageCapabilitiesValue(
 		nil,
 		nil,
 		nil,
-		newAuthAccountStorageCapabilitiesIssueFunction(gauge, addressValue),
+		newAuthAccountStorageCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
 	)
 }
 
@@ -2211,9 +2219,9 @@ func newAuthAccountAccountCapabilitiesValue(
 
 func newAuthAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
+	idGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	// TODO:
 	return interpreter.NewAuthAccountCapabilitiesValue(
 		gauge,
 		addressValue,
@@ -2224,6 +2232,7 @@ func newAuthAccountCapabilitiesValue(
 		func() interpreter.Value {
 			storageCapabilities := newAuthAccountStorageCapabilitiesValue(
 				gauge,
+				idGenerator,
 				addressValue,
 			)
 			return interpreter.NewEphemeralReferenceValue(
@@ -2250,8 +2259,10 @@ func newAuthAccountCapabilitiesValue(
 
 func newAuthAccountStorageCapabilitiesIssueFunction(
 	gauge common.MemoryGauge,
+	idGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		sema.AuthAccountStorageCapabilitiesTypeIssueFunctionType,
@@ -2259,8 +2270,8 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 
 			// Get path argument
 
-			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-			if !ok || pathValue.Domain != common.PathDomainStorage {
+			targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || targetPathValue.Domain != common.PathDomainStorage {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -2272,16 +2283,36 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			// TODO: create and write StorageCapabilityController
+			// Create and write StorageCapabilityController
 
 			borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(gauge, borrowType)
 
+			var capabilityID uint64
+			var err error
+			errors.WrapPanic(func() {
+				capabilityID, err = idGenerator.GenerateAccountID(address)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			capabilityIDValue := interpreter.UInt64Value(capabilityID)
+
+			_ = interpreter.NewStorageCapabilityControllerValue(
+				gauge,
+				borrowStaticType,
+				targetPathValue,
+				capabilityIDValue,
+			)
+
+			// TODO: store controller in {ID -> controller}
+			// TODO: store controller in {path -> {controller ID -> void}}
+
 			return interpreter.NewStorageCapabilityValue(
 				gauge,
-				// TODO:
-				interpreter.TodoCapabilityID,
+				capabilityIDValue,
 				addressValue,
-				pathValue,
+				targetPathValue,
 				borrowStaticType,
 			)
 		},
