@@ -51,6 +51,7 @@ const (
 	MemoryKindBigInt
 	MemoryKindSimpleCompositeValue
 	MemoryKindPublishedValue
+	MemoryKindStorageCapabilityControllerValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab

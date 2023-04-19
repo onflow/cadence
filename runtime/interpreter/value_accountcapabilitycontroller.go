@@ -70,7 +70,7 @@ func NewAccountCapabilityControllerValue(
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AccountCapabilityControllerStringMemoryUsage)
+			common.UseMemory(memoryGauge, common.AccountCapabilityControllerValueStringMemoryUsage)
 
 			borrowTypeStr := borrowTypeValue.MeteredString(gauge, seenReferences)
 

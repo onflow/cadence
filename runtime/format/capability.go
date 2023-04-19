@@ -37,11 +37,12 @@ func StorageCapability(borrowType string, id string, address string, path string
 	)
 }
 
-func StorageCapabilityController(borrowType string, capabilityID string) string {
+func StorageCapabilityController(borrowType string, capabilityID string, target string) string {
 	return fmt.Sprintf(
-		"StorageCapabilityController(borrowType: %s, capabilityID: %s)",
+		"StorageCapabilityController(borrowType: %s, capabilityID: %s, target: %s)",
 		borrowType,
 		capabilityID,
+		target,
 	)
 }
 
