@@ -78,11 +78,13 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	referencedExpression := referenceExpression.Expression
 
-	_ = checker.VisitExpression(referencedExpression, targetType)
+	referencedType := checker.VisitExpression(referencedExpression, targetType)
 
 	if referenceType == nil {
 		return InvalidType
 	}
+
+	checker.checkUnusedExpressionResourceLoss(referencedType, referencedExpression)
 
 	checker.Elaboration.SetReferenceExpressionBorrowType(referenceExpression, returnType)
 

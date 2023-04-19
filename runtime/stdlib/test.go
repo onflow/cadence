@@ -69,6 +69,7 @@ var TestContractChecker = func() *sema.Checker {
 
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(AssertFunction)
+	activation.DeclareValue(PanicFunction)
 
 	var checker *sema.Checker
 	checker, err = sema.NewChecker(
@@ -124,6 +125,11 @@ func NewTestContract(
 	// Inject natively implemented matchers
 	compositeValue.Functions[newMatcherFunctionName] = newMatcherFunction
 	compositeValue.Functions[equalMatcherFunctionName] = equalMatcherFunction
+	compositeValue.Functions[beEmptyMatcherFunctionName] = beEmptyMatcherFunction
+	compositeValue.Functions[haveElementCountMatcherFunctionName] = haveElementCountMatcherFunction
+	compositeValue.Functions[containMatcherFunctionName] = containMatcherFunction
+	compositeValue.Functions[beGreaterThanMatcherFunctionName] = beGreaterThanMatcherFunction
+	compositeValue.Functions[beLessThanMatcherFunctionName] = beLessThanMatcherFunction
 
 	return compositeValue, nil
 }
@@ -277,7 +283,7 @@ func init() {
 		),
 	)
 
-	// Matcher functions
+	// Test.equal()
 	testContractType.Members.Set(
 		equalMatcherFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -285,6 +291,61 @@ func init() {
 			equalMatcherFunctionName,
 			equalMatcherFunctionType,
 			equalMatcherFunctionDocString,
+		),
+	)
+
+	// Test.beEmpty()
+	testContractType.Members.Set(
+		beEmptyMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			beEmptyMatcherFunctionName,
+			beEmptyMatcherFunctionType,
+			beEmptyMatcherFunctionDocString,
+		),
+	)
+
+	// Test.haveElementCount()
+	testContractType.Members.Set(
+		haveElementCountMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			haveElementCountMatcherFunctionName,
+			haveElementCountMatcherFunctionType,
+			haveElementCountMatcherFunctionDocString,
+		),
+	)
+
+	// Test.contain()
+	testContractType.Members.Set(
+		containMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			containMatcherFunctionName,
+			containMatcherFunctionType,
+			containMatcherFunctionDocString,
+		),
+	)
+
+	// Test.beGreaterThan()
+	testContractType.Members.Set(
+		beGreaterThanMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			beGreaterThanMatcherFunctionName,
+			beGreaterThanMatcherFunctionType,
+			beGreaterThanMatcherFunctionDocString,
+		),
+	)
+
+	// Test.beLessThan()
+	testContractType.Members.Set(
+		beLessThanMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			beLessThanMatcherFunctionName,
+			beLessThanMatcherFunctionType,
+			beLessThanMatcherFunctionDocString,
 		),
 	)
 
@@ -316,7 +377,7 @@ var blockchainType = func() sema.Type {
 	return typ
 }()
 
-// Functions belong to the 'Test' contract
+// Functions belonging to the 'Test' contract
 
 // 'Test.assert' function
 
@@ -765,8 +826,8 @@ var EmulatorBackendType = func() *sema.CompositeType {
 		),
 	}
 
-	ty.Members = sema.GetMembersAsMap(members)
-	ty.Fields = sema.GetFieldNames(members)
+	ty.Members = sema.MembersAsMap(members)
+	ty.Fields = sema.MembersFieldNames(members)
 
 	return ty
 }()
@@ -1355,6 +1416,280 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 		)
 
 		return newMatcherWithGenericTestFunction(invocation, equalTestFunc)
+	},
+)
+
+const beEmptyMatcherFunctionName = "beEmpty"
+
+const beEmptyMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is an array or dictionary,
+and the tested value contains no elements.
+`
+
+var beEmptyMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:        false,
+		TypeParameters:       []*sema.TypeParameter{},
+		Parameters:           []sema.Parameter{},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var beEmptyMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	beEmptyMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		beEmptyTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				var isEmpty bool
+				switch value := invocation.Arguments[0].(type) {
+				case *interpreter.ArrayValue:
+					isEmpty = value.Count() == 0
+				case *interpreter.DictionaryValue:
+					isEmpty = value.Count() == 0
+				default:
+					panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
+				}
+
+				return interpreter.AsBoolValue(isEmpty)
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, beEmptyTestFunc)
+	},
+)
+
+const haveElementCountMatcherFunctionName = "haveElementCount"
+
+const haveElementCountMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is an array or dictionary,
+and has the given number of elements.
+`
+
+var haveElementCountMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "count",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.IntType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var haveElementCountMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	haveElementCountMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		count, ok := invocation.Arguments[0].(interpreter.IntValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		haveElementCountTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				var matchingCount bool
+				switch value := invocation.Arguments[0].(type) {
+				case *interpreter.ArrayValue:
+					matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+				case *interpreter.DictionaryValue:
+					matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+				default:
+					panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
+				}
+
+				return interpreter.AsBoolValue(matchingCount)
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, haveElementCountTestFunc)
+	},
+)
+
+const containMatcherFunctionName = "contain"
+
+const containMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is an array that contains
+a value that is equal to the given value, or the tested value is a dictionary
+that contains an entry where the key is equal to the given value.
+`
+
+var containMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "element",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.AnyStructType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var containMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	containMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		element, ok := invocation.Arguments[0].(interpreter.EquatableValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		containTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				var elementFound interpreter.BoolValue
+				switch value := invocation.Arguments[0].(type) {
+				case *interpreter.ArrayValue:
+					elementFound = value.Contains(
+						inter,
+						invocation.LocationRange,
+						element,
+					)
+				case *interpreter.DictionaryValue:
+					elementFound = value.ContainsKey(
+						inter,
+						invocation.LocationRange,
+						element,
+					)
+				default:
+					panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
+				}
+
+				return elementFound
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, containTestFunc)
+	},
+)
+
+const beGreaterThanMatcherFunctionName = "beGreaterThan"
+
+const beGreaterThanMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is a number and
+greater than the given number.
+`
+
+var beGreaterThanMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.NumberType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var beGreaterThanMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	beGreaterThanMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		beGreaterThanTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				thisValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				isGreaterThan := thisValue.Greater(
+					inter,
+					otherValue,
+					invocation.LocationRange,
+				)
+
+				return isGreaterThan
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, beGreaterThanTestFunc)
+	},
+)
+
+const beLessThanMatcherFunctionName = "beLessThan"
+
+const beLessThanMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is a number and
+less than the given number.
+`
+
+var beLessThanMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.NumberType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var beLessThanMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	beLessThanMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		beLessThanTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				thisValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				isLessThan := thisValue.Less(
+					inter,
+					otherValue,
+					invocation.LocationRange,
+				)
+
+				return isLessThan
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, beLessThanTestFunc)
 	},
 )
 

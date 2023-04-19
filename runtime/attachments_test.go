@@ -170,8 +170,12 @@ func TestAccountAttachmentExportFailure(t *testing.T) {
 		import Test from 0x1
 		pub fun main(): &Test.A? { 
 			let r <- Test.makeRWithA()
-			let a = r[Test.A]
-			destroy r
+
+			let acc = getAuthAccount(0x1)
+			acc.save(<-r, to: /storage/r)
+			var rRef = acc.borrow<&Test.R>(from: /storage/r)!
+
+			let a = rRef[Test.A]
 			return a
 		}
 	 `)

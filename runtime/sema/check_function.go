@@ -352,8 +352,18 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 	if returnType != VoidType {
 		var resultType Type
 		if returnType.IsResourceType() {
-			resultType = &ReferenceType{
-				Type: returnType,
+			optType, isOptional := returnType.(*OptionalType)
+			if isOptional {
+				// If the return type is an optional type T?, then create an optional reference (&T)?.
+				resultType = &OptionalType{
+					Type: &ReferenceType{
+						Type: optType.Type,
+					},
+				}
+			} else {
+				resultType = &ReferenceType{
+					Type: returnType,
+				}
 			}
 		} else {
 			resultType = returnType

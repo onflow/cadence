@@ -290,7 +290,7 @@ Logical operators work with the boolean values `true` and `false`.
 
 Comparison operators work with boolean and integer values.
 
-- Equality: `==`, is supported for booleans, numbers, addresses, strings, characters, enums, paths, `Type` values, references, and `Void` values (`()`). Variable-sized arrays, fixed-size arrays, and optionals also support equality tests if their inner types do.
+- Equality: `==`, is supported for booleans, numbers, addresses, strings, characters, enums, paths, `Type` values, references, and `Void` values (`()`). Variable-sized arrays, fixed-size arrays, dictionaries, and optionals also support equality tests if their inner types do.
 
   Both sides of the equality operator may be optional, even of different levels,
   so it is for example possible to compare a non-optional with a double-optional (`??`).
@@ -349,8 +349,19 @@ Comparison operators work with boolean and integer values.
   xs == ys // is `true`
   ```
 
+  ```cadence
+  // Equality tests of dictionaries are possible if the key and value types are equatable.
+  let d1 = {"abc": 1, "def": 2}
+  let d2 = {"abc": 1, "def": 2}
+  d1 == d2 // is `true`
+
+  let d3 = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+  let d4 = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+  d3 == d4 // is `true`
+  ```
+
 - Inequality: `!=`, is supported for booleans, numbers, addresses, strings, characters, enums, paths, `Type` values, references, and `Void` values (`()`). 
-  Variable-sized arrays, fixed-size arrays, and optionals also support inequality tests if their inner types do.
+  Variable-sized arrays, fixed-size arrays, dictionaries, and optionals also support inequality tests if their inner types do.
 
   Both sides of the inequality operator may be optional, even of different levels,
   so it is for example possible to compare a non-optional with a double-optional (`??`).
@@ -403,6 +414,17 @@ Comparison operators work with boolean and integer values.
   let xs: [Int; 2] = [1, 2]
   let ys: [Int; 2] = [1, 2]
   xs != ys // is `false`
+  ```
+
+  ```cadence
+  // Inequality tests of dictionaries are possible if the key and value types are equatable.
+  let d1 = {"abc": 1, "def": 2}
+  let d2 = {"abc": 1, "def": 500}
+  d1 != d2 // is `true`
+
+  let d3 = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+  let d4 = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+  d3 != d4 // is `false`
   ```
 
 - Less than: `<`, for integers

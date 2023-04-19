@@ -10,57 +10,85 @@ Every account can be accessed through two types, `PublicAccount` and `AuthAccoun
 which represents the publicly available portion of an account.
 
 ```cadence
-struct PublicAccount {
+pub struct PublicAccount {
 
-    let address: Address
-    // The FLOW balance of the default vault of this account
-    let balance: UFix64
-    // The FLOW balance of the default vault of this account that is available to be moved
-    let availableBalance: UFix64
-    // Amount of storage used by the account, in bytes
-    let storageUsed: UInt64
-    // storage capacity of the account, in bytes
-    let storageCapacity: UInt64
+    /// The address of the account.
+    pub let address: Address
 
-    // Contracts deployed to the account
-    let contracts: PublicAccount.Contracts
+    /// The FLOW balance of the default vault of this account.
+    pub let balance: UFix64
 
-    // Keys assigned to the account
-    let keys: PublicAccount.Keys
+    /// The FLOW balance of the default vault of this account that is available to be moved.
+    pub let availableBalance: UFix64
 
-    // The public paths associated with this account
-    let publicPaths: [PublicPath]
+    /// The current amount of storage used by the account in bytes.
+    pub let storageUsed: UInt64
 
-    // Storage operations
+    /// The storage capacity of the account in bytes.
+    pub let storageCapacity: UInt64
 
-    fun getCapability<T>(_ path: PublicPath): Capability<T>
-    fun getLinkTarget(_ path: CapabilityPath): Path?
+    /// The contracts deployed to the account.
+    pub let contracts: PublicAccount.Contracts
 
-    // Storage iteration  
-    fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
+    /// The keys assigned to the account.
+    pub let keys: PublicAccount.Keys
 
-    struct Contracts {
+    /// All public paths of this account.
+    pub let publicPaths: [PublicPath]
 
-        let names: [String]
+    /// Returns the capability at the given public path.
+    pub fun getCapability<T: &Any>(_ path: PublicPath): Capability<T>
 
-        fun get(name: String): DeployedContract?
+    /// Returns the target path of the capability at the given public or private path,
+    /// or nil if there exists no capability at the given path.
+    pub fun getLinkTarget(_ path: CapabilityPath): Path?
 
-        fun borrow<T: &Any>(name: String): T?
+    /// Iterate over all the public paths of an account.
+    /// passing each path and type in turn to the provided callback function.
+    ///
+    /// The callback function takes two arguments:
+    ///   1. The path of the stored object
+    ///   2. The runtime type of that object
+    ///
+    /// Iteration is stopped early if the callback function returns `false`.
+    ///
+    /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
+    /// is undefined.
+    pub fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
+
+    pub struct Contracts {
+
+        /// The names of all contracts deployed in the account.
+        pub let names: [String]
+
+        /// Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
+        ///
+        /// Returns nil if no contract/contract interface with the given name exists in the account.
+        pub fun get(name: String): DeployedContract?
+
+        /// Returns a reference of the given type to the contract with the given name in the account, if any.
+        ///
+        /// Returns nil if no contract with the given name exists in the account,
+        /// or if the contract does not conform to the given type.
+        pub fun borrow<T: &Any>(name: String): T?
     }
 
-    struct Keys {
-        // Returns the key at the given index, if it exists.
-        // Revoked keys are always returned, but they have \`isRevoked\` field set to true.
-        fun get(keyIndex: Int): AccountKey?
+    pub struct Keys {
 
-        // Iterate over all unrevoked keys in this account,
-        // passing each key in turn to the provided function.
-        // Iteration is stopped early if the function returns `false`.
-        // The order of iteration is undefined.
-        fun forEach(function: fun(AccountKey): Bool): Void
+        /// Returns the key at the given index, if it exists, or nil otherwise.
+        ///
+        /// Revoked keys are always returned, but they have `isRevoked` field set to true.
+        pub fun get(keyIndex: Int): AccountKey?
 
-        // The total number of unrevoked keys in this account.
-        let count: UInt64
+        /// Iterate over all unrevoked keys in this account,
+        /// passing each key in turn to the provided function.
+        ///
+        /// Iteration is stopped early if the function returns `false`.
+        /// The order of iteration is undefined.
+        pub fun forEach(_ function: fun(AccountKey): Bool)
+
+        /// The total number of unrevoked keys in this account.
+        pub let count: UInt64
     }
 }
 ```
@@ -84,154 +112,323 @@ Only [signed transactions](transactions) can get the `AuthAccount` for an accoun
 For each signer of the transaction that signs as an authorizer, the corresponding `AuthAccount` object is passed
 to the `prepare` phase of the transaction.
 
-  ```cadence
-  struct AuthAccount {
+```cadence
+pub struct AuthAccount {
 
-      let address: Address
-      // The FLOW balance of the default vault of this account
-      let balance: UFix64
-      // The FLOW balance of the default vault of this account that is available to be moved
-      let availableBalance: UFix64
-      // Amount of storage used by the account, in bytes
-      let storageUsed: UInt64
-      // storage capacity of the account, in bytes
-      let storageCapacity: UInt64
+    /// The address of the account.
+    pub let address: Address
 
-      // Contracts deployed to the account
+    /// The FLOW balance of the default vault of this account.
+    pub let balance: UFix64
 
-      let contracts: AuthAccount.Contracts
+    /// The FLOW balance of the default vault of this account that is available to be moved.
+    pub let availableBalance: UFix64
 
-      // Key management API
+    /// The current amount of storage used by the account in bytes.
+    pub let storageUsed: UInt64
 
-      let keys: AuthAccount.Keys
+    /// The storage capacity of the account in bytes.
+    pub let storageCapacity: UInt64
 
-      // Provides a API for bootstrapping (sending and receiving) capabilities
+    /// The contracts deployed to the account.
+    pub let contracts: AuthAccount.Contracts
 
-      let inbox: AuthAccount.Inbox
+    /// The keys assigned to the account.
+    pub let keys: AuthAccount.Keys
 
-      // All the paths associated with this account
-      let publicPaths: [PublicPath]
-      let privatePaths: [PrivatePath]
-      let storagePaths: [StoragePath]
+    /// The inbox allows bootstrapping (sending and receiving) capabilities.
+    pub let inbox: AuthAccount.Inbox
 
-      // Account storage API (see the section below for documentation)
+    /// All public paths of this account.
+    pub let publicPaths: [PublicPath]
 
-      fun save<T>(_ value: T, to: StoragePath)
-      fun type(at path: StoragePath): Type?
-      fun load<T>(from: StoragePath): T?
-      fun copy<T: AnyStruct>(from: StoragePath): T?
+    /// All private paths of this account.
+    pub let privatePaths: [PrivatePath]
 
-      fun borrow<T: &Any>(from: StoragePath): T?
+    /// All storage paths of this account.
+    pub let storagePaths: [StoragePath]
 
-      fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?
-      fun linkAccount(_ newCapabilityPath: PrivatePath): Capability<&AuthAccount>?
-      fun getCapability<T>(_ path: CapabilityPath): Capability<T>
-      fun getLinkTarget(_ path: CapabilityPath): Path?
-      fun unlink(_ path: CapabilityPath)
+    // Key management API
 
-      // All the paths associated with this account
+    /// **DEPRECATED**: Use `keys.add` instead.
+    ///
+    /// Adds a public key to the account.
+    ///
+    /// The public key must be encoded together with their signature algorithm, hashing algorithm and weight.
+    fun addPublicKey(_ publicKey: [UInt8])
 
-      let publicPaths: [PublicPath]
-      let privatePaths: [PrivatePath]
-      let storagePaths: [StoragePath]
+    /// **DEPRECATED**: Use `keys.revoke` instead.
+    ///
+    /// Revokes the key at the given index.
+    fun removePublicKey(_ index: Int)
 
-      // Storage iteration
+    // Account storage API (see the section below for documentation)
 
-      fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
-      fun forEachPrivate(_ function: fun(PrivatePath, Type): Bool)
-      fun forEachStored(_ function: fun(StoragePath, Type): Bool)
+    // Provides a API for bootstrapping (sending and receiving) capabilities
 
-      struct Contracts {
+    let inbox: AuthAccount.Inbox
 
-          // The names of each contract deployed to the account
-          let names: [String]
+    /// Saves the given object into the account's storage at the given path.
+    ///
+    /// Resources are moved into storage, and structures are copied.
+    ///
+    /// If there is already an object stored under the given path, the program aborts.
+    ///
+    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
+    pub fun save<T: Storable>(_ value: T, to: StoragePath)
 
-          fun add(
-              name: String,
-              code: [UInt8],
-              ... contractInitializerArguments
-          ): DeployedContract
+    /// Reads the type of an object from the account's storage which is stored under the given path,
+    /// or nil if no object is stored under the given path.
+    ///
+    /// If there is an object stored, the type of the object is returned without modifying the stored object.
+    ///
+    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
+    pub fun type(at: StoragePath): Type?
 
-          fun update__experimental(name: String, code: [UInt8]): DeployedContract
+    /// Loads an object from the account's storage which is stored under the given path,
+    /// or nil if no object is stored under the given path.
+    ///
+    /// If there is an object stored,
+    /// the stored resource or structure is moved out of storage and returned as an optional.
+    ///
+    /// When the function returns, the storage no longer contains an object under the given path.
+    ///
+    /// The given type must be a supertype of the type of the loaded object.
+    /// If it is not, the function panics.
+    ///
+    /// The given type must not necessarily be exactly the same as the type of the loaded object.
+    ///
+    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
+    pub fun load<T: Storable>(from: StoragePath): T?
 
-          fun get(name: String): DeployedContract?
+    /// Returns a copy of a structure stored in account storage under the given path,
+    /// without removing it from storage,
+    /// or nil if no object is stored under the given path.
+    ///
+    /// If there is a structure stored, it is copied.
+    /// The structure stays stored in storage after the function returns.
+    ///
+    /// The given type must be a supertype of the type of the copied structure.
+    /// If it is not, the function panics.
+    ///
+    /// The given type must not necessarily be exactly the same as the type of the copied structure.
+    ///
+    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
+    pub fun copy<T: AnyStruct>(from: StoragePath): T?
 
-          fun remove(name: String): DeployedContract?
+    /// Returns a reference to an object in storage without removing it from storage.
+    ///
+    /// If no object is stored under the given path, the function returns nil.
+    /// If there is an object stored, a reference is returned as an optional,
+    /// provided it can be borrowed using the given type.
+    /// If the stored object cannot be borrowed using the given type, the function panics.
+    ///
+    /// The given type must not necessarily be exactly the same as the type of the borrowed object.
+    ///
+    /// The path must be a storage path, i.e., only the domain `storage` is allowed
+    pub fun borrow<T: &Any>(from: StoragePath): T?
 
-          fun borrow<T: &Any>(name: String): T?
-      }
+    /// Creates a capability at the given public or private path,
+    /// which targets the given public, private, or storage path.
+    ///
+    /// The target path leads to the object that will provide the functionality defined by this capability.
+    ///
+    /// The given type defines how the capability can be borrowed, i.e., how the stored value can be accessed.
+    ///
+    /// Returns nil if a link for the given capability path already exists, or the newly created capability if not.
+    ///
+    /// It is not necessary for the target path to lead to a valid object; the target path could be empty,
+    /// or could lead to an object which does not provide the necessary type interface:
+    /// The link function does **not** check if the target path is valid/exists at the time the capability is created
+    /// and does **not** check if the target value conforms to the given type.
+    ///
+    /// The link is latent.
+    ///
+    /// The target value might be stored after the link is created,
+    /// and the target value might be moved out after the link has been created.
+    pub fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?
 
-      struct Keys {
-          // Adds a new key with the given hashing algorithm and a weight, and returns the added key.
-          fun add(
-              publicKey: PublicKey,
-              hashAlgorithm: HashAlgorithm,
-              weight: UFix64
-          ): AccountKey
+    /// Creates a capability at the given public or private path which targets this account.
+    ///
+    /// Returns nil if a link for the given capability path already exists, or the newly created capability if not.
+    pub fun linkAccount(_ newCapabilityPath: PrivatePath): Capability<&AuthAccount>?
 
-          // Returns the key at the given index, if it exists, or nil otherwise.
-          // Revoked keys are always returned, but they have `isRevoked` field set to true.
-          fun get(keyIndex: Int): AccountKey?
+    /// Returns the capability at the given private or public path.
+    pub fun getCapability<T: &Any>(_ path: CapabilityPath): Capability<T>
 
-          // Marks the key at the given index revoked, but does not delete it.
-          // Returns the revoked key if it exists, or nil otherwise.
-          fun revoke(keyIndex: Int): AccountKey?
+    /// Returns the target path of the capability at the given public or private path,
+    /// or nil if there exists no capability at the given path.
+    pub fun getLinkTarget(_ path: CapabilityPath): Path?
 
-          // Iterate over all unrevoked keys in this account,
-          // passing each key in turn to the provided function.
-          // Iteration is stopped early if the function returns `false`.
-          // The order of iteration is undefined.
-          fun forEach(function: fun(AccountKey): Bool): Void
+    /// Removes the capability at the given public or private path.
+    pub fun unlink(_ path: CapabilityPath)
 
-          // The total number of unrevoked keys in this account.
-          let count: UInt64
-      }
+    /// Iterate over all the public paths of an account.
+    /// passing each path and type in turn to the provided callback function.
+    ///
+    /// The callback function takes two arguments:
+    ///   1. The path of the stored object
+    ///   2. The runtime type of that object
+    ///
+    /// Iteration is stopped early if the callback function returns `false`.
+    ///
+    /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
+    /// is undefined.
+    pub fun forEachPublic(_ function: ((PublicPath, Type): Bool))
 
-      struct Inbox {
-        // Publishes a new Capability under the given name, to be claimed by the specified recipient
-        fun publish(_ value: Capability, name: String, recipient: Address)
+    /// Iterate over all the private paths of an account.
+    /// passing each path and type in turn to the provided callback function.
+    ///
+    /// The callback function takes two arguments:
+    ///   1. The path of the stored object
+    ///   2. The runtime type of that object
+    ///
+    /// Iteration is stopped early if the callback function returns `false`.
+    ///
+    /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
+    /// is undefined.
+    pub fun forEachPrivate(_ function: ((PrivatePath, Type): Bool))
 
-        // Unpublishes a Capability previously published by this account.
-        // Returns `nil` if no Capability is published under the given name.
-        // Errors if the Capability under that name does not match the provided type.
-        fun unpublish<T: &Any>(_ name: String): Capability<T>?
+    /// Iterate over all the stored paths of an account.
+    /// passing each path and type in turn to the provided callback function.
+    ///
+    /// The callback function takes two arguments:
+    ///   1. The path of the stored object
+    ///   2. The runtime type of that object
+    ///
+    /// Iteration is stopped early if the callback function returns `false`.
+    ///
+    /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
+    /// is undefined.
+    pub fun forEachStored(_ function: ((StoragePath, Type): Bool))
 
-        // Claims a Capability previously published by the specified provider.
-        // Returns `nil` if no Capability is published under the given name, or if this account is not its intended recipient.
-        // Errors if the Capability under that name does not match the provided type.
-        fun claim<T: &Any>(_ name: String, provider: Address): Capability<T>?
+    pub struct Contracts {
+
+        /// The names of all contracts deployed in the account.
+        pub let names: [String]
+
+        /// Adds the given contract to the account.
+        ///
+        /// The `code` parameter is the UTF-8 encoded representation of the source code.
+        /// The code must contain exactly one contract or contract interface,
+        /// which must have the same name as the `name` parameter.
+        ///
+        /// All additional arguments that are given are passed further to the initializer
+        /// of the contract that is being deployed.
+        ///
+        /// The function fails if a contract/contract interface with the given name already exists in the account,
+        /// if the given code does not declare exactly one contract or contract interface,
+        /// or if the given name does not match the name of the contract/contract interface declaration in the code.
+        ///
+        /// Returns the deployed contract.
+        pub fun add(
+            name: String,
+            code: [UInt8]
+        ): DeployedContract
+
+        /// **Experimental**
+        ///
+        /// Updates the code for the contract/contract interface in the account.
+        ///
+        /// The `code` parameter is the UTF-8 encoded representation of the source code.
+        /// The code must contain exactly one contract or contract interface,
+        /// which must have the same name as the `name` parameter.
+        ///
+        /// Does **not** run the initializer of the contract/contract interface again.
+        /// The contract instance in the world state stays as is.
+        ///
+        /// Fails if no contract/contract interface with the given name exists in the account,
+        /// if the given code does not declare exactly one contract or contract interface,
+        /// or if the given name does not match the name of the contract/contract interface declaration in the code.
+        ///
+        /// Returns the deployed contract for the updated contract.
+        pub fun update__experimental(name: String, code: [UInt8]): DeployedContract
+
+        /// Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
+        ///
+        /// Returns nil if no contract/contract interface with the given name exists in the account.
+        pub fun get(name: String): DeployedContract?
+
+        /// Removes the contract/contract interface from the account which has the given name, if any.
+        ///
+        /// Returns the removed deployed contract, if any.
+        ///
+        /// Returns nil if no contract/contract interface with the given name exists in the account.
+        pub fun remove(name: String): DeployedContract?
+
+        /// Returns a reference of the given type to the contract with the given name in the account, if any.
+        ///
+        /// Returns nil if no contract with the given name exists in the account,
+        /// or if the contract does not conform to the given type.
+        pub fun borrow<T: &Any>(name: String): T?
     }
-  }
 
-  struct DeployedContract {
-      let name: String
-      let code: [UInt8]
+    pub struct Keys {
 
-      // Returns an array of `Type` objects representing all the public type declarations in this contract (e.g. structs, resources, enums)
-      //
-      // For example, given a contract
-      // ```
-      // contract Foo {
-      //       pub struct Bar {...}
-      //       pub resource Qux {...}
-      // }
-      // ```
-      // then `.publicTypes()` will return an array equivalent to the expression `[Type<Bar>(), Type<Qux>()]`
+        /// Adds a new key with the given hashing algorithm and a weight.
+        ///
+        /// Returns the added key.
+        pub fun add(
+            publicKey: PublicKey,
+            hashAlgorithm: HashAlgorithm,
+            weight: UFix64
+        ): AccountKey
 
-      fun publicTypes(): [Type]
-  }
-  ```
+        /// Returns the key at the given index, if it exists, or nil otherwise.
+        ///
+        /// Revoked keys are always returned, but they have `isRevoked` field set to true.
+        pub fun get(keyIndex: Int): AccountKey?
 
-  A script can get the `AuthAccount` for an account address using the built-in `getAuthAccount` function:
+        /// Marks the key at the given index revoked, but does not delete it.
+        ///
+        /// Returns the revoked key if it exists, or nil otherwise.
+        pub fun revoke(keyIndex: Int): AccountKey?
 
-  ```cadence
-  fun getAuthAccount(_ address: Address): AuthAccount
-  ```
+        /// Iterate over all unrevoked keys in this account,
+        /// passing each key in turn to the provided function.
+        ///
+        /// Iteration is stopped early if the function returns `false`.
+        /// The order of iteration is undefined.
+        pub fun forEach(_ function: fun(AccountKey): Bool)
 
-  This `AuthAccount` object can perform all operations associated with authorized accounts,
-  and as such this function is only available in scripts,
-  which discard their changes upon completion.
-  Attempting to use this function outside of a script will cause a type error.
+        /// The total number of unrevoked keys in this account.
+        pub let count: UInt64
+    }
+
+    pub struct Inbox {
+
+        /// Publishes a new Capability under the given name,
+        /// to be claimed by the specified recipient.
+        pub fun publish(_ value: Capability, name: String, recipient: Address)
+
+        /// Unpublishes a Capability previously published by this account.
+        ///
+        /// Returns `nil` if no Capability is published under the given name.
+        ///
+        /// Errors if the Capability under that name does not match the provided type.
+        pub fun unpublish<T: &Any>(_ name: String): Capability<T>?
+
+        /// Claims a Capability previously published by the specified provider.
+        ///
+        /// Returns `nil` if no Capability is published under the given name,
+        /// or if this account is not its intended recipient.
+        ///
+        /// Errors if the Capability under that name does not match the provided type.
+        pub fun claim<T: &Any>(_ name: String, provider: Address): Capability<T>?
+    }
+}
+```
+
+A script can get the `AuthAccount` for an account address using the built-in `getAuthAccount` function:
+
+```cadence
+fun getAuthAccount(_ address: Address): AuthAccount
+```
+
+This `AuthAccount` object can perform all operations associated with authorized accounts,
+and as such this function is only available in scripts,
+which discard their changes upon completion.
+Attempting to use this function outside of a script will cause a type error.
 
 ## Account Creation
 
@@ -484,7 +681,7 @@ let path = PublicPath(identifier: pathID) // is /public/foo
 Account storage is accessed through the following functions of `AuthAccount`.
 This means that any code that has access to the authorized account has access
 to all its stored objects.
- 
+
 ```cadence
 fun save<T>(_ value: T, to: StoragePath)
 ```
@@ -501,7 +698,7 @@ The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 
 ```cadence
-fun type(at path: StoragePath): Type?
+fun type(at: StoragePath): Type?
 ```
 
 Reads the type of an object from the account's storage which is stored under the given path, or nil if no object is stored under the given path.
