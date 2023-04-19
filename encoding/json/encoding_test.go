@@ -2459,15 +2459,16 @@ func TestEncodeType(t *testing.T) {
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},
-					ReturnType: cadence.IntType{},
+					ReturnType:     cadence.IntType{},
+					TypeParameters: []cadence.TypeParameter{},
 				},
 			},
 			`{"type":"Type","value":{"staticType":
 				{	
 					"kind" : "Function",
-					"typeID":"Foo", 
 					"purity": "view",
-					"return" : {"kind" : "Int"}, 
+					"return" : {"kind" : "Int"},
+					"typeParameters": [],
 					"parameters" : [
 						{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
 					]}
@@ -2482,8 +2483,8 @@ func TestEncodeType(t *testing.T) {
 		encodedValue := `{"type":"Type","value":{"staticType":
 			{	
 				"kind" : "Function",
-				"typeID":"Foo", 
-				"return" : {"kind" : "Int"}, 
+				"return" : {"kind" : "Int"},
+				"typeParameters": [],
 				"parameters" : [
 					{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
 				]}
@@ -2495,7 +2496,8 @@ func TestEncodeType(t *testing.T) {
 				Parameters: []cadence.Parameter{
 					{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 				},
-				ReturnType: cadence.IntType{},
+				ReturnType:     cadence.IntType{},
+				TypeParameters: []cadence.TypeParameter{},
 			},
 		}
 

@@ -190,7 +190,7 @@ func TestType_ID(t *testing.T) {
 				},
 				ReturnType: StringType{},
 			},
-			"((Int):String)",
+			"fun(Int):String",
 		},
 		{
 			&EventType{
