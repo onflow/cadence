@@ -61,7 +61,7 @@ pub struct AuthAccount {
     /// If there is an object stored, the type of the object is returned without modifying the stored object.
     ///
     /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-    pub fun type(at path: StoragePath): Type?
+    pub view fun type(at path: StoragePath): Type?
 
     /// Loads an object from the account's storage which is stored under the given path,
     /// or nil if no object is stored under the given path.
@@ -152,7 +152,7 @@ pub struct AuthAccount {
     ///
     /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
     /// is undefined.
-    pub fun forEachPublic(_ function: ((PublicPath, Type): Bool))
+    pub fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
 
     /// Iterate over all the private paths of an account.
     /// passing each path and type in turn to the provided callback function.
@@ -165,7 +165,7 @@ pub struct AuthAccount {
     ///
     /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
     /// is undefined.
-    pub fun forEachPrivate(_ function: ((PrivatePath, Type): Bool))
+    pub fun forEachPrivate(_ function: fun(PrivatePath, Type): Bool)
 
     /// Iterate over all the stored paths of an account.
     /// passing each path and type in turn to the provided callback function.
@@ -178,7 +178,7 @@ pub struct AuthAccount {
     ///
     /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
     /// is undefined.
-    pub fun forEachStored(_ function: ((StoragePath, Type): Bool))
+    pub fun forEachStored(_ function: fun(StoragePath, Type): Bool)
 
     pub struct Contracts {
 
@@ -267,7 +267,7 @@ pub struct AuthAccount {
         ///
         /// Iteration is stopped early if the function returns `false`.
         /// The order of iteration is undefined.
-        pub fun forEach(_ function: ((AccountKey): Bool))
+        pub fun forEach(_ function: fun(AccountKey): Bool)
 
         /// The total number of unrevoked keys in this account.
         pub let count: UInt64

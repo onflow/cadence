@@ -157,6 +157,19 @@ const TestTypeTypeParamWithBoundAndParamFunctionDocString = `
 This is a test function with a type parameter and a parameter using it.
 `
 
+const TestTypeViewFunctionFunctionName = "viewFunction"
+
+var TestTypeViewFunctionFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const TestTypeViewFunctionFunctionDocString = `
+This is a function with 'view' modifier
+`
+
 const TestTypeName = "Test"
 
 var TestType = &SimpleType{
@@ -215,6 +228,12 @@ func init() {
 				TestTypeTypeParamWithBoundAndParamFunctionName,
 				TestTypeTypeParamWithBoundAndParamFunctionType,
 				TestTypeTypeParamWithBoundAndParamFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				TestTypeViewFunctionFunctionName,
+				TestTypeViewFunctionFunctionType,
+				TestTypeViewFunctionFunctionDocString,
 			),
 		})
 	}

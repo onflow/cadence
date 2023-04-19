@@ -203,6 +203,7 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 const AuthAccountTypeTypeFunctionName = "type"
 
 var AuthAccountTypeTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Label:          "at",
