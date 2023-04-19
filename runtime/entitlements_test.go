@@ -318,3 +318,80 @@ func TestAccountEntitlementAttachmentMap(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestAccountExportEntitledRef(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntime()
+	accountCodes := map[Location][]byte{}
+
+	deployTx := DeploymentTransaction("Test", []byte(`
+		pub contract Test {
+			pub entitlement X
+
+			pub resource R {}
+
+			pub fun createR(): @R {
+				return <-create R()
+			}
+		}
+	`))
+
+	script := []byte(`
+		import Test from 0x1
+		pub fun main(): &Test.R { 
+			let r <- Test.createR()
+			let authAccount = getAuthAccount(0x1)
+			authAccount.save(<-r, to: /storage/foo)
+			let ref = authAccount.borrow<auth(Test.X) &Test.R>(from: /storage/foo)!
+			return ref
+		}
+	 `)
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log:     func(message string) {},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	value, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "A.0000000000000001.Test.R(uuid: 0)", value.String())
+}
