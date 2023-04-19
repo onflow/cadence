@@ -131,6 +131,9 @@ type Type interface {
 	// IsEquatable returns true if values of the type can be equated
 	IsEquatable() bool
 
+	// IsComparable returns true if values of the type can be compared
+	IsComparable() bool
+
 	TypeAnnotationState() TypeAnnotationState
 	RewriteWithRestrictedTypes() (result Type, rewritten bool)
 
@@ -583,6 +586,10 @@ func (t *OptionalType) IsEquatable() bool {
 	return t.Type.IsEquatable()
 }
 
+func (*OptionalType) IsComparable() bool {
+	return false
+}
+
 func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -766,6 +773,10 @@ func (t *GenericType) IsImportable(_ map[*Member]bool) bool {
 }
 
 func (*GenericType) IsEquatable() bool {
+	return false
+}
+
+func (*GenericType) IsComparable() bool {
 	return false
 }
 
@@ -1050,6 +1061,10 @@ func (*NumericType) IsEquatable() bool {
 	return true
 }
 
+func (t *NumericType) IsComparable() bool {
+	return !t.IsSuperType()
+}
+
 func (*NumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1240,6 +1255,10 @@ func (t *FixedPointNumericType) IsImportable(_ map[*Member]bool) bool {
 
 func (*FixedPointNumericType) IsEquatable() bool {
 	return true
+}
+
+func (t *FixedPointNumericType) IsComparable() bool {
+	return !t.IsSuperType()
 }
 
 func (*FixedPointNumericType) TypeAnnotationState() TypeAnnotationState {
@@ -2174,6 +2193,10 @@ func (v *VariableSizedType) IsEquatable() bool {
 	return v.Type.IsEquatable()
 }
 
+func (t *VariableSizedType) IsComparable() bool {
+	return t.Type.IsComparable()
+}
+
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -2314,6 +2337,10 @@ func (t *ConstantSizedType) IsImportable(results map[*Member]bool) bool {
 
 func (t *ConstantSizedType) IsEquatable() bool {
 	return t.Type.IsEquatable()
+}
+
+func (t *ConstantSizedType) IsComparable() bool {
+	return t.Type.IsComparable()
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -2784,6 +2811,10 @@ func (t *FunctionType) IsImportable(_ map[*Member]bool) bool {
 }
 
 func (*FunctionType) IsEquatable() bool {
+	return false
+}
+
+func (*FunctionType) IsComparable() bool {
 	return false
 }
 
@@ -3779,6 +3810,10 @@ func (t *CompositeType) IsEquatable() bool {
 	return t.Kind == common.CompositeKindEnum
 }
 
+func (*CompositeType) IsComparable() bool {
+	return false
+}
+
 func (c *CompositeType) TypeAnnotationState() TypeAnnotationState {
 	if c.Kind == common.CompositeKindAttachment {
 		return TypeAnnotationStateDirectAttachmentTypeAnnotation
@@ -4273,6 +4308,10 @@ func (*InterfaceType) IsEquatable() bool {
 	return false
 }
 
+func (*InterfaceType) IsComparable() bool {
+	return false
+}
+
 func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -4408,6 +4447,10 @@ func (t *DictionaryType) IsImportable(results map[*Member]bool) bool {
 func (t *DictionaryType) IsEquatable() bool {
 	return t.KeyType.IsEquatable() &&
 		t.ValueType.IsEquatable()
+}
+
+func (*DictionaryType) IsComparable() bool {
+	return false
 }
 
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
@@ -4849,6 +4892,10 @@ func (*ReferenceType) IsEquatable() bool {
 	return true
 }
 
+func (*ReferenceType) IsComparable() bool {
+	return false
+}
+
 func (*ReferenceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -5010,6 +5057,10 @@ func (t *AddressType) IsImportable(_ map[*Member]bool) bool {
 
 func (*AddressType) IsEquatable() bool {
 	return true
+}
+
+func (*AddressType) IsComparable() bool {
+	return false
 }
 
 func (*AddressType) TypeAnnotationState() TypeAnnotationState {
@@ -5923,6 +5974,10 @@ func (*TransactionType) IsEquatable() bool {
 	return false
 }
 
+func (*TransactionType) IsComparable() bool {
+	return false
+}
+
 func (*TransactionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6146,6 +6201,10 @@ func (*RestrictedType) IsEquatable() bool {
 	return false
 }
 
+func (t *RestrictedType) IsComparable() bool {
+	return false
+}
+
 func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6364,6 +6423,10 @@ func (t *CapabilityType) IsImportable(_ map[*Member]bool) bool {
 
 func (*CapabilityType) IsEquatable() bool {
 	// TODO:
+	return false
+}
+
+func (*CapabilityType) IsComparable() bool {
 	return false
 }
 

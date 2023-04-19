@@ -27,6 +27,7 @@ var PathType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
+	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
 	IsSuperTypeOf: func(subType Type) bool {
@@ -44,6 +45,7 @@ var StoragePathType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
+	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
 }
@@ -57,6 +59,7 @@ var CapabilityPathType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
+	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
 	IsSuperTypeOf: func(subType Type) bool {
@@ -74,6 +77,7 @@ var PublicPathType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
+	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
 }
@@ -87,6 +91,7 @@ var PrivatePathType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
+	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
 }

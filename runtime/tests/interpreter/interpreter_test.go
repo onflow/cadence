@@ -4681,6 +4681,69 @@ func TestInterpretDictionaryEquality(t *testing.T) {
 	}
 }
 
+func TestInterpretComparison(t *testing.T) {
+	t.Parallel()
+
+	runBooleanTest := func(t *testing.T, name string, expected bool, innerCode string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.Equal(t, expected, bool(boolVal))
+		})
+	}
+
+	tests := []struct {
+		name     string
+		expected bool
+		inner    string
+	}{
+		{"true < true", false, "return true < true"},
+		{"true <= true", true, "return true <= true"},
+		{"true > true", false, "return true > true"},
+		{"true >= true", true, "return true >= true"},
+		{"false < false", false, "return false < false"},
+		{"false <= false", true, "return false <= false"},
+		{"false > false", false, "return false > false"},
+		{"false >= false", true, "return false >= false"},
+		{"true < false", false, "return true < false"},
+		{"true <= false", false, "return true <= false"},
+		{"true > false", true, "return true > false"},
+		{"true >= false", true, "return true >= false"},
+		{"false < true", true, "return false < true"},
+		{"false <= true", true, "return false <= true"},
+		{"false > true", false, "return false > true"},
+		{"false >= true", false, "return false >= true"},
+		{"a < b", true, "let left: Character = \"a\";\nlet right: Character = \"b\"; return left < right"},
+		{"b < a", false, "let left: Character = \"b\";\nlet right: Character = \"a\"; return left < right"},
+		{"a < A", false, "let left: Character = \"a\";\nlet right: Character = \"A\"; return left < right"},
+		{"A < a", true, "let left: Character = \"A\";\nlet right: Character = \"a\"; return left < right"},
+		{"A < Z", true, "let left: Character = \"A\";\nlet right: Character = \"Z\"; return left < right"},
+		{"a <= b", true, "let left: Character = \"a\";\nlet right: Character = \"b\"; return left <= right"},
+		{"a <= a", true, "let left: Character = \"a\";\nlet right: Character = \"a\"; return left <= right"},
+		{"A <= a", true, "let left: Character = \"A\";\nlet right: Character = \"a\"; return left <= right"},
+		{"a > b", false, "let left: Character = \"a\";\nlet right: Character = \"b\"; return left > right"},
+		{"b > a", true, "let left: Character = \"b\";\nlet right: Character = \"a\"; return left > right"},
+		{"A > a", false, "let left: Character = \"A\";\nlet right: Character = \"a\"; return left > right"},
+		{"a >= b", false, "let left: Character = \"a\";\nlet right: Character = \"b\"; return left >= right"},
+		{"a >= a", true, "let left: Character = \"a\";\nlet right: Character = \"a\"; return left >= right"},
+		{"A >= a", false, "let left: Character = \"A\";\nlet right: Character = \"a\"; return left >= right"},
+	}
+
+	for _, test := range tests {
+		runBooleanTest(t, test.name, test.expected, test.inner)
+	}
+}
+
 func TestInterpretOptionalAnyStruct(t *testing.T) {
 
 	t.Parallel()
