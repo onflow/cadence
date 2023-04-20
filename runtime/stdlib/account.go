@@ -2427,7 +2427,47 @@ func getCapabilityController(
 		panic(errors.NewUnreachableError())
 	}
 
+	// Inject functions
+	switch capabilityController := capabilityController.(type) {
+	case *interpreter.StorageCapabilityControllerValue:
+		capabilityController.RetargetFunction =
+			newStorageCapabilityControllerRetargetFunction(inter, address, capabilityController)
+
+		// TODO: inject delete function
+	}
+
 	return capabilityController
+}
+
+func newStorageCapabilityControllerRetargetFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	controller *interpreter.StorageCapabilityControllerValue,
+) interpreter.FunctionValue {
+	return interpreter.NewHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeTargetFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			newTargetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || newTargetPathValue.Domain != common.PathDomainStorage {
+				panic(errors.NewUnreachableError())
+			}
+
+			oldTargetPathValue := controller.TargetPath
+
+			capabilityID := controller.CapabilityID
+			unrecordPathCapabilityController(inter, locationRange, address, oldTargetPathValue, capabilityID)
+			recordPathCapabilityController(inter, locationRange, address, newTargetPathValue, capabilityID)
+
+			controller.TargetPath = newTargetPathValue
+
+			return interpreter.Void
+		},
+	)
 }
 
 var capabilityIDSetStaticType = interpreter.DictionaryStaticType{
@@ -2441,7 +2481,7 @@ const PathCapabilityStorageDomain = "path_cap"
 
 func recordPathCapabilityController(
 	inter *interpreter.Interpreter,
-	locatonRange interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
 	capabilityIDValue interpreter.UInt64Value,
@@ -2467,7 +2507,7 @@ func recordPathCapabilityController(
 	if readValue == nil {
 		capabilityIDSet := interpreter.NewDictionaryValueWithAddress(
 			inter,
-			locatonRange,
+			locationRange,
 			capabilityIDSetStaticType,
 			address,
 			setKey,
@@ -2476,10 +2516,45 @@ func recordPathCapabilityController(
 		storageMap.SetValue(inter, storageMapKey, capabilityIDSet)
 	} else {
 		capabilityIDSet := readValue.(*interpreter.DictionaryValue)
-		existing := capabilityIDSet.Insert(inter, locatonRange, setKey, setValue)
+		existing := capabilityIDSet.Insert(inter, locationRange, setKey, setValue)
 		if existing != interpreter.Nil {
 			panic(errors.NewUnreachableError())
 		}
+	}
+}
+
+func unrecordPathCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	address common.Address,
+	targetPathValue interpreter.PathValue,
+	capabilityIDValue interpreter.UInt64Value,
+) {
+	if targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewUnreachableError())
+	}
+
+	identifier := targetPathValue.Identifier
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	storageMap := inter.Storage().GetStorageMap(
+		address,
+		PathCapabilityStorageDomain,
+		true,
+	)
+
+	setKey := capabilityIDValue
+
+	readValue := storageMap.ReadValue(inter, storageMapKey)
+	if readValue == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	capabilityIDSet := readValue.(*interpreter.DictionaryValue)
+	existing := capabilityIDSet.Remove(inter, locationRange, setKey)
+	if existing == interpreter.Nil {
+		panic(errors.NewUnreachableError())
 	}
 }
 

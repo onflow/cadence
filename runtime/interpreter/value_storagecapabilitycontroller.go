@@ -35,9 +35,10 @@ type CapabilityControllerValue interface {
 // StorageCapabilityControllerValue
 
 type StorageCapabilityControllerValue struct {
-	BorrowType   StaticType
-	TargetPath   PathValue
-	CapabilityID UInt64Value
+	BorrowType       StaticType
+	TargetPath       PathValue
+	CapabilityID     UInt64Value
+	RetargetFunction FunctionValue
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
@@ -192,8 +193,10 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 }
 
 func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+
+	// TODO: sema.StorageCapabilityControllerTypeDeleteFunctionName
+
 	switch name {
-	// TODO:
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
 
@@ -210,29 +213,7 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 		)
 
 	case sema.StorageCapabilityControllerTypeRetargetFunctionName:
-		return NewHostFunctionValue(
-			inter,
-			sema.StorageCapabilityControllerTypeTargetFunctionType,
-			func(invocation Invocation) Value {
-				// Get path argument
-
-				newTargetPathValue, ok := invocation.Arguments[0].(PathValue)
-				if !ok || newTargetPathValue.Domain != common.PathDomainStorage {
-					panic(errors.NewUnreachableError())
-				}
-
-				oldTargetPathValue := v.TargetPath
-
-				// TODO: remove from old path -> cap id set
-				_ = oldTargetPathValue
-
-				// TODO: add to new path -> cap id set
-
-				v.TargetPath = newTargetPathValue
-
-				return Void
-			},
-		)
+		return v.RetargetFunction
 	}
 
 	return nil
