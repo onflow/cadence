@@ -199,6 +199,40 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	case sema.StorageCapabilityControllerTypeBorrowTypeFieldName:
 		return NewTypeValue(inter, v.BorrowType)
+
+	case sema.StorageCapabilityControllerTypeTargetFunctionName:
+		return NewHostFunctionValue(
+			inter,
+			sema.StorageCapabilityControllerTypeTargetFunctionType,
+			func(invocation Invocation) Value {
+				return v.TargetPath
+			},
+		)
+
+	case sema.StorageCapabilityControllerTypeRetargetFunctionName:
+		return NewHostFunctionValue(
+			inter,
+			sema.StorageCapabilityControllerTypeTargetFunctionType,
+			func(invocation Invocation) Value {
+				// Get path argument
+
+				newTargetPathValue, ok := invocation.Arguments[0].(PathValue)
+				if !ok || newTargetPathValue.Domain != common.PathDomainStorage {
+					panic(errors.NewUnreachableError())
+				}
+
+				oldTargetPathValue := v.TargetPath
+
+				// TODO: remove from old path -> cap id set
+				_ = oldTargetPathValue
+
+				// TODO: add to new path -> cap id set
+
+				v.TargetPath = newTargetPathValue
+
+				return Void
+			},
+		)
 	}
 
 	return nil
