@@ -22,7 +22,9 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type CapabilityControllerValue interface {
@@ -69,6 +71,7 @@ var _ Value = &StorageCapabilityControllerValue{}
 var _ atree.Value = &StorageCapabilityControllerValue{}
 var _ EquatableValue = &StorageCapabilityControllerValue{}
 var _ CapabilityControllerValue = &StorageCapabilityControllerValue{}
+var _ MemberAccessibleValue = &StorageCapabilityControllerValue{}
 
 func (*StorageCapabilityControllerValue) IsValue() {}
 
@@ -186,4 +189,24 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 		v.TargetPath,
 		v.CapabilityID,
 	}
+}
+
+func (v *StorageCapabilityControllerValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	// TODO:
+	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
+		return v.CapabilityID
+	}
+
+	return nil
+}
+
+func (*StorageCapabilityControllerValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+	// Storage capability controllers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (*StorageCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+	// Storage capability controllers have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
 }
