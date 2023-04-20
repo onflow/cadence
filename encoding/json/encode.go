@@ -849,7 +849,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
 	case *cadence.FunctionType:
-		typeJson :=  jsonFunctionType{
+		typeJson := jsonFunctionType{
 			Kind:           "Function",
 			TypeParameters: prepareTypeParameters(typ.TypeParameters, results),
 			Parameters:     prepareParameters(typ.Parameters, results),

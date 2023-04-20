@@ -135,7 +135,7 @@ const (
 	typeParametersKey = "typeParameters"
 	returnKey         = "return"
 	typeBoundKey      = "typeBound"
-	purityKey       = "purity"
+	purityKey         = "purity"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
