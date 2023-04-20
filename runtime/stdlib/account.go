@@ -2278,6 +2278,14 @@ func newAuthAccountCapabilitiesValue(
 	)
 }
 
+// CapabilityControllerStorageDomain is the storage domain which stores
+// capability controllers by capability ID
+const CapabilityControllerStorageDomain = "cap_con"
+
+// PathCapabilityStorageDomain is the storage domain which stores
+// capability ID dictionaries (sets) by storage path identifier
+const PathCapabilityStorageDomain = "path_cap"
+
 func newAuthAccountStorageCapabilitiesIssueFunction(
 	gauge common.MemoryGauge,
 	idGenerator AccountIDGenerator,
@@ -2288,6 +2296,9 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 		gauge,
 		sema.AuthAccountStorageCapabilitiesTypeIssueFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// Get path argument
 
@@ -2319,15 +2330,15 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 
 			capabilityIDValue := interpreter.UInt64Value(capabilityID)
 
-			_ = interpreter.NewStorageCapabilityControllerValue(
+			controller := interpreter.NewStorageCapabilityControllerValue(
 				gauge,
 				borrowStaticType,
 				targetPathValue,
 				capabilityIDValue,
 			)
 
-			// TODO: store controller in {ID -> controller}
-			// TODO: store controller in {path -> {controller ID -> void}}
+			storeCapabilityController(inter, address, capabilityIDValue, controller)
+			recordPathCapabilityController(inter, locationRange, address, targetPathValue, capabilityIDValue)
 
 			return interpreter.NewStorageCapabilityValue(
 				gauge,
@@ -2338,6 +2349,75 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 			)
 		},
 	)
+}
+
+// storeCapabilityController stores a capability controller in the account's capability ID to controller storage map
+func storeCapabilityController(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+	controller interpreter.CapabilityControllerValue,
+) {
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
+
+	existed := inter.WriteStored(
+		address,
+		CapabilityControllerStorageDomain,
+		storageMapKey,
+		controller,
+	)
+	if existed {
+		panic(errors.NewUnreachableError())
+	}
+}
+
+var capabilityIDSetStaticType = interpreter.DictionaryStaticType{
+	KeyType:   interpreter.PrimitiveStaticTypeUInt64,
+	ValueType: interpreter.NilStaticType,
+}
+
+func recordPathCapabilityController(
+	inter *interpreter.Interpreter,
+	locatonRange interpreter.LocationRange,
+	address common.Address,
+	targetPathValue interpreter.PathValue,
+	capabilityIDValue interpreter.UInt64Value,
+) {
+	if targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewUnreachableError())
+	}
+
+	identifier := targetPathValue.Identifier
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	storageMap := inter.Storage().GetStorageMap(
+		address,
+		PathCapabilityStorageDomain,
+		true,
+	)
+
+	setKey := capabilityIDValue
+	setValue := interpreter.Nil
+
+	readValue := storageMap.ReadValue(inter, storageMapKey)
+	if readValue == nil {
+		capabilityIDSet := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			locatonRange,
+			capabilityIDSetStaticType,
+			address,
+			setKey,
+			setValue,
+		)
+		storageMap.SetValue(inter, storageMapKey, capabilityIDSet)
+	} else {
+		capabilityIDSet := readValue.(*interpreter.DictionaryValue)
+		existing := capabilityIDSet.Insert(inter, locatonRange, setKey, setValue)
+		if existing != interpreter.Nil {
+			panic(errors.NewUnreachableError())
+		}
+	}
 }
 
 func newAuthAccountCapabilitiesPublishFunction(
@@ -2469,7 +2549,6 @@ func newPublicAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	// TODO:
 	return interpreter.NewPublicAccountCapabilitiesValue(
 		gauge,
 		addressValue,

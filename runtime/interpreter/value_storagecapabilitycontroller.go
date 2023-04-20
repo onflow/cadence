@@ -25,6 +25,11 @@ import (
 	"github.com/onflow/cadence/runtime/format"
 )
 
+type CapabilityControllerValue interface {
+	Value
+	isCapabilityControllerValue()
+}
+
 // StorageCapabilityControllerValue
 
 type StorageCapabilityControllerValue struct {
@@ -63,8 +68,11 @@ func NewStorageCapabilityControllerValue(
 var _ Value = &StorageCapabilityControllerValue{}
 var _ atree.Value = &StorageCapabilityControllerValue{}
 var _ EquatableValue = &StorageCapabilityControllerValue{}
+var _ CapabilityControllerValue = &StorageCapabilityControllerValue{}
 
 func (*StorageCapabilityControllerValue) IsValue() {}
+
+func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
 
 func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
