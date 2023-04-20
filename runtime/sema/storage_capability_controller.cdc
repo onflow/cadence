@@ -24,5 +24,5 @@ pub struct StorageCapabilityController {
 
     /// Retarget the controlled capability to the given storage path.
     /// The path may be different or the same as the current path.
-    pub fun retarget(target: StoragePath)
+    pub fun retarget(_ target: StoragePath)
 }
