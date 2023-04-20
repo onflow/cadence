@@ -2216,7 +2216,7 @@ func newAuthAccountStorageCapabilitiesValue(
 	return interpreter.NewAuthAccountStorageCapabilitiesValue(
 		gauge,
 		addressValue,
-		nil,
+		newAuthAccountStorageCapabilitiesGetControllerFunction(gauge, addressValue),
 		nil,
 		nil,
 		newAuthAccountStorageCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
@@ -2278,13 +2278,42 @@ func newAuthAccountCapabilitiesValue(
 	)
 }
 
-// CapabilityControllerStorageDomain is the storage domain which stores
-// capability controllers by capability ID
-const CapabilityControllerStorageDomain = "cap_con"
+func newAuthAccountStorageCapabilitiesGetControllerFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.FunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountStorageCapabilitiesTypeGetControllerFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
 
-// PathCapabilityStorageDomain is the storage domain which stores
-// capability ID dictionaries (sets) by storage path identifier
-const PathCapabilityStorageDomain = "path_cap"
+			inter := invocation.Interpreter
+
+			// Get capability ID argument
+
+			capabilityIDValue, ok := invocation.Arguments[0].(interpreter.UInt64Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityController := getCapabilityController(inter, address, capabilityIDValue)
+			storageCapabilityController, ok := capabilityController.(*interpreter.StorageCapabilityControllerValue)
+			if !ok {
+				return interpreter.Nil
+			}
+
+			referenceValue := interpreter.NewEphemeralReferenceValue(
+				inter,
+				false,
+				storageCapabilityController,
+				sema.StorageCapabilityControllerType,
+			)
+
+			return interpreter.NewSomeValueNonCopying(inter, referenceValue)
+		},
+	)
+}
 
 func newAuthAccountStorageCapabilitiesIssueFunction(
 	gauge common.MemoryGauge,
@@ -2351,6 +2380,10 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 	)
 }
 
+// CapabilityControllerStorageDomain is the storage domain which stores
+// capability controllers by capability ID
+const CapabilityControllerStorageDomain = "cap_con"
+
 // storeCapabilityController stores a capability controller in the account's capability ID to controller storage map
 func storeCapabilityController(
 	inter *interpreter.Interpreter,
@@ -2371,10 +2404,40 @@ func storeCapabilityController(
 	}
 }
 
+// getCapabilityController gets the capability controller for the given capability ID
+func getCapabilityController(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) interpreter.CapabilityControllerValue {
+
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
+
+	readValue := inter.ReadStored(
+		address,
+		CapabilityControllerStorageDomain,
+		storageMapKey,
+	)
+	if readValue == nil {
+		return nil
+	}
+
+	capabilityController, ok := readValue.(interpreter.CapabilityControllerValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return capabilityController
+}
+
 var capabilityIDSetStaticType = interpreter.DictionaryStaticType{
 	KeyType:   interpreter.PrimitiveStaticTypeUInt64,
 	ValueType: interpreter.NilStaticType,
 }
+
+// PathCapabilityStorageDomain is the storage domain which stores
+// capability ID dictionaries (sets) by storage path identifier
+const PathCapabilityStorageDomain = "path_cap"
 
 func recordPathCapabilityController(
 	inter *interpreter.Interpreter,

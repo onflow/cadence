@@ -17330,7 +17330,8 @@ func (*StorageReferenceValue) isReference() {}
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
-	Value        Value
+	Value Value
+	// BorrowedType is the T in &T
 	BorrowedType sema.Type
 	Authorized   bool
 }
