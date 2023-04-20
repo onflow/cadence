@@ -191,11 +191,14 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (v *StorageCapabilityControllerValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	// TODO:
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
+
+	case sema.StorageCapabilityControllerTypeBorrowTypeFieldName:
+		return NewTypeValue(inter, v.BorrowType)
 	}
 
 	return nil
