@@ -46,12 +46,25 @@
   "sidebars": {
     "": [
       {
-        "title": "Developer Guides",
+        "title": "Cadence",
         "items": [
           {
             "title": "Introduction to Cadence",
             "href": ""
           },
+          {
+            "title": "Tutorial",
+            "href": "tutorial/02-hello-world"
+          },
+          {
+            "title": "Language Reference",
+            "href": "language"
+          },
+        ]
+      },
+      {
+        "title": "Developer Guides",
+        "items": [
           {
             "title": "Cadence Design Patterns",
             "href": "design-patterns"
@@ -94,20 +107,8 @@
               "href": "style-guide"
             }
           ]
-        },      
-      {
-        "title": "Cadence",
-        "items": [
-          {
-            "title": "Language Reference",
-            "href": "language"
-          },
-          {
-            "title": "Tutorial",
-            "href": "tutorial/02-hello-world"
-          }
-        ]
-      }
+        }     
+      
     ],
     "language": [
       {
