@@ -987,7 +987,7 @@ func newPublicAccountContractsValue(
 	)
 }
 
-const inboxStorageDomain = "inbox"
+const InboxStorageDomain = "inbox"
 
 func accountInboxPublishFunction(
 	gauge common.MemoryGauge,
@@ -1037,7 +1037,14 @@ func accountInboxPublishFunction(
 				nil,
 			)
 
-			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, publishedValue)
+			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+			inter.WriteStored(
+				address,
+				InboxStorageDomain,
+				storageMapKey,
+				publishedValue,
+			)
 
 			return interpreter.Void
 		},
@@ -1062,7 +1069,9 @@ func accountInboxUnpublishFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
-			readValue := inter.ReadStored(address, inboxStorageDomain, nameValue.Str)
+			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+			readValue := inter.ReadStored(address, InboxStorageDomain, storageMapKey)
 			if readValue == nil {
 				return interpreter.Nil
 			}
@@ -1094,7 +1103,12 @@ func accountInboxUnpublishFunction(
 				nil,
 			)
 
-			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, nil)
+			inter.WriteStored(
+				address,
+				InboxStorageDomain,
+				storageMapKey,
+				nil,
+			)
 
 			handler.EmitEvent(
 				inter,
@@ -1135,7 +1149,9 @@ func accountInboxClaimFunction(
 
 			providerAddress := providerValue.ToAddress()
 
-			readValue := inter.ReadStored(providerAddress, inboxStorageDomain, nameValue.Str)
+			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+			readValue := inter.ReadStored(providerAddress, InboxStorageDomain, storageMapKey)
 			if readValue == nil {
 				return interpreter.Nil
 			}
@@ -1172,7 +1188,12 @@ func accountInboxClaimFunction(
 				nil,
 			)
 
-			inter.WriteStored(providerAddress, inboxStorageDomain, nameValue.Str, nil)
+			inter.WriteStored(
+				providerAddress,
+				InboxStorageDomain,
+				storageMapKey,
+				nil,
+			)
 
 			handler.EmitEvent(
 				inter,
@@ -2347,10 +2368,12 @@ func newAuthAccountCapabilitiesPublishFunction(
 
 			locationRange := invocation.LocationRange
 
+			storageMapKey := interpreter.StringStorageMapKey(identifier)
+
 			if inter.StoredValueExists(
 				address,
 				domain,
-				identifier,
+				storageMapKey,
 			) {
 				panic(
 					interpreter.OverwriteError{
@@ -2374,7 +2397,12 @@ func newAuthAccountCapabilitiesPublishFunction(
 
 			// Write new value
 
-			inter.WriteStored(address, domain, identifier, capabilityValue)
+			inter.WriteStored(
+				address,
+				domain,
+				storageMapKey,
+				capabilityValue,
+			)
 
 			return interpreter.Void
 		},
@@ -2402,7 +2430,9 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
-			readValue := inter.ReadStored(address, domain, identifier)
+			storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+			readValue := inter.ReadStored(address, domain, storageMapKey)
 			if readValue == nil {
 				return interpreter.Nil
 			}
@@ -2423,7 +2453,12 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter.WriteStored(address, domain, identifier, nil)
+			inter.WriteStored(
+				address,
+				domain,
+				storageMapKey,
+				nil,
+			)
 
 			return interpreter.NewSomeValueNonCopying(inter, capabilityValue)
 		},
@@ -2479,7 +2514,9 @@ func newAccountCapabilitiesGetFunction(
 
 			// Read stored capability, if any
 
-			readValue := inter.ReadStored(address, domain, identifier)
+			storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+			readValue := inter.ReadStored(address, domain, storageMapKey)
 			if readValue == nil {
 				return interpreter.Nil
 			}

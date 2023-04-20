@@ -1760,9 +1760,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, 
 		panic(errors.NewExternalError(err))
 	}
 
-	config := interpreter.SharedState.Config
-
-	return StoredValue(interpreter, storable, config.Storage)
+	return StoredValue(interpreter, storable, interpreter.Storage())
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
@@ -1809,8 +1807,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	config := interpreter.SharedState.Config
-	existingValue := StoredValue(interpreter, existingStorable, config.Storage)
+	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
 
 	existingValue.DeepRemove(interpreter)
 
@@ -1969,8 +1966,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	config := interpreter.SharedState.Config
-	value := StoredValue(interpreter, storable, config.Storage)
+	value := StoredValue(interpreter, storable, interpreter.Storage())
 
 	return value.Transfer(
 		interpreter,
@@ -14185,8 +14181,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	storable, err := v.dictionary.Get(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -14329,8 +14325,8 @@ func (v *CompositeValue) RemoveMember(
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -14403,8 +14399,8 @@ func (v *CompositeValue) SetMember(
 	)
 
 	existingStorable, err := v.dictionary.Set(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		NewStringAtreeValue(interpreter, name),
 		value,
 	)
@@ -14508,8 +14504,8 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 	}
 
 	storable, err := v.dictionary.Get(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -14807,8 +14803,8 @@ func (v *CompositeValue) Transfer(
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
-			StringAtreeComparator,
-			StringAtreeHashInput,
+			StringAtreeValueComparator,
+			StringAtreeValueHashInput,
 			v.dictionary.Seed(),
 			func() (atree.Value, atree.Value, error) {
 
@@ -14950,8 +14946,8 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		v.StorageID().Address,
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		v.dictionary.Seed(),
 		func() (atree.Value, atree.Value, error) {
 
@@ -15064,8 +15060,8 @@ func (v *CompositeValue) RemoveField(
 ) {
 
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -15084,8 +15080,7 @@ func (v *CompositeValue) RemoveField(
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
-	config := interpreter.SharedState.Config
-	existingValue := StoredValue(interpreter, existingValueStorable, config.Storage)
+	existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
 	existingValue.DeepRemove(interpreter)
 	interpreter.RemoveReferencedSlab(existingValueStorable)
 }
@@ -15937,8 +15932,7 @@ func (v *DictionaryValue) Remove(
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
-	config := interpreter.SharedState.Config
-	storage := config.Storage
+	storage := interpreter.Storage()
 
 	// Key
 
@@ -16021,8 +16015,7 @@ func (v *DictionaryValue) Insert(
 		return NilOptionalValue
 	}
 
-	config := interpreter.SharedState.Config
-	storage := config.Storage
+	storage := interpreter.Storage()
 
 	existingValue := StoredValue(
 		interpreter,
@@ -17075,7 +17068,9 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
-	referenced := interpreter.ReadStored(address, domain, identifier)
+	storageMapKey := StringStorageMapKey(identifier)
+
+	referenced := interpreter.ReadStored(address, domain, storageMapKey)
 	if referenced == nil {
 		return nil, nil
 	}

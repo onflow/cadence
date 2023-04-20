@@ -38,7 +38,7 @@ import (
 )
 
 type encodeDecodeTest struct {
-	value                Value
+	value                atree.Value
 	storable             atree.Storable
 	encoded              []byte
 	invalid              bool
@@ -47,7 +47,6 @@ type encodeDecodeTest struct {
 	deepEquality         bool
 	storage              Storage
 	slabStorageID        atree.StorageID
-	check                func(actual Value)
 	maxInlineElementSize uint64
 }
 
@@ -90,7 +89,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	}
 
 	decoder := CBORDecMode.NewByteStreamDecoder(encoded)
-	decoded, err := DecodeStorable(decoder, test.slabStorageID, nil)
+	decodedStorable, err := DecodeStorable(decoder, test.slabStorageID, nil)
 
 	if test.invalid {
 		require.Error(t, err)
@@ -103,8 +102,10 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 				Storage: test.storage,
 			},
 		)
+		require.NoError(t, err)
 
-		decodedValue := StoredValue(inter, decoded, test.storage)
+		decodedValue, err := decodedStorable.StoredValue(test.storage)
+		require.NoError(t, err)
 
 		expectedValue := test.value
 		if test.decodedValue != nil {
@@ -114,12 +115,13 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		if test.deepEquality {
 			assert.Equal(t, expectedValue, decodedValue)
 		} else {
-			require.NoError(t, err)
-			AssertValuesEqual(t, inter, expectedValue, decodedValue)
-		}
-
-		if test.check != nil {
-			test.check(decodedValue)
+			if expectedValue, ok := expectedValue.(Value); ok {
+				storedValue, err := ConvertStoredValue(nil, decodedValue)
+				require.NoError(t, err)
+				AssertValuesEqual(t, inter, expectedValue, storedValue)
+				return
+			}
+			assert.Equal(t, expectedValue, decodedValue)
 		}
 	}
 }
@@ -253,6 +255,132 @@ func TestEncodeDecodeString(t *testing.T) {
 
 					// storage ID
 					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
+}
+
+func TestEncodeDecodeStringAtreeValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		expected := StringAtreeValue("")
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					//  UTF-8 string, 0 bytes follow
+					0x60,
+				},
+			})
+	})
+
+	t.Run("non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		expected := StringAtreeValue("foo")
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// UTF-8 string, 3 bytes follow
+					0x63,
+					// f, o, o
+					0x66, 0x6f, 0x6f,
+				},
+			},
+		)
+	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		expected := StringAtreeValue(strings.Repeat("x", int(maxInlineElementSize+1)))
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
+}
+
+func TestEncodeDecodeUint64AtreeValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: Uint64AtreeValue(0),
+				encoded: []byte{
+					// integer 0
+					0x0,
+				},
+			},
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// negative integer 42
+					0x38,
+					0x29,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: Uint64AtreeValue(42),
+				encoded: []byte{
+					// positive integer 42
+					0x18,
+					0x2a,
+				},
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: Uint64AtreeValue(math.MaxUint64),
+				encoded: []byte{
+					// positive integer 0xffffffffffffffff
+					0x1b,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				},
 			},
 		)

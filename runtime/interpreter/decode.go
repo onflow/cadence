@@ -184,6 +184,13 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		// already metered by decodeString
 		storable = StringAtreeValue(str)
 
+	case cbor.UintType:
+		n, err := decodeUint64(d.decoder, d.memoryGauge)
+		if err != nil {
+			return nil, err
+		}
+		storable = Uint64AtreeValue(n)
+
 	case cbor.TagType:
 		var num uint64
 		num, err = d.decoder.DecodeTagNumber()

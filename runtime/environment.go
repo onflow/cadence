@@ -896,7 +896,7 @@ func (e *interpreterEnvironment) loadContract(
 				false,
 			)
 			if storageMap != nil {
-				storedValue = storageMap.ReadValue(inter, location.Name)
+				storedValue = storageMap.ReadValue(inter, interpreter.StringStorageMapKey(location.Name))
 			}
 		}
 

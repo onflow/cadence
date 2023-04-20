@@ -280,6 +280,11 @@ func (v StringAtreeValue) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeString(string(v))
 }
 
+// Encode encodes the value as a CBOR unsigned integer
+func (v Uint64AtreeValue) Encode(e *atree.Encoder) error {
+	return e.CBOR.EncodeUint64(uint64(v))
+}
+
 // cborVoidValue represents the CBOR value:
 //
 //	cbor.Tag{

@@ -111,7 +111,9 @@ func (v *AccountReferenceValue) checkLink(interpreter *Interpreter, locationRang
 	domain := v.Path.Domain.Identifier()
 	identifier := v.Path.Identifier
 
-	referenced := interpreter.ReadStored(address, domain, identifier)
+	storageMapKey := StringStorageMapKey(identifier)
+
+	referenced := interpreter.ReadStored(address, domain, storageMapKey)
 	if referenced == nil {
 		panic(DereferenceError{
 			Cause:         "no value is stored at this path",

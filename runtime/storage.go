@@ -207,10 +207,11 @@ func (s *Storage) writeContractUpdate(
 ) {
 	storageMap := s.GetStorageMap(key.Address, StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
+	storageMapKey := interpreter.StringStorageMapKey(key.Key)
 	if contractValue == nil {
-		storageMap.WriteValue(inter, key.Key, nil)
+		storageMap.WriteValue(inter, storageMapKey, nil)
 	} else {
-		storageMap.WriteValue(inter, key.Key, contractValue)
+		storageMap.WriteValue(inter, storageMapKey, contractValue)
 	}
 }
 
