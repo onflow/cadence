@@ -24,6 +24,8 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
 )
@@ -394,4 +396,107 @@ func TestAccountExportEntitledRef(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, "A.0000000000000001.Test.R(uuid: 0)", value.String())
+}
+
+func TestAccountEntitlementNamingConflict(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntime()
+	accountCodes := map[Location][]byte{}
+
+	deployTx := DeploymentTransaction("Test", []byte(`
+		pub contract Test {
+			pub entitlement X
+
+			pub resource R {
+				access(X) fun foo() {}
+			}
+
+			pub fun createR(): @R {
+				return <-create R()
+			}
+		}
+	`))
+
+	otherDeployTx := DeploymentTransaction("OtherTest", []byte(`
+		pub contract OtherTest {
+			pub entitlement X
+		}
+	`))
+
+	script := []byte(`
+		import Test from 0x1
+		import OtherTest from 0x1
+
+		pub fun main(){ 
+			let r <- Test.createR()
+			let ref = &r as auth(OtherTest.X) &Test.R
+			ref.foo()
+			destroy r
+		}
+	 `)
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log:     func(message string) {},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: otherDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextScriptLocation(),
+		},
+	)
+
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+	var accessError *sema.InvalidAccessError
+	require.ErrorAs(t, errs[0], &accessError)
 }
