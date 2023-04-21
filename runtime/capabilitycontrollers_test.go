@@ -34,10 +34,7 @@ import (
 func TestRuntimeCapabilityControllers(t *testing.T) {
 	t.Parallel()
 
-	test := func(
-		testContract string,
-		testTransaction string,
-	) (
+	test := func(tx string) (
 		err error,
 		logs []string,
 		events []string,
@@ -48,12 +45,32 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		accountCodes := map[Location][]byte{}
 		accountIDs := map[common.Address]uint64{}
 
-		var deployTx []byte
-		if len(testContract) > 0 {
-			deployTx = DeploymentTransaction("Test", []byte(testContract))
-		}
+		deployTx := DeploymentTransaction(
+			"Test",
+			// language=cadence
+			[]byte(`
+                  pub contract Test {
 
-		testTx := []byte(testTransaction)
+                      pub resource R {
+
+                          pub let id: Int
+
+                          init(id: Int) {
+                              self.id = id
+                          }
+                      }
+
+                      pub resource S {}
+
+                      pub fun createAndSaveR(id: Int, storagePath: StoragePath) {
+                              self.account.save(
+                              <-create R(id: id),
+                              to: storagePath
+                          )
+                      }
+                  }
+                `),
+		)
 
 		signer := common.MustBytesToAddress([]byte{0x1})
 
@@ -87,27 +104,24 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		if deployTx != nil {
+		// Deploy contract
 
-			// Deploy contract
-
-			err = rt.ExecuteTransaction(
-				Script{
-					Source: deployTx,
-				},
-				Context{
-					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
-				},
-			)
-			require.NoError(t, err)
-		}
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: deployTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
 
 		// Call contract
 
 		err = rt.ExecuteTransaction(
 			Script{
-				Source: testTx,
+				Source: []byte(tx),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -129,50 +143,25 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			// language=cadence
-			contract := `
-              pub contract Test {
-
-                  pub resource R {
-
-                      pub let id: Int
-
-                      init(id: Int) {
-                          self.id = id
-                      }
-                  }
-
-                  pub resource S {}
-
-                  pub fun createAndSaveR(id: Int, storagePath: StoragePath) {
-                          self.account.save(
-                          <-create R(id: id),
-                          to: storagePath
-                      )
-                  }
-              }
-            `
-
 			t.Run("get non-existing", func(t *testing.T) {
 
 				t.Parallel()
 
 				err, _, _ := test(
-					contract,
 					fmt.Sprintf(
 						// language=cadence
 						`
-                        transaction {
-                            prepare(signer: AuthAccount) {
-                                // Act
-                                let gotCap: Capability<&AnyStruct>? =
-                                    %s.capabilities.get<&AnyStruct>(/public/r)
+                            transaction {
+                                prepare(signer: AuthAccount) {
+                                    // Act
+                                    let gotCap: Capability<&AnyStruct>? =
+                                        %s.capabilities.get<&AnyStruct>(/public/r)
 
-                                // Assert
-                                assert(gotCap == nil)
+                                    // Assert
+                                    assert(gotCap == nil)
+                                }
                             }
-                        }
-                    `,
+                        `,
 						accountExpression,
 					),
 				)
@@ -184,7 +173,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _, _ := test(
-					contract,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -225,7 +213,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _, _ := test(
-					contract,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -264,7 +251,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _, _ := test(
-					contract,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -303,7 +289,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _, _ := test(
-					contract,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -344,7 +329,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _, _ := test(
-					contract,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -370,7 +354,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _, _ := test(
-					contract,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -409,7 +392,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _, _ := test(
-					contract,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -448,7 +430,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _, _ := test(
-					contract,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -487,7 +468,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _, _ := test(
-					contract,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -530,7 +510,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					t.Parallel()
 
 					err, _, _ := test(
-						contract,
 						// language=cadence
 						`
                           import Test from 0x1
@@ -563,7 +542,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					t.Parallel()
 
 					err, _, _ := test(
-						contract,
 						// language=cadence
 						`
                           import Test from 0x1
