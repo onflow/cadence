@@ -1040,9 +1040,9 @@ func (v TypeValue) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedStorageCapabilityControllerValueTargetPathFieldKey   uint64 = 0
-	// encodedStorageCapabilityControllerValueBorrowTypeFieldKey   uint64 = 1
-	// encodedStorageCapabilityControllerValueCapabilityIDFieldKey uint64 = 2
+	// encodedStorageCapabilityControllerValueBorrowTypeFieldKey   uint64 = 0
+	// encodedStorageCapabilityControllerValueCapabilityIDFieldKey uint64 = 1
+	// encodedStorageCapabilityControllerValueTargetPathFieldKey   uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
@@ -1056,9 +1056,9 @@ const (
 //	cbor.Tag{
 //				Number: CBORTagStorageCapabilityControllerValue,
 //				Content: []any{
-//					encodedStorageCapabilityControllerValueTargetPathFieldKey:   PathValue(v.TargetPath),
 //					encodedStorageCapabilityControllerValueBorrowTypeFieldKey:   StaticType(v.BorrowType),
 //					encodedStorageCapabilityControllerValueCapabilityIDFieldKey: UInt64Value(v.CapabilityID),
+//					encodedStorageCapabilityControllerValueTargetPathFieldKey:   PathValue(v.TargetPath),
 //				},
 //	}
 func (v *StorageCapabilityControllerValue) Encode(e *atree.Encoder) error {
@@ -1072,11 +1072,6 @@ func (v *StorageCapabilityControllerValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode target path at array index encodedStorageCapabilityControllerValueTargetPathFieldKey
-	err = v.TargetPath.Encode(e)
-	if err != nil {
-		return err
-	}
 
 	// Encode borrow type at array index encodedStorageCapabilityControllerValueBorrowTypeFieldKey
 	err = EncodeStaticType(e.CBOR, v.BorrowType)
@@ -1085,7 +1080,13 @@ func (v *StorageCapabilityControllerValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode ID at array index encodedStorageCapabilityControllerValueCapabilityIDFieldKey
-	return e.CBOR.EncodeUint64(uint64(v.CapabilityID))
+	err = e.CBOR.EncodeUint64(uint64(v.CapabilityID))
+	if err != nil {
+		return err
+	}
+
+	// Encode target path at array index encodedStorageCapabilityControllerValueTargetPathFieldKey
+	return v.TargetPath.Encode(e)
 }
 
 func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {

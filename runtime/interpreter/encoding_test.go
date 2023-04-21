@@ -4010,6 +4010,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagStorageCapabilityControllerValue,
 			// array, 3 items follow
 			0x83,
+		}
+		result = append(result, bytes...)
+		result = append(result,
+			// positive integer 42
+			0x18, 0x2A,
 			0xd8, CBORTagPathValue,
 			// array, 2 items follow
 			0x82,
@@ -4019,11 +4024,6 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0x63,
 			// b, a, r
 			0x62, 0x61, 0x72,
-		}
-		result = append(result, bytes...)
-		result = append(result,
-			// positive integer 42
-			0x18, 0x2A,
 		)
 		return result
 	}
