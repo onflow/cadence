@@ -19,9 +19,13 @@
 package execute
 
 import (
+	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/c-bata/go-prompt"
 	prettyJSON "github.com/tidwall/pretty"
@@ -35,11 +39,12 @@ import (
 )
 
 func RunREPL() {
-	printReplWelcome()
-
 	lineNumber := 1
-	lineIsContinuation := false
-	code := ""
+	var lineIsContinuation bool
+	var code string
+	var history []string
+
+	printReplWelcome()
 
 	errorPrettyPrinter := pretty.NewErrorPrettyPrinter(os.Stderr, true)
 
@@ -78,6 +83,12 @@ func RunREPL() {
 			}
 		}
 
+		history = append(history, code)
+		err = writeHistory(history)
+		if err != nil {
+			panic(err)
+		}
+
 		lineIsContinuation = false
 		code = ""
 	}
@@ -87,7 +98,7 @@ func RunREPL() {
 			return nil
 		}
 
-		suggests := []prompt.Suggest{}
+		var suggests []prompt.Suggest
 
 		for _, suggestion := range repl.Suggestions() {
 			suggests = append(suggests, prompt.Suggest{
@@ -108,10 +119,102 @@ func RunREPL() {
 		return fmt.Sprintf("%d%c ", lineNumber, separator), true
 	}
 
+	history, _ = readHistory()
+
 	options := []prompt.Option{
 		prompt.OptionLivePrefix(changeLivePrefix),
+		prompt.OptionHistory(history),
 	}
 	prompt.New(executor, suggest, options...).Run()
+}
+
+func cadenceDirPath() (string, error) {
+	userCacheDir, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(userCacheDir, "cadence"), nil
+}
+
+func historyFilePath() (string, error) {
+	cadenceDirPath, err := cadenceDirPath()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(cadenceDirPath, "replHistory"), nil
+}
+
+func readHistory() ([]string, error) {
+	path, err := historyFilePath()
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine cadence directory path: %w", err)
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open history path: %w", err)
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+
+	var result []string
+
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to read history: %w", err)
+		}
+
+		if len(row) == 0 {
+			return nil, fmt.Errorf("failed to read history: invalid row %d", len(result)+1)
+		}
+
+		result = append(result, row[0])
+	}
+
+	return result, nil
+}
+
+func writeHistory(history []string) error {
+	cadenceDirPath, err := cadenceDirPath()
+	if err != nil {
+		return fmt.Errorf("failed to determine cadence directory path: %w", err)
+	}
+
+	err = os.MkdirAll(cadenceDirPath, 0700)
+	if err != nil {
+		return fmt.Errorf("failed to create cadence directory: %w", err)
+	}
+
+	path, err := historyFilePath()
+	if err != nil {
+		return fmt.Errorf("failed to determine history path: %w", err)
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create history: %w", err)
+	}
+	defer f.Close()
+
+	writer := csv.NewWriter(f)
+
+	for _, code := range history {
+		err = writer.Write([]string{strings.TrimRightFunc(code, unicode.IsSpace)})
+		if err != nil {
+			return fmt.Errorf("failed to write history: %w", err)
+		}
+	}
+
+	writer.Flush()
+
+	return nil
 }
 
 const replHelpMessage = `
