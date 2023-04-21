@@ -723,7 +723,8 @@ func newAccountKeysGetFunction(
 	)
 }
 
-// the AccountKey in `forEachKey(_ f: ((AccountKey): Bool)): Void`
+// accountKeysForEachCallbackTypeParams are the parameter types of the callback function of
+// `Auth/PublicAccount.Keys.forEachKey(_ f: ((AccountKey): Bool))`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
 func newAccountKeysForEachFunction(
@@ -2212,13 +2213,12 @@ func newAuthAccountStorageCapabilitiesValue(
 	accountIDGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	// TODO:
 	return interpreter.NewAuthAccountStorageCapabilitiesValue(
 		gauge,
 		addressValue,
 		newAuthAccountStorageCapabilitiesGetControllerFunction(gauge, addressValue),
 		newAuthAccountStorageCapabilitiesGetControllersFunction(gauge, addressValue),
-		nil,
+		newAuthAccountStorageCapabilitiesForEachControllerFunction(gauge, addressValue),
 		newAuthAccountStorageCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
 	)
 }
@@ -2297,22 +2297,12 @@ func newAuthAccountStorageCapabilitiesGetControllerFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			capabilityController := getCapabilityController(inter, address, uint64(capabilityIDValue))
-			if capabilityController == nil {
+			capabilityID := uint64(capabilityIDValue)
+
+			referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID)
+			if referenceValue == nil {
 				return interpreter.Nil
 			}
-
-			storageCapabilityController, ok := capabilityController.(*interpreter.StorageCapabilityControllerValue)
-			if !ok {
-				return interpreter.Nil
-			}
-
-			referenceValue := interpreter.NewEphemeralReferenceValue(
-				inter,
-				false,
-				storageCapabilityController,
-				sema.StorageCapabilityControllerType,
-			)
 
 			return interpreter.NewSomeValueNonCopying(inter, referenceValue)
 		},
@@ -2346,7 +2336,8 @@ func newAuthAccountStorageCapabilitiesGetControllersFunction(
 
 			// Get capability controllers iterator
 
-			nextCapabilityControllerID, count := getPathCapabilityControllerIDsIterator(inter, address, targetPathValue)
+			nextCapabilityID, count :=
+				getPathCapabilityControllerIDsIterator(inter, address, targetPathValue)
 
 			var capabilityControllerIndex uint64 = 0
 
@@ -2361,29 +2352,101 @@ func newAuthAccountStorageCapabilitiesGetControllersFunction(
 					}
 					capabilityControllerIndex++
 
-					capabilityControllerID, ok := nextCapabilityControllerID()
+					capabilityID, ok := nextCapabilityID()
 					if !ok {
 						return nil
 					}
 
-					capabilityController := getCapabilityController(inter, address, capabilityControllerID)
-					if capabilityController == nil {
+					referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID)
+					if referenceValue == nil {
 						panic(errors.NewUnreachableError())
 					}
 
-					storageCapabilityController, ok := capabilityController.(*interpreter.StorageCapabilityControllerValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					return interpreter.NewEphemeralReferenceValue(
-						inter,
-						false,
-						storageCapabilityController,
-						sema.StorageCapabilityControllerType,
-					)
+					return referenceValue
 				},
 			)
+		},
+	)
+}
+
+// the AccountKey in ` forEachController(forPath: StoragePath, _ function: ((&StorageCapabilityController): Bool))`
+var authAccountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
+	&sema.ReferenceType{
+		Type: sema.StorageCapabilityControllerType,
+	},
+}
+
+func newAuthAccountStorageCapabilitiesForEachControllerFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountStorageCapabilitiesTypeForEachControllerFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || targetPathValue.Domain != common.PathDomainStorage {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get function argument
+
+			functionValue, ok := invocation.Arguments[1].(interpreter.FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get capability controllers iterator
+
+			nextCapabilityID, _ :=
+				getPathCapabilityControllerIDsIterator(inter, address, targetPathValue)
+
+			for {
+				capabilityID, ok := nextCapabilityID()
+				if !ok {
+					break
+				}
+
+				referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID)
+				if referenceValue == nil {
+					panic(errors.NewUnreachableError())
+				}
+
+				subInvocation := interpreter.NewInvocation(
+					inter,
+					nil,
+					nil,
+					[]interpreter.Value{referenceValue},
+					authAccountStorageCapabilitiesForEachControllerCallbackTypeParams,
+					nil,
+					locationRange,
+				)
+
+				res, err := inter.InvokeFunction(functionValue, subInvocation)
+				if err != nil {
+					// interpreter panicked while invoking the inner function value
+					panic(err)
+				}
+
+				shouldContinue, ok := res.(interpreter.BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !shouldContinue {
+					break
+				}
+			}
+
+			return interpreter.Void
 		},
 	)
 }
@@ -2510,6 +2573,30 @@ func getCapabilityController(
 	}
 
 	return capabilityController
+}
+
+func getStorageCapabilityControllerReference(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityID uint64,
+) *interpreter.EphemeralReferenceValue {
+
+	capabilityController := getCapabilityController(inter, address, capabilityID)
+	if capabilityController == nil {
+		return nil
+	}
+
+	storageCapabilityController, ok := capabilityController.(*interpreter.StorageCapabilityControllerValue)
+	if !ok {
+		return nil
+	}
+
+	return interpreter.NewEphemeralReferenceValue(
+		inter,
+		false,
+		storageCapabilityController,
+		sema.StorageCapabilityControllerType,
+	)
 }
 
 func newStorageCapabilityControllerRetargetFunction(

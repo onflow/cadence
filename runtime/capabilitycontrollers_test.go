@@ -793,7 +793,112 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		// TODO: forEachController
+		t.Run("forEachController, all", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath1 = /storage/r
+                          let storagePath2 = /storage/r2
+
+                          // Arrange
+                          let issuedCap1: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                          let issuedCap2: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                          let issuedCap3: Capability<&Test.R{}> =
+                              signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
+                          let issuedCap4: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath2)
+
+                          // Act
+                          let controllers1: [&StorageCapabilityController] = []
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath1,
+                              fun (controller: &StorageCapabilityController): Bool {
+                                  controllers1.append(controller)
+                                  return true
+                              }
+                          )
+
+                          let controllers2: [&StorageCapabilityController] = []
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath2,
+                              fun (controller: &StorageCapabilityController): Bool {
+                                  controllers2.append(controller)
+                                  return true
+                              }
+                          )
+
+                          // Assert
+                          assert(controllers1.length == 3)
+
+                          Test.quickSort(
+                              &controllers1 as &[AnyStruct],
+                              isLess: fun(i: Int, j: Int): Bool {
+                                  let a = controllers1[i]
+                                  let b = controllers1[j]
+                                  return a.capabilityID < b.capabilityID
+                              }
+                          )
+
+                          assert(controllers1[0].capabilityID == 1)
+                          assert(controllers1[1].capabilityID == 2)
+                          assert(controllers1[2].capabilityID == 3)
+
+                          assert(controllers2.length == 1)
+                          assert(controllers2[0].capabilityID == 4)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("forEachController, stop immediately", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath = /storage/r
+
+                          // Arrange
+                          let issuedCap1: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath)
+                          let issuedCap2: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath)
+
+                          // Act
+                          var stopped = false
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath,
+                              fun (controller: &StorageCapabilityController): Bool {
+                                  assert(!stopped)
+                                  stopped = true
+                                  return false
+                              }
+                          )
+
+                          // Assert
+                          assert(stopped)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
 	})
 
 	// TODO: AuthAccount.AccountCapabilities
