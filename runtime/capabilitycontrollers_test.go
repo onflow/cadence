@@ -672,5 +672,73 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 		// TODO: getControllers, forEachController
 	})
+
+	// TODO: AuthAccount.AccountCapabilities
+
+	t.Run("StorageCapabilityController", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("retarget", func(t *testing.T) {
+
+			t.Parallel()
+
+			// TODO: assert borrow
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath1 = /storage/r
+                          let storagePath2 = /storage/r2
+
+                          // Arrange
+                          let issuedCap1: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                          let controller1: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
+
+                          let issuedCap2: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                          let controller2: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap2.id)
+
+                          let issuedCap3: Capability<&Test.R{}> =
+                              signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
+                          let controller3: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap3.id)
+
+                          let issuedCap4: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath2)
+                          let controller4: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap4.id)
+
+                          // Act
+                          controller1!.retarget(storagePath2)
+
+                          // Assert
+                          assert(controller1!.target() == storagePath2)
+                          let controller1After: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
+                          assert(controller1After!.target() == storagePath2)
+
+                          assert(controller2!.target() == storagePath1)
+
+                          assert(controller3!.target() == storagePath1)
+
+                          assert(controller4!.target() == storagePath2)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		// TODO: getControllers, forEachController
 	})
+
+	// TODO: AccountCapabilityController
 }
