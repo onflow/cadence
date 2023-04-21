@@ -613,6 +613,33 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.NoError(t, err)
 		})
 
+		t.Run("getController, non-existing", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Act
+                          let controller1: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: 0)
+                          let controller2: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: 1)
+
+                          // Assert
+                          assert(controller1 == nil)
+                          assert(controller2 == nil)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
 		t.Run("getController, multiple controllers to various paths, with same or different type", func(t *testing.T) {
 
 			t.Parallel()
