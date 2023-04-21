@@ -52,6 +52,7 @@ const (
 	MemoryKindSimpleCompositeValue
 	MemoryKindPublishedValue
 	MemoryKindStorageCapabilityControllerValue
+	MemoryKindAccountCapabilityControllerValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab

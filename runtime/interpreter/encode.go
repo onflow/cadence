@@ -201,7 +201,7 @@ const (
 	CBORTagPublishedValue
 	CBORTagAccountLinkValue
 	CBORTagStorageCapabilityControllerValue
-	_
+	CBORTagAccountCapabilityControllerValue
 	_
 	_
 	_
@@ -1087,6 +1087,49 @@ func (v *StorageCapabilityControllerValue) Encode(e *atree.Encoder) error {
 
 	// Encode target path at array index encodedStorageCapabilityControllerValueTargetPathFieldKey
 	return v.TargetPath.Encode(e)
+}
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// encodedAccountCapabilityControllerValueBorrowTypeFieldKey   uint64 = 0
+	// encodedAccountCapabilityControllerValueCapabilityIDFieldKey uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedAccountCapabilityControllerValueLength MUST be updated when new element is added.
+	// It is used to verify encoded account capability controller length during decoding.
+	encodedAccountCapabilityControllerValueLength = 2
+)
+
+// Encode encodes AccountCapabilityControllerValue as
+//
+//	cbor.Tag{
+//				Number: CBORTagAccountCapabilityControllerValue,
+//				Content: []any{
+//					encodedAccountCapabilityControllerValueBorrowTypeFieldKey:   StaticType(v.BorrowType),
+//					encodedAccountCapabilityControllerValueCapabilityIDFieldKey: UInt64Value(v.CapabilityID),
+//				},
+//	}
+func (v *AccountCapabilityControllerValue) Encode(e *atree.Encoder) error {
+	// Encode tag number and array head
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagAccountCapabilityControllerValue,
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Encode borrow type at array index encodedAccountCapabilityControllerValueBorrowTypeFieldKey
+	err = EncodeStaticType(e.CBOR, v.BorrowType)
+	if err != nil {
+		return err
+	}
+
+	// Encode ID at array index encodedAccountCapabilityControllerValueCapabilityIDFieldKey
+	return e.CBOR.EncodeUint64(uint64(v.CapabilityID))
 }
 
 func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {

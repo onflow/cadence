@@ -4491,3 +4491,91 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		)
 	})
 }
+
+func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
+
+	t.Parallel()
+
+	assemble := func(bytes ...byte) []byte {
+		result := []byte{
+			// tag
+			0xd8, CBORTagAccountCapabilityControllerValue,
+			// array, 2 items follow
+			0x82,
+		}
+		result = append(result, bytes...)
+		result = append(result,
+			// positive integer 42
+			0x18, 0x2A,
+		)
+		return result
+	}
+
+	const capabilityID = 42
+
+	t.Run("AuthAccount reference, unauthorized, ", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &AccountCapabilityControllerValue{
+			BorrowType: ReferenceStaticType{
+				Authorized:   false,
+				BorrowedType: PrimitiveStaticTypeBool,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// false
+			0xf4,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Generate an arbitrary, large static type
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		var borrowType StaticType = PrimitiveStaticTypeNever
+
+		for i := uint64(0); i < maxInlineElementSize; i++ {
+			borrowType = OptionalStaticType{
+				Type: borrowType,
+			}
+		}
+
+		expected := &AccountCapabilityControllerValue{
+			BorrowType:   borrowType,
+			CapabilityID: capabilityID,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
+}
