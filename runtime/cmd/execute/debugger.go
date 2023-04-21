@@ -88,7 +88,7 @@ func (d *InteractiveDebugger) Show(names []string) {
 			return
 		}
 
-		fmt.Println(formatValue(variable.GetValue()))
+		fmt.Println(colorizeValue(variable.GetValue()))
 
 	default:
 		for _, name := range names {
@@ -100,7 +100,7 @@ func (d *InteractiveDebugger) Show(names []string) {
 			fmt.Printf(
 				"%s = %s\n",
 				name,
-				formatValue(variable.GetValue()),
+				colorizeValue(variable.GetValue()),
 			)
 		}
 	}

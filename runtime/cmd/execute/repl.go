@@ -36,99 +36,204 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/pretty"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
-func RunREPL() {
-	lineNumber := 1
-	var lineIsContinuation bool
-	var code string
-	var history []string
+type ConsoleREPL struct {
+	lineIsContinuation bool
+	code               string
+	lineNumber         int
+	errorPrettyPrinter pretty.ErrorPrettyPrinter
+	repl               *runtime.REPL
+	historyWriter      *csv.Writer
+}
 
-	printReplWelcome()
+func NewConsoleREPL() (*ConsoleREPL, error) {
+	consoleREPL := &ConsoleREPL{
+		lineNumber:         1,
+		errorPrettyPrinter: pretty.NewErrorPrettyPrinter(os.Stderr, true),
+	}
 
-	errorPrettyPrinter := pretty.NewErrorPrettyPrinter(os.Stderr, true)
+	repl, err := runtime.NewREPL()
+	if err != nil {
+		return nil, err
+	}
 
-	repl, err := runtime.NewREPL(
-		func(err error, location common.Location, codes map[common.Location][]byte) {
-			printErr := errorPrettyPrinter.PrettyPrintError(err, location, codes)
-			if printErr != nil {
-				panic(printErr)
-			}
-		},
-		func(value interpreter.Value) {
-			fmt.Println(formatValue(value))
-		},
-	)
+	repl.OnError = consoleREPL.onError
+	repl.OnResult = consoleREPL.onResult
 
+	consoleREPL.repl = repl
+
+	return consoleREPL, nil
+}
+
+func (consoleREPL *ConsoleREPL) onError(err error, location common.Location, codes map[common.Location][]byte) {
+	printErr := consoleREPL.errorPrettyPrinter.PrettyPrintError(err, location, codes)
+	if printErr != nil {
+		panic(printErr)
+	}
+}
+
+func (consoleREPL *ConsoleREPL) onResult(value interpreter.Value) {
+	fmt.Println(colorizeValue(value))
+}
+
+func (consoleREPL *ConsoleREPL) handleCommand(command string) {
+	parts := strings.SplitN(command, " ", 2)
+	for _, command := range commands {
+		if command.name != parts[0][1:] {
+			continue
+		}
+
+		var argument string
+		if len(parts) > 1 {
+			argument = parts[1]
+		}
+
+		command.handler(consoleREPL, argument)
+		return
+	}
+
+	printError(fmt.Sprintf("Unknown command. %s", replAssistanceMessage))
+}
+
+func (consoleREPL *ConsoleREPL) exportVariable(name string) {
+	repl := consoleREPL.repl
+
+	global := repl.GetGlobal(name)
+	if global == nil {
+		printError(fmt.Sprintf("Undefined global: %s", name))
+		return
+	}
+
+	value, err := repl.ExportValue(global)
+	if err != nil {
+		printError(fmt.Sprintf("Failed to export global %s: %s", name, err))
+		return
+	}
+
+	json, err := jsoncdc.Encode(value)
+	if err != nil {
+		printError(fmt.Sprintf("Failed to encode global %s to JSON: %s", name, err))
+		return
+	}
+
+	_, _ = os.Stdout.Write(prettyJSON.Color(prettyJSON.Pretty(json), nil))
+}
+
+func (consoleREPL *ConsoleREPL) showType(expression string) {
+	repl := consoleREPL.repl
+
+	oldOnExpressionType := repl.OnExpressionType
+	repl.OnExpressionType = func(ty sema.Type) {
+		fmt.Println(colorizeResult(string(ty.ID())))
+	}
+	defer func() {
+		repl.OnExpressionType = oldOnExpressionType
+	}()
+
+	_, err := repl.Accept([]byte(expression+"\n"), false)
+	if err == nil {
+		consoleREPL.lineNumber++
+	}
+}
+
+func (consoleREPL *ConsoleREPL) execute(line string) {
+	if consoleREPL.code == "" && strings.HasPrefix(line, ".") {
+		consoleREPL.handleCommand(line)
+		consoleREPL.code = ""
+		return
+	}
+
+	consoleREPL.code += line + "\n"
+
+	inputIsComplete, err := consoleREPL.repl.Accept([]byte(consoleREPL.code), true)
+	if err == nil {
+		consoleREPL.lineNumber++
+
+		if !inputIsComplete {
+			consoleREPL.lineIsContinuation = true
+			return
+		}
+	}
+
+	err = consoleREPL.appendHistory()
 	if err != nil {
 		panic(err)
 	}
 
-	executor := func(line string) {
-		if code == "" && strings.HasPrefix(line, ".") {
-			handleCommand(repl, line)
-			code = ""
-			return
-		}
+	consoleREPL.lineIsContinuation = false
+	consoleREPL.code = ""
+}
 
-		code += line + "\n"
+func (consoleREPL *ConsoleREPL) suggest(d prompt.Document) []prompt.Suggest {
+	wordBeforeCursor := d.GetWordBeforeCursor()
 
-		inputIsComplete, err := repl.Accept([]byte(code))
-		if err == nil {
-			lineNumber++
-
-			if !inputIsComplete {
-				lineIsContinuation = true
-				return
-			}
-		}
-
-		history = append(history, code)
-		err = writeHistory(history)
-		if err != nil {
-			panic(err)
-		}
-
-		lineIsContinuation = false
-		code = ""
+	if len(wordBeforeCursor) == 0 {
+		return nil
 	}
 
-	suggest := func(d prompt.Document) []prompt.Suggest {
-		if len(d.GetWordBeforeCursor()) == 0 {
-			return nil
+	var suggests []prompt.Suggest
+
+	if wordBeforeCursor[0] == commandPrefix {
+		commandLookupPrefix := wordBeforeCursor[1:]
+
+		for _, command := range commands {
+			if !strings.HasPrefix(command.name, commandLookupPrefix) {
+				continue
+			}
+			suggests = append(suggests, prompt.Suggest{
+				Text:        fmt.Sprintf("%c%s", commandPrefix, command.name),
+				Description: command.description,
+			})
 		}
 
-		var suggests []prompt.Suggest
-
-		for _, suggestion := range repl.Suggestions() {
+	} else {
+		for _, suggestion := range consoleREPL.repl.Suggestions() {
 			suggests = append(suggests, prompt.Suggest{
 				Text:        suggestion.Name,
 				Description: suggestion.Description,
 			})
 		}
-
-		return prompt.FilterHasPrefix(suggests, d.GetWordBeforeCursor(), false)
 	}
 
-	changeLivePrefix := func() (string, bool) {
-		separator := '>'
-		if lineIsContinuation {
-			separator = '.'
-		}
-
-		return fmt.Sprintf("%d%c ", lineNumber, separator), true
-	}
-
-	history, _ = readHistory()
-
-	options := []prompt.Option{
-		prompt.OptionLivePrefix(changeLivePrefix),
-		prompt.OptionHistory(history),
-	}
-	prompt.New(executor, suggest, options...).Run()
+	return prompt.FilterHasPrefix(suggests, wordBeforeCursor, false)
 }
 
-func cadenceDirPath() (string, error) {
+func (consoleREPL *ConsoleREPL) changeLivePrefix() (string, bool) {
+	separator := '>'
+	if consoleREPL.lineIsContinuation {
+		separator = '.'
+	}
+
+	return fmt.Sprintf("%d%c ", consoleREPL.lineNumber, separator), true
+}
+
+func (consoleREPL *ConsoleREPL) Run() {
+
+	consoleREPL.printWelcome()
+
+	history, _ := consoleREPL.readHistory()
+	err := consoleREPL.openHistoryWriter()
+	if err != nil {
+		panic(err)
+	}
+
+	prompt.New(
+		consoleREPL.execute,
+		consoleREPL.suggest,
+		prompt.OptionLivePrefix(consoleREPL.changeLivePrefix),
+		prompt.OptionHistory(history),
+	).Run()
+}
+
+func printError(message string) {
+	println(colorizeError(message))
+}
+
+const commandPrefix = '.'
+
+func (consoleREPL *ConsoleREPL) cadenceDirPath() (string, error) {
 	userCacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
@@ -137,8 +242,8 @@ func cadenceDirPath() (string, error) {
 	return filepath.Join(userCacheDir, "cadence"), nil
 }
 
-func historyFilePath() (string, error) {
-	cadenceDirPath, err := cadenceDirPath()
+func (consoleREPL *ConsoleREPL) historyFilePath() (string, error) {
+	cadenceDirPath, err := consoleREPL.cadenceDirPath()
 	if err != nil {
 		return "", err
 	}
@@ -146,8 +251,8 @@ func historyFilePath() (string, error) {
 	return filepath.Join(cadenceDirPath, "replHistory"), nil
 }
 
-func readHistory() ([]string, error) {
-	path, err := historyFilePath()
+func (consoleREPL *ConsoleREPL) readHistory() ([]string, error) {
+	path, err := consoleREPL.historyFilePath()
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine cadence directory path: %w", err)
 	}
@@ -181,8 +286,8 @@ func readHistory() ([]string, error) {
 	return result, nil
 }
 
-func writeHistory(history []string) error {
-	cadenceDirPath, err := cadenceDirPath()
+func (consoleREPL *ConsoleREPL) openHistoryWriter() error {
+	cadenceDirPath, err := consoleREPL.cadenceDirPath()
 	if err != nil {
 		return fmt.Errorf("failed to determine cadence directory path: %w", err)
 	}
@@ -192,24 +297,28 @@ func writeHistory(history []string) error {
 		return fmt.Errorf("failed to create cadence directory: %w", err)
 	}
 
-	path, err := historyFilePath()
+	path, err := consoleREPL.historyFilePath()
 	if err != nil {
 		return fmt.Errorf("failed to determine history path: %w", err)
 	}
 
-	f, err := os.Create(path)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return fmt.Errorf("failed to create history: %w", err)
 	}
-	defer f.Close()
 
-	writer := csv.NewWriter(f)
+	consoleREPL.historyWriter = csv.NewWriter(f)
 
-	for _, code := range history {
-		err = writer.Write([]string{strings.TrimRightFunc(code, unicode.IsSpace)})
-		if err != nil {
-			return fmt.Errorf("failed to write history: %w", err)
-		}
+	return nil
+}
+
+func (consoleREPL *ConsoleREPL) appendHistory() error {
+
+	writer := consoleREPL.historyWriter
+
+	err := writer.Write([]string{strings.TrimRightFunc(consoleREPL.code, unicode.IsSpace)})
+	if err != nil {
+		return fmt.Errorf("failed to write history: %w", err)
 	}
 
 	writer.Flush()
@@ -217,51 +326,83 @@ func writeHistory(history []string) error {
 	return nil
 }
 
-const replHelpMessage = `
-Enter declarations and statements to evaluate them.
-Commands are prefixed with a dot. Valid commands are:
-
-.exit                 Exit the interpreter
-.help                 Print this help message
-.export variable      Export variable
-
-Press ^C to abort current expression, ^D to exit`
-
 const replAssistanceMessage = `Type '.help' for assistance.`
 
-func handleCommand(repl *runtime.REPL, command string) {
-	parts := strings.SplitN(command, " ", 2)
-	switch parts[0] {
-	case ".exit":
-		os.Exit(0)
-	case ".help":
-		fmt.Println(replHelpMessage)
-	case ".export":
-		name := strings.TrimSpace(parts[1])
-		global := repl.GetGlobal(name)
-		if global == nil {
-			fmt.Println(colorizeError(fmt.Sprintf("Undefined global: %s", name)))
-			return
-		}
+const replHelpMessagePrefix = `
+Enter declarations and statements to evaluate them.
+Commands are prefixed with a dot. Valid commands are:
+`
 
-		value, err := repl.ExportValue(global)
-		if err != nil {
-			fmt.Println(colorizeError(fmt.Sprintf("Failed to export global %s: %s", name, err.Error())))
-			return
-		}
+const replHelpMessageSuffix = `
+Press ^C to abort current expression, ^D to exit
+`
 
-		json, err := jsoncdc.Encode(value)
-		if err != nil {
-			fmt.Println(colorizeError(fmt.Sprintf("Failed to encode global %s to JSON: %s", name, err.Error())))
-			return
-		}
-		_, _ = os.Stdout.Write(prettyJSON.Color(prettyJSON.Pretty(json), nil))
+func (consoleREPL *ConsoleREPL) printHelp() {
+	println(replHelpMessagePrefix)
 
-	default:
-		fmt.Println(colorizeError(fmt.Sprintf("Unknown command. %s", replAssistanceMessage)))
+	for _, command := range commands {
+		fmt.Printf(
+			"%c%s\t%s\n",
+			commandPrefix,
+			command.name,
+			command.description,
+		)
+	}
+
+	println(replHelpMessageSuffix)
+}
+
+type command struct {
+	name        string
+	description string
+	handler     func(repl *ConsoleREPL, argument string)
+}
+
+var commands []command
+
+func init() {
+	commands = []command{
+		{
+			name:        "exit",
+			description: "Exit the interpreter",
+			handler: func(_ *ConsoleREPL, _ string) {
+				os.Exit(0)
+			},
+		},
+		{
+			name:        "help",
+			description: "Show help",
+			handler: func(consoleREPL *ConsoleREPL, _ string) {
+				consoleREPL.printHelp()
+			},
+		},
+		{
+			name:        "export",
+			description: "Export variable",
+			handler: func(consoleREPL *ConsoleREPL, argument string) {
+				name := strings.TrimSpace(argument)
+				if len(name) == 0 {
+					printError("Missing name")
+					return
+				}
+				consoleREPL.exportVariable(name)
+			},
+		},
+		{
+			name:        "type",
+			description: "Show type of expression",
+			handler: func(consoleREPL *ConsoleREPL, argument string) {
+				if len(argument) == 0 {
+					printError("Missing expression")
+					return
+				}
+
+				consoleREPL.showType(argument)
+			},
+		},
 	}
 }
 
-func printReplWelcome() {
+func (consoleREPL *ConsoleREPL) printWelcome() {
 	fmt.Printf("Welcome to Cadence %s!\n%s\n\n", cadence.Version, replAssistanceMessage)
 }
