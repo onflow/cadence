@@ -1608,8 +1608,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -1631,26 +1629,11 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	v.isDestroyed = true
 
+	interpreter.invalidateReferencedResources(v)
+
 	if config.InvalidatedResourceValidationEnabled {
 		v.array = nil
 	}
-
-	interpreter.updateReferencedResource(
-		storageID,
-		storageID,
-		func(value ReferenceTrackedResourceKindedValue) {
-			arrayValue, ok := value.(*ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			arrayValue.isDestroyed = true
-
-			if config.InvalidatedResourceValidationEnabled {
-				arrayValue.array = nil
-			}
-		},
-	)
 }
 
 func (v *ArrayValue) IsDestroyed() bool {
@@ -2474,28 +2457,14 @@ func (v *ArrayValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
+		interpreter.invalidateReferencedResources(v)
+
 		if config.InvalidatedResourceValidationEnabled {
 			v.array = nil
 		} else {
 			v.array = array
 			res = v
 		}
-
-		newStorageID := array.StorageID()
-
-		interpreter.updateReferencedResource(
-			currentStorageID,
-			newStorageID,
-			func(value ReferenceTrackedResourceKindedValue) {
-				arrayValue, ok := value.(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Any kind of move would invalidate the references.
-				arrayValue.array = nil
-			},
-		)
 	}
 
 	if res == nil {
@@ -14046,8 +14015,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -14108,26 +14075,11 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	v.isDestroyed = true
 
+	interpreter.invalidateReferencedResources(v)
+
 	if config.InvalidatedResourceValidationEnabled {
 		v.dictionary = nil
 	}
-
-	interpreter.updateReferencedResource(
-		storageID,
-		storageID,
-		func(value ReferenceTrackedResourceKindedValue) {
-			compositeValue, ok := value.(*CompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			compositeValue.isDestroyed = true
-
-			if config.InvalidatedResourceValidationEnabled {
-				compositeValue.dictionary = nil
-			}
-		},
-	)
 }
 
 func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -14856,28 +14808,14 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
+		interpreter.invalidateReferencedResources(v)
+
 		if config.InvalidatedResourceValidationEnabled {
 			v.dictionary = nil
 		} else {
 			v.dictionary = dictionary
 			res = v
 		}
-
-		newStorageID := dictionary.StorageID()
-
-		interpreter.updateReferencedResource(
-			currentStorageID,
-			newStorageID,
-			func(value ReferenceTrackedResourceKindedValue) {
-				compositeValue, ok := value.(*CompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Any kind of move would invalidate the references.
-				compositeValue.dictionary = nil
-			},
-		)
 	}
 
 	if res == nil {
@@ -15486,8 +15424,6 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -15512,26 +15448,11 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	v.isDestroyed = true
 
+	interpreter.invalidateReferencedResources(v)
+
 	if config.InvalidatedResourceValidationEnabled {
 		v.dictionary = nil
 	}
-
-	interpreter.updateReferencedResource(
-		storageID,
-		storageID,
-		func(value ReferenceTrackedResourceKindedValue) {
-			dictionaryValue, ok := value.(*DictionaryValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			dictionaryValue.isDestroyed = true
-
-			if config.InvalidatedResourceValidationEnabled {
-				dictionaryValue.dictionary = nil
-			}
-		},
-	)
 }
 
 func (v *DictionaryValue) ForEachKey(
@@ -16308,28 +16229,14 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
+		interpreter.invalidateReferencedResources(v)
+
 		if config.InvalidatedResourceValidationEnabled {
 			v.dictionary = nil
 		} else {
 			v.dictionary = dictionary
 			res = v
 		}
-
-		newStorageID := dictionary.StorageID()
-
-		interpreter.updateReferencedResource(
-			currentStorageID,
-			newStorageID,
-			func(value ReferenceTrackedResourceKindedValue) {
-				dictionaryValue, ok := value.(*DictionaryValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Any kind of move would invalidate the references.
-				dictionaryValue.dictionary = nil
-			},
-		)
 	}
 
 	if res == nil {

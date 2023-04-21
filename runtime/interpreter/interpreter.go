@@ -4657,25 +4657,63 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	values[value] = struct{}{}
 }
 
-func (interpreter *Interpreter) updateReferencedResource(
-	currentStorageID atree.StorageID,
-	newStorageID atree.StorageID,
-	updateFunc func(value ReferenceTrackedResourceKindedValue),
-) {
-	values := interpreter.SharedState.referencedResourceKindedValues[currentStorageID]
+func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
+	// skip non-resource typed values
+	if !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	var storageID atree.StorageID
+
+	switch value := value.(type) {
+	case *CompositeValue:
+		value.ForEachField(interpreter, func(_ string, fieldValue Value) {
+			interpreter.invalidateReferencedResources(fieldValue)
+		})
+		storageID = value.StorageID()
+	case *DictionaryValue:
+		value.Iterate(interpreter, func(_, value Value) (resume bool) {
+			interpreter.invalidateReferencedResources(value)
+			return true
+		})
+		storageID = value.StorageID()
+	case *ArrayValue:
+		value.Iterate(interpreter, func(element Value) (resume bool) {
+			interpreter.invalidateReferencedResources(element)
+			return true
+		})
+		storageID = value.StorageID()
+	case *SomeValue:
+		interpreter.invalidateReferencedResources(value.value)
+		return
+	default:
+		// skip non-container typed values.
+		return
+	}
+
+	values := interpreter.SharedState.referencedResourceKindedValues[storageID]
 	if values == nil {
 		return
 	}
+
 	for value := range values { //nolint:maprange
-		updateFunc(value)
+		switch value := value.(type) {
+		case *CompositeValue:
+			value.dictionary = nil
+		case *DictionaryValue:
+			value.dictionary = nil
+		case *ArrayValue:
+			value.array = nil
+		default:
+			panic(errors.NewUnreachableError())
+		}
 	}
 
-	// If the move is to a new location, then the resources are already cleared via the update function above.
-	// So no need to track those stale resources anymore.
-	if newStorageID != currentStorageID {
-		interpreter.SharedState.referencedResourceKindedValues[newStorageID] = values
-		interpreter.SharedState.referencedResourceKindedValues[currentStorageID] = nil
-	}
+	// The old resource instances are already cleared/invalidated above.
+	// So no need to track those stale resources anymore. We will not need to update/clear them again.
+	// Therefore, remove them from the mapping.
+	// This is only to allow GC. No impact to the behavior.
+	delete(interpreter.SharedState.referencedResourceKindedValues, storageID)
 }
 
 // startResourceTracking starts tracking the life-span of a resource.

@@ -223,7 +223,7 @@ func TestAccountAttachmentExportFailure(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestAccountAttachmentExport(t *testing.T) {

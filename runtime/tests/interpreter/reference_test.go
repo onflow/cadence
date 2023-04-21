@@ -1147,6 +1147,180 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
+
+	t.Run("nested resource in composite", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                let id: UInt8  // non resource typed field
+                let bar: @Bar   // resource typed field
+                init() {
+                    self.id = 1
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let baz: @Baz
+                init() {
+                    self.baz <-create Baz()
+                }
+                destroy() {
+                    destroy self.baz
+                }
+            }
+
+            resource Baz {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            pub fun main() {
+                var foo <- create Foo()
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var bazRef = getRef(&foo.bar.baz as &Baz)
+
+                // Move the outer resource
+                var foo2 <- foo
+
+                // Access the moved resource
+                bazRef.id
+
+                destroy foo2
+            }
+
+            pub fun getRef(_ ref: &Baz): &Baz {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested resource in dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {}
+
+            pub fun main() {
+                var dict <- {"levelOne": <- {"levelTwo": <- create Foo()}}
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var dictRef = getRef(&dict["levelOne"] as &{String: Foo}?)!
+
+                // Move the outer resource
+                var dict2 <- dict
+
+                // Access the inner moved resource
+                var fooRef = &dictRef["levelTwo"] as &Foo?
+
+                destroy dict2
+            }
+
+            pub fun getRef(_ ref: &{String: Foo}?): &{String: Foo}? {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested resource in array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {}
+
+            pub fun main() {
+                var array <- [<-[<- create Foo()]]
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var arrayRef = getRef(&array[0] as &[Foo])
+
+                // Move the outer resource
+                var array2 <- array
+
+                // Access the inner moved resource
+                var fooRef = &arrayRef[0] as &Foo
+
+                destroy array2
+            }
+
+            pub fun getRef(_ ref: &[Foo]): &[Foo] {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested optional resource", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                let optionalBar: @Bar?
+                init() {
+                    self.optionalBar <-create Bar()
+                }
+                destroy() {
+                    destroy self.optionalBar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            pub fun main() {
+                var foo <- create Foo()
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var barRef = getRef(&foo.optionalBar as &Bar?)
+
+                // Move the outer resource
+                var foo2 <- foo
+
+                // Access the moved resource
+                barRef!.id
+
+                destroy foo2
+            }
+
+            pub fun getRef(_ ref: &Bar?): &Bar? {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
 }
 
 func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
