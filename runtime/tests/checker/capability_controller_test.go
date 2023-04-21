@@ -76,7 +76,7 @@ func TestCheckStorageCapabilityController(t *testing.T) {
           let borrowType: Type = controller.borrowType
           let capabilityID: UInt64 = controller.capabilityID
           let target: StoragePath = controller.target()
-          let _: Void = controller.retarget(target: /storage/test)
+          let _: Void = controller.retarget(/storage/test)
         `)
 
 		require.NoError(t, err)
