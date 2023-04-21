@@ -132,6 +132,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		return
 	}
 
+	// TODO: account capability
 	testAccount := func(accountType sema.Type, accountExpression string) {
 
 		testName := fmt.Sprintf(
@@ -571,4 +572,105 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 	} {
 		testAccount(accountType, accountExpression)
 	}
+
+	t.Run("AuthAccount.StorageCapabilities", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("issue, multiple controllers to various paths, with same or different type", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath1 = /storage/r
+                          let storagePath2 = /storage/r2
+
+                          // Act
+                          let issuedCap1: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                          let issuedCap2: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                          let issuedCap3: Capability<&Test.R{}> =
+                              signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
+                          let issuedCap4: Capability<&Test.R{}> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath2)
+
+                          // Assert
+                          assert(issuedCap1.id == 1)
+                          assert(issuedCap2.id == 2)
+                          assert(issuedCap3.id == 3)
+                          assert(issuedCap4.id == 4)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("getController, multiple controllers to various paths, with same or different type", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath1 = /storage/r
+                          let storagePath2 = /storage/r2
+
+                          // Arrange
+                          let issuedCap1: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                          let issuedCap2: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                          let issuedCap3: Capability<&Test.R{}> =
+                              signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
+                          let issuedCap4: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath2)
+
+                          // Act
+                          let controller1: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
+                          let controller2: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap2.id)
+                          let controller3: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap3.id)
+                          let controller4: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap4.id)
+
+                          // Assert
+                          assert(controller1!.capabilityID == 1)
+                          assert(controller1!.borrowType == Type<&Test.R>())
+                          assert(controller1!.target() == storagePath1)
+
+                          assert(controller2!.capabilityID == 2)
+                          assert(controller2!.borrowType == Type<&Test.R>())
+                          assert(controller2!.target() == storagePath1)
+
+                          assert(controller3!.capabilityID == 3)
+                          assert(controller3!.borrowType == Type<&Test.R{}>())
+                          assert(controller3!.target() == storagePath1)
+
+                          assert(controller4!.capabilityID == 4)
+                          assert(controller4!.borrowType == Type<&Test.R>())
+                          assert(controller4!.target() == storagePath2)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		// TODO: getControllers, forEachController
+	})
+	})
 }
