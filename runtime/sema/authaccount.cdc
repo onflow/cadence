@@ -353,7 +353,7 @@ pub struct AuthAccount {
         /// Iterate through all storage capability controllers for capabilities that target this storage path.
         ///
         /// Returning false from the function stops the iteration.
-        pub fun forEachController(forPath: StoragePath, function: ((&StorageCapabilityController): Bool))
+        pub fun forEachController(forPath: StoragePath, _ function: ((&StorageCapabilityController): Bool))
 
         /// Issue/create a new storage capability.
         pub fun issue<T: &Any>(_ path: StoragePath): Capability<T>
