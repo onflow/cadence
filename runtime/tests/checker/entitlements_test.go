@@ -797,6 +797,31 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
+	t.Run("accessor function with impl invalid cast", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F
+			entitlement mapping M {
+				E -> F
+			}
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					let x = &1 as auth(M) &Int
+					// cannot cast, because M may be pub
+					let y: auth(F) &Int = x
+					return y
+				}
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F) &Int")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(M) &Int")
+	})
+
 	t.Run("accessor function with complex impl", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
