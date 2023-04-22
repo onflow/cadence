@@ -2498,8 +2498,8 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 			controller := interpreter.NewStorageCapabilityControllerValue(
 				gauge,
 				borrowStaticType,
-				targetPathValue,
 				capabilityIDValue,
+				targetPathValue,
 			)
 
 			storeCapabilityController(inter, address, capabilityIDValue, controller)

@@ -37,14 +37,14 @@ type CapabilityControllerValue interface {
 type StorageCapabilityControllerValue struct {
 	BorrowType       StaticType
 	TargetPath       PathValue
-	CapabilityID     UInt64Value
 	RetargetFunction FunctionValue
+	CapabilityID     UInt64Value
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
 	staticType StaticType,
-	targetPath PathValue,
 	capabilityID UInt64Value,
+	targetPath PathValue,
 ) *StorageCapabilityControllerValue {
 	return &StorageCapabilityControllerValue{
 		BorrowType:   staticType,
@@ -56,15 +56,15 @@ func NewUnmeteredStorageCapabilityControllerValue(
 func NewStorageCapabilityControllerValue(
 	memoryGauge common.MemoryGauge,
 	staticType StaticType,
-	targetPath PathValue,
 	capabilityID UInt64Value,
+	targetPath PathValue,
 ) *StorageCapabilityControllerValue {
 	// Constant because its constituents are already metered.
 	common.UseMemory(memoryGauge, common.StorageCapabilityControllerValueMemoryUsage)
 	return NewUnmeteredStorageCapabilityControllerValue(
 		staticType,
-		targetPath,
 		capabilityID,
+		targetPath,
 	)
 }
 

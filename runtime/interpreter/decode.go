@@ -1035,8 +1035,8 @@ func (d StorableDecoder) decodeStorageCapabilityController() (*StorageCapability
 	return NewStorageCapabilityControllerValue(
 		d.memoryGauge,
 		borrowStaticType,
-		pathValue,
 		UInt64Value(capabilityID),
+		pathValue,
 	), nil
 }
 
