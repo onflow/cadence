@@ -1246,13 +1246,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations(
-			nil,
-			[]byte("fun foo  < > () {}"),
-			Config{
-				TypeParametersEnabled: true,
-			},
-		)
+		result, errs := testParseDeclarations("fun foo  < > () {}")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1295,13 +1289,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations(
-			nil,
-			[]byte("fun foo  < A  > () {}"),
-			Config{
-				TypeParametersEnabled: true,
-			},
-		)
+		result, errs := testParseDeclarations("fun foo  < A  > () {}")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1351,13 +1339,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations(
-			nil,
-			[]byte("fun foo  < A  , B : C > () {}"),
-			Config{
-				TypeParametersEnabled: true,
-			},
-		)
+		result, errs := testParseDeclarations("fun foo  < A  , B : C > () {}")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1418,34 +1400,11 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("with type parameters, disabled", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseDeclarations("fun foo<A>() {}")
-
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected '(' as start of parameter list, got '<'",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
-				},
-			},
-			errs,
-		)
-	})
-
 	t.Run("missing type parameter list end, enabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte("fun foo  < "),
-			Config{
-				TypeParametersEnabled: true,
-			},
-		)
+		_, errs := testParseDeclarations("fun foo  < ")
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
@@ -1462,13 +1421,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte("fun foo  < A B > () { } "),
-			Config{
-				TypeParametersEnabled: true,
-			},
-		)
+		_, errs := testParseDeclarations("fun foo  < A B > () { } ")
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
