@@ -182,6 +182,7 @@ func (checker *Checker) visitTransactionPrepareFunction(
 	prepareFunctionType := transactionType.PrepareFunctionType()
 
 	checker.checkFunction(
+		nil,
 		prepareFunction.FunctionDeclaration.ParameterList,
 		nil,
 		prepareFunctionType,
@@ -231,6 +232,7 @@ func (checker *Checker) visitTransactionExecuteFunction(
 	executeFunctionType := transactionType.ExecuteFunctionType()
 
 	checker.checkFunction(
+		nil,
 		&ast.ParameterList{},
 		nil,
 		executeFunctionType,

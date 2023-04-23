@@ -50,7 +50,7 @@ func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.
 	)
 }
 
-func TestCheckGenericFunction(t *testing.T) {
+func TestCheckGenericFunctionInvocation(t *testing.T) {
 
 	t.Parallel()
 
@@ -925,7 +925,7 @@ func TestCheckBorrowOfCapabilityWithoutTypeArgument(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckUnparameterizedTypeInstantiationE(t *testing.T) {
+func TestCheckUnparameterizedTypeInstantiation(t *testing.T) {
 
 	t.Parallel()
 
@@ -938,4 +938,168 @@ func TestCheckUnparameterizedTypeInstantiationE(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UnparameterizedTypeInstantiationError{}, errs[0])
+}
+
+func TestCheckGenericFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("global, struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun head<T: AnyStruct>(_ items: [T]): T? {
+              if items.length < 1 {
+                  return nil
+              }
+              return items[0]
+          }
+
+          let x: Int? = head([1, 2, 3])
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("global, resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun head<T: @AnyResource>(_ items: @[T]): @T? {
+              if items.length < 1 {
+                  destroy items
+                  return nil
+              }
+              let item <-items.remove(at: 0)
+              destroy items
+              return <-item
+          }
+
+          resource R {}
+
+          let x: @R? <- head(<-[<-create R()])
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("missing type parameter bound", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test<T>() {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.MissingTypeParameterTypeBoundError{}, errs[0])
+	})
+
+	t.Run("too many type arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test<T: AnyStruct>() {}
+
+          let x = test<Int, Bool>()
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidTypeArgumentCountError{}, errs[0])
+	})
+
+	t.Run("type parameter usage in function body", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test<T: AnyStruct>(): Type {
+              return Type<T>()
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+	})
+
+	t.Run("type parameter usage in following type parameter", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test<T: AnyStruct, U: T>(_ u: U): U { return u }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("composite, struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct S {
+              fun head<T: AnyStruct>(_ items: [T]): T? {
+                  if items.length < 1 {
+                      return nil
+                  }
+                  return items[0]
+              }
+          }
+
+          let x: Int? = S().head([1, 2, 3])
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct S {
+              fun head<T: @AnyResource>(_ items: @[T]): @T? {
+                  if items.length < 1 {
+                      destroy items
+                      return nil
+                  }
+                  let item <-items.remove(at: 0)
+                  destroy items
+                  return <-item
+              }
+          }
+
+          resource R {}
+
+          let x: @R? <- S().head(<-[<-create R()])
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct interface SI {
+              fun foo<T: AnyStruct>()
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidTypeParameterizedInterfaceFunctionError{}, errs[0])
+	})
+
 }

@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
@@ -80,7 +81,11 @@ func (checker *Checker) visitFunctionDeclaration(
 
 	functionType := checker.Elaboration.FunctionDeclarationFunctionType(declaration)
 	if functionType == nil {
-		functionType = checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
+		functionType = checker.functionType(
+			declaration.TypeParameterList,
+			declaration.ParameterList,
+			declaration.ReturnTypeAnnotation,
+		)
 
 		if options.declareFunction {
 			checker.declareFunctionDeclaration(declaration, functionType)
@@ -90,6 +95,7 @@ func (checker *Checker) visitFunctionDeclaration(
 	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 
 	checker.checkFunction(
+		declaration.TypeParameterList,
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
 		functionType,
@@ -125,6 +131,7 @@ func (checker *Checker) declareFunctionDeclaration(
 }
 
 func (checker *Checker) checkFunction(
+	typeParameterList *ast.TypeParameterList,
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 	functionType *FunctionType,
@@ -133,6 +140,47 @@ func (checker *Checker) checkFunction(
 	initializationInfo *InitializationInfo,
 	checkResourceLoss bool,
 ) {
+	// If type parameters are given,
+	// resolve generic types in the function type
+	// to the type bounds of the type parameters.
+	//
+	// Type parameters must have type bounds,
+	// to at least determine resource-kindedness
+	// (A function cannot be written in a way that it supports
+	// either resources or non-resources.)
+
+	typeParameters := functionType.TypeParameters
+	if len(typeParameters) > 0 {
+
+		typeArguments := &TypeParameterTypeOrderedMap{}
+
+		for typeParameterIndex, typeParameter := range typeParameters {
+
+			typeBound := typeParameter.TypeBound
+			if typeBound == nil {
+				astTypeParameter := typeParameterList.TypeParameters[typeParameterIndex]
+
+				checker.report(&MissingTypeParameterTypeBoundError{
+					Name:  typeParameter.Name,
+					Range: ast.NewUnmeteredRangeFromPositioned(astTypeParameter),
+				})
+				continue
+			}
+
+			typeArguments.Set(typeParameter, typeBound)
+		}
+
+		resolvedType := functionType.Resolve(typeArguments)
+
+		if resolvedType != nil {
+			var ok bool
+			functionType, ok = resolvedType.(*FunctionType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+		}
+	}
+
 	// check argument labels
 	checker.checkArgumentLabels(parameterList)
 
@@ -414,14 +462,24 @@ func (checker *Checker) declareBefore() {
 
 func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) Type {
 
+	// TODO: add support in parser
+	var typeParameterList *ast.TypeParameterList
+	parameterList := expression.ParameterList
+	returnTypeAnnotation := expression.ReturnTypeAnnotation
+
 	// TODO: infer
-	functionType := checker.functionType(expression.ParameterList, expression.ReturnTypeAnnotation)
+	functionType := checker.functionType(
+		typeParameterList,
+		parameterList,
+		returnTypeAnnotation,
+	)
 
 	checker.Elaboration.SetFunctionExpressionFunctionType(expression, functionType)
 
 	checker.checkFunction(
-		expression.ParameterList,
-		expression.ReturnTypeAnnotation,
+		typeParameterList,
+		parameterList,
+		returnTypeAnnotation,
 		functionType,
 		expression.FunctionBlock,
 		true,

@@ -4046,3 +4046,41 @@ func (*AttachmentsNotEnabledError) IsUserError() {}
 func (e *AttachmentsNotEnabledError) Error() string {
 	return "attachments are not enabled and cannot be used in this environment"
 }
+
+// MissingTypeParameterTypeBoundError
+
+type MissingTypeParameterTypeBoundError struct {
+	Name string
+	ast.Range
+}
+
+var _ SemanticError = &MissingTypeParameterTypeBoundError{}
+var _ errors.UserError = &MissingTypeParameterTypeBoundError{}
+
+func (*MissingTypeParameterTypeBoundError) isSemanticError() {}
+
+func (*MissingTypeParameterTypeBoundError) IsUserError() {}
+
+func (e *MissingTypeParameterTypeBoundError) Error() string {
+	return fmt.Sprintf(
+		"missing type bound for type parameter `%s`",
+		e.Name,
+	)
+}
+
+// InvalidTypeParameterizedInterfaceFunctionError
+
+type InvalidTypeParameterizedInterfaceFunctionError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidTypeParameterizedInterfaceFunctionError{}
+var _ errors.UserError = &InvalidTypeParameterizedInterfaceFunctionError{}
+
+func (*InvalidTypeParameterizedInterfaceFunctionError) isSemanticError() {}
+
+func (*InvalidTypeParameterizedInterfaceFunctionError) IsUserError() {}
+
+func (e *InvalidTypeParameterizedInterfaceFunctionError) Error() string {
+	return "invalid type parameters in interface function"
+}

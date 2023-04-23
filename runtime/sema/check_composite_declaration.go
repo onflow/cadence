@@ -1758,7 +1758,11 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		identifier := function.Identifier.Identifier
 
-		functionType := checker.functionType(function.ParameterList, function.ReturnTypeAnnotation)
+		functionType := checker.functionType(
+			function.TypeParameterList,
+			function.ParameterList,
+			function.ReturnTypeAnnotation,
+		)
 
 		argumentLabels := function.ParameterList.EffectiveArgumentLabels()
 
@@ -2035,6 +2039,7 @@ func (checker *Checker) checkSpecialFunction(
 	}
 
 	checker.checkFunction(
+		nil,
 		specialFunction.FunctionDeclaration.ParameterList,
 		nil,
 		functionType,
