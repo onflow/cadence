@@ -85,6 +85,23 @@ func TestCheckToBytes(t *testing.T) {
 	})
 }
 
+func TestCheckAddressFromBytes(t *testing.T) {
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+		let address = Address.fromBytes([1])
+	`)
+
+	require.NoError(t, err)
+
+	resType := RequireGlobalValue(t, checker.Elaboration, "address")
+
+	assert.Equal(t,
+		sema.TheAddressType,
+		resType,
+	)
+}
+
 func TestCheckToBigEndianBytes(t *testing.T) {
 
 	t.Parallel()
