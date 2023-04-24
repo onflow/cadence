@@ -184,7 +184,13 @@ func TestInterpretAddressFromBytesInvalid(t *testing.T) {
 		t.Run(innerCode, func(t *testing.T) {
 			t.Parallel()
 
-			code := fmt.Sprintf("fun test(): Address { \n return Address.fromBytes(%s) \n }", innerCode)
+			code := fmt.Sprintf(`
+                  fun test(): Address {
+                      return Address.fromBytes(%s)
+                  }
+            	`,
+				innerCode,
+			)
 
 			inter := parseCheckAndInterpret(t, code)
 			_, err := inter.Invoke("test")
