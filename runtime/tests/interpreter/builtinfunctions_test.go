@@ -153,11 +153,17 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 
 	t.Parallel()
 
-	runAddressTest := func(t *testing.T, expected []byte, innerCode string) {
+	runValidCase := func(t *testing.T, expected []byte, innerCode string) {
 		t.Run(innerCode, func(t *testing.T) {
 			t.Parallel()
 
-			code := fmt.Sprintf("fun test(): Address { \n return Address.fromBytes(%s) \n }", innerCode)
+			code := fmt.Sprintf(`
+                  fun test(): Address {
+                      return Address.fromBytes(%s)
+                  }
+            	`,
+				innerCode,
+			)
 
 			inter := parseCheckAndInterpret(t, code)
 			res, err := inter.Invoke("test")
@@ -171,16 +177,32 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 		})
 	}
 
-	runAddressTest(t, []byte{1}, "[1]")
-	runAddressTest(t, []byte{12, 34, 56}, "[12, 34, 56]")
-	runAddressTest(t, []byte{67, 97, 100, 101, 110, 99, 101, 33}, "[67, 97, 100, 101, 110, 99, 101, 33]")
-}
+	runValidRoundTripCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
 
-func TestInterpretAddressFromBytesInvalid(t *testing.T) {
+			code := fmt.Sprintf(`
+                  fun test(): Bool {
+                    let address : Address = %s;
+					return address == Address.fromBytes(address.toBytes());
+                  }
+            	`,
+				innerCode,
+			)
 
-	t.Parallel()
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
 
-	runAddressTest := func(t *testing.T, innerCode string) {
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.True(t, bool(boolVal))
+		})
+	}
+
+	runInvalidCase := func(t *testing.T, innerCode string) {
 		t.Run(innerCode, func(t *testing.T) {
 			t.Parallel()
 
@@ -199,7 +221,15 @@ func TestInterpretAddressFromBytesInvalid(t *testing.T) {
 		})
 	}
 
-	runAddressTest(t, "[12, 34, 56, 11, 22, 33, 44, 55, 66, 77, 88, 99, 111]")
+	runValidCase(t, []byte{1}, "[1]")
+	runValidCase(t, []byte{12, 34, 56}, "[12, 34, 56]")
+	runValidCase(t, []byte{67, 97, 100, 101, 110, 99, 101, 33}, "[67, 97, 100, 101, 110, 99, 101, 33]")
+
+	runValidRoundTripCase(t, "0x436164656E636521")
+	runValidRoundTripCase(t, "0x01")
+	runValidRoundTripCase(t, "0x46716465AE633188")
+
+	runInvalidCase(t, "[12, 34, 56, 11, 22, 33, 44, 55, 66, 77, 88, 99, 111]")
 }
 
 func TestInterpretToBigEndianBytes(t *testing.T) {
