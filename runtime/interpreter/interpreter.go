@@ -2492,8 +2492,11 @@ type ValueConverterDeclaration struct {
 	max             Value
 	convert         func(*Interpreter, Value, LocationRange) Value
 	functionType    *sema.FunctionType
-	nestedVariables map[string]Value
-	name            string
+	nestedVariables []struct {
+		Name  string
+		Value Value
+	}
+	name string
 }
 
 // It would be nice if return types in Go's function types would be covariant
@@ -2681,12 +2684,16 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
 			return ConvertAddress(interpreter, value, locationRange)
 		},
-		nestedVariables: map[string]Value{
-			sema.AddressTypeFromBytesFunctionName: NewUnmeteredHostFunctionValue(
+		nestedVariables: []struct {
+			Name  string
+			Value Value
+		}{{
+			Name: sema.AddressTypeFromBytesFunctionName,
+			Value: NewUnmeteredHostFunctionValue(
 				sema.AddressConversionFunctionType,
 				AddressFromBytes,
 			),
-		},
+		}},
 	},
 	{
 		name:         sema.PublicPathType.Name,
@@ -3064,8 +3071,8 @@ var converterFunctionValues = func() []converterFunction {
 		addMember(sema.FromStringFunctionName, fromStringVal.hostFunction)
 
 		if declaration.nestedVariables != nil {
-			for name, variable := range declaration.nestedVariables {
-				addMember(name, variable)
+			for _, variable := range declaration.nestedVariables {
+				addMember(variable.Name, variable.Value)
 			}
 		}
 
