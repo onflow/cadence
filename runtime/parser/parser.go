@@ -527,7 +527,14 @@ func (p *parser) endAmbiguity() {
 	}
 }
 
-func ParseExpression(memoryGauge common.MemoryGauge, input []byte, config Config) (expression ast.Expression, errs []error) {
+func ParseExpression(
+	memoryGauge common.MemoryGauge,
+	input []byte,
+	config Config,
+) (
+	expression ast.Expression,
+	errs []error,
+) {
 	return Parse(
 		memoryGauge,
 		input,

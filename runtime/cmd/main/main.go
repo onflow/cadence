@@ -46,6 +46,10 @@ func main() {
 
 		execute.Execute(os.Args[1:], debugger)
 	} else {
-		execute.RunREPL()
+		repl, err := execute.NewConsoleREPL()
+		if err != nil {
+			panic(err)
+		}
+		repl.Run()
 	}
 }

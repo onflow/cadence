@@ -24,17 +24,16 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-func colorizeResult(value interpreter.Value) string {
-	str := value.String()
-	return aurora.Colorize(str, aurora.YellowFg|aurora.BrightFg).String()
+func colorizeResult(result string) string {
+	return aurora.Colorize(result, aurora.YellowFg|aurora.BrightFg).String()
 }
 
-func formatValue(value interpreter.Value) string {
+func colorizeValue(value interpreter.Value) string {
 	if value == nil {
 		return ""
 	}
 
-	return colorizeResult(value)
+	return colorizeResult(value.String())
 }
 
 func colorizeError(message string) string {
