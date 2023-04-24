@@ -13748,6 +13748,7 @@ func TestDecodeInvalidData(t *testing.T) {
 
 	test := func(tc testCase) {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			decodedVal, err := ccf.Decode(nil, tc.data)
 			require.Nil(t, decodedVal)
 			require.Error(t, err)
