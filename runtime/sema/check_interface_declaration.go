@@ -55,6 +55,13 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	inheritedTypes := map[string]Type{}
 
 	for _, conformance := range interfaceType.EffectiveInterfaceConformances() {
+		if conformance.InterfaceType == interfaceType {
+			checker.report(CyclicConformanceError{
+				InterfaceType: interfaceType,
+				Range:         ast.NewRangeFromPositioned(checker.memoryGauge, declaration.Identifier),
+			})
+		}
+
 		checker.checkInterfaceConformance(
 			declaration,
 			interfaceType,

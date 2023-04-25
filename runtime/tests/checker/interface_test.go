@@ -3187,6 +3187,35 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("cyclic conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo: Baz {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            struct interface Bar: Foo {}
+
+            struct interface Baz: Bar {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 3)
+
+		conformanceError := sema.CyclicConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Equal(t, "Foo", conformanceError.InterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Equal(t, "Bar", conformanceError.InterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[2], &conformanceError)
+		assert.Equal(t, "Baz", conformanceError.InterfaceType.QualifiedIdentifier())
+	})
 }
 
 func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {

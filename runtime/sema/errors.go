@@ -1434,6 +1434,26 @@ func (e *DuplicateConformanceError) Error() string {
 	)
 }
 
+// CyclicConformanceError
+type CyclicConformanceError struct {
+	InterfaceType *InterfaceType
+	ast.Range
+}
+
+var _ SemanticError = CyclicConformanceError{}
+var _ errors.UserError = CyclicConformanceError{}
+
+func (CyclicConformanceError) isSemanticError() {}
+
+func (CyclicConformanceError) IsUserError() {}
+
+func (e CyclicConformanceError) Error() string {
+	return fmt.Sprintf(
+		"`%s` has a cyclic conformance to itself",
+		e.InterfaceType.QualifiedString(),
+	)
+}
+
 // MultipleInterfaceDefaultImplementationsError
 type MultipleInterfaceDefaultImplementationsError struct {
 	CompositeType CompositeKindedType
