@@ -221,12 +221,14 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 		})
 	}
 
+	runValidCase(t, []byte{}, "[]")
 	runValidCase(t, []byte{1}, "[1]")
 	runValidCase(t, []byte{12, 34, 56}, "[12, 34, 56]")
 	runValidCase(t, []byte{67, 97, 100, 101, 110, 99, 101, 33}, "[67, 97, 100, 101, 110, 99, 101, 33]")
 
-	runValidRoundTripCase(t, "0x436164656E636521")
+	runValidRoundTripCase(t, "0x0")
 	runValidRoundTripCase(t, "0x01")
+	runValidRoundTripCase(t, "0x436164656E636521")
 	runValidRoundTripCase(t, "0x46716465AE633188")
 
 	runInvalidCase(t, "[12, 34, 56, 11, 22, 33, 44, 55, 66, 77, 88, 99, 111]")
