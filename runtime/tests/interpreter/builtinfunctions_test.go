@@ -218,7 +218,7 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 			_, err := inter.Invoke("test")
 
 			RequireError(t, err)
-			require.ErrorAs(t, err, &common.AddressOverflowError)
+			require.ErrorIs(t, err, common.AddressOverflowError)
 		})
 	}
 
