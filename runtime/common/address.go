@@ -25,7 +25,7 @@ import (
 	"strings"
 )
 
-var addressOverflowError = goErrors.New("address too large")
+var AddressOverflowError = goErrors.New("address too large")
 
 const AddressLength = 8
 
@@ -50,7 +50,7 @@ func MustBytesToAddress(b []byte) Address {
 // If the address is too large, then the function returns an error.
 func BytesToAddress(b []byte) (Address, error) {
 	if len(b) > AddressLength {
-		return Address{}, addressOverflowError
+		return Address{}, AddressOverflowError
 	}
 	var a Address
 	a.SetBytes(b)
