@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,10 +33,10 @@ type Stop struct {
 }
 
 type Debugger struct {
-	pauseRequested uint32
 	stops          chan Stop
 	continues      chan struct{}
 	breakpoints    map[common.Location]*bitset.BitSet
+	pauseRequested uint32
 }
 
 func NewDebugger() *Debugger {
@@ -69,7 +69,7 @@ func (d *Debugger) RemoveBreakpoint(location common.Location, line uint) {
 }
 
 func (d *Debugger) ClearBreakpoints() {
-	for location := range d.breakpoints { //nolint:maprangecheck
+	for location := range d.breakpoints { //nolint:maprange
 		delete(d.breakpoints, location)
 	}
 }

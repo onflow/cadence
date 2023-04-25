@@ -3,7 +3,11 @@ title: Built-in Functions
 ---
 
 ## panic
-`cadence•fun panic(_ message: String): Never`
+#
+
+```cadence
+fun panic(_ message: String): Never
+```
 
   Terminates the program unconditionally
   and reports a message which explains why the unrecoverable error occurred.
@@ -15,7 +19,9 @@ title: Built-in Functions
 
 ## assert
 
-`cadence•fun assert(_ condition: Bool, message: String)`
+```cadence
+fun assert(_ condition: Bool, message: String)
+```
 
   Terminates the program if the given condition is false,
   and reports a message which explains how the condition is false.
@@ -25,14 +31,36 @@ title: Built-in Functions
 
 ## unsafeRandom
 
-`cadence•fun unsafeRandom(): UInt64`
+```cadence
+fun unsafeRandom(): UInt64
+```
 
   Returns a pseudo-random number.
 
-  NOTE: The use of this function is unsafe if not used correctly.
+  NOTE: 
+  Smart contract developers should be mindful about the limitations of unsafeRandom. 
+  The stream of random numbers produced is potentially unsafe in the following two regards:
 
-  Follow [best practices](https://consensys.github.io/smart-contract-best-practices/development-recommendations/general/public-data/)
-  to prevent security issues when using this function.
+  1. The sequence of random numbers is potentially predictable by transactions within the same block
+  and by other smart contracts calling into your smart contract.
+  2. A transaction calling into your smart contract can potentially bias the sequence of random numbers which
+  your smart contract internally generates. 
+  
+  We are working towards removing these limitations incrementally. Once these points are addressed, 
+  Flow’s randomness is safe and we will remove the "unsafe" qualifier.
+
+  Nevertheless, there is an additional safety-relevant aspect that developers need to be mindful about:
+
+  * A transaction can atomically revert all its action at any time. Therefore, it is possible for a transaction calling into
+  your smart contract to post-select favourable results and revert the transaction for unfavourable results.
+  ([example](https://consensys.github.io/smart-contract-best-practices/development-recommendations/general/public-data/))
+
+  This limitation is inherent to any smart contract platform that allows transactions to roll back atomically and cannot be
+  solved through safe randomness alone.  Providing additional Cadence language primitives to simplify this challenge for
+  developers is on our roadmap as well. Nevertheless, with safe randomness (points 1 and 2 above resolved), developers can prevent
+  clients from post-select favourable outcomes using approaches such as described in the
+  [example](https://consensys.github.io/smart-contract-best-practices/development-recommendations/general/public-data/).
+
 
 ## RLP
 
@@ -40,16 +68,22 @@ RLP (Recursive Length Prefix) serialization allows the encoding of arbitrarily n
 
 Cadence provides RLP decoding functions in the built-in `RLP` contract, which does not need to be imported.
 
-- `cadence•fun decodeString(_ input: [UInt8]): [UInt8]`
+-
+    ```cadence
+    fun decodeString(_ input: [UInt8]): [UInt8]
+    ```
 
-  Decodes an RLP-encoded byte array (called string in the context of RLP).
-  The byte array should only contain of a single encoded value for a string; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
-  If any error is encountered while decoding, the program aborts.
+    Decodes an RLP-encoded byte array (called string in the context of RLP).
+    The byte array should only contain of a single encoded value for a string; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
+    If any error is encountered while decoding, the program aborts.
 
 
-- `cadence•fun decodeList(_ input: [UInt8]): [[UInt8]]`
+ 
+    ```cadence
+    fun decodeList(_ input: [UInt8]): [[UInt8]]`
+    ```
 
-  Decodes an RLP-encoded list into an array of RLP-encoded items.
-  Note that this function does not recursively decode, so each element of the resulting array is RLP-encoded data.
-  The byte array should only contain of a single encoded value for a list; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
-  If any error is encountered while decoding, the program aborts.
+    Decodes an RLP-encoded list into an array of RLP-encoded items.
+    Note that this function does not recursively decode, so each element of the resulting array is RLP-encoded data.
+    The byte array should only contain of a single encoded value for a list; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
+    If any error is encountered while decoding, the program aborts.

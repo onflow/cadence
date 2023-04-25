@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import (
 // InvalidMagicError is returned when the WASM binary
 // does not start with the magic byte sequence
 type InvalidMagicError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidMagicError) Error() string {
@@ -43,8 +43,8 @@ func (e InvalidMagicError) Unwrap() error {
 // InvalidMagicError is returned when the WASM binary
 // does not have the expected version
 type InvalidVersionError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidVersionError) Error() string {
@@ -61,9 +61,9 @@ func (e InvalidVersionError) Unwrap() error {
 // InvalidSectionIDError is returned when the WASM binary specifies
 // an invalid section ID
 type InvalidSectionIDError struct {
+	ReadError error
 	Offset    int
 	SectionID sectionID
-	ReadError error
 }
 
 func (e InvalidSectionIDError) Error() string {
@@ -111,8 +111,8 @@ func (e InvalidSectionOrderError) Error() string {
 // InvalidSectionSizeError is returned when the WASM binary specifies
 // an invalid section size
 type InvalidSectionSizeError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidSectionSizeError) Error() string {
@@ -130,9 +130,9 @@ func (e InvalidSectionSizeError) Unwrap() error {
 // InvalidValTypeError is returned when the WASM binary specifies
 // an invalid value type
 type InvalidValTypeError struct {
+	ReadError error
 	Offset    int
 	ValType   ValueType
-	ReadError error
 }
 
 func (e InvalidValTypeError) Error() string {
@@ -150,9 +150,9 @@ func (e InvalidValTypeError) Unwrap() error {
 // InvalidFuncTypeIndicatorError is returned when the WASM binary specifies
 // an invalid function type indicator
 type InvalidFuncTypeIndicatorError struct {
+	ReadError         error
 	Offset            int
 	FuncTypeIndicator byte
-	ReadError         error
 }
 
 func (e InvalidFuncTypeIndicatorError) Error() string {
@@ -171,8 +171,8 @@ func (e InvalidFuncTypeIndicatorError) Unwrap() error {
 // InvalidFuncTypeParameterCountError is returned when the WASM binary specifies
 // an invalid func type parameter count
 type InvalidFuncTypeParameterCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidFuncTypeParameterCountError) Error() string {
@@ -189,8 +189,8 @@ func (e InvalidFuncTypeParameterCountError) Unwrap() error {
 // InvalidFuncTypeParameterTypeError is returned when the WASM binary specifies
 // an invalid function type parameter type
 type InvalidFuncTypeParameterTypeError struct {
-	Index     int
 	ReadError error
+	Index     int
 }
 
 func (e InvalidFuncTypeParameterTypeError) Error() string {
@@ -207,8 +207,8 @@ func (e InvalidFuncTypeParameterTypeError) Unwrap() error {
 // InvalidFuncTypeResultCountError is returned when the WASM binary specifies
 // an invalid func type result count
 type InvalidFuncTypeResultCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidFuncTypeResultCountError) Error() string {
@@ -225,8 +225,8 @@ func (e InvalidFuncTypeResultCountError) Unwrap() error {
 // InvalidFuncTypeResultTypeError is returned when the WASM binary specifies
 // an invalid function type result type
 type InvalidFuncTypeResultTypeError struct {
-	Index     int
 	ReadError error
+	Index     int
 }
 
 func (e InvalidFuncTypeResultTypeError) Error() string {
@@ -243,8 +243,8 @@ func (e InvalidFuncTypeResultTypeError) Unwrap() error {
 // InvalidTypeSectionTypeCountError is returned when the WASM binary specifies
 // an invalid count in the type section
 type InvalidTypeSectionTypeCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidTypeSectionTypeCountError) Error() string {
@@ -261,8 +261,8 @@ func (e InvalidTypeSectionTypeCountError) Unwrap() error {
 // InvalidImportSectionImportCountError is returned when the WASM binary specifies
 // an invalid count in the import section
 type InvalidImportSectionImportCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidImportSectionImportCountError) Error() string {
@@ -279,8 +279,8 @@ func (e InvalidImportSectionImportCountError) Unwrap() error {
 // InvalidImportError is returned when the WASM binary specifies
 // invalid import in the import section
 type InvalidImportError struct {
-	Index     int
 	ReadError error
+	Index     int
 }
 
 func (e InvalidImportError) Error() string {
@@ -297,9 +297,9 @@ func (e InvalidImportError) Unwrap() error {
 // InvalidImportIndicatorError is returned when the WASM binary specifies
 // an invalid type indicator in the import section
 type InvalidImportIndicatorError struct {
+	ReadError       error
 	Offset          int
 	ImportIndicator importIndicator
-	ReadError       error
 }
 
 func (e InvalidImportIndicatorError) Error() string {
@@ -317,8 +317,8 @@ func (e InvalidImportIndicatorError) Unwrap() error {
 // InvalidImportSectionTypeIndexError is returned when the WASM binary specifies
 // an invalid type index in the import section
 type InvalidImportSectionTypeIndexError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidImportSectionTypeIndexError) Error() string {
@@ -335,8 +335,8 @@ func (e InvalidImportSectionTypeIndexError) Unwrap() error {
 // InvalidFunctionSectionFunctionCountError is returned when the WASM binary specifies
 // an invalid count in the function section
 type InvalidFunctionSectionFunctionCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidFunctionSectionFunctionCountError) Error() string {
@@ -353,9 +353,9 @@ func (e InvalidFunctionSectionFunctionCountError) Unwrap() error {
 // InvalidFunctionSectionTypeIndexError is returned when the WASM binary specifies
 // an invalid type index in the function section
 type InvalidFunctionSectionTypeIndexError struct {
+	ReadError error
 	Offset    int
 	Index     int
-	ReadError error
 }
 
 func (e InvalidFunctionSectionTypeIndexError) Error() string {
@@ -386,8 +386,8 @@ func (e FunctionCountMismatchError) Error() string {
 // InvalidExportSectionExportCountError is returned when the WASM binary specifies
 // an invalid count in the export section
 type InvalidExportSectionExportCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidExportSectionExportCountError) Error() string {
@@ -404,8 +404,8 @@ func (e InvalidExportSectionExportCountError) Unwrap() error {
 // InvalidExportError is returned when the WASM binary specifies
 // invalid export in the export section
 type InvalidExportError struct {
-	Index     int
 	ReadError error
+	Index     int
 }
 
 func (e InvalidExportError) Error() string {
@@ -422,9 +422,9 @@ func (e InvalidExportError) Unwrap() error {
 // InvalidExportIndicatorError is returned when the WASM binary specifies
 // an invalid type indicator in the export section
 type InvalidExportIndicatorError struct {
+	ReadError       error
 	Offset          int
 	ExportIndicator exportIndicator
-	ReadError       error
 }
 
 func (e InvalidExportIndicatorError) Error() string {
@@ -442,8 +442,8 @@ func (e InvalidExportIndicatorError) Unwrap() error {
 // InvalidExportSectionIndexError is returned when the WASM binary specifies
 // an invalid index in the export section
 type InvalidExportSectionIndexError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidExportSectionIndexError) Error() string {
@@ -460,8 +460,8 @@ func (e InvalidExportSectionIndexError) Unwrap() error {
 // InvalidCodeSectionFunctionCountError is returned when the WASM binary specifies
 // an invalid function count in the code section
 type InvalidCodeSectionFunctionCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidCodeSectionFunctionCountError) Error() string {
@@ -478,8 +478,8 @@ func (e InvalidCodeSectionFunctionCountError) Unwrap() error {
 // InvalidFunctionCodeError is returned when the WASM binary specifies
 // invalid code for a function in the code section
 type InvalidFunctionCodeError struct {
-	Index     int
 	ReadError error
+	Index     int
 }
 
 func (e InvalidFunctionCodeError) Error() string {
@@ -496,8 +496,8 @@ func (e InvalidFunctionCodeError) Unwrap() error {
 // InvalidCodeSizeError is returned when the WASM binary specifies
 // an invalid code size in the code section
 type InvalidCodeSizeError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidCodeSizeError) Error() string {
@@ -510,8 +510,8 @@ func (e InvalidCodeSizeError) Error() string {
 // InvalidCodeSectionLocalsCountError is returned when the WASM binary specifies
 // an invalid locals count in the code section
 type InvalidCodeSectionLocalsCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidCodeSectionLocalsCountError) Error() string {
@@ -528,8 +528,8 @@ func (e InvalidCodeSectionLocalsCountError) Unwrap() error {
 // InvalidCodeSectionCompressedLocalsCountError is returned when the WASM binary specifies
 // an invalid local type in the code section
 type InvalidCodeSectionCompressedLocalsCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidCodeSectionCompressedLocalsCountError) Error() string {
@@ -546,8 +546,8 @@ func (e InvalidCodeSectionCompressedLocalsCountError) Unwrap() error {
 // InvalidCodeSectionLocalTypeError is returned when the WASM binary specifies
 // an invalid local type in the code section
 type InvalidCodeSectionLocalTypeError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidCodeSectionLocalTypeError) Error() string {
@@ -582,9 +582,9 @@ func (e CodeSectionLocalsCountMismatchError) Error() string {
 // InvalidOpcodeError is returned when the WASM binary specifies
 // an invalid opcode in the code section
 type InvalidOpcodeError struct {
+	ReadError error
 	Offset    int
 	Opcode    opcode
-	ReadError error
 }
 
 func (e InvalidOpcodeError) Error() string {
@@ -602,8 +602,8 @@ func (e InvalidOpcodeError) Unwrap() error {
 // InvalidInstructionArgumentError is returned when the WASM binary specifies
 // an invalid argument for an instruction in the code section
 type InvalidInstructionArgumentError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidInstructionArgumentError) Error() string {
@@ -648,8 +648,8 @@ func (e InvalidNonUTF8NameError) Error() string {
 // InvalidNameLengthError is returned the WASM binary specifies
 // an invalid name length
 type InvalidNameLengthError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidNameLengthError) Error() string {
@@ -666,8 +666,8 @@ func (e InvalidNameLengthError) Unwrap() error {
 // InvalidNameError is returned the WASM binary specifies
 // an invalid name
 type InvalidNameError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidNameError) Error() string {
@@ -715,8 +715,8 @@ func (e InvalidBlockSecondInstructionsError) Error() string {
 // InvalidInstructionVectorArgumentCountError is returned when the WASM binary specifies
 // an invalid count for a vector argument of an instruction
 type InvalidInstructionVectorArgumentCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidInstructionVectorArgumentCountError) Error() string {
@@ -748,8 +748,8 @@ func (e InvalidBlockTypeTypeIndexError) Error() string {
 // InvalidDataSectionSegmentCountError is returned when the WASM binary specifies
 // an invalid count in the data section
 type InvalidDataSectionSegmentCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidDataSectionSegmentCountError) Error() string {
@@ -766,8 +766,8 @@ func (e InvalidDataSectionSegmentCountError) Unwrap() error {
 // InvalidDataSegmentError is returned when the WASM binary specifies
 // invalid segment in the data section
 type InvalidDataSegmentError struct {
-	Index     int
 	ReadError error
+	Index     int
 }
 
 func (e InvalidDataSegmentError) Error() string {
@@ -784,8 +784,8 @@ func (e InvalidDataSegmentError) Unwrap() error {
 // InvalidDataSectionMemoryIndexError is returned when the WASM binary specifies
 // an invalid memory index in the data section
 type InvalidDataSectionMemoryIndexError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidDataSectionMemoryIndexError) Error() string {
@@ -802,8 +802,8 @@ func (e InvalidDataSectionMemoryIndexError) Unwrap() error {
 // InvalidDataSectionInitByteCountError is returned when the WASM binary specifies
 // an invalid init byte count in the data section
 type InvalidDataSectionInitByteCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidDataSectionInitByteCountError) Error() string {
@@ -820,8 +820,8 @@ func (e InvalidDataSectionInitByteCountError) Unwrap() error {
 // InvalidMemorySectionMemoryCountError is returned when the WASM binary specifies
 // an invalid count in the memory section
 type InvalidMemorySectionMemoryCountError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidMemorySectionMemoryCountError) Error() string {
@@ -838,8 +838,8 @@ func (e InvalidMemorySectionMemoryCountError) Unwrap() error {
 // InvalidMemoryError is returned when the WASM binary specifies
 // invalid memory in the memory section
 type InvalidMemoryError struct {
-	Index     int
 	ReadError error
+	Index     int
 }
 
 func (e InvalidMemoryError) Error() string {
@@ -856,9 +856,9 @@ func (e InvalidMemoryError) Unwrap() error {
 // InvalidLimitIndicatorError is returned when the WASM binary specifies
 // an invalid limit indicator
 type InvalidLimitIndicatorError struct {
+	ReadError      error
 	Offset         int
 	LimitIndicator byte
-	ReadError      error
 }
 
 func (e InvalidLimitIndicatorError) Error() string {
@@ -876,8 +876,8 @@ func (e InvalidLimitIndicatorError) Unwrap() error {
 // InvalidLimitMinError is returned when the WASM binary specifies
 // an invalid limit minimum
 type InvalidLimitMinError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidLimitMinError) Error() string {
@@ -894,8 +894,8 @@ func (e InvalidLimitMinError) Unwrap() error {
 // InvalidLimitMaxError is returned when the WASM binary specifies
 // an invalid limit maximum
 type InvalidLimitMaxError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidLimitMaxError) Error() string {
@@ -912,8 +912,8 @@ func (e InvalidLimitMaxError) Unwrap() error {
 // InvalidStartSectionFunctionIndexError is returned when the WASM binary specifies
 // an invalid function index in the start section
 type InvalidStartSectionFunctionIndexError struct {
-	Offset    int
 	ReadError error
+	Offset    int
 }
 
 func (e InvalidStartSectionFunctionIndexError) Error() string {

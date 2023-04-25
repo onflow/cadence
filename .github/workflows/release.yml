@@ -1,0 +1,81 @@
+# This workflow automates the release process.
+# It follows the below steps:
+#   - Bump the version to the target release version
+#   - Run tests and lint
+#   - Create and push a branch `release/v<version>` with version bump changes
+#   - Open a PR from `release/<version>` branch to `master`
+#   - Create and push a release tag with name `v<version>`
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+      base:
+        description: 'Base branch for the release'
+        required: true
+        default: 'master'
+
+env:
+  GO_VERSION: '1.19.2'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: "${{ github.event.inputs.version }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install wabt
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.base }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      # Unify the version to the format `v0.1.0`.
+      # This is to support both version formats: `0.1.0` and `v0.1.0`.
+      - name: Cleanup version
+        id: version-gen
+        run: echo "version=v`(echo "${{ github.event.inputs.version }}" | sed -Ee 's/^v//')`" >> $GITHUB_OUTPUT
+
+      - name: Bump Version
+        run: make release bump=${{ steps.version-gen.outputs.version }}
+
+      - name: Run Tests
+        run: |
+          make ci
+          make lint-github-actions
+
+      - name: Config git
+        run: |
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+      - name: Open Pull Request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          branch: release/${{ steps.version-gen.outputs.version }}
+          title: 'Merge `release/${{ steps.version-gen.outputs.version }}` to `${{ inputs.base }}`'
+          commit-message: ${{ steps.version-gen.outputs.version }}
+          body: |
+            Merge `release/${{ steps.version-gen.outputs.version }}` branch to `${{ inputs.base }}`
+
+      - name: Tag and Push
+        run: |
+          git checkout release/${{ steps.version-gen.outputs.version }}
+          git tag ${{ steps.version-gen.outputs.version }}
+          git push origin ${{ steps.version-gen.outputs.version }}

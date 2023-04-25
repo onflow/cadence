@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,15 +39,17 @@ func NewAuthAccountContractsValue(
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
 	getFunction FunctionValue,
+	borrowFunction FunctionValue,
 	removeFunction FunctionValue,
 	namesGetter ContractNamesGetter,
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountContractsTypeAddFunctionName:                addFunction,
-		sema.AuthAccountContractsTypeGetFunctionName:                getFunction,
-		sema.AuthAccountContractsTypeRemoveFunctionName:             removeFunction,
-		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName: updateFunction,
+		sema.AuthAccountContractsTypeAddFunctionName:                  addFunction,
+		sema.AuthAccountContractsTypeGetFunctionName:                  getFunction,
+		sema.AuthAccountContractsTypeBorrowFunctionName:               borrowFunction,
+		sema.AuthAccountContractsTypeRemoveFunctionName:               removeFunction,
+		sema.AuthAccountContractsTypeUpdate__experimentalFunctionName: updateFunction,
 	}
 
 	computeField := func(
@@ -56,7 +58,7 @@ func NewAuthAccountContractsValue(
 		locationRange LocationRange,
 	) Value {
 		switch name {
-		case sema.AuthAccountContractsTypeNamesField:
+		case sema.AuthAccountContractsTypeNamesFieldName:
 			return namesGetter(interpreter, locationRange)
 		}
 		return nil
@@ -93,11 +95,13 @@ func NewPublicAccountContractsValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	getFunction FunctionValue,
+	borrowFunction FunctionValue,
 	namesGetter ContractNamesGetter,
 ) Value {
 
 	fields := map[string]Value{
-		sema.PublicAccountContractsTypeGetFunctionName: getFunction,
+		sema.PublicAccountContractsTypeGetFunctionName:    getFunction,
+		sema.PublicAccountContractsTypeBorrowFunctionName: borrowFunction,
 	}
 
 	computeField := func(
@@ -106,7 +110,7 @@ func NewPublicAccountContractsValue(
 		locationRange LocationRange,
 	) Value {
 		switch name {
-		case sema.PublicAccountContractsTypeNamesField:
+		case sema.PublicAccountContractsTypeNamesFieldName:
 			return namesGetter(interpreter, locationRange)
 		}
 		return nil

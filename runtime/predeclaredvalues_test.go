@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,10 +75,10 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},

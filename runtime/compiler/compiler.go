@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,6 +98,11 @@ func (compiler *Compiler) VisitEmitStatement(_ *ast.EmitStatement) ir.Stmt {
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitRemoveStatement(_ *ast.RemoveStatement) ir.Stmt {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitSwitchStatement(_ *ast.SwitchStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
@@ -110,7 +115,7 @@ func (compiler *Compiler) VisitVariableDeclaration(declaration *ast.VariableDecl
 	// TODO: second value
 
 	identifier := declaration.Identifier.Identifier
-	targetType := compiler.Checker.Elaboration.VariableDeclarationTypes[declaration].TargetType
+	targetType := compiler.Checker.Elaboration.VariableDeclarationTypes(declaration).TargetType
 	valType := compileValueType(targetType)
 	local := compiler.declareLocal(identifier, valType)
 	exp := ast.AcceptExpression[ir.Expr](declaration.Value, compiler)
@@ -214,6 +219,11 @@ func (compiler *Compiler) VisitConditionalExpression(_ *ast.ConditionalExpressio
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitAttachExpression(_ *ast.AttachExpression) ir.Expr {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitUnaryExpression(_ *ast.UnaryExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
@@ -294,7 +304,7 @@ func (compiler *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDecl
 
 	// Declare a local for each parameter
 
-	functionType := compiler.Checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
+	functionType := compiler.Checker.Elaboration.FunctionDeclarationFunctionType(declaration)
 
 	parameters := declaration.ParameterList.Parameters
 
@@ -346,6 +356,11 @@ func (compiler *Compiler) visitBlock(block *ast.Block) ir.Stmt {
 }
 
 func (compiler *Compiler) VisitCompositeDeclaration(_ *ast.CompositeDeclaration) ir.Stmt {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (compiler *Compiler) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }

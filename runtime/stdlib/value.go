@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,13 @@ import (
 )
 
 type StandardLibraryValue struct {
-	Name           string
 	Type           sema.Type
-	DocString      string
 	Value          interpreter.Value
-	Kind           common.DeclarationKind
 	Position       *ast.Position
+	Name           string
+	DocString      string
 	ArgumentLabels []string
+	Kind           common.DeclarationKind
 }
 
 func (v StandardLibraryValue) ValueDeclarationName() string {

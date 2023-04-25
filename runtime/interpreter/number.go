@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,9 @@ func OverEstimateNumberStringLength(memoryGauge common.MemoryGauge, value Number
 		)
 
 	case NumberValue:
-		return OverEstimateIntStringLength(value.ToInt())
+		// this is only used for memory metering, so use an `EmptyLocationRange`
+		// here to avoid needing a `LocationRange` argument to `MeteredString`
+		return OverEstimateIntStringLength(value.ToInt(EmptyLocationRange))
 
 	default:
 		panic(errors.NewUnreachableError())

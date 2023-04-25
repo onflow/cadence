@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ func PrepareProgramFromFile(location common.StringLocation, codes map[common.Loc
 func PrepareProgram(code []byte, location common.Location, codes map[common.Location][]byte) (*ast.Program, func(error)) {
 	must := mustClosure(location, codes)
 
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(nil, code, parser.Config{})
 	codes[location] = code
 	must(err)
 
@@ -85,6 +85,9 @@ func DefaultCheckerConfig(
 	checkers map[common.Location]*sema.Checker,
 	codes map[common.Location][]byte,
 ) *sema.Config {
+	// NOTE: declarations here only create a nil binding in the checker environment,
+	// not a definition that the interpreter can follow. (see #2106 and #2109)
+	// remember to also implement all definitions, e.g. for the `REPL` in `NewREPL`
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.NewLogFunction(StandardOutputLogger{}))
 
@@ -96,9 +99,10 @@ func DefaultCheckerConfig(
 			importedLocation common.Location,
 			_ ast.Range,
 		) (sema.Import, error) {
-			if importedLocation == stdlib.CryptoChecker.Location {
+			if importedLocation == stdlib.CryptoCheckerLocation {
+				cryptoChecker := stdlib.CryptoChecker()
 				return sema.ElaborationImport{
-					Elaboration: stdlib.CryptoChecker.Elaboration,
+					Elaboration: cryptoChecker.Elaboration,
 				}, nil
 			}
 

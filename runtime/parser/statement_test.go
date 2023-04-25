@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -965,16 +965,6 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
 					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "",
-								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
-							},
-						},
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
 							Range: ast.Range{
@@ -1006,16 +996,6 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 								StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 								EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 							},
-						},
-						ReturnTypeAnnotation: &ast.TypeAnnotation{
-							IsResource: false,
-							Type: &ast.NominalType{
-								Identifier: ast.Identifier{
-									Identifier: "",
-									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
-								},
-							},
-							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
 						FunctionBlock: &ast.FunctionBlock{
 							Block: &ast.Block{
@@ -1119,6 +1099,163 @@ func TestParseStatements(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 						},
 					},
+				},
+			},
+			result,
+		)
+	})
+}
+
+func TestParseRemoveAttachmentStatement(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements("remove A from b")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.RemoveStatement{
+					Attachment: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "A",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "b",
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("namespaced attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements("remove Foo.E from b")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.RemoveStatement{
+					Attachment: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Foo",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+						NestedIdentifiers: []ast.Identifier{
+							{
+								Identifier: "E",
+								Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+							},
+						},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "b",
+							Pos:        ast.Position{Line: 1, Column: 18, Offset: 18},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no from", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseStatements("remove A")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected from keyword, got EOF",
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+				&SyntaxError{
+					Message: "unexpected end of program",
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("no target", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseStatements("remove A from")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected end of program",
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("no nominal type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseStatements("remove [A] from e")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected attachment nominal type, got [A]",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("complex source", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements("remove A from foo()")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.RemoveStatement{
+					Attachment: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "A",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Value: &ast.InvocationExpression{
+						InvokedExpression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+							},
+						},
+						ArgumentsStartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+						EndPos:            ast.Position{Line: 1, Column: 18, Offset: 18},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 				},
 			},
 			result,
@@ -1276,15 +1413,6 @@ func TestParseIfStatementInFunctionDeclaration(t *testing.T) {
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -1487,15 +1615,6 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -1541,15 +1660,6 @@ func TestParseIfStatementNoElse(t *testing.T) {
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -1622,15 +1732,6 @@ func TestParseWhileStatementInFunctionDeclaration(t *testing.T) {
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -1712,15 +1813,6 @@ func TestParseForStatementInFunctionDeclaration(t *testing.T) {
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -1782,15 +1874,6 @@ func TestParseAssignment(t *testing.T) {
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -1855,15 +1938,6 @@ func TestParseAccessAssignment(t *testing.T) {
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -1978,15 +2052,6 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -2088,16 +2153,6 @@ func TestParseMoveStatement(t *testing.T) {
 						EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
-						},
-					},
-					StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -2160,16 +2215,6 @@ func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpre
 						EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-						},
-					},
-					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -2208,16 +2253,6 @@ func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpre
 												StartPos: ast.Position{Offset: 65, Line: 4, Column: 15},
 												EndPos:   ast.Position{Offset: 66, Line: 4, Column: 16},
 											},
-										},
-										ReturnTypeAnnotation: &ast.TypeAnnotation{
-											IsResource: false,
-											Type: &ast.NominalType{
-												Identifier: ast.Identifier{
-													Identifier: "",
-													Pos:        ast.Position{Offset: 66, Line: 4, Column: 16},
-												},
-											},
-											StartPos: ast.Position{Offset: 66, Line: 4, Column: 16},
 										},
 										FunctionBlock: &ast.FunctionBlock{
 											Block: &ast.Block{
@@ -2282,16 +2317,6 @@ func TestParseExpressionStatementAfterReturnStatement(t *testing.T) {
 						EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-						},
-					},
-					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -2352,16 +2377,6 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 						EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-						},
-					},
-					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -2415,4 +2430,65 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 		},
 		result.Declarations(),
 	)
+}
+
+func TestParseStatementsWithWhitespace(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("two statements: variable declaration and parenthesized expression, not one function-call", func(t *testing.T) {
+		t.Parallel()
+
+		const code = `
+          a == b
+          (c)
+	    `
+
+		statements, errs := testParseStatements(code)
+		require.Empty(t, errs)
+
+		require.Len(t, statements, 2)
+	})
+
+	t.Run("two statements: binary expression and array literal, not an indexing expression", func(t *testing.T) {
+		t.Parallel()
+
+		const code = `
+          a == b
+          [c]
+	    `
+
+		statements, errs := testParseStatements(code)
+		require.Empty(t, errs)
+
+		require.Len(t, statements, 2)
+	})
+
+	t.Run("two statements: binary expression and unary prefix negation, not unary postfix force", func(t *testing.T) {
+		t.Parallel()
+
+		const code = `
+          a == b
+          !c == d
+	    `
+
+		statements, errs := testParseStatements(code)
+		require.Empty(t, errs)
+
+		require.Len(t, statements, 2)
+	})
+
+	t.Run("one statement: binary expression, right-hand side with member access", func(t *testing.T) {
+		t.Parallel()
+
+		const code = `
+          a == b
+          .c
+	    `
+
+		statements, errs := testParseStatements(code)
+		require.Empty(t, errs)
+
+		require.Len(t, statements, 1)
+	})
 }

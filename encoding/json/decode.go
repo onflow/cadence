@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,28 +111,30 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey         = "type"
-	kindKey         = "kind"
-	valueKey        = "value"
-	keyKey          = "key"
-	nameKey         = "name"
-	fieldsKey       = "fields"
-	initializersKey = "initializers"
-	idKey           = "id"
-	targetPathKey   = "targetPath"
-	borrowTypeKey   = "borrowType"
-	domainKey       = "domain"
-	identifierKey   = "identifier"
-	staticTypeKey   = "staticType"
-	addressKey      = "address"
-	pathKey         = "path"
-	authorizedKey   = "authorized"
-	sizeKey         = "size"
-	typeIDKey       = "typeID"
-	restrictionsKey = "restrictions"
-	labelKey        = "label"
-	parametersKey   = "parameters"
-	returnKey       = "return"
+	typeKey           = "type"
+	kindKey           = "kind"
+	valueKey          = "value"
+	keyKey            = "key"
+	nameKey           = "name"
+	fieldsKey         = "fields"
+	initializersKey   = "initializers"
+	idKey             = "id"
+	targetPathKey     = "targetPath"
+	borrowTypeKey     = "borrowType"
+	domainKey         = "domain"
+	identifierKey     = "identifier"
+	staticTypeKey     = "staticType"
+	addressKey        = "address"
+	pathKey           = "path"
+	authorizedKey     = "authorized"
+	sizeKey           = "size"
+	typeIDKey         = "typeID"
+	restrictionsKey   = "restrictions"
+	labelKey          = "label"
+	parametersKey     = "parameters"
+	typeParametersKey = "typeParameters"
+	returnKey         = "return"
+	typeBoundKey      = "typeBound"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -215,8 +217,6 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeEvent(valueJSON)
 	case contractTypeStr:
 		return d.decodeContract(valueJSON)
-	case linkTypeStr:
-		return d.decodeLink(valueJSON)
 	case pathTypeStr:
 		return d.decodePath(valueJSON)
 	case typeTypeStr:
@@ -823,57 +823,57 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 	))
 }
 
-func (d *Decoder) decodeLink(valueJSON any) cadence.Link {
-	obj := toObject(valueJSON)
-
-	targetPath, ok := d.decodeJSON(obj.Get(targetPathKey)).(cadence.Path)
-	if !ok {
-		panic(errors.NewDefaultUserError("invalid link: missing or invalid target path"))
-	}
-
-	borrowType := obj.GetString(borrowTypeKey)
-
-	common.UseMemory(d.gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// no need to add 1 to account for empty string: string is metered in Link struct
-		Amount: uint64(len(borrowType)),
-	})
-
-	return cadence.NewMeteredLink(
-		d.gauge,
-		targetPath,
-		borrowType,
-	)
-}
-
 func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 	obj := toObject(valueJSON)
 
-	domain := obj.GetString(domainKey)
-
-	common.UseMemory(d.gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// no need to add 1 to account for empty string: string is metered in Path struct
-		Amount: uint64(len(domain)),
-	})
+	domain := common.PathDomainFromIdentifier(obj.GetString(domainKey))
 
 	identifier := obj.GetString(identifierKey)
-	common.UseMemory(d.gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// no need to add 1 to account for empty string: string is metered in Path struct
-		Amount: uint64(len(identifier)),
-	})
+	common.UseMemory(d.gauge, common.NewRawStringMemoryUsage(len(identifier)))
 
-	return cadence.NewMeteredPath(
+	path, err := cadence.NewMeteredPath(
 		d.gauge,
 		domain,
 		identifier,
 	)
+	if err != nil {
+		panic(errors.NewDefaultUserError("failed to decode path: %w", err))
+	}
+	return path
 }
 
-func (d *Decoder) decodeParamType(valueJSON any, results typeDecodingResults) cadence.Parameter {
+func (d *Decoder) decodeTypeParameter(valueJSON any, results typeDecodingResults) cadence.TypeParameter {
 	obj := toObject(valueJSON)
-	// Unmetered because decodeParamType is metered in decodeParamTypes and called nowhere else
+	// Unmetered because decodeTypeParameter is metered in decodeTypeParameters and called nowhere else
+	typeBoundObj, ok := obj[typeBoundKey]
+	var typeBound cadence.Type
+	if ok {
+		typeBound = d.decodeType(typeBoundObj, results)
+	}
+
+	return cadence.NewTypeParameter(
+		toString(obj.Get(nameKey)),
+		typeBound,
+	)
+}
+
+func (d *Decoder) decodeTypeParameters(typeParams []any, results typeDecodingResults) []cadence.TypeParameter {
+	common.UseMemory(d.gauge, common.MemoryUsage{
+		Kind:   common.MemoryKindCadenceTypeParameter,
+		Amount: uint64(len(typeParams)),
+	})
+	typeParameters := make([]cadence.TypeParameter, 0, len(typeParams))
+
+	for _, param := range typeParams {
+		typeParameters = append(typeParameters, d.decodeTypeParameter(param, results))
+	}
+
+	return typeParameters
+}
+
+func (d *Decoder) decodeParameter(valueJSON any, results typeDecodingResults) cadence.Parameter {
+	obj := toObject(valueJSON)
+	// Unmetered because decodeParameter is metered in decodeParameters and called nowhere else
 	return cadence.NewParameter(
 		toString(obj.Get(labelKey)),
 		toString(obj.Get(idKey)),
@@ -881,7 +881,7 @@ func (d *Decoder) decodeParamType(valueJSON any, results typeDecodingResults) ca
 	)
 }
 
-func (d *Decoder) decodeParamTypes(params []any, results typeDecodingResults) []cadence.Parameter {
+func (d *Decoder) decodeParameters(params []any, results typeDecodingResults) []cadence.Parameter {
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceParameter,
 		Amount: uint64(len(params)),
@@ -889,7 +889,7 @@ func (d *Decoder) decodeParamTypes(params []any, results typeDecodingResults) []
 	parameters := make([]cadence.Parameter, 0, len(params))
 
 	for _, param := range params {
-		parameters = append(parameters, d.decodeParamType(param, results))
+		parameters = append(parameters, d.decodeParameter(param, results))
 	}
 
 	return parameters
@@ -919,16 +919,17 @@ func (d *Decoder) decodeFieldType(valueJSON any, results typeDecodingResults) ca
 	)
 }
 
-func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id any, results typeDecodingResults) cadence.Type {
-	parameters := d.decodeParamTypes(toSlice(parametersValue), results)
+func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, returnValue any, results typeDecodingResults) cadence.Type {
+	typeParameters := d.decodeTypeParameters(toSlice(typeParametersValue), results)
+	parameters := d.decodeParameters(toSlice(parametersValue), results)
 	returnType := d.decodeType(returnValue, results)
 
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
-		"",
+		typeParameters,
 		parameters,
 		returnType,
-	).WithID(toString(id))
+	)
 }
 
 func (d *Decoder) decodeNominalType(
@@ -943,7 +944,7 @@ func (d *Decoder) decodeNominalType(
 	for _, params := range initializers {
 		inits = append(
 			inits,
-			d.decodeParamTypes(toSlice(params), results),
+			d.decodeParameters(toSlice(params), results),
 		)
 	}
 
@@ -1051,10 +1052,10 @@ func (d *Decoder) decodeNominalType(
 func (d *Decoder) decodeRestrictedType(
 	typeValue any,
 	restrictionsValue []any,
-	typeIDValue string,
 	results typeDecodingResults,
 ) cadence.Type {
 	typ := d.decodeType(typeValue, results)
+
 	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
 	for _, restriction := range restrictionsValue {
 		restrictions = append(restrictions, d.decodeType(restriction, results))
@@ -1062,10 +1063,9 @@ func (d *Decoder) decodeRestrictedType(
 
 	return cadence.NewMeteredRestrictedType(
 		d.gauge,
-		"",
 		typ,
 		restrictions,
-	).WithID(typeIDValue)
+	)
 }
 
 type typeDecodingResults map[string]cadence.Type
@@ -1092,18 +1092,16 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 
 	switch kindValue {
 	case "Function":
-		returnValue := obj.Get(returnKey)
+		typeParametersValue := obj.Get(typeParametersKey)
 		parametersValue := obj.Get(parametersKey)
-		idValue := obj.Get(typeIDKey)
-		return d.decodeFunctionType(returnValue, parametersValue, idValue, results)
+		returnValue := obj.Get(returnKey)
+		return d.decodeFunctionType(typeParametersValue, parametersValue, returnValue, results)
 	case "Restriction":
 		restrictionsValue := obj.Get(restrictionsKey)
-		typeIDValue := toString(obj.Get(typeIDKey))
 		typeValue := obj.Get(typeKey)
 		return d.decodeRestrictedType(
 			typeValue,
 			toSlice(restrictionsValue),
-			typeIDValue,
 			results,
 		)
 	case "Optional":
@@ -1142,107 +1140,111 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Any":
-		return cadence.NewMeteredAnyType(d.gauge)
+		return cadence.TheAnyType
 	case "AnyStruct":
-		return cadence.NewMeteredAnyStructType(d.gauge)
+		return cadence.TheAnyStructType
+	case "AnyStructAttachment":
+		return cadence.TheAnyStructAttachmentType
 	case "AnyResource":
-		return cadence.NewMeteredAnyResourceType(d.gauge)
+		return cadence.TheAnyResourceType
+	case "AnyResourceAttachment":
+		return cadence.TheAnyResourceAttachmentType
 	case "Type":
-		return cadence.NewMeteredMetaType(d.gauge)
+		return cadence.TheMetaType
 	case "Void":
-		return cadence.NewMeteredVoidType(d.gauge)
+		return cadence.TheVoidType
 	case "Never":
-		return cadence.NewMeteredNeverType(d.gauge)
+		return cadence.TheNeverType
 	case "Bool":
-		return cadence.NewMeteredBoolType(d.gauge)
+		return cadence.TheBoolType
 	case "String":
-		return cadence.NewMeteredStringType(d.gauge)
+		return cadence.TheStringType
 	case "Character":
-		return cadence.NewMeteredCharacterType(d.gauge)
+		return cadence.TheCharacterType
 	case "Bytes":
-		return cadence.NewMeteredBytesType(d.gauge)
+		return cadence.TheBytesType
 	case "Address":
-		return cadence.NewMeteredAddressType(d.gauge)
+		return cadence.TheAddressType
 	case "Number":
-		return cadence.NewMeteredNumberType(d.gauge)
+		return cadence.TheNumberType
 	case "SignedNumber":
-		return cadence.NewMeteredSignedNumberType(d.gauge)
+		return cadence.TheSignedNumberType
 	case "Integer":
-		return cadence.NewMeteredIntegerType(d.gauge)
+		return cadence.TheIntegerType
 	case "SignedInteger":
-		return cadence.NewMeteredSignedIntegerType(d.gauge)
+		return cadence.TheSignedIntegerType
 	case "FixedPoint":
-		return cadence.NewMeteredFixedPointType(d.gauge)
+		return cadence.TheFixedPointType
 	case "SignedFixedPoint":
-		return cadence.NewMeteredSignedFixedPointType(d.gauge)
+		return cadence.TheSignedFixedPointType
 	case "Int":
-		return cadence.NewMeteredIntType(d.gauge)
+		return cadence.TheIntType
 	case "Int8":
-		return cadence.NewMeteredInt8Type(d.gauge)
+		return cadence.TheInt8Type
 	case "Int16":
-		return cadence.NewMeteredInt16Type(d.gauge)
+		return cadence.TheInt16Type
 	case "Int32":
-		return cadence.NewMeteredInt32Type(d.gauge)
+		return cadence.TheInt32Type
 	case "Int64":
-		return cadence.NewMeteredInt64Type(d.gauge)
+		return cadence.TheInt64Type
 	case "Int128":
-		return cadence.NewMeteredInt128Type(d.gauge)
+		return cadence.TheInt128Type
 	case "Int256":
-		return cadence.NewMeteredInt256Type(d.gauge)
+		return cadence.TheInt256Type
 	case "UInt":
-		return cadence.NewMeteredUIntType(d.gauge)
+		return cadence.TheUIntType
 	case "UInt8":
-		return cadence.NewMeteredUInt8Type(d.gauge)
+		return cadence.TheUInt8Type
 	case "UInt16":
-		return cadence.NewMeteredUInt16Type(d.gauge)
+		return cadence.TheUInt16Type
 	case "UInt32":
-		return cadence.NewMeteredUInt32Type(d.gauge)
+		return cadence.TheUInt32Type
 	case "UInt64":
-		return cadence.NewMeteredUInt64Type(d.gauge)
+		return cadence.TheUInt64Type
 	case "UInt128":
-		return cadence.NewMeteredUInt128Type(d.gauge)
+		return cadence.TheUInt128Type
 	case "UInt256":
-		return cadence.NewMeteredUInt256Type(d.gauge)
+		return cadence.TheUInt256Type
 	case "Word8":
-		return cadence.NewMeteredWord8Type(d.gauge)
+		return cadence.TheWord8Type
 	case "Word16":
-		return cadence.NewMeteredWord16Type(d.gauge)
+		return cadence.TheWord16Type
 	case "Word32":
-		return cadence.NewMeteredWord32Type(d.gauge)
+		return cadence.TheWord32Type
 	case "Word64":
-		return cadence.NewMeteredWord64Type(d.gauge)
+		return cadence.TheWord64Type
 	case "Fix64":
-		return cadence.NewMeteredFix64Type(d.gauge)
+		return cadence.TheFix64Type
 	case "UFix64":
-		return cadence.NewMeteredUFix64Type(d.gauge)
+		return cadence.TheUFix64Type
 	case "Path":
-		return cadence.NewMeteredPathType(d.gauge)
+		return cadence.ThePathType
 	case "CapabilityPath":
-		return cadence.NewMeteredCapabilityPathType(d.gauge)
+		return cadence.TheCapabilityPathType
 	case "StoragePath":
-		return cadence.NewMeteredStoragePathType(d.gauge)
+		return cadence.TheStoragePathType
 	case "PublicPath":
-		return cadence.NewMeteredPublicPathType(d.gauge)
+		return cadence.ThePublicPathType
 	case "PrivatePath":
-		return cadence.NewMeteredPrivatePathType(d.gauge)
+		return cadence.ThePrivatePathType
 	case "AuthAccount":
-		return cadence.NewMeteredAuthAccountType(d.gauge)
+		return cadence.TheAuthAccountType
 	case "PublicAccount":
-		return cadence.NewMeteredPublicAccountType(d.gauge)
+		return cadence.ThePublicAccountType
 	case "AuthAccount.Keys":
-		return cadence.NewMeteredAuthAccountKeysType(d.gauge)
+		return cadence.TheAuthAccountKeysType
 	case "PublicAccount.Keys":
-		return cadence.NewMeteredPublicAccountKeysType(d.gauge)
+		return cadence.ThePublicAccountKeysType
 	case "AuthAccount.Contracts":
-		return cadence.NewMeteredAuthAccountContractsType(d.gauge)
+		return cadence.TheAuthAccountContractsType
 	case "PublicAccount.Contracts":
-		return cadence.NewMeteredPublicAccountContractsType(d.gauge)
+		return cadence.ThePublicAccountContractsType
 	case "DeployedContract":
-		return cadence.NewMeteredDeployedContractType(d.gauge)
+		return cadence.TheDeployedContractType
 	case "AccountKey":
-		return cadence.NewMeteredAccountKeyType(d.gauge)
+		return cadence.TheAccountKeyType
 	case "Block":
-		return cadence.NewMeteredBlockType(d.gauge)
+		return cadence.TheBlockType
 	default:
 		fieldsValue := obj.Get(fieldsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))
@@ -1267,7 +1269,7 @@ func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 	)
 }
 
-func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
+func (d *Decoder) decodeCapability(valueJSON any) cadence.StorageCapability {
 	obj := toObject(valueJSON)
 
 	path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
@@ -1275,7 +1277,7 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 		panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
 	}
 
-	return cadence.NewMeteredCapability(
+	return cadence.NewMeteredStorageCapability(
 		d.gauge,
 		path,
 		d.decodeAddress(obj.Get(addressKey)),

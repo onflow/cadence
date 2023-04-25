@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ func TestInterpretOptionalResourceBindingWithSecondValue(t *testing.T) {
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
-	require.Equal(t, interpreter.BoolValue(true), result)
+	require.Equal(t, interpreter.TrueValue, result)
 }
 
 func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
@@ -1748,8 +1748,9 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
-					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+					errs := checker.RequireCheckerErrors(t, err, 2)
+					require.IsType(t, &sema.ResourceLossError{}, errs[0])
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 				},
 			},
 		)
@@ -2322,25 +2323,26 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 		address,
 		true,
 		`
-        resource R {
-            pub let id: Int
-    
-            init() {
-                self.id = 1
-            }
-        }
-    
-        fun test() {
-            account.save(<-{0 : <-create R()}, to: /storage/x)
-            let collection = account.borrow<&{Int: R}>(from: /storage/x)!
-    
-            let resourceRef = (&collection[0] as &R?)!
-            let token <- collection.remove(key: 0)
-			
-            let x = resourceRef.id
-            destroy token
-        }                
+          resource R {
+              pub let id: Int
+
+              init() {
+                  self.id = 1
+              }
+          }
+
+          fun test() {
+              account.save(<-{0 : <-create R()}, to: /storage/x)
+              let collection = account.borrow<&{Int: R}>(from: /storage/x)!
+
+              let resourceRef = (&collection[0] as &R?)!
+              let token <- collection.remove(key: 0)
+
+              let x = resourceRef.id
+              destroy token
+          }
         `,
+		sema.Config{},
 	)
 
 	_, err := inter.Invoke("test")
@@ -2358,25 +2360,26 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 		address,
 		true,
 		`
-        resource R {
-            pub let id: Int
-    
-            init() {
-                self.id = 1
-            }
-        }
-    
-        fun test() {
-            account.save(<-[<-create R()], to: /storage/x)
-            let collection = account.borrow<&[R?]>(from: /storage/x)!
-    
-            let resourceRef = (&collection[0] as &R?)!
-            let token <- collection.remove(at: 0)
-			
-            let x = resourceRef.id
-            destroy token
-        }                
+          resource R {
+              pub let id: Int
+
+              init() {
+                  self.id = 1
+              }
+          }
+
+          fun test() {
+              account.save(<-[<-create R()], to: /storage/x)
+              let collection = account.borrow<&[R?]>(from: /storage/x)!
+
+              let resourceRef = (&collection[0] as &R?)!
+              let token <- collection.remove(at: 0)
+
+              let x = resourceRef.id
+              destroy token
+          }
         `,
+		sema.Config{},
 	)
 
 	_, err := inter.Invoke("test")

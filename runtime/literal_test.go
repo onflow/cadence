@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -240,7 +241,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			value,
@@ -256,7 +257,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			value,
@@ -272,7 +273,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			value,
@@ -299,7 +300,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			value,
@@ -348,7 +349,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			value,
@@ -360,7 +361,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			value,
@@ -386,7 +387,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			value,
@@ -419,7 +420,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			value,
@@ -448,7 +449,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Address, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`0x1`, &sema.AddressType{}, newTestInterpreter(t))
+		value, err := ParseLiteral(`0x1`, sema.TheAddressType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
@@ -457,7 +458,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Address, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`1`, &sema.AddressType{}, newTestInterpreter(t))
+		value, err := ParseLiteral(`1`, sema.TheAddressType, newTestInterpreter(t))
 		RequireError(t, err)
 
 		require.Nil(t, value)

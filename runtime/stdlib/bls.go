@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ var blsContractType = func() *sema.CompositeType {
 		Kind:       common.CompositeKindContract,
 	}
 
-	ty.Members = sema.GetMembersAsMap([]*sema.Member{
+	ty.Members = sema.MembersAsMap([]*sema.Member{
 		sema.NewUnmeteredPublicFunctionMember(
 			ty,
 			blsAggregatePublicKeysFunctionName,
@@ -68,7 +68,7 @@ The function returns nil if the array is empty or if decoding one of the signatu
 const blsAggregateSignaturesFunctionName = "aggregateSignatures"
 
 var blsAggregateSignaturesFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "signatures",
@@ -95,7 +95,7 @@ The function returns nil if the array is empty or any of the input keys is not a
 const blsAggregatePublicKeysFunctionName = "aggregatePublicKeys"
 
 var blsAggregatePublicKeysFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "keys",
@@ -124,6 +124,7 @@ func newBLSAggregatePublicKeysFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		blsAggregatePublicKeysFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeysValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -159,7 +160,7 @@ func newBLSAggregatePublicKeysFunction(
 
 			var err error
 			var aggregatedPublicKey *PublicKey
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				aggregatedPublicKey, err = aggregator.BLSAggregatePublicKeys(publicKeys)
 			})
 
@@ -181,7 +182,6 @@ func newBLSAggregatePublicKeysFunction(
 				aggregatedPublicKeyValue,
 			)
 		},
-		blsAggregatePublicKeysFunctionType,
 	)
 }
 
@@ -196,6 +196,7 @@ func newBLSAggregateSignaturesFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		blsAggregateSignaturesFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signaturesValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -218,7 +219,7 @@ func newBLSAggregateSignaturesFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature)
+				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature, invocation.LocationRange)
 				if err != nil {
 					panic(err)
 				}
@@ -231,7 +232,7 @@ func newBLSAggregateSignaturesFunction(
 
 			var err error
 			var aggregatedSignature []byte
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				aggregatedSignature, err = aggregator.BLSAggregateSignatures(bytesArray)
 			})
 
@@ -247,7 +248,6 @@ func newBLSAggregateSignaturesFunction(
 				aggregatedSignatureValue,
 			)
 		},
-		blsAggregateSignaturesFunctionType,
 	)
 }
 

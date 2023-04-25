@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,11 @@ type TypeAnnotationState uint
 const (
 	TypeAnnotationStateUnknown TypeAnnotationState = iota
 	TypeAnnotationStateValid
+	// Resource annotations (@) are invalid on non-resource types (e.g. @Int)
 	TypeAnnotationStateInvalidResourceAnnotation
+	// Resource types must have a resource annotation (@)
 	TypeAnnotationStateMissingResourceAnnotation
+	// attachments types must never appear directly as annotations, and instead
+	// should appear only in reference types: e.g. `&A` or `[&A]`
+	TypeAnnotationStateDirectAttachmentTypeAnnotation
 )

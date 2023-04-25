@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,29 +22,34 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type interpreterTransactionExecutor struct {
-	runtime *interpreterRuntime
-	script  Script
-	context Context
-
-	// prepare
-	preprocessOnce   sync.Once
-	preprocessErr    error
+type interpreterTransactionExecutorPreparation struct {
 	codesAndPrograms codesAndPrograms
+	environment      Environment
+	preprocessErr    error
+	transactionType  *sema.TransactionType
 	storage          *Storage
 	program          *interpreter.Program
-	environment      Environment
-	transactionType  *sema.TransactionType
 	authorizers      []Address
+	preprocessOnce   sync.Once
+}
 
-	// execute
-	executeOnce sync.Once
+type interpreterTransactionExecutorExecution struct {
 	executeErr  error
 	interpret   InterpretFunc
+	executeOnce sync.Once
+}
+
+type interpreterTransactionExecutor struct {
+	context Context
+	interpreterTransactionExecutorExecution
+	runtime *interpreterRuntime
+	script  Script
+	interpreterTransactionExecutorPreparation
 }
 
 func newInterpreterTransactionExecutor(
@@ -140,7 +145,7 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 	executor.transactionType = transactionType
 
 	var authorizers []Address
-	wrapPanic(func() {
+	errors.WrapPanic(func() {
 		authorizers, err = runtimeInterface.GetSigningAccounts()
 	})
 	if err != nil {
@@ -245,6 +250,8 @@ func (executor *interpreterTransactionExecutor) transactionExecutionFunction(
 		defer inter.RecoverErrors(func(internalErr error) {
 			err = internalErr
 		})
+
+		inter.ConfigureAccountLinkingAllowed()
 
 		values, err := validateArgumentParams(
 			inter,

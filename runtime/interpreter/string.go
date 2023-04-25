@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,13 +36,13 @@ func stringFunctionEncodeHex(invocation Invocation) Value {
 
 	inter := invocation.Interpreter
 	memoryUsage := common.NewStringMemoryUsage(
-		safeMul(argument.Count(), 2),
+		safeMul(argument.Count(), 2, invocation.LocationRange),
 	)
 	return NewStringValue(
 		inter,
 		memoryUsage,
 		func() string {
-			bytes, _ := ByteArrayValueToByteSlice(inter, argument)
+			bytes, _ := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
 			return hex.EncodeToString(bytes)
 		},
 	)
@@ -56,7 +56,7 @@ func stringFunctionFromUtf8(invocation Invocation) Value {
 
 	inter := invocation.Interpreter
 	// naively read the entire byte array before validating
-	buf, err := ByteArrayValueToByteSlice(inter, argument)
+	buf, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
 
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -111,10 +111,10 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
 var stringFunction = func() Value {
 	functionValue := NewUnmeteredHostFunctionValue(
+		sema.StringFunctionType,
 		func(invocation Invocation) Value {
 			return emptyString
 		},
-		sema.StringFunctionType,
 	)
 
 	addMember := func(name string, value Value) {
@@ -129,24 +129,24 @@ var stringFunction = func() Value {
 	addMember(
 		sema.StringTypeEncodeHexFunctionName,
 		NewUnmeteredHostFunctionValue(
-			stringFunctionEncodeHex,
 			sema.StringTypeEncodeHexFunctionType,
+			stringFunctionEncodeHex,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromUtf8FunctionName,
 		NewUnmeteredHostFunctionValue(
-			stringFunctionFromUtf8,
 			sema.StringTypeFromUtf8FunctionType,
+			stringFunctionFromUtf8,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromCharactersFunctionName,
 		NewUnmeteredHostFunctionValue(
-			stringFunctionFromCharacters,
 			sema.StringTypeFromCharactersFunctionType,
+			stringFunctionFromCharacters,
 		),
 	)
 

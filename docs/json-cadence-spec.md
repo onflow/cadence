@@ -364,11 +364,17 @@ Composite fields are encoded as a list of name-value pairs in the order in which
 {
   "type": "Capability",
   "value": {
-    "path": "/public/someInteger",
+    "path": {
+      "type": "Path",
+      "value": {
+        "domain": "public",
+        "identifier": "someInteger"
+      }
+    },
     "address": "0x1",
     "borrowType": {
       "kind": "Int"
-    },
+    }
   }
 }
 ```
@@ -416,7 +422,7 @@ These are basic types like `Int`, `String`, or `StoragePath`.
 
 ```json
 {
-  "kind": "Any" | "AnyStruct" | "AnyResource" | "Type" | 
+  "kind": "Any" | "AnyStruct" | "AnyResource" | "AnyStructAttachment" | "AnyResourceAttachment" | "Type" | 
     "Void" | "Never" | "Bool" | "String" | "Character" | 
     "Bytes" | "Address" | "Number" | "SignedNumber" | 
     "Integer" | "SignedInteger" | "FixedPoint" | 

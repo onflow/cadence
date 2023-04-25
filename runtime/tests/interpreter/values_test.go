@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
 
 func TestRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
-		t.SkipNow()
+		t.Skip("smoke tests are disabled")
 	}
 
 	t.Parallel()
@@ -63,7 +63,7 @@ func TestRandomMapOperations(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(nil, false),
+			Elaboration: sema.NewElaboration(nil),
 		},
 		utils.TestLocation,
 		&interpreter.Config{
@@ -357,7 +357,25 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("random insert & remove", func(t *testing.T) {
 		keyValues := make([][2]interpreter.Value, numberOfValues)
 		for i := 0; i < numberOfValues; i++ {
-			keyValues[i][0] = randomHashableValue(inter)
+			// Generate unique key
+			var key interpreter.Value
+			for {
+				key = randomHashableValue(inter)
+
+				var foundConflict bool
+				for j := 0; j < i; j++ {
+					existingKey := keyValues[j][0]
+					if key.(interpreter.EquatableValue).Equal(inter, interpreter.EmptyLocationRange, existingKey) {
+						foundConflict = true
+						break
+					}
+				}
+				if !foundConflict {
+					break
+				}
+			}
+
+			keyValues[i][0] = key
 			keyValues[i][1] = randomStorableValue(inter, 0)
 		}
 
@@ -497,7 +515,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 func TestRandomArrayOperations(t *testing.T) {
 	if !*runSmokeTests {
-		t.SkipNow()
+		t.Skip("smoke tests are disabled")
 	}
 
 	seed := time.Now().UnixNano()
@@ -508,7 +526,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(nil, false),
+			Elaboration: sema.NewElaboration(nil),
 		},
 		utils.TestLocation,
 		&interpreter.Config{
@@ -861,7 +879,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 func TestRandomCompositeValueOperations(t *testing.T) {
 	if !*runSmokeTests {
-		t.SkipNow()
+		t.Skip("smoke tests are disabled")
 	}
 
 	seed := time.Now().UnixNano()
@@ -872,7 +890,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(nil, false),
+			Elaboration: sema.NewElaboration(nil),
 		},
 		utils.TestLocation,
 		&interpreter.Config{
@@ -1070,7 +1088,10 @@ func newCompositeValue(
 	}
 
 	// Add the type to the elaboration, to short-circuit the type-lookup
-	inter.Program.Elaboration.CompositeTypes[compositeType.ID()] = compositeType
+	inter.Program.Elaboration.SetCompositeType(
+		compositeType.ID(),
+		compositeType,
+	)
 
 	testComposite := interpreter.NewCompositeValue(
 		inter,
@@ -1122,7 +1143,7 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 	case Composite:
 		return randomCompositeValue(inter, common.CompositeKindStructure, currentDepth)
 	case Capability:
-		return &interpreter.CapabilityValue{
+		return &interpreter.StorageCapabilityValue{
 			Address: randomAddressValue(),
 			Path:    randomPathValue(),
 			BorrowType: interpreter.ReferenceStaticType{
@@ -1192,12 +1213,13 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// Fixed point
 	case Fix64:
-		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(sign()) * rand.Int63n(sema.Fix64TypeMaxInt))
+		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(sign())*rand.Int63n(sema.Fix64TypeMaxInt), interpreter.EmptyLocationRange)
 	case UFix64:
 		return interpreter.NewUnmeteredUFix64ValueWithInteger(
 			uint64(rand.Int63n(
 				int64(sema.UFix64TypeMaxInt),
 			)),
+			interpreter.EmptyLocationRange,
 		)
 
 	// String
@@ -1209,9 +1231,9 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 		return interpreter.NewUnmeteredStringValue(randomUTF8StringOfSize(size))
 
 	case Bool_True:
-		return interpreter.BoolValue(true)
+		return interpreter.TrueValue
 	case Bool_False:
-		return interpreter.BoolValue(false)
+		return interpreter.FalseValue
 
 	case Address:
 		return randomAddressValue()
@@ -1242,7 +1264,10 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 			Location:    location,
 		}
 
-		inter.Program.Elaboration.CompositeTypes[enumType.ID()] = enumType
+		inter.Program.Elaboration.SetCompositeType(
+			enumType.ID(),
+			enumType,
+		)
 
 		enum := interpreter.NewCompositeValue(
 			inter,
@@ -1256,7 +1281,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 					Value: rawValue,
 				},
 			},
-			common.Address{},
+			common.ZeroAddress,
 		)
 
 		if enum.GetField(inter, interpreter.EmptyLocationRange, sema.EnumRawValueFieldName) == nil {
@@ -1316,7 +1341,7 @@ func randomDictionaryValue(
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		keyValues...,
 	)
 }
@@ -1340,7 +1365,7 @@ func randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpre
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		elements...,
 	)
 }
@@ -1393,7 +1418,10 @@ func randomCompositeValue(
 	}
 
 	// Add the type to the elaboration, to short-circuit the type-lookup
-	inter.Program.Elaboration.CompositeTypes[compositeType.ID()] = compositeType
+	inter.Program.Elaboration.SetCompositeType(
+		compositeType.ID(),
+		compositeType,
+	)
 
 	return interpreter.NewCompositeValue(
 		inter,
@@ -1402,7 +1430,7 @@ func randomCompositeValue(
 		identifier,
 		kind,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 }
 

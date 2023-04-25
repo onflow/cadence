@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -316,6 +317,167 @@ func TestCheckDictionaryValues(t *testing.T) {
 	)
 }
 
+func TestCheckDictionaryEqual(t *testing.T) {
+	t.Parallel()
+
+	testValid := func(name, code string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+			require.NoError(t, err)
+		})
+	}
+
+	assertInvalid := func(name, code string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+		})
+	}
+
+	for _, opStr := range []string{"==", "!="} {
+		testValid(
+			"self_dict_equality",
+			fmt.Sprintf(
+				`
+					fun test(): Bool {
+						let d = {"abc": 1, "def": 2}
+						return d %s d
+					}
+				`,
+				opStr,
+			),
+		)
+
+		testValid(
+			"self_dict_equality_nested_1",
+			fmt.Sprintf(
+				`
+					fun test(): Bool {
+						let d = {"abc": {1: 100, 2: 200}, "def": {4: 400, 5: 500}}
+						return d %s d
+					}
+				`,
+				opStr,
+			),
+		)
+
+		testValid(
+			"self_dict_equality_nested_2",
+			fmt.Sprintf(
+				`
+					fun test(): Bool {
+						let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+						return d %s d
+					}
+				`,
+				opStr,
+			),
+		)
+
+		testValid(
+			"dict_equality_true",
+			fmt.Sprintf(
+				`
+					fun test(): Bool {
+						let d = {"abc": 1, "def": 2}
+						let d2 = {"abc": 1, "def": 2}
+						return d %s d2
+					}
+				`,
+				opStr,
+			),
+		)
+
+		testValid(
+			"dict_equality_true_nested",
+			fmt.Sprintf(
+				`
+					fun test(): Bool {
+						let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+						let d2 = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+						return d %s d2
+					}
+				`,
+				opStr,
+			),
+		)
+
+		testValid(
+			"dict_equality_false",
+			fmt.Sprintf(
+				`
+					fun test(): Bool {
+						let d = {"abc": 1, "def": 2}
+						let d2 = {"abc": 1, "def": 2, "xyz": 4}
+						return d %s d2
+					}
+				`,
+				opStr,
+			),
+		)
+
+		testValid(
+			"dict_equality_false_nested",
+			fmt.Sprintf(
+				`
+					fun test(): Bool {
+						let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+						let d2 = {"abc": {1: {"a": 1000}, 2: {"c": 1000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+						return d %s d2
+					}
+				`,
+				opStr,
+			),
+		)
+
+		assertInvalid("dict_equality_invalid",
+			fmt.Sprintf(
+				`
+					fun test(): Bool {
+						let d = {"abc": 1, "def": 2}
+						let d2 = {1: "abc", 2: "def"}
+						return d %s d2
+					}
+				`,
+				opStr,
+			),
+		)
+
+		assertInvalid(
+			"dict_equality_invalid_nested",
+			fmt.Sprintf(
+				`
+					fun test(): Bool {
+						let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+						let d2 = {"abc": {1: {1000: "a"}, 2: {2000: "b"}}, "def": {4: {1000: "c"}, 5: {2000: "d"}}}
+						return d %s d2
+					}
+				`,
+				opStr,
+			),
+		)
+
+		assertInvalid(
+			"dict_equality_invalid_inner_type_unequatable",
+			fmt.Sprintf(
+				`
+					fun test(): Bool {
+						let d = {"abc": fun (): Void {}}
+						let d2 = {"abc": fun (): Void {}}
+						return d %s d2
+					}
+				`,
+				opStr,
+			),
+		)
+	}
+}
+
 func TestCheckLength(t *testing.T) {
 
 	t.Parallel()
@@ -471,6 +633,107 @@ func TestCheckArrayConcat(t *testing.T) {
     `)
 
 	require.NoError(t, err)
+}
+
+func TestCheckVariableSizedArrayEqual(t *testing.T) {
+	t.Parallel()
+
+	for i := 0; i < 4; i++ {
+		nestingLevel := i
+		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
+
+		for _, opStr := range []string{"==", "!="} {
+			op := opStr
+			testName := fmt.Sprintf("test array %s at nesting level %d", op, nestingLevel)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+				code := fmt.Sprintf(`
+					fun test(): Bool {
+						let xs = %s
+						return xs %s xs
+					}`,
+					array,
+					op,
+				)
+
+				_, err := ParseAndCheck(t, code)
+				require.NoError(t, err)
+			})
+		}
+	}
+}
+
+func TestCheckFixedSizedArrayEqual(t *testing.T) {
+	t.Parallel()
+
+	testValid := func(name, code string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+			require.NoError(t, err)
+		})
+	}
+
+	testValid("[Int; 3]", `
+		fun test(): Bool {
+			let xs: [Int; 3] = [1, 2, 3]
+			return xs == xs
+		}
+	`)
+
+	testValid("[[Int; 3]; 2]", `
+		fun test(): Bool {
+			let xs: [Int; 3] = [1, 2, 3]
+			let ys: [[Int; 3]; 2] = [xs, xs]
+			return ys == ys
+		}
+	`)
+}
+
+func TestCheckInvalidArrayEqual(t *testing.T) {
+	t.Parallel()
+
+	assertInvalid := func(name, innerCode string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n}", innerCode)
+
+			_, err := ParseAndCheck(t, code)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+		})
+	}
+
+	assertInvalid("variable size array", `
+		let xs = [fun(){}]
+		return xs == xs
+	`)
+
+	assertInvalid("fixed size array", `
+		let xs: [((): Void); 1] = [fun(){}]
+		return xs == xs
+	`)
+
+	assertInvalid("fixed size equaling variable-size", `
+		let xs: [Int; 3] = [1, 2, 3]
+		let ys: [Int] = [1, 2, 3]
+		return xs == ys
+	`)
+
+	assertInvalid("fixed size arrays of different lengths", `
+		let xs: [Int; 2] = [42, 1337]
+		let ys: [Int; 3] = [1, 2, 3]
+		return xs == ys
+	`)
+
+	assertInvalid("fixed size arrays of different types", `
+		let xs: [Int; 2] = [42, 1337]
+		let ys: [String; 3] = ["O", "w", "O"]
+		return xs != ys
+	`)
 }
 
 func TestCheckInvalidArrayConcat(t *testing.T) {
@@ -772,8 +1035,8 @@ func TestCheckArrayIndexOfNonEquatableValueArray(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       fun test(): Int? {
-          let x = [[1, 2], [3]]
-          return x.firstIndex(of: [3])
+          let x = [[fun(){}, fun(){}], [fun(){}]]
+          return x.firstIndex(of: [fun(){}])
       }
     `)
 
@@ -851,8 +1114,8 @@ func TestCheckInvalidArrayContainsNotEquatable(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       fun test(): Bool {
-          let z = [[1], [2], [3]]
-          return z.contains([1, 2])
+          let z = [[fun(){}], [fun(){}], [fun(){}]]
+          return z.contains([fun(){}])
       }
     `)
 

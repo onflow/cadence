@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -473,11 +473,11 @@ func TestCheckTopLevelContractRestriction(t *testing.T) {
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				ValidTopLevelDeclarationsHandler: func(_ common.Location) []common.DeclarationKind {
-					return []common.DeclarationKind{
+				ValidTopLevelDeclarationsHandler: func(_ common.Location) common.DeclarationKindSet {
+					return common.NewDeclarationKindSet(
 						common.DeclarationKindContract,
 						common.DeclarationKindImport,
-					}
+					)
 				},
 			},
 		},
@@ -508,12 +508,12 @@ func TestCheckInvalidTopLevelContractRestriction(t *testing.T) {
 				code,
 				ParseAndCheckOptions{
 					Config: &sema.Config{
-						ValidTopLevelDeclarationsHandler: func(_ common.Location) []common.DeclarationKind {
-							return []common.DeclarationKind{
+						ValidTopLevelDeclarationsHandler: func(_ common.Location) common.DeclarationKindSet {
+							return common.NewDeclarationKindSet(
 								common.DeclarationKindContractInterface,
 								common.DeclarationKindContract,
 								common.DeclarationKindImport,
-							}
+							)
 						},
 					},
 				},
@@ -561,10 +561,16 @@ func TestCheckInvalidLocalDeclarations(t *testing.T) {
 				body = "()"
 			}
 
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			tests[name] = fmt.Sprintf(
-				`%s %s Test %s`,
+				`%s %s Test %s %s`,
 				kind.Keyword(),
 				interfaceKeyword,
+				baseType,
 				body,
 			)
 		}

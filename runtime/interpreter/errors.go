@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -60,7 +61,14 @@ func (e Error) Unwrap() error {
 }
 
 func (e Error) Error() string {
-	return e.Err.Error()
+	var sb strings.Builder
+	sb.WriteString("Execution failed:\n")
+	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
+		PrettyPrintError(e.Err, e.Location, map[common.Location][]byte{})
+	if printErr != nil {
+		panic(printErr)
+	}
+	return sb.String()
 }
 
 func (e Error) ChildErrors() []error {
@@ -124,8 +132,8 @@ func (e PositionedError) Error() string {
 // NotDeclaredError
 
 type NotDeclaredError struct {
-	ExpectedKind common.DeclarationKind
 	Name         string
+	ExpectedKind common.DeclarationKind
 }
 
 var _ errors.UserError = NotDeclaredError{}
@@ -198,9 +206,9 @@ func (e TransactionNotDeclaredError) Error() string {
 // ConditionError
 
 type ConditionError struct {
-	ConditionKind ast.ConditionKind
-	Message       string
 	LocationRange
+	Message       string
+	ConditionKind ast.ConditionKind
 }
 
 var _ errors.UserError = ConditionError{}
@@ -231,10 +239,14 @@ func (e RedeclarationError) Error() string {
 // DereferenceError
 
 type DereferenceError struct {
+	Cause        string
+	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
 var _ errors.UserError = DereferenceError{}
+var _ errors.SecondaryError = DereferenceError{}
 
 func (DereferenceError) IsUserError() {}
 
@@ -242,9 +254,27 @@ func (e DereferenceError) Error() string {
 	return "dereference failed"
 }
 
+func (e DereferenceError) SecondaryError() string {
+	if e.Cause != "" {
+		return e.Cause
+	}
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"type mismatch: expected `%s`, got `%s`",
+		expected,
+		actual,
+	)
+}
+
 // OverflowError
 
-type OverflowError struct{}
+type OverflowError struct {
+	LocationRange
+}
 
 var _ errors.UserError = OverflowError{}
 
@@ -256,7 +286,9 @@ func (e OverflowError) Error() string {
 
 // UnderflowError
 
-type UnderflowError struct{}
+type UnderflowError struct {
+	LocationRange
+}
 
 var _ errors.UserError = UnderflowError{}
 
@@ -268,7 +300,9 @@ func (e UnderflowError) Error() string {
 
 // UnderflowError
 
-type DivisionByZeroError struct{}
+type DivisionByZeroError struct {
+	LocationRange
+}
 
 var _ errors.UserError = DivisionByZeroError{}
 
@@ -343,10 +377,15 @@ var _ errors.UserError = ForceCastTypeMismatchError{}
 func (ForceCastTypeMismatchError) IsUserError() {}
 
 func (e ForceCastTypeMismatchError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"failed to force-cast value: expected type `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
@@ -362,18 +401,23 @@ var _ errors.UserError = TypeMismatchError{}
 func (TypeMismatchError) IsUserError() {}
 
 func (e TypeMismatchError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"type mismatch: expected `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
 // InvalidPathDomainError
 type InvalidPathDomainError struct {
-	ActualDomain    common.PathDomain
-	ExpectedDomains []common.PathDomain
 	LocationRange
+	ExpectedDomains []common.PathDomain
+	ActualDomain    common.PathDomain
 }
 
 var _ errors.UserError = InvalidPathDomainError{}
@@ -402,9 +446,9 @@ func (e InvalidPathDomainError) SecondaryError() string {
 
 // OverwriteError
 type OverwriteError struct {
-	Address AddressValue
-	Path    PathValue
 	LocationRange
+	Path    PathValue
+	Address AddressValue
 }
 
 var _ errors.UserError = OverwriteError{}
@@ -421,9 +465,9 @@ func (e OverwriteError) Error() string {
 
 // CyclicLinkError
 type CyclicLinkError struct {
-	Address common.Address
-	Paths   []PathValue
 	LocationRange
+	Paths   []PathValue
+	Address common.Address
 }
 
 var _ errors.UserError = CyclicLinkError{}
@@ -449,9 +493,9 @@ func (e CyclicLinkError) Error() string {
 
 // ArrayIndexOutOfBoundsError
 type ArrayIndexOutOfBoundsError struct {
+	LocationRange
 	Index int
 	Size  int
-	LocationRange
 }
 
 var _ errors.UserError = ArrayIndexOutOfBoundsError{}
@@ -468,10 +512,10 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 
 // ArraySliceIndicesError
 type ArraySliceIndicesError struct {
+	LocationRange
 	FromIndex int
 	UpToIndex int
 	Size      int
-	LocationRange
 }
 
 var _ errors.UserError = ArraySliceIndicesError{}
@@ -488,9 +532,9 @@ func (e ArraySliceIndicesError) Error() string {
 // InvalidSliceIndexError is returned when a slice index is invalid, such as fromIndex > upToIndex
 // This error can be returned even when fromIndex and upToIndex are both within bounds.
 type InvalidSliceIndexError struct {
+	LocationRange
 	FromIndex int
 	UpToIndex int
-	LocationRange
 }
 
 var _ errors.UserError = InvalidSliceIndexError{}
@@ -503,9 +547,9 @@ func (e InvalidSliceIndexError) Error() string {
 
 // StringIndexOutOfBoundsError
 type StringIndexOutOfBoundsError struct {
+	LocationRange
 	Index  int
 	Length int
-	LocationRange
 }
 
 var _ errors.UserError = StringIndexOutOfBoundsError{}
@@ -522,10 +566,10 @@ func (e StringIndexOutOfBoundsError) Error() string {
 
 // StringSliceIndicesError
 type StringSliceIndicesError struct {
+	LocationRange
 	FromIndex int
 	UpToIndex int
 	Length    int
-	LocationRange
 }
 
 var _ errors.UserError = StringSliceIndicesError{}
@@ -534,7 +578,7 @@ func (StringSliceIndicesError) IsUserError() {}
 
 func (e StringSliceIndicesError) Error() string {
 	return fmt.Sprintf(
-		"slice indices [%d:%d] are out of bounds (length %d)",
+		"string slice indices [%d:%d] are out of bounds (length %d)",
 		e.FromIndex, e.UpToIndex, e.Length,
 	)
 }
@@ -549,7 +593,7 @@ var _ errors.UserError = EventEmissionUnavailableError{}
 func (EventEmissionUnavailableError) IsUserError() {}
 
 func (e EventEmissionUnavailableError) Error() string {
-	return "cannot emit event: unavailable"
+	return "cannot emit event: event emission is unavailable in this configuration of Cadence"
 }
 
 // UUIDUnavailableError
@@ -562,7 +606,7 @@ var _ errors.UserError = UUIDUnavailableError{}
 func (UUIDUnavailableError) IsUserError() {}
 
 func (e UUIDUnavailableError) Error() string {
-	return "cannot get UUID: unavailable"
+	return "cannot get UUID: UUID access is unavailable in this configuration of Cadence"
 }
 
 // TypeLoadingError
@@ -578,26 +622,25 @@ func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
 }
 
-// MissingMemberValueError
-
-type MissingMemberValueError struct {
-	Name string
+// UseBeforeInitializationError
+type UseBeforeInitializationError struct {
 	LocationRange
+	Name string
 }
 
-var _ errors.UserError = MissingMemberValueError{}
+var _ errors.UserError = UseBeforeInitializationError{}
 
-func (MissingMemberValueError) IsUserError() {}
+func (UseBeforeInitializationError) IsUserError() {}
 
-func (e MissingMemberValueError) Error() string {
-	return fmt.Sprintf("missing value for member `%s`", e.Name)
+func (e UseBeforeInitializationError) Error() string {
+	return fmt.Sprintf("member `%s` is used before it has been initialized", e.Name)
 }
 
 // InvocationArgumentTypeError
 type InvocationArgumentTypeError struct {
-	Index         int
-	ParameterType sema.Type
 	LocationRange
+	ParameterType sema.Type
+	Index         int
 }
 
 var _ errors.UserError = InvocationArgumentTypeError{}
@@ -619,9 +662,9 @@ type MemberAccessTypeError struct {
 	LocationRange
 }
 
-var _ errors.UserError = MemberAccessTypeError{}
+var _ errors.InternalError = MemberAccessTypeError{}
 
-func (MemberAccessTypeError) IsUserError() {}
+func (MemberAccessTypeError) IsInternalError() {}
 
 func (e MemberAccessTypeError) Error() string {
 	return fmt.Sprintf(
@@ -638,15 +681,20 @@ type ValueTransferTypeError struct {
 	LocationRange
 }
 
-var _ errors.UserError = ValueTransferTypeError{}
+var _ errors.InternalError = ValueTransferTypeError{}
 
-func (ValueTransferTypeError) IsUserError() {}
+func (ValueTransferTypeError) IsInternalError() {}
 
 func (e ValueTransferTypeError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"invalid transfer of value: expected `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
@@ -656,9 +704,9 @@ type ResourceConstructionError struct {
 	LocationRange
 }
 
-var _ errors.UserError = ResourceConstructionError{}
+var _ errors.InternalError = ResourceConstructionError{}
 
-func (ResourceConstructionError) IsUserError() {}
+func (ResourceConstructionError) IsInternalError() {}
 
 func (e ResourceConstructionError) Error() string {
 	return fmt.Sprintf(
@@ -735,11 +783,11 @@ func (e InterfaceMissingLocationError) Error() string {
 
 // InvalidOperandsError
 type InvalidOperandsError struct {
-	Operation    ast.Operation
-	FunctionName string
+	LocationRange
 	LeftType     StaticType
 	RightType    StaticType
-	LocationRange
+	FunctionName string
+	Operation    ast.Operation
 }
 
 var _ errors.UserError = InvalidOperandsError{}
@@ -822,8 +870,8 @@ func (StorageMutatedDuringIterationError) Error() string {
 
 // InvalidHexByteError
 type InvalidHexByteError struct {
-	Byte byte
 	LocationRange
+	Byte byte
 }
 
 var _ errors.UserError = InvalidHexByteError{}
@@ -845,4 +893,72 @@ func (InvalidHexLengthError) IsUserError() {}
 
 func (InvalidHexLengthError) Error() string {
 	return "hex string has non-even length"
+}
+
+// DuplicateAttachmentError
+type DuplicateAttachmentError struct {
+	AttachmentType sema.Type
+	Value          *CompositeValue
+	LocationRange
+}
+
+var _ errors.UserError = DuplicateAttachmentError{}
+
+func (DuplicateAttachmentError) IsUserError() {}
+
+func (e DuplicateAttachmentError) Error() string {
+	return fmt.Sprintf(
+		"cannot attach %s to %s, as it already exists on that value",
+		e.AttachmentType.QualifiedString(),
+		e.Value.QualifiedIdentifier,
+	)
+}
+
+// AttachmentIterationMutationError
+type AttachmentIterationMutationError struct {
+	Value *CompositeValue
+	LocationRange
+}
+
+var _ errors.UserError = AttachmentIterationMutationError{}
+
+func (AttachmentIterationMutationError) IsUserError() {}
+
+func (e AttachmentIterationMutationError) Error() string {
+	return fmt.Sprintf(
+		"cannot modify %s's attachments while iterating over them",
+		e.Value.QualifiedIdentifier,
+	)
+}
+
+// InvalidAttachmentOperationTargetError
+type InvalidAttachmentOperationTargetError struct {
+	Value Value
+	LocationRange
+}
+
+var _ errors.InternalError = InvalidAttachmentOperationTargetError{}
+
+func (InvalidAttachmentOperationTargetError) IsInternalError() {}
+
+func (e InvalidAttachmentOperationTargetError) Error() string {
+	return fmt.Sprintf(
+		"cannot add or remove attachment with non-owned value (%T)",
+		e.Value,
+	)
+}
+
+// AccountLinkingForbiddenError is the error which is reported
+// when a user uses the account link function,
+// but account linking is not allowed
+type AccountLinkingForbiddenError struct {
+	LocationRange
+}
+
+var _ errors.UserError = AccountLinkingForbiddenError{}
+
+func (AccountLinkingForbiddenError) IsUserError() {}
+
+func (e AccountLinkingForbiddenError) Error() string {
+	return "account linking is not allowed"
 }

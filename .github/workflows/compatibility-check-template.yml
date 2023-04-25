@@ -1,0 +1,108 @@
+name: BackwardCompatibilityCheckTemplate
+
+on:
+  workflow_call:
+    inputs:
+      current-branch:
+        required: true
+        type: string
+      base-branch:
+        required: true
+        type: string
+      chain:
+        required: true
+        type: string
+      url:
+        required: true
+        type: string
+
+env:
+  GO_VERSION: '1.19.2'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.base-branch || github.run_id }}-${{ inputs.chain }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          # Checkout the branch where the compatibility check tool is available.
+          # Usually this is the master branch.
+          ref: master
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Make output dirs
+        run: |
+          mkdir tmp
+
+      - name: Generate cache key
+        id: cache-key-generator
+        # cache key should include chain name
+        run: echo "cache-key=${{ github.workflow }}-${{ inputs.chain }}-$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      # Get contracts
+
+      - name: Restore Cached Contracts
+        id: restore-cached-contracts
+        uses: actions/cache/restore@v3
+        with:
+          path: tmp/contracts.csv
+          key: ${{ steps.cache-key-generator.outputs.cache-key }}-contracts
+
+      - name: Download contracts
+        if: ${{ steps.restore-cached-contracts.outputs.cache-hit != 'true' }}
+        working-directory: ./tools/batch-script
+        run: |
+          go run ./cmd/get_contracts/main.go --chain=${{ inputs.chain }} --u=${{ inputs.url }} > ../../tmp/contracts.csv
+
+      - name: Cache Contracts
+        id: cache-contracts
+        if: ${{ steps.restore-cached-contracts.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v3
+        with:
+          path: tmp/contracts.csv
+          key: ${{ steps.cache-key-generator.outputs.cache-key }}-contracts
+
+      # Check contracts using current branch
+
+      - name: Check contracts using ${{ inputs.current-branch }}
+        working-directory: ./tools/compatibility-check
+        run: |
+          GOPROXY=direct go get github.com/onflow/cadence@${{ inputs.current-branch }}
+          go mod tidy
+          go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-new.txt
+
+      # Check contracts using base branch
+
+      - name: Check contracts using ${{ inputs.base-branch }}
+        working-directory: ./tools/compatibility-check
+        run: |
+          GOPROXY=direct go get github.com/onflow/cadence@${{ inputs.base-branch }}
+          go mod tidy
+          go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-old.txt
+
+      # Upload checking results for later use
+
+      - name: Archive checking results
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.chain }}-checking-results
+          path: |
+            ./tmp/output-old.txt
+            ./tmp/output-new.txt
+
+      # Check Diff
+
+      - name: Check diff
+        working-directory: ./tools/compatibility-check
+        run: |
+          go run ./cmd/check_diff/main.go ../../tmp/output-old.txt ../../tmp/output-new.txt

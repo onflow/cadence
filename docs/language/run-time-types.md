@@ -32,7 +32,7 @@ Type<Int>() == Type<Int>()
 Type<Int>() != Type<String>()
 ```
 
-The method `fun isSubtype(of otherType: Type): Bool` can be used to compare the run-time types of values.
+The method `fun isSubtype(of: Type): Bool` can be used to compare the run-time types of values.
 
 ```cadence
 Type<Int>().isSubtype(of: Type<Int>()) // true
@@ -93,7 +93,7 @@ fun InterfaceType(_ identifier: String): Type?
 fun RestrictedType(identifier: String?, restrictions: [String]): Type?
 ```
 
-Given a type identifer (as well as a list of identifiers for restricting interfaces
+Given a type identifier (as well as a list of identifiers for restricting interfaces
 in the case of `RestrictedType`), these functions will look up nominal types and
 produce their run-time equivalents. If the provided identifiers do not correspond
 to any types, or (in the case of `RestrictedType`) the provided combination of 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,15 +42,15 @@ func NewAuthAccountKeysValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysAddFunctionName:         addFunction,
-		sema.AccountKeysGetFunctionName:         getFunction,
-		sema.AccountKeysRevokeFunctionName:      revokeFunction,
-		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
+		sema.AuthAccountKeysTypeAddFunctionName:     addFunction,
+		sema.AuthAccountKeysTypeGetFunctionName:     getFunction,
+		sema.AuthAccountKeysTypeRevokeFunctionName:  revokeFunction,
+		sema.AuthAccountKeysTypeForEachFunctionName: forEachFunction,
 	}
 
 	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
-		case sema.AccountKeysCountFieldName:
+		case sema.AuthAccountKeysTypeCountFieldName:
 			return getKeysCount()
 		}
 		return nil
@@ -93,13 +93,13 @@ func NewPublicAccountKeysValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysGetFunctionName:         getFunction,
-		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
+		sema.PublicAccountKeysTypeGetFunctionName:     getFunction,
+		sema.PublicAccountKeysTypeForEachFunctionName: forEachFunction,
 	}
 
 	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
-		case sema.AccountKeysCountFieldName:
+		case sema.PublicAccountKeysTypeCountFieldName:
 			return getKeysCount()
 		}
 		return nil

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,8 +84,11 @@ func TestOwnerNewArray(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -108,14 +111,14 @@ func TestOwnerNewArray(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		value,
 	)
 
 	value = array.Get(inter, EmptyLocationRange, 0).(*CompositeValue)
 
-	assert.Equal(t, common.Address{}, array.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, array.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestOwnerArrayDeepCopy(t *testing.T) {
@@ -124,8 +127,11 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -159,7 +165,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		value,
 	)
 
@@ -188,8 +194,11 @@ func TestOwnerArrayElement(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -227,8 +236,11 @@ func TestOwnerArraySetIndex(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -276,8 +288,11 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -319,8 +334,11 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -362,8 +380,11 @@ func TestOwnerArrayRemove(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -394,7 +415,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 	value = array.Remove(inter, EmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, owner, array.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestOwnerNewDictionary(t *testing.T) {
@@ -403,8 +424,11 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -437,8 +461,8 @@ func TestOwnerNewDictionary(t *testing.T) {
 	queriedValue, _ := dictionary.Get(inter, EmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
-	assert.Equal(t, common.Address{}, dictionary.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, dictionary.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestOwnerDictionary(t *testing.T) {
@@ -447,8 +471,11 @@ func TestOwnerDictionary(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -491,8 +518,11 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -549,8 +579,8 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 	)
 	value = queriedValue.(*CompositeValue)
 
-	assert.Equal(t, common.Address{}, dictionaryCopy.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, dictionaryCopy.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestOwnerDictionarySetSome(t *testing.T) {
@@ -559,8 +589,11 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -610,8 +643,11 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -662,8 +698,11 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -710,7 +749,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	value2 = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
-	assert.Equal(t, common.Address{}, value1.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value1.GetOwner())
 	assert.Equal(t, newOwner, value2.GetOwner())
 }
 
@@ -720,8 +759,11 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
-	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+	elaboration := sema.NewElaboration(nil)
+	elaboration.SetCompositeType(
+		testCompositeValueType.ID(),
+		testCompositeValueType,
+	)
 
 	inter, err := NewInterpreter(
 		&Program{
@@ -762,7 +804,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 	value = innerValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestOwnerNewComposite(t *testing.T) {
@@ -837,8 +879,8 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		fieldName,
 	).(*CompositeValue)
 
-	assert.Equal(t, common.Address{}, composite.GetOwner())
-	assert.Equal(t, common.Address{}, value.GetOwner())
+	assert.Equal(t, common.ZeroAddress, composite.GetOwner())
+	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
 func TestStringer(t *testing.T) {
@@ -920,11 +962,11 @@ func TestStringer(t *testing.T) {
 			expected: "64",
 		},
 		"UFix64": {
-			value:    NewUnmeteredUFix64ValueWithInteger(64),
+			value:    NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
 			expected: "64.00000000",
 		},
 		"Fix64": {
-			value:    NewUnmeteredFix64ValueWithInteger(-32),
+			value:    NewUnmeteredFix64ValueWithInteger(-32, EmptyLocationRange),
 			expected: "-32.00000000",
 		},
 		"Void": {
@@ -932,15 +974,15 @@ func TestStringer(t *testing.T) {
 			expected: "()",
 		},
 		"true": {
-			value:    BoolValue(true),
+			value:    TrueValue,
 			expected: "true",
 		},
 		"false": {
-			value:    BoolValue(false),
+			value:    FalseValue,
 			expected: "false",
 		},
 		"some": {
-			value:    NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			value:    NewUnmeteredSomeValueNonCopying(TrueValue),
 			expected: "true",
 		},
 		"nil": {
@@ -958,7 +1000,7 @@ func TestStringer(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredIntValueFromInt64(10),
 				NewUnmeteredStringValue("TEST"),
 			),
@@ -999,7 +1041,7 @@ func TestStringer(t *testing.T) {
 					"Foo",
 					common.CompositeKindResource,
 					fields,
-					common.Address{},
+					common.ZeroAddress,
 				)
 			}(),
 			expected: "S.test.Foo(y: \"bar\")",
@@ -1022,7 +1064,7 @@ func TestStringer(t *testing.T) {
 					"Foo",
 					common.CompositeKindResource,
 					fields,
-					common.Address{},
+					common.ZeroAddress,
 				)
 
 				compositeValue.Stringer = func(_ common.MemoryGauge, _ *CompositeValue, _ SeenReferences) string {
@@ -1033,15 +1075,19 @@ func TestStringer(t *testing.T) {
 			}(),
 			expected: "y --> bar",
 		},
-		"Link": {
-			value: LinkValue{
+		"PathLink": {
+			value: PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
 				Type: PrimitiveStaticTypeInt,
 			},
-			expected: "Link<Int>(/storage/foo)",
+			expected: "PathLink<Int>(/storage/foo)",
+		},
+		"AccountLink": {
+			value:    AccountLinkValue{},
+			expected: "AccountLink()",
 		},
 		"Path": {
 			value: PathValue{
@@ -1055,7 +1101,7 @@ func TestStringer(t *testing.T) {
 			expected: "Type<Int>()",
 		},
 		"Capability with borrow type": {
-			value: &CapabilityValue{
+			value: &StorageCapabilityValue{
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
@@ -1066,7 +1112,7 @@ func TestStringer(t *testing.T) {
 			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
 		},
 		"Capability without borrow type": {
-			value: &CapabilityValue{
+			value: &StorageCapabilityValue{
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
@@ -1083,7 +1129,7 @@ func TestStringer(t *testing.T) {
 					VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
-					common.Address{},
+					common.ZeroAddress,
 				)
 				arrayRef := &EphemeralReferenceValue{Value: array}
 				array.Insert(newTestInterpreter(t), EmptyLocationRange, 0, arrayRef)
@@ -1137,7 +1183,7 @@ func TestVisitor(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		value,
 	)
 
@@ -1165,7 +1211,7 @@ func TestVisitor(t *testing.T) {
 		"Foo",
 		common.CompositeKindStructure,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 
 	value.Accept(inter, visitor)
@@ -1401,35 +1447,35 @@ func TestGetHashInput(t *testing.T) {
 			expected: []byte{byte(HashInputTypeWord64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
 		"UFix64": {
-			value:    NewUnmeteredUFix64ValueWithInteger(64),
+			value:    NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
 			expected: []byte{byte(HashInputTypeUFix64), 0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
 		},
 		"UFix64 min": {
-			value:    NewUnmeteredUFix64ValueWithInteger(0),
+			value:    NewUnmeteredUFix64ValueWithInteger(0, EmptyLocationRange),
 			expected: []byte{byte(HashInputTypeUFix64), 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 		},
 		"UFix64 max": {
-			value:    NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMaxInt),
+			value:    NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMaxInt, EmptyLocationRange),
 			expected: []byte{byte(HashInputTypeUFix64), 0xff, 0xff, 0xff, 0xff, 0xff, 0x6e, 0x41, 0x0},
 		},
 		"Fix64": {
-			value:    NewUnmeteredFix64ValueWithInteger(-32),
+			value:    NewUnmeteredFix64ValueWithInteger(-32, EmptyLocationRange),
 			expected: []byte{byte(HashInputTypeFix64), 0xff, 0xff, 0xff, 0xff, 0x41, 0x43, 0xe0, 0x0},
 		},
 		"Fix64 min": {
-			value:    NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMinInt),
+			value:    NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMinInt, EmptyLocationRange),
 			expected: []byte{byte(HashInputTypeFix64), 0x80, 0x0, 0x0, 0x0, 0x03, 0x43, 0xd0, 0x0},
 		},
 		"Fix64 max": {
-			value:    NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMaxInt),
+			value:    NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMaxInt, EmptyLocationRange),
 			expected: []byte{byte(HashInputTypeFix64), 0x7f, 0xff, 0xff, 0xff, 0xfc, 0xbc, 0x30, 0x00},
 		},
 		"true": {
-			value:    BoolValue(true),
+			value:    TrueValue,
 			expected: []byte{byte(HashInputTypeBool), 1},
 		},
 		"false": {
-			value:    BoolValue(false),
+			value:    FalseValue,
 			expected: []byte{byte(HashInputTypeBool), 0},
 		},
 		"String": {
@@ -1473,7 +1519,7 @@ func TestGetHashInput(t *testing.T) {
 					"Foo",
 					common.CompositeKindEnum,
 					fields,
-					common.Address{},
+					common.ZeroAddress,
 				)
 			}(),
 			expected: []byte{
@@ -1501,7 +1547,7 @@ func TestGetHashInput(t *testing.T) {
 					strings.Repeat("a", 32),
 					common.CompositeKindEnum,
 					fields,
-					common.Address{},
+					common.ZeroAddress,
 				)
 			}(),
 			expected: append(
@@ -1582,7 +1628,7 @@ func TestBlockValue(t *testing.T) {
 			inter,
 			EmptyLocationRange,
 			ByteArrayStaticType,
-			common.Address{},
+			common.ZeroAddress,
 		),
 		5.0,
 	)
@@ -1652,7 +1698,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	assert.True(t, conforms)
 }
 
-func TestCapabilityValue_Equal(t *testing.T) {
+func TestStorageCapabilityValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
@@ -1663,7 +1709,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1673,7 +1719,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&CapabilityValue{
+				&StorageCapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1692,7 +1738,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1701,7 +1747,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&CapabilityValue{
+				&StorageCapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1719,7 +1765,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1729,7 +1775,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&CapabilityValue{
+				&StorageCapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1748,7 +1794,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1758,7 +1804,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&CapabilityValue{
+				&StorageCapabilityValue{
 					Address: AddressValue{0x2},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1777,7 +1823,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1787,7 +1833,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&CapabilityValue{
+				&StorageCapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1806,7 +1852,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1897,10 +1943,10 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			BoolValue(true).Equal(
+			TrueValue.Equal(
 				inter,
 				EmptyLocationRange,
-				BoolValue(true),
+				TrueValue,
 			),
 		)
 	})
@@ -1912,10 +1958,10 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			BoolValue(false).Equal(
+			FalseValue.Equal(
 				inter,
 				EmptyLocationRange,
-				BoolValue(false),
+				FalseValue,
 			),
 		)
 	})
@@ -1927,10 +1973,10 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			BoolValue(true).Equal(
+			TrueValue.Equal(
 				inter,
 				EmptyLocationRange,
-				BoolValue(false),
+				FalseValue,
 			),
 		)
 	})
@@ -1942,7 +1988,7 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			BoolValue(true).Equal(
+			TrueValue.Equal(
 				inter,
 				EmptyLocationRange,
 				NewUnmeteredUInt8Value(1),
@@ -2241,7 +2287,7 @@ func TestPathValue_Equal(t *testing.T) {
 	})
 }
 
-func TestLinkValue_Equal(t *testing.T) {
+func TestPathLinkValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
@@ -2252,7 +2298,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
@@ -2261,7 +2307,7 @@ func TestLinkValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				EmptyLocationRange,
-				LinkValue{
+				PathLinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "test",
@@ -2279,7 +2325,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test1",
@@ -2288,7 +2334,7 @@ func TestLinkValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				EmptyLocationRange,
-				LinkValue{
+				PathLinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "test2",
@@ -2306,7 +2352,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
@@ -2315,7 +2361,7 @@ func TestLinkValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				EmptyLocationRange,
-				LinkValue{
+				PathLinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "test",
@@ -2333,7 +2379,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
@@ -2367,7 +2413,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
 				NewUnmeteredUInt8Value(2),
 			).Equal(
@@ -2377,7 +2423,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint8ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 					NewUnmeteredUInt8Value(1),
 					NewUnmeteredUInt8Value(2),
 				),
@@ -2396,7 +2442,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
 				NewUnmeteredUInt8Value(2),
 			).Equal(
@@ -2406,7 +2452,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint8ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 					NewUnmeteredUInt8Value(2),
 					NewUnmeteredUInt8Value(3),
 				),
@@ -2425,7 +2471,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
 			).Equal(
 				inter,
@@ -2434,7 +2480,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint8ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 					NewUnmeteredUInt8Value(1),
 					NewUnmeteredUInt8Value(2),
 				),
@@ -2453,7 +2499,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
 				NewUnmeteredUInt8Value(2),
 			).Equal(
@@ -2463,7 +2509,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint8ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 					NewUnmeteredUInt8Value(1),
 				),
 			),
@@ -2485,7 +2531,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2493,7 +2539,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint16ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2510,7 +2556,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				nil,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2518,7 +2564,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					uint8ArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2535,7 +2581,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2543,7 +2589,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					nil,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2560,7 +2606,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				nil,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2568,7 +2614,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					nil,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2585,7 +2631,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				EmptyLocationRange,
 				uint8ArrayStaticType,
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
 			).Equal(
 				inter,
@@ -2806,7 +2852,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					inter,
 					EmptyLocationRange,
 					ByteArrayStaticType,
-					common.Address{},
+					common.ZeroAddress,
 					NewUnmeteredUInt8Value(1),
 					NewUnmeteredUInt8Value(2),
 				),
@@ -2847,7 +2893,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2858,7 +2904,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2892,7 +2938,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2903,7 +2949,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2937,7 +2983,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2948,7 +2994,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"Y",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -2982,7 +3028,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -2993,7 +3039,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -3031,7 +3077,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -3042,7 +3088,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -3080,7 +3126,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -3091,7 +3137,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -3125,7 +3171,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -3136,7 +3182,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindResource,
 					fields2,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			),
 		)
@@ -3163,7 +3209,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				common.Address{},
+				common.ZeroAddress,
 			).Equal(
 				inter,
 				EmptyLocationRange,
@@ -3195,8 +3241,8 @@ func TestNumberValue_Equal(t *testing.T) {
 		"Word16":  NewUnmeteredWord16Value(16),
 		"Word32":  NewUnmeteredWord32Value(32),
 		"Word64":  NewUnmeteredWord64Value(64),
-		"UFix64":  NewUnmeteredUFix64ValueWithInteger(64),
-		"Fix64":   NewUnmeteredFix64ValueWithInteger(-32),
+		"UFix64":  NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
+		"Fix64":   NewUnmeteredFix64ValueWithInteger(-32, EmptyLocationRange),
 	}
 
 	for name, value := range testValues {
@@ -3279,7 +3325,7 @@ func TestPublicKeyValue(t *testing.T) {
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			NewUnmeteredIntValueFromInt64(1),
 			NewUnmeteredIntValueFromInt64(7),
 			NewUnmeteredIntValueFromInt64(3),
@@ -3332,7 +3378,7 @@ func TestPublicKeyValue(t *testing.T) {
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			NewUnmeteredIntValueFromInt64(int64(publicKeyBytes[0])),
 			NewUnmeteredIntValueFromInt64(int64(publicKeyBytes[1])),
 			NewUnmeteredIntValueFromInt64(int64(publicKeyBytes[2])),
@@ -3595,7 +3641,7 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 	converters := map[string]converter{
 		"ToInt": {
 			convert: func(value NumberValue) (any, bool) {
-				return value.ToInt(), true
+				return value.ToInt(EmptyLocationRange), true
 			},
 			check: func(t *testing.T, result any) bool {
 				return assert.Equal(t, 42, result)
@@ -3675,8 +3721,11 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 		members.Set("foo", fooField)
 
-		elaboration := sema.NewElaboration(nil, false)
-		elaboration.CompositeTypes[compositeType.ID()] = compositeType
+		elaboration := sema.NewElaboration(nil)
+		elaboration.SetCompositeType(
+			compositeType.ID(),
+			compositeType,
+		)
 
 		inter, err := NewInterpreter(
 			&Program{
@@ -3709,7 +3758,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		t.Parallel()
 
 		functionType := &sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
@@ -3908,8 +3957,8 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		t.Parallel()
 
 		testCases := map[*sema.FixedPointNumericType]NumberValue{
-			sema.UFix64Type: NewUnmeteredUFix64ValueWithInteger(42),
-			sema.Fix64Type:  NewUnmeteredFix64ValueWithInteger(42),
+			sema.UFix64Type: NewUnmeteredUFix64ValueWithInteger(42, EmptyLocationRange),
+			sema.Fix64Type:  NewUnmeteredFix64ValueWithInteger(42, EmptyLocationRange),
 		}
 
 		for _, ty := range sema.AllFixedPointTypes {
@@ -3991,13 +4040,13 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 	})
 
-	t.Run("CapabilityValue", func(t *testing.T) {
+	t.Run("StorageCapabilityValue", func(t *testing.T) {
 
 		t.Parallel()
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredCapabilityValue(
+				return NewUnmeteredStorageCapabilityValue(
 					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					ReferenceStaticType{

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import (
 )
 
 func pretty(code string, maxLineWidth int) string {
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 	if err != nil {
 		return err.Error()
 	}
@@ -154,9 +154,9 @@ type Request struct {
 	MaxLineLength int    `json:"maxLineLength"`
 }
 
-var portFlag = flag.Int("port", 9090, "port")
-
 func main() {
+
+	portFlag := flag.Int("port", 9090, "port")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(page))

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +29,10 @@ import (
 // ImportDeclaration
 
 type ImportDeclaration struct {
-	Identifiers []Identifier
 	Location    common.Location
-	LocationPos Position
+	Identifiers []Identifier
 	Range
+	LocationPos Position
 }
 
 var _ Element = &ImportDeclaration{}
@@ -90,8 +90,8 @@ func (d *ImportDeclaration) DeclarationDocString() string {
 func (d *ImportDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias ImportDeclaration
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "ImportDeclaration",
 		Alias: (*Alias)(d),

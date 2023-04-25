@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,14 +114,14 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (bytes []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -467,7 +467,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
 		getCode: func(_ Location) (bytes []byte, err error) {
@@ -477,7 +477,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -661,10 +661,10 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 			}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) (err error) {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -798,10 +798,10 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 			return []Address{signer}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) (err error) {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -912,10 +912,10 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 			return []Address{signer}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -1053,10 +1053,10 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 			return []Address{signer}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -1206,10 +1206,10 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 			return signers, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -1340,14 +1340,14 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
 	runtimeInterface := &testRuntimeInterface{
 		resolveLocation: singleIdentifierLocationResolver(b),
-		getAccountContractCode: func(_ Address, _ string) (bytes []byte, err error) {
+		getAccountContractCode: func(_ common.AddressLocation) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: storage,
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},

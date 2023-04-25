@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -186,7 +186,6 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 				{sema.BoolType, "1", "2", nil},
 				{sema.BoolType, "1.2", "3.4", nil},
 				{sema.BoolType, "true", "2", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "1.2", "3", []error{
@@ -196,20 +195,15 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "true", "1.2", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "1", "true", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "1.2", "true", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{sema.BoolType, "true", "false", []error{
-					&sema.InvalidBinaryOperandsError{},
-				}},
+				{sema.BoolType, "true", "false", nil},
 			},
 		},
 		{
@@ -314,6 +308,75 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 						fmt.Sprintf(
 							`fun test(): %s { return %s %s %s }`,
 							test.ty, test.left, operation.Symbol(), test.right,
+						),
+					)
+
+					errs := RequireCheckerErrors(t, err, len(test.expectedErrors))
+
+					for i, expectedErr := range test.expectedErrors {
+						assert.IsType(t, expectedErr, errs[i])
+					}
+				})
+			}
+		}
+	}
+}
+
+type operationWithTypeTest struct {
+	ty                  sema.Type
+	left, right         string
+	leftType, rightType string
+	expectedErrors      []error
+}
+
+type operationWithTypeTests struct {
+	operations []ast.Operation
+	tests      []operationWithTypeTest
+}
+
+func TestCheckNonIntegerComparisonOperations(t *testing.T) {
+	t.Parallel()
+
+	allOperationTests := []operationWithTypeTests{
+		{
+			operations: []ast.Operation{
+				ast.OperationLess,
+				ast.OperationLessEqual,
+				ast.OperationGreater,
+				ast.OperationGreaterEqual,
+			},
+			tests: []operationWithTypeTest{
+				{sema.BoolType, "false", "true", "Bool", "Bool", nil},
+				{sema.BoolType, "false", "1", "Bool", "Int", []error{
+					&sema.InvalidBinaryOperandsError{},
+				}},
+				{sema.BoolType, "\"a\"", "\"b\"", "Character", "Character", nil},
+				{sema.BoolType, "1.2", "\"b\"", "Fix64", "Character", []error{
+					&sema.InvalidBinaryOperandsError{},
+				}},
+			},
+		},
+	}
+
+	for _, operationTests := range allOperationTests {
+		for _, operation := range operationTests.operations {
+			for _, test := range operationTests.tests {
+
+				testName := fmt.Sprintf(
+					"%s / %s %s %s",
+					test.ty, test.left, operation.Symbol(), test.right,
+				)
+
+				t.Run(testName, func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`fun test(): %s { 
+								let a: %s = %s
+								let b: %s = %s
+								return a %s b 
+							}`,
+							test.ty, test.leftType, test.left, test.rightType, test.right, operation.Symbol(),
 						),
 					)
 
@@ -467,10 +530,15 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 				conformances = ": Int"
 			}
 
+			var baseType string
+			if compositeKind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s X%[2]s %[3]s
+                      %[1]s X %[7]s %[2]s %[3]s
 
                       %[4]s
 
@@ -482,11 +550,20 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 					preparationCode,
 					firstIdentifier,
 					secondIdentifier,
+					baseType,
 				),
 			)
 
 			if compositeKind == common.CompositeKindEnum {
 				require.NoError(t, err)
+			} else if compositeKind == common.CompositeKindAttachment {
+				errs := RequireCheckerErrors(t, err, 5)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[2])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[3])
+				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[4])
 			} else {
 				errs := RequireCheckerErrors(t, err, 1)
 

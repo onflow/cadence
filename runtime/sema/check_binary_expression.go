@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,12 +28,14 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 	var leftType, rightType, resultType Type
 	defer func() {
-		elaboration := checker.Elaboration
-		elaboration.BinaryExpressionTypes[expression] = BinaryExpressionTypes{
-			LeftType:   leftType,
-			RightType:  rightType,
-			ResultType: resultType,
-		}
+		checker.Elaboration.SetBinaryExpressionTypes(
+			expression,
+			BinaryExpressionTypes{
+				LeftType:   leftType,
+				RightType:  rightType,
+				ResultType: resultType,
+			},
+		)
 	}()
 
 	// The left-hand side is always evaluated.
@@ -129,13 +131,20 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 		switch operationKind {
 		case BinaryOperationKindArithmetic,
-			BinaryOperationKindNonEqualityComparison,
 			BinaryOperationKindBitwise:
 
-			resultType = checker.checkBinaryExpressionArithmeticOrNonEqualityComparisonOrBitwise(
+			resultType = checker.checkBinaryExpressionArithmeticOrBitwise(
 				expression, operation, operationKind,
 				leftType, rightType,
 				leftIsInvalid, rightIsInvalid, anyInvalid,
+			)
+			return resultType
+
+		case BinaryOperationKindNonEqualityComparison:
+			resultType = checker.checkBinaryExpressionNonEquality(
+				expression, operation,
+				leftType, rightType,
+				anyInvalid,
 			)
 			return resultType
 
@@ -197,7 +206,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 	}
 }
 
-func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOrBitwise(
+func (checker *Checker) checkBinaryExpressionArithmeticOrBitwise(
 	expression *ast.BinaryExpression,
 	operation ast.Operation,
 	operationKind BinaryOperationKind,
@@ -209,9 +218,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 	var expectedSuperType Type
 
 	switch operationKind {
-	case BinaryOperationKindArithmetic,
-		BinaryOperationKindNonEqualityComparison:
-
+	case BinaryOperationKindArithmetic:
 		expectedSuperType = NumberType
 
 	case BinaryOperationKindBitwise:
@@ -275,8 +282,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 			return true
 		}
 
-		// Arithmetic, bitwise and non-equality comparison operators
-		// are not supported for numeric supertypes.
+		// Arithmetic and bitwise operations are not supported for numeric supertypes.
 		return isNumericSuperType(leftType)
 	}
 
@@ -291,18 +297,33 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 		)
 	}
 
-	switch operationKind {
-	case BinaryOperationKindArithmetic,
-		BinaryOperationKindBitwise:
+	return leftType
+}
 
-		return leftType
+func (checker *Checker) checkBinaryExpressionNonEquality(
+	expression *ast.BinaryExpression,
+	operation ast.Operation,
+	leftType, rightType Type,
+	anyInvalid bool,
+) (resultType Type) {
+	resultType = BoolType
 
-	case BinaryOperationKindNonEqualityComparison:
-		return BoolType
+	areEqualAndComparable := leftType.Equal(rightType) &&
+		leftType.IsComparable() &&
+		rightType.IsComparable()
 
-	default:
-		panic(errors.NewUnreachableError())
+	if !areEqualAndComparable && !anyInvalid {
+		checker.report(
+			&InvalidBinaryOperandsError{
+				Operation: operation,
+				LeftType:  leftType,
+				RightType: rightType,
+				Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+			},
+		)
 	}
+
+	return
 }
 
 func (checker *Checker) checkBinaryExpressionEquality(

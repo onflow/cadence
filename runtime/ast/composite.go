@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,20 +31,29 @@ import (
 
 // NOTE: For events, only an empty initializer is declared
 
+type CompositeLikeDeclaration interface {
+	Element
+	Declaration
+	Statement
+	Kind() common.CompositeKind
+	ConformanceList() []*NominalType
+	IsInterface() bool
+}
+
 type CompositeDeclaration struct {
+	Members      *Members
+	DocString    string
+	Conformances []*NominalType
+	Identifier   Identifier
+	Range
 	Access        Access
 	CompositeKind common.CompositeKind
-	Identifier    Identifier
-	Conformances  []*NominalType
-	Members       *Members
-	DocString     string
-	Range
 }
 
 var _ Element = &CompositeDeclaration{}
 var _ Declaration = &CompositeDeclaration{}
 var _ Statement = &CompositeDeclaration{}
-var _ HasConformance = &CompositeDeclaration{}
+var _ CompositeLikeDeclaration = &CompositeDeclaration{}
 
 func NewCompositeDeclaration(
 	memoryGauge common.MemoryGauge,
@@ -106,8 +115,8 @@ func (d *CompositeDeclaration) DeclarationDocString() string {
 func (d *CompositeDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias CompositeDeclaration
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "CompositeDeclaration",
 		Alias: (*Alias)(d),
@@ -161,10 +170,6 @@ func (d *CompositeDeclaration) EventDoc() prettier.Doc {
 
 func (d *CompositeDeclaration) String() string {
 	return Prettier(d)
-}
-
-func (d *CompositeDeclaration) InterfaceConformances() []*NominalType {
-	return d.Conformances
 }
 
 var interfaceKeywordSpaceDoc = prettier.Text("interface ")
@@ -262,15 +267,37 @@ func CompositeDocument(
 	return doc
 }
 
+func (d *CompositeDeclaration) Kind() common.CompositeKind {
+	return d.CompositeKind
+}
+
+func (d *CompositeDeclaration) ConformanceList() []*NominalType {
+	return d.Conformances
+}
+
+func (d *CompositeDeclaration) IsInterface() bool {
+	return false
+}
+
+// FieldDeclarationFlags
+
+type FieldDeclarationFlags uint8
+
+const (
+	FieldDeclarationFlagsIsStatic FieldDeclarationFlags = 1 << iota
+	FieldDeclarationFlagsIsNative
+)
+
 // FieldDeclaration
 
 type FieldDeclaration struct {
-	Access         Access
-	VariableKind   VariableKind
-	Identifier     Identifier
 	TypeAnnotation *TypeAnnotation
 	DocString      string
+	Identifier     Identifier
 	Range
+	Access       Access
+	VariableKind VariableKind
+	Flags        FieldDeclarationFlags
 }
 
 var _ Element = &FieldDeclaration{}
@@ -279,6 +306,8 @@ var _ Declaration = &FieldDeclaration{}
 func NewFieldDeclaration(
 	memoryGauge common.MemoryGauge,
 	access Access,
+	isStatic bool,
+	isNative bool,
 	variableKind VariableKind,
 	identifier Identifier,
 	typeAnnotation *TypeAnnotation,
@@ -287,8 +316,17 @@ func NewFieldDeclaration(
 ) *FieldDeclaration {
 	common.UseMemory(memoryGauge, common.FieldDeclarationMemoryUsage)
 
+	var flags FieldDeclarationFlags
+	if isStatic {
+		flags |= FieldDeclarationFlagsIsStatic
+	}
+	if isNative {
+		flags |= FieldDeclarationFlagsIsNative
+	}
+
 	return &FieldDeclaration{
 		Access:         access,
+		Flags:          flags,
 		VariableKind:   variableKind,
 		Identifier:     identifier,
 		TypeAnnotation: typeAnnotation,
@@ -331,11 +369,17 @@ func (d *FieldDeclaration) DeclarationDocString() string {
 func (d *FieldDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FieldDeclaration
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type     string
+		Flags    FieldDeclarationFlags `json:",omitempty"`
+		IsStatic bool
+		IsNative bool
 	}{
-		Type:  "FieldDeclaration",
-		Alias: (*Alias)(d),
+		Type:     "FieldDeclaration",
+		Alias:    (*Alias)(d),
+		IsStatic: d.IsStatic(),
+		IsNative: d.IsNative(),
+		Flags:    0,
 	})
 }
 
@@ -351,6 +395,9 @@ func VariableKindDoc(kind VariableKind) prettier.Doc {
 		panic(errors.NewUnreachableError())
 	}
 }
+
+var staticKeywordDoc prettier.Doc = prettier.Text("static")
+var nativeKeywordDoc prettier.Doc = prettier.Text("native")
 
 func (d *FieldDeclaration) Doc() prettier.Doc {
 	identifierTypeDoc := prettier.Concat{
@@ -371,6 +418,20 @@ func (d *FieldDeclaration) Doc() prettier.Doc {
 		docs = append(
 			docs,
 			prettier.Text(d.Access.Keyword()),
+		)
+	}
+
+	if d.IsStatic() {
+		docs = append(
+			docs,
+			staticKeywordDoc,
+		)
+	}
+
+	if d.IsNative() {
+		docs = append(
+			docs,
+			nativeKeywordDoc,
 		)
 	}
 
@@ -407,13 +468,21 @@ func (d *FieldDeclaration) String() string {
 	return Prettier(d)
 }
 
+func (d *FieldDeclaration) IsStatic() bool {
+	return d.Flags&FieldDeclarationFlagsIsStatic != 0
+}
+
+func (d *FieldDeclaration) IsNative() bool {
+	return d.Flags&FieldDeclarationFlagsIsNative != 0
+}
+
 // EnumCaseDeclaration
 
 type EnumCaseDeclaration struct {
-	Access     Access
-	Identifier Identifier
 	DocString  string
+	Identifier Identifier
 	StartPos   Position `json:"-"`
+	Access     Access
 }
 
 var _ Element = &EnumCaseDeclaration{}
@@ -477,9 +546,9 @@ func (d *EnumCaseDeclaration) DeclarationDocString() string {
 func (d *EnumCaseDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias EnumCaseDeclaration
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "EnumCaseDeclaration",
 		Range: NewUnmeteredRangeFromPositioned(d),

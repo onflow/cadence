@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,13 +62,14 @@ var TestContractLocation = common.IdentifierLocation(testContractTypeName)
 
 var TestContractChecker = func() *sema.Checker {
 
-	program, err := parser.ParseProgram(contracts.TestContract, nil)
+	program, err := parser.ParseProgram(nil, contracts.TestContract, parser.Config{})
 	if err != nil {
 		panic(err)
 	}
 
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(AssertFunction)
+	activation.DeclareValue(PanicFunction)
 
 	var checker *sema.Checker
 	checker, err = sema.NewChecker(
@@ -103,7 +104,7 @@ func NewTestContract(
 ) {
 	value, err := inter.InvokeFunctionValue(
 		constructor,
-		[]interpreter.Value{},
+		nil,
 		testContractInitializerTypes,
 		testContractInitializerTypes,
 		invocationRange,
@@ -124,12 +125,17 @@ func NewTestContract(
 	// Inject natively implemented matchers
 	compositeValue.Functions[newMatcherFunctionName] = newMatcherFunction
 	compositeValue.Functions[equalMatcherFunctionName] = equalMatcherFunction
+	compositeValue.Functions[beEmptyMatcherFunctionName] = beEmptyMatcherFunction
+	compositeValue.Functions[haveElementCountMatcherFunctionName] = haveElementCountMatcherFunction
+	compositeValue.Functions[containMatcherFunctionName] = containMatcherFunction
+	compositeValue.Functions[beGreaterThanMatcherFunctionName] = beGreaterThanMatcherFunction
+	compositeValue.Functions[beLessThanMatcherFunctionName] = beLessThanMatcherFunction
 
 	return compositeValue, nil
 }
 
 var testContractType = func() *sema.CompositeType {
-	variable, ok := TestContractChecker.Elaboration.GlobalTypes.Get(testContractTypeName)
+	variable, ok := TestContractChecker.Elaboration.GetGlobalType(testContractTypeName)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -277,7 +283,7 @@ func init() {
 		),
 	)
 
-	// Matcher functions
+	// Test.equal()
 	testContractType.Members.Set(
 		equalMatcherFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -285,6 +291,61 @@ func init() {
 			equalMatcherFunctionName,
 			equalMatcherFunctionType,
 			equalMatcherFunctionDocString,
+		),
+	)
+
+	// Test.beEmpty()
+	testContractType.Members.Set(
+		beEmptyMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			beEmptyMatcherFunctionName,
+			beEmptyMatcherFunctionType,
+			beEmptyMatcherFunctionDocString,
+		),
+	)
+
+	// Test.haveElementCount()
+	testContractType.Members.Set(
+		haveElementCountMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			haveElementCountMatcherFunctionName,
+			haveElementCountMatcherFunctionType,
+			haveElementCountMatcherFunctionDocString,
+		),
+	)
+
+	// Test.contain()
+	testContractType.Members.Set(
+		containMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			containMatcherFunctionName,
+			containMatcherFunctionType,
+			containMatcherFunctionDocString,
+		),
+	)
+
+	// Test.beGreaterThan()
+	testContractType.Members.Set(
+		beGreaterThanMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			beGreaterThanMatcherFunctionName,
+			beGreaterThanMatcherFunctionType,
+			beGreaterThanMatcherFunctionDocString,
+		),
+	)
+
+	// Test.beLessThan()
+	testContractType.Members.Set(
+		beLessThanMatcherFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			beLessThanMatcherFunctionName,
+			beLessThanMatcherFunctionType,
+			beLessThanMatcherFunctionDocString,
 		),
 	)
 
@@ -301,7 +362,10 @@ func init() {
 
 	// Enrich 'Test' contract elaboration with natively implemented composite types.
 	// e.g: 'EmulatorBackend' type.
-	TestContractChecker.Elaboration.CompositeTypes[EmulatorBackendType.ID()] = EmulatorBackendType
+	TestContractChecker.Elaboration.SetCompositeType(
+		EmulatorBackendType.ID(),
+		EmulatorBackendType,
+	)
 }
 
 var blockchainType = func() sema.Type {
@@ -313,7 +377,7 @@ var blockchainType = func() sema.Type {
 	return typ
 }()
 
-// Functions belong to the 'Test' contract
+// Functions belonging to the 'Test' contract
 
 // 'Test.assert' function
 
@@ -324,7 +388,7 @@ Fails the test-case if the given condition is false, and reports a message which
 const testAssertFunctionName = "assert"
 
 var testAssertFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "condition",
@@ -346,6 +410,7 @@ var testAssertFunctionType = &sema.FunctionType{
 }
 
 var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
+	testAssertFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		condition, ok := invocation.Arguments[0].(interpreter.BoolValue)
 		if !ok {
@@ -370,7 +435,6 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return interpreter.Void
 	},
-	testAssertFunctionType,
 )
 
 // 'Test.fail' function
@@ -382,7 +446,7 @@ Fails the test-case with a message.
 const testFailFunctionName = "fail"
 
 var testFailFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Identifier: "message",
 			TypeAnnotation: sema.NewTypeAnnotation(
@@ -397,6 +461,7 @@ var testFailFunctionType = &sema.FunctionType{
 }
 
 var testFailFunction = interpreter.NewUnmeteredHostFunctionValue(
+	testFailFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		var message string
 		if len(invocation.Arguments) > 0 {
@@ -412,7 +477,6 @@ var testFailFunction = interpreter.NewUnmeteredHostFunctionValue(
 			LocationRange: invocation.LocationRange,
 		})
 	},
-	testFailFunctionType,
 )
 
 // 'Test.expect' function
@@ -423,32 +487,42 @@ Expect function tests a value against a matcher, and fails the test if it's not 
 
 const testExpectFunctionName = "expect"
 
-var testExpectFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.GenericType{
-					TypeParameter: typeParameter,
-				},
-			),
+var testExpectFunctionType = func() *sema.FunctionType {
+
+	typeParameter := &sema.TypeParameter{
+		TypeBound: sema.AnyStructType,
+		Name:      "T",
+		Optional:  true,
+	}
+
+	return &sema.FunctionType{
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "matcher",
+				TypeAnnotation: sema.NewTypeAnnotation(matcherType),
+			},
 		},
-		{
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     "matcher",
-			TypeAnnotation: sema.NewTypeAnnotation(matcherType),
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
 		},
-	},
-	TypeParameters: []*sema.TypeParameter{
-		typeParameter,
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
-}
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			sema.VoidType,
+		),
+	}
+}()
 
 var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
+	testExpectFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		value := invocation.Arguments[0]
 
@@ -473,7 +547,6 @@ var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return interpreter.Void
 	},
-	testExpectFunctionType,
 )
 
 func invokeMatcherTest(
@@ -527,7 +600,7 @@ Read a local file, and return the content as a string.
 const testReadFileFunctionName = "readFile"
 
 var testReadFileFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "path",
@@ -543,6 +616,7 @@ var testReadFileFunctionType = &sema.FunctionType{
 
 func testReadFileFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		testReadFileFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			pathString, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -556,7 +630,6 @@ func testReadFileFunction(testFramework TestFramework) *interpreter.HostFunction
 
 			return interpreter.NewUnmeteredStringValue(content)
 		},
-		testReadFileFunctionType,
 	)
 }
 
@@ -569,7 +642,6 @@ Creates a blockchain which is backed by a new emulator instance.
 const testNewEmulatorBlockchainFunctionName = "newEmulatorBlockchain"
 
 var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		blockchainType,
 	),
@@ -577,6 +649,7 @@ var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
 
 func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		testNewEmulatorBlockchainFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
@@ -610,7 +683,6 @@ func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter
 
 			return blockchain
 		},
-		testNewEmulatorBlockchainFunctionType,
 	)
 }
 
@@ -646,46 +718,50 @@ The test function is of type '((T): Bool)', where 'T' is bound to 'AnyStruct'.
 
 const newMatcherFunctionName = "newMatcher"
 
-var newMatcherFunctionType = &sema.FunctionType{
-	IsConstructor: true,
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "test",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				// Type of the 'test' function: ((T): Bool)
-				&sema.FunctionType{
-					Parameters: []*sema.Parameter{
-						{
-							Label:      sema.ArgumentLabelNotRequired,
-							Identifier: "value",
-							TypeAnnotation: sema.NewTypeAnnotation(
-								&sema.GenericType{
-									TypeParameter: newMatcherFunctionTypeParameter,
-								},
-							),
-						},
-					},
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(
-						sema.BoolType,
-					),
-				},
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
-	TypeParameters: []*sema.TypeParameter{
-		newMatcherFunctionTypeParameter,
-	},
-}
+var newMatcherFunctionType = func() *sema.FunctionType {
 
-var newMatcherFunctionTypeParameter = &sema.TypeParameter{
-	TypeBound: sema.AnyStructType,
-	Name:      "T",
-	Optional:  true,
-}
+	typeParameter := &sema.TypeParameter{
+		TypeBound: sema.AnyStructType,
+		Name:      "T",
+		Optional:  true,
+	}
+
+	return &sema.FunctionType{
+		IsConstructor: true,
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "test",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					// Type of the 'test' function: ((T): Bool)
+					&sema.FunctionType{
+						Parameters: []sema.Parameter{
+							{
+								Label:      sema.ArgumentLabelNotRequired,
+								Identifier: "value",
+								TypeAnnotation: sema.NewTypeAnnotation(
+									&sema.GenericType{
+										TypeParameter: typeParameter,
+									},
+								),
+							},
+						},
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(
+							sema.BoolType,
+						),
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+		},
+	}
+}()
 
 var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	newMatcherFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		test, ok := invocation.Arguments[0].(interpreter.FunctionValue)
 		if !ok {
@@ -694,7 +770,6 @@ var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return newMatcherWithGenericTestFunction(invocation, test)
 	},
-	equalMatcherFunctionType,
 )
 
 // 'EmulatorBackend' struct.
@@ -760,8 +835,8 @@ var EmulatorBackendType = func() *sema.CompositeType {
 		),
 	}
 
-	ty.Members = sema.GetMembersAsMap(members)
-	ty.Fields = sema.GetFieldNames(members)
+	ty.Members = sema.MembersAsMap(members)
+	ty.Fields = sema.MembersFieldNames(members)
 
 	return ty
 }()
@@ -808,7 +883,7 @@ func newEmulatorBackend(
 		emulatorBackendTypeName,
 		common.CompositeKindStructure,
 		fields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 }
 
@@ -828,6 +903,7 @@ var emulatorBackendExecuteScriptFunctionType = interfaceFunctionType(
 
 func emulatorBackendExecuteScriptFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendExecuteScriptFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -845,7 +921,6 @@ func emulatorBackendExecuteScriptFunction(testFramework TestFramework) *interpre
 
 			return newScriptResult(inter, result.Value, result)
 		},
-		emulatorBackendExecuteScriptFunctionType,
 	)
 }
 
@@ -935,6 +1010,7 @@ var emulatorBackendCreateAccountFunctionType = interfaceFunctionType(
 
 func emulatorBackendCreateAccountFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendCreateAccountFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			account, err := testFramework.CreateAccount()
 			if err != nil {
@@ -951,7 +1027,6 @@ func emulatorBackendCreateAccountFunction(testFramework TestFramework) *interpre
 				account,
 			)
 		},
-		emulatorBackendCreateAccountFunctionType,
 	)
 }
 
@@ -1008,6 +1083,7 @@ var emulatorBackendAddTransactionFunctionType = interfaceFunctionType(
 
 func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendAddTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
@@ -1075,7 +1151,6 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 
 			return interpreter.Void
 		},
-		emulatorBackendAddTransactionFunctionType,
 	)
 }
 
@@ -1151,7 +1226,7 @@ func accountFromValue(
 	publicKeyVal, ok := accountValue.GetMember(
 		inter,
 		locationRange,
-		sema.AccountKeyPublicKeyField,
+		sema.AccountKeyPublicKeyFieldName,
 	).(interpreter.MemberAccessibleValue)
 
 	if !ok {
@@ -1185,6 +1260,7 @@ var emulatorBackendExecuteNextTransactionFunctionType = interfaceFunctionType(
 
 func emulatorBackendExecuteNextTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendExecuteNextTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			result := testFramework.ExecuteNextTransaction()
 
@@ -1195,7 +1271,6 @@ func emulatorBackendExecuteNextTransactionFunction(testFramework TestFramework) 
 
 			return newTransactionResult(invocation.Interpreter, result)
 		},
-		emulatorBackendExecuteNextTransactionFunctionType,
 	)
 }
 
@@ -1271,6 +1346,7 @@ var emulatorBackendCommitBlockFunctionType = interfaceFunctionType(
 
 func emulatorBackendCommitBlockFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendCommitBlockFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			err := testFramework.CommitBlock()
 			if err != nil {
@@ -1279,7 +1355,6 @@ func emulatorBackendCommitBlockFunction(testFramework TestFramework) *interprete
 
 			return interpreter.Void
 		},
-		emulatorBackendCommitBlockFunctionType,
 	)
 }
 
@@ -1291,32 +1366,36 @@ const equalMatcherFunctionDocString = `
 Returns a matcher that succeeds if the tested value is equal to the given value.
 `
 
-var typeParameter = &sema.TypeParameter{
-	TypeBound: sema.AnyStructType,
-	Name:      "T",
-	Optional:  true,
-}
+var equalMatcherFunctionType = func() *sema.FunctionType {
 
-var equalMatcherFunctionType = &sema.FunctionType{
-	IsConstructor: false,
-	TypeParameters: []*sema.TypeParameter{
-		typeParameter,
-	},
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.GenericType{
-					TypeParameter: typeParameter,
-				},
-			),
+	typeParameter := &sema.TypeParameter{
+		TypeBound: sema.AnyStructType,
+		Name:      "T",
+		Optional:  true,
+	}
+
+	return &sema.FunctionType{
+		IsConstructor: false,
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
 		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
-}
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
 
 var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	equalMatcherFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		otherValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
 		if !ok {
@@ -1327,6 +1406,7 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		equalTestFunc := interpreter.NewHostFunctionValue(
 			nil,
+			matcherTestFunctionType,
 			func(invocation interpreter.Invocation) interpreter.Value {
 
 				thisValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
@@ -1342,12 +1422,284 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 				return interpreter.AsBoolValue(equal)
 			},
-			matcherTestFunctionType,
 		)
 
 		return newMatcherWithGenericTestFunction(invocation, equalTestFunc)
 	},
-	equalMatcherFunctionType,
+)
+
+const beEmptyMatcherFunctionName = "beEmpty"
+
+const beEmptyMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is an array or dictionary,
+and the tested value contains no elements.
+`
+
+var beEmptyMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:        false,
+		TypeParameters:       []*sema.TypeParameter{},
+		Parameters:           []sema.Parameter{},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var beEmptyMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	beEmptyMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		beEmptyTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				var isEmpty bool
+				switch value := invocation.Arguments[0].(type) {
+				case *interpreter.ArrayValue:
+					isEmpty = value.Count() == 0
+				case *interpreter.DictionaryValue:
+					isEmpty = value.Count() == 0
+				default:
+					panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
+				}
+
+				return interpreter.AsBoolValue(isEmpty)
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, beEmptyTestFunc)
+	},
+)
+
+const haveElementCountMatcherFunctionName = "haveElementCount"
+
+const haveElementCountMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is an array or dictionary,
+and has the given number of elements.
+`
+
+var haveElementCountMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "count",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.IntType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var haveElementCountMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	haveElementCountMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		count, ok := invocation.Arguments[0].(interpreter.IntValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		haveElementCountTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				var matchingCount bool
+				switch value := invocation.Arguments[0].(type) {
+				case *interpreter.ArrayValue:
+					matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+				case *interpreter.DictionaryValue:
+					matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+				default:
+					panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
+				}
+
+				return interpreter.AsBoolValue(matchingCount)
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, haveElementCountTestFunc)
+	},
+)
+
+const containMatcherFunctionName = "contain"
+
+const containMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is an array that contains
+a value that is equal to the given value, or the tested value is a dictionary
+that contains an entry where the key is equal to the given value.
+`
+
+var containMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "element",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.AnyStructType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var containMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	containMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		element, ok := invocation.Arguments[0].(interpreter.EquatableValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		containTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				var elementFound interpreter.BoolValue
+				switch value := invocation.Arguments[0].(type) {
+				case *interpreter.ArrayValue:
+					elementFound = value.Contains(
+						inter,
+						invocation.LocationRange,
+						element,
+					)
+				case *interpreter.DictionaryValue:
+					elementFound = value.ContainsKey(
+						inter,
+						invocation.LocationRange,
+						element,
+					)
+				default:
+					panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
+				}
+
+				return elementFound
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, containTestFunc)
+	},
+)
+
+const beGreaterThanMatcherFunctionName = "beGreaterThan"
+
+const beGreaterThanMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is a number and
+greater than the given number.
+`
+
+var beGreaterThanMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.NumberType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var beGreaterThanMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	beGreaterThanMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		beGreaterThanTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				thisValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				isGreaterThan := thisValue.Greater(
+					inter,
+					otherValue,
+					invocation.LocationRange,
+				)
+
+				return isGreaterThan
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, beGreaterThanTestFunc)
+	},
+)
+
+const beLessThanMatcherFunctionName = "beLessThan"
+
+const beLessThanMatcherFunctionDocString = `
+Returns a matcher that succeeds if the tested value is a number and
+less than the given number.
+`
+
+var beLessThanMatcherFunctionType = func() *sema.FunctionType {
+	return &sema.FunctionType{
+		IsConstructor:  false,
+		TypeParameters: []*sema.TypeParameter{},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.NumberType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
+	}
+}()
+
+var beLessThanMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	beLessThanMatcherFunctionType,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		beLessThanTestFunc := interpreter.NewHostFunctionValue(
+			nil,
+			matcherTestFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				thisValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				isLessThan := thisValue.Less(
+					inter,
+					otherValue,
+					invocation.LocationRange,
+				)
+
+				return isLessThan
+			},
+		)
+
+		return newMatcherWithGenericTestFunction(invocation, beLessThanTestFunc)
+	},
 )
 
 // 'EmulatorBackend.deployContract' function
@@ -1365,6 +1717,7 @@ var emulatorBackendDeployContractFunctionType = interfaceFunctionType(
 
 func emulatorBackendDeployContractFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendDeployContractFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
@@ -1404,7 +1757,6 @@ func emulatorBackendDeployContractFunction(testFramework TestFramework) *interpr
 
 			return newErrorValue(inter, err)
 		},
-		emulatorBackendDeployContractFunctionType,
 	)
 }
 
@@ -1421,6 +1773,7 @@ var emulatorBackendUseConfigFunctionType = interfaceFunctionType(
 
 func emulatorBackendUseConfigFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		emulatorBackendUseConfigFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
@@ -1463,7 +1816,6 @@ func emulatorBackendUseConfigFunction(testFramework TestFramework) *interpreter.
 
 			return interpreter.Void
 		},
-		emulatorBackendUseConfigFunctionType,
 	)
 }
 
@@ -1512,6 +1864,7 @@ func newMatcherWithGenericTestFunction(
 	// No need to validate if the matcher is created as a matcher combinator.
 	//
 	matcherTestFunction := interpreter.NewUnmeteredHostFunctionValue(
+		matcherTestFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
@@ -1537,7 +1890,6 @@ func newMatcherWithGenericTestFunction(
 
 			return value
 		},
-		matcherTestFunctionType,
 	)
 
 	matcherConstructor := getNestedTypeConstructorValue(
@@ -1557,4 +1909,67 @@ func newMatcherWithGenericTestFunction(
 	}
 
 	return matcher
+}
+
+func TestCheckerContractValueHandler(
+	checker *sema.Checker,
+	declaration *ast.CompositeDeclaration,
+	compositeType *sema.CompositeType,
+) sema.ValueDeclaration {
+	constructorType, constructorArgumentLabels := sema.CompositeLikeConstructorType(
+		checker.Elaboration,
+		declaration,
+		compositeType,
+	)
+
+	return StandardLibraryValue{
+		Name:           declaration.Identifier.Identifier,
+		Type:           constructorType,
+		DocString:      declaration.DocString,
+		Kind:           declaration.DeclarationKind(),
+		Position:       &declaration.Identifier.Pos,
+		ArgumentLabels: constructorArgumentLabels,
+	}
+}
+
+func NewTestInterpreterContractValueHandler(
+	testFramework TestFramework,
+) interpreter.ContractValueHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		compositeType *sema.CompositeType,
+		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+		invocationRange ast.Range,
+	) interpreter.ContractValue {
+
+		switch compositeType.Location {
+		case CryptoCheckerLocation:
+			contract, err := NewCryptoContract(
+				inter,
+				constructorGenerator(common.ZeroAddress),
+				invocationRange,
+			)
+			if err != nil {
+				panic(err)
+			}
+			return contract
+
+		case TestContractLocation:
+			contract, err := NewTestContract(
+				inter,
+				testFramework,
+				constructorGenerator(common.ZeroAddress),
+				invocationRange,
+			)
+			if err != nil {
+				panic(err)
+			}
+			return contract
+
+		default:
+			// During tests, imported contracts can be constructed using the constructor,
+			// similar to structs. Therefore, generate a constructor function.
+			return constructorGenerator(common.ZeroAddress)
+		}
+	}
 }

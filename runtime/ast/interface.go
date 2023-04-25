@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,19 +29,18 @@ import (
 // InterfaceDeclaration
 
 type InterfaceDeclaration struct {
+	Members      *Members
+	DocString    string
+	Identifier   Identifier
+	Conformances []*NominalType
+	Range
 	Access        Access
 	CompositeKind common.CompositeKind
-	Identifier    Identifier
-	Conformances  []*NominalType
-	Members       *Members
-	DocString     string
-	Range
 }
 
 var _ Element = &InterfaceDeclaration{}
 var _ Declaration = &InterfaceDeclaration{}
 var _ Statement = &InterfaceDeclaration{}
-var _ HasConformance = &CompositeDeclaration{}
 
 func NewInterfaceDeclaration(
 	gauge common.MemoryGauge,
@@ -103,8 +102,8 @@ func (d *InterfaceDeclaration) DeclarationDocString() string {
 func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias InterfaceDeclaration
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "InterfaceDeclaration",
 		Alias: (*Alias)(d),
@@ -126,6 +125,14 @@ func (d *InterfaceDeclaration) String() string {
 	return Prettier(d)
 }
 
-func (d *InterfaceDeclaration) InterfaceConformances() []*NominalType {
+func (d *InterfaceDeclaration) ConformanceList() []*NominalType {
 	return d.Conformances
+}
+
+func (d *InterfaceDeclaration) Kind() common.CompositeKind {
+	return d.CompositeKind
+}
+
+func (d *InterfaceDeclaration) IsInterface() bool {
+	return true
 }

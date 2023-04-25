@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,16 @@ package sema
 
 // VoidType represents the void type
 var VoidType = &SimpleType{
-	Name:                 "Void",
-	QualifiedName:        "Void",
-	TypeID:               "Void",
-	tag:                  VoidTypeTag,
-	IsInvalid:            false,
-	IsResource:           false,
-	Storable:             false,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           false,
+	Name:          "Void",
+	QualifiedName: "Void",
+	TypeID:        "Void",
+	tag:           VoidTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     true,
+	Comparable:    false,
+	Exportable:    true,
+	Importable:    false,
 }
+
+var VoidTypeAnnotation = NewTypeAnnotation(VoidType)

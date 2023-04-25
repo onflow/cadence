@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,22 +19,21 @@
 package execute
 
 import (
-	"github.com/logrusorgru/aurora"
+	"github.com/logrusorgru/aurora/v4"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-func colorizeResult(value interpreter.Value) string {
-	str := value.String()
-	return aurora.Colorize(str, aurora.YellowFg|aurora.BrightFg).String()
+func colorizeResult(result string) string {
+	return aurora.Colorize(result, aurora.YellowFg|aurora.BrightFg).String()
 }
 
-func formatValue(value interpreter.Value) string {
+func colorizeValue(value interpreter.Value) string {
 	if value == nil {
 		return ""
 	}
 
-	return colorizeResult(value)
+	return colorizeResult(value.String())
 }
 
 func colorizeError(message string) string {

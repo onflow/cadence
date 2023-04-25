@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,6 @@ package interpreter_test
 
 import (
 	"fmt"
-	"math"
-	"math/big"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
@@ -152,7 +150,6 @@ func TestInterpretArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
@@ -474,7 +471,6 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
@@ -1057,7 +1053,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 			interpreter.Declare(baseActivation, valueDeclaration)
@@ -1098,7 +1094,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 			stdlib.NewPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
@@ -1152,7 +1148,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 			stdlib.NewPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
@@ -1585,31 +1581,6 @@ func TestInterpretIntMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
 }
 
 func TestInterpretUIntMetering(t *testing.T) {
@@ -1863,31 +1834,6 @@ func TestInterpretUIntMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
-	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: UInt = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -2188,31 +2134,6 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		// result: 1
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindNumberValue))
 	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: UInt8 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
 }
 
 func TestInterpretUInt16Metering(t *testing.T) {
@@ -2510,31 +2431,6 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		// creation: 2 + 2
 		// result: 2
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindNumberValue))
-	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: UInt16 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -2834,31 +2730,6 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		// result: 4
 		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindNumberValue))
 	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: UInt32 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
 }
 
 func TestInterpretUInt64Metering(t *testing.T) {
@@ -3157,31 +3028,6 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
 	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: UInt64 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
 }
 
 func TestInterpretUInt128Metering(t *testing.T) {
@@ -3204,8 +3050,8 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindBigInt))
+		// creation: 8
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("addition", func(t *testing.T) {
@@ -3224,9 +3070,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating addition", func(t *testing.T) {
@@ -3245,9 +3091,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("subtraction", func(t *testing.T) {
@@ -3266,9 +3112,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating subtraction", func(t *testing.T) {
@@ -3287,9 +3133,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 	})
 
@@ -3309,9 +3155,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating multiplication", func(t *testing.T) {
@@ -3330,9 +3176,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("division", func(t *testing.T) {
@@ -3351,9 +3197,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("modulo", func(t *testing.T) {
@@ -3372,9 +3218,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise or", func(t *testing.T) {
@@ -3393,9 +3239,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise xor", func(t *testing.T) {
@@ -3414,9 +3260,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise and", func(t *testing.T) {
@@ -3435,9 +3281,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise left-shift", func(t *testing.T) {
@@ -3456,9 +3302,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise right-shift", func(t *testing.T) {
@@ -3477,34 +3323,9 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 16 + 16
+		// creation: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
-	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: UInt128 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 }
 
@@ -3528,8 +3349,8 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+		// creation: 8
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("addition", func(t *testing.T) {
@@ -3548,9 +3369,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating addition", func(t *testing.T) {
@@ -3569,9 +3390,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("subtraction", func(t *testing.T) {
@@ -3590,9 +3411,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating subtraction", func(t *testing.T) {
@@ -3611,9 +3432,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("multiplication", func(t *testing.T) {
@@ -3632,9 +3453,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating multiplication", func(t *testing.T) {
@@ -3653,9 +3474,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("division", func(t *testing.T) {
@@ -3674,9 +3495,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("modulo", func(t *testing.T) {
@@ -3695,9 +3516,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise or", func(t *testing.T) {
@@ -3716,9 +3537,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise xor", func(t *testing.T) {
@@ -3737,9 +3558,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise and", func(t *testing.T) {
@@ -3758,9 +3579,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise left-shift", func(t *testing.T) {
@@ -3779,9 +3600,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise right-shift", func(t *testing.T) {
@@ -3800,34 +3621,9 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 32 + 32
+		// creation: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
-	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: UInt256 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 }
 
@@ -4174,30 +3970,6 @@ func TestInterpretInt8Metering(t *testing.T) {
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindNumberValue))
 	})
 
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Int8 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
 }
 
 func TestInterpretInt16Metering(t *testing.T) {
@@ -4541,31 +4313,6 @@ func TestInterpretInt16Metering(t *testing.T) {
 		// two literals: 2 + 2
 		// result: 2
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindNumberValue))
-	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Int16 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -4911,31 +4658,6 @@ func TestInterpretInt32Metering(t *testing.T) {
 		// result: 4
 		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindNumberValue))
 	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Int32 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
 }
 
 func TestInterpretInt64Metering(t *testing.T) {
@@ -5280,31 +5002,6 @@ func TestInterpretInt64Metering(t *testing.T) {
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
 	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Int64 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
 }
 
 func TestInterpretInt128Metering(t *testing.T) {
@@ -5327,7 +5024,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("addition", func(t *testing.T) {
@@ -5346,9 +5043,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating addition", func(t *testing.T) {
@@ -5368,9 +5065,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("subtraction", func(t *testing.T) {
@@ -5389,9 +5086,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating subtraction", func(t *testing.T) {
@@ -5411,9 +5108,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("multiplication", func(t *testing.T) {
@@ -5432,9 +5129,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating multiplication", func(t *testing.T) {
@@ -5454,9 +5151,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("division", func(t *testing.T) {
@@ -5475,9 +5172,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating division", func(t *testing.T) {
@@ -5497,9 +5194,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("modulo", func(t *testing.T) {
@@ -5518,9 +5215,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("negation", func(t *testing.T) {
@@ -5542,7 +5239,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 
 		// x: 16
 		// y: 16
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise or", func(t *testing.T) {
@@ -5561,9 +5258,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise xor", func(t *testing.T) {
@@ -5582,9 +5279,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise and", func(t *testing.T) {
@@ -5603,9 +5300,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise left shift", func(t *testing.T) {
@@ -5624,9 +5321,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise right shift", func(t *testing.T) {
@@ -5645,9 +5342,9 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 16 + 16
+		// two literals: 8 + 8
 		// result: 16
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("logical operations", func(t *testing.T) {
@@ -5672,7 +5369,6 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 	})
 }
@@ -5697,7 +5393,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("addition", func(t *testing.T) {
@@ -5716,9 +5412,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating addition", func(t *testing.T) {
@@ -5738,9 +5434,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("subtraction", func(t *testing.T) {
@@ -5759,9 +5455,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating subtraction", func(t *testing.T) {
@@ -5781,9 +5477,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("multiplication", func(t *testing.T) {
@@ -5802,9 +5498,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating multiplication", func(t *testing.T) {
@@ -5824,9 +5520,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("division", func(t *testing.T) {
@@ -5845,9 +5541,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating division", func(t *testing.T) {
@@ -5867,9 +5563,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("modulo", func(t *testing.T) {
@@ -5888,9 +5584,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("negation", func(t *testing.T) {
@@ -5912,7 +5608,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 
 		// x: 32
 		// y: 32
-		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(40), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise or", func(t *testing.T) {
@@ -5931,9 +5627,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise xor", func(t *testing.T) {
@@ -5952,9 +5648,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise and", func(t *testing.T) {
@@ -5973,9 +5669,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise left shift", func(t *testing.T) {
@@ -5994,9 +5690,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise right shift", func(t *testing.T) {
@@ -6015,34 +5711,9 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// two literals: 32 + 32
+		// two literals: 8 + 8
 		// result: 32
-		assert.Equal(t, uint64(96), meter.getMemory(common.MemoryKindBigInt))
-	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Int256 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 }
 
@@ -6280,31 +5951,6 @@ func TestInterpretWord8Metering(t *testing.T) {
 		// result: 1
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindNumberValue))
 	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Word8 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
 }
 
 func TestInterpretWord16Metering(t *testing.T) {
@@ -6539,31 +6185,6 @@ func TestInterpretWord16Metering(t *testing.T) {
 		// creation: 2 + 2
 		// result: 2
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindNumberValue))
-	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Word16 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -6800,31 +6421,6 @@ func TestInterpretWord32Metering(t *testing.T) {
 		// result: 4
 		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindNumberValue))
 	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Word32 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
 }
 
 func TestInterpretWord64Metering(t *testing.T) {
@@ -7059,179 +6655,6 @@ func TestInterpretWord64Metering(t *testing.T) {
 		// creation: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-	})
-
-	t.Run("logical operations", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Word64 = 1
-                x == 1
-                x != 1
-                x > 1
-                x >= 1
-                x < 1
-                x <= 1
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
-}
-
-func TestInterpretBoolMetering(t *testing.T) {
-	t.Parallel()
-
-	t.Run("creation", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Bool = true
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
-
-	t.Run("negation", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                !true
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
-
-	t.Run("equality, true", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                true == true
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
-
-	t.Run("equality, false", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                true == false
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
-
-	t.Run("inequality", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                true != false
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
-}
-
-func TestInterpretNilMetering(t *testing.T) {
-	t.Parallel()
-
-	t.Run("creation", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: Bool? = nil
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindNilValue))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-	})
-}
-
-func TestInterpretVoidMetering(t *testing.T) {
-	t.Parallel()
-
-	t.Run("returnless function", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindVoidValue))
-	})
-
-	t.Run("returning function", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            pub fun main(): Bool {
-                return true
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindVoidValue))
 	})
 }
 
@@ -7541,7 +6964,7 @@ func TestInterpretPathValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretCapabilityValueMetering(t *testing.T) {
+func TestInterpretStorageCapabilityValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7553,7 +6976,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
             pub fun main(account: AuthAccount) {
                 let r <- create R()
                 account.save(<-r, to: /storage/r)
-                let x = account.link<&R>(/public/capo, target: /storage/r)
+                let x = account.link<&R>(/public/cap, target: /storage/r)
             }
         `
 		meter := newTestMemoryGauge()
@@ -7563,7 +6986,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCapabilityValue))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStorageCapabilityValue))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPathValue))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
 	})
@@ -7577,7 +7000,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
             pub fun main(account: AuthAccount) {
                 let r <- create R()
                 account.save(<-r, to: /storage/r)
-                let x = account.link<&R>(/public/capo, target: /storage/r)
+                let x = account.link<&R>(/public/cap, target: /storage/r)
 
                 let y = [x]
             }
@@ -7593,7 +7016,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretLinkValueMetering(t *testing.T) {
+func TestInterpretPathLinkValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7603,7 +7026,7 @@ func TestInterpretLinkValueMetering(t *testing.T) {
             resource R {}
 
             pub fun main(account: AuthAccount) {
-                account.link<&R>(/public/capo, target: /private/p)
+                account.link<&R>(/public/cap, target: /private/p)
             }
         `
 		meter := newTestMemoryGauge()
@@ -7614,8 +7037,46 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// Metered twice only when Atree validation is enabled.
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindLinkValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPathLinkValue))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
+	})
+}
+
+func TestInterpretAccountLinkValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+          #allowAccountLinking
+
+          pub fun main(account: AuthAccount) {
+              account.linkAccount(/private/cap)
+          }
+        `
+
+		meter := newTestMemoryGauge()
+
+		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+			t,
+			script,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					AccountLinkingEnabled: true,
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
+
+		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
+		_, err = inter.Invoke("main", account)
+		require.NoError(t, err)
+
+		// Metered twice only when Atree validation is enabled.
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAccountLinkValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindReferenceStaticType))
 	})
 }
 
@@ -7777,7 +7238,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindNumberValue))
-		assert.Equal(t, uint64(80), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("addition", func(t *testing.T) {
@@ -7799,8 +7260,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating addition", func(t *testing.T) {
@@ -7823,8 +7283,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("subtraction", func(t *testing.T) {
@@ -7846,8 +7305,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating subtraction", func(t *testing.T) {
@@ -7870,8 +7328,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("multiplication", func(t *testing.T) {
@@ -7893,8 +7350,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating multiplication", func(t *testing.T) {
@@ -7917,8 +7373,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("division", func(t *testing.T) {
@@ -7940,8 +7395,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating division", func(t *testing.T) {
@@ -7964,8 +7418,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("modulo", func(t *testing.T) {
@@ -7990,8 +7443,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// truncatedQuotient.Mul(o): 8
 		// result: 8
 		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("negation", func(t *testing.T) {
@@ -8015,7 +7467,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// y: 8
 		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindNumberValue))
 
-		assert.Equal(t, uint64(80), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("creation as supertype", func(t *testing.T) {
@@ -8035,7 +7487,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindNumberValue))
-		assert.Equal(t, uint64(80), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("logical operations", func(t *testing.T) {
@@ -8060,8 +7512,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-		assert.Equal(t, uint64(560), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(224), meter.getMemory(common.MemoryKindBigInt))
 	})
 }
 
@@ -8086,7 +7537,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindNumberValue))
-		assert.Equal(t, uint64(80), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("addition", func(t *testing.T) {
@@ -8108,8 +7559,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating addition", func(t *testing.T) {
@@ -8132,8 +7582,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("subtraction", func(t *testing.T) {
@@ -8155,8 +7604,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating subtraction", func(t *testing.T) {
@@ -8179,8 +7627,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("multiplication", func(t *testing.T) {
@@ -8202,8 +7649,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating multiplication", func(t *testing.T) {
@@ -8226,8 +7672,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("division", func(t *testing.T) {
@@ -8249,8 +7694,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating division", func(t *testing.T) {
@@ -8273,8 +7717,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		// two literals: 8 + 8
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("modulo", func(t *testing.T) {
@@ -8299,8 +7742,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		// truncatedQuotient.Mul(o): 8
 		// result: 8
 		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(160), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("creation as supertype", func(t *testing.T) {
@@ -8320,8 +7762,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindNumberValue))
-
-		assert.Equal(t, uint64(80), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("logical operations", func(t *testing.T) {
@@ -8346,9 +7787,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
-
-		assert.Equal(t, uint64(560), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(224), meter.getMemory(common.MemoryKindBigInt))
 	})
 }
 
@@ -8516,7 +7955,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 'main', 'foo', 'bar', empty-return-type
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindIdentifier))
 	})
 
 	t.Run("parameters", func(t *testing.T) {
@@ -8537,7 +7976,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 'main', 'foo', 'String', 'bar', 'String', empty-return-type
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindIdentifier))
 	})
 
 	t.Run("composite declaration", func(t *testing.T) {
@@ -8564,7 +8003,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
 	})
 
 	t.Run("member resolvers", func(t *testing.T) {
@@ -8585,7 +8024,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
@@ -9061,13 +8500,13 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInstantiationType))
-		assert.Equal(t, uint64(17), meter.getMemory(common.MemoryKindNominalType))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindNominalType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindRestrictedType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindVariableSizedType))
 
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindTypeAnnotation))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindTypeAnnotation))
 	})
 
 	t.Run("position info", func(t *testing.T) {
@@ -9099,8 +8538,8 @@ func TestInterpretASTMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(231), meter.getMemory(common.MemoryKindPosition))
-		assert.Equal(t, uint64(126), meter.getMemory(common.MemoryKindRange))
+		assert.Equal(t, uint64(229), meter.getMemory(common.MemoryKindPosition))
+		assert.Equal(t, uint64(124), meter.getMemory(common.MemoryKindRange))
 	})
 
 	t.Run("locations", func(t *testing.T) {
@@ -9266,7 +8705,7 @@ func TestInterpretStorageMapMetering(t *testing.T) {
         pub fun main(account: AuthAccount) {
             let r <- create R()
             account.save(<-r, to: /storage/r)
-            account.link<&R>(/public/capo, target: /storage/r)
+            account.link<&R>(/public/cap, target: /storage/r)
             account.borrow<&R>(from: /storage/r)
         }
     `
@@ -9293,7 +8732,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		logFunction := stdlib.NewStandardLibraryFunction(
 			"log",
 			&sema.FunctionType{
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:          sema.ArgumentLabelNotRequired,
 						Identifier:     "value",
@@ -9317,7 +8756,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, logFunction)
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
@@ -9599,7 +9038,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
         `
 
 		testValueStringConversion(t, script,
-			interpreter.NewUnmeteredCapabilityValue(
+			interpreter.NewUnmeteredStorageCapabilityValue(
 				interpreter.AddressValue{1},
 				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
@@ -9637,7 +9076,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		logFunction := stdlib.NewStandardLibraryFunction(
 			"log",
 			&sema.FunctionType{
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:          sema.ArgumentLabelNotRequired,
 						Identifier:     "value",
@@ -9661,7 +9100,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, logFunction)
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
@@ -9837,44 +9276,4 @@ func TestInterpretBytesMetering(t *testing.T) {
 
 	// 1 + 3
 	assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindBytes))
-}
-
-func TestOverEstimateBigIntFromString(t *testing.T) {
-
-	t.Parallel()
-
-	for _, v := range []*big.Int{
-		big.NewInt(0),
-		big.NewInt(1),
-		big.NewInt(9),
-		big.NewInt(10),
-		big.NewInt(99),
-		big.NewInt(100),
-		big.NewInt(999),
-		big.NewInt(1000),
-		big.NewInt(math.MaxUint16),
-		big.NewInt(math.MaxUint32),
-		new(big.Int).SetUint64(math.MaxUint64),
-		func() *big.Int {
-			v := new(big.Int).SetUint64(math.MaxUint64)
-			return v.Mul(v, big.NewInt(2))
-		}(),
-		func() *big.Int {
-			v := new(big.Int).SetUint64(math.MaxUint64)
-			return v.Mul(v, new(big.Int).SetUint64(math.MaxUint64))
-		}(),
-	} {
-
-		// Always should be equal or overestimate
-		assert.LessOrEqual(t,
-			common.BigIntByteLength(v),
-			common.OverEstimateBigIntFromString(v.String()),
-		)
-
-		neg := new(big.Int).Neg(v)
-		assert.LessOrEqual(t,
-			common.BigIntByteLength(neg),
-			common.OverEstimateBigIntFromString(neg.String()),
-		)
-	}
 }

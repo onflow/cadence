@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 
 	const kind = ContainerKindInterface
 
-	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
+	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
 	if interfaceType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -82,7 +82,6 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		declaration.Members.Initializers(),
 		declaration.Members.Fields(),
 		interfaceType,
-		declaration.DeclarationKind(),
 		declaration.DeclarationDocString(),
 		interfaceType.InitializerParameters,
 		kind,
@@ -109,6 +108,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	checker.checkResourceFieldNesting(
 		interfaceType.Members,
 		interfaceType.CompositeKind,
+		nil,
 		fieldPositionGetter,
 	)
 
@@ -133,7 +133,13 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		// Composite declarations nested in interface declarations are type requirements,
 		// i.e. they should be checked like interfaces
 
-		checker.visitCompositeDeclaration(nestedComposite, kind)
+		checker.visitCompositeLikeDeclaration(nestedComposite, kind)
+	}
+
+	for _, nestedAttachments := range declaration.Members.Attachments() {
+		// Attachment declarations nested in interface declarations are type requirements,
+		// i.e. they should be checked like interfaces
+		checker.visitAttachmentDeclaration(nestedAttachments, kind)
 	}
 
 	return
@@ -149,8 +155,8 @@ func (checker *Checker) declareInterfaceNestedTypes(
 	declaration *ast.InterfaceDeclaration,
 ) {
 
-	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
-	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations[declaration]
+	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
+	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations(declaration)
 
 	interfaceType.NestedTypes.Foreach(func(name string, nestedType Type) {
 		nestedDeclaration := nestedDeclarations[name]
@@ -184,7 +190,7 @@ func (checker *Checker) checkInterfaceFunctions(
 	for _, function := range functions {
 		// NOTE: new activation, as function declarations
 		// shouldn't be visible in other function declarations,
-		// and `self` is is only visible inside function
+		// and `self` is only visible inside function
 
 		func() {
 			checker.enterValueScope()
@@ -265,8 +271,8 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	interfaceType.ExplicitInterfaceConformances =
 		checker.explicitInterfaceConformances(declaration, interfaceType)
 
-	checker.Elaboration.InterfaceDeclarationTypes[declaration] = interfaceType
-	checker.Elaboration.InterfaceTypeDeclarations[interfaceType] = declaration
+	checker.Elaboration.SetInterfaceDeclarationType(declaration, interfaceType)
+	checker.Elaboration.SetInterfaceTypeDeclaration(interfaceType, declaration)
 
 	if !declaration.CompositeKind.SupportsInterfaces() {
 		checker.report(
@@ -292,10 +298,11 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 			declaration.CompositeKind,
 			declaration.DeclarationKind(),
 			declaration.Members.Composites(),
+			declaration.Members.Attachments(),
 			declaration.Members.Interfaces(),
 		)
 
-	checker.Elaboration.InterfaceNestedDeclarations[declaration] = nestedDeclarations
+	checker.Elaboration.SetInterfaceNestedDeclarations(declaration, nestedDeclarations)
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
 		interfaceType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
@@ -318,7 +325,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 // in the elaboration's `InterfaceDeclarationTypes` and `InterfaceNestedDeclarations` fields.
 func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclaration) {
 
-	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
+	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
 	if interfaceType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -367,7 +374,11 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	}
 
 	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-		checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
+		checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
+	}
+
+	for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
+		checker.declareAttachmentMembersAndValue(nestedAttachmentDeclaration, ContainerKindInterface)
 	}
 }
 

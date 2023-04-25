@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,8 +42,14 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 		Address: signerAccount,
 		Name:    "Foo",
 	}
+	var checkGetAndSetProgram, getProgramCalled bool
 
-	var checkGetSetProgram, getProgramCalled, setProgramCalled bool
+	programs := map[Location]*interpreter.Program{}
+	clearPrograms := func() {
+		for l := range programs {
+			delete(programs, l)
+		}
+	}
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -54,18 +60,10 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 			return []Address{signerAccount}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
@@ -75,24 +73,33 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
+		getAndSetProgram: func(
+			location Location,
+			load func() (*interpreter.Program, error),
+		) (
+			program *interpreter.Program,
+			err error,
+		) {
 			_, isTransactionLocation := location.(common.TransactionLocation)
-			if checkGetSetProgram && !isTransactionLocation {
+			if checkGetAndSetProgram && !isTransactionLocation {
 				require.Equal(t, location, fooLocation)
 				require.False(t, getProgramCalled)
-				getProgramCalled = true
 			}
-			// Always force to get the old program from the source during the update.
-			return nil, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			_, isTransactionLocation := location.(common.TransactionLocation)
-			if checkGetSetProgram && !isTransactionLocation {
-				require.Equal(t, location, fooLocation)
-				require.False(t, setProgramCalled)
-				setProgramCalled = true
+
+			var ok bool
+			program, ok = programs[location]
+			if ok {
+				return
 			}
-			return nil
+
+			program, err = load()
+
+			// NOTE: important: still set empty program,
+			// even if error occurred
+
+			programs[location] = program
+
+			return
 		},
 	}
 
@@ -147,6 +154,9 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Programs are only valid during the transaction
+	clearPrograms()
+
 	// Deploy 'Bar' contract
 
 	signerAccount = common.MustBytesToAddress([]byte{0x2})
@@ -164,6 +174,9 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	// Programs are only valid during the transaction
+	clearPrograms()
 
 	// Update 'Foo' contract to change function signature
 
@@ -190,12 +203,15 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Programs are only valid during the transaction
+	clearPrograms()
+
 	// Update 'Bar' contract to change match the
 	// function signature change in 'Foo'.
 
 	signerAccount = common.MustBytesToAddress([]byte{0x2})
 
-	checkGetSetProgram = true
+	checkGetAndSetProgram = true
 
 	err = runtime.ExecuteTransaction(
 		Script{

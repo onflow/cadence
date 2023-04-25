@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,22 @@ func TestScriptLocationTypeID(t *testing.T) {
 	)
 }
 
+func TestScriptLocationID(t *testing.T) {
+
+	t.Parallel()
+
+	location, _, err := decodeScriptLocationTypeID(
+		nil,
+		"s.0102000000000000000000000000000000000000000000000000000000000000.Bar.Baz",
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"s.0102000000000000000000000000000000000000000000000000000000000000",
+		location.ID(),
+	)
+}
+
 func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 	t.Parallel()
@@ -89,10 +105,10 @@ func TestDecodeScriptLocationTypeID(t *testing.T) {
 			ScriptLocation{0x1, 0x2},
 			location,
 		)
-		assert.Empty(t, qualifiedIdentifier)
+		assert.Equal(t, "", qualifiedIdentifier)
 	})
 
-	t.Run("missing qualified identifier", func(t *testing.T) {
+	t.Run("invalid prefix", func(t *testing.T) {
 
 		t.Parallel()
 

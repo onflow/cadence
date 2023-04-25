@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -230,7 +230,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 
 	missingDeclarations := make([]ast.Declaration, 0, len(oldCompositeAndInterfaceDecls))
 
-	for _, declaration := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
+	for _, declaration := range oldCompositeAndInterfaceDecls { //nolint:maprange
 		missingDeclarations = append(missingDeclarations, declaration)
 	}
 
@@ -257,12 +257,12 @@ func getNestedCompositeAndInterfaceDecls(declaration ast.Declaration) map[string
 	compositeAndInterfaceDecls := map[string]ast.Declaration{}
 
 	nestedCompositeDecls := declaration.DeclarationMembers().CompositesByIdentifier()
-	for identifier, nestedDecl := range nestedCompositeDecls { //nolint:maprangecheck
+	for identifier, nestedDecl := range nestedCompositeDecls { //nolint:maprange
 		compositeAndInterfaceDecls[identifier] = nestedDecl
 	}
 
 	nestedInterfaceDecls := declaration.DeclarationMembers().InterfacesByIdentifier()
-	for identifier, nestedDecl := range nestedInterfaceDecls { //nolint:maprangecheck
+	for identifier, nestedDecl := range nestedInterfaceDecls { //nolint:maprange
 		compositeAndInterfaceDecls[identifier] = nestedDecl
 	}
 
@@ -397,9 +397,9 @@ func containsEnums(declaration ast.Declaration) bool {
 // ContractUpdateError is reported upon any invalid update to a contract or contract interface.
 // It contains all the errors reported during the update validation.
 type ContractUpdateError struct {
+	Location     common.Location
 	ContractName string
 	Errors       []error
-	Location     common.Location
 }
 
 var _ errors.UserError = &ContractUpdateError{}
@@ -422,9 +422,9 @@ func (e *ContractUpdateError) ImportLocation() common.Location {
 // FieldMismatchError is reported during a contract update, when a type of a field
 // does not match the existing type of the same field.
 type FieldMismatchError struct {
+	Err       error
 	DeclName  string
 	FieldName string
-	Err       error
 	ast.Range
 }
 

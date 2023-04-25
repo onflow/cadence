@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return nil, nil
 			},
 			meterMemory: func(_ common.MemoryUsage) error {
@@ -63,7 +63,6 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			return json.Decode(runtimeInterface, b)
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
@@ -71,7 +70,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 					cadence.Struct{}.
 						WithType(&cadence.StructType{
 							Location: common.AddressLocation{
-								Address: common.Address{},
+								Address: common.ZeroAddress,
 								Name:    "Foo",
 							},
 							QualifiedIdentifier: "Foo.Bar",
@@ -80,7 +79,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.TransactionLocation{},
 			},
 		)
 		RequireError(t, err)
@@ -103,7 +102,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return nil, nil
 			},
 			meterMemory: func(_ common.MemoryUsage) error {
@@ -114,7 +113,6 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			return json.Decode(runtimeInterface, b)
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
@@ -122,7 +120,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 					cadence.Struct{}.
 						WithType(&cadence.StructType{
 							Location: common.AddressLocation{
-								Address: common.Address{},
+								Address: common.ZeroAddress,
 								Name:    "Foo",
 							},
 							QualifiedIdentifier: "Foo.Bar",
@@ -131,7 +129,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 		RequireError(t, err)

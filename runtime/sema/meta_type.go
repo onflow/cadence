@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,15 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
+const MetaTypeIdentifierFieldName = "identifier"
 
-const metaTypeIdentifierDocString = `
+const metaTypeIdentifierFieldDocString = `
 The fully-qualified identifier of the type
 `
 
-const metaTypeSubtypeDocString = `
+const MetaTypeIsSubtypeFunctionName = "isSubtype"
+
+const metaTypeIsSubtypeFunctionDocString = `
 Returns true if this type is a subtype of the given type at run-time
 `
 
@@ -35,20 +34,20 @@ const MetaTypeName = "Type"
 
 // MetaType represents the type of a type.
 var MetaType = &SimpleType{
-	Name:                 MetaTypeName,
-	QualifiedName:        MetaTypeName,
-	TypeID:               MetaTypeName,
-	tag:                  MetaTypeTag,
-	IsInvalid:            false,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          MetaTypeName,
+	QualifiedName: MetaTypeName,
+	TypeID:        MetaTypeName,
+	tag:           MetaTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Comparable:    false,
+	Exportable:    true,
+	Importable:    true,
 }
 
 var MetaTypeIsSubtypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          "of",
 			Identifier:     "otherType",
@@ -62,31 +61,19 @@ var MetaTypeIsSubtypeFunctionType = &FunctionType{
 
 func init() {
 	MetaType.Members = func(t *SimpleType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			"identifier": {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						StringType,
-						metaTypeIdentifierDocString,
-					)
-				},
-			},
-			"isSubtype": {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						MetaTypeIsSubtypeFunctionType,
-						metaTypeSubtypeDocString,
-					)
-				},
-			},
-		}
+		return MembersAsResolvers([]*Member{
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				MetaTypeIdentifierFieldName,
+				StringType,
+				metaTypeIdentifierFieldDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				MetaTypeIsSubtypeFunctionName,
+				MetaTypeIsSubtypeFunctionType,
+				metaTypeIsSubtypeFunctionDocString,
+			),
+		})
 	}
 }

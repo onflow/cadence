@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,12 +41,18 @@ func TestCheckInvalidNonEnumCompositeEnumCases(t *testing.T) {
 
 			t.Parallel()
 
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T { case a }
+                      %[1]s T %[2]s { case a }
                     `,
 					kindKeyword,
+					baseType,
 				),
 			)
 

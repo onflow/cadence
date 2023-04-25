@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,6 +73,7 @@ func newHashAlgorithmHashFunction(
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		sema.HashAlgorithmTypeHashFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -92,7 +93,6 @@ func newHashAlgorithmHashFunction(
 				hashAlgoValue,
 			)
 		},
-		sema.HashAlgorithmTypeHashFunctionType,
 	)
 }
 
@@ -101,6 +101,7 @@ func newHashAlgorithmHashWithTagFunction(
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
+		sema.HashAlgorithmTypeHashWithTagFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -126,7 +127,6 @@ func newHashAlgorithmHashWithTagFunction(
 				hashAlgorithmValue,
 			)
 		},
-		sema.HashAlgorithmTypeHashWithTagFunctionType,
 	)
 }
 
@@ -138,7 +138,7 @@ func hash(
 	tagValue *interpreter.StringValue,
 	hashAlgorithmValue interpreter.MemberAccessibleValue,
 ) interpreter.Value {
-	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
+	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue, locationRange)
 	if err != nil {
 		panic(errors.NewUnexpectedError("failed to get data. %w", err))
 	}
@@ -151,7 +151,7 @@ func hash(
 	hashAlgorithm := NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
 
 	var result []byte
-	wrapPanic(func() {
+	errors.WrapPanic(func() {
 		result, err = hasher.Hash(data, tag, hashAlgorithm)
 	})
 	if err != nil {

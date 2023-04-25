@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ package wasm
 // Data represents a data segment, which initializes a range of memory,
 // at a given offset, with a static vector of bytes.
 type Data struct {
-	MemoryIndex uint32
 	// must be constant, as defined in the spec
 	// (https://webassembly.github.io/spec/core/valid/instructions.html#constant-expressions)
-	Offset []Instruction
-	Init   []byte
+	Offset      []Instruction
+	Init        []byte
+	MemoryIndex uint32
 }

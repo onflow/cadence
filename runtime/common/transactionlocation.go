@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +68,10 @@ func (l TransactionLocation) String() string {
 
 func (l TransactionLocation) Description() string {
 	return fmt.Sprintf("transaction with ID %s", hex.EncodeToString(l[:]))
+}
+
+func (l TransactionLocation) ID() string {
+	return fmt.Sprintf("%s.%s", TransactionLocationPrefix, l)
 }
 
 func (l TransactionLocation) MarshalJSON() ([]byte, error) {

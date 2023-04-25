@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeUInt64,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt64Value(500),
 			),
 			NewArrayValue(
@@ -57,16 +57,16 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredInt256ValueFromBigInt(largeBigInt),
 			),
 			NewUnmeteredUInt64Value(500),
-			BoolValue(true),
+			TrueValue,
 			NewUnmeteredStringValue("test"),
 		}
 
 		for _, value := range invalid {
-			_, err := ByteArrayValueToByteSlice(inter, value)
+			_, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
 			RequireError(t, err)
 		}
 	})
@@ -82,15 +82,15 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.Address{},
-			): {},
+				common.ZeroAddress,
+			): nil,
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt64Value(2),
 				NewUnmeteredUInt128ValueFromUint64(3),
 			): {2, 3},
@@ -100,14 +100,14 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(4),
 				NewUnmeteredIntValueFromInt64(5),
 			): {4, 5},
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteArrayValueToByteSlice(inter, value)
+			result, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}
@@ -129,7 +129,7 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for _, value := range invalid {
-			_, err := ByteValueToByte(nil, value)
+			_, err := ByteValueToByte(nil, value, EmptyLocationRange)
 			RequireError(t, err)
 		}
 	})
@@ -147,7 +147,7 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteValueToByte(nil, value)
+			result, err := ByteValueToByte(nil, value, EmptyLocationRange)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}

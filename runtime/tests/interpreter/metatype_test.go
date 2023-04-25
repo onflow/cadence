@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -64,7 +64,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -80,7 +80,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -96,7 +96,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -112,7 +112,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -133,7 +133,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
@@ -154,7 +154,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -187,7 +187,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range valueDeclarations {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
@@ -210,7 +210,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("result").GetValue(),
 		)
 	})
@@ -276,7 +276,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range valueDeclarations {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
@@ -406,7 +406,7 @@ func TestInterpretIsInstance(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
 	for _, testCase := range cases {
@@ -546,7 +546,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
 	for _, testCase := range cases {
@@ -626,12 +626,35 @@ func TestInterpretGetType(t *testing.T) {
 			// wrapping the ephemeral reference in an optional
 			// ensures getType doesn't dereference the value,
 			// i.e. EphemeralReferenceValue.StaticType is tested
-			name: "optional ephemeral reference",
+			name: "optional ephemeral reference, auth to unauth",
 			code: `
               fun test(): Type {
                   let value = 1
                   let ref = &value as auth &Int
                   let optRef: &Int? = ref
+                  return optRef.getType()
+              }
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.OptionalStaticType{
+					Type: interpreter.ReferenceStaticType{
+						// Reference was converted from authorized to unauthorized
+						Authorized:   false,
+						BorrowedType: interpreter.PrimitiveStaticTypeInt,
+					},
+				},
+			},
+		},
+		{
+			// wrapping the ephemeral reference in an optional
+			// ensures getType doesn't dereference the value,
+			// i.e. EphemeralReferenceValue.StaticType is tested
+			name: "optional ephemeral reference, auth to auth",
+			code: `
+              fun test(): Type {
+                  let value = 1
+                  let ref = &value as auth &Int
+                  let optRef: auth &Int? = ref
                   return optRef.getType()
               }
             `,
@@ -648,11 +671,33 @@ func TestInterpretGetType(t *testing.T) {
 			// wrapping the storage reference in an optional
 			// ensures getType doesn't dereference the value,
 			// i.e. StorageReferenceValue.StaticType is tested
-			name: "optional storage reference",
+			name: "optional storage reference, auth to unauth",
 			code: `
               fun test(): Type {
                   let ref = getStorageReference()
                   let optRef: &Int? = ref
+                  return optRef.getType()
+              }
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.OptionalStaticType{
+					Type: interpreter.ReferenceStaticType{
+						// Reference was converted from authorized to unauthorized
+						Authorized:   false,
+						BorrowedType: interpreter.PrimitiveStaticTypeInt,
+					},
+				},
+			},
+		},
+		{
+			// wrapping the storage reference in an optional
+			// ensures getType doesn't dereference the value,
+			// i.e. StorageReferenceValue.StaticType is tested
+			name: "optional storage reference, auth to auth",
+			code: `
+              fun test(): Type {
+                  let ref = getStorageReference()
+                  let optRef: auth &Int? = ref
                   return optRef.getType()
               }
             `,
@@ -712,7 +757,7 @@ func TestInterpretGetType(t *testing.T) {
 			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 			baseValueActivation.DeclareValue(valueDeclaration)
 
-			baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+			baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 			interpreter.Declare(baseActivation, valueDeclaration)
 
 			storage := newUnmeteredInMemoryStorage()

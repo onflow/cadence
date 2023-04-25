@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,10 +47,15 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 				t.Parallel()
 
+				var baseType string
+				if compositeKind == common.CompositeKindAttachment {
+					baseType = "for AnyStruct"
+				}
+
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          %[1]s Token {
+                          %[1]s Token %[3]s {
                             let id: String
 
                             init(id: String) {
@@ -62,6 +67,7 @@ func TestCheckEventDeclaration(t *testing.T) {
                         `,
 						compositeKind.Keyword(),
 						compositeKind.Annotation(),
+						baseType,
 					),
 				)
 
@@ -75,6 +81,12 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 				case common.CompositeKindStructure:
 					require.NoError(t, err)
+
+				case common.CompositeKindAttachment:
+					errs := RequireCheckerErrors(t, err, 2)
+
+					assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
+					assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 				default:
 					panic(errors.NewUnreachableError())
@@ -100,7 +112,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 				sema.StringType,
 				sema.CharacterType,
 				sema.BoolType,
-				&sema.AddressType{},
+				sema.TheAddressType,
 				sema.MetaType,
 				sema.PathType,
 				sema.StoragePathType,

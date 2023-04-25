@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ const (
 
 	// Values
 
-	MemoryKindBoolValue
 	MemoryKindAddressValue
 	MemoryKindStringValue
 	MemoryKindCharacterValue
@@ -38,13 +37,13 @@ const (
 	MemoryKindCompositeValueBase
 	MemoryKindSimpleCompositeValueBase
 	MemoryKindOptionalValue
-	MemoryKindNilValue
-	MemoryKindVoidValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
-	MemoryKindCapabilityValue
-	MemoryKindLinkValue
+	MemoryKindStorageCapabilityValue
+	MemoryKindPathLinkValue
+	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue
+	MemoryKindAccountReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue
 	MemoryKindHostFunctionValue
@@ -92,29 +91,33 @@ const (
 	MemoryKindCadenceStructValueBase
 	MemoryKindCadenceStructValueSize
 	MemoryKindCadenceResourceValueBase
+	MemoryKindCadenceAttachmentValueBase
 	MemoryKindCadenceResourceValueSize
+	MemoryKindCadenceAttachmentValueSize
 	MemoryKindCadenceEventValueBase
 	MemoryKindCadenceEventValueSize
 	MemoryKindCadenceContractValueBase
 	MemoryKindCadenceContractValueSize
 	MemoryKindCadenceEnumValueBase
 	MemoryKindCadenceEnumValueSize
-	MemoryKindCadenceLinkValue
+	MemoryKindCadencePathLinkValue
+	MemoryKindCadenceAccountLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
-	MemoryKindCadenceCapabilityValue
+	MemoryKindCadenceStorageCapabilityValue
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
-	MemoryKindCadenceSimpleType
 	MemoryKindCadenceOptionalType
 	MemoryKindCadenceVariableSizedArrayType
 	MemoryKindCadenceConstantSizedArrayType
 	MemoryKindCadenceDictionaryType
 	MemoryKindCadenceField
 	MemoryKindCadenceParameter
+	MemoryKindCadenceTypeParameter
 	MemoryKindCadenceStructType
 	MemoryKindCadenceResourceType
+	MemoryKindCadenceAttachmentType
 	MemoryKindCadenceEventType
 	MemoryKindCadenceContractType
 	MemoryKindCadenceStructInterfaceType
@@ -153,6 +156,8 @@ const (
 	MemoryKindFunctionBlock
 	MemoryKindParameter
 	MemoryKindParameterList
+	MemoryKindTypeParameter
+	MemoryKindTypeParameterList
 	MemoryKindTransfer
 	MemoryKindMembers
 	MemoryKindTypeAnnotation
@@ -160,6 +165,7 @@ const (
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
+	MemoryKindAttachmentDeclaration
 	MemoryKindInterfaceDeclaration
 	MemoryKindEnumCaseDeclaration
 	MemoryKindFieldDeclaration
@@ -180,8 +186,10 @@ const (
 	MemoryKindSwapStatement
 	MemoryKindSwitchStatement
 	MemoryKindWhileStatement
+	MemoryKindRemoveStatement
 
 	MemoryKindBooleanExpression
+	MemoryKindVoidExpression
 	MemoryKindNilExpression
 	MemoryKindStringExpression
 	MemoryKindIntegerExpression
@@ -202,6 +210,7 @@ const (
 	MemoryKindReferenceExpression
 	MemoryKindForceExpression
 	MemoryKindPathExpression
+	MemoryKindAttachExpression
 
 	MemoryKindConstantSizedType
 	MemoryKindDictionaryType

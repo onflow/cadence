@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,16 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			identifier := p.tokenToIdentifier(p.current)
 			// Skip the `prepare` keyword
 			p.next()
-			prepare, err = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, identifier)
+			prepare, err = parseSpecialFunctionDeclaration(
+				p,
+				false,
+				ast.AccessNotSpecified,
+				nil,
+				nil,
+				nil,
+				identifier,
+				"",
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -221,7 +230,14 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 		case lexer.TokenIdentifier:
 			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
-				field, err := parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, docString)
+				field, err := parseFieldWithVariableKind(
+					p,
+					ast.AccessNotSpecified,
+					nil,
+					nil,
+					nil,
+					docString,
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -256,7 +272,10 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
+			false,
+			false,
 			identifier,
+			nil,
 			nil,
 			nil,
 			ast.NewFunctionBlock(

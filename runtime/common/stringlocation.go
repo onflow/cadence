@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/errors"
@@ -64,6 +65,10 @@ func (l StringLocation) Description() string {
 	return string(l)
 }
 
+func (l StringLocation) ID() string {
+	return fmt.Sprintf("%s.%s", StringLocationPrefix, l)
+}
+
 func (l StringLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type   string
@@ -98,11 +103,8 @@ func decodeStringLocationTypeID(gauge MemoryGauge, typeID string) (StringLocatio
 	parts := strings.SplitN(typeID, ".", 3)
 
 	pieceCount := len(parts)
-	switch pieceCount {
-	case 1:
+	if pieceCount == 1 {
 		return newError("missing location")
-	case 2:
-		return newError("missing qualified identifier")
 	}
 
 	prefix := parts[0]
@@ -117,7 +119,10 @@ func decodeStringLocationTypeID(gauge MemoryGauge, typeID string) (StringLocatio
 	}
 
 	location := NewStringLocation(gauge, parts[1])
-	qualifiedIdentifier := parts[2]
+	var qualifiedIdentifier string
+	if pieceCount > 2 {
+		qualifiedIdentifier = parts[2]
+	}
 
 	return location, qualifiedIdentifier, nil
 }

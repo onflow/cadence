@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -307,7 +307,7 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.BoolType
 
 	case PrimitiveStaticTypeAddress:
-		return &sema.AddressType{}
+		return sema.TheAddressType
 
 	case PrimitiveStaticTypeString:
 		return sema.StringType
@@ -557,13 +557,20 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeAuthAccountInbox
 	}
 
-	switch t.(type) {
+	switch t := t.(type) {
 	case *sema.AddressType:
 		typ = PrimitiveStaticTypeAddress
 
 	// Storage
 	case *sema.CapabilityType:
-		typ = PrimitiveStaticTypeCapability
+		// Only convert unparameterized Capability type
+		if t.BorrowType == nil {
+			typ = PrimitiveStaticTypeCapability
+		}
+	}
+
+	if typ == PrimitiveStaticTypeUnknown {
+		return
 	}
 
 	return NewPrimitiveStaticType(memoryGauge, typ) // default is 0 aka PrimitiveStaticTypeUnknown

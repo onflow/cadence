@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -168,7 +168,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		assert.False(t,
 			IsSubType(
 				&FunctionType{
-					Parameters: []*Parameter{
+					Parameters: []Parameter{
 						{
 							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
@@ -178,7 +178,7 @@ func TestFunctionSubtyping(t *testing.T) {
 					),
 				},
 				&FunctionType{
-					Parameters: []*Parameter{
+					Parameters: []Parameter{
 						{
 							TypeAnnotation: NewTypeAnnotation(AnyStructType),
 						},
@@ -195,7 +195,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
-					Parameters: []*Parameter{
+					Parameters: []Parameter{
 						{
 							TypeAnnotation: NewTypeAnnotation(AnyStructType),
 						},
@@ -205,7 +205,7 @@ func TestFunctionSubtyping(t *testing.T) {
 					),
 				},
 				&FunctionType{
-					Parameters: []*Parameter{
+					Parameters: []Parameter{
 						{
 							TypeAnnotation: NewTypeAnnotation(IntType),
 						},

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ func (s *Storage) GetStorageMap(
 
 		var data []byte
 		var err error
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
 		})
 		if err != nil {
@@ -161,11 +161,10 @@ func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *inte
 }
 
 func (s *Storage) recordContractUpdate(
-	address common.Address,
-	name string,
+	location common.AddressLocation,
 	contractValue *interpreter.CompositeValue,
 ) {
-	key := interpreter.NewStorageKey(s.memoryGauge, address, name)
+	key := interpreter.NewStorageKey(s.memoryGauge, location.Address, location.Name)
 
 	// NOTE: do NOT delete the map entry,
 	// otherwise the removal write is lost
@@ -177,8 +176,8 @@ func (s *Storage) recordContractUpdate(
 }
 
 type ContractUpdate struct {
-	Key           interpreter.StorageKey
 	ContractValue *interpreter.CompositeValue
+	Key           interpreter.StorageKey
 }
 
 func SortContractUpdates(updates []ContractUpdate) {
@@ -229,6 +228,13 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	// Commit the underlying slab storage's writes
 
+	size := s.PersistentSlabStorage.DeltasSizeWithoutTempAddresses()
+	if size > 0 {
+		inter.ReportComputation(common.ComputationKindEncodeValue, uint(size))
+		usage := common.NewBytesMemoryUsage(int(size))
+		common.UseMemory(s.memoryGauge, usage)
+	}
+
 	deltas := s.PersistentSlabStorage.DeltasWithoutTempAddresses()
 	common.UseMemory(s.memoryGauge, common.NewAtreeEncodedSlabMemoryUsage(deltas))
 
@@ -243,7 +249,7 @@ func (s *Storage) commitNewStorageMaps() error {
 
 	for pair := s.newStorageMaps.Oldest(); pair != nil; pair = pair.Next() {
 		var err error
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			err = s.Ledger.SetValue(
 				pair.Key.Address[:],
 				[]byte(pair.Key.Key),
@@ -270,7 +276,7 @@ func (s *Storage) CheckHealth() error {
 	accountRootSlabIDs := make(map[atree.StorageID]struct{}, len(rootSlabIDs))
 
 	// NOTE: map range is safe, as it creates a subset
-	for rootSlabID := range rootSlabIDs { //nolint:maprangecheck
+	for rootSlabID := range rootSlabIDs { //nolint:maprange
 		if rootSlabID.Address == (atree.Address{}) {
 			continue
 		}
@@ -284,7 +290,7 @@ func (s *Storage) CheckHealth() error {
 
 	var storageMapStorageIDs []atree.StorageID
 
-	for _, storageMap := range s.storageMaps { //nolint:maprangecheck
+	for _, storageMap := range s.storageMaps { //nolint:maprange
 		storageMapStorageIDs = append(
 			storageMapStorageIDs,
 			storageMap.StorageID(),
@@ -312,7 +318,7 @@ func (s *Storage) CheckHealth() error {
 	if len(accountRootSlabIDs) > len(found) {
 		var unreferencedRootSlabIDs []atree.StorageID
 
-		for accountRootSlabID := range accountRootSlabIDs { //nolint:maprangecheck
+		for accountRootSlabID := range accountRootSlabIDs { //nolint:maprange
 			if _, ok := found[accountRootSlabID]; ok {
 				continue
 			}

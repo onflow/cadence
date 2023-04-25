@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.JSONEq(t,
+			// language=json
 			`
             {
                 "Expression": {
@@ -89,6 +90,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.JSONEq(t,
+			// language=json
 			`
             {
                 "Label": "ok",

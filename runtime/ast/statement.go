@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,8 +85,8 @@ func (s *ReturnStatement) String() string {
 func (s *ReturnStatement) MarshalJSON() ([]byte, error) {
 	type Alias ReturnStatement
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "ReturnStatement",
 		Alias: (*Alias)(s),
@@ -132,8 +132,8 @@ func (s *BreakStatement) String() string {
 func (s *BreakStatement) MarshalJSON() ([]byte, error) {
 	type Alias BreakStatement
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "BreakStatement",
 		Alias: (*Alias)(s),
@@ -179,8 +179,8 @@ func (s *ContinueStatement) String() string {
 func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
 	type Alias ContinueStatement
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "ContinueStatement",
 		Alias: (*Alias)(s),
@@ -293,9 +293,9 @@ func (s *IfStatement) String() string {
 func (s *IfStatement) MarshalJSON() ([]byte, error) {
 	type Alias IfStatement
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "IfStatement",
 		Range: NewUnmeteredRangeFromPositioned(s),
@@ -367,9 +367,9 @@ func (s *WhileStatement) String() string {
 func (s *WhileStatement) MarshalJSON() ([]byte, error) {
 	type Alias WhileStatement
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "WhileStatement",
 		Range: NewUnmeteredRangeFromPositioned(s),
@@ -380,10 +380,10 @@ func (s *WhileStatement) MarshalJSON() ([]byte, error) {
 // ForStatement
 
 type ForStatement struct {
-	Identifier Identifier
-	Index      *Identifier
 	Value      Expression
+	Index      *Identifier
 	Block      *Block
+	Identifier Identifier
 	StartPos   Position `json:"-"`
 }
 
@@ -465,9 +465,9 @@ func (s *ForStatement) String() string {
 func (s *ForStatement) MarshalJSON() ([]byte, error) {
 	type Alias ForStatement
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "ForStatement",
 		Range: NewUnmeteredRangeFromPositioned(s),
@@ -531,9 +531,9 @@ func (s *EmitStatement) String() string {
 func (s *EmitStatement) MarshalJSON() ([]byte, error) {
 	type Alias EmitStatement
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "EmitStatement",
 		Range: NewUnmeteredRangeFromPositioned(s),
@@ -609,9 +609,9 @@ func (s *AssignmentStatement) String() string {
 func (s *AssignmentStatement) MarshalJSON() ([]byte, error) {
 	type Alias AssignmentStatement
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "AssignmentStatement",
 		Range: NewUnmeteredRangeFromPositioned(s),
@@ -675,9 +675,9 @@ func (s *SwapStatement) String() string {
 func (s *SwapStatement) MarshalJSON() ([]byte, error) {
 	type Alias SwapStatement
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "SwapStatement",
 		Range: NewUnmeteredRangeFromPositioned(s),
@@ -726,9 +726,9 @@ func (s *ExpressionStatement) Doc() prettier.Doc {
 func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
 	type Alias ExpressionStatement
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "ExpressionStatement",
 		Range: NewUnmeteredRangeFromPositioned(s),
@@ -826,8 +826,8 @@ func (s *SwitchStatement) String() string {
 func (s *SwitchStatement) MarshalJSON() ([]byte, error) {
 	type Alias SwitchStatement
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "SwitchStatement",
 		Alias: (*Alias)(s),
@@ -845,8 +845,8 @@ type SwitchCase struct {
 func (s *SwitchCase) MarshalJSON() ([]byte, error) {
 	type Alias SwitchCase
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "SwitchCase",
 		Alias: (*Alias)(s),

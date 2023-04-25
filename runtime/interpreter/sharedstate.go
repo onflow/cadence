@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,15 +26,16 @@ import (
 )
 
 type SharedState struct {
-	Config                        *Config
-	allInterpreters               map[common.Location]*Interpreter
-	callStack                     *CallStack
-	typeCodes                     TypeCodes
-	inStorageIteration            bool
-	storageMutatedDuringIteration bool
+	attachmentIterationMap map[*CompositeValue]bool
+	typeCodes              TypeCodes
+	Config                 *Config
+	allInterpreters        map[common.Location]*Interpreter
+	callStack              *CallStack
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues ReferencedResourceKindedValues
 	resourceVariables              map[ResourceKindedValue]*Variable
+	inStorageIteration             bool
+	storageMutatedDuringIteration  bool
 }
 
 func NewSharedState(config *Config) *SharedState {
@@ -52,4 +53,15 @@ func NewSharedState(config *Config) *SharedState {
 		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
 	}
+}
+
+func (s *SharedState) inAttachmentIteration(base *CompositeValue) bool {
+	return s.attachmentIterationMap[base]
+}
+
+func (s *SharedState) setAttachmentIteration(base *CompositeValue, b bool) {
+	if s.attachmentIterationMap == nil {
+		s.attachmentIterationMap = map[*CompositeValue]bool{}
+	}
+	s.attachmentIterationMap[base] = b
 }

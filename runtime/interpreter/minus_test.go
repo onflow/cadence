@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ func TestMinusUInt8(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -245,7 +245,7 @@ func TestMinusUInt16(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -359,7 +359,7 @@ func TestMinusUInt32(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -689,7 +689,7 @@ func TestMinusUInt64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -805,7 +805,7 @@ func TestMinusUInt128(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1263,7 +1263,7 @@ func TestMinusUInt256(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1377,7 +1377,7 @@ func TestMinusInt8(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1492,7 +1492,7 @@ func TestMinusInt16(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1606,7 +1606,7 @@ func TestMinusInt32(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1936,7 +1936,7 @@ func TestMinusInt64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2052,7 +2052,7 @@ func TestMinusInt128(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2510,7 +2510,7 @@ func TestMinusInt256(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(inter, test.b)
+			test.a.Minus(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2625,7 +2625,7 @@ func TestMinusUInt(t *testing.T) {
 		f := func() {
 			a := NewUnmeteredUIntValueFromUint64(test.a)
 			b := NewUnmeteredUIntValueFromUint64(test.b)
-			a.Minus(inter, b)
+			a.Minus(inter, b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)

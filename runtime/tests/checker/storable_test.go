@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCheckStorable(t *testing.T) {
@@ -36,7 +37,18 @@ func TestCheckStorable(t *testing.T) {
 
 	test := func(t *testing.T, code string, errorTypes ...error) {
 
-		_, err := ParseAndCheckWithPanic(t, code)
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(stdlib.PanicFunction)
+
+		_, err := ParseAndCheckWithOptions(t,
+			code,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+					AttachmentsEnabled:  true,
+				},
+			},
+		)
 
 		if len(errorTypes) == 0 {
 			require.NoError(t, err)
@@ -95,7 +107,7 @@ func TestCheckStorable(t *testing.T) {
 	storableTypes := sema.AllNumberTypes[:]
 	storableTypes = append(
 		storableTypes,
-		&sema.AddressType{},
+		sema.TheAddressType,
 		sema.PathType,
 		&sema.CapabilityType{},
 		sema.StringType,
@@ -253,6 +265,7 @@ func TestCheckStorable(t *testing.T) {
 				}
 
 				var interfaceKeyword string
+				var baseType string
 				var initializer string
 				var destructor string
 
@@ -291,6 +304,10 @@ func TestCheckStorable(t *testing.T) {
 					}
 				}
 
+				if compositeKind == common.CompositeKindAttachment {
+					baseType = "for AnyStruct"
+				}
+
 				var body string
 				if compositeKind == common.CompositeKindEvent {
 					body = fmt.Sprintf("(value: %s)", typeName)
@@ -325,10 +342,11 @@ func TestCheckStorable(t *testing.T) {
 
 					code := fmt.Sprintf(
 						`
-					      %[1]s %[2]s T %[3]s
+					      %[1]s %[2]s T %[3]s %[4]s
 					    `,
 						compositeKeyword,
 						interfaceKeyword,
+						baseType,
 						body,
 					)
 

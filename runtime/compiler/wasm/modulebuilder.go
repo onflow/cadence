@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,8 +29,8 @@ type ModuleBuilder struct {
 	types              []*FunctionType
 	functions          []*Function
 	data               []*Data
-	requiredMemorySize uint32
 	exports            []*Export
+	requiredMemorySize uint32
 }
 
 func (b *ModuleBuilder) AddFunction(name string, functionType *FunctionType, code *Code) uint32 {

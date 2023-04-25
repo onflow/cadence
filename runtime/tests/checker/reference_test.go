@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -721,6 +721,27 @@ func TestCheckInvalidReferenceResourceLoss(t *testing.T) {
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
 
+func TestCheckInvalidReferenceResourceLoss2(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun f(): @R {
+          return <- create R()
+      }
+
+      fun test() {
+          let ref = &f() as &R
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+}
+
 func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 
 	t.Parallel()
@@ -743,7 +764,7 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -763,7 +784,7 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
 	t.Run("non-composite", func(t *testing.T) {

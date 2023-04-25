@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,13 +71,15 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	referencedExpression := referenceExpression.Expression
 
-	_, _ = checker.visitExpression(referencedExpression, targetType)
+	referencedType := checker.VisitExpression(referencedExpression, targetType)
 
 	if referenceType == nil {
 		return InvalidType
 	}
 
-	checker.Elaboration.ReferenceExpressionBorrowTypes[referenceExpression] = returnType
+	checker.checkUnusedExpressionResourceLoss(referencedType, referencedExpression)
+
+	checker.Elaboration.SetReferenceExpressionBorrowType(referenceExpression, returnType)
 
 	return returnType
 }

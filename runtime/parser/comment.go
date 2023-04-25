@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,10 @@ func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 		switch p.current.Type {
 		case lexer.TokenBlockCommentStart:
 			p.next()
-			ok = false
 			depth++
 
 		case lexer.TokenBlockCommentContent:
 			p.next()
-			ok = false
 
 		case lexer.TokenBlockCommentEnd:
 			endToken = p.current

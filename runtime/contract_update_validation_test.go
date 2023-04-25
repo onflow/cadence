@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ func newContractAddTransaction(name string, code string) string {
 
 func newContractUpdateTransaction(name string, code string) string {
 	return newContractDeployTransaction(
-		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
+		sema.AuthAccountContractsTypeUpdate__experimentalFunctionName,
 		name,
 		code,
 	)
@@ -93,26 +93,14 @@ func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 			return []Address{common.MustBytesToAddress([]byte{0x42})}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		removeAccountContractCode: func(address Address, name string) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		removeAccountContractCode: func(location common.AddressLocation) error {
 			delete(accountCodes, location)
 			return nil
 		},
@@ -2163,26 +2151,14 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 				return []Address{address}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
-			removeAccountContractCode: func(address Address, name string) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			removeAccountContractCode: func(location common.AddressLocation) error {
 				delete(accountCodes, location)
 				return nil
 			},
@@ -2241,30 +2217,36 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		programSets = locationAccessCounts{}
 
 		runtimeInterface = &testRuntimeInterface{
-			getProgram: func(location Location) (*interpreter.Program, error) {
-
+			getAndSetProgram: func(
+				location Location,
+				load func() (*interpreter.Program, error),
+			) (
+				program *interpreter.Program,
+				err error,
+			) {
 				if runtimeInterface.programs == nil {
 					runtimeInterface.programs = map[Location]*interpreter.Program{}
 				}
 
-				program := runtimeInterface.programs[location]
+				var ok bool
+				program, ok = runtimeInterface.programs[location]
 				if program != nil {
 					programGets[location]++
 				}
-
-				return program, nil
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-
-				programSets[location]++
-
-				if runtimeInterface.programs == nil {
-					runtimeInterface.programs = map[Location]*interpreter.Program{}
+				if ok {
+					return
 				}
+
+				program, err = load()
+
+				// NOTE: important: still set empty program,
+				// even if error occurred
 
 				runtimeInterface.programs[location] = program
 
-				return nil
+				programSets[location]++
+
+				return
 			},
 			getCode: func(location Location) (bytes []byte, err error) {
 				return accountCodes[location], nil
@@ -2274,26 +2256,14 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 				return []Address{address}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
-			removeAccountContractCode: func(address Address, name string) error {
-				location := common.AddressLocation{
-					Address: address,
-					Name:    name,
-				}
+			removeAccountContractCode: func(location common.AddressLocation) error {
 				delete(accountCodes, location)
 				return nil
 			},
@@ -2330,7 +2300,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 			programGets2,
 			programSets2,
 		} {
-			for location := range counts { //nolint:maprangecheck
+			for location := range counts { //nolint:maprange
 				delete(counts, location)
 			}
 		}
@@ -2342,7 +2312,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		addTx := newContractAddTransaction(name, oldCode)
 
-		txLocation := common.TransactionLocation{0}
+		txLocation := common.TransactionLocation{0x1}
 
 		// Deploy to first
 
@@ -2370,7 +2340,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		clearLocationAccessCounts()
 
-		txLocation := common.TransactionLocation{1}
+		txLocation := common.TransactionLocation{0x2}
 
 		importTx := fmt.Sprintf(
 			`
@@ -2416,9 +2386,9 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		clearLocationAccessCounts()
 
-		txLocation1 := common.TransactionLocation{1}
+		txLocation1 := common.TransactionLocation{0x2}
 		// second has seen an additional transaction (import, above)
-		txLocation2 := common.TransactionLocation{2}
+		txLocation2 := common.TransactionLocation{0x3}
 
 		updateTx := newContractUpdateTransaction(name, newCode)
 

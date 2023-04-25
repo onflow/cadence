@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -524,18 +524,10 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			return []Address{signerAccount}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(b),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
@@ -673,7 +665,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Run validation scripts
 
-	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0)
+	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0, interpreter.EmptyLocationRange)
 
 	inter := newTestInterpreter(b)
 
@@ -699,9 +691,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		value := interpreter.NewUnmeteredUFix64Value(uint64(result.(cadence.UFix64)))
 
-		require.True(b, bool(value.Less(inter, mintAmountValue)))
+		require.True(b, bool(value.Less(inter, mintAmountValue, interpreter.EmptyLocationRange)))
 
-		sum = sum.Plus(inter, value).(interpreter.UFix64Value)
+		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.UFix64Value)
 	}
 
 	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)

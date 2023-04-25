@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -259,19 +259,93 @@ func TestParseVariableDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("static var x = 1"),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for variable",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("static var x = 1")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("native var x = 1"),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for variable",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("native var x = 1")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseParameterList(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (any, []error) {
+	parse := func(input string) (*ast.ParameterList, []error) {
 		return Parse(
-			[]byte(input),
-			func(p *parser) (any, error) {
-				return parseParameterList(p)
-			},
 			nil,
+			[]byte(input),
+			parseParameterList,
+			Config{},
 		)
 	}
 
@@ -337,10 +411,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
-						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					},
 				},
 				Range: ast.Range{
@@ -378,10 +449,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
-						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					},
 				},
 				Range: ast.Range{
@@ -419,10 +487,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
-						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					},
 					{
 						Label: "",
@@ -440,10 +505,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
-							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
-						},
+						StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
 					},
 				},
 				Range: ast.Range{
@@ -496,16 +558,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 						},
 					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "",
-								Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
-							},
-						},
-						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
 							Range: ast.Range{
@@ -542,16 +594,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
 							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
 						},
-					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "",
-								Pos:        ast.Position{Line: 1, Column: 13, Offset: 13},
-							},
-						},
-						StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
 					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
@@ -646,16 +688,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							StartPos: ast.Position{Line: 2, Column: 18, Offset: 19},
 							EndPos:   ast.Position{Line: 2, Column: 19, Offset: 20},
 						},
-					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "",
-								Pos:        ast.Position{Line: 2, Column: 19, Offset: 20},
-							},
-						},
-						StartPos: ast.Position{Line: 2, Column: 19, Offset: 20},
 					},
 					FunctionBlock: &ast.FunctionBlock{
 						PreConditions: &ast.Conditions{
@@ -770,16 +802,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							EndPos:   ast.Position{Line: 2, Column: 8, Offset: 17},
 						},
 					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "",
-								Pos:        ast.Position{Line: 2, Column: 8, Offset: 17},
-							},
-						},
-						StartPos: ast.Position{Line: 2, Column: 8, Offset: 17},
-					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
 							Range: ast.Range{
@@ -817,16 +839,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							EndPos:   ast.Position{Line: 7, Column: 8, Offset: 47},
 						},
 					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "",
-								Pos:        ast.Position{Line: 7, Column: 8, Offset: 47},
-							},
-						},
-						StartPos: ast.Position{Line: 7, Column: 8, Offset: 47},
-					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
 							Range: ast.Range{
@@ -863,16 +875,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							StartPos: ast.Position{Line: 7, Column: 7, Offset: 46},
 							EndPos:   ast.Position{Line: 7, Column: 8, Offset: 47},
 						},
-					},
-					ReturnTypeAnnotation: &ast.TypeAnnotation{
-						IsResource: false,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "",
-								Pos:        ast.Position{Line: 7, Column: 8, Offset: 47},
-							},
-						},
-						StartPos: ast.Position{Line: 7, Column: 8, Offset: 47},
 					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
@@ -956,19 +958,540 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("native fun foo() {}"),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Flags: ast.FunctionDeclarationFlagsIsNative,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+								EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("native fun foo() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("static fun foo() {}"),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Flags: ast.FunctionDeclarationFlagsIsStatic,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+								EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("static fun foo() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("static native fun foo() {}"),
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Flags: ast.FunctionDeclarationFlagsIsStatic | ast.FunctionDeclarationFlagsIsNative,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 18, Offset: 18},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
+							EndPos:   ast.Position{Line: 1, Column: 22, Offset: 22},
+						},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 24, Offset: 24},
+								EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("static native fun foo() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("native static fun foo() {}"),
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier after native modifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("native static fun foo() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("pub static native fun foo() {}"),
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Access: ast.AccessPublic,
+					Flags:  ast.FunctionDeclarationFlagsIsStatic | ast.FunctionDeclarationFlagsIsNative,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 22, Offset: 22},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 25, Offset: 25},
+							EndPos:   ast.Position{Line: 1, Column: 26, Offset: 26},
+						},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
+								EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("pub static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("pub static native fun foo() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("with empty type parameters, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < > () {}"),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					TypeParameterList: &ast.TypeParameterList{
+						TypeParameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+								EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with type parameters, single type parameter, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < A  > () {}"),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					TypeParameterList: &ast.TypeParameterList{
+						TypeParameters: []*ast.TypeParameter{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Offset: 11, Line: 1, Column: 11},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+							EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+						},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
+								EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with type parameters, multiple parameters, type bound, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < A  , B : C > () {}"),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					TypeParameterList: &ast.TypeParameterList{
+						TypeParameters: []*ast.TypeParameter{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Offset: 11, Line: 1, Column: 11},
+								},
+							},
+							{
+								Identifier: ast.Identifier{
+									Identifier: "B",
+									Pos:        ast.Position{Offset: 16, Line: 1, Column: 16},
+								},
+								TypeBound: &ast.TypeAnnotation{
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "C",
+											Pos:        ast.Position{Offset: 20, Line: 1, Column: 20},
+										},
+									},
+									StartPos: ast.Position{Offset: 20, Line: 1, Column: 20},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 22, Offset: 22},
+						},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 24, Offset: 24},
+							EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+						},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
+								EndPos:   ast.Position{Line: 1, Column: 28, Offset: 28},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with type parameters, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo<A>() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected '(' as start of parameter list, got '<'",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing type parameter list end, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < "),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "missing '>' at end of type parameter list",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing type parameter list separator, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("fun foo  < A B > () { } "),
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&MissingCommaInParameterListError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+	})
+
 }
 
 func TestParseAccess(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (any, []error) {
+	parse := func(input string) (ast.Access, []error) {
 		return Parse(
-			[]byte(input),
-			func(p *parser) (any, error) {
-				return parseAccess(p)
-			},
 			nil,
+			[]byte(input),
+			parseAccess,
+			Config{},
 		)
 	}
 
@@ -1014,7 +1537,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1035,7 +1558,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1056,7 +1579,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1142,7 +1665,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1163,7 +1686,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1184,7 +1707,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -1608,10 +2131,7 @@ func TestParseEvent(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 21, Line: 1, Column: 21},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
-													EndPos:   ast.Position{Offset: 23, Line: 1, Column: 23},
-												},
+												StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
 											},
 											{
 												Label: "",
@@ -1629,10 +2149,7 @@ func TestParseEvent(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 31, Line: 1, Column: 31},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 27, Line: 1, Column: 27},
-													EndPos:   ast.Position{Offset: 36, Line: 1, Column: 36},
-												},
+												StartPos: ast.Position{Offset: 27, Line: 1, Column: 27},
 											},
 										},
 										Range: ast.Range{
@@ -1660,13 +2177,21 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (any, []error) {
+	parse := func(input string) (*ast.FieldDeclaration, []error) {
 		return Parse(
-			[]byte(input),
-			func(p *parser) (any, error) {
-				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, "")
-			},
 			nil,
+			[]byte(input),
+			func(p *parser) (*ast.FieldDeclaration, error) {
+				return parseFieldWithVariableKind(
+					p,
+					ast.AccessNotSpecified,
+					nil,
+					nil,
+					nil,
+					"",
+				)
+			},
+			Config{},
 		)
 	}
 
@@ -1737,6 +2262,271 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 			result,
 		)
 	})
+}
+
+func TestParseField(t *testing.T) {
+
+	t.Parallel()
+
+	parse := func(input string, config Config) (ast.Declaration, []error) {
+		return Parse(
+			nil,
+			[]byte(input),
+			func(p *parser) (ast.Declaration, error) {
+				return parseMemberOrNestedDeclaration(
+					p,
+					"",
+				)
+			},
+			config,
+		)
+	}
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse(
+			"native let foo: Int",
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FieldDeclaration{
+				Flags:        ast.FieldDeclarationFlagsIsNative,
+				VariableKind: ast.VariableKindConstant,
+				Identifier: ast.Identifier{
+					Identifier: "foo",
+					Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 16, Offset: 16},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("native let foo: Int", Config{})
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		require.Empty(t, errs)
+	})
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse(
+			"static let foo: Int",
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FieldDeclaration{
+				Flags:        ast.FieldDeclarationFlagsIsStatic,
+				VariableKind: ast.VariableKindConstant,
+				Identifier: ast.Identifier{
+					Identifier: "foo",
+					Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 16, Offset: 16},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static let foo: Int",
+			Config{},
+		)
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		require.Empty(t, errs)
+	})
+
+	t.Run("static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse(
+			"static native let foo: Int",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FieldDeclaration{
+				Flags:        ast.FieldDeclarationFlagsIsStatic | ast.FieldDeclarationFlagsIsNative,
+				VariableKind: ast.VariableKindConstant,
+				Identifier: ast.Identifier{
+					Identifier: "foo",
+					Pos:        ast.Position{Line: 1, Column: 18, Offset: 18},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 23, Offset: 23},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("static native let foo: Int", Config{})
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"native static let foo: Int",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier after native modifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse(
+			"pub static native let foo: Int",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FieldDeclaration{
+				Access:       ast.AccessPublic,
+				Flags:        ast.FieldDeclarationFlagsIsStatic | ast.FieldDeclarationFlagsIsNative,
+				VariableKind: ast.VariableKindConstant,
+				Identifier: ast.Identifier{
+					Identifier: "foo",
+					Pos:        ast.Position{Line: 1, Column: 22, Offset: 22},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 27, Offset: 27},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("pub static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("pub static native let foo: Int", Config{})
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
 }
 
 func TestParseCompositeDeclaration(t *testing.T) {
@@ -1882,10 +2672,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 86, Line: 5, Column: 24},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 81, Line: 5, Column: 19},
-													EndPos:   ast.Position{Offset: 88, Line: 5, Column: 26},
-												},
+												StartPos: ast.Position{Offset: 81, Line: 5, Column: 19},
 											},
 										},
 										Range: ast.Range{
@@ -1989,6 +2776,344 @@ func TestParseCompositeDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
 						EndPos:   ast.Position{Offset: 241, Line: 12, Column: 10},
+					},
+				},
+			},
+			result,
+		)
+	})
+}
+
+func TestParseAttachmentDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations("pub attachment E for S {} ")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.AttachmentDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+					BaseType: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "S",
+							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+						},
+					},
+					Members: &ast.Members{},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 24, Offset: 24},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("nested in contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+		contract Test {
+			pub attachment E for S {}
+		}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindContract,
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos:        ast.Position{Line: 2, Column: 11, Offset: 12},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 2, Offset: 3},
+						EndPos:   ast.Position{Line: 4, Column: 2, Offset: 50},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.AttachmentDeclaration{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "E",
+									Pos:        ast.Position{Line: 3, Column: 18, Offset: 37},
+								},
+								BaseType: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "S",
+										Pos:        ast.Position{Line: 3, Column: 24, Offset: 43},
+									},
+								},
+								Members: &ast.Members{},
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 3, Column: 3, Offset: 22},
+									EndPos:   ast.Position{Line: 3, Column: 27, Offset: 46},
+								},
+							},
+						},
+					),
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("missing base type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("attachment E {} ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected 'for', got '{'",
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("one conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations("pub attachment E for S: I {} ")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.AttachmentDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+					BaseType: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "S",
+							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+						},
+					},
+					Members: &ast.Members{},
+					Conformances: []*ast.NominalType{
+						ast.NewNominalType(
+							nil,
+							ast.Identifier{
+								Identifier: "I",
+								Pos:        ast.Position{Line: 1, Column: 24, Offset: 24},
+							},
+							nil,
+						),
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("two conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations("pub attachment E for S: I1, I2 {} ")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.AttachmentDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+					BaseType: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "S",
+							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+						},
+					},
+					Members: &ast.Members{},
+					Conformances: []*ast.NominalType{
+						ast.NewNominalType(
+							nil,
+							ast.Identifier{
+								Identifier: "I1",
+								Pos:        ast.Position{Line: 1, Column: 24, Offset: 24},
+							},
+							nil,
+						),
+						ast.NewNominalType(
+							nil,
+							ast.Identifier{
+								Identifier: "I2",
+								Pos:        ast.Position{Line: 1, Column: 28, Offset: 28},
+							},
+							nil,
+						),
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 32, Offset: 32},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("fields, functions and special functions", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`pub attachment E for S {
+			pub(set) var foo: Int
+			init() {}
+			destroy() {}
+			pub fun getFoo(): Int {}
+		}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.AttachmentDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+					BaseType: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "S",
+							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+						},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.FieldDeclaration{
+								Access:       ast.AccessPublicSettable,
+								VariableKind: ast.VariableKindVariable,
+								Identifier: ast.Identifier{
+									Identifier: "foo",
+									Pos:        ast.Position{Offset: 41, Line: 2, Column: 16},
+								},
+								TypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 46, Line: 2, Column: 21},
+										},
+									},
+									StartPos: ast.Position{Offset: 46, Line: 2, Column: 21},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 28, Line: 2, Column: 3},
+									EndPos:   ast.Position{Offset: 48, Line: 2, Column: 23},
+								},
+							},
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindInitializer,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Identifier: ast.Identifier{
+										Identifier: "init",
+										Pos:        ast.Position{Offset: 53, Line: 3, Column: 3},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 57, Line: 3, Column: 7},
+											EndPos:   ast.Position{Offset: 58, Line: 3, Column: 8},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 60, Line: 3, Column: 10},
+												EndPos:   ast.Position{Offset: 61, Line: 3, Column: 11},
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 53, Line: 3, Column: 3},
+								},
+							},
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindDestructor,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Identifier: ast.Identifier{
+										Identifier: "destroy",
+										Pos:        ast.Position{Offset: 66, Line: 4, Column: 3},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 73, Line: 4, Column: 10},
+											EndPos:   ast.Position{Offset: 74, Line: 4, Column: 11},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 76, Line: 4, Column: 13},
+												EndPos:   ast.Position{Offset: 77, Line: 4, Column: 14},
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 66, Line: 4, Column: 3},
+								},
+							},
+							&ast.FunctionDeclaration{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "getFoo",
+									Pos:        ast.Position{Offset: 90, Line: 5, Column: 11},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 96, Line: 5, Column: 17},
+										EndPos:   ast.Position{Offset: 97, Line: 5, Column: 18},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 100, Line: 5, Column: 21},
+										},
+									},
+									StartPos: ast.Position{Offset: 100, Line: 5, Column: 21},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 104, Line: 5, Column: 25},
+											EndPos:   ast.Position{Offset: 105, Line: 5, Column: 26},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 82, Line: 5, Column: 3},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 6, Column: 2, Offset: 109},
 					},
 				},
 			},
@@ -2128,10 +3253,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 96, Line: 5, Column: 24},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 91, Line: 5, Column: 19},
-													EndPos:   ast.Position{Offset: 98, Line: 5, Column: 26},
-												},
+												StartPos: ast.Position{Offset: 91, Line: 5, Column: 19},
 											},
 										},
 										Range: ast.Range{
@@ -2233,6 +3355,11 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 			result,
 		)
 	})
+}
+
+func TestParseEnumDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("enum, two cases one one line", func(t *testing.T) {
 
@@ -2278,6 +3405,74 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("enum case with static modifier, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(" enum E { static case e }"),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for enum case",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("enum case with static modifier, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" enum E { static case e }")
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		require.Empty(t, errs)
+	})
+
+	t.Run("enum case with native modifier, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(" enum E { native case e }"),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for enum case",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("enum case with native modifier, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" enum E { native case e }")
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		require.Empty(t, errs)
 	})
 }
 
@@ -2421,10 +3616,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
-											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
-										},
+										StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
 									},
 								},
 								Range: ast.Range{
@@ -2617,10 +3809,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
-											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
-										},
+										StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
 									},
 								},
 								Range: ast.Range{
@@ -2857,10 +4046,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
-											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
-										},
+										StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
 									},
 								},
 								Range: ast.Range{
@@ -3042,15 +4228,6 @@ func TestParseFunctionAndBlock(t *testing.T) {
 						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Statements: []ast.Statement{
@@ -3109,25 +4286,13 @@ func TestParseFunctionParameterWithoutLabel(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-								EndPos:   ast.Position{Offset: 20, Line: 2, Column: 19},
-							},
+							StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 						},
 					},
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 21, Line: 2, Column: 20},
-						},
-					},
-					StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -3179,25 +4344,13 @@ func TestParseFunctionParameterWithLabel(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-								EndPos:   ast.Position{Offset: 22, Line: 2, Column: 21},
-							},
+							StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 						},
 					},
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 23, Line: 2, Column: 22},
-						},
-					},
-					StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -3291,10 +4444,7 @@ func TestParseStructure(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 80, Line: 5, Column: 22},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 75, Line: 5, Column: 17},
-												EndPos:   ast.Position{Offset: 82, Line: 5, Column: 24},
-											},
+											StartPos: ast.Position{Offset: 75, Line: 5, Column: 17},
 										},
 									},
 									Range: ast.Range{
@@ -3448,6 +4598,24 @@ func TestParseStructureWithConformances(t *testing.T) {
 	)
 }
 
+func TestParseInvalidMember(t *testing.T) {
+
+	// For now, leading unknown identifiers are valid.
+	// This will be rejected in Stable Cadence.
+
+	t.Parallel()
+
+	const code = `
+        struct Test {
+            foo let x: Int
+        }
+	`
+
+	_, errs := testParseDeclarations(code)
+
+	require.Empty(t, errs)
+}
+
 func TestParsePreAndPostConditions(t *testing.T) {
 
 	t.Parallel()
@@ -3493,26 +4661,13 @@ func TestParsePreAndPostConditions(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-								EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
-							},
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 						},
 					},
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 						EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
-						},
-					},
-					StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -3653,26 +4808,13 @@ func TestParseConditionMessage(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-								EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
-							},
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 						},
 					},
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 						EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
-						},
-					},
-					StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -3738,7 +4880,8 @@ func TestParseInterface(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
+
 		code := fmt.Sprintf(`
             %s interface Test {
                 foo: Int
@@ -3813,10 +4956,7 @@ func TestParseInterface(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 89, Line: 5, Column: 26},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 84, Line: 5, Column: 21},
-											EndPos:   ast.Position{Offset: 91, Line: 5, Column: 28},
-										},
+										StartPos: ast.Position{Offset: 84, Line: 5, Column: 21},
 									},
 								},
 								Range: ast.Range{
@@ -3872,27 +5012,107 @@ func TestParsePragmaNoArguments(t *testing.T) {
 
 	t.Parallel()
 
-	const code = `#pedantic`
-	result, err := testParseProgram(code)
-	require.NoError(t, err)
+	t.Run("identifier", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.PragmaDeclaration{
-				Expression: &ast.IdentifierExpression{
-					Identifier: ast.Identifier{
-						Identifier: "pedantic",
-						Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`#pedantic`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.PragmaDeclaration{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "pedantic",
+							Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
 					},
 				},
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
-					EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+			},
+			result,
+		)
+	})
+
+	t.Run("static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("static #foo"),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
-		},
-		result.Declarations(),
-	)
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("static #foo")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("native #foo"),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("native #foo")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParsePragmaArguments(t *testing.T) {
@@ -4211,10 +5431,7 @@ func TestParseEventDeclaration(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 28, Line: 2, Column: 27},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
-												EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
-											},
+											StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 										},
 										{
 											Label: "",
@@ -4232,10 +5449,7 @@ func TestParseEventDeclaration(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
-												EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
-											},
+											StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
 										},
 									},
 									Range: ast.Range{
@@ -4283,16 +5497,6 @@ func TestParseEventEmitStatement(t *testing.T) {
 						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 						EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-						},
-					},
-					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -4456,16 +5660,6 @@ func TestParseResourceParameterType(t *testing.T) {
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "",
-							Pos:        ast.Position{Offset: 23, Line: 2, Column: 22},
-						},
-					},
-					StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
-				},
 				ParameterList: &ast.ParameterList{
 					Parameters: []*ast.Parameter{
 						{
@@ -4484,10 +5678,7 @@ func TestParseResourceParameterType(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-								EndPos:   ast.Position{Offset: 22, Line: 2, Column: 21},
-							},
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 						},
 					},
 					Range: ast.Range{
@@ -4730,10 +5921,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 47, Line: 2, Column: 46},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
-												EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
-											},
+											StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
 										},
 									},
 									Range: ast.Range{
@@ -4827,30 +6015,36 @@ func TestParseAccessModifiers(t *testing.T) {
 				)
 			}
 
+			var baseType = ""
+
+			if compositeKind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			formatCode := func(format string) string {
-				return fmt.Sprintf(format, compositeKind.Keyword(), interfaceKeyword)
+				return fmt.Sprintf(format, compositeKind.Keyword(), interfaceKeyword, baseType)
 			}
 
 			if compositeKind == common.CompositeKindEvent {
 				declarations = append(declarations,
 					declaration{
 						formatName("itself"),
-						formatCode("%%s %s %s Test()"),
+						formatCode("%%s %s %s Test()%s"),
 					},
 				)
 			} else {
 				declarations = append(declarations,
 					declaration{
 						formatName("itself"),
-						formatCode("%%s %s %s Test {}"),
+						formatCode("%%s %s %s Test %s {}"),
 					},
 					declaration{
 						formatName("field"),
-						formatCode("%s %s Test { %%s let test: Int ; init() { self.test = 1 } }"),
+						formatCode("%s %s Test %s { %%s let test: Int ; init() { self.test = 1 } }"),
 					},
 					declaration{
 						formatName("function"),
-						formatCode("%s %s Test { %%s fun test() {} }"),
+						formatCode("%s %s Test %s { %%s fun test() {} }"),
 					},
 				)
 			}
@@ -4898,14 +6092,6 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 						StartPos: ast.Position{Offset: 12, Line: 2, Column: 11},
 						EndPos:   ast.Position{Offset: 13, Line: 2, Column: 12},
 					},
-				},
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Pos: ast.Position{Offset: 13, Line: 2, Column: 12},
-						},
-					},
-					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
@@ -4975,7 +6161,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for pragma",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -4991,7 +6177,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for transaction",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -5013,4 +6199,841 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 			errs,
 		)
 	})
+}
+
+func TestParseInvalidImportWithModifier(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                static import x from 0x1
+	        `),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for import",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            static import x from 0x1
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                native import x from 0x1
+	        `),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for import",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            native import x from 0x1
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+}
+
+func TestParseInvalidEventWithModifier(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                static event Foo()
+	        `),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for event",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            static event Foo()
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                native event Foo()
+	        `),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for event",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            native event Foo()
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+
+}
+
+func TestParseCompositeWithModifier(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                static struct Foo()
+	        `),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for structure",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            static struct Foo()
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                native struct Foo()
+	        `),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for structure",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            native struct Foo()
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+}
+
+func TestParseTransactionWithModifier(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                static transaction {}
+	        `),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for transaction",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            static transaction {}
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                native transaction {}
+	        `),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for transaction",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            native transaction {}
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+}
+
+func TestParseNestedPragma(t *testing.T) {
+
+	t.Parallel()
+
+	parse := func(input string, config Config) (ast.Declaration, []error) {
+		return Parse(
+			nil,
+			[]byte(input),
+			func(p *parser) (ast.Declaration, error) {
+				return parseMemberOrNestedDeclaration(
+					p,
+					"",
+				)
+			},
+			config,
+		)
+	}
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"native #foo",
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("native #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static #pragma",
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static #pragma",
+			Config{},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static native #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("static native #pragma", Config{})
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"native static #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier after native modifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("pub #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"pub static native #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("pub static native #pragma", Config{})
+
+		// For now, leading unknown identifiers are valid.
+		// This will be rejected in Stable Cadence.
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+}
+
+func TestParseMemberDocStrings(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("functions", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+          struct Test {
+
+              /// noReturnNoBlock
+              fun noReturnNoBlock()
+
+              /// returnNoBlock
+              fun returnNoBlock(): Int
+
+              /// returnAndBlock
+              fun returnAndBlock(): String {}
+          }
+	    `)
+
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.FunctionDeclaration{
+								DocString: " noReturnNoBlock",
+								Identifier: ast.Identifier{
+									Identifier: "noReturnNoBlock",
+									Pos:        ast.Position{Offset: 78, Line: 5, Column: 18},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 93, Line: 5, Column: 33},
+										EndPos:   ast.Position{Offset: 94, Line: 5, Column: 34},
+									},
+								},
+								StartPos: ast.Position{Offset: 74, Line: 5, Column: 14},
+							},
+							&ast.FunctionDeclaration{
+								DocString: " returnNoBlock",
+								Identifier: ast.Identifier{
+									Identifier: "returnNoBlock",
+									Pos:        ast.Position{Offset: 147, Line: 8, Column: 18},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 160, Line: 8, Column: 31},
+										EndPos:   ast.Position{Offset: 161, Line: 8, Column: 32},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 164, Line: 8, Column: 35},
+										},
+									},
+									StartPos: ast.Position{Offset: 164, Line: 8, Column: 35},
+								},
+								StartPos: ast.Position{Offset: 143, Line: 8, Column: 14},
+							},
+							&ast.FunctionDeclaration{
+								DocString: " returnAndBlock",
+								Identifier: ast.Identifier{
+									Identifier: "returnAndBlock",
+									Pos:        ast.Position{Offset: 220, Line: 11, Column: 18},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 234, Line: 11, Column: 32},
+										EndPos:   ast.Position{Offset: 235, Line: 11, Column: 33},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "String",
+											Pos:        ast.Position{Offset: 238, Line: 11, Column: 36},
+										},
+									},
+									StartPos: ast.Position{Offset: 238, Line: 11, Column: 36},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 245, Line: 11, Column: 43},
+											EndPos:   ast.Position{Offset: 246, Line: 11, Column: 44},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 216, Line: 11, Column: 14},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
+						EndPos:   ast.Position{Offset: 258, Line: 12, Column: 10},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("special functions", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+          struct Test {
+
+              /// unknown
+              unknown()
+
+              /// initNoBlock
+              init()
+
+              /// destroyWithBlock
+              destroy() {}
+          }
+	    `)
+
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindUnknown,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									DocString: " unknown",
+									Identifier: ast.Identifier{
+										Identifier: "unknown",
+										Pos:        ast.Position{Offset: 66, Line: 5, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 73, Line: 5, Column: 21},
+											EndPos:   ast.Position{Offset: 74, Line: 5, Column: 22},
+										},
+									},
+									StartPos: ast.Position{Offset: 66, Line: 5, Column: 14},
+								},
+							},
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindInitializer,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									DocString: " initNoBlock",
+									Identifier: ast.Identifier{
+										Identifier: "init",
+										Pos:        ast.Position{Offset: 121, Line: 8, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 125, Line: 8, Column: 18},
+											EndPos:   ast.Position{Offset: 126, Line: 8, Column: 19},
+										},
+									},
+									StartPos: ast.Position{Offset: 121, Line: 8, Column: 14},
+								},
+							},
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindDestructor,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									DocString: " destroyWithBlock",
+									Identifier: ast.Identifier{
+										Identifier: "destroy",
+										Pos:        ast.Position{Offset: 178, Line: 11, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 185, Line: 11, Column: 21},
+											EndPos:   ast.Position{Offset: 186, Line: 11, Column: 22},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 188, Line: 11, Column: 24},
+												EndPos:   ast.Position{Offset: 189, Line: 11, Column: 25},
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 178, Line: 11, Column: 14},
+								},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
+						EndPos:   ast.Position{Offset: 201, Line: 12, Column: 10},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+}
+
+func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := testParseDeclarations(`
+      struct Test {
+
+          init(): Int
+      }
+	`)
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "invalid return type for initializer",
+				Pos:     ast.Position{Offset: 40, Line: 4, Column: 18},
+			},
+		},
+		errs,
+	)
 }

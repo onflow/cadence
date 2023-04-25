@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import (
 
 func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) StatementResult {
 
-	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations[declaration]
+	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations(declaration)
 
 	for _, resolvedLocation := range resolvedLocations {
 		interpreter.importResolvedLocation(resolvedLocation)
@@ -73,7 +73,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 
 	var names []string
 
-	for name := range variables { //nolint:maprangecheck
+	for name := range variables { //nolint:maprange
 		names = append(names, name)
 	}
 

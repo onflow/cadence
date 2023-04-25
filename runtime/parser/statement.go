@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,6 +94,8 @@ func parseStatement(p *parser) (ast.Statement, error) {
 			return parseForStatement(p)
 		case keywordEmit:
 			return parseEmitStatement(p)
+		case keywordRemove:
+			return parseRemoveStatement(p)
 		case keywordFun:
 			// The `fun` keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
@@ -163,6 +165,16 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 
 		p.next()
 
+		var typeParameterList *ast.TypeParameterList
+
+		if p.config.TypeParametersEnabled {
+			var err error
+			typeParameterList, err = parseTypeParameterList(p)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		parameterList, returnTypeAnnotation, functionBlock, err :=
 			parseFunctionParameterListAndRest(p, false)
 
@@ -173,7 +185,10 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 		return ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
+			false,
+			false,
 			identifier,
+			typeParameterList,
 			parameterList,
 			returnTypeAnnotation,
 			functionBlock,
@@ -762,4 +777,49 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 			endPos,
 		),
 	}, nil
+}
+
+func parseRemoveStatement(
+	p *parser,
+) (*ast.RemoveStatement, error) {
+
+	startPos := p.current.StartPos
+	p.next()
+	p.skipSpaceAndComments()
+
+	attachment, err := parseType(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+	attachmentNominalType, ok := attachment.(*ast.NominalType)
+
+	if !ok {
+		p.reportSyntaxError(
+			"expected attachment nominal type, got %s",
+			attachment,
+		)
+	}
+
+	p.skipSpaceAndComments()
+
+	// check and skip `from` keyword
+	if !p.isToken(p.current, lexer.TokenIdentifier, keywordFrom) {
+		p.reportSyntaxError(
+			"expected from keyword, got %s",
+			p.current.Type,
+		)
+	}
+	p.nextSemanticToken()
+
+	attached, err := parseExpression(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+
+	return ast.NewRemoveStatement(
+		p.memoryGauge,
+		attachmentNominalType,
+		attached,
+		startPos,
+	), nil
 }

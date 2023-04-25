@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,14 +44,13 @@ func TestFunctionStaticType(t *testing.T) {
 		}
 
 		hostFunctionType := &sema.FunctionType{
-			Parameters:           []*sema.Parameter{},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
 		}
 
 		hostFunctionValue := NewHostFunctionValue(
 			inter,
-			hostFunction,
 			hostFunctionType,
+			hostFunction,
 		)
 
 		staticType := hostFunctionValue.StaticType(inter)
@@ -69,14 +68,13 @@ func TestFunctionStaticType(t *testing.T) {
 		}
 
 		hostFunctionType := &sema.FunctionType{
-			Parameters:           []*sema.Parameter{},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
 		}
 
 		hostFunctionValue := NewHostFunctionValue(
 			inter,
-			hostFunction,
 			hostFunctionType,
+			hostFunction,
 		)
 
 		compositeValue := NewCompositeValue(
@@ -95,6 +93,7 @@ func TestFunctionStaticType(t *testing.T) {
 			inter,
 			hostFunctionValue,
 			&self,
+			nil,
 		)
 
 		staticType := boundFunctionValue.StaticType(inter)

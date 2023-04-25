@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,7 +144,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 			formatLiteral := func(integer, fractional *big.Int) string {
 				var builder strings.Builder
 				builder.WriteString(integer.String())
-				builder.WriteRune('.')
+				builder.WriteByte('.')
 				builder.WriteString(format.PadLeft(fractional.String(), '0', ranged.Scale()))
 				return builder.String()
 			}

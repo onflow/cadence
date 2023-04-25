@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ func Fuzz(data []byte) int {
 		return 0
 	}
 
-	program, err := parser.ParseProgram(data, nil)
+	program, err := parser.ParseProgram(nil, data, parser.Config{})
 
 	if err != nil {
 		return 0

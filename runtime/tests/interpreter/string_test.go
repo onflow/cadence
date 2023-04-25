@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredUInt8Value(1),
 				interpreter.NewUnmeteredUInt8Value(0xCA),
 				interpreter.NewUnmeteredUInt8Value(0xDE),
@@ -272,7 +272,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			// Flowers
 			interpreter.NewUnmeteredUInt8Value(70),
 			interpreter.NewUnmeteredUInt8Value(108),
@@ -444,21 +444,21 @@ func TestInterpretCompareCharacters(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }

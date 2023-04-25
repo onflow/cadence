@@ -237,9 +237,28 @@ The deployed contracts of an account can be accessed through the `contracts` obj
 Accounts store "deployed contracts", that is, the code of the contract:
 
 ```cadence
-struct DeployedContract {
-    let name: String
-    let code: [UInt8]
+pub struct DeployedContract {
+    /// The address of the account where the contract is deployed at.
+    pub let address: Address
+
+    /// The name of the contract.
+    pub let name: String
+
+    /// The code of the contract.
+    pub let code: [UInt8]
+
+    /// Returns an array of `Type` objects representing all the public type declarations in this contract
+    /// (e.g. structs, resources, enums).
+    ///
+    /// For example, given a contract
+    /// ```
+    /// contract Foo {
+    ///       pub struct Bar {...}
+    ///       pub resource Qux {...}
+    /// }
+    /// ```
+    /// then `.publicTypes()` will return an array equivalent to the expression `[Type<Bar>(), Type<Qux>()]`
+    pub fun publicTypes(): [Type]
 }
 ```
 
@@ -370,7 +389,7 @@ Only the code of the contract is updated.
 
 ### Getting a Deployed Contract
 
-A deployed contract can be get from an account using the `get` function:
+A deployed contract can be gotten from an account using the `get` function:
 
   ```cadence
   fun get(name: String): DeployedContract?
@@ -387,19 +406,42 @@ let signer: AuthAccount = ...
 let contract = signer.contracts.get(name: "Test")
 ```
 
+### Borrowing a Deployed Contract
+
+In contrast to a static contract import `import T from 0x1`, 
+which will always perform an import of a type, 
+contracts can be "borrowed" to effectively perform a dynamic import dependent on a specific execution path. 
+
+A reference to a deployed contract contract can obtained using the `borrow` function:
+
+  ```cadence
+  fun borrow<T: &Any>(name: String): T?
+  ```
+
+  This returns a reference to the contract value stored with that name on the account, 
+  if it exists, and if it has the provided type `T`. 
+
+  Returns `nil` if no contract/contract interface with the given name exists in the account.
+
+For example, assuming that a contract named `Test` which conforms to the `TestInterface` interface is deployed to an account, the contract can be retrieved as follows:
+
+```cadence
+let signer: AuthAccount = ...
+let contract: &TestInterface = signer.contracts.borrow<&TestInterface>(name: "Test")
+
 ### Removing a Deployed Contract
 
 A deployed contract can be removed from an account using the `remove` function:
 
-  ```cadence
-  fun remove(name: String): DeployedContract?
-  ```
+```cadence
+fun remove(name: String): DeployedContract?
+```
 
-  Removes the contract/contract interface from the account which has the given name, if any.
+ Removes the contract/contract interface from the account which has the given name, if any.
 
-  Returns the removed [deployed contract](#deployed-contracts), if any.
+ Returns the removed [deployed contract](#deployed-contracts), if any.
 
-  Returns `nil` if no contract/contract interface with the given name exist in the account.
+ Returns `nil` if no contract/contract interface with the given name exist in the account.
 
 For example, assuming that a contract named `Test` is deployed to an account, the contract can be removed as follows:
 

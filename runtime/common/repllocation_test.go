@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +57,19 @@ func TestREPLLocation_TypeID(t *testing.T) {
 	)
 }
 
+func TestREPLLocation_ID(t *testing.T) {
+
+	t.Parallel()
+
+	location, _, err := decodeREPLLocationTypeID("REPL.Bar.Baz")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"REPL",
+		location.ID(),
+	)
+}
+
 func TestDecodeREPLLocationTypeID(t *testing.T) {
 
 	t.Parallel()
@@ -69,15 +82,35 @@ func TestDecodeREPLLocationTypeID(t *testing.T) {
 		require.EqualError(t, err, "invalid REPL location type ID: missing prefix")
 	})
 
-	t.Run("missing qualified identifier", func(t *testing.T) {
+	t.Run("missing qualified identifier part", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeREPLLocationTypeID("REPL")
-		require.EqualError(t, err, "invalid REPL location type ID: missing qualified identifier")
+		location, qualifiedIdentifier, err := decodeREPLLocationTypeID("REPL")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			REPLLocation{},
+			location,
+		)
+		assert.Equal(t, "", qualifiedIdentifier)
 	})
 
-	t.Run("missing qualified identifier", func(t *testing.T) {
+	t.Run("empty qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		location, qualifiedIdentifier, err := decodeREPLLocationTypeID("REPL.")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			REPLLocation{},
+			location,
+		)
+		assert.Equal(t, "", qualifiedIdentifier)
+	})
+
+	t.Run("invalid prefix", func(t *testing.T) {
 
 		t.Parallel()
 

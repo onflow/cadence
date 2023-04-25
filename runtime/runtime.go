@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	goRuntime "runtime"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -93,6 +92,9 @@ type Executor interface {
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
+	// Config returns the runtime.Config this Runtime was instantiated with.
+	Config() Config
+
 	// NewScriptExecutor returns an executor which executes the given script.
 	NewScriptExecutor(Script, Context) Executor
 
@@ -162,20 +164,21 @@ type Runtime interface {
 
 type ImportResolver = func(location Location) (program *ast.Program, e error)
 
-var validTopLevelDeclarationsInTransaction = []common.DeclarationKind{
+var validTopLevelDeclarationsInTransaction = common.NewDeclarationKindSet(
+	common.DeclarationKindPragma,
 	common.DeclarationKindImport,
 	common.DeclarationKindFunction,
 	common.DeclarationKindTransaction,
-}
+)
 
-var validTopLevelDeclarationsInAccountCode = []common.DeclarationKind{
+var validTopLevelDeclarationsInAccountCode = common.NewDeclarationKindSet(
 	common.DeclarationKindPragma,
 	common.DeclarationKindImport,
 	common.DeclarationKindContract,
 	common.DeclarationKindContractInterface,
-}
+)
 
-func validTopLevelDeclarations(location Location) []common.DeclarationKind {
+func validTopLevelDeclarations(location Location) common.DeclarationKindSet {
 	switch location.(type) {
 	case common.TransactionLocation:
 		return validTopLevelDeclarationsInTransaction
@@ -183,7 +186,7 @@ func validTopLevelDeclarations(location Location) []common.DeclarationKind {
 		return validTopLevelDeclarationsInAccountCode
 	}
 
-	return nil
+	return common.AllDeclarationKindsSet
 }
 
 func reportMetric(
@@ -214,6 +217,10 @@ func NewInterpreterRuntime(defaultConfig Config) Runtime {
 	return &interpreterRuntime{
 		defaultConfig: defaultConfig,
 	}
+}
+
+func (r *interpreterRuntime) Config() Config {
+	return r.defaultConfig
 }
 
 func (r *interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms codesAndPrograms) {
@@ -263,6 +270,10 @@ func (r *interpreterRuntime) NewScriptExecutor(
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+	location := context.Location
+	if _, ok := location.(common.ScriptLocation); !ok {
+		return nil, errors.NewUnexpectedError("invalid non-script location: %s", location)
+	}
 	return r.NewScriptExecutor(script, context).Result()
 }
 
@@ -304,26 +315,12 @@ func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Conte
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+	location := context.Location
+	if _, ok := location.(common.TransactionLocation); !ok {
+		return errors.NewUnexpectedError("invalid non-transaction location: %s", location)
+	}
 	_, err = r.NewTransactionExecutor(script, context).Result()
 	return err
-}
-
-func wrapPanic(f func()) {
-	defer func() {
-		if r := recover(); r != nil {
-			// don't wrap Go errors and internal errors
-			switch r := r.(type) {
-			case goRuntime.Error, errors.InternalError:
-				panic(r)
-			default:
-				panic(errors.ExternalError{
-					Recovered: r,
-				})
-			}
-
-		}
-	}()
-	f()
 }
 
 // userPanicToError Executes `f` and gracefully handle `UserError` panics.
@@ -364,7 +361,7 @@ func validateArgumentParams(
 	decoder ArgumentDecoder,
 	locationRange interpreter.LocationRange,
 	arguments [][]byte,
-	parameters []*sema.Parameter,
+	parameters []sema.Parameter,
 ) (
 	[]interpreter.Value,
 	error,
@@ -390,7 +387,7 @@ func validateArgumentParams(
 		var value cadence.Value
 		var err error
 
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			value, err = decoder.DecodeArgument(
 				argument,
 				exportedParameterType,
@@ -645,7 +642,7 @@ func (r *interpreterRuntime) ReadLinked(
 
 	pathValue := valueImporter{inter: inter}.importPathValue(path)
 
-	targetPath, _, err := inter.GetCapabilityFinalTargetPath(
+	target, _, err := inter.GetStorageCapabilityFinalTarget(
 		address,
 		pathValue,
 		&sema.ReferenceType{
@@ -657,25 +654,41 @@ func (r *interpreterRuntime) ReadLinked(
 		return nil, err
 	}
 
-	if targetPath == interpreter.EmptyPathValue {
+	if target == nil {
 		return nil, nil
 	}
 
-	value := inter.ReadStored(
-		address,
-		targetPath.Domain.Identifier(),
-		targetPath.Identifier,
-	)
+	switch target := target.(type) {
+	case interpreter.AccountCapabilityTarget:
+		return nil, nil
 
-	var exportedValue cadence.Value
-	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
-		if err != nil {
-			return nil, newError(err, location, codesAndPrograms)
+	case interpreter.PathCapabilityTarget:
+
+		targetPath := interpreter.PathValue(target)
+
+		if targetPath == interpreter.EmptyPathValue {
+			return nil, nil
 		}
-	}
 
-	return exportedValue, nil
+		value := inter.ReadStored(
+			address,
+			targetPath.Domain.Identifier(),
+			targetPath.Identifier,
+		)
+
+		var exportedValue cadence.Value
+		if value != nil {
+			exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
+			if err != nil {
+				return nil, newError(err, location, codesAndPrograms)
+			}
+		}
+
+		return exportedValue, nil
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {

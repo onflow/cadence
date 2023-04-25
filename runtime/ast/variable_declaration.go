@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,17 +27,17 @@ import (
 )
 
 type VariableDeclaration struct {
-	Access            Access
-	IsConstant        bool
-	Identifier        Identifier
-	TypeAnnotation    *TypeAnnotation
 	Value             Expression
-	Transfer          *Transfer
-	StartPos          Position `json:"-"`
-	SecondTransfer    *Transfer
 	SecondValue       Expression
+	TypeAnnotation    *TypeAnnotation
+	Transfer          *Transfer
+	SecondTransfer    *Transfer
 	ParentIfStatement *IfStatement `json:"-"`
 	DocString         string
+	Identifier        Identifier
+	StartPos          Position `json:"-"`
+	Access            Access
+	IsConstant        bool
 }
 
 var _ Element = &VariableDeclaration{}
@@ -227,9 +227,9 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 func (d *VariableDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias VariableDeclaration
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "VariableDeclaration",
 		Range: NewUnmeteredRangeFromPositioned(d),

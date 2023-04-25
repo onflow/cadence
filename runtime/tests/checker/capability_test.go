@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -448,6 +448,6 @@ func TestCheckCapability_address(t *testing.T) {
 		require.NoError(t, err)
 
 		addrType := RequireGlobalValue(t, checker.Elaboration, "addr")
-		require.Equal(t, &sema.AddressType{}, addrType)
+		require.Equal(t, sema.TheAddressType, addrType)
 	})
 }

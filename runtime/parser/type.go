@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,20 +95,20 @@ type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) a
 type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) ast.Type
 
 type literalType struct {
-	tokenType      lexer.TokenType
 	nullDenotation typeNullDenotationFunc
+	tokenType      lexer.TokenType
 }
 
 type prefixType struct {
-	tokenType      lexer.TokenType
-	bindingPower   int
 	nullDenotation prefixTypeFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
 }
 
 type postfixType struct {
-	tokenType      lexer.TokenType
-	bindingPower   int
 	leftDenotation postfixTypeFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
 }
 
 func defineType(def any) {
@@ -509,10 +509,10 @@ func defineRestrictedOrDictionaryType() {
 		lexer.TokenBraceOpen,
 		func(p *parser, rightBindingPower int, left ast.Type) (result ast.Type, err error, done bool) {
 
-			// Start buffering before skipping the `{` token,
-			// so it can be replayed in case the
+			// Perform a lookahead
 
-			p.startBuffering()
+			current := p.current
+			cursor := p.tokens.Cursor()
 
 			// Skip the `{` token.
 			p.next()
@@ -521,8 +521,10 @@ func defineRestrictedOrDictionaryType() {
 			// The buffered tokens are replayed to allow them to be re-parsed.
 
 			if p.current.Is(lexer.TokenSpace) {
-				err = p.replayBuffered()
-				return left, err, true
+				p.current = current
+				p.tokens.Revert(cursor)
+
+				return left, nil, true
 			}
 
 			// It was determined that a restricted type is parsed.
@@ -530,11 +532,10 @@ func defineRestrictedOrDictionaryType() {
 			// was higher. In that case, replay the buffered tokens and stop.
 
 			if rightBindingPower >= typeLeftBindingPowerRestriction {
-				err = p.replayBuffered()
-				return left, err, true
+				p.current = current
+				p.tokens.Revert(cursor)
+				return left, nil, true
 			}
-
-			p.acceptBuffered()
 
 			nominalTypes, endPos, err := parseNominalTypes(p, lexer.TokenBraceClose)
 			if err != nil {
@@ -811,6 +812,8 @@ func defaultTypeMetaLeftDenotation(
 }
 
 func parseTypeAnnotation(p *parser) (*ast.TypeAnnotation, error) {
+	p.skipSpaceAndComments()
+
 	startPos := p.current.StartPos
 
 	isResource := false

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,16 @@ func TestProgramIndices(t *testing.T) {
 		Identifier: Identifier{Identifier: "B"},
 	}
 	compositeC := &CompositeDeclaration{
+		Identifier: Identifier{Identifier: "C"},
+	}
+
+	attachmentA := &AttachmentDeclaration{
+		Identifier: Identifier{Identifier: "A"},
+	}
+	attachmentB := &AttachmentDeclaration{
+		Identifier: Identifier{Identifier: "B"},
+	}
+	attachmentC := &AttachmentDeclaration{
 		Identifier: Identifier{Identifier: "C"},
 	}
 
@@ -121,6 +131,7 @@ func TestProgramIndices(t *testing.T) {
 			importB,
 			pragmaA,
 			transactionC,
+			attachmentC,
 			functionC,
 			interfaceB,
 			transactionA,
@@ -129,11 +140,13 @@ func TestProgramIndices(t *testing.T) {
 			transactionB,
 			importA,
 			interfaceA,
+			attachmentA,
 			pragmaB,
 			functionA,
 			compositeC,
 			functionB,
 			interfaceC,
+			attachmentB,
 			pragmaC,
 			compositeA,
 		},
@@ -163,6 +176,15 @@ func TestProgramIndices(t *testing.T) {
 					compositeA,
 				},
 				program.CompositeDeclarations(),
+			)
+
+			require.Equal(t,
+				[]*AttachmentDeclaration{
+					attachmentC,
+					attachmentA,
+					attachmentB,
+				},
+				program.AttachmentDeclarations(),
 			)
 
 			require.Equal(t,

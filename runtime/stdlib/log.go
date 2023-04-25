@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 var LogFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "value",
@@ -59,7 +60,7 @@ func NewLogFunction(logger Logger) StandardLibraryValue {
 			message := value.MeteredString(memoryGauge, interpreter.SeenReferences{})
 
 			var err error
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				err = logger.ProgramLog(message)
 			})
 			if err != nil {

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,7 +108,7 @@ func TestInterpretIntegerConversions(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(true),
+				interpreter.TrueValue,
 				inter.Globals.Get("z").GetValue(),
 			)
 
@@ -350,7 +350,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				numberValue.Plus(inter, numberValue),
+				numberValue.Plus(inter, numberValue, interpreter.EmptyLocationRange),
 				inter.Globals.Get("x").GetValue(),
 			)
 		})
@@ -393,7 +393,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(
-					numberValue.Plus(inter, numberValue),
+					numberValue.Plus(inter, numberValue, interpreter.EmptyLocationRange),
 				),
 				inter.Globals.Get("x").GetValue(),
 			)

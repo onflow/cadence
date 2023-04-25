@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,11 @@ import (
 var accountKeyTypeID = sema.AccountKeyType.ID()
 var accountKeyStaticType StaticType = PrimitiveStaticTypeAccountKey // unmetered
 var accountKeyFieldNames = []string{
-	sema.AccountKeyKeyIndexField,
-	sema.AccountKeyPublicKeyField,
-	sema.AccountKeyHashAlgoField,
-	sema.AccountKeyWeightField,
-	sema.AccountKeyIsRevokedField,
+	sema.AccountKeyKeyIndexFieldName,
+	sema.AccountKeyPublicKeyFieldName,
+	sema.AccountKeyHashAlgoFieldName,
+	sema.AccountKeyWeightFieldName,
+	sema.AccountKeyIsRevokedFieldName,
 }
 
 // NewAccountKeyValue constructs an AccountKey value.
@@ -42,11 +42,11 @@ func NewAccountKeyValue(
 	isRevoked BoolValue,
 ) *SimpleCompositeValue {
 	fields := map[string]Value{
-		sema.AccountKeyKeyIndexField:  keyIndex,
-		sema.AccountKeyPublicKeyField: publicKey,
-		sema.AccountKeyHashAlgoField:  hashAlgo,
-		sema.AccountKeyWeightField:    weight,
-		sema.AccountKeyIsRevokedField: isRevoked,
+		sema.AccountKeyKeyIndexFieldName:  keyIndex,
+		sema.AccountKeyPublicKeyFieldName: publicKey,
+		sema.AccountKeyHashAlgoFieldName:  hashAlgo,
+		sema.AccountKeyWeightFieldName:    weight,
+		sema.AccountKeyIsRevokedFieldName: isRevoked,
 	}
 
 	return NewSimpleCompositeValue(

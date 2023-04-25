@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -136,6 +137,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
                  return ref.foo
               }
             `,
+			sema.Config{},
 		)
 
 		// save
@@ -161,12 +163,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleR2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("single S", func(t *testing.T) {
@@ -174,12 +171,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleS")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("single auth", func(t *testing.T) {
@@ -187,12 +179,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("double", func(t *testing.T) {
@@ -363,6 +350,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
                  return ref.foo
               }
             `,
+			sema.Config{},
 		)
 
 		// save
@@ -388,12 +376,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleS2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("single R", func(t *testing.T) {
@@ -401,12 +384,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleR")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("single auth", func(t *testing.T) {
@@ -414,12 +392,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("double", func(t *testing.T) {
@@ -481,6 +454,82 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("single change after borrow", func(t *testing.T) {
 
 			_, err := inter.Invoke("singleChangeAfterBorrow")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
+	})
+
+	t.Run("account", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+              #allowAccountLinking
+
+              fun link(): Capability {
+                  return account.linkAccount(/private/acct)!
+              }
+
+              fun address(_ cap: Capability): Address {
+                  return cap.borrow<&AuthAccount>()!.address
+              }
+
+              fun borrow(_ cap: Capability): Address {
+                  return address(cap)
+              }
+
+              fun borrowAuth(_ cap: Capability): auth &AuthAccount? {
+                  return cap.borrow<auth &AuthAccount>()
+              }
+
+              fun unlinkAfterBorrow(_ cap: Capability): Address {
+                 let ref = cap.borrow<&AuthAccount>()!
+
+                 account.unlink(/private/acct)
+
+                 return ref.address
+              }
+            `,
+			sema.Config{
+				AccountLinkingEnabled: true,
+			},
+		)
+
+		// link
+
+		capability, err := inter.Invoke("link")
+		require.NoError(t, err)
+
+		t.Run("borrow", func(t *testing.T) {
+
+			value, err := inter.Invoke("borrow", capability)
+			require.NoError(t, err)
+
+			RequireValuesEqual(t,
+				inter,
+				address,
+				value,
+			)
+		})
+
+		t.Run("borrowAuth", func(t *testing.T) {
+
+			value, err := inter.Invoke("borrowAuth", capability)
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NilValue{}, value)
+		})
+
+		t.Run("unlink after borrow", func(t *testing.T) {
+
+			_, err := inter.Invoke("unlinkAfterBorrow", capability)
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
@@ -583,6 +632,7 @@ func TestInterpretCapability_check(t *testing.T) {
                   return account.getCapability<&R2>(/public/r2).check()
               }
             `,
+			sema.Config{},
 		)
 
 		// save
@@ -595,12 +645,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("single auth", func(t *testing.T) {
@@ -608,12 +653,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("single R2", func(t *testing.T) {
@@ -621,12 +661,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleR2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("single S", func(t *testing.T) {
@@ -634,12 +669,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleS")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("double", func(t *testing.T) {
@@ -647,12 +677,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("nonExistent", func(t *testing.T) {
@@ -660,12 +685,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("nonExistent")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -687,12 +707,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleTyped")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("r2", func(t *testing.T) {
@@ -700,12 +715,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("r2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 	})
 
@@ -800,6 +810,7 @@ func TestInterpretCapability_check(t *testing.T) {
                   return account.getCapability<&S2>(/public/s2).check()
               }
             `,
+			sema.Config{},
 		)
 
 		// save
@@ -812,12 +823,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("single auth", func(t *testing.T) {
@@ -825,12 +831,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("single S2", func(t *testing.T) {
@@ -838,12 +839,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleS2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("single R", func(t *testing.T) {
@@ -851,12 +847,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleR")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("double", func(t *testing.T) {
@@ -864,12 +855,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("nonExistent", func(t *testing.T) {
@@ -877,12 +863,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("nonExistent")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -904,12 +885,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleTyped")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("s2", func(t *testing.T) {
@@ -917,14 +893,62 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("s2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 	})
+
+	t.Run("account", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+              #allowAccountLinking
+
+              fun link(): Capability {
+                  return account.linkAccount(/private/acct)!
+              }
+
+              fun check(_ cap: Capability): Bool {
+                  return cap.check<&AuthAccount>()
+              }
+
+              fun checkAuth(_ cap: Capability): Bool {
+                  return cap.check<auth &AuthAccount>()
+              }
+            `,
+			sema.Config{
+				AccountLinkingEnabled: true,
+			},
+		)
+
+		// link
+
+		capability, err := inter.Invoke("link")
+		require.NoError(t, err)
+
+		t.Run("check", func(t *testing.T) {
+
+			value, err := inter.Invoke("check", capability)
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.TrueValue, value)
+		})
+
+		t.Run("checkAuth", func(t *testing.T) {
+
+			value, err := inter.Invoke("checkAuth", capability)
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.FalseValue, value)
+		})
+	})
+
 }
 
 func TestInterpretCapability_address(t *testing.T) {
@@ -946,10 +970,11 @@ func TestInterpretCapability_address(t *testing.T) {
 				return account.getCapability(/public/double).address
 			}
 
-			fun nonExistent() : Address {
+			fun nonExistent(): Address {
 				return account.getCapability(/public/nonExistent).address
 			}				
 		`,
+		sema.Config{},
 	)
 
 	t.Run("single", func(t *testing.T) {
@@ -1019,6 +1044,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
                   return cap.check<&S2>()
               }
             `,
+			sema.Config{},
 		)
 
 		_, err := inter.Invoke("test")
@@ -1108,6 +1134,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
                   return cap.borrow<&S2>()!.what()
               }
             `,
+			sema.Config{},
 		)
 
 		_, err := inter.Invoke("test")

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,25 +26,29 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type interpreterScriptExecutor struct {
-	runtime *interpreterRuntime
-	script  Script
-	context Context
-
-	// preprocess
-	preprocessOnce         sync.Once
+type interpreterScriptExecutorPreparation struct {
+	environment            Environment
 	preprocessErr          error
 	codesAndPrograms       codesAndPrograms
-	storage                *Storage
-	program                *interpreter.Program
-	environment            Environment
 	functionEntryPointType *sema.FunctionType
+	program                *interpreter.Program
+	storage                *Storage
 	interpret              InterpretFunc
+	preprocessOnce         sync.Once
+}
 
-	// execute
-	executeOnce sync.Once
+type interpreterScriptExecutorExecution struct {
 	executeErr  error
 	result      cadence.Value
+	executeOnce sync.Once
+}
+
+type interpreterScriptExecutor struct {
+	context Context
+	interpreterScriptExecutorExecution
+	runtime *interpreterRuntime
+	interpreterScriptExecutorPreparation
+	script Script
 }
 
 func newInterpreterScriptExecutor(
@@ -149,7 +153,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 
 	// Ensure the entry point's return type is valid
 	returnType := functionEntryPointType.ReturnTypeAnnotation.Type
-	if !returnType.IsExternallyReturnable(map[*sema.Member]bool{}) {
+	if !returnType.IsExportable(map[*sema.Member]bool{}) {
 		err = &InvalidScriptReturnTypeError{
 			Type: returnType,
 		}
@@ -224,6 +228,8 @@ func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFu
 			err = internalErr
 		})
 
+		inter.ConfigureAccountLinkingAllowed()
+
 		values, err := validateArgumentParams(
 			inter,
 			executor.environment,
@@ -234,6 +240,7 @@ func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFu
 		if err != nil {
 			return nil, err
 		}
+
 		return inter.Invoke("main", values...)
 	}
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ Returns the block at the given height. If the given block does not exist the fun
 `
 
 var getBlockFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      "at",
 			Identifier: "height",
@@ -136,7 +136,7 @@ func NewBlockValue(
 
 	// ID
 	common.UseMemory(inter, blockIDMemoryUsage)
-	var values = make([]interpreter.Value, sema.BlockIDSize)
+	var values = make([]interpreter.Value, sema.BlockTypeIdFieldType.Size)
 	for i, b := range block.Hash {
 		values[i] = interpreter.NewUnmeteredUInt8Value(b)
 	}
@@ -145,7 +145,7 @@ func NewBlockValue(
 		inter,
 		locationRange,
 		BlockIDStaticType,
-		common.Address{},
+		common.ZeroAddress,
 		values...,
 	)
 
@@ -156,6 +156,7 @@ func NewBlockValue(
 		func() uint64 {
 			return uint64(time.Unix(0, block.Timestamp).Unix())
 		},
+		locationRange,
 	)
 
 	return interpreter.NewBlockValue(
@@ -175,7 +176,7 @@ func getBlockAtHeight(
 	exists bool,
 ) {
 	var err error
-	wrapPanic(func() {
+	errors.WrapPanic(func() {
 		block, exists, err = provider.GetBlockAtHeight(height)
 	})
 	if err != nil {
@@ -200,7 +201,7 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 
 			var height uint64
 			var err error
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				height, err = provider.GetCurrentBlockHeight()
 			})
 			if err != nil {

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ func (d *InteractiveDebugger) Show(names []string) {
 	current := d.debugger.CurrentActivation(d.stop.Interpreter)
 	switch len(names) {
 	case 0:
-		for name := range current.FunctionValues() { //nolint:maprangecheck
+		for name := range current.FunctionValues() { //nolint:maprange
 			fmt.Println(name)
 		}
 
@@ -88,7 +88,7 @@ func (d *InteractiveDebugger) Show(names []string) {
 			return
 		}
 
-		fmt.Println(formatValue(variable.GetValue()))
+		fmt.Println(colorizeValue(variable.GetValue()))
 
 	default:
 		for _, name := range names {
@@ -100,7 +100,7 @@ func (d *InteractiveDebugger) Show(names []string) {
 			fmt.Printf(
 				"%s = %s\n",
 				name,
-				formatValue(variable.GetValue()),
+				colorizeValue(variable.GetValue()),
 			)
 		}
 	}

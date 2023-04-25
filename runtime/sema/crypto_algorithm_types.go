@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ func (algo SignatureAlgorithm) DocString() string {
 const HashAlgorithmTypeHashFunctionName = "hash"
 
 var HashAlgorithmTypeHashFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "data",
@@ -126,7 +126,7 @@ Returns the hash of the given data
 const HashAlgorithmTypeHashWithTagFunctionName = "hashWithTag"
 
 var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "data",
@@ -303,8 +303,8 @@ func newNativeEnumType(
 		),
 	)
 
-	ty.Members = GetMembersAsMap(members)
-	ty.Fields = GetFieldNames(members)
+	ty.Members = MembersAsMap(members)
+	ty.Fields = MembersFieldNames(members)
 	return ty
 }
 

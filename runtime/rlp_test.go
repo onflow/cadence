@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,9 +45,9 @@ func TestRLPDecodeString(t *testing.T) {
 
 	type testCase struct {
 		name           string
+		expectedErrMsg string
 		input          []cadence.Value
 		output         []cadence.Value
-		expectedErrMsg string
 	}
 
 	tests := []testCase{
@@ -138,7 +138,7 @@ func TestRLPDecodeString(t *testing.T) {
 					Source: script,
 					Arguments: encodeArgs([]cadence.Value{
 						cadence.Array{
-							ArrayType: cadence.VariableSizedArrayType{
+							ArrayType: &cadence.VariableSizedArrayType{
 								ElementType: cadence.UInt8Type{},
 							},
 							Values: test.input,
@@ -147,7 +147,7 @@ func TestRLPDecodeString(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  TestLocation,
+					Location:  common.ScriptLocation{},
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
@@ -159,7 +159,7 @@ func TestRLPDecodeString(t *testing.T) {
 				assert.Equal(t,
 					cadence.Array{
 						Values: test.output,
-					}.WithType(cadence.VariableSizedArrayType{
+					}.WithType(&cadence.VariableSizedArrayType{
 						ElementType: cadence.UInt8Type{},
 					}),
 					result,
@@ -188,9 +188,9 @@ func TestRLPDecodeList(t *testing.T) {
 
 	type testCase struct {
 		name           string
+		expectedErrMsg string
 		input          []cadence.Value
 		output         [][]cadence.Value
-		expectedErrMsg string
 	}
 
 	tests := []testCase{
@@ -297,7 +297,7 @@ func TestRLPDecodeList(t *testing.T) {
 					Source: script,
 					Arguments: encodeArgs([]cadence.Value{
 						cadence.Array{
-							ArrayType: cadence.VariableSizedArrayType{
+							ArrayType: &cadence.VariableSizedArrayType{
 								ElementType: cadence.UInt8Type{},
 							},
 							Values: test.input,
@@ -306,7 +306,7 @@ func TestRLPDecodeList(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  TestLocation,
+					Location:  common.ScriptLocation{},
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
@@ -320,7 +320,7 @@ func TestRLPDecodeList(t *testing.T) {
 				for _, values := range test.output {
 					arrays = append(arrays,
 						cadence.Array{Values: values}.
-							WithType(cadence.VariableSizedArrayType{
+							WithType(&cadence.VariableSizedArrayType{
 								ElementType: cadence.UInt8Type{},
 							}))
 				}
@@ -328,8 +328,8 @@ func TestRLPDecodeList(t *testing.T) {
 				assert.Equal(t,
 					cadence.Array{
 						Values: arrays,
-					}.WithType(cadence.VariableSizedArrayType{
-						ElementType: cadence.VariableSizedArrayType{
+					}.WithType(&cadence.VariableSizedArrayType{
+						ElementType: &cadence.VariableSizedArrayType{
 							ElementType: cadence.UInt8Type{},
 						},
 					}),

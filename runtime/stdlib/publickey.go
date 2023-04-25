@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +30,13 @@ Constructs a new public key
 `
 
 var publicKeyConstructorFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
-			Identifier:     sema.PublicKeyPublicKeyField,
+			Identifier:     sema.PublicKeyTypePublicKeyFieldName,
 			TypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
 		},
 		{
-			Identifier:     sema.PublicKeySignAlgoField,
+			Identifier:     sema.PublicKeyTypeSignAlgoFieldName,
 			TypeAnnotation: sema.NewTypeAnnotation(sema.SignatureAlgorithmType),
 		},
 	},
@@ -64,7 +64,7 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 			return err
 		}
 
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			err = validator.ValidatePublicKey(publicKey)
 		})
 		return err
@@ -165,15 +165,15 @@ func NewPublicKeyFromValue(
 	error,
 ) {
 	// publicKey field
-	key := publicKey.GetMember(inter, locationRange, sema.PublicKeyPublicKeyField)
+	key := publicKey.GetMember(inter, locationRange, sema.PublicKeyTypePublicKeyFieldName)
 
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
+	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key, locationRange)
 	if err != nil {
 		return nil, errors.NewUnexpectedError("public key needs to be a byte array. %w", err)
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, locationRange, sema.PublicKeySignAlgoField)
+	signAlgoField := publicKey.GetMember(inter, locationRange, sema.PublicKeyTypeSignAlgoFieldName)
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
@@ -201,7 +201,7 @@ func NewPublicKeyFromValue(
 
 	return &PublicKey{
 		PublicKey: byteArray,
-		SignAlgo:  sema.SignatureAlgorithm(signAlgoRawValue.ToInt()),
+		SignAlgo:  sema.SignatureAlgorithm(signAlgoRawValue.ToInt(locationRange)),
 	}, nil
 }
 
@@ -224,6 +224,7 @@ func newPublicKeyVerifySignatureFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.PublicKeyVerifyFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -257,12 +258,12 @@ func newPublicKeyVerifySignatureFunction(
 				locationRange,
 			)
 
-			signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
+			signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue, locationRange)
 			if err != nil {
 				panic(errors.NewUnexpectedError("failed to get signature. %w", err))
 			}
 
-			signedData, err := interpreter.ByteArrayValueToByteSlice(inter, signedDataValue)
+			signedData, err := interpreter.ByteArrayValueToByteSlice(inter, signedDataValue, locationRange)
 			if err != nil {
 				panic(errors.NewUnexpectedError("failed to get signed data. %w", err))
 			}
@@ -277,7 +278,7 @@ func newPublicKeyVerifySignatureFunction(
 			}
 
 			var valid bool
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				valid, err = verififier.VerifySignature(
 					signature,
 					domainSeparationTag,
@@ -294,7 +295,6 @@ func newPublicKeyVerifySignatureFunction(
 
 			return interpreter.AsBoolValue(valid)
 		},
-		sema.PublicKeyVerifyFunctionType,
 	)
 }
 
@@ -309,6 +309,7 @@ func newPublicKeyVerifyPoPFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		sema.PublicKeyVerifyPoPFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -332,13 +333,13 @@ func newPublicKeyVerifyPoPFunction(
 				panic(err)
 			}
 
-			signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
+			signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue, locationRange)
 			if err != nil {
 				panic(err)
 			}
 
 			var valid bool
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				valid, err = verifier.BLSVerifyPOP(publicKey, signature)
 			})
 			if err != nil {
@@ -346,6 +347,5 @@ func newPublicKeyVerifyPoPFunction(
 			}
 			return interpreter.AsBoolValue(valid)
 		},
-		sema.PublicKeyVerifyPoPFunctionType,
 	)
 }

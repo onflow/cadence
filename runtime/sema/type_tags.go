@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -216,6 +216,8 @@ const (
 	capabilityTypeMask uint64 = 1 << iota
 	restrictedTypeMask
 	transactionTypeMask
+	anyResourceAttachmentMask
+	anyStructAttachmentMask
 
 	invalidTypeMask
 )
@@ -325,10 +327,12 @@ var (
 	FunctionTypeTag      = newTypeTagFromLowerMask(functionTypeMask)
 	InterfaceTypeTag     = newTypeTagFromLowerMask(interfaceTypeMask)
 
-	RestrictedTypeTag  = newTypeTagFromUpperMask(restrictedTypeMask)
-	CapabilityTypeTag  = newTypeTagFromUpperMask(capabilityTypeMask)
-	InvalidTypeTag     = newTypeTagFromUpperMask(invalidTypeMask)
-	TransactionTypeTag = newTypeTagFromUpperMask(transactionTypeMask)
+	RestrictedTypeTag            = newTypeTagFromUpperMask(restrictedTypeMask)
+	CapabilityTypeTag            = newTypeTagFromUpperMask(capabilityTypeMask)
+	InvalidTypeTag               = newTypeTagFromUpperMask(invalidTypeMask)
+	TransactionTypeTag           = newTypeTagFromUpperMask(transactionTypeMask)
+	AnyResourceAttachmentTypeTag = newTypeTagFromUpperMask(anyResourceAttachmentMask)
+	AnyStructAttachmentTypeTag   = newTypeTagFromUpperMask(anyStructAttachmentMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -336,6 +340,7 @@ var (
 	// to be included in the mask without knowing their member types.
 	// Hence, they are checked on demand in `getSuperTypeOfDerivedTypes()`.
 	AnyStructTypeTag = newTypeTagFromLowerMask(anyStructTypeMask).
+				Or(AnyStructAttachmentTypeTag).
 				Or(NeverTypeTag).
 				Or(NumberTypeTag).
 				Or(StringTypeTag).
@@ -352,7 +357,8 @@ var (
 				Or(CapabilityTypeTag).
 				Or(FunctionTypeTag)
 
-	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask)
+	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
+				Or(AnyResourceAttachmentTypeTag)
 
 	AnyTypeTag = newTypeTagFromLowerMask(anyTypeMask).
 			Or(AnyStructTypeTag).
@@ -570,7 +576,7 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 	case voidTypeMask:
 		return VoidType
 	case addressTypeMask:
-		return &AddressType{}
+		return TheAddressType
 	case metaTypeMask:
 		return MetaType
 	case blockTypeMask:
@@ -649,6 +655,10 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 		restrictedTypeMask,
 		transactionTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
+	case anyResourceAttachmentMask:
+		return AnyResourceAttachmentType
+	case anyStructAttachmentMask:
+		return AnyStructAttachmentType
 	default:
 		return nil
 	}
@@ -688,7 +698,7 @@ func commonSuperTypeOfVariableSizedArrays(types []Type) Type {
 	// We reach here if all types are variable-sized arrays.
 	// Therefore, decide the common supertype based on the element types.
 
-	elementTypes := make([]Type, 0)
+	var elementTypes []Type
 
 	for _, typ := range types {
 		// 'Never' type doesn't affect the supertype.
@@ -720,7 +730,7 @@ func commonSuperTypeOfConstantSizedArrays(types []Type) Type {
 	// We reach here if all types are constant-sized arrays.
 	// Therefore, decide the common supertype based on the element types.
 
-	elementTypes := make([]Type, 0)
+	var elementTypes []Type
 	var prevType *ConstantSizedType
 
 	for _, typ := range types {
@@ -764,8 +774,8 @@ func commonSuperTypeOfDictionaries(types []Type) Type {
 	// We reach here if all types are dictionary types.
 	// Therefore, decide the common supertype based on the key types and value types.
 
-	keyTypes := make([]Type, 0)
-	valueTypes := make([]Type, 0)
+	var keyTypes []Type
+	var valueTypes []Type
 
 	for _, typ := range types {
 		// 'Never' type doesn't affect the supertype.

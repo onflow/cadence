@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,21 +44,24 @@ var (
 
 	// AST
 
-	ProgramMemoryUsage         = NewConstantMemoryUsage(MemoryKindProgram)
-	IdentifierMemoryUsage      = NewConstantMemoryUsage(MemoryKindIdentifier)
-	ArgumentMemoryUsage        = NewConstantMemoryUsage(MemoryKindArgument)
-	BlockMemoryUsage           = NewConstantMemoryUsage(MemoryKindBlock)
-	FunctionBlockMemoryUsage   = NewConstantMemoryUsage(MemoryKindFunctionBlock)
-	ParameterMemoryUsage       = NewConstantMemoryUsage(MemoryKindParameter)
-	ParameterListMemoryUsage   = NewConstantMemoryUsage(MemoryKindParameterList)
-	TransferMemoryUsage        = NewConstantMemoryUsage(MemoryKindTransfer)
-	TypeAnnotationMemoryUsage  = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
-	DictionaryEntryMemoryUsage = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
+	ProgramMemoryUsage           = NewConstantMemoryUsage(MemoryKindProgram)
+	IdentifierMemoryUsage        = NewConstantMemoryUsage(MemoryKindIdentifier)
+	ArgumentMemoryUsage          = NewConstantMemoryUsage(MemoryKindArgument)
+	BlockMemoryUsage             = NewConstantMemoryUsage(MemoryKindBlock)
+	FunctionBlockMemoryUsage     = NewConstantMemoryUsage(MemoryKindFunctionBlock)
+	ParameterMemoryUsage         = NewConstantMemoryUsage(MemoryKindParameter)
+	ParameterListMemoryUsage     = NewConstantMemoryUsage(MemoryKindParameterList)
+	TypeParameterMemoryUsage     = NewConstantMemoryUsage(MemoryKindTypeParameter)
+	TypeParameterListMemoryUsage = NewConstantMemoryUsage(MemoryKindTypeParameterList)
+	TransferMemoryUsage          = NewConstantMemoryUsage(MemoryKindTransfer)
+	TypeAnnotationMemoryUsage    = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
+	DictionaryEntryMemoryUsage   = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
 
 	// AST Declarations
 
 	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
 	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
+	AttachmentDeclarationMemoryUsage      = NewConstantMemoryUsage(MemoryKindAttachmentDeclaration)
 	InterfaceDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
 	ImportDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindImportDeclaration)
 	TransactionDeclarationMemoryUsage     = NewConstantMemoryUsage(MemoryKindTransactionDeclaration)
@@ -81,10 +84,12 @@ var (
 	SwapStatementMemoryUsage       = NewConstantMemoryUsage(MemoryKindSwapStatement)
 	SwitchStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindSwitchStatement)
 	WhileStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindWhileStatement)
+	RemoveStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindRemoveStatement)
 
 	// AST Expressions
 
 	BooleanExpressionMemoryUsage     = NewConstantMemoryUsage(MemoryKindBooleanExpression)
+	VoidExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindVoidExpression)
 	NilExpressionMemoryUsage         = NewConstantMemoryUsage(MemoryKindNilExpression)
 	StringExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindStringExpression)
 	IntegerExpressionMemoryUsage     = NewConstantMemoryUsage(MemoryKindIntegerExpression)
@@ -103,6 +108,7 @@ var (
 	ReferenceExpressionMemoryUsage   = NewConstantMemoryUsage(MemoryKindReferenceExpression)
 	ForceExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindForceExpression)
 	PathExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindPathExpression)
+	AttachExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindAttachExpression)
 
 	// AST Types
 
@@ -134,16 +140,15 @@ var (
 	ArrayValueBaseMemoryUsage           = NewConstantMemoryUsage(MemoryKindArrayValueBase)
 	CompositeValueBaseMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeValueBase)
 	AddressValueMemoryUsage             = NewConstantMemoryUsage(MemoryKindAddressValue)
-	BoolValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindBoolValue)
-	NilValueMemoryUsage                 = NewConstantMemoryUsage(MemoryKindNilValue)
-	VoidValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindVoidValue)
 	BoundFunctionValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindBoundFunctionValue)
 	HostFunctionValueMemoryUsage        = NewConstantMemoryUsage(MemoryKindHostFunctionValue)
 	InterpretedFunctionValueMemoryUsage = NewConstantMemoryUsage(MemoryKindInterpretedFunctionValue)
-	CapabilityValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindCapabilityValue)
+	StorageCapabilityValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindStorageCapabilityValue)
 	EphemeralReferenceValueMemoryUsage  = NewConstantMemoryUsage(MemoryKindEphemeralReferenceValue)
 	StorageReferenceValueMemoryUsage    = NewConstantMemoryUsage(MemoryKindStorageReferenceValue)
-	LinkValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindLinkValue)
+	AccountReferenceValueMemoryUsage    = NewConstantMemoryUsage(MemoryKindAccountReferenceValue)
+	PathLinkValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindPathLinkValue)
+	AccountLinkValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindAccountLinkValue)
 	PathValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindPathValue)
 	OptionalValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindOptionalValue)
 	TypeValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindTypeValue)
@@ -182,27 +187,28 @@ var (
 
 	// Cadence external values
 
-	CadenceDictionaryValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceDictionaryValue)
-	CadenceArrayValueBaseMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceArrayValueBase)
-	CadenceStructValueBaseMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceStructValueBase)
-	CadenceResourceValueBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceResourceValueBase)
-	CadenceEventValueBaseMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceEventValueBase)
-	CadenceContractValueBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceContractValueBase)
-	CadenceEnumValueBaseMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceEnumValueBase)
-	CadenceAddressValueMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceAddressValue)
-	CadenceBoolValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceBoolValue)
-	CadenceCapabilityValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceCapabilityValue)
-	CadenceFunctionValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceFunctionValue)
-	CadenceKeyValuePairMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceKeyValuePair)
-	CadenceLinkValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceLinkValue)
-	CadenceOptionalValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceOptionalValue)
-	CadencePathValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadencePathValue)
-	CadenceVoidValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceVoidValue)
-	CadenceTypeValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceTypeValue)
+	CadenceDictionaryValueMemoryUsage        = NewConstantMemoryUsage(MemoryKindCadenceDictionaryValue)
+	CadenceArrayValueBaseMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceArrayValueBase)
+	CadenceStructValueBaseMemoryUsage        = NewConstantMemoryUsage(MemoryKindCadenceStructValueBase)
+	CadenceResourceValueBaseMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceResourceValueBase)
+	CadenceAttachmentValueBaseMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceAttachmentValueBase)
+	CadenceEventValueBaseMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceEventValueBase)
+	CadenceContractValueBaseMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceContractValueBase)
+	CadenceEnumValueBaseMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadenceEnumValueBase)
+	CadenceAddressValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceAddressValue)
+	CadenceBoolValueMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadenceBoolValue)
+	CadenceStorageCapabilityValueMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceStorageCapabilityValue)
+	CadenceFunctionValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadenceFunctionValue)
+	CadenceKeyValuePairMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceKeyValuePair)
+	CadencePathLinkValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadencePathLinkValue)
+	CadenceAccountLinkValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadencePathLinkValue)
+	CadenceOptionalValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadenceOptionalValue)
+	CadencePathValueMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadencePathValue)
+	CadenceVoidValueMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadenceVoidValue)
+	CadenceTypeValueMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadenceTypeValue)
 
 	// Cadence external types
 
-	CadenceSimpleTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceSimpleType)
 	CadenceCapabilityTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceCapabilityType)
 	CadenceConstantSizedArrayTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceConstantSizedArrayType)
 	CadenceVariableSizedArrayTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceVariableSizedArrayType)
@@ -219,6 +225,7 @@ var (
 	CadenceRestrictedTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceRestrictedType)
 	CadenceStructInterfaceTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceStructInterfaceType)
 	CadenceStructTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceStructType)
+	CadenceAttachmentTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceAttachmentType)
 
 	// Following are the known memory usage amounts for string representation of interpreter values.
 	// Same as `len(format.X)`. However, values are hard-coded to avoid the circular dependency.
@@ -229,6 +236,7 @@ var (
 	TypeValueStringMemoryUsage              = NewRawStringMemoryUsage(len("Type<>()"))
 	NilValueStringMemoryUsage               = NewRawStringMemoryUsage(len("nil"))
 	StorageReferenceValueStringMemoryUsage  = NewRawStringMemoryUsage(len("StorageReference()"))
+	AccountReferenceValueStringMemoryUsage  = NewRawStringMemoryUsage(len("AccountReference()"))
 	SeenReferenceStringMemoryUsage          = NewRawStringMemoryUsage(3)                   // len(ellipsis)
 	AddressValueStringMemoryUsage           = NewRawStringMemoryUsage(AddressLength*2 + 2) // len(bytes-to-hex + prefix)
 	HostFunctionValueStringMemoryUsage      = NewRawStringMemoryUsage(len("Function(...)"))
@@ -239,8 +247,8 @@ var (
 	AuthAccountKeysStringMemoryUsage        = NewRawStringMemoryUsage(len("AuthAccount.Keys()"))
 	PublicAccountKeysStringMemoryUsage      = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
 	AuthAccountInboxStringMemoryUsage       = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
-	CapabilityValueStringMemoryUsage        = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
-	LinkValueStringMemoryUsage              = NewRawStringMemoryUsage(len("Link<>()"))
+	StorageCapabilityValueStringMemoryUsage = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
+	PathLinkValueStringMemoryUsage          = NewRawStringMemoryUsage(len("PathLink<>()"))
 	PublishedValueStringMemoryUsage         = NewRawStringMemoryUsage(len("PublishedValue<>()"))
 
 	// Static types string representations
@@ -464,6 +472,13 @@ func NewCadenceStructMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
 func NewCadenceResourceMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
 	return CadenceResourceValueBaseMemoryUsage, MemoryUsage{
 		Kind:   MemoryKindCadenceResourceValueSize,
+		Amount: uint64(fields),
+	}
+}
+
+func NewCadenceAttachmentMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return CadenceAttachmentValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindCadenceAttachmentValueSize,
 		Amount: uint64(fields),
 	}
 }

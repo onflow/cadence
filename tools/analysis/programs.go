@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,19 @@ import (
 
 type Programs map[common.Location]*Program
 
+type importResolutionResults map[common.Location]bool
+
 func (programs Programs) Load(config *Config, location common.Location) error {
-	return programs.load(config, location, nil, ast.Range{})
+	return programs.load(
+		config,
+		location,
+		nil,
+		ast.Range{},
+		importResolutionResults{
+			// Entry point program is also currently in check.
+			location: true,
+		},
+	)
 }
 
 func (programs Programs) load(
@@ -37,6 +48,7 @@ func (programs Programs) load(
 	location common.Location,
 	importingLocation common.Location,
 	importRange ast.Range,
+	seenImports importResolutionResults,
 ) error {
 
 	if programs[location] != nil {
@@ -55,14 +67,14 @@ func (programs Programs) load(
 		return err
 	}
 
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(nil, code, parser.Config{})
 	if err != nil {
 		return wrapError(err)
 	}
 
 	var elaboration *sema.Elaboration
 	if config.Mode&NeedTypes != 0 {
-		elaboration, err = programs.check(config, program, location)
+		elaboration, err = programs.check(config, program, location, seenImports)
 		if err != nil {
 			return wrapError(err)
 		}
@@ -82,6 +94,7 @@ func (programs Programs) check(
 	config *Config,
 	program *ast.Program,
 	location common.Location,
+	seenImports importResolutionResults,
 ) (
 	*sema.Elaboration,
 	error,
@@ -111,11 +124,20 @@ func (programs Programs) check(
 
 				var elaboration *sema.Elaboration
 				switch importedLocation {
-				case stdlib.CryptoChecker.Location:
-					elaboration = stdlib.CryptoChecker.Elaboration
+				case stdlib.CryptoCheckerLocation:
+					cryptoChecker := stdlib.CryptoChecker()
+					elaboration = cryptoChecker.Elaboration
 
 				default:
-					err := programs.load(config, importedLocation, location, importRange)
+					if seenImports[importedLocation] {
+						return nil, &sema.CyclicImportsError{
+							Location: importedLocation,
+						}
+					}
+					seenImports[importedLocation] = true
+					defer delete(seenImports, importedLocation)
+
+					err := programs.load(config, importedLocation, location, importRange, seenImports)
 					if err != nil {
 						return nil, err
 					}

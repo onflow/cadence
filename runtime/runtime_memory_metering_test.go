@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,7 +77,7 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 			meterMemory: func(usage common.MemoryUsage) error {
 				return meter.MeterMemory(usage)
 			},
-			getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
 		}
@@ -90,7 +90,7 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -145,19 +145,11 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 					return []Address{Address(addressValue)}, nil
 				},
 				resolveLocation: singleIdentifierLocationResolver(t),
-				updateAccountContractCode: func(address Address, name string, code []byte) error {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
+				updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 					accountCodes[location] = code
 					return nil
 				},
-				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-					location := common.AddressLocation{
-						Address: address,
-						Name:    name,
-					}
+				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 					code = accountCodes[location]
 					return code, nil
 				},
@@ -194,7 +186,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
+					Location:  common.ScriptLocation{},
 				},
 			)
 			require.NoError(t, err)
@@ -242,12 +234,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -286,12 +277,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -323,12 +313,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -360,12 +349,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -397,12 +385,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -434,12 +421,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -471,12 +457,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -508,12 +493,11 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
@@ -544,7 +528,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -580,7 +564,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -611,7 +595,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -642,7 +626,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -673,7 +657,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -704,7 +688,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -735,7 +719,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -766,7 +750,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -803,7 +787,7 @@ func TestLogFunctionStringConversionMetering(t *testing.T) {
 			meterMemory: func(usage common.MemoryUsage) error {
 				return meter.MeterMemory(usage)
 			},
-			getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
 			log: func(s string) {
@@ -819,7 +803,7 @@ func TestLogFunctionStringConversionMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		require.NoError(t, err)
@@ -879,7 +863,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.TransactionLocation{},
 			},
 		)
 
@@ -917,7 +901,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.TransactionLocation{},
 			},
 		)
 
@@ -963,7 +947,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.TransactionLocation{},
 			},
 		)
 
@@ -999,6 +983,8 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		return intf
 	}
 
+	nextScriptLocation := newScriptLocationGenerator()
+
 	executeScript := func(script []byte, meter memoryMeter, args ...cadence.Value) error {
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -1007,7 +993,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface(meter),
-				Location:  TestLocation,
+				Location:  nextScriptLocation(),
 			},
 		)
 
@@ -1075,5 +1061,151 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		RequireError(t, err)
 
 		assert.ErrorIs(t, err, testMemoryError{})
+	})
+}
+
+func TestMeterEncoding(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("string", func(t *testing.T) {
+
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+		rt.defaultConfig.AtreeValidationEnabled = false
+
+		address := common.MustBytesToAddress([]byte{0x1})
+		storage := newTestLedger(nil, nil)
+		meter := newTestMemoryGauge()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			meterMemory: meter.MeterMemory,
+		}
+
+		text := "A quick brown fox jumps over the lazy dog"
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(fmt.Sprintf(`
+                transaction() {
+                    prepare(acc: AuthAccount) {
+                        var s = "%s"
+                        acc.save(s, to:/storage/some_path)
+                    }
+                }`,
+					text,
+				)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.TransactionLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, 87, int(meter.getMemory(common.MemoryKindBytes)))
+	})
+
+	t.Run("string in loop", func(t *testing.T) {
+
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+		rt.defaultConfig.AtreeValidationEnabled = false
+
+		address := common.MustBytesToAddress([]byte{0x1})
+		storage := newTestLedger(nil, nil)
+		meter := newTestMemoryGauge()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			meterMemory: meter.MeterMemory,
+		}
+
+		text := "A quick brown fox jumps over the lazy dog"
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(fmt.Sprintf(`
+                transaction() {
+                    prepare(acc: AuthAccount) {
+                        var i = 0
+                        var s = "%s"
+                        while i<1000 {
+                            let path = StoragePath(identifier: "i".concat(i.toString()))!
+                            acc.save(s, to: path)
+                            i=i+1
+                        }
+                    }
+                }`,
+					text,
+				)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.TransactionLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, 62787, int(meter.getMemory(common.MemoryKindBytes)))
+	})
+
+	t.Run("composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+		rt.defaultConfig.AtreeValidationEnabled = false
+
+		address := common.MustBytesToAddress([]byte{0x1})
+		storage := newTestLedger(nil, nil)
+		meter := newTestMemoryGauge()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			meterMemory: meter.MeterMemory,
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(`
+                pub fun main() {
+                    let acc = getAuthAccount(0x02)
+                    var i = 0
+                    var f = Foo()
+                    while i<1000 {
+                        let path = StoragePath(identifier: "i".concat(i.toString()))!
+                        acc.save(f, to: path)
+                        i=i+1
+                    }
+                }
+
+                pub struct Foo {
+                    priv var id: Int
+                    init() {
+                        self.id = 123456789
+                    }
+                }`),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, 76941, int(meter.getMemory(common.MemoryKindBytes)))
 	})
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -147,8 +147,8 @@ func TestWASMWriter_writeFunctionSection(t *testing.T) {
 					ValueTypeI32,
 				},
 				Instructions: []Instruction{
-					InstructionLocalGet{0},
-					InstructionLocalGet{1},
+					InstructionLocalGet{LocalIndex: 0},
+					InstructionLocalGet{LocalIndex: 1},
 					InstructionI32Add{},
 				},
 			},
@@ -301,8 +301,8 @@ func TestWASMWriter_writeCodeSection(t *testing.T) {
 					ValueTypeI32,
 				},
 				Instructions: []Instruction{
-					InstructionLocalGet{0},
-					InstructionLocalGet{1},
+					InstructionLocalGet{LocalIndex: 0},
+					InstructionLocalGet{LocalIndex: 1},
 					InstructionI32Add{},
 				},
 			},

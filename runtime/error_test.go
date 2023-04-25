@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,6 +137,44 @@ func TestRuntimeError(t *testing.T) {
 				"  |\n"+
 				"6 |                 a + b\n"+
 				"  |                 ^^^^^\n",
+		)
+	})
+
+	t.Run("execution error with position", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
+			pub fun main() {
+				let x: AnyStruct? = nil
+				let y = x!
+			}
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		location := common.ScriptLocation{0x1}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  location,
+			},
+		)
+		require.EqualError(
+			t,
+			err,
+			"Execution failed:\n"+
+				"error: unexpectedly found nil while forcing an Optional value\n"+
+				" --> 0100000000000000000000000000000000000000000000000000000000000000:4:12\n"+
+				"  |\n"+
+				"4 | 				let y = x!\n"+
+				"  | 				        ^^\n",
 		)
 	})
 
@@ -350,11 +388,7 @@ func TestRuntimeError(t *testing.T) {
 				}
 				return
 			},
-			getAccountContractCode: func(address Address, name string) ([]byte, error) {
-				location := common.AddressLocation{
-					Name:    name,
-					Address: address,
-				}
+			getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 				code := codes[location]
 				return []byte(code), nil
 			},

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,28 +19,59 @@
 package stdlib
 
 import (
+	"sync"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	errors2 "github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib/contracts"
+
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
-var CryptoChecker = func() *sema.Checker {
+const CryptoCheckerLocation = common.IdentifierLocation("Crypto")
 
-	program, err := parser.ParseProgram(contracts.Crypto, nil)
+var cryptoOnce sync.Once
+
+// Deprecated: Use CryptoChecker instead
+var cryptoChecker *sema.Checker
+
+// Deprecated: Use CryptoContractType instead
+var cryptoContractType *sema.CompositeType
+
+// Deprecated: Use CryptoContractInitializerTypes
+var cryptoContractInitializerTypes []sema.Type
+
+func CryptoChecker() *sema.Checker {
+	cryptoOnce.Do(initCrypto)
+	return cryptoChecker
+}
+
+func CryptoContractType() *sema.CompositeType {
+	cryptoOnce.Do(initCrypto)
+	return cryptoContractType
+}
+
+func CryptoContractInitializerTypes() []sema.Type {
+	cryptoOnce.Do(initCrypto)
+	return cryptoContractInitializerTypes
+}
+
+func initCrypto() {
+	program, err := parser.ParseProgram(
+		nil,
+		contracts.Crypto,
+		parser.Config{},
+	)
 	if err != nil {
 		panic(err)
 	}
 
-	location := common.IdentifierLocation("Crypto")
-
-	var checker *sema.Checker
-	checker, err = sema.NewChecker(
+	cryptoChecker, err = sema.NewChecker(
 		program,
-		location,
+		CryptoCheckerLocation,
 		nil,
 		&sema.Config{
 			AccessCheckMode: sema.AccessCheckModeStrict,
@@ -50,29 +81,22 @@ var CryptoChecker = func() *sema.Checker {
 		panic(err)
 	}
 
-	err = checker.Check()
+	err = cryptoChecker.Check()
 	if err != nil {
 		panic(err)
 	}
 
-	return checker
-}()
-
-var cryptoContractType = func() *sema.CompositeType {
-	variable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("Crypto")
+	variable, ok := cryptoChecker.Elaboration.GetGlobalType("Crypto")
 	if !ok {
-		panic(errors2.NewUnreachableError())
+		panic(errors.NewUnreachableError())
 	}
-	return variable.Type.(*sema.CompositeType)
-}()
+	cryptoContractType = variable.Type.(*sema.CompositeType)
 
-var cryptoContractInitializerTypes = func() (result []sema.Type) {
-	result = make([]sema.Type, len(cryptoContractType.ConstructorParameters))
+	cryptoContractInitializerTypes = make([]sema.Type, len(cryptoContractType.ConstructorParameters))
 	for i, parameter := range cryptoContractType.ConstructorParameters {
-		result[i] = parameter.TypeAnnotation.Type
+		cryptoContractInitializerTypes[i] = parameter.TypeAnnotation.Type
 	}
-	return result
-}()
+}
 
 func NewCryptoContract(
 	inter *interpreter.Interpreter,
@@ -82,11 +106,12 @@ func NewCryptoContract(
 	*interpreter.CompositeValue,
 	error,
 ) {
+	initializerTypes := CryptoContractInitializerTypes()
 	value, err := inter.InvokeFunctionValue(
 		constructor,
 		nil,
-		cryptoContractInitializerTypes,
-		cryptoContractInitializerTypes,
+		initializerTypes,
+		initializerTypes,
 		invocationRange,
 	)
 	if err != nil {
@@ -115,7 +140,7 @@ func cryptoAlgorithmEnumConstructorType[T sema.CryptoAlgorithm](
 
 	constructorType := &sema.FunctionType{
 		IsConstructor: true,
-		Parameters: []*sema.Parameter{
+		Parameters: []sema.Parameter{
 			{
 				Identifier:     sema.EnumRawValueFieldName,
 				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
@@ -126,7 +151,7 @@ func cryptoAlgorithmEnumConstructorType[T sema.CryptoAlgorithm](
 				Type: enumType,
 			},
 		),
-		Members: sema.GetMembersAsMap(members),
+		Members: sema.MembersAsMap(members),
 	}
 
 	return constructorType

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -177,24 +177,24 @@ func TestRuntimeContract(t *testing.T) {
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
-			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				require.Equal(t, tc.name, name)
-				assert.Equal(t, signerAddress, address)
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				require.Equal(t, tc.name, location.Name)
+				assert.Equal(t, signerAddress, location.Address)
 
 				deployedCode = code
 
 				return nil
 			},
-			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				if name == tc.name {
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				if location.Name == tc.name {
 					return deployedCode, nil
 				}
 
 				return nil, nil
 			},
-			removeAccountContractCode: func(address Address, name string) error {
-				require.Equal(t, tc.name, name)
-				assert.Equal(t, signerAddress, address)
+			removeAccountContractCode: func(location common.AddressLocation) error {
+				require.Equal(t, tc.name, location.Name)
+				assert.Equal(t, signerAddress, location.Address)
 
 				deployedCode = nil
 
@@ -662,27 +662,15 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
-		removeAccountContractCode: func(address Address, name string) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		removeAccountContractCode: func(location common.AddressLocation) error {
 			delete(accountCodes, location)
 			return nil
 		},

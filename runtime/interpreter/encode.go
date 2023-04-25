@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -195,11 +195,11 @@ const (
 	// Storage
 
 	CBORTagPathValue
-	CBORTagCapabilityValue
+	CBORTagStorageCapabilityValue
 	_ // DO NOT REPLACE! used to be used for storage references
-	CBORTagLinkValue
+	CBORTagPathLinkValue
 	CBORTagPublishedValue
-	_
+	CBORTagAccountLinkValue
 	_
 	_
 	_
@@ -294,7 +294,7 @@ var cborVoidValue = []byte{
 }
 
 // Encode writes a value of type Void to the encoder
-func (v VoidValue) Encode(e *atree.Encoder) error {
+func (VoidValue) Encode(e *atree.Encoder) error {
 
 	// TODO: optimize: use 0xf7, but decoded by github.com/fxamacker/cbor/v2 as Go `nil`:
 	//   https://github.com/fxamacker/cbor/blob/a6ed6ff68e99cbb076997a08d19f03c453851555/README.md#limitations
@@ -722,32 +722,32 @@ func (v PathValue) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedCapabilityValueAddressFieldKey    uint64 = 0
-	// encodedCapabilityValuePathFieldKey       uint64 = 1
-	// encodedCapabilityValueBorrowTypeFieldKey uint64 = 2
+	// encodedStorageCapabilityValueAddressFieldKey    uint64 = 0
+	// encodedStorageCapabilityValuePathFieldKey       uint64 = 1
+	// encodedStorageCapabilityValueBorrowTypeFieldKey uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
-	// encodedCapabilityValueLength MUST be updated when new element is added.
+	// encodedStorageCapabilityValueLength MUST be updated when new element is added.
 	// It is used to verify encoded capability length during decoding.
-	encodedCapabilityValueLength = 3
+	encodedStorageCapabilityValueLength = 3
 )
 
 // Encode encodes CapabilityStorable as
 //
 //	cbor.Tag{
-//				Number: CBORTagCapabilityValue,
+//				Number: CBORTagStorageCapabilityValue,
 //				Content: []any{
-//						encodedCapabilityValueAddressFieldKey:    AddressValue(v.Address),
-//						encodedCapabilityValuePathFieldKey:       PathValue(v.Path),
-//						encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
+//						encodedStorageCapabilityValueAddressFieldKey:    AddressValue(v.Address),
+//						encodedStorageCapabilityValuePathFieldKey:       PathValue(v.Path),
+//						encodedStorageCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
 //					},
 //	}
-func (v *CapabilityValue) Encode(e *atree.Encoder) error {
+func (v *StorageCapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagCapabilityValue,
+		0xd8, CBORTagStorageCapabilityValue,
 		// array, 3 items follow
 		0x83,
 	})
@@ -755,19 +755,19 @@ func (v *CapabilityValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode address at array index encodedCapabilityValueAddressFieldKey
+	// Encode address at array index encodedStorageCapabilityValueAddressFieldKey
 	err = v.Address.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// Encode path at array index encodedCapabilityValuePathFieldKey
+	// Encode path at array index encodedStorageCapabilityValuePathFieldKey
 	err = v.Path.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
+	// Encode borrow type at array index encodedStorageCapabilityValueBorrowTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.BorrowType)
 }
 
@@ -892,43 +892,61 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedLinkValueTargetPathFieldKey uint64 = 0
-	// encodedLinkValueTypeFieldKey       uint64 = 1
+	// encodedPathLinkValueTargetPathFieldKey uint64 = 0
+	// encodedPathLinkValueTypeFieldKey       uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
-	// encodedLinkValueLength MUST be updated when new element is added.
+	// encodedPathLinkValueLength MUST be updated when new element is added.
 	// It is used to verify encoded link length during decoding.
-	encodedLinkValueLength = 2
+	encodedPathLinkValueLength = 2
 )
 
-// Encode encodes LinkValue as
+// Encode encodes PathLinkValue as
 //
 //	cbor.Tag{
-//				Number: CBORTagLinkValue,
+//				Number: CBORTagPathLinkValue,
 //				Content: []any{
-//					encodedLinkValueTargetPathFieldKey: PathValue(v.TargetPath),
-//					encodedLinkValueTypeFieldKey:       StaticType(v.Type),
+//					encodedPathLinkValueTargetPathFieldKey: PathValue(v.TargetPath),
+//					encodedPathLinkValueTypeFieldKey:       StaticType(v.Type),
 //				},
 //	}
-func (v LinkValue) Encode(e *atree.Encoder) error {
+func (v PathLinkValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagLinkValue,
+		0xd8, CBORTagPathLinkValue,
 		// array, 2 items follow
 		0x82,
 	})
 	if err != nil {
 		return err
 	}
-	// Encode path at array index encodedLinkValueTargetPathFieldKey
+	// Encode path at array index encodedPathLinkValueTargetPathFieldKey
 	err = v.TargetPath.Encode(e)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedLinkValueTypeFieldKey
+	// Encode type at array index encodedPathLinkValueTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.Type)
+}
+
+// cborAccountLinkValue represents the CBOR value:
+//
+//	cbor.Tag{
+//		Number: CBORTagAccountLinkValue,
+//		Content: nil
+//	}
+var cborAccountLinkValue = []byte{
+	// tag
+	0xd8, CBORTagAccountLinkValue,
+	// null
+	0xf6,
+}
+
+// Encode writes a value of type AccountValue to the encoder
+func (AccountLinkValue) Encode(e *atree.Encoder) error {
+	return e.CBOR.EncodeRawBytes(cborAccountLinkValue)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -963,12 +981,12 @@ func (v *PublishedValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode path at array index encodedLinkValueTargetPathFieldKey
+	// Encode path at array index encodedPublishedValueRecipientFieldKey
 	err = v.Recipient.Encode(e)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedLinkValueValueFieldKey
+	// Encode type at array index encodedPublishedValueValueFieldKey
 	return v.Value.Encode(e)
 }
 

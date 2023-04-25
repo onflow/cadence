@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ func TestCheckInterfaceWithFunction(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -109,7 +109,7 @@ func TestCheckInterfaceWithFunctionImplementationAndConditions(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -137,7 +137,7 @@ func TestCheckInterfaceWithFunctionImplementation(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -167,7 +167,7 @@ func TestCheckInvalidInterfaceWithFunctionImplementationNoConditions(t *testing.
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -194,7 +194,7 @@ func TestCheckInterfaceWithInitializer(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -217,7 +217,7 @@ func TestCheckInterfaceWithInitializerImplementation(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -243,7 +243,7 @@ func TestCheckInterfaceWithInitializerImplementationAndConditions(t *testing.T) 
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -561,7 +561,7 @@ func TestCheckInterfaceFieldUse(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		if compositeKind == common.CompositeKindContract {
 			// Contracts cannot be instantiated
@@ -608,7 +608,7 @@ func TestCheckInvalidInterfaceUndeclaredFieldUse(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		if compositeKind == common.CompositeKindContract {
 			// Contracts cannot be instantiated
@@ -655,7 +655,7 @@ func TestCheckInterfaceFunctionUse(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		var setupCode, identifier string
 		if compositeKind != common.CompositeKindContract {
@@ -709,7 +709,7 @@ func TestCheckInvalidInterfaceUndeclaredFunctionUse(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		if compositeKind == common.CompositeKindContract {
 			continue
@@ -754,7 +754,7 @@ func TestCheckInvalidInterfaceConformanceInitializerExplicitMismatch(t *testing.
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -783,7 +783,7 @@ func TestCheckInvalidInterfaceConformanceInitializerImplicitMismatch(t *testing.
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -811,7 +811,7 @@ func TestCheckInvalidInterfaceConformanceMissingFunction(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -838,7 +838,7 @@ func TestCheckInvalidInterfaceConformanceFunctionMismatch(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -869,7 +869,7 @@ func TestCheckInvalidInterfaceConformanceFunctionPrivateAccessModifier(t *testin
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -947,7 +947,7 @@ func TestCheckInvalidInterfaceConformanceFieldTypeMismatch(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -979,7 +979,7 @@ func TestCheckInvalidInterfaceConformanceFieldPrivateAccessModifier(t *testing.T
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -1012,7 +1012,7 @@ func TestCheckInvalidInterfaceConformanceFieldMismatchAccessModifierMoreRestrict
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -1045,7 +1045,7 @@ func TestCheckInvalidInterfaceConformanceFunctionMismatchAccessModifierMoreRestr
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -1074,7 +1074,7 @@ func TestCheckInterfaceConformanceFieldMorePermissiveAccessModifier(t *testing.T
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -1105,7 +1105,7 @@ func TestCheckInvalidInterfaceConformanceKindFieldFunctionMismatch(t *testing.T)
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -1136,7 +1136,7 @@ func TestCheckInvalidInterfaceConformanceKindFunctionFieldMismatch(t *testing.T)
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -1169,7 +1169,7 @@ func TestCheckInvalidInterfaceConformanceFieldKindLetVarMismatch(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -1202,7 +1202,7 @@ func TestCheckInvalidInterfaceConformanceFieldKindVarLetMismatch(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -1235,7 +1235,7 @@ func TestCheckInterfaceConformanceFunctionArgumentLabelMatch(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -1262,7 +1262,7 @@ func TestCheckInvalidInterfaceConformanceFunctionArgumentLabelMismatch(t *testin
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -1366,7 +1366,6 @@ func TestCheckInterfaceWithFieldHavingStructType(t *testing.T) {
 	t.Parallel()
 
 	test := func(firstKind, secondKind common.CompositeKind) {
-
 		testName := fmt.Sprintf(
 			"%s in %s",
 			firstKind.Keyword(),
@@ -1429,9 +1428,8 @@ func TestCheckInterfaceWithFieldHavingStructType(t *testing.T) {
 		})
 	}
 
-	for _, firstKind := range common.CompositeKindsWithFieldsAndFunctions {
-		for _, secondKind := range common.CompositeKindsWithFieldsAndFunctions {
-
+	for _, firstKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
+		for _, secondKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 			test(firstKind, secondKind)
 		}
 	}
@@ -1441,8 +1439,8 @@ func TestCheckInterfaceWithFunctionHavingStructType(t *testing.T) {
 
 	t.Parallel()
 
-	for _, firstKind := range common.CompositeKindsWithFieldsAndFunctions {
-		for _, secondKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, firstKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
+		for _, secondKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 			testName := fmt.Sprintf(
 				"%s/%s",
@@ -1497,7 +1495,7 @@ func TestCheckInterfaceSelfUse(t *testing.T) {
 		common.DeclarationKindFunction,
 	}
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		for _, declarationKind := range declarationKinds {
 
 			testName := fmt.Sprintf("%s %s", compositeKind, declarationKind)
@@ -1856,7 +1854,7 @@ func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 
 	const code = examples.FungibleTokenContractInterface
 
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1887,7 +1885,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 
 	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
 
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1967,7 +1965,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					TypeAnnotation: sema.NewTypeAnnotation(
 						&sema.RestrictedType{

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -169,12 +169,14 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		}
 	}
 
-	checker.Elaboration.VariableDeclarationTypes[declaration] =
+	checker.Elaboration.SetVariableDeclarationTypes(
+		declaration,
 		VariableDeclarationTypes{
 			TargetType:      declarationType,
 			ValueType:       valueType,
 			SecondValueType: secondValueType,
-		}
+		},
+	)
 
 	// Finally, declare the variable in the current value activation
 
@@ -230,6 +232,6 @@ func (checker *Checker) recordVariableDeclarationRange(
 func (checker *Checker) elaborateNestedResourceMoveExpression(expression ast.Expression) {
 	switch expression.(type) {
 	case *ast.IndexExpression, *ast.MemberExpression:
-		checker.Elaboration.IsNestedResourceMoveExpression[expression] = struct{}{}
+		checker.Elaboration.SetIsNestedResourceMoveExpression(expression)
 	}
 }

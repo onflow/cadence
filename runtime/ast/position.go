@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,6 +77,16 @@ func (position Position) Compare(other Position) int {
 func EndPosition(memoryGauge common.MemoryGauge, startPosition Position, end int) Position {
 	length := end - startPosition.Offset
 	return startPosition.Shifted(memoryGauge, length)
+}
+
+func EarliestPosition(p Position, ps ...*Position) (earliest Position) {
+	earliest = p
+	for _, pos := range ps {
+		if pos != nil && pos.Compare(earliest) < 0 {
+			earliest = *pos
+		}
+	}
+	return
 }
 
 // HasPosition

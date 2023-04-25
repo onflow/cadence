@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +68,10 @@ func (m *Members) Composites() []*CompositeDeclaration {
 	return m.indices.Composites(m.declarations)
 }
 
+func (m *Members) Attachments() []*AttachmentDeclaration {
+	return m.indices.Attachments(m.declarations)
+}
+
 func (m *Members) EnumCases() []*EnumCaseDeclaration {
 	return m.indices.EnumCases(m.declarations)
 }
@@ -82,6 +86,10 @@ func (m *Members) FunctionsByIdentifier() map[string]*FunctionDeclaration {
 
 func (m *Members) CompositesByIdentifier() map[string]*CompositeDeclaration {
 	return m.indices.CompositesByIdentifier(m.declarations)
+}
+
+func (m *Members) AttachmentsByIdentifier() map[string]*AttachmentDeclaration {
+	return m.indices.AttachmentsByIdentifier(m.declarations)
 }
 
 func (m *Members) InterfacesByIdentifier() map[string]*InterfaceDeclaration {
@@ -120,8 +128,8 @@ func (m *Members) FieldPosition(name string, compositeKind common.CompositeKind)
 func (m *Members) MarshalJSON() ([]byte, error) {
 	type Alias Members
 	return json.Marshal(&struct {
-		Declarations []Declaration
 		*Alias
+		Declarations []Declaration
 	}{
 		Declarations: m.declarations,
 		Alias:        (*Alias)(m),

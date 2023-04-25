@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,30 +37,36 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		valueType = expectedMapType.ValueType
 	}
 
+	var entryTypes []DictionaryEntryType
+	var keyTypes []Type
+	var valueTypes []Type
+
 	dictionarySize := len(expression.Entries)
-	entryTypes := make([]DictionaryEntryType, dictionarySize)
-	keyTypes := make([]Type, dictionarySize)
-	valueTypes := make([]Type, dictionarySize)
+	if dictionarySize > 0 {
+		entryTypes = make([]DictionaryEntryType, dictionarySize)
+		keyTypes = make([]Type, dictionarySize)
+		valueTypes = make([]Type, dictionarySize)
 
-	for i, entry := range expression.Entries {
-		// NOTE: important to check move after each type check,
-		// not combined after both type checks!
+		for i, entry := range expression.Entries {
+			// NOTE: important to check move after each type check,
+			// not combined after both type checks!
 
-		entryKeyType := checker.VisitExpression(entry.Key, keyType)
-		checker.checkVariableMove(entry.Key)
-		checker.checkResourceMoveOperation(entry.Key, entryKeyType)
+			entryKeyType := checker.VisitExpression(entry.Key, keyType)
+			checker.checkVariableMove(entry.Key)
+			checker.checkResourceMoveOperation(entry.Key, entryKeyType)
 
-		entryValueType := checker.VisitExpression(entry.Value, valueType)
-		checker.checkVariableMove(entry.Value)
-		checker.checkResourceMoveOperation(entry.Value, entryValueType)
+			entryValueType := checker.VisitExpression(entry.Value, valueType)
+			checker.checkVariableMove(entry.Value)
+			checker.checkResourceMoveOperation(entry.Value, entryValueType)
 
-		entryTypes[i] = DictionaryEntryType{
-			KeyType:   entryKeyType,
-			ValueType: entryValueType,
+			entryTypes[i] = DictionaryEntryType{
+				KeyType:   entryKeyType,
+				ValueType: entryValueType,
+			}
+
+			keyTypes[i] = entryKeyType
+			valueTypes[i] = entryValueType
 		}
-
-		keyTypes[i] = entryKeyType
-		valueTypes[i] = entryValueType
 	}
 
 	if keyType == nil && valueType == nil {
@@ -96,11 +102,13 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		ValueType: valueType,
 	}
 
-	checker.Elaboration.DictionaryExpressionTypes[expression] =
+	checker.Elaboration.SetDictionaryExpressionTypes(
+		expression,
 		DictionaryExpressionTypes{
 			EntryTypes:     entryTypes,
 			DictionaryType: dictionaryType,
-		}
+		},
+	)
 
 	return dictionaryType
 }

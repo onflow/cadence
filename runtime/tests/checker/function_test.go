@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -414,4 +415,93 @@ func TestCheckFunctionNonExistingField(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckStaticFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          static fun test() {}
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				StaticModifierEnabled: true,
+			},
+		},
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidStaticModifierError{}, errs[0])
+}
+
+func TestCheckNativeFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          native fun test() {}
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				NativeModifierEnabled: true,
+			},
+		},
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
+}
+
+func TestCheckResultVariable(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            pub resource R {
+                pub let id: UInt64
+                init() {
+                    self.id = 1
+                }
+            }
+
+            pub fun main(): @R  {
+                post {
+                    result.id == 1234: "Invalid id"
+                }
+                return <- create R()
+            }`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("optional resource", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            pub resource R {
+                pub let id: UInt64
+                init() {
+                    self.id = 1
+                }
+            }
+
+            pub fun main(): @R?  {
+                post {
+                    result!.id == 1234: "invalid id"
+                }
+                return nil
+            }`,
+		)
+
+		require.NoError(t, err)
+	})
 }

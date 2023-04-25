@@ -15,11 +15,17 @@ Please let us know if your use-case demands it by request this feature in an iss
 
 To get information about a block, the functions `getCurrentBlock` and `getBlock` can be used:
 
-- `cadence•fun getCurrentBlock(): Block`
+-
+    ```cadence
+    fun getCurrentBlock(): Block
+    ```
 
   Returns the current block, i.e. the block which contains the currently executed transaction.
 
-- `cadence•fun getBlock(at height: UInt64): Block?`
+-
+    ```cadence
+    fun getBlock(at: UInt64): Block?
+    ```
 
   Returns the block at the given height.
   If the given block does not exist the function returns `nil`.
@@ -44,8 +50,7 @@ pub struct Block {
     /// The view of the block.
     ///
     /// It is a detail of the consensus algorithm. It is a monotonically increasing integer
-    /// and counts rounds in the consensus algorithm. Since not all rounds result in a finalized block,
-    /// the view number is strictly greater than or equal to the block height
+    /// and counts rounds in the consensus algorithm. It is reset to zero at each spork.
     ///
     pub let view: UInt64
 

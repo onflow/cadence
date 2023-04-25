@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,9 +35,39 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 
 	decl := &FunctionDeclaration{
 		Access: AccessPublic,
+		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
 			Identifier: "xyz",
 			Pos:        Position{Offset: 37, Line: 38, Column: 39},
+		},
+		TypeParameterList: &TypeParameterList{
+			TypeParameters: []*TypeParameter{
+				{
+					Identifier: Identifier{
+						Identifier: "A",
+						Pos:        Position{Offset: 40, Line: 41, Column: 42},
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "B",
+						Pos:        Position{Offset: 43, Line: 44, Column: 45},
+					},
+					TypeBound: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "C",
+								Pos:        Position{Offset: 46, Line: 47, Column: 48},
+							},
+						},
+						StartPos: Position{Offset: 49, Line: 50, Column: 51},
+					},
+				},
+			},
+			Range: Range{
+				StartPos: Position{Offset: 52, Line: 53, Column: 54},
+				EndPos:   Position{Offset: 55, Line: 56, Column: 57},
+			},
 		},
 		ParameterList: &ParameterList{
 			Parameters: []*Parameter{
@@ -56,10 +86,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 						},
 						StartPos: Position{Offset: 7, Line: 8, Column: 9},
 					},
-					Range: Range{
-						StartPos: Position{Offset: 10, Line: 11, Column: 12},
-						EndPos:   Position{Offset: 13, Line: 14, Column: 15},
-					},
+					StartPos: Position{Offset: 10, Line: 11, Column: 12},
 				},
 			},
 			Range: Range{
@@ -94,14 +121,101 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FunctionDeclaration",
             "Access": "AccessPublic",
+            "IsStatic": true,
+            "IsNative": true,
             "Identifier": {
                 "Identifier": "xyz",
 				"StartPos": {"Offset": 37, "Line": 38, "Column": 39},
 				"EndPos": {"Offset": 39, "Line": 38, "Column": 41}
+            },
+            "TypeParameterList": {
+              "TypeParameters": [
+                {
+                  "Identifier": {
+                    "Identifier": "A",
+                    "StartPos": {
+                      "Offset": 40,
+                      "Line": 41,
+                      "Column": 42
+                    },
+                    "EndPos": {
+                      "Offset": 40,
+                      "Line": 41,
+                      "Column": 42
+                    }
+                  },
+                  "TypeBound": null
+                },
+                {
+                  "Identifier": {
+                    "Identifier": "B",
+                    "StartPos": {
+                      "Offset": 43,
+                      "Line": 44,
+                      "Column": 45
+                    },
+                    "EndPos": {
+                      "Offset": 43,
+                      "Line": 44,
+                      "Column": 45
+                    }
+                  },
+                  "TypeBound": {
+                    "StartPos": {
+                      "Offset": 49,
+                      "Line": 50,
+                      "Column": 51
+                    },
+                    "EndPos": {
+                      "Offset": 46,
+                      "Line": 47,
+                      "Column": 48
+                    },
+                    "IsResource": false,
+                    "AnnotatedType": {
+                      "Type": "NominalType",
+                      "StartPos": {
+                        "Offset": 46,
+                        "Line": 47,
+                        "Column": 48
+                      },
+                      "EndPos": {
+                        "Offset": 46,
+                        "Line": 47,
+                        "Column": 48
+                      },
+                      "Identifier": {
+                        "Identifier": "C",
+                        "StartPos": {
+                          "Offset": 46,
+                          "Line": 47,
+                          "Column": 48
+                        },
+                        "EndPos": {
+                          "Offset": 46,
+                          "Line": 47,
+                          "Column": 48
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "StartPos": {
+                "Offset": 52,
+                "Line": 53,
+                "Column": 54
+              },
+              "EndPos": {
+                "Offset": 55,
+                "Line": 56,
+                "Column": 57
+              }
             },
             "ParameterList": {
                 "Parameters": [
@@ -128,7 +242,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
                             "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                         },
                         "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
-                        "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
+                        "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                     }
                 ],
                 "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
@@ -175,9 +289,11 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 
 	decl := &FunctionDeclaration{
 		Access: AccessPublic,
+		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
 			Identifier: "xyz",
 		},
+
 		ParameterList: &ParameterList{
 			Parameters: []*Parameter{
 				{
@@ -213,6 +329,10 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 	require.Equal(t,
 		prettier.Concat{
 			prettier.Text("pub"),
+			prettier.Space,
+			prettier.Text("static"),
+			prettier.Space,
+			prettier.Text("native"),
 			prettier.Space,
 			prettier.Text("fun "),
 			prettier.Text("xyz"),
@@ -254,47 +374,120 @@ func TestFunctionDeclaration_String(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &FunctionDeclaration{
-		Access: AccessPublic,
-		Identifier: Identifier{
-			Identifier: "xyz",
-		},
-		ParameterList: &ParameterList{
-			Parameters: []*Parameter{
-				{
-					Label: "ok",
-					Identifier: Identifier{
-						Identifier: "foobar",
-					},
-					TypeAnnotation: &TypeAnnotation{
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "AB",
+	t.Run("without type parameters", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FunctionDeclaration{
+			Access: AccessPublic,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			ParameterList: &ParameterList{
+				Parameters: []*Parameter{
+					{
+						Label: "ok",
+						Identifier: Identifier{
+							Identifier: "foobar",
+						},
+						TypeAnnotation: &TypeAnnotation{
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "AB",
+								},
 							},
 						},
 					},
 				},
 			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			IsResource: true,
-			Type: &NominalType{
-				Identifier: Identifier{
-					Identifier: "CD",
+			ReturnTypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
 				},
 			},
-		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Statements: []Statement{},
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{},
+				},
 			},
-		},
-	}
+		}
 
-	require.Equal(t,
-		"pub fun xyz(ok foobar: AB): @CD {}",
-		decl.String(),
-	)
+		require.Equal(t,
+			"pub fun xyz(ok foobar: AB): @CD {}",
+			decl.String(),
+		)
+
+	})
+
+	t.Run("with type parameters", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &FunctionDeclaration{
+			Access: AccessPublic,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeParameterList: &TypeParameterList{
+				TypeParameters: []*TypeParameter{
+					{
+						Identifier: Identifier{
+							Identifier: "A",
+						},
+					},
+					{
+						Identifier: Identifier{
+							Identifier: "B",
+						},
+						TypeBound: &TypeAnnotation{
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "C",
+								},
+							},
+						},
+					},
+				},
+			},
+			ParameterList: &ParameterList{
+				Parameters: []*Parameter{
+					{
+						Label: "ok",
+						Identifier: Identifier{
+							Identifier: "foobar",
+						},
+						TypeAnnotation: &TypeAnnotation{
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "AB",
+								},
+							},
+						},
+					},
+				},
+			},
+			ReturnTypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{},
+				},
+			},
+		}
+
+		require.Equal(t,
+			"pub fun xyz<A, B: C>(ok foobar: AB): @CD {}",
+			decl.String(),
+		)
+	})
 }
 
 func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
@@ -305,9 +498,39 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 		Kind: common.DeclarationKindInitializer,
 		FunctionDeclaration: &FunctionDeclaration{
 			Access: AccessNotSpecified,
+			Flags:  FunctionDeclarationFlagsIsNative,
 			Identifier: Identifier{
 				Identifier: "xyz",
 				Pos:        Position{Offset: 37, Line: 38, Column: 39},
+			},
+			TypeParameterList: &TypeParameterList{
+				TypeParameters: []*TypeParameter{
+					{
+						Identifier: Identifier{
+							Identifier: "A",
+							Pos:        Position{Offset: 40, Line: 41, Column: 42},
+						},
+					},
+					{
+						Identifier: Identifier{
+							Identifier: "B",
+							Pos:        Position{Offset: 43, Line: 44, Column: 45},
+						},
+						TypeBound: &TypeAnnotation{
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "C",
+									Pos:        Position{Offset: 46, Line: 47, Column: 48},
+								},
+							},
+							StartPos: Position{Offset: 49, Line: 50, Column: 51},
+						},
+					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 52, Line: 53, Column: 54},
+					EndPos:   Position{Offset: 55, Line: 56, Column: 57},
+				},
 			},
 			ParameterList: &ParameterList{
 				Parameters: []*Parameter{
@@ -326,10 +549,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 							},
 							StartPos: Position{Offset: 7, Line: 8, Column: 9},
 						},
-						Range: Range{
-							StartPos: Position{Offset: 10, Line: 11, Column: 12},
-							EndPos:   Position{Offset: 13, Line: 14, Column: 15},
-						},
+						StartPos: Position{Offset: 10, Line: 11, Column: 12},
 					},
 				},
 				Range: Range{
@@ -365,6 +585,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "SpecialFunctionDeclaration",
@@ -372,10 +593,96 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
             "FunctionDeclaration": {
                 "Type": "FunctionDeclaration",
                 "Access": "AccessNotSpecified",
+                "IsStatic": false,
+                "IsNative": true,
                 "Identifier": {
                     "Identifier": "xyz",
 		    		"StartPos": {"Offset": 37, "Line": 38, "Column": 39},
 		    		"EndPos": {"Offset": 39, "Line": 38, "Column": 41}
+                },
+                "TypeParameterList": {
+                  "TypeParameters": [
+                    {
+                      "Identifier": {
+                        "Identifier": "A",
+                        "StartPos": {
+                          "Offset": 40,
+                          "Line": 41,
+                          "Column": 42
+                        },
+                        "EndPos": {
+                          "Offset": 40,
+                          "Line": 41,
+                          "Column": 42
+                        }
+                      },
+                      "TypeBound": null
+                    },
+                    {
+                      "Identifier": {
+                        "Identifier": "B",
+                        "StartPos": {
+                          "Offset": 43,
+                          "Line": 44,
+                          "Column": 45
+                        },
+                        "EndPos": {
+                          "Offset": 43,
+                          "Line": 44,
+                          "Column": 45
+                        }
+                      },
+                      "TypeBound": {
+                        "StartPos": {
+                          "Offset": 49,
+                          "Line": 50,
+                          "Column": 51
+                        },
+                        "EndPos": {
+                          "Offset": 46,
+                          "Line": 47,
+                          "Column": 48
+                        },
+                        "IsResource": false,
+                        "AnnotatedType": {
+                          "Type": "NominalType",
+                          "StartPos": {
+                            "Offset": 46,
+                            "Line": 47,
+                            "Column": 48
+                          },
+                          "EndPos": {
+                            "Offset": 46,
+                            "Line": 47,
+                            "Column": 48
+                          },
+                          "Identifier": {
+                            "Identifier": "C",
+                            "StartPos": {
+                              "Offset": 46,
+                              "Line": 47,
+                              "Column": 48
+                            },
+                            "EndPos": {
+                              "Offset": 46,
+                              "Line": 47,
+                              "Column": 48
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "StartPos": {
+                    "Offset": 52,
+                    "Line": 53,
+                    "Column": 54
+                  },
+                  "EndPos": {
+                    "Offset": 55,
+                    "Line": 56,
+                    "Column": 57
+                  }
                 },
                 "ParameterList": {
                     "Parameters": [
@@ -402,7 +709,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
                                 "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                             },
                             "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
-                            "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
+                            "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                         }
                     ],
                     "StartPos": {"Offset": 16, "Line": 17, "Column": 18},

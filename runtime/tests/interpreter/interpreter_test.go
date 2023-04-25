@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,12 @@ type ParseCheckAndInterpretOptions struct {
 }
 
 func parseCheckAndInterpret(t testing.TB, code string) *interpreter.Interpreter {
-	inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
+	inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
+		// attachments should be on by default in tests
+		CheckerConfig: &sema.Config{
+			AttachmentsEnabled: true,
+		},
+	})
 	require.NoError(t, err)
 	return inter
 }
@@ -153,6 +158,8 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 
 	require.NoError(t, err)
 
+	inter.ConfigureAccountLinkingAllowed()
+
 	err = inter.Interpret()
 
 	if err == nil {
@@ -209,7 +216,7 @@ func makeContractValueHandler(
 		invocationRange ast.Range,
 	) interpreter.ContractValue {
 
-		constructor := constructorGenerator(common.Address{})
+		constructor := constructorGenerator(common.ZeroAddress)
 
 		value, err := inter.InvokeFunctionValue(
 			constructor,
@@ -249,7 +256,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 
@@ -263,7 +270,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("a").GetValue(),
 	)
 
@@ -276,7 +283,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
@@ -597,6 +604,70 @@ func TestInterpretParameters(t *testing.T) {
 		inter, b, value)
 }
 
+func TestInterpretArrayEquality(t *testing.T) {
+	t.Parallel()
+
+	testBooleanFunction := func(t *testing.T, name string, expected bool, innerCode string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.Equal(t, bool(boolVal), expected)
+		})
+
+	}
+
+	// variable sized arrays
+	nestingLimit := 4
+
+	for i := 0; i < nestingLimit; i++ {
+		nestingLevel := i
+		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
+
+		for _, opStr := range []string{"==", "!="} {
+			op := opStr
+			testname := fmt.Sprintf("test variable size array %s at nesting level %d", op, nestingLevel)
+			code := fmt.Sprintf(` 
+					let xs = %s
+					return xs %s xs
+				`,
+				array,
+				op,
+			)
+
+			testBooleanFunction(t, testname, op == "==", code)
+		}
+	}
+
+	// fixed size arrays
+
+	testBooleanFunction(t, "fixed array [Int; 3] should not equal a different array", false, `
+		let xs: [Int; 3] = [1, 2, 3]
+		let ys: [Int; 3] = [4, 5, 6]
+		return xs == ys
+	`)
+
+	testBooleanFunction(t, "fixed array [Int; 3] should be unequal to a different array", true, `
+		let xs: [Int; 3] = [1, 2, 3]
+		let ys: [Int; 3] = [4, 5, 6]
+		return xs != ys
+	`)
+
+	testBooleanFunction(t, "fixed array [[Int; 2]; 1] should equal itself", true, `
+		let xs: [[Int; 2]; 1] = [[42, 1337]]
+		return xs == xs
+	`)
+}
+
 func TestInterpretArrayIndexing(t *testing.T) {
 
 	t.Parallel()
@@ -681,7 +752,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
 		interpreter.NewUnmeteredIntValueFromInt64(2),
 	)
@@ -1402,21 +1473,21 @@ func TestInterpretOrOperatorShortCircuitLeftSuccess(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1445,21 +1516,21 @@ func TestInterpretOrOperatorShortCircuitLeftFailure(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1530,21 +1601,21 @@ func TestInterpretAndOperatorShortCircuitLeftSuccess(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1573,21 +1644,21 @@ func TestInterpretAndOperatorShortCircuitLeftFailure(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1780,28 +1851,28 @@ func TestInterpretUnaryBooleanNegation(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("a").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("b").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("c").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("d").GetValue(),
 	)
 }
@@ -1813,14 +1884,14 @@ func TestInterpretHostFunction(t *testing.T) {
 	const code = `
       pub let a = test(1, 2)
     `
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 
 	require.NoError(t, err)
 
 	testFunction := stdlib.NewStandardLibraryFunction(
 		"test",
 		&sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "a",
@@ -1864,7 +1935,7 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, testFunction)
 
 	inter, err := interpreter.NewInterpreter(
@@ -1895,7 +1966,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	const code = `
       pub let nothing = test(1, true, "test")
     `
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 
 	require.NoError(t, err)
 
@@ -1904,7 +1975,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	testFunction := stdlib.NewStandardLibraryFunction(
 		"test",
 		&sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
@@ -1939,7 +2010,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(true),
+				interpreter.TrueValue,
 				invocation.Arguments[1],
 			)
 
@@ -1973,7 +2044,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, testFunction)
 
 	inter, err := interpreter.NewInterpreter(
@@ -2040,7 +2111,8 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 		switch compositeKind {
 		case common.CompositeKindContract,
 			common.CompositeKindEvent,
-			common.CompositeKindEnum:
+			common.CompositeKindEnum,
+			common.CompositeKindAttachment:
 
 			continue
 		}
@@ -2420,9 +2492,9 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			common.ZeroAddress,
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2465,9 +2537,9 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			common.ZeroAddress,
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2507,9 +2579,9 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			common.ZeroAddress,
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2549,9 +2621,9 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			common.ZeroAddress,
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2598,9 +2670,9 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			common.ZeroAddress,
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2636,7 +2708,7 @@ func TestInterpretStructCopyOnPassing(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -2674,7 +2746,7 @@ func TestInterpretArrayCopy(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(0),
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
@@ -2715,7 +2787,7 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 			interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -2752,7 +2824,7 @@ func TestInterpretMutuallyRecursiveFunctions(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 
@@ -2762,7 +2834,7 @@ func TestInterpretMutuallyRecursiveFunctions(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -3201,14 +3273,14 @@ func TestInterpretNilCoalescingShortCircuitLeftSuccess(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3244,14 +3316,14 @@ func TestInterpretNilCoalescingShortCircuitLeftFailure(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3268,7 +3340,7 @@ func TestInterpretNilCoalescingOptionalAnyStructNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3361,7 +3433,7 @@ func TestInterpretNilsComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 }
@@ -3379,14 +3451,14 @@ func TestInterpretNonOptionalNilComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3403,7 +3475,7 @@ func TestInterpretOptionalNilComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3420,7 +3492,7 @@ func TestInterpretNestedOptionalNilComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3437,7 +3509,7 @@ func TestInterpretOptionalNilComparisonSwapped(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3454,7 +3526,7 @@ func TestInterpretNestedOptionalNilComparisonSwapped(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3472,7 +3544,7 @@ func TestInterpretNestedOptionalComparisonNils(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3490,7 +3562,7 @@ func TestInterpretNestedOptionalComparisonValues(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3508,7 +3580,7 @@ func TestInterpretNestedOptionalComparisonMixed(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3525,7 +3597,7 @@ func TestInterpretOptionalSomeValueComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3542,7 +3614,7 @@ func TestInterpretOptionalNilValueComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3649,14 +3721,14 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(false),
+				interpreter.FalseValue,
 				inter.Globals.Get("y").GetValue(),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(false),
+				interpreter.FalseValue,
 				inter.Globals.Get("z").GetValue(),
 			)
 		})
@@ -3664,7 +3736,7 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
-		if compositeKind == common.CompositeKindEvent {
+		if compositeKind == common.CompositeKindEvent || compositeKind == common.CompositeKindAttachment {
 			continue
 		}
 
@@ -4015,7 +4087,7 @@ func TestInterpretImportError(t *testing.T) {
 
 	mainChecker := parseAndCheck(code, TestLocation)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	storage := newUnmeteredInMemoryStorage()
@@ -4502,6 +4574,176 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	)
 }
 
+func TestInterpretDictionaryEquality(t *testing.T) {
+	t.Parallel()
+
+	testBooleanFunction := func(t *testing.T, name string, expected bool, innerCode string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.Equal(t, bool(boolVal), expected)
+		})
+
+	}
+
+	for _, opStr := range []string{"==", "!="} {
+		testBooleanFunction(
+			t,
+			"dictionary should be equal to itself",
+			opStr == "==",
+			fmt.Sprintf(
+				`
+					let d = {"abc": 1, "def": 2}
+					return d %s d
+				`,
+				opStr,
+			),
+		)
+
+		testBooleanFunction(
+			t,
+			"nested dictionary should be equal to itself",
+			opStr == "==",
+			fmt.Sprintf(
+				`
+					let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+					return d %s d
+				`,
+				opStr,
+			),
+		)
+
+		testBooleanFunction(
+			t,
+			"simple dictionary equality",
+			opStr == "==",
+			fmt.Sprintf(
+				`
+					let d = {"abc": 1, "def": 2}
+					let d2 = {"abc": 1, "def": 2}
+					return d %s d2
+				`,
+				opStr,
+			),
+		)
+
+		testBooleanFunction(
+			t,
+			"nested dictionary equality check",
+			opStr == "==",
+			fmt.Sprintf(
+				`
+				let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+				let d2 = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+				return d %s d2
+				`,
+				opStr,
+			),
+		)
+
+		testBooleanFunction(
+			t,
+			"simple dictionary unequal",
+			opStr == "!=",
+			fmt.Sprintf(
+				`
+				let d = {"abc": 1, "def": 2}
+				let d2 = {"abc": 1, "def": 2, "xyz": 4}
+				return d %s d2
+				`,
+				opStr,
+			),
+		)
+
+		testBooleanFunction(
+			t,
+			"nested dictionary unequal",
+			opStr == "!=",
+			fmt.Sprintf(
+				`
+					let d = {"abc": {1: {"a": 1000}, 2: {"b": 2000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+					let d2 = {"abc": {1: {"a": 1000}, 2: {"c": 1000}}, "def": {4: {"c": 1000}, 5: {"d": 2000}}}
+					return d %s d2
+				`,
+				opStr,
+			),
+		)
+	}
+}
+
+func TestInterpretComparison(t *testing.T) {
+	t.Parallel()
+
+	runBooleanTest := func(t *testing.T, name string, expected bool, innerCode string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.Equal(t, expected, bool(boolVal))
+		})
+	}
+
+	tests := []struct {
+		name     string
+		expected bool
+		inner    string
+	}{
+		{"true < true", false, "return true < true"},
+		{"true <= true", true, "return true <= true"},
+		{"true > true", false, "return true > true"},
+		{"true >= true", true, "return true >= true"},
+		{"false < false", false, "return false < false"},
+		{"false <= false", true, "return false <= false"},
+		{"false > false", false, "return false > false"},
+		{"false >= false", true, "return false >= false"},
+		{"true < false", false, "return true < false"},
+		{"true <= false", false, "return true <= false"},
+		{"true > false", true, "return true > false"},
+		{"true >= false", true, "return true >= false"},
+		{"false < true", true, "return false < true"},
+		{"false <= true", true, "return false <= true"},
+		{"false > true", false, "return false > true"},
+		{"false >= true", false, "return false >= true"},
+		{"a < b", true, "let left: Character = \"a\";\nlet right: Character = \"b\"; return left < right"},
+		{"b < a", false, "let left: Character = \"b\";\nlet right: Character = \"a\"; return left < right"},
+		{"a < A", false, "let left: Character = \"a\";\nlet right: Character = \"A\"; return left < right"},
+		{"A < a", true, "let left: Character = \"A\";\nlet right: Character = \"a\"; return left < right"},
+		{"A < Z", true, "let left: Character = \"A\";\nlet right: Character = \"Z\"; return left < right"},
+		{"a <= b", true, "let left: Character = \"a\";\nlet right: Character = \"b\"; return left <= right"},
+		{"a <= a", true, "let left: Character = \"a\";\nlet right: Character = \"a\"; return left <= right"},
+		{"A <= a", true, "let left: Character = \"A\";\nlet right: Character = \"a\"; return left <= right"},
+		{"a > b", false, "let left: Character = \"a\";\nlet right: Character = \"b\"; return left > right"},
+		{"b > a", true, "let left: Character = \"b\";\nlet right: Character = \"a\"; return left > right"},
+		{"A > a", false, "let left: Character = \"A\";\nlet right: Character = \"a\"; return left > right"},
+		{"a >= b", false, "let left: Character = \"a\";\nlet right: Character = \"b\"; return left >= right"},
+		{"a >= a", true, "let left: Character = \"a\";\nlet right: Character = \"a\"; return left >= right"},
+		{"A >= a", false, "let left: Character = \"A\";\nlet right: Character = \"a\"; return left >= right"},
+	}
+
+	for _, test := range tests {
+		runBooleanTest(t, test.name, test.expected, test.inner)
+	}
+}
+
 func TestInterpretOptionalAnyStruct(t *testing.T) {
 
 	t.Parallel()
@@ -4690,7 +4932,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		var inter *interpreter.Interpreter
 
 		getType := func(name string) sema.Type {
-			variable, ok := inter.Program.Elaboration.GlobalTypes.Get(name)
+			variable, ok := inter.Program.Elaboration.GetGlobalType(name)
 			require.True(t, ok, "missing global type %s", name)
 			return variable.Type
 		}
@@ -4707,7 +4949,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		}
 
 		getStorageReferenceFunctionType := &sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:      "authorized",
 					Identifier: "authorized",
@@ -4748,7 +4990,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
 		storage := newUnmeteredInMemoryStorage()
@@ -5626,7 +5868,7 @@ func TestInterpretArrayContains(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 
@@ -5636,7 +5878,7 @@ func TestInterpretArrayContains(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -5669,7 +5911,7 @@ func TestInterpretDictionaryContainsKey(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 
@@ -5679,7 +5921,7 @@ func TestInterpretDictionaryContainsKey(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -5887,7 +6129,7 @@ func TestInterpretDictionaryForEachKey(t *testing.T) {
 				if !ok {
 					return 0, ok
 				}
-				return intVal.ToInt(), true
+				return intVal.ToInt(interpreter.EmptyLocationRange), true
 			}
 
 			entries, ok := dictionaryEntries(inter, dict, toInt, toInt)
@@ -6348,7 +6590,7 @@ func TestInterpretSwapVariables(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
@@ -6389,7 +6631,7 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
@@ -6436,7 +6678,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("ranDestructor").GetValue(),
 	)
 
@@ -6446,7 +6688,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("ranDestructor").GetValue(),
 	)
 }
@@ -6488,14 +6730,14 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("ranDestructorA").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("ranDestructorB").GetValue(),
 	)
 
@@ -6505,14 +6747,14 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("ranDestructorA").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("ranDestructorB").GetValue(),
 	)
 }
@@ -6819,7 +7061,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
 			fields1,
-			common.Address{},
+			common.ZeroAddress,
 		),
 		interpreter.NewCompositeValue(
 			inter,
@@ -6828,7 +7070,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
 			fields2,
-			common.Address{},
+			common.ZeroAddress,
 		),
 		interpreter.NewCompositeValue(
 			inter,
@@ -6837,7 +7079,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
 			common.CompositeKindEvent,
 			fields3,
-			common.Address{},
+			common.ZeroAddress,
 		),
 	}
 
@@ -6895,7 +7137,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		"S",
 		common.CompositeKindStructure,
 		nil,
-		common.Address{},
+		common.ZeroAddress,
 	)
 	sValue.Functions = map[string]interpreter.FunctionValue{}
 
@@ -6909,13 +7151,13 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.CharacterType,
 		},
 		"Bool": {
-			value: interpreter.BoolValue(true),
+			value: interpreter.TrueValue,
 			ty:    sema.BoolType,
 		},
 		"Address": {
 			literal: `0x1`,
 			value:   interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-			ty:      &sema.AddressType{},
+			ty:      sema.TheAddressType,
 		},
 		// Int*
 		"Int": {
@@ -7054,7 +7296,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 					},
-					common.Address{},
+					common.ZeroAddress,
 					testCase.value,
 				),
 				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
@@ -7069,7 +7311,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 						Size: 1,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					testCase.value,
 				),
 				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
@@ -7170,7 +7412,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					TestLocation.QualifiedIdentifier(testType.ID()),
 					common.CompositeKindEvent,
 					fields,
-					common.Address{},
+					common.ZeroAddress,
 				),
 			}
 
@@ -7357,7 +7599,7 @@ func TestInterpretReferenceUse(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -7409,7 +7651,7 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(0),
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -7587,7 +7829,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 						Type: interpreter.PrimitiveStaticTypeString,
 					},
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
@@ -7674,7 +7916,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 						Type: interpreter.PrimitiveStaticTypeString,
 					},
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
@@ -7915,7 +8157,7 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -7957,7 +8199,7 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -8163,7 +8405,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -8193,7 +8435,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: 2,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(40),
 			interpreter.NewUnmeteredIntValueFromInt64(60),
 		),
@@ -8593,7 +8835,7 @@ func TestInterpretHexDecode(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
@@ -8939,7 +9181,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredStringValue("2"),
 				interpreter.NewUnmeteredStringValue("3"),
 			),
@@ -8985,7 +9227,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -9021,10 +9263,10 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 func newPanicFunctionValue(gauge common.MemoryGauge) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
+		stdlib.PanicFunction.Type.(*sema.FunctionType),
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
-		stdlib.PanicFunction.Type.(*sema.FunctionType),
 	)
 }
 
@@ -9047,6 +9289,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunctionValue,
 				panicFunctionValue,
 				panicFunctionValue,
+				panicFunctionValue,
 				func(
 					inter *interpreter.Interpreter,
 					locationRange interpreter.LocationRange,
@@ -9057,7 +9300,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 						interpreter.VariableSizedStaticType{
 							Type: interpreter.PrimitiveStaticTypeString,
 						},
-						common.Address{},
+						common.ZeroAddress,
 					)
 				},
 			)
@@ -9114,6 +9357,7 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 				gauge,
 				addressValue,
 				panicFunctionValue,
+				panicFunctionValue,
 				func(
 					inter *interpreter.Interpreter,
 					locationRange interpreter.LocationRange,
@@ -9124,7 +9368,7 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 						interpreter.VariableSizedStaticType{
 							Type: interpreter.PrimitiveStaticTypeString,
 						},
-						common.Address{},
+						common.ZeroAddress,
 					)
 				},
 			)
@@ -9426,24 +9670,24 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 	for _, test := range []test{
 		{
-			sema.Int256Type,
-			"676983016644359394637212096269997871684197836659065544033845082275068334",
-			72,
+			Type:    sema.Int256Type,
+			Literal: "676983016644359394637212096269997871684197836659065544033845082275068334",
+			Count:   72,
 		},
 		{
-			sema.UInt256Type,
-			"676983016644359394637212096269997871684197836659065544033845082275068334",
-			72,
+			Type:    sema.UInt256Type,
+			Literal: "676983016644359394637212096269997871684197836659065544033845082275068334",
+			Count:   72,
 		},
 		{
-			sema.Int128Type,
-			"676983016644359394637212096269997871",
-			36,
+			Type:    sema.Int128Type,
+			Literal: "676983016644359394637212096269997871",
+			Count:   36,
 		},
 		{
-			sema.UInt128Type,
-			"676983016644359394637212096269997871",
-			36,
+			Type:    sema.UInt128Type,
+			Literal: "676983016644359394637212096269997871",
+			Count:   36,
 		},
 	} {
 
@@ -9536,7 +9780,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	logFunction := stdlib.NewStandardLibraryFunction(
 		"log",
 		&sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
@@ -9558,7 +9802,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, logFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -9686,7 +9930,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: stringIntDictionaryStaticType,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
@@ -9723,9 +9967,6 @@ func TestInterpretVoidReturn_(t *testing.T) {
 
 		if returnType != "" {
 			returnSnippet = ": " + returnType
-		}
-
-		if returnValue != "" {
 		}
 
 		var name string
@@ -9869,7 +10110,7 @@ func TestInterpretMissingMember(t *testing.T) {
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
 
-	var missingMemberError interpreter.MissingMemberValueError
+	var missingMemberError interpreter.UseBeforeInitializationError
 	require.ErrorAs(t, err, &missingMemberError)
 
 	require.Equal(t, "y", missingMemberError.Name)
@@ -10205,7 +10446,7 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -10282,4 +10523,139 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.DuplicateKeyInResourceDictionaryError{})
 
 	})
+}
+
+func TestInterpretReferenceUpAndDowncast(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		typeName string
+		code     string
+	}
+
+	checkerConfig := sema.Config{
+		AccountLinkingEnabled: true,
+	}
+
+	testFunctionReturn := func(tc testCase) {
+
+		t.Run(fmt.Sprintf("function return: %s", tc.name), func(t *testing.T) {
+
+			t.Parallel()
+
+			inter, _ := testAccount(t,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				true,
+				fmt.Sprintf(
+					`
+                      #allowAccountLinking
+
+                      struct S {}
+
+                      fun getRef(): &AnyStruct  {
+                         %[2]s
+                         return ref
+                      }
+
+                      fun test(): &%[1]s {
+                          let ref2 = getRef()
+                          return (ref2 as AnyStruct) as! &%[1]s
+                      }
+                    `,
+					tc.typeName,
+					tc.code,
+				),
+				checkerConfig,
+			)
+
+			_, err := inter.Invoke("test")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		})
+	}
+
+	testVariableDeclaration := func(tc testCase) {
+
+		t.Run(fmt.Sprintf("variable declaration: %s", tc.name), func(t *testing.T) {
+
+			t.Parallel()
+
+			inter, _ := testAccount(t,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				true,
+				fmt.Sprintf(
+					`
+                      #allowAccountLinking
+
+                      struct S {}
+
+                      fun test(): &%[1]s {
+                          %[2]s
+                          let ref2: &AnyStruct = ref
+                          return (ref2 as AnyStruct) as! &%[1]s
+                      }
+                    `,
+					tc.typeName,
+					tc.code,
+				),
+				checkerConfig,
+			)
+
+			_, err := inter.Invoke("test")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		})
+	}
+
+	testCases := []testCase{
+		{
+			name:     "account reference",
+			typeName: "AuthAccount",
+			code: `
+		      let cap = account.linkAccount(/private/test)!
+		      let ref = cap.borrow()!
+		    `,
+		},
+	}
+
+	for _, authorized := range []bool{true, false} {
+
+		var authKeyword, testNameSuffix string
+		if authorized {
+			authKeyword = "auth"
+			testNameSuffix = ", auth"
+		}
+
+		testCases = append(testCases,
+			testCase{
+				name:     fmt.Sprintf("ephemeral reference%s", testNameSuffix),
+				typeName: "S",
+				code: fmt.Sprintf(`
+                      var s = S()
+                      let ref = &s as %s &S
+                    `,
+					authKeyword,
+				),
+			},
+			testCase{
+				name:     fmt.Sprintf("storage reference%s", testNameSuffix),
+				typeName: "S",
+				code: fmt.Sprintf(`
+                      account.save(S(), to: /storage/s)
+                      let ref = account.borrow<%s &S>(from: /storage/s)!
+                    `,
+					authKeyword,
+				),
+			},
+		)
+	}
+
+	for _, tc := range testCases {
+		testFunctionReturn(tc)
+		testVariableDeclaration(tc)
+	}
 }

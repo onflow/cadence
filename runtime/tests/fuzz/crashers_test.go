@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 package fuzz
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -35,13 +34,10 @@ func TestCrashers(t *testing.T) {
 
 	t.Parallel()
 
-	f, err := os.Open(crashersDir)
+	files, err := os.ReadDir(crashersDir)
 	if err != nil {
 		return
 	}
-
-	files, err := f.Readdir(-1)
-	_ = f.Close()
 
 	for _, file := range files {
 
@@ -55,7 +51,7 @@ func TestCrashers(t *testing.T) {
 			t.Parallel()
 
 			var data []byte
-			data, err = ioutil.ReadFile(path.Join(crashersDir, name))
+			data, err = os.ReadFile(path.Join(crashersDir, name))
 			if err != nil {
 				t.Fatal(err)
 			}

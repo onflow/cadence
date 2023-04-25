@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ func ParseLiteral(
 ) {
 	code := []byte(literal)
 
-	expression, errs := parser.ParseExpression(code, inter)
+	expression, errs := parser.ParseExpression(inter, code, parser.Config{})
 	if len(errs) > 0 {
 		return nil, parser.Error{
 			Code:   code,
@@ -73,7 +73,7 @@ func ParseLiteralArgumentList(
 	error,
 ) {
 	code := []byte(argumentList)
-	arguments, errs := parser.ParseArgumentList(code, inter)
+	arguments, errs := parser.ParseArgumentList(inter, code, parser.Config{})
 	if len(errs) > 0 {
 		return nil, parser.Error{
 			Errors: errs,
@@ -126,15 +126,25 @@ func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression
 		})
 }
 
-func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
+func pathLiteralValue(
+	memoryGauge common.MemoryGauge,
+	expression ast.Expression,
+	ty sema.Type,
+) (
+	cadence.Value,
+	error,
+) {
 	pathExpression, ok := expression.(*ast.PathExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
 	}
 
+	pathDomain := pathExpression.Domain.Identifier
+	pathIdentifier := pathExpression.Identifier.Identifier
+
 	pathType, err := sema.CheckPathLiteral(
-		pathExpression.Domain.Identifier,
-		pathExpression.Identifier.Identifier,
+		pathDomain,
+		pathIdentifier,
 		func() ast.Range {
 			return ast.NewRangeFromPositioned(memoryGauge, pathExpression.Domain)
 		},
@@ -155,9 +165,9 @@ func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression,
 
 	return cadence.NewMeteredPath(
 		memoryGauge,
-		pathExpression.Domain.Identifier,
-		pathExpression.Identifier.Identifier,
-	), nil
+		common.PathDomainFromIdentifier(pathDomain),
+		pathIdentifier,
+	)
 }
 
 func integerLiteralValue(
@@ -210,41 +220,41 @@ func convertIntValue(
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
 		return intValue, nil
 	case sema.Int8Type:
-		return interpreter.ConvertInt8(memoryGauge, intValue), nil
+		return interpreter.ConvertInt8(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Int16Type:
-		return interpreter.ConvertInt16(memoryGauge, intValue), nil
+		return interpreter.ConvertInt16(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Int32Type:
-		return interpreter.ConvertInt32(memoryGauge, intValue), nil
+		return interpreter.ConvertInt32(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Int64Type:
-		return interpreter.ConvertInt64(memoryGauge, intValue), nil
+		return interpreter.ConvertInt64(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Int128Type:
-		return interpreter.ConvertInt128(memoryGauge, intValue), nil
+		return interpreter.ConvertInt128(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Int256Type:
-		return interpreter.ConvertInt256(memoryGauge, intValue), nil
+		return interpreter.ConvertInt256(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 
 	case sema.UIntType:
-		return interpreter.ConvertUInt(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt8Type:
-		return interpreter.ConvertUInt8(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt8(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt16Type:
-		return interpreter.ConvertUInt16(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt16(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt32Type:
-		return interpreter.ConvertUInt32(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt32(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt64Type:
-		return interpreter.ConvertUInt64(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt64(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt128Type:
-		return interpreter.ConvertUInt128(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt128(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt256Type:
-		return interpreter.ConvertUInt256(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt256(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 
 	case sema.Word8Type:
-		return interpreter.ConvertWord8(memoryGauge, intValue), nil
+		return interpreter.ConvertWord8(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Word16Type:
-		return interpreter.ConvertWord16(memoryGauge, intValue), nil
+		return interpreter.ConvertWord16(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Word32Type:
-		return interpreter.ConvertWord32(memoryGauge, intValue), nil
+		return interpreter.ConvertWord32(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Word64Type:
-		return interpreter.ConvertWord64(memoryGauge, intValue), nil
+		return interpreter.ConvertWord64(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 
 	default:
 		return nil, UnsupportedLiteralError

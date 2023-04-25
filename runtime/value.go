@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,16 @@ func newExportableValue(v interpreter.Value, inter *interpreter.Interpreter) exp
 		Value: v,
 		inter: inter,
 	}
+}
+
+func newExportableValues(inter *interpreter.Interpreter, values []interpreter.Value) []exportableValue {
+	exportableValues := make([]exportableValue, 0, len(values))
+
+	for _, value := range values {
+		exportableValues = append(exportableValues, newExportableValue(value, inter))
+	}
+
+	return exportableValues
 }
 
 func (v exportableValue) Interpreter() *interpreter.Interpreter {

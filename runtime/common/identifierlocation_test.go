@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,19 @@ func TestIdentifierLocation_TypeID(t *testing.T) {
 	)
 }
 
+func TestIdentifierLocation_ID(t *testing.T) {
+
+	t.Parallel()
+
+	location, _, err := decodeIdentifierLocationTypeID(nil, "I.foo.Bar.Baz")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"I.foo",
+		location.ID(),
+	)
+}
+
 func TestDecodeIdentifierLocationTypeID(t *testing.T) {
 
 	t.Parallel()
@@ -78,15 +91,35 @@ func TestDecodeIdentifierLocationTypeID(t *testing.T) {
 		require.EqualError(t, err, "invalid identifier location type ID: missing location")
 	})
 
-	t.Run("missing qualified identifier", func(t *testing.T) {
+	t.Run("missing qualified identifier part", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeIdentifierLocationTypeID(nil, "I.test")
-		require.EqualError(t, err, "invalid identifier location type ID: missing qualified identifier")
+		location, qualifiedIdentifier, err := decodeIdentifierLocationTypeID(nil, "I.test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			IdentifierLocation("test"),
+			location,
+		)
+		assert.Equal(t, "", qualifiedIdentifier)
 	})
 
-	t.Run("missing qualified identifier", func(t *testing.T) {
+	t.Run("empty qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		location, qualifiedIdentifier, err := decodeIdentifierLocationTypeID(nil, "I.test.")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			IdentifierLocation("test"),
+			location,
+		)
+		assert.Equal(t, "", qualifiedIdentifier)
+	})
+
+	t.Run("invalid prefix", func(t *testing.T) {
 
 		t.Parallel()
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -660,11 +660,20 @@ func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
 		for _, isInterface := range []bool{true, false} {
 			keywords := kind.Keyword()
 
+			if isInterface && kind == common.CompositeKindAttachment {
+				continue
+			}
+
 			if isInterface {
 				keywords += " interface"
 			}
 
-			code := fmt.Sprintf(`%s Test {}`, keywords)
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
+			code := fmt.Sprintf(`%s Test %s {}`, keywords, baseType)
 
 			tests = append(tests, test{
 				name:        keywords,

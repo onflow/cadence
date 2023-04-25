@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,11 @@
  */
 
 package sema
+
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
+)
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=AccessCheckMode
 
@@ -43,4 +48,46 @@ var AccessCheckModes = []AccessCheckMode{
 	AccessCheckModeNotSpecifiedRestricted,
 	AccessCheckModeNotSpecifiedUnrestricted,
 	AccessCheckModeNone,
+}
+
+func (mode AccessCheckMode) IsReadableAccess(access ast.Access) bool {
+	switch mode {
+	case AccessCheckModeStrict,
+		AccessCheckModeNotSpecifiedRestricted:
+
+		return access == ast.AccessPublic ||
+			access == ast.AccessPublicSettable
+
+	case AccessCheckModeNotSpecifiedUnrestricted:
+
+		return access == ast.AccessNotSpecified ||
+			access == ast.AccessPublic ||
+			access == ast.AccessPublicSettable
+
+	case AccessCheckModeNone:
+		return true
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (mode AccessCheckMode) IsWriteableAccess(access ast.Access) bool {
+	switch mode {
+	case AccessCheckModeStrict,
+		AccessCheckModeNotSpecifiedRestricted:
+
+		return access == ast.AccessPublicSettable
+
+	case AccessCheckModeNotSpecifiedUnrestricted:
+
+		return access == ast.AccessNotSpecified ||
+			access == ast.AccessPublicSettable
+
+	case AccessCheckModeNone:
+		return true
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }

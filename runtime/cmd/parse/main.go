@@ -4,7 +4,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,12 +57,12 @@ type benchResult struct {
 }
 
 type result struct {
-	Path     string       `json:"path,omitempty"`
-	Code     []byte       `json:"-"`
-	Bench    *benchResult `json:"bench,omitempty"`
-	BenchStr string       `json:"-"`
 	Error    error        `json:"error,omitempty"`
+	Bench    *benchResult `json:"bench,omitempty"`
 	Program  *ast.Program `json:"program"`
+	Path     string       `json:"path,omitempty"`
+	BenchStr string       `json:"-"`
+	Code     []byte       `json:"-"`
 }
 
 type output interface {
@@ -175,7 +175,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 			}
 		}()
 
-		program, err = parser.ParseProgram(code, nil)
+		program, err = parser.ParseProgram(nil, code, parser.Config{})
 		if !bench {
 			res.Program = program
 		}
@@ -189,7 +189,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 
 	if bench {
 		benchRes := benchParse(func() (err error) {
-			_, err = parser.ParseProgram(code, nil)
+			_, err = parser.ParseProgram(nil, code, parser.Config{})
 			return
 		})
 		res.Bench = &benchResult{

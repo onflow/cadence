@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ func TestPrimitiveStaticTypeSemaTypeConversion(t *testing.T) {
 
 	t.Parallel()
 
-	placeholderTypePattern := regexp.MustCompile("PrimitiveStaticType\\(\\d+\\)")
+	placeholderTypePattern := regexp.MustCompile(`PrimitiveStaticType\(\d+\)`)
 
 	test := func(ty PrimitiveStaticType) {
 		t.Run(ty.String(), func(t *testing.T) {

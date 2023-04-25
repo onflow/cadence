@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -505,4 +505,29 @@ func TestCheckNestedFunctionExits(t *testing.T) {
 		// NOTE: inner function returns, but outer does not
 		exits: false,
 	})
+}
+
+func TestCheckFunctionExpressionReturnStatementInfluence(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int {
+          if false {
+              // should not influence definite halt of outer function (test)
+              fun() { return }
+              return 1
+          }
+
+          if false {
+              return 2
+          }
+
+          return 3
+      }
+    `)
+
+	// If this test fails, there is likely something wrong in the definite halt analysis,
+	// or in the function activation stack
+	require.NoError(t, err)
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -451,8 +451,12 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Parameters:           []*sema.Parameter{{TypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType}}},
-					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.IntType},
+					Parameters: []sema.Parameter{
+						{
+							TypeAnnotation: sema.TypeAnnotation{Type: sema.StringType},
+						},
+					},
+					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.IntType},
 				},
 			},
 		},
@@ -463,11 +467,11 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Parameters: []*sema.Parameter{
-						{TypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType}},
-						{TypeAnnotation: &sema.TypeAnnotation{Type: sema.IntType}},
+					Parameters: []sema.Parameter{
+						{TypeAnnotation: sema.TypeAnnotation{Type: sema.StringType}},
+						{TypeAnnotation: sema.TypeAnnotation{Type: sema.IntType}},
 					},
-					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.BoolType},
+					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.BoolType},
 				},
 			},
 		},
@@ -478,8 +482,7 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Parameters:           []*sema.Parameter{},
-					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType},
+					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.StringType},
 				},
 			},
 		},

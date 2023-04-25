@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,9 +112,13 @@ type PathExtractor interface {
 	ExtractPath(extractor *ExpressionExtractor, expression *PathExpression) ExpressionExtraction
 }
 
+type AttachExtractor interface {
+	ExtractAttach(extractor *ExpressionExtractor, expression *AttachExpression) ExpressionExtraction
+}
+
 type ExpressionExtractor struct {
-	nextIdentifier       int
-	VoidExtractor        VoidExtractor
+	IndexExtractor       IndexExtractor
+	ForceExtractor       ForceExtractor
 	BoolExtractor        BoolExtractor
 	NilExtractor         NilExtractor
 	IntExtractor         IntExtractor
@@ -123,20 +127,21 @@ type ExpressionExtractor struct {
 	ArrayExtractor       ArrayExtractor
 	DictionaryExtractor  DictionaryExtractor
 	IdentifierExtractor  IdentifierExtractor
-	InvocationExtractor  InvocationExtractor
-	MemberExtractor      MemberExtractor
-	IndexExtractor       IndexExtractor
-	ConditionalExtractor ConditionalExtractor
+	AttachExtractor      AttachExtractor
+	MemoryGauge          common.MemoryGauge
+	VoidExtractor        VoidExtractor
 	UnaryExtractor       UnaryExtractor
+	ConditionalExtractor ConditionalExtractor
+	InvocationExtractor  InvocationExtractor
 	BinaryExtractor      BinaryExtractor
 	FunctionExtractor    FunctionExtractor
 	CastingExtractor     CastingExtractor
 	CreateExtractor      CreateExtractor
 	DestroyExtractor     DestroyExtractor
 	ReferenceExtractor   ReferenceExtractor
-	ForceExtractor       ForceExtractor
+	MemberExtractor      MemberExtractor
 	PathExtractor        PathExtractor
-	MemoryGauge          common.MemoryGauge
+	nextIdentifier       int
 }
 
 var _ ExpressionVisitor[ExpressionExtraction] = &ExpressionExtractor{}
@@ -162,8 +167,8 @@ func (extractor *ExpressionExtractor) FormatIdentifier(identifier int) string {
 }
 
 type ExtractedExpression struct {
-	Identifier Identifier
 	Expression Expression
+	Identifier Identifier
 }
 
 type ExpressionExtraction struct {
@@ -780,4 +785,36 @@ func (extractor *ExpressionExtractor) VisitPathExpression(expression *PathExpres
 
 func (extractor *ExpressionExtractor) ExtractPath(expression *PathExpression) ExpressionExtraction {
 	return rewriteExpressionAsIs(expression)
+}
+
+func (extractor *ExpressionExtractor) VisitAttachExpression(expression *AttachExpression) ExpressionExtraction {
+
+	// delegate to child extractor, if any,
+	// or call default implementation
+
+	if extractor.AttachExtractor != nil {
+		return extractor.AttachExtractor.ExtractAttach(extractor, expression)
+	}
+	return extractor.ExtractAttach(expression)
+}
+
+func (extractor *ExpressionExtractor) ExtractAttach(expression *AttachExpression) ExpressionExtraction {
+	// copy the expression
+	newExpression := *expression
+
+	// rewrite left and right sub-expression
+
+	rewrittenExpressions, extractedExpressions :=
+		extractor.VisitExpressions([]Expression{
+			newExpression.Attachment,
+			newExpression.Base,
+		})
+
+	newExpression.Attachment = rewrittenExpressions[0].(*InvocationExpression)
+	newExpression.Base = rewrittenExpressions[1]
+
+	return ExpressionExtraction{
+		RewrittenExpression:  &newExpression,
+		ExtractedExpressions: extractedExpressions,
+	}
 }

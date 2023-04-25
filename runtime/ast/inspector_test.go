@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,11 @@ func TestInspector_Elements(t *testing.T) {
 
 	t.Parallel()
 
-	program, err := parser.ParseProgram([]byte(examples.FungibleTokenContractInterface), nil)
+	program, err := parser.ParseProgram(
+		nil,
+		[]byte(examples.FungibleTokenContractInterface),
+		parser.Config{},
+	)
 	require.NoError(t, err)
 
 	inspector := ast.NewInspector(program)
@@ -102,7 +106,11 @@ func TestInspectorTypeFiltering(t *testing.T) {
       }
     `
 
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(
+		nil,
+		[]byte(code),
+		parser.Config{},
+	)
 	require.NoError(t, err)
 
 	inspector := ast.NewInspector(program)
