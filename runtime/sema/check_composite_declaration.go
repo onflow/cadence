@@ -214,7 +214,7 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 	inheritedMembers := map[string]struct{}{}
 	typeRequirementsInheritedMembers := map[string]map[string]struct{}{}
 
-	for _, conformance := range compositeType.InterfaceConformances() {
+	for _, conformance := range compositeType.EffectiveInterfaceConformances() {
 		checker.checkCompositeLikeConformance(
 			declaration,
 			compositeType,
@@ -697,7 +697,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 
 			var inheritedMembers StringMemberOrderedMap
 
-			for _, compositeTypeConformance := range compositeType.InterfaceConformances() {
+			for _, compositeTypeConformance := range compositeType.EffectiveInterfaceConformances() {
 				conformanceNestedTypes := compositeTypeConformance.InterfaceType.GetNestedTypes()
 
 				nestedType, ok := conformanceNestedTypes.Get(nestedTypeIdentifier)
@@ -1561,10 +1561,10 @@ func (checker *Checker) checkTypeRequirement(
 	// Check that the composite declaration declares at least the conformances
 	// that the type requirement stated
 
-	for _, requiredConformance := range requiredCompositeType.InterfaceConformances() {
+	for _, requiredConformance := range requiredCompositeType.EffectiveInterfaceConformances() {
 		found := false
 
-		for _, conformance := range declaredCompositeType.InterfaceConformances() {
+		for _, conformance := range declaredCompositeType.EffectiveInterfaceConformances() {
 			if conformance.InterfaceType == requiredConformance.InterfaceType {
 				found = true
 				break

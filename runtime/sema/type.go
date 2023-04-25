@@ -3540,16 +3540,16 @@ type CompositeType struct {
 	Fields                              []string
 	ConstructorParameters               []Parameter
 	ImplicitTypeRequirementConformances []*CompositeType
-	interfaceConformances               []Conformance
-	// an internal set of field `ExplicitInterfaceConformances`
-	explicitInterfaceConformanceSet     *InterfaceSet
-	ExplicitInterfaceConformances       []*InterfaceType
-	Kind                                common.CompositeKind
-	cachedIdentifiersLock               sync.RWMutex
-	explicitInterfaceConformanceSetOnce sync.Once
-	memberResolversOnce                 sync.Once
-	interfaceConformancesOnce           sync.Once
-	hasComputedMembers                  bool
+	// an internal set of field `effectiveInterfaceConformances`
+	effectiveInterfaceConformanceSet     *InterfaceSet
+	effectiveInterfaceConformances       []Conformance
+	ExplicitInterfaceConformances        []*InterfaceType
+	Kind                                 common.CompositeKind
+	cachedIdentifiersLock                sync.RWMutex
+	effectiveInterfaceConformanceSetOnce sync.Once
+	effectiveInterfaceConformancesOnce   sync.Once
+	memberResolversOnce                  sync.Once
+	hasComputedMembers                   bool
 	// Only applicable for native composite types
 	importable bool
 }
@@ -3565,31 +3565,31 @@ func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
 }
 
-func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
-	t.initializeExplicitInterfaceConformanceSet()
-	return t.explicitInterfaceConformanceSet
+func (t *CompositeType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	t.initializeEffectiveInterfaceConformanceSet()
+	return t.effectiveInterfaceConformanceSet
 }
 
-func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
-	t.explicitInterfaceConformanceSetOnce.Do(func() {
-		t.explicitInterfaceConformanceSet = NewInterfaceSet()
+func (t *CompositeType) initializeEffectiveInterfaceConformanceSet() {
+	t.effectiveInterfaceConformanceSetOnce.Do(func() {
+		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
 
-		for _, conformance := range t.InterfaceConformances() {
-			t.explicitInterfaceConformanceSet.Add(conformance.InterfaceType)
+		for _, conformance := range t.EffectiveInterfaceConformances() {
+			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
 		}
 	})
 }
 
-func (t *CompositeType) InterfaceConformances() []Conformance {
-	t.interfaceConformancesOnce.Do(func() {
-		t.interfaceConformances = distinctConformances(
+func (t *CompositeType) EffectiveInterfaceConformances() []Conformance {
+	t.effectiveInterfaceConformancesOnce.Do(func() {
+		t.effectiveInterfaceConformances = distinctConformances(
 			t.ExplicitInterfaceConformances,
 			nil,
 			map[*InterfaceType]struct{}{},
 		)
 	})
 
-	return t.interfaceConformances
+	return t.effectiveInterfaceConformances
 }
 
 func (t *CompositeType) addImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
@@ -3860,7 +3860,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	var typeRequirements []*CompositeType
 
 	if containerComposite, ok := t.containerType.(*CompositeType); ok {
-		for _, conformance := range containerComposite.InterfaceConformances() {
+		for _, conformance := range containerComposite.EffectiveInterfaceConformances() {
 			ty, ok := conformance.InterfaceType.NestedTypes.Get(t.Identifier)
 			if !ok {
 				continue
@@ -3930,7 +3930,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 		// However, if this composite type is a type requirement,
 		// it acts like an interface and does not have to declare members.
 
-		t.ExplicitInterfaceConformanceSet().
+		t.EffectiveInterfaceConformanceSet().
 			ForEach(func(conformance *InterfaceType) {
 				for name, resolver := range conformance.GetMembers() { //nolint:maprange
 					if _, ok := memberResolvers[name]; !ok {
@@ -4153,9 +4153,9 @@ type InterfaceType struct {
 	cachedIdentifiersLock sync.RWMutex
 	memberResolversOnce   sync.Once
 
-	ExplicitInterfaceConformances []*InterfaceType
-	interfaceConformancesOnce     sync.Once
-	interfaceConformances         []Conformance
+	ExplicitInterfaceConformances      []*InterfaceType
+	effectiveInterfaceConformancesOnce sync.Once
+	effectiveInterfaceConformances     []Conformance
 }
 
 var _ Type = &InterfaceType{}
@@ -4377,16 +4377,16 @@ func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDec
 	return declaration.Members.FieldPosition(name, declaration.CompositeKind)
 }
 
-func (t *InterfaceType) InterfaceConformances() []Conformance {
-	t.interfaceConformancesOnce.Do(func() {
-		t.interfaceConformances = distinctConformances(
+func (t *InterfaceType) EffectiveInterfaceConformances() []Conformance {
+	t.effectiveInterfaceConformancesOnce.Do(func() {
+		t.effectiveInterfaceConformances = distinctConformances(
 			t.ExplicitInterfaceConformances,
 			nil,
 			map[*InterfaceType]struct{}{},
 		)
 	})
 
-	return t.interfaceConformances
+	return t.effectiveInterfaceConformances
 }
 
 // distinctConformances recursively visit conformances and their conformances,
@@ -4399,7 +4399,7 @@ func distinctConformances(
 
 	collectedConformances := make([]Conformance, 0)
 
-	var origin *InterfaceType
+	var conformanceChainRoot *InterfaceType
 
 	for _, conformance := range conformances {
 		if _, ok := seenConformances[conformance]; ok {
@@ -4407,24 +4407,24 @@ func distinctConformances(
 		}
 		seenConformances[conformance] = struct{}{}
 
-		if parent != nil {
-			origin = parent
+		if parent == nil {
+			conformanceChainRoot = conformance
 		} else {
-			origin = conformance
+			conformanceChainRoot = parent
 		}
 
 		collectedConformances = append(
 			collectedConformances,
 			Conformance{
 				InterfaceType:        conformance,
-				ConformanceChainRoot: origin,
+				ConformanceChainRoot: conformanceChainRoot,
 			},
 		)
 
 		// Recursively collect conformances
 		nestedConformances := distinctConformances(
 			conformance.ExplicitInterfaceConformances,
-			origin,
+			conformanceChainRoot,
 			seenConformances,
 		)
 
@@ -5468,7 +5468,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// TODO: once interfaces can conform to interfaces, include
 					return IsSubType(typedInnerSubType, restrictedSuperType) &&
 						typedInnerSuperType.RestrictionSet().
-							IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
+							IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
 				}
 
 				switch typedSubType.Type {
@@ -5564,7 +5564,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			// This is equivalent in principle to the check we would perform to check
 			// if `&T <: &{U}`, the singleton restricted set containing only `U`.
 			case *CompositeType:
-				return typedInnerSubType.ExplicitInterfaceConformanceSet().Contains(typedInnerSuperType)
+				return typedInnerSubType.EffectiveInterfaceConformanceSet().Contains(typedInnerSuperType)
 
 			// An unauthorized reference to an interface type `&T`
 			// is a supertype of a reference to a restricted type `&{U}`:
@@ -5742,7 +5742,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// TODO: once interfaces can conform to interfaces, include
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
 						typedSuperType.RestrictionSet().
-							IsSubsetOf(restrictedSubtype.ExplicitInterfaceConformanceSet())
+							IsSubsetOf(restrictedSubtype.EffectiveInterfaceConformanceSet())
 				}
 
 			case *CompositeType:
@@ -5753,7 +5753,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 				return IsSubType(typedSubType, typedSuperType.Type) &&
 					typedSuperType.RestrictionSet().
-						IsSubsetOf(typedSubType.ExplicitInterfaceConformanceSet())
+						IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 			}
 
 		default:
@@ -5848,7 +5848,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			}
 
 			// TODO: once interfaces can conform to interfaces, include
-			return typedSubType.ExplicitInterfaceConformanceSet().
+			return typedSubType.EffectiveInterfaceConformanceSet().
 				Contains(typedSuperType)
 
 		// An interface type is a supertype of a restricted type if the restricted set contains

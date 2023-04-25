@@ -867,7 +867,7 @@ func commonSuperTypeOfComposites(types []Type) Type {
 			panic(errors.NewUnreachableError())
 		}
 
-		conformances := compositeType.InterfaceConformances()
+		conformances := compositeType.EffectiveInterfaceConformances()
 
 		if len(conformances) > 0 {
 

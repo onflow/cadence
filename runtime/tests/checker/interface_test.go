@@ -2723,6 +2723,36 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("interface declaration order", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Baz: Bar {
+                let x: Int
+
+                init() {
+                    self.x = 3
+                }
+
+                fun test(): Int {
+                    return self.x
+                }
+            }
+
+            // 'Foo' is defined after later in the program.
+            struct interface Bar: Foo {}
+
+            struct interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("resource interface", func(t *testing.T) {
 
 		t.Parallel()

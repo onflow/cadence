@@ -234,7 +234,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 
 						return IsSubType(typedInnerSubType, restrictedSuperType) &&
 							typedSuperType.RestrictionSet().
-								IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
+								IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
 					}
 				}
 
@@ -255,7 +255,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 
 						return IsSubType(typedInnerSubType, restrictedSuperType) &&
 							typedSuperType.RestrictionSet().
-								IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
+								IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
 					}
 				}
 
@@ -278,7 +278,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 
 						return IsSubType(typedInnerSubType, restrictedSuperType) &&
 							typedSuperType.RestrictionSet().
-								IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
+								IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
 					}
 				}
 
@@ -317,7 +317,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 
 				return IsSubType(typedSubType, typedSuperType.Type) &&
 					typedSuperType.RestrictionSet().
-						IsSubsetOf(typedSubType.ExplicitInterfaceConformanceSet())
+						IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 
 			default:
 

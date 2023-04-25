@@ -54,7 +54,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	inheritedMembers := map[string]*Member{}
 	inheritedTypes := map[string]Type{}
 
-	for _, conformance := range interfaceType.InterfaceConformances() {
+	for _, conformance := range interfaceType.EffectiveInterfaceConformances() {
 		checker.checkInterfaceConformance(
 			declaration,
 			interfaceType,
@@ -266,10 +266,6 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 			variable,
 		)
 	}
-
-	// Resolve conformances
-	interfaceType.ExplicitInterfaceConformances =
-		checker.explicitInterfaceConformances(declaration, interfaceType)
 
 	checker.Elaboration.SetInterfaceDeclarationType(declaration, interfaceType)
 	checker.Elaboration.SetInterfaceTypeDeclaration(interfaceType, declaration)

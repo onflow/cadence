@@ -286,11 +286,22 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 		}
 	}
 
-	for _, declaration := range program.InterfaceDeclarations() {
-		interfaceType := checker.declareInterfaceType(declaration)
+	// NOTE: Resolving interface conformances and registering types in elaboration
+	// must be done *after* the full container chain is fully set up for *all* interfaces types.
+	// This is because initializing the explicit interface conformances (`explicitInterfaceConformances()`)
+	// requires the other interfaces to be already defined.
+	// Therefore, this is done in two steps.
 
-		// NOTE: register types in elaboration
-		// *after* the full container chain is fully set up
+	for _, declaration := range program.InterfaceDeclarations() {
+		checker.declareInterfaceType(declaration)
+	}
+
+	for _, declaration := range program.InterfaceDeclarations() {
+		interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
+
+		// Resolve conformances
+		interfaceType.ExplicitInterfaceConformances =
+			checker.explicitInterfaceConformances(declaration, interfaceType)
 
 		VisitThisAndNested(interfaceType, registerInElaboration)
 	}
@@ -958,7 +969,7 @@ func CheckRestrictedType(
 
 		// Prepare a set of all the conformances
 
-		conformances := compositeType.ExplicitInterfaceConformanceSet()
+		conformances := compositeType.EffectiveInterfaceConformanceSet()
 
 		for _, restriction := range restrictions {
 			// The restriction must be an explicit or implicit conformance
