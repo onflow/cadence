@@ -1303,21 +1303,26 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 }
 
+// checkConformanceKindMatch ensures the composite kinds match.
+// e.g. a structure shouldn't be able to conform to a resource interface.
 func (checker *Checker) checkConformanceKindMatch(
 	compositeDeclaration ast.CompositeLikeDeclaration,
 	compositeKindedType CompositeKindedType,
 	interfaceConformance *InterfaceType,
 ) {
 
+	// Check if the conformance kind matches the declaration type's kind.
 	if interfaceConformance.CompositeKind == compositeKindedType.GetCompositeKind() {
 		return
 	}
 
-	// For attachments
+	// For attachments, check if the conformance kind matches the base type's kind.
 	if compositeType, ok := compositeKindedType.(*CompositeType); ok &&
 		interfaceConformance.CompositeKind == compositeType.getBaseCompositeKind() {
 		return
 	}
+
+	// If not a match, then report an error.
 
 	var compositeKindMismatchIdentifier *ast.Identifier
 

@@ -55,6 +55,8 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	inheritedTypes := map[string]Type{}
 
 	for _, conformance := range interfaceType.EffectiveInterfaceConformances() {
+		// If the currently checking type is also in its own conformance list,
+		// then this is a direct/indirect cyclic conformance.
 		if conformance.InterfaceType == interfaceType {
 			checker.report(CyclicConformanceError{
 				InterfaceType: interfaceType,
@@ -385,6 +387,10 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	}
 }
 
+// checkInterfaceConformance checks the validity of an interface-conformance of an interface declaration.
+// It checks for:
+//   - Duplicate conformances
+//   - Conflicting members (functions, fields, and type definitions)
 func (checker *Checker) checkInterfaceConformance(
 	interfaceDeclaration *ast.InterfaceDeclaration,
 	interfaceType *InterfaceType,
