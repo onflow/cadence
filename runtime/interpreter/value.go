@@ -18006,7 +18006,7 @@ func AddressFromBytes(invocation Invocation) Value {
 
 	bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
 	if err != nil {
-		panic(errors.NewUnreachableError())
+		panic(err)
 	}
 
 	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
