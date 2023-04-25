@@ -311,7 +311,14 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 
 	case *sema.OptionalType:
 		if _, ok := expression.(*ast.NilExpression); ok {
-			return cadence.NewMeteredOptional(inter, nil), nil
+			value := cadence.NewMeteredOptional(inter, nil)
+			for {
+				ty, ok = ty.Type.(*sema.OptionalType)
+				if !ok {
+					return value, nil
+				}
+				value = cadence.NewMeteredOptional(inter, value)
+			}
 		}
 
 		converted, err := LiteralValue(inter, expression, ty.Type)
