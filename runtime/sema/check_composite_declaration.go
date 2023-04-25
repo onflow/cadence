@@ -1305,11 +1305,17 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 func (checker *Checker) checkConformanceKindMatch(
 	compositeDeclaration ast.CompositeLikeDeclaration,
-	compositeType CompositeKindedType,
+	compositeKindedType CompositeKindedType,
 	interfaceConformance *InterfaceType,
 ) {
 
-	if interfaceConformance.CompositeKind == compositeType.GetCompositeKind() {
+	if interfaceConformance.CompositeKind == compositeKindedType.GetCompositeKind() {
+		return
+	}
+
+	// For attachments
+	if compositeType, ok := compositeKindedType.(*CompositeType); ok &&
+		interfaceConformance.CompositeKind == compositeType.getBaseCompositeKind() {
 		return
 	}
 
@@ -1342,7 +1348,7 @@ func (checker *Checker) checkConformanceKindMatch(
 
 	checker.report(
 		&CompositeKindMismatchError{
-			ExpectedKind: compositeType.GetCompositeKind(),
+			ExpectedKind: compositeKindedType.GetCompositeKind(),
 			ActualKind:   interfaceConformance.CompositeKind,
 			Range:        ast.NewRangeFromPositioned(checker.memoryGauge, compositeKindMismatchIdentifier),
 		},
