@@ -64,7 +64,7 @@ func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpr
 			) {
 				if importedLocation == TestContractLocation {
 					return sema.ElaborationImport{
-						Elaboration: TestContractChecker.Elaboration,
+						Elaboration: TestContractChecker().Elaboration,
 					}, nil
 				}
 
@@ -91,7 +91,7 @@ func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpr
 			Storage: storage,
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				if location == TestContractLocation {
-					program := interpreter.ProgramFromChecker(TestContractChecker)
+					program := interpreter.ProgramFromChecker(TestContractChecker())
 					subInterpreter, err := inter.NewSubInterpreter(program, location)
 					if err != nil {
 						panic(err)
