@@ -24,7 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -662,5 +665,197 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(25))
 		utils.RequireError(t, err)
 		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+	})
+
+	t.Run("pre conditions order", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
+				logs = append(logs, msg)
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		// Inheritance hierarchy is as follows:
+		//
+		//       F (concrete type)
+		//       |
+		//       E (interface)
+		//     /  \
+		//    C    D
+		//   / \
+		//  A   B
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            struct interface A {
+                pub fun test() {
+                    pre { print("A") }
+                }
+            }
+
+            struct interface B {
+                pub fun test() {
+                    pre { print("B") }
+                }
+            }
+
+            struct interface C: A, B {
+                pub fun test() {
+                    pre { print("C") }
+                }
+            }
+
+            struct interface D {
+                pub fun test() {
+                    pre { print("D") }
+                }
+            }
+
+            struct interface E: C, D {
+                pub fun test() {
+                    pre { print("E") }
+                }
+            }
+
+            struct F: E {
+                pub fun test() {
+                    pre { print("F") }
+                }
+            }
+
+            pub fun print(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            pub fun main() {
+                let f = F()
+                f.test()
+            }`,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		// The pre-conditions of the interfaces are executed first, with depth-first pre-order traversal.
+		// The pre-condition of the concrete type is executed at the end, after the interfaces.
+		assert.Equal(t, []string{"E", "C", "A", "B", "D", "F"}, logs)
+	})
+
+	t.Run("post conditions order", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
+				logs = append(logs, msg)
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		// Inheritance hierarchy is as follows:
+		//
+		//       F (concrete type)
+		//       |
+		//       E (interface)
+		//     /  \
+		//    C    D
+		//   / \
+		//  A   B
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            struct interface A {
+                pub fun test() {
+                    post { print("A") }
+                }
+            }
+
+            struct interface B {
+                pub fun test() {
+                    post { print("B") }
+                }
+            }
+
+            struct interface C: A, B {
+                pub fun test() {
+                    post { print("C") }
+                }
+            }
+
+            struct interface D {
+                pub fun test() {
+                    post { print("D") }
+                }
+            }
+
+            struct interface E: C, D {
+                pub fun test() {
+                    post { print("E") }
+                }
+            }
+
+            struct F: E {
+                pub fun test() {
+                    post { print("F") }
+                }
+            }
+
+            pub fun print(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            pub fun main() {
+                let f = F()
+                f.test()
+            }`,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		// The post-condition of the concrete type is executed first, before the interfaces.
+		// The post-conditions of the interfaces are executed after that, with the reversed depth-first pre-order.
+		assert.Equal(t, []string{"F", "D", "B", "A", "C", "E"}, logs)
 	})
 }
