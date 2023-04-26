@@ -970,7 +970,8 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 		return nil, err
 	}
 
-	return ast.NewAttachExpression(p.memoryGauge, base, attachment, token.StartPos), nil
+	// TODO: parse provided entitlements
+	return ast.NewAttachExpression(p.memoryGauge, base, attachment, []*ast.NominalType{}, token.StartPos), nil
 }
 
 // Invocation Expression Grammar:
