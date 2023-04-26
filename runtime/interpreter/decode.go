@@ -1027,22 +1027,7 @@ func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 
 	// Decode borrow type at array index encodedIDCapabilityValueBorrowTypeFieldKey
 
-	// borrow type (optional, for backwards compatibility)
-	// Capabilities used to be untyped, i.e. they didn't have a borrow type.
-	// Later an optional type parameter, the borrow type, was added to it,
-	// which specifies as what type the capability should be borrowed.
-	//
-	// The decoding must be backwards-compatible and support both capability values
-	// with a borrow type and ones without
-
-	var borrowType StaticType
-
-	// Optional borrow type can be CBOR nil.
-	err = d.decoder.DecodeNil()
-	if _, ok := err.(*cbor.WrongTypeError); ok {
-		borrowType, err = d.DecodeStaticType()
-	}
-
+	borrowType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid capability borrow type encoding: %w", err)
 	}

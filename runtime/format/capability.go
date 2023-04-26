@@ -37,14 +37,9 @@ func PathCapability(borrowType string, address string, path string) string {
 }
 
 func IDCapability(borrowType string, address string, id string) string {
-	var typeArgument string
-	if borrowType != "" {
-		typeArgument = fmt.Sprintf("<%s>", borrowType)
-	}
-
 	return fmt.Sprintf(
-		"Capability%s(address: %s, id: %s)",
-		typeArgument,
+		"Capability<%s>(address: %s, id: %s)",
+		borrowType,
 		address,
 		id,
 	)

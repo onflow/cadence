@@ -654,16 +654,14 @@ func exportIDCapabilityValue(
 	v *interpreter.IDCapabilityValue,
 	inter *interpreter.Interpreter,
 ) (cadence.IDCapability, error) {
-	var borrowType sema.Type
-	if v.BorrowType != nil {
-		borrowType = inter.MustConvertStaticToSemaType(v.BorrowType)
-	}
+	borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
+	exportedBorrowType := ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
 
 	return cadence.NewMeteredIDCapability(
 		inter,
 		cadence.NewMeteredUInt64(inter, uint64(v.ID)),
 		cadence.NewMeteredAddress(inter, v.Address),
-		ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{}),
+		exportedBorrowType,
 	), nil
 }
 

@@ -388,6 +388,18 @@ func newValueTestCases() map[string]valueTestCase {
 			expectedType: NewCapabilityType(IntType{}),
 			string:       "Capability<Int>(address: 0x0000000102030405, path: /public/foo)",
 		},
+		"Capability (Path, no borrow type)": {
+			value: NewPathCapability(
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Path{
+					Domain:     common.PathDomainPublic,
+					Identifier: "foo",
+				},
+				nil,
+			),
+			expectedType: NewCapabilityType(nil),
+			string:       "Capability(address: 0x0000000102030405, path: /public/foo)",
+		},
 		"Capability (ID)": {
 			value: NewIDCapability(
 				3,

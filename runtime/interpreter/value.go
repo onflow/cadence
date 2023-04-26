@@ -18487,12 +18487,8 @@ func (v *IDCapabilityValue) String() string {
 }
 
 func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
-	var borrowType string
-	if v.BorrowType != nil {
-		borrowType = v.BorrowType.String()
-	}
 	return format.IDCapability(
-		borrowType,
+		v.BorrowType.String(),
 		v.Address.RecursiveString(seenReferences),
 		v.ID.RecursiveString(seenReferences),
 	)
@@ -18501,13 +18497,8 @@ func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) strin
 func (v *IDCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 	common.UseMemory(memoryGauge, common.IDCapabilityValueStringMemoryUsage)
 
-	var borrowType string
-	if v.BorrowType != nil {
-		borrowType = v.BorrowType.MeteredString(memoryGauge)
-	}
-
 	return format.IDCapability(
-		borrowType,
+		v.BorrowType.MeteredString(memoryGauge),
 		v.Address.MeteredString(memoryGauge, seenReferences),
 		v.ID.MeteredString(memoryGauge, seenReferences),
 	)
@@ -18516,21 +18507,15 @@ func (v *IDCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenRe
 func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
-		var borrowType *sema.ReferenceType
-		if v.BorrowType != nil {
-			// this function will panic already if this conversion fails
-			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		}
+		// this function will panic already if this conversion fails
+		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		// TODO:
 		_ = borrowType
 		panic("TODO")
 
 	case sema.CapabilityTypeCheckFunctionName:
-		var borrowType *sema.ReferenceType
-		if v.BorrowType != nil {
-			// this function will panic already if this conversion fails
-			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		}
+		// this function will panic already if this conversion fails
+		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		// TODO:
 		_ = borrowType
 		panic("TODO")
@@ -18569,18 +18554,9 @@ func (v *IDCapabilityValue) Equal(interpreter *Interpreter, locationRange Locati
 		return false
 	}
 
-	// BorrowType is optional
-
-	if v.BorrowType == nil {
-		if otherCapability.BorrowType != nil {
-			return false
-		}
-	} else if !v.BorrowType.Equal(otherCapability.BorrowType) {
-		return false
-	}
-
 	return otherCapability.ID == v.ID &&
-		otherCapability.Address.Equal(interpreter, locationRange, v.Address)
+		otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
+		otherCapability.BorrowType.Equal(v.BorrowType)
 }
 
 func (*IDCapabilityValue) IsStorable() bool {

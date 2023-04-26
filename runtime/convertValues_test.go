@@ -2271,31 +2271,6 @@ func TestExportIDCapabilityValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
-
-	t.Run("no borrow type", func(t *testing.T) {
-
-		capability := interpreter.NewUnmeteredIDCapabilityValue(
-			3,
-			interpreter.AddressValue{0x1},
-			nil,
-		)
-
-		actual, err := exportValueWithInterpreter(
-			capability,
-			newTestInterpreter(t),
-			interpreter.EmptyLocationRange,
-			seenReferences{},
-		)
-		require.NoError(t, err)
-
-		expected := cadence.NewIDCapability(
-			3,
-			cadence.Address{0x1},
-			nil,
-		)
-
-		assert.Equal(t, expected, actual)
-	})
 }
 
 func TestExportPathLinkValue(t *testing.T) {

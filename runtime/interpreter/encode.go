@@ -773,7 +773,12 @@ func (v *PathCapabilityValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode borrow type at array index encodedPathCapabilityValueBorrowTypeFieldKey
-	return EncodeStaticType(e.CBOR, v.BorrowType)
+
+	if v.BorrowType == nil {
+		return e.CBOR.EncodeNil()
+	} else {
+		return v.BorrowType.Encode(e.CBOR)
+	}
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -824,7 +829,7 @@ func (v *IDCapabilityValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode borrow type at array index encodedIDCapabilityValueBorrowTypeFieldKey
-	return EncodeStaticType(e.CBOR, v.BorrowType)
+	return v.BorrowType.Encode(e.CBOR)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -984,7 +989,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 	// Encode type at array index encodedPathLinkValueTypeFieldKey
-	return EncodeStaticType(e.CBOR, v.Type)
+	return v.Type.Encode(e.CBOR)
 }
 
 // cborAccountLinkValue represents the CBOR value:
@@ -1078,7 +1083,11 @@ func (v TypeValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode type at array index encodedTypeValueTypeFieldKey
-	return EncodeStaticType(e.CBOR, v.Type)
+	if v.Type == nil {
+		return e.CBOR.EncodeNil()
+	} else {
+		return v.Type.Encode(e.CBOR)
+	}
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1117,7 +1126,7 @@ func (v *StorageCapabilityControllerValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode borrow type at array index encodedStorageCapabilityControllerValueBorrowTypeFieldKey
-	err = EncodeStaticType(e.CBOR, v.BorrowType)
+	err = v.BorrowType.Encode(e.CBOR)
 	if err != nil {
 		return err
 	}
@@ -1166,7 +1175,7 @@ func (v *AccountCapabilityControllerValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode borrow type at array index encodedAccountCapabilityControllerValueBorrowTypeFieldKey
-	err = EncodeStaticType(e.CBOR, v.BorrowType)
+	err = v.BorrowType.Encode(e.CBOR)
 	if err != nil {
 		return err
 	}
@@ -1179,7 +1188,7 @@ func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {
 	var buf bytes.Buffer
 	enc := CBOREncMode.NewStreamEncoder(&buf)
 
-	err := EncodeStaticType(enc, t)
+	err := t.Encode(enc)
 	if err != nil {
 		return nil, err
 	}
@@ -1190,14 +1199,6 @@ func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-func EncodeStaticType(e *cbor.StreamEncoder, t StaticType) error {
-	if t == nil {
-		return e.EncodeNil()
-	}
-
-	return t.Encode(e)
 }
 
 // Encode encodes PrimitiveStaticType as
@@ -1231,7 +1232,12 @@ func (t OptionalStaticType) Encode(e *cbor.StreamEncoder) error {
 	if err != nil {
 		return err
 	}
-	return EncodeStaticType(e, t.Type)
+
+	if t.Type == nil {
+		return e.EncodeNil()
+	} else {
+		return t.Type.Encode(e)
+	}
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1334,7 +1340,7 @@ func (t VariableSizedStaticType) Encode(e *cbor.StreamEncoder) error {
 	if err != nil {
 		return err
 	}
-	return EncodeStaticType(e, t.Type)
+	return t.Type.Encode(e)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1375,7 +1381,7 @@ func (t ConstantSizedStaticType) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 	// Encode type at array index encodedConstantSizedStaticTypeTypeFieldKey
-	return EncodeStaticType(e, t.Type)
+	return t.Type.Encode(e)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1416,7 +1422,7 @@ func (t ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 	// Encode type at array index encodedReferenceStaticTypeTypeFieldKey
-	return EncodeStaticType(e, t.BorrowedType)
+	return t.BorrowedType.Encode(e)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1452,12 +1458,12 @@ func (t DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 	// Encode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKey
-	err = EncodeStaticType(e, t.KeyType)
+	err = t.KeyType.Encode(e)
 	if err != nil {
 		return err
 	}
 	// Encode value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
-	return EncodeStaticType(e, t.ValueType)
+	return t.ValueType.Encode(e)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1493,7 +1499,7 @@ func (t *RestrictedStaticType) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 	// Encode type at array index encodedRestrictedStaticTypeTypeFieldKey
-	err = EncodeStaticType(e, t.Type)
+	err = t.Type.Encode(e)
 	if err != nil {
 		return err
 	}
@@ -1526,7 +1532,11 @@ func (t CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 	if err != nil {
 		return err
 	}
-	return EncodeStaticType(e, t.BorrowType)
+	if t.BorrowType == nil {
+		return e.EncodeNil()
+	} else {
+		return t.BorrowType.Encode(e)
+	}
 }
 
 func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {

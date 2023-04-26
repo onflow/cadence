@@ -2074,8 +2074,13 @@ func (PathCapability) ToGoValue() any {
 }
 
 func (v PathCapability) String() string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.ID()
+	}
+
 	return format.PathCapability(
-		v.BorrowType.ID(),
+		borrowType,
 		v.Address.String(),
 		v.Path.String(),
 	)

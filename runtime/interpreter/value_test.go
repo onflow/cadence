@@ -1130,14 +1130,6 @@ func TestStringer(t *testing.T) {
 			),
 			expected: "Capability<Int>(address: 0x0000000102030405, id: 6)",
 		},
-		"ID Capability without borrow type": {
-			value: NewUnmeteredIDCapabilityValue(
-				6,
-				NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
-				nil,
-			),
-			expected: "Capability(address: 0x0000000102030405, id: 6)",
-		},
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {
 				array := NewArrayValue(
@@ -1913,29 +1905,6 @@ func TestIDCapabilityValue_Equal(t *testing.T) {
 					4,
 					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					PrimitiveStaticTypeInt,
-				),
-			),
-		)
-	})
-
-	t.Run("equal, no borrow type", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.True(t,
-			NewUnmeteredIDCapabilityValue(
-				4,
-				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				nil,
-			).Equal(
-				inter,
-				EmptyLocationRange,
-				NewUnmeteredIDCapabilityValue(
-					4,
-					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-					nil,
 				),
 			),
 		)

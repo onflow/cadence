@@ -3337,12 +3337,6 @@ func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := NewUnmeteredIDCapabilityValue(
-			4,
-			NewUnmeteredAddressValueFromBytes([]byte{0x2}),
-			nil,
-		)
-
 		encoded := []byte{
 			// tag
 			0xd8, CBORTagIDCapabilityValue,
@@ -3362,8 +3356,9 @@ func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
+				encoded:    encoded,
+				decodeOnly: true,
+				invalid:    true,
 			},
 		)
 	})
