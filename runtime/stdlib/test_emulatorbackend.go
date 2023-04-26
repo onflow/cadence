@@ -124,13 +124,13 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 			compositeType,
 			testEmulatorBackendTypeDeployContractFunctionName,
 			deployContractFunctionType,
-			newEmulatorBackendTypeDeployContractFunctionDocString,
+			testEmulatorBackendTypeDeployContractFunctionDocString,
 		),
 		sema.NewUnmeteredPublicFunctionMember(
 			compositeType,
 			testEmulatorBackendTypeUseConfigFunctionName,
 			useConfigFunctionType,
-			emulatorBackendUseConfigFunctionDocString,
+			testEmulatorBackendTypeUseConfigFunctionDocString,
 		),
 	}
 
@@ -234,7 +234,7 @@ func newTestAccountValue(
 	)
 
 	// Create an 'Account' by calling its constructor.
-	accountConstructor := getConstructor(inter, accountTypeName)
+	accountConstructor := getConstructor(inter, testAccountTypeName)
 	accountValue, err := inter.InvokeExternally(
 		accountConstructor,
 		accountConstructor.Type,
@@ -259,6 +259,11 @@ const testEmulatorBackendTypeAddTransactionFunctionDocString = `
 Add a transaction to the current block.
 `
 
+const testTransactionTypeCodeFieldName = "code"
+const testTransactionTypeAuthorizersFieldName = "authorizers"
+const testTransactionTypeSignersFieldName = "signers"
+const testTransactionTypeArgumentsFieldName = "arguments"
+
 func (t *testEmulatorBackendType) newAddTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.addTransactionFunctionType,
@@ -275,7 +280,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(testFramework TestFr
 			codeValue := transactionValue.GetMember(
 				inter,
 				locationRange,
-				transactionCodeFieldName,
+				testTransactionTypeCodeFieldName,
 			)
 			code, ok := codeValue.(*interpreter.StringValue)
 			if !ok {
@@ -286,19 +291,19 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(testFramework TestFr
 			authorizerValue := transactionValue.GetMember(
 				inter,
 				locationRange,
-				transactionAuthorizerFieldName,
+				testTransactionTypeAuthorizersFieldName,
 			)
 
-			authorizers := addressesFromValue(authorizerValue)
+			authorizers := addressArrayValueToSlice(authorizerValue)
 
 			// Get signers
 			signersValue := transactionValue.GetMember(
 				inter,
 				locationRange,
-				transactionSignersFieldName,
+				testTransactionTypeSignersFieldName,
 			)
 
-			signerAccounts := accountsFromValue(
+			signerAccounts := accountsArrayValueToSlice(
 				inter,
 				signersValue,
 				locationRange,
@@ -308,7 +313,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(testFramework TestFr
 			argsValue := transactionValue.GetMember(
 				inter,
 				locationRange,
-				transactionArgsFieldName,
+				testTransactionTypeArgumentsFieldName,
 			)
 			args, err := arrayValueToSlice(argsValue)
 			if err != nil {
@@ -383,7 +388,7 @@ func (t *testEmulatorBackendType) newCommitBlockFunction(testFramework TestFrame
 
 const testEmulatorBackendTypeDeployContractFunctionName = "deployContract"
 
-const newEmulatorBackendTypeDeployContractFunctionDocString = `
+const testEmulatorBackendTypeDeployContractFunctionDocString = `
 Deploys a given contract, and initializes it with the provided arguments.
 `
 
@@ -436,7 +441,7 @@ func (t *testEmulatorBackendType) newDeployContractFunction(testFramework TestFr
 
 const testEmulatorBackendTypeUseConfigFunctionName = "useConfiguration"
 
-const emulatorBackendUseConfigFunctionDocString = `
+const testEmulatorBackendTypeUseConfigFunctionDocString = `
 Set the configuration to be used by the blockchain.
 Overrides any existing configuration.
 `
@@ -489,7 +494,7 @@ func (t *testEmulatorBackendType) newUseConfigFunction(testFramework TestFramewo
 	)
 }
 
-func (t *testEmulatorBackendType) new(
+func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
 	locationRange interpreter.LocationRange,
