@@ -90,21 +90,9 @@ var newMatcherFunction *interpreter.HostFunctionValue
 
 var testNewEmulatorBlockchainFunctionType *sema.FunctionType
 
-var emulatorBackendExecuteScriptFunctionType *sema.FunctionType
-
-var emulatorBackendCreateAccountFunctionType *sema.FunctionType
-
-var emulatorBackendAddTransactionFunctionType *sema.FunctionType
-
-var emulatorBackendExecuteNextTransactionFunctionType *sema.FunctionType
-
-var emulatorBackendCommitBlockFunctionType *sema.FunctionType
-
-var emulatorBackendDeployContractFunctionType *sema.FunctionType
-
-var emulatorBackendUseConfigFunctionType *sema.FunctionType
-
-var emulatorBackendType *sema.CompositeType
+// TODO: nest in future testType
+// Deprecated
+var testEmulatorBackend *testEmulatorBackendType
 
 func TestContractChecker() *sema.Checker {
 	testOnce.Do(initTest)
@@ -169,8 +157,7 @@ func initTest() {
 	matcherType := initMatcherType()
 	matcherTestFunctionType := compositeFunctionType(matcherType, matcherTestFunctionName)
 
-	initEmulatorBackendFunctions(blockchainBackendInterfaceType)
-	initEmulatorBackendType(blockchainBackendInterfaceType)
+	testEmulatorBackend = newTestEmulatorBackendType(blockchainBackendInterfaceType)
 
 	// Test.expect()
 	testExpectFunctionType := initTestExpectFunctionType(matcherType)
@@ -292,8 +279,8 @@ func initTest() {
 	// Enrich 'Test' contract elaboration with natively implemented composite types.
 	// e.g: 'EmulatorBackend' type.
 	testContractChecker.Elaboration.SetCompositeType(
-		emulatorBackendType.ID(),
-		emulatorBackendType,
+		testEmulatorBackend.compositeType.ID(),
+		testEmulatorBackend.compositeType,
 	)
 }
 
@@ -730,7 +717,7 @@ func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter
 			locationRange := invocation.LocationRange
 
 			// Create an `EmulatorBackend`
-			emulatorBackend := newEmulatorBackend(
+			emulatorBackend := testEmulatorBackend.new(
 				inter,
 				testFramework,
 				locationRange,
@@ -855,187 +842,6 @@ func initNewMatcherFunction(
 	)
 }
 
-// 'EmulatorBackend' struct.
-//
-// 'EmulatorBackend' is the native implementation of the 'Test.BlockchainBackend' interface.
-// It provides a blockchain backed by the emulator.
-
-const emulatorBackendTypeName = "EmulatorBackend"
-
-func initEmulatorBackendFunctions(blockchainBackendInterfaceType *sema.InterfaceType) {
-	emulatorBackendExecuteScriptFunctionType = interfaceFunctionType(
-		blockchainBackendInterfaceType,
-		emulatorBackendExecuteScriptFunctionName,
-	)
-
-	emulatorBackendCreateAccountFunctionType = interfaceFunctionType(
-		blockchainBackendInterfaceType,
-		emulatorBackendCreateAccountFunctionName,
-	)
-
-	emulatorBackendAddTransactionFunctionType = interfaceFunctionType(
-		blockchainBackendInterfaceType,
-		emulatorBackendAddTransactionFunctionName,
-	)
-
-	emulatorBackendExecuteNextTransactionFunctionType = interfaceFunctionType(
-		blockchainBackendInterfaceType,
-		emulatorBackendExecuteNextTransactionFunctionName,
-	)
-
-	emulatorBackendCommitBlockFunctionType = interfaceFunctionType(
-		blockchainBackendInterfaceType,
-		emulatorBackendCommitBlockFunctionName,
-	)
-
-	emulatorBackendDeployContractFunctionType = interfaceFunctionType(
-		blockchainBackendInterfaceType,
-		emulatorBackendDeployContractFunctionName,
-	)
-
-	emulatorBackendUseConfigFunctionType = interfaceFunctionType(
-		blockchainBackendInterfaceType,
-		emulatorBackendUseConfigFunctionName,
-	)
-}
-
-func initEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceType) {
-	emulatorBackendType = &sema.CompositeType{
-		Identifier: emulatorBackendTypeName,
-		Kind:       common.CompositeKindStructure,
-		Location:   TestContractLocation,
-		ExplicitInterfaceConformances: []*sema.InterfaceType{
-			blockchainBackendInterfaceType,
-		},
-	}
-
-	var members = []*sema.Member{
-		sema.NewUnmeteredPublicFunctionMember(
-			emulatorBackendType,
-			emulatorBackendExecuteScriptFunctionName,
-			emulatorBackendExecuteScriptFunctionType,
-			emulatorBackendExecuteScriptFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			emulatorBackendType,
-			emulatorBackendCreateAccountFunctionName,
-			emulatorBackendCreateAccountFunctionType,
-			emulatorBackendCreateAccountFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			emulatorBackendType,
-			emulatorBackendAddTransactionFunctionName,
-			emulatorBackendAddTransactionFunctionType,
-			emulatorBackendAddTransactionFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			emulatorBackendType,
-			emulatorBackendExecuteNextTransactionFunctionName,
-			emulatorBackendExecuteNextTransactionFunctionType,
-			emulatorBackendExecuteNextTransactionFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			emulatorBackendType,
-			emulatorBackendCommitBlockFunctionName,
-			emulatorBackendCommitBlockFunctionType,
-			emulatorBackendCommitBlockFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			emulatorBackendType,
-			emulatorBackendDeployContractFunctionName,
-			emulatorBackendDeployContractFunctionType,
-			emulatorBackendDeployContractFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			emulatorBackendType,
-			emulatorBackendUseConfigFunctionName,
-			emulatorBackendUseConfigFunctionType,
-			emulatorBackendUseConfigFunctionDocString,
-		),
-	}
-
-	emulatorBackendType.Members = sema.MembersAsMap(members)
-	emulatorBackendType.Fields = sema.MembersFieldNames(members)
-}
-
-func newEmulatorBackend(
-	inter *interpreter.Interpreter,
-	testFramework TestFramework,
-	locationRange interpreter.LocationRange,
-) *interpreter.CompositeValue {
-	var fields = []interpreter.CompositeField{
-		{
-			Name:  emulatorBackendExecuteScriptFunctionName,
-			Value: emulatorBackendExecuteScriptFunction(testFramework),
-		},
-		{
-			Name:  emulatorBackendCreateAccountFunctionName,
-			Value: emulatorBackendCreateAccountFunction(testFramework),
-		}, {
-			Name:  emulatorBackendAddTransactionFunctionName,
-			Value: emulatorBackendAddTransactionFunction(testFramework),
-		},
-		{
-			Name:  emulatorBackendExecuteNextTransactionFunctionName,
-			Value: emulatorBackendExecuteNextTransactionFunction(testFramework),
-		},
-		{
-			Name:  emulatorBackendCommitBlockFunctionName,
-			Value: emulatorBackendCommitBlockFunction(testFramework),
-		},
-		{
-			Name:  emulatorBackendDeployContractFunctionName,
-			Value: emulatorBackendDeployContractFunction(testFramework),
-		},
-		{
-			Name:  emulatorBackendUseConfigFunctionName,
-			Value: emulatorBackendUseConfigFunction(testFramework),
-		},
-	}
-
-	return interpreter.NewCompositeValue(
-		inter,
-		locationRange,
-		emulatorBackendType.Location,
-		emulatorBackendTypeName,
-		common.CompositeKindStructure,
-		fields,
-		common.ZeroAddress,
-	)
-}
-
-// 'EmulatorBackend.executeScript' function
-
-const emulatorBackendExecuteScriptFunctionName = "executeScript"
-
-const emulatorBackendExecuteScriptFunctionDocString = `
-Executes a script and returns the script return value and the status.
-The 'returnValue' field of the result will be nil if the script failed.
-`
-
-func emulatorBackendExecuteScriptFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
-		emulatorBackendExecuteScriptFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			script, ok := invocation.Arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			args, err := arrayValueToSlice(invocation.Arguments[1])
-			if err != nil {
-				panic(errors.NewUnexpectedErrorFromCause(err))
-			}
-
-			inter := invocation.Interpreter
-
-			result := testFramework.RunScript(inter, script.Str, args)
-
-			return newScriptResult(inter, result.Value, result)
-		},
-	)
-}
-
 func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 	array, ok := value.(*interpreter.ArrayValue)
 	if !ok {
@@ -1103,157 +909,6 @@ func getConstructor(inter *interpreter.Interpreter, typeName string) *interprete
 	}
 
 	return resultStatusConstructor
-}
-
-// 'EmulatorBackend.createAccount' function
-
-const emulatorBackendCreateAccountFunctionName = "createAccount"
-
-const emulatorBackendCreateAccountFunctionDocString = `
-Creates an account by submitting an account creation transaction.
-The transaction is paid by the service account.
-The returned account can be used to sign and authorize transactions.
-`
-
-func emulatorBackendCreateAccountFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
-		emulatorBackendCreateAccountFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			account, err := testFramework.CreateAccount()
-			if err != nil {
-				panic(err)
-			}
-
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			return newAccountValue(
-				testFramework,
-				inter,
-				locationRange,
-				account,
-			)
-		},
-	)
-}
-
-func newAccountValue(
-	framework TestFramework,
-	inter *interpreter.Interpreter,
-	locationRange interpreter.LocationRange,
-	account *Account,
-) interpreter.Value {
-
-	// Create address value
-	address := interpreter.NewAddressValue(nil, account.Address)
-
-	standardLibraryHandler := framework.StandardLibraryHandler()
-
-	publicKey := NewPublicKeyValue(
-		inter,
-		locationRange,
-		account.PublicKey,
-		standardLibraryHandler,
-		standardLibraryHandler,
-	)
-
-	// Create an 'Account' by calling its constructor.
-	accountConstructor := getConstructor(inter, accountTypeName)
-	accountValue, err := inter.InvokeExternally(
-		accountConstructor,
-		accountConstructor.Type,
-		[]interpreter.Value{
-			address,
-			publicKey,
-		},
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return accountValue
-}
-
-// 'EmulatorBackend.addTransaction' function
-
-const emulatorBackendAddTransactionFunctionName = "addTransaction"
-
-const emulatorBackendAddTransactionFunctionDocString = `
-Add a transaction to the current block.
-`
-
-func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
-		emulatorBackendAddTransactionFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			transactionValue, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			// Get transaction code
-			codeValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				transactionCodeFieldName,
-			)
-			code, ok := codeValue.(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			// Get authorizers
-			authorizerValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				transactionAuthorizerFieldName,
-			)
-
-			authorizers := addressesFromValue(authorizerValue)
-
-			// Get signers
-			signersValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				transactionSignersFieldName,
-			)
-
-			signerAccounts := accountsFromValue(
-				inter,
-				signersValue,
-				locationRange,
-			)
-
-			// Get arguments
-			argsValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				transactionArgsFieldName,
-			)
-			args, err := arrayValueToSlice(argsValue)
-			if err != nil {
-				panic(errors.NewUnexpectedErrorFromCause(err))
-			}
-
-			err = testFramework.AddTransaction(
-				invocation.Interpreter,
-				code.Str,
-				authorizers,
-				signerAccounts,
-				args,
-			)
-
-			if err != nil {
-				panic(err)
-			}
-
-			return interpreter.Void
-		},
-	)
 }
 
 func addressesFromValue(accountsValue interpreter.Value) []common.Address {
@@ -1346,31 +1001,6 @@ func accountFromValue(
 	}
 }
 
-// 'EmulatorBackend.executeNextTransaction' function
-
-const emulatorBackendExecuteNextTransactionFunctionName = "executeNextTransaction"
-
-const emulatorBackendExecuteNextTransactionFunctionDocString = `
-Executes the next transaction in the block, if any.
-Returns the result of the transaction, or nil if no transaction was scheduled.
-`
-
-func emulatorBackendExecuteNextTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
-		emulatorBackendExecuteNextTransactionFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			result := testFramework.ExecuteNextTransaction()
-
-			// If there are no transactions to run, then return `nil`.
-			if result == nil {
-				return interpreter.Nil
-			}
-
-			return newTransactionResult(invocation.Interpreter, result)
-		},
-	)
-}
-
 // newTransactionResult Creates a "TransactionResult" indicating the status of the transaction execution.
 func newTransactionResult(inter *interpreter.Interpreter, result *TransactionResult) interpreter.Value {
 	// Lookup and get 'ResultStatus' enum value.
@@ -1426,28 +1056,6 @@ func newErrorValue(inter *interpreter.Interpreter, err error) interpreter.Value 
 	}
 
 	return errorValue
-}
-
-// 'EmulatorBackend.commitBlock' function
-
-const emulatorBackendCommitBlockFunctionName = "commitBlock"
-
-const emulatorBackendCommitBlockFunctionDocString = `
-Commit the current block. Committing will fail if there are un-executed transactions in the block.
-`
-
-func emulatorBackendCommitBlockFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
-		emulatorBackendCommitBlockFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			err := testFramework.CommitBlock()
-			if err != nil {
-				panic(err)
-			}
-
-			return interpreter.Void
-		},
-	)
 }
 
 // Built-in matchers
@@ -1843,113 +1451,6 @@ func initBeLessThanMatcherFunction(
 				beLessThanTestFunc,
 				matcherTestFunctionType,
 			)
-		},
-	)
-}
-
-// 'EmulatorBackend.deployContract' function
-
-const emulatorBackendDeployContractFunctionName = "deployContract"
-
-const emulatorBackendDeployContractFunctionDocString = `
-Deploys a given contract, and initializes it with the provided arguments.
-`
-
-func emulatorBackendDeployContractFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
-		emulatorBackendDeployContractFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-
-			// Contract name
-			name, ok := invocation.Arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			// Contract code
-			code, ok := invocation.Arguments[1].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			// authorizer
-			accountValue, ok := invocation.Arguments[2].(interpreter.MemberAccessibleValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			account := accountFromValue(inter, accountValue, invocation.LocationRange)
-
-			// Contract init arguments
-			args, err := arrayValueToSlice(invocation.Arguments[3])
-			if err != nil {
-				panic(err)
-			}
-
-			err = testFramework.DeployContract(
-				inter,
-				name.Str,
-				code.Str,
-				account,
-				args,
-			)
-
-			return newErrorValue(inter, err)
-		},
-	)
-}
-
-// 'EmulatorBackend.useConfiguration' function
-
-const emulatorBackendUseConfigFunctionName = "useConfiguration"
-
-const emulatorBackendUseConfigFunctionDocString = `Use configurations function`
-
-func emulatorBackendUseConfigFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
-		emulatorBackendUseConfigFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-
-			// configurations
-			configsValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			addresses, ok := configsValue.GetMember(
-				inter,
-				invocation.LocationRange,
-				addressesFieldName,
-			).(*interpreter.DictionaryValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			mapping := make(map[string]common.Address, addresses.Count())
-
-			addresses.Iterate(nil, func(locationValue, addressValue interpreter.Value) bool {
-				location, ok := locationValue.(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				address, ok := addressValue.(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				mapping[location.Str] = common.Address(address)
-
-				return true
-			})
-
-			testFramework.UseConfiguration(&Configuration{
-				Addresses: mapping,
-			})
-
-			return interpreter.Void
 		},
 	)
 }
