@@ -53,9 +53,9 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 		actual, err := json.Marshal(decl)
 		require.NoError(t, err)
 
-	assert.JSONEq(t,
-		// language=json
-		`
+		assert.JSONEq(t,
+			// language=json
+			`
         {
             "Type": "InterfaceDeclaration",
             "Access": "AccessPublic",
