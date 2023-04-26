@@ -41,6 +41,7 @@ type InterfaceDeclaration struct {
 var _ Element = &InterfaceDeclaration{}
 var _ Declaration = &InterfaceDeclaration{}
 var _ Statement = &InterfaceDeclaration{}
+var _ CompositeLikeDeclaration = &InterfaceDeclaration{}
 
 func NewInterfaceDeclaration(
 	gauge common.MemoryGauge,
