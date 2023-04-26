@@ -34,18 +34,6 @@ pub struct AuthAccount {
     /// All storage paths of this account.
     pub let storagePaths: [StoragePath]
 
-    /// **DEPRECATED**: Use `keys.add` instead.
-    ///
-    /// Adds a public key to the account.
-    ///
-    /// The public key must be encoded together with their signature algorithm, hashing algorithm and weight.
-    pub fun addPublicKey(_ publicKey: [UInt8])
-
-    /// **DEPRECATED**: Use `keys.revoke` instead.
-    ///
-    /// Revokes the key at the given index.
-    pub fun removePublicKey(_ index: Int)
-
     /// Saves the given object into the account's storage at the given path.
     ///
     /// Resources are moved into storage, and structures are copied.

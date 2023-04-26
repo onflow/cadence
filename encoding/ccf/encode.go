@@ -61,6 +61,7 @@ func Encode(value cadence.Value) ([]byte, error) {
 	var w bytes.Buffer
 
 	enc := NewEncoder(&w)
+	defer enc.enc.Close()
 
 	err := enc.Encode(value)
 	if err != nil {
