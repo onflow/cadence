@@ -690,46 +690,46 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		// Inheritance hierarchy is as follows:
 		//
-		//       F (concrete type)
+		//       A (concrete type)
 		//       |
-		//       E (interface)
-		//     /  \
-		//    C    D
-		//   / \
-		//  A   B
+		//       B (interface)
+		//      / \
+		//     C   D
+		//    / \ /
+		//   E   F
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
-            struct interface A {
+            struct A: B {
                 pub fun test() {
                     pre { print("A") }
                 }
             }
 
-            struct interface B {
+            struct interface B: C, D {
                 pub fun test() {
                     pre { print("B") }
                 }
             }
 
-            struct interface C: A, B {
+            struct interface C: E, F {
                 pub fun test() {
                     pre { print("C") }
                 }
             }
 
-            struct interface D {
+            struct interface D: F {
                 pub fun test() {
                     pre { print("D") }
                 }
             }
 
-            struct interface E: C, D {
+            struct interface E {
                 pub fun test() {
                     pre { print("E") }
                 }
             }
 
-            struct F: E {
+            struct interface F {
                 pub fun test() {
                     pre { print("F") }
                 }
@@ -741,8 +741,8 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             }
 
             pub fun main() {
-                let f = F()
-                f.test()
+                let a = A()
+                a.test()
             }`,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
@@ -760,7 +760,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		// The pre-conditions of the interfaces are executed first, with depth-first pre-order traversal.
 		// The pre-condition of the concrete type is executed at the end, after the interfaces.
-		assert.Equal(t, []string{"E", "C", "A", "B", "D", "F"}, logs)
+		assert.Equal(t, []string{"B", "C", "E", "F", "D", "A"}, logs)
 	})
 
 	t.Run("post conditions order", func(t *testing.T) {
@@ -786,46 +786,46 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		// Inheritance hierarchy is as follows:
 		//
-		//       F (concrete type)
+		//       A (concrete type)
 		//       |
-		//       E (interface)
-		//     /  \
-		//    C    D
-		//   / \
-		//  A   B
+		//       B (interface)
+		//      / \
+		//     C   D
+		//    / \ /
+		//   E   F
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
-            struct interface A {
+            struct A: B {
                 pub fun test() {
                     post { print("A") }
                 }
             }
 
-            struct interface B {
+            struct interface B: C, D {
                 pub fun test() {
                     post { print("B") }
                 }
             }
 
-            struct interface C: A, B {
+            struct interface C: E, F {
                 pub fun test() {
                     post { print("C") }
                 }
             }
 
-            struct interface D {
+            struct interface D: F {
                 pub fun test() {
                     post { print("D") }
                 }
             }
 
-            struct interface E: C, D {
+            struct interface E {
                 pub fun test() {
                     post { print("E") }
                 }
             }
 
-            struct F: E {
+            struct interface F {
                 pub fun test() {
                     post { print("F") }
                 }
@@ -837,8 +837,8 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             }
 
             pub fun main() {
-                let f = F()
-                f.test()
+                let a = A()
+                a.test()
             }`,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
@@ -856,6 +856,6 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		// The post-condition of the concrete type is executed first, before the interfaces.
 		// The post-conditions of the interfaces are executed after that, with the reversed depth-first pre-order.
-		assert.Equal(t, []string{"F", "D", "B", "A", "C", "E"}, logs)
+		assert.Equal(t, []string{"A", "D", "F", "E", "C", "B"}, logs)
 	})
 }

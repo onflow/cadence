@@ -3286,6 +3286,37 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 	})
 
+	t.Run("default impl in ancestor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                pub fun hello()
+            }
+
+            struct interface C: B {
+                pub fun hello() {
+                    var a = 2
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
 	t.Run("default impl from two paths", func(t *testing.T) {
 
 		t.Parallel()
@@ -3540,8 +3571,17 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-		assert.IsType(t, &sema.ConformanceError{}, errs[1])
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Empty(t, conformanceError.MissingMembers)
+		assert.Len(t, conformanceError.MissingNestedCompositeTypes, 1)
+		assert.Equal(t, conformanceError.MissingNestedCompositeTypes[0].Identifier, "BNested")
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Empty(t, conformanceError.MissingMembers)
+		assert.Len(t, conformanceError.MissingNestedCompositeTypes, 1)
+		assert.Equal(t, conformanceError.MissingNestedCompositeTypes[0].Identifier, "ANested")
 	})
 
 	t.Run("nested struct conflicting", func(t *testing.T) {
@@ -3693,6 +3733,24 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		require.ErrorAs(t, errs[0], &conformanceError)
 		require.ErrorAs(t, errs[1], &conformanceError)
 	})
+
+	t.Run("nested interface inheritance", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                resource interface X: B.Y {}
+            }
+
+            contract interface B: A {
+                resource interface Y {}
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
 }
 
 func TestCheckInterfaceEventsInheritance(t *testing.T) {
