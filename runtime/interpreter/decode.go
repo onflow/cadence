@@ -303,8 +303,11 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagPathValue:
 			storable, err = d.decodePath()
 
-		case CBORTagStorageCapabilityValue:
-			storable, err = d.decodeStorageCapability()
+		case CBORTagPathCapabilityValue:
+			storable, err = d.decodePathCapability()
+
+		case CBORTagIDCapabilityValue:
+			storable, err = d.decodeIDCapability()
 
 		case CBORTagPathLinkValue:
 			storable, err = d.decodePathLink()
@@ -873,9 +876,9 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 	), nil
 }
 
-func (d StorableDecoder) decodeStorageCapability() (*StorageCapabilityValue, error) {
+func (d StorableDecoder) decodePathCapability() (*PathCapabilityValue, error) {
 
-	const expectedLength = encodedStorageCapabilityValueLength
+	const expectedLength = encodedPathCapabilityValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
@@ -899,7 +902,7 @@ func (d StorableDecoder) decodeStorageCapability() (*StorageCapabilityValue, err
 
 	// address
 
-	// Decode address at array index encodedStorageCapabilityValueAddressFieldKey
+	// Decode address at array index encodedPathCapabilityValueAddressFieldKey
 	var num uint64
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
@@ -924,7 +927,7 @@ func (d StorableDecoder) decodeStorageCapability() (*StorageCapabilityValue, err
 
 	// path
 
-	// Decode path at array index encodedStorageCapabilityValuePathFieldKey
+	// Decode path at array index encodedPathCapabilityValuePathFieldKey
 	pathStorable, err := d.decodeStorable()
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid capability path: %w", err)
@@ -934,7 +937,95 @@ func (d StorableDecoder) decodeStorageCapability() (*StorageCapabilityValue, err
 		return nil, errors.NewUnexpectedError("invalid capability path: invalid type %T", pathValue)
 	}
 
-	// Decode borrow type at array index encodedStorageCapabilityValueBorrowTypeFieldKey
+	// Decode borrow type at array index encodedPathCapabilityValueBorrowTypeFieldKey
+
+	// borrow type (optional, for backwards compatibility)
+	// Capabilities used to be untyped, i.e. they didn't have a borrow type.
+	// Later an optional type parameter, the borrow type, was added to it,
+	// which specifies as what type the capability should be borrowed.
+	//
+	// The decoding must be backwards-compatible and support both capability values
+	// with a borrow type and ones without
+
+	var borrowType StaticType
+
+	// Optional borrow type can be CBOR nil.
+	err = d.decoder.DecodeNil()
+	if _, ok := err.(*cbor.WrongTypeError); ok {
+		borrowType, err = d.DecodeStaticType()
+	}
+	if err != nil {
+		return nil, errors.NewUnexpectedError("invalid capability borrow type encoding: %w", err)
+	}
+
+	return NewPathCapabilityValue(
+		d.memoryGauge,
+		address,
+		pathValue,
+		borrowType,
+	), nil
+}
+
+func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
+
+	const expectedLength = encodedIDCapabilityValueLength
+
+	size, err := d.decoder.DecodeArrayHead()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, errors.NewUnexpectedError(
+				"invalid capability encoding: expected [%d]any, got %s",
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
+	}
+
+	if size != expectedLength {
+		return nil, errors.NewUnexpectedError(
+			"invalid capability encoding: expected [%d]any, got [%d]any",
+			expectedLength,
+			size,
+		)
+	}
+
+	// address
+
+	// Decode address at array index encodedIDCapabilityValueAddressFieldKey
+	var num uint64
+	num, err = d.decoder.DecodeTagNumber()
+	if err != nil {
+		return nil, errors.NewUnexpectedError(
+			"invalid capability address: %w",
+			err,
+		)
+	}
+	if num != CBORTagAddressValue {
+		return nil, errors.NewUnexpectedError(
+			"invalid capability address: wrong tag %d",
+			num,
+		)
+	}
+	address, err := d.decodeAddress()
+	if err != nil {
+		return nil, errors.NewUnexpectedError(
+			"invalid capability address: %w",
+			err,
+		)
+	}
+
+	// Decode ID at array index encodedIDCapabilityValueIDFieldKey
+
+	id, err := d.decoder.DecodeUint64()
+	if err != nil {
+		return nil, errors.NewUnexpectedError(
+			"invalid capability ID: %w",
+			err,
+		)
+	}
+
+	// Decode borrow type at array index encodedIDCapabilityValueBorrowTypeFieldKey
 
 	// borrow type (optional, for backwards compatibility)
 	// Capabilities used to be untyped, i.e. they didn't have a borrow type.
@@ -956,21 +1047,10 @@ func (d StorableDecoder) decodeStorageCapability() (*StorageCapabilityValue, err
 		return nil, errors.NewUnexpectedError("invalid capability borrow type encoding: %w", err)
 	}
 
-	// Decode ID at array index encodedStorageCapabilityValueIDFieldKey
-
-	id, err := d.decoder.DecodeUint64()
-	if err != nil {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability ID: %w",
-			err,
-		)
-	}
-
-	return NewStorageCapabilityValue(
+	return NewIDCapabilityValue(
 		d.memoryGauge,
 		UInt64Value(id),
 		address,
-		pathValue,
 		borrowType,
 	), nil
 }
@@ -1173,27 +1253,32 @@ func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
 		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: %w", err)
 	}
 	if num != CBORTagAddressValue {
-		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: expected CBOR tag %d, got %d", CBORTagAddressValue, num)
+		return nil, errors.NewUnexpectedError(
+			"invalid published value recipient encoding: expected CBOR tag %d, got %d",
+			CBORTagAddressValue,
+			num,
+		)
 	}
 	addressValue, err := d.decodeAddress()
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: %w", err)
 	}
 
-	// Decode address at array index encodedPublishedValueValueFieldKey
-	num, err = d.decoder.DecodeTagNumber()
+	// Decode value at array index encodedPublishedValueValueFieldKey
+	value, err := d.decodeStorable()
 	if err != nil {
-		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: %w", err)
-	}
-	if num != CBORTagStorageCapabilityValue {
-		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: expected CBOR tag %d, got %d", CBORTagStorageCapabilityValue, num)
-	}
-	value, err := d.decodeStorageCapability()
-	if err != nil {
-		return nil, errors.NewUnexpectedError("invalid published value encoding: %w", err)
+		return nil, errors.NewUnexpectedError("invalid published value value encoding: %w", err)
 	}
 
-	return NewPublishedValue(d.memoryGauge, addressValue, value), nil
+	capabilityValue, ok := value.(CapabilityValue)
+	if !ok {
+		return nil, errors.NewUnexpectedError(
+			"invalid published value value encoding: expected capability, got %T",
+			value,
+		)
+	}
+
+	return NewPublishedValue(d.memoryGauge, addressValue, capabilityValue), nil
 }
 
 func (d StorableDecoder) decodeType() (TypeValue, error) {

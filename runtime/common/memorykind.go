@@ -39,7 +39,8 @@ const (
 	MemoryKindOptionalValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
-	MemoryKindStorageCapabilityValue
+	MemoryKindIDCapabilityValue
+	MemoryKindPathCapabilityValue
 	MemoryKindPathLinkValue
 	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue
@@ -106,7 +107,8 @@ const (
 	MemoryKindCadenceAccountLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
-	MemoryKindCadenceStorageCapabilityValue
+	MemoryKindCadenceIDCapabilityValue
+	MemoryKindCadencePathCapabilityValue
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types

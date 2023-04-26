@@ -1000,7 +1000,7 @@ func accountInboxPublishFunction(
 		gauge,
 		sema.AuthAccountInboxTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value, ok := invocation.Arguments[0].(*interpreter.StorageCapabilityValue)
+			value, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -2507,12 +2507,10 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 			storeCapabilityController(inter, address, capabilityIDValue, controller)
 			recordPathCapabilityController(inter, locationRange, address, targetPathValue, capabilityIDValue)
 
-			return interpreter.NewStorageCapabilityValue(
+			return interpreter.NewIDCapabilityValue(
 				gauge,
 				capabilityIDValue,
 				addressValue,
-				// TODO: remove
-				interpreter.EmptyPathValue,
 				borrowStaticType,
 			)
 		},
@@ -2564,12 +2562,10 @@ func newAuthAccountAccountCapabilitiesIssueFunction(
 			storeCapabilityController(inter, address, capabilityIDValue, controller)
 			recordAccountCapabilityController(inter, address, capabilityIDValue)
 
-			return interpreter.NewStorageCapabilityValue(
+			return interpreter.NewIDCapabilityValue(
 				gauge,
 				capabilityIDValue,
 				addressValue,
-				// TODO: remove
-				interpreter.EmptyPathValue,
 				borrowStaticType,
 			)
 		},
@@ -2863,10 +2859,23 @@ func newAuthAccountCapabilitiesPublishFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
-			capabilityValue, ok := invocation.Arguments[0].(*interpreter.StorageCapabilityValue)
-			if !ok {
+			// Get capability argument
+
+			var capabilityValue *interpreter.IDCapabilityValue
+
+			firstValue := invocation.Arguments[0]
+			switch firstValue := firstValue.(type) {
+			case *interpreter.IDCapabilityValue:
+				capabilityValue = firstValue
+
+			case *interpreter.PathCapabilityValue:
+				panic(errors.NewDefaultUserError("cannot publish linked capability"))
+
+			default:
 				panic(errors.NewUnreachableError())
 			}
+
+			// Get path argument
 
 			pathValue, ok := invocation.Arguments[1].(interpreter.PathValue)
 			if !ok || pathValue.Domain != common.PathDomainPublic {
@@ -2902,7 +2911,7 @@ func newAuthAccountCapabilitiesPublishFunction(
 				atree.Address(address),
 				true,
 				nil,
-			).(*interpreter.StorageCapabilityValue)
+			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -2931,6 +2940,11 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 		sema.AuthAccountCapabilitiesTypeUnpublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
 			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
 			if !ok || pathValue.Domain != common.PathDomainPublic {
 				panic(errors.NewUnreachableError())
@@ -2939,8 +2953,7 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 			domain := pathValue.Domain.Identifier()
 			identifier := pathValue.Identifier
 
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
+			// Read/remove capability
 
 			storageMapKey := interpreter.StringStorageMapKey(identifier)
 
@@ -2949,8 +2962,15 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 				return interpreter.Nil
 			}
 
-			capabilityValue := readValue.(*interpreter.StorageCapabilityValue)
-			if !ok {
+			var capabilityValue *interpreter.IDCapabilityValue
+			switch readValue := readValue.(type) {
+			case *interpreter.IDCapabilityValue:
+				capabilityValue = readValue
+
+			case interpreter.LinkValue:
+				panic(errors.NewDefaultUserError("cannot unpublish linked capability"))
+
+			default:
 				panic(errors.NewUnreachableError())
 			}
 
@@ -2960,7 +2980,7 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 				atree.Address{},
 				true,
 				nil,
-			).(*interpreter.StorageCapabilityValue)
+			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3032,8 +3052,17 @@ func newAccountCapabilitiesGetFunction(
 				return interpreter.Nil
 			}
 
-			readCapabilityValue := readValue.(*interpreter.StorageCapabilityValue)
-			if !ok {
+			var readCapabilityValue *interpreter.IDCapabilityValue
+
+			switch readValue := readValue.(type) {
+			case *interpreter.IDCapabilityValue:
+				readCapabilityValue = readValue
+
+			case interpreter.LinkValue:
+				// TODO: return PathCapabilityValue?
+				return interpreter.Nil
+
+			default:
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3056,7 +3085,7 @@ func newAccountCapabilitiesGetFunction(
 				atree.Address{},
 				false,
 				nil,
-			).(*interpreter.StorageCapabilityValue)
+			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3069,18 +3098,19 @@ func newAccountCapabilitiesGetFunction(
 
 			var resultValue interpreter.Value
 			if borrow {
-				resultValue = inter.BorrowCapability(
-					readCapabilityValue.Address.ToAddress(),
-					readCapabilityValue.Path,
-					wantedBorrowType,
-					locationRange,
-				)
+				// TODO:
+				panic("TODO")
+				//resultValue = inter.BorrowCapability(
+				//	readCapabilityValue.Address.ToAddress(),
+				//	readCapabilityValue.ID,
+				//	wantedBorrowType,
+				//	locationRange,
+				//)
 			} else {
-				resultValue = interpreter.NewStorageCapabilityValue(
+				resultValue = interpreter.NewIDCapabilityValue(
 					inter,
 					readCapabilityValue.ID,
 					readCapabilityValue.Address,
-					readCapabilityValue.Path,
 					wantedBorrowStaticType,
 				)
 			}

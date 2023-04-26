@@ -63,7 +63,7 @@ var _ EquatableValue = &AccountCapabilityControllerValue{}
 var _ CapabilityControllerValue = &AccountCapabilityControllerValue{}
 var _ MemberAccessibleValue = &AccountCapabilityControllerValue{}
 
-func (*AccountCapabilityControllerValue) IsValue() {}
+func (*AccountCapabilityControllerValue) isValue() {}
 
 func (*AccountCapabilityControllerValue) isCapabilityControllerValue() {}
 

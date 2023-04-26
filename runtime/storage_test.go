@@ -1368,7 +1368,7 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
+func TestRuntimeStorageSavePathCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -1443,9 +1443,7 @@ func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 				value, err := runtime.ReadStored(signer, storagePath, context)
 				require.NoError(t, err)
 
-				expected := cadence.NewStorageCapability(
-					// TODO:
-					interpreter.TodoCapabilityID,
+				expected := cadence.NewPathCapability(
 					cadence.Address(signer),
 					cadence.Path{
 						Domain:     domain,

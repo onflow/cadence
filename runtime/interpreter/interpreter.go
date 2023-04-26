@@ -30,9 +30,8 @@ import (
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
 
-	"github.com/onflow/cadence/runtime/activations"
-
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -3746,10 +3745,8 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				NewStorageCapabilityValue(
+				NewPathCapabilityValue(
 					interpreter,
-					// TODO:
-					TodoCapabilityID,
 					addressValue,
 					newCapabilityPath,
 					borrowStaticType,
@@ -3760,7 +3757,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	)
 }
 
-var authAccountReferenceStaticType = ReferenceStaticType{
+var AuthAccountReferenceStaticType = ReferenceStaticType{
 	BorrowedType:   PrimitiveStaticTypeAuthAccount,
 	ReferencedType: PrimitiveStaticTypeAuthAccount,
 }
@@ -3774,7 +3771,7 @@ var authAccountReferenceStaticType = ReferenceStaticType{
 // an interpreter.AccountLink is stored in the account.
 //
 // In both cases, when acquiring a capability, e.g. using getCapability,
-// a StorageCapabilityValue is returned.
+// a PathCapabilityValue is returned.
 // This is because in both cases, we are looking up a path in an account.
 // Depending on what is stored in the path, PathLink or AccountLink,
 // we return a respective reference value, a StorageReferenceValue for PathLink
@@ -3844,13 +3841,11 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				NewStorageCapabilityValue(
+				NewPathCapabilityValue(
 					interpreter,
-					// TODO:
-					TodoCapabilityID,
 					addressValue,
 					newCapabilityPath,
-					authAccountReferenceStaticType,
+					AuthAccountReferenceStaticType,
 				),
 			)
 
@@ -3936,14 +3931,14 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	)
 }
 
-func (interpreter *Interpreter) BorrowCapability(
+func (interpreter *Interpreter) BorrowPathCapability(
 	address common.Address,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
 	locationRange LocationRange,
 ) ReferenceValue {
 	target, authorized, err :=
-		interpreter.GetStorageCapabilityFinalTarget(
+		interpreter.GetPathCapabilityFinalTarget(
 			address,
 			pathValue,
 			borrowType,
@@ -3996,7 +3991,7 @@ func (interpreter *Interpreter) BorrowCapability(
 	}
 }
 
-func (interpreter *Interpreter) storageCapabilityBorrowFunction(
+func (interpreter *Interpreter) pathCapabilityBorrowFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
@@ -4029,7 +4024,7 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			reference := interpreter.BorrowCapability(address, pathValue, borrowType, invocation.LocationRange)
+			reference := interpreter.BorrowPathCapability(address, pathValue, borrowType, invocation.LocationRange)
 			if reference == nil {
 				return Nil
 			}
@@ -4038,7 +4033,7 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 	)
 }
 
-func (interpreter *Interpreter) storageCapabilityCheckFunction(
+func (interpreter *Interpreter) pathCapabilityCheckFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
@@ -4071,7 +4066,7 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 			}
 
 			target, authorized, err :=
-				interpreter.GetStorageCapabilityFinalTarget(
+				interpreter.GetPathCapabilityFinalTarget(
 					address,
 					pathValue,
 					borrowType,
@@ -4115,7 +4110,7 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 	)
 }
 
-func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
+func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
 	address common.Address,
 	path PathValue,
 	wantedBorrowType *sema.ReferenceType,
@@ -4168,7 +4163,7 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 
 		case AccountLinkValue:
 			if !interpreter.IsSubTypeOfSemaType(
-				authAccountReferenceStaticType,
+				AuthAccountReferenceStaticType,
 				wantedBorrowType,
 			) {
 				return nil, false, nil

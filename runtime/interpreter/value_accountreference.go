@@ -67,7 +67,7 @@ func NewAccountReferenceValue(
 	)
 }
 
-func (*AccountReferenceValue) IsValue() {}
+func (*AccountReferenceValue) isValue() {}
 
 func (*AccountReferenceValue) isReference() {}
 

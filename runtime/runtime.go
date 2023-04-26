@@ -146,7 +146,7 @@ type Runtime interface {
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 
-	// ReadLinked dereferences the path and returns the value stored at the target
+	// Deprecated: ReadLinked dereferences the path and returns the value stored at the target.
 	//
 	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 
@@ -644,7 +644,7 @@ func (r *interpreterRuntime) ReadLinked(
 
 	pathValue := valueImporter{inter: inter}.importPathValue(path)
 
-	target, _, err := inter.GetStorageCapabilityFinalTarget(
+	target, _, err := inter.GetPathCapabilityFinalTarget(
 		address,
 		pathValue,
 		&sema.ReferenceType{

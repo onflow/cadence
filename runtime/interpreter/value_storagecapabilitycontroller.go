@@ -74,7 +74,7 @@ var _ EquatableValue = &StorageCapabilityControllerValue{}
 var _ CapabilityControllerValue = &StorageCapabilityControllerValue{}
 var _ MemberAccessibleValue = &StorageCapabilityControllerValue{}
 
-func (*StorageCapabilityControllerValue) IsValue() {}
+func (*StorageCapabilityControllerValue) isValue() {}
 
 func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
 
