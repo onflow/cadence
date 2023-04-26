@@ -1570,18 +1570,30 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		inter, _ := testAccount(t, address, true, `
             resource R {}
             attachment A for R {
-                fun foo(): Int { return 3 }
+                pub(set) var id: UInt8
+                init() {
+                    self.id = 1
+                }
             }
-            fun test() {
+            fun test(): UInt8 {
                 let r <- create R()
                 let r2 <- attach A() to <-r
                 let a = r2[A]!
-                authAccount.save(<-r2, to: /storage/foo)
-                let i = a.foo()
-            }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
+
+
+                // Move the resource after taking a reference to the attachment.
+                // Then update the field of the attachment.
+                var r3 <- r2
+                let a2 = r3[A]!
+                a2.id = 5
+                authAccount.save(<-r3, to: /storage/foo)
+
+                // Access the attachment filed from the previous reference.
+                return a.id
+            }`,
+			sema.Config{
+				AttachmentsEnabled: true,
+			},
 		)
 
 		_, err := inter.Invoke("test")
@@ -1633,18 +1645,70 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 }
             }
             attachment A for R {
-                fun foo(): Int { return 3 }
+                pub(set) var id: UInt8
+                init() {
+                    self.id = 1
+                }
             }
-            fun test() {
+            fun test(): UInt8 {
                 let r2 <- create R2(r: <-attach A() to <-create R())
                 let a = r2.r[A]!
-                authAccount.save(<-r2, to: /storage/foo)
-                let i = a.foo()
+
+                // Move the resource after taking a reference to the attachment.
+                // Then update the field of the attachment.
+                var r3 <- r2
+                let a2 = r3.r[A]!
+                a2.id = 5
+                authAccount.save(<-r3, to: /storage/foo)
+
+                // Access the attachment filed from the previous reference.
+                return a.id
+            }`,
+			sema.Config{
+				AttachmentsEnabled: true,
+			},
+		)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("base reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+            pub resource R {
+                pub(set) var id: UInt8
+                init() {
+                    self.id = 1
+                }
             }
-        
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
+
+            var ref: &R? = nil
+
+            attachment A for R {
+                fun saveBaseRef() {
+                    ref = base
+                }
+            }
+
+            fun test(): UInt8 {
+                let r <- attach A() to <-create R()
+                let a = r[A]!
+
+                a.saveBaseRef()
+
+                var r2 <- r
+                r2.id = 5
+                authAccount.save(<-r2, to: /storage/foo)
+                return ref!.id
+            }`,
+			sema.Config{
+				AttachmentsEnabled: true,
+			},
 		)
 
 		_, err := inter.Invoke("test")
@@ -1685,6 +1749,47 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	})
+
+	t.Run("self reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+            pub resource R {}
+
+            var ref: &A? = nil
+
+            attachment A for R {
+                pub(set) var id: UInt8
+                init() {
+                    self.id = 1
+                }
+
+                fun saveSelfRef() {
+                    ref = self as &A
+                }
+            }
+
+            fun test(): UInt8 {
+                let r <- attach A() to <-create R()
+                r[A]!.saveSelfRef()
+
+                var r2 <- r
+                let a = r2[A]!
+                a.id = 5
+                authAccount.save(<-r2, to: /storage/foo)
+                return ref!.id
+            }`,
+			sema.Config{
+				AttachmentsEnabled: true,
+			},
+		)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
 

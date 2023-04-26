@@ -2474,15 +2474,15 @@ func formatParameter(spaces bool, label, identifier, typeAnnotation string) stri
 	if label != "" {
 		builder.WriteString(label)
 		if spaces {
-			builder.WriteRune(' ')
+			builder.WriteByte(' ')
 		}
 	}
 
 	if identifier != "" {
 		builder.WriteString(identifier)
-		builder.WriteRune(':')
+		builder.WriteByte(':')
 		if spaces {
-			builder.WriteRune(' ')
+			builder.WriteByte(' ')
 		}
 	}
 
@@ -2598,7 +2598,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 // Function types
 
 func formatFunctionType(
-	spaces bool,
+	separator string,
 	purity string,
 	typeParameters []string,
 	parameters []string,
@@ -2615,32 +2615,26 @@ func formatFunctionType(
 	builder.WriteString("fun")
 
 	if len(typeParameters) > 0 {
-		builder.WriteRune('<')
+		builder.WriteByte('<')
 		for i, typeParameter := range typeParameters {
 			if i > 0 {
-				builder.WriteRune(',')
-				if spaces {
-					builder.WriteRune(' ')
-				}
+				builder.WriteByte(',')
+				builder.WriteString(separator)
 			}
 			builder.WriteString(typeParameter)
 		}
-		builder.WriteRune('>')
+		builder.WriteByte('>')
 	}
-	builder.WriteRune('(')
+	builder.WriteByte('(')
 	for i, parameter := range parameters {
 		if i > 0 {
-			builder.WriteRune(',')
-			if spaces {
-				builder.WriteRune(' ')
-			}
+			builder.WriteByte(',')
+			builder.WriteString(separator)
 		}
 		builder.WriteString(parameter)
 	}
 	builder.WriteString("):")
-	if spaces {
-		builder.WriteRune(' ')
-	}
+	builder.WriteString(separator)
 	builder.WriteString(returnTypeAnnotation)
 	return builder.String()
 }
@@ -2669,6 +2663,8 @@ type FunctionType struct {
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
 	Parameters               []Parameter
+	memberResolvers          map[string]MemberResolver
+	memberResolversOnce      sync.Once
 	IsConstructor            bool
 }
 
@@ -2696,7 +2692,11 @@ func (t *FunctionType) Tag() TypeTag {
 	return FunctionTypeTag
 }
 
-func (t *FunctionType) String() string {
+func (t *FunctionType) string(
+	typeParameterFormatter func(*TypeParameter) string,
+	parameterFormatter func(Parameter) string,
+	returnTypeAnnotationFormatter func(TypeAnnotation) string,
+) string {
 
 	purity := t.Purity.String()
 
@@ -2705,7 +2705,7 @@ func (t *FunctionType) String() string {
 	if typeParameterCount > 0 {
 		typeParameters = make([]string, typeParameterCount)
 		for i, typeParameter := range t.TypeParameters {
-			typeParameters[i] = typeParameter.String()
+			typeParameters[i] = typeParameterFormatter(typeParameter)
 		}
 	}
 
@@ -2714,14 +2714,14 @@ func (t *FunctionType) String() string {
 	if parameterCount > 0 {
 		parameters = make([]string, parameterCount)
 		for i, parameter := range t.Parameters {
-			parameters[i] = parameter.String()
+			parameters[i] = parameterFormatter(parameter)
 		}
 	}
 
-	returnTypeAnnotation := t.ReturnTypeAnnotation.String()
+	returnTypeAnnotation := returnTypeAnnotationFormatter(t.ReturnTypeAnnotation)
 
 	return formatFunctionType(
-		true,
+		" ",
 		purity,
 		typeParameters,
 		parameters,
@@ -2729,30 +2729,46 @@ func (t *FunctionType) String() string {
 	)
 }
 
-func (t *FunctionType) QualifiedString() string {
-
-	purity := t.Purity.String()
-
-	typeParameters := make([]string, len(t.TypeParameters))
-
-	for i, typeParameter := range t.TypeParameters {
-		typeParameters[i] = typeParameter.QualifiedString()
-	}
-
-	parameters := make([]string, len(t.Parameters))
-
-	for i, parameter := range t.Parameters {
-		parameters[i] = parameter.QualifiedString()
-	}
-
-	returnTypeAnnotation := t.ReturnTypeAnnotation.QualifiedString()
-
+func FormatFunctionTypeID(
+	purity string,
+	typeParameters []string,
+	parameters []string,
+	returnTypeAnnotation string,
+) string {
 	return formatFunctionType(
-		true,
+		"",
 		purity,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
+	)
+}
+
+func (t *FunctionType) String() string {
+	return t.string(
+		func(parameter *TypeParameter) string {
+			return parameter.String()
+		},
+		func(parameter Parameter) string {
+			return parameter.String()
+		},
+		func(typeAnnotation TypeAnnotation) string {
+			return typeAnnotation.String()
+		},
+	)
+}
+
+func (t *FunctionType) QualifiedString() string {
+	return t.string(
+		func(parameter *TypeParameter) string {
+			return parameter.QualifiedString()
+		},
+		func(parameter Parameter) string {
+			return parameter.QualifiedString()
+		},
+		func(typeAnnotation TypeAnnotation) string {
+			return typeAnnotation.QualifiedString()
+		},
 	)
 }
 
@@ -2761,23 +2777,28 @@ func (t *FunctionType) ID() TypeID {
 
 	purity := t.Purity.String()
 
-	typeParameters := make([]string, len(t.TypeParameters))
-
-	for i, typeParameter := range t.TypeParameters {
-		typeParameters[i] = string(typeParameter.TypeBound.ID())
+	typeParameterCount := len(t.TypeParameters)
+	var typeParameters []string
+	if typeParameterCount > 0 {
+		typeParameters = make([]string, typeParameterCount)
+		for i, typeParameter := range t.TypeParameters {
+			typeParameters[i] = typeParameter.Name
+		}
 	}
 
-	parameters := make([]string, len(t.Parameters))
-
-	for i, parameter := range t.Parameters {
-		parameters[i] = string(parameter.TypeAnnotation.Type.ID())
+	parameterCount := len(t.Parameters)
+	var parameters []string
+	if parameterCount > 0 {
+		parameters = make([]string, parameterCount)
+		for i, parameter := range t.Parameters {
+			parameters[i] = string(parameter.TypeAnnotation.Type.ID())
+		}
 	}
 
 	returnTypeAnnotation := string(t.ReturnTypeAnnotation.Type.ID())
 
 	return TypeID(
-		formatFunctionType(
-			false,
+		FormatFunctionTypeID(
 			purity,
 			typeParameters,
 			parameters,
@@ -3115,22 +3136,18 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 }
 
 func (t *FunctionType) GetMembers() map[string]MemberResolver {
-	// TODO: optimize
-	var members map[string]MemberResolver
-	if t.Members != nil {
-		members = make(map[string]MemberResolver, t.Members.Len())
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
-	}
-	return withBuiltinMembers(t, members)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *FunctionType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		var memberResolvers map[string]MemberResolver
+		if t.Members != nil {
+			memberResolvers = MembersMapAsResolvers(t.Members)
+		}
+		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
+	})
 }
 
 type ArgumentExpressionsCheck func(
@@ -3998,18 +4015,7 @@ func (t *CompositeType) GetMembers() map[string]MemberResolver {
 
 func (t *CompositeType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
-		members := make(map[string]MemberResolver, t.Members.Len())
-
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
+		memberResolvers := MembersMapAsResolvers(t.Members)
 
 		// Check conformances.
 		// If this composite type results from a normal composite declaration,
@@ -4020,13 +4026,13 @@ func (t *CompositeType) initializeMemberResolvers() {
 		t.ExplicitInterfaceConformanceSet().
 			ForEach(func(conformance *InterfaceType) {
 				for name, resolver := range conformance.GetMembers() { //nolint:maprange
-					if _, ok := members[name]; !ok {
-						members[name] = resolver
+					if _, ok := memberResolvers[name]; !ok {
+						memberResolvers[name] = resolver
 					}
 				}
 			})
 
-		t.memberResolvers = withBuiltinMembers(t, members)
+		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
 	})
 }
 
@@ -4042,6 +4048,14 @@ func (t *CompositeType) FieldPosition(name string, declaration ast.CompositeLike
 		pos = declaration.DeclarationMembers().FieldPosition(name, declaration.Kind())
 	}
 	return pos
+}
+
+func (t *CompositeType) SetNestedType(name string, nestedType ContainedType) {
+	if t.NestedTypes == nil {
+		t.NestedTypes = &StringTypeOrderedMap{}
+	}
+	t.NestedTypes.Set(name, nestedType)
+	nestedType.SetContainerType(t)
 }
 
 // Member
@@ -4341,17 +4355,7 @@ func (t *InterfaceType) GetMembers() map[string]MemberResolver {
 
 func (t *InterfaceType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
-		members := make(map[string]MemberResolver, t.Members.Len())
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
+		members := MembersMapAsResolvers(t.Members)
 
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
@@ -4551,9 +4555,9 @@ func (t *DictionaryType) IsImportable(results map[*Member]bool) bool {
 		t.ValueType.IsImportable(results)
 }
 
-func (*DictionaryType) IsEquatable() bool {
-	// TODO:
-	return false
+func (t *DictionaryType) IsEquatable() bool {
+	return t.KeyType.IsEquatable() &&
+		t.ValueType.IsEquatable()
 }
 
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
@@ -4917,37 +4921,49 @@ func (t *ReferenceType) Tag() TypeTag {
 	return ReferenceTypeTag
 }
 
+func formatReferenceType(
+	separator string,
+	authorized bool,
+	typeString string,
+) string {
+	var builder strings.Builder
+	if authorized {
+		builder.WriteString("auth")
+		builder.WriteString(separator)
+	}
+	builder.WriteByte('&')
+	builder.WriteString(typeString)
+	return builder.String()
+}
+
+func FormatReferenceTypeID(authorized bool, typeString string) string {
+	return formatReferenceType("", authorized, typeString)
+}
+
 func (t *ReferenceType) string(typeFormatter func(Type) string) string {
 	if t.Type == nil {
 		return "reference"
 	}
-	var builder strings.Builder
-	if t.Authorized {
-		builder.WriteString("auth ")
-	}
-	builder.WriteRune('&')
-	builder.WriteString(typeFormatter(t.Type))
-	return builder.String()
+	return formatReferenceType(" ", t.Authorized, typeFormatter(t.Type))
 }
 
 func (t *ReferenceType) String() string {
-	return t.string(func(ty Type) string {
-		return ty.String()
+	return t.string(func(t Type) string {
+		return t.String()
 	})
 }
 
 func (t *ReferenceType) QualifiedString() string {
-	return t.string(func(ty Type) string {
-		return ty.QualifiedString()
+	return t.string(func(t Type) string {
+		return t.QualifiedString()
 	})
 }
 
 func (t *ReferenceType) ID() TypeID {
-	return TypeID(
-		t.string(func(ty Type) string {
-			return string(ty.ID())
-		}),
-	)
+	if t.Type == nil {
+		return "reference"
+	}
+	return TypeID(FormatReferenceTypeID(t.Authorized, string(t.Type.ID())))
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
@@ -5201,20 +5217,15 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 
 func (t *AddressType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			AddressTypeToBytesFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						AddressTypeToBytesFunctionType,
-						addressTypeToBytesFunctionDocString,
-					)
-				},
-			},
+		memberResolvers := MembersAsResolvers([]*Member{
+			NewUnmeteredPublicFunctionMember(
+				t,
+				AddressTypeToBytesFunctionName,
+				AddressTypeToBytesFunctionType,
+				addressTypeToBytesFunctionDocString,
+			),
 		})
+		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
 	})
 }
 
@@ -5992,10 +6003,12 @@ func IsNilType(ty Type) bool {
 }
 
 type TransactionType struct {
-	Members           *StringMemberOrderedMap
-	Fields            []string
-	PrepareParameters []Parameter
-	Parameters        []Parameter
+	Fields              []string
+	PrepareParameters   []Parameter
+	Parameters          []Parameter
+	Members             *StringMemberOrderedMap
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ Type = &TransactionType{}
@@ -6083,22 +6096,18 @@ func (t *TransactionType) RewriteWithRestrictedTypes() (Type, bool) {
 }
 
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
-	// TODO: optimize
-	var members map[string]MemberResolver
-	if t.Members != nil {
-		members = make(map[string]MemberResolver, t.Members.Len())
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
-	}
-	return withBuiltinMembers(t, members)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *TransactionType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		var memberResolvers map[string]MemberResolver
+		if t.Members != nil {
+			memberResolvers = MembersMapAsResolvers(t.Members)
+		}
+		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
+	})
 }
 
 func (*TransactionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
@@ -6116,9 +6125,11 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 type RestrictedType struct {
 	Type Type
 	// an internal set of field `Restrictions`
-	restrictionSet     *InterfaceSet
-	Restrictions       []*InterfaceType
-	restrictionSetOnce sync.Once
+	restrictionSet      *InterfaceSet
+	Restrictions        []*InterfaceType
+	restrictionSetOnce  sync.Once
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ Type = &RestrictedType{}
@@ -6158,19 +6169,35 @@ func (t *RestrictedType) Tag() TypeTag {
 	return RestrictedTypeTag
 }
 
-func (t *RestrictedType) string(separator string, typeFormatter func(Type) string) string {
+func formatRestrictedType(separator string, typeString string, restrictionStrings []string) string {
 	var result strings.Builder
-	result.WriteString(typeFormatter(t.Type))
-	result.WriteRune('{')
-	for i, restriction := range t.Restrictions {
+	result.WriteString(typeString)
+	result.WriteByte('{')
+	for i, restrictionString := range restrictionStrings {
 		if i > 0 {
-			result.WriteRune(',')
+			result.WriteByte(',')
 			result.WriteString(separator)
 		}
-		result.WriteString(typeFormatter(restriction))
+		result.WriteString(restrictionString)
 	}
-	result.WriteRune('}')
+	result.WriteByte('}')
 	return result.String()
+}
+
+func FormatRestrictedTypeID(typeString string, restrictionStrings []string) string {
+	return formatRestrictedType("", typeString, restrictionStrings)
+}
+
+func (t *RestrictedType) string(separator string, typeFormatter func(Type) string) string {
+	var restrictionStrings []string
+	restrictionCount := len(t.Restrictions)
+	if restrictionCount > 0 {
+		restrictionStrings = make([]string, 0, restrictionCount)
+		for _, restriction := range t.Restrictions {
+			restrictionStrings = append(restrictionStrings, typeFormatter(restriction))
+		}
+	}
+	return formatRestrictedType(separator, typeFormatter(t.Type), restrictionStrings)
 }
 
 func (t *RestrictedType) String() string {
@@ -6294,54 +6321,66 @@ func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
 }
 
 func (t *RestrictedType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
 
-	members := map[string]MemberResolver{}
+func (t *RestrictedType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
 
-	// Return the members of all restrictions.
-	// The invariant that restrictions may not have overlapping members is not checked here,
-	// but implicitly when the resource declaration's conformances are checked.
+		memberResolvers := map[string]MemberResolver{}
 
-	for _, restriction := range t.Restrictions {
-		for name, resolver := range restriction.GetMembers() { //nolint:maprange
-			if _, ok := members[name]; !ok {
-				members[name] = resolver
+		// Return the members of all restrictions.
+		// The invariant that restrictions may not have overlapping members is not checked here,
+		// but implicitly when the resource declaration's conformances are checked.
+
+		for _, restriction := range t.Restrictions {
+			for name, resolver := range restriction.GetMembers() { //nolint:maprange
+				if _, ok := memberResolvers[name]; !ok {
+					memberResolvers[name] = resolver
+				}
 			}
 		}
-	}
 
-	// Also include members of the restricted type for convenience,
-	// to help check the rest of the program and improve the developer experience,
-	// *but* also report an error that this access is invalid when the entry is resolved.
-	//
-	// The restricted type may be `AnyResource`, in which case there are no members.
+		// Also include members of the restricted type for convenience,
+		// to help check the rest of the program and improve the developer experience,
+		// *but* also report an error that this access is invalid when the entry is resolved.
+		//
+		// The restricted type may be `AnyResource`, in which case there are no members.
 
-	for name, loopResolver := range t.Type.GetMembers() { //nolint:maprange
+		for name, loopResolver := range t.Type.GetMembers() { //nolint:maprange
 
-		if _, ok := members[name]; ok {
-			continue
+			if _, ok := memberResolvers[name]; ok {
+				continue
+			}
+
+			// NOTE: don't capture loop variable
+			resolver := loopResolver
+
+			memberResolvers[name] = MemberResolver{
+				Kind: resolver.Kind,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.Range,
+					report func(error),
+				) *Member {
+					member := resolver.Resolve(memoryGauge, identifier, targetRange, report)
+
+					report(
+						&InvalidRestrictedTypeMemberAccessError{
+							Name:  identifier,
+							Range: targetRange,
+						},
+					)
+
+					return member
+				},
+			}
 		}
 
-		// NOTE: don't capture loop variable
-		resolver := loopResolver
-
-		members[name] = MemberResolver{
-			Kind: resolver.Kind,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
-				member := resolver.Resolve(memoryGauge, identifier, targetRange, report)
-
-				report(
-					&InvalidRestrictedTypeMemberAccessError{
-						Name:  identifier,
-						Range: targetRange,
-					},
-				)
-
-				return member
-			},
-		}
-	}
-
-	return members
+		t.memberResolvers = memberResolvers
+	})
 }
 
 func (*RestrictedType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
@@ -6404,33 +6443,46 @@ func (t *CapabilityType) Tag() TypeTag {
 	return CapabilityTypeTag
 }
 
-func (t *CapabilityType) string(typeFormatter func(Type) string) string {
+func formatCapabilityType(borrowTypeString string) string {
 	var builder strings.Builder
 	builder.WriteString("Capability")
-	if t.BorrowType != nil {
-		builder.WriteRune('<')
-		builder.WriteString(typeFormatter(t.BorrowType))
-		builder.WriteRune('>')
+	if borrowTypeString != "" {
+		builder.WriteByte('<')
+		builder.WriteString(borrowTypeString)
+		builder.WriteByte('>')
 	}
 	return builder.String()
 }
 
+func FormatCapabilityTypeID(borrowTypeString string) string {
+	return formatCapabilityType(borrowTypeString)
+}
+
 func (t *CapabilityType) String() string {
-	return t.string(func(t Type) string {
-		return t.String()
-	})
+	var borrowTypeString string
+	borrowType := t.BorrowType
+	if borrowType != nil {
+		borrowTypeString = borrowType.String()
+	}
+	return formatCapabilityType(borrowTypeString)
 }
 
 func (t *CapabilityType) QualifiedString() string {
-	return t.string(func(t Type) string {
-		return t.QualifiedString()
-	})
+	var borrowTypeString string
+	borrowType := t.BorrowType
+	if borrowType != nil {
+		borrowTypeString = borrowType.QualifiedString()
+	}
+	return formatCapabilityType(borrowTypeString)
 }
 
 func (t *CapabilityType) ID() TypeID {
-	return TypeID(t.string(func(t Type) string {
-		return string(t.ID())
-	}))
+	var borrowTypeString string
+	borrowType := t.BorrowType
+	if borrowType != nil {
+		borrowTypeString = string(borrowType.ID())
+	}
+	return TypeID(FormatCapabilityTypeID(borrowTypeString))
 }
 
 func (t *CapabilityType) Equal(other Type) bool {
@@ -6633,44 +6685,27 @@ const CapabilityTypeAddressFieldName = "address"
 
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			CapabilityTypeBorrowFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						CapabilityTypeBorrowFunctionType(t.BorrowType),
-						capabilityTypeBorrowFunctionDocString,
-					)
-				},
-			},
-			CapabilityTypeCheckFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						CapabilityTypeCheckFunctionType(t.BorrowType),
-						capabilityTypeCheckFunctionDocString,
-					)
-				},
-			},
-			CapabilityTypeAddressFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						TheAddressType,
-						capabilityTypeAddressFieldDocString,
-					)
-				},
-			},
+		members := MembersAsResolvers([]*Member{
+			NewUnmeteredPublicFunctionMember(
+				t,
+				CapabilityTypeBorrowFunctionName,
+				CapabilityTypeBorrowFunctionType(t.BorrowType),
+				capabilityTypeBorrowFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				CapabilityTypeCheckFunctionName,
+				CapabilityTypeCheckFunctionType(t.BorrowType),
+				capabilityTypeCheckFunctionDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				CapabilityTypeAddressFieldName,
+				TheAddressType,
+				capabilityTypeAddressFieldDocString,
+			),
 		})
+		t.memberResolvers = withBuiltinMembers(t, members)
 	})
 }
 
@@ -6750,8 +6785,8 @@ var AccountKeyType = func() *CompositeType {
 		),
 	}
 
-	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = GetFieldNames(members)
+	accountKeyType.Members = MembersAsMap(members)
+	accountKeyType.Fields = MembersFieldNames(members)
 	return accountKeyType
 }()
 
@@ -6820,8 +6855,8 @@ var PublicKeyType = func() *CompositeType {
 		),
 	}
 
-	publicKeyType.Members = GetMembersAsMap(members)
-	publicKeyType.Fields = GetFieldNames(members)
+	publicKeyType.Members = MembersAsMap(members)
+	publicKeyType.Fields = MembersFieldNames(members)
 
 	return publicKeyType
 }()
@@ -6875,7 +6910,7 @@ type CryptoAlgorithm interface {
 	DocString() string
 }
 
-func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
+func MembersAsMap(members []*Member) *StringMemberOrderedMap {
 	membersMap := &StringMemberOrderedMap{}
 	for _, member := range members {
 		name := member.Identifier.Identifier
@@ -6888,7 +6923,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	return membersMap
 }
 
-func GetFieldNames(members []*Member) []string {
+func MembersFieldNames(members []*Member) []string {
 	fields := make([]string, 0)
 	for _, member := range members {
 		if member.DeclarationKind == common.DeclarationKindField {
@@ -6897,6 +6932,36 @@ func GetFieldNames(members []*Member) []string {
 	}
 
 	return fields
+}
+
+func MembersMapAsResolvers(members *StringMemberOrderedMap) map[string]MemberResolver {
+	resolvers := make(map[string]MemberResolver, members.Len())
+
+	members.Foreach(func(name string, member *Member) {
+		resolvers[name] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
+	})
+	return resolvers
+}
+
+func MembersAsResolvers(members []*Member) map[string]MemberResolver {
+	resolvers := make(map[string]MemberResolver, len(members))
+
+	for _, loopMember := range members {
+		// NOTE: don't capture loop variable
+		member := loopMember
+		resolvers[member.Identifier.Identifier] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
+	}
+	return resolvers
 }
 
 func isNumericSuperType(typ Type) bool {

@@ -1075,7 +1075,7 @@ func TestStringer(t *testing.T) {
 			}(),
 			expected: "y --> bar",
 		},
-		"Link": {
+		"PathLink": {
 			value: PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1084,6 +1084,10 @@ func TestStringer(t *testing.T) {
 				Type: PrimitiveStaticTypeInt,
 			},
 			expected: "PathLink<Int>(/storage/foo)",
+		},
+		"AccountLink": {
+			value:    AccountLinkValue{},
+			expected: "AccountLink()",
 		},
 		"Path": {
 			value: PathValue{

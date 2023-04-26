@@ -59,7 +59,7 @@ func newContractAddTransaction(name string, code string) string {
 
 func newContractUpdateTransaction(name string, code string) string {
 	return newContractDeployTransaction(
-		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
+		sema.AuthAccountContractsTypeUpdate__experimentalFunctionName,
 		name,
 		code,
 	)
