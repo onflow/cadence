@@ -3366,6 +3366,22 @@ var AddressConversionFunctionType = &FunctionType{
 	},
 }
 
+const AddressTypeFromBytesFunctionName = "fromBytes"
+const AddressTypeFromBytesFunctionDocString = `
+Returns an Address from the given byte array
+`
+
+var AddressTypeFromBytesFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "bytes",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
+}
+
 func init() {
 	// Declare a conversion function for the address type
 
@@ -3377,11 +3393,31 @@ func init() {
 		panic(errors.NewUnreachableError())
 	}
 
+	functionType := AddressConversionFunctionType
+
+	addMember := func(member *Member) {
+		if functionType.Members == nil {
+			functionType.Members = &StringMemberOrderedMap{}
+		}
+		name := member.Identifier.Identifier
+		if functionType.Members.Contains(name) {
+			panic(errors.NewUnreachableError())
+		}
+		functionType.Members.Set(name, member)
+	}
+
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		AddressTypeFromBytesFunctionName,
+		AddressTypeFromBytesFunctionType,
+		AddressTypeFromBytesFunctionDocString,
+	))
+
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
 			typeName,
-			AddressConversionFunctionType,
+			functionType,
 			numberConversionDocString("an address"),
 		),
 	)

@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -145,6 +147,92 @@ func TestInterpretToBytes(t *testing.T) {
 			inter.Globals.Get("y").GetValue(),
 		)
 	})
+}
+
+func TestInterpretAddressFromBytes(t *testing.T) {
+
+	t.Parallel()
+
+	runValidCase := func(t *testing.T, expected []byte, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  fun test(): Address {
+                      return Address.fromBytes(%s)
+                  }
+            	`,
+				innerCode,
+			)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			addressVal, ok := res.(interpreter.AddressValue)
+			require.True(t, ok)
+
+			require.Equal(t, expected, addressVal.ToAddress().Bytes())
+		})
+	}
+
+	runValidRoundTripCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  fun test(): Bool {
+                    let address : Address = %s;
+					return address == Address.fromBytes(address.toBytes());
+                  }
+            	`,
+				innerCode,
+			)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.True(t, bool(boolVal))
+		})
+	}
+
+	runInvalidCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  fun test(): Address {
+                      return Address.fromBytes(%s)
+                  }
+            	`,
+				innerCode,
+			)
+
+			inter := parseCheckAndInterpret(t, code)
+			_, err := inter.Invoke("test")
+
+			RequireError(t, err)
+			require.ErrorIs(t, err, common.AddressOverflowError)
+		})
+	}
+
+	runValidCase(t, []byte{}, "[]")
+	runValidCase(t, []byte{1}, "[1]")
+	runValidCase(t, []byte{12, 34, 56}, "[12, 34, 56]")
+	runValidCase(t, []byte{67, 97, 100, 101, 110, 99, 101, 33}, "[67, 97, 100, 101, 110, 99, 101, 33]")
+
+	runValidRoundTripCase(t, "0x0")
+	runValidRoundTripCase(t, "0x01")
+	runValidRoundTripCase(t, "0x436164656E636521")
+	runValidRoundTripCase(t, "0x46716465AE633188")
+
+	runInvalidCase(t, "[12, 34, 56, 11, 22, 33, 44, 55, 66, 77, 88, 99, 111]")
 }
 
 func TestInterpretToBigEndianBytes(t *testing.T) {
