@@ -30,29 +30,29 @@ import (
 // AccountCapabilityControllerValue
 
 type AccountCapabilityControllerValue struct {
-	BorrowType   StaticType
+	BorrowType   ReferenceStaticType
 	CapabilityID UInt64Value
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
-	staticType StaticType,
+	borrowType ReferenceStaticType,
 	capabilityID UInt64Value,
 ) *AccountCapabilityControllerValue {
 	return &AccountCapabilityControllerValue{
-		BorrowType:   staticType,
+		BorrowType:   borrowType,
 		CapabilityID: capabilityID,
 	}
 }
 
 func NewAccountCapabilityControllerValue(
 	memoryGauge common.MemoryGauge,
-	staticType StaticType,
+	borrowType ReferenceStaticType,
 	capabilityID UInt64Value,
 ) *AccountCapabilityControllerValue {
 	// Constant because its constituents are already metered.
 	common.UseMemory(memoryGauge, common.AccountCapabilityControllerValueMemoryUsage)
 	return NewUnmeteredAccountCapabilityControllerValue(
-		staticType,
+		borrowType,
 		capabilityID,
 	)
 }
