@@ -3630,8 +3630,9 @@ type CompositeType struct {
 	// in a language with support for algebraic data types,
 	// we would implement this as an argument to the CompositeKind type constructor.
 	// Alas, this is Go, so for now these fields are only non-nil when Kind is CompositeKindAttachment
-	baseType          Type
-	baseTypeDocString string
+	baseType             Type
+	baseTypeDocString    string
+	requiredEntitlements *EntitlementOrderedSet
 
 	cachedIdentifiers *struct {
 		TypeID              TypeID

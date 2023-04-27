@@ -712,6 +712,30 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		assert.NoError(t, err)
 	})
+
+	t.Run("conformance checking", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			contract interface I {
+				entitlement X
+				entitlement Y
+				entitlement mapping M {
+					X -> Y
+				} 
+			}
+
+			contract C: I {
+				entitlement X
+				entitlement Y
+				entitlement mapping M {
+					X -> Y
+				} 
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
 }
 
 func TestCheckInvalidEntitlementAccess(t *testing.T) {
@@ -2098,7 +2122,7 @@ func TestCheckEntitlementMappingTypeAnnotation(t *testing.T) {
 	})
 }
 
-func TestChecAttachmentEntitlementAccessAnnotation(t *testing.T) {
+func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
 
 	t.Parallel()
 	t.Run("mapping allowed", func(t *testing.T) {
@@ -2150,4 +2174,164 @@ func TestChecAttachmentEntitlementAccessAnnotation(t *testing.T) {
 		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
 	})
 
+}
+
+func TestCheckAttachmentRequireEntitlements(t *testing.T) {
+	t.Parallel()
+	t.Run("entitlements allowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F
+			attachment A for AnyStruct {
+				require entitlement E
+				require entitlement F
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("entitlement mapping disallowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement mapping M {}
+			attachment A for AnyStruct {
+				require entitlement E
+				require entitlement M
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
+	})
+
+	t.Run("event disallowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			event M()
+			attachment A for AnyStruct {
+				require entitlement E
+				require entitlement M
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
+	})
+
+	t.Run("struct disallowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			struct M {}
+			attachment A for AnyStruct {
+				require entitlement E
+				require entitlement M
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
+	})
+
+	t.Run("struct interface disallowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			struct interface M {}
+			attachment A for AnyStruct {
+				require entitlement E
+				require entitlement M
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
+	})
+
+	t.Run("resource disallowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			resource M {}
+			attachment A for AnyStruct {
+				require entitlement E
+				require entitlement M
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
+	})
+
+	t.Run("resource interface disallowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			resource interface M {}
+			attachment A for AnyStruct {
+				require entitlement E
+				require entitlement M
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
+	})
+
+	t.Run("attachment disallowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			attachment M for AnyResource {}
+			attachment A for AnyStruct {
+				require entitlement E
+				require entitlement M
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
+	})
+
+	t.Run("enum disallowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			enum M: UInt8 {}
+			attachment A for AnyStruct {
+				require entitlement E
+				require entitlement M
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
+	})
+
+	t.Run("duplicates disallowed", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			attachment A for AnyStruct {
+				require entitlement E
+				require entitlement E
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DuplicateEntitlementRequirementError{}, errs[0])
+	})
 }

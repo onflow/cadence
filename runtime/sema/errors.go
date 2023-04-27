@@ -4057,6 +4057,39 @@ func (e *DirectEntitlementAnnotationError) Error() string {
 	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
 }
 
+type DuplicateEntitlementRequirementError struct {
+	Entitlement *EntitlementType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementRequirementError{}
+var _ errors.UserError = &DuplicateEntitlementRequirementError{}
+
+func (*DuplicateEntitlementRequirementError) isSemanticError() {}
+
+func (*DuplicateEntitlementRequirementError) IsUserError() {}
+
+func (e *DuplicateEntitlementRequirementError) Error() string {
+	return fmt.Sprintf("entitlement %s is already required by this attachment", e.Entitlement.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type InvalidNonEntitlementRequirement struct {
+	InvalidType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementRequirement{}
+var _ errors.UserError = &InvalidNonEntitlementRequirement{}
+
+func (*InvalidNonEntitlementRequirement) isSemanticError() {}
+
+func (*InvalidNonEntitlementRequirement) IsUserError() {}
+
+func (e *InvalidNonEntitlementRequirement) Error() string {
+	return fmt.Sprintf("cannot use %s as an entitlement requirement", e.InvalidType.QualifiedString())
+}
+
 // InvalidBaseTypeError
 
 type InvalidBaseTypeError struct {
