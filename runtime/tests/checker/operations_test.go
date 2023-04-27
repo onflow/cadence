@@ -354,6 +354,15 @@ func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 				{sema.BoolType, "1.2", "\"b\"", "Fix64", "Character", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
+				{sema.BoolType, "\"\"", "\"\"", "String", "String", nil},
+				{sema.BoolType, "\"\"", "\"b\"", "String", "String", nil},
+				{sema.BoolType, "\"xyz\"", "\"b\"", "String", "String", nil},
+				{sema.BoolType, "\"x\"", "\"b\"", "Character", "String", []error{
+					&sema.InvalidBinaryOperandsError{},
+				}},
+				{sema.BoolType, "1.2", "\"bcd\"", "Fix64", "String", []error{
+					&sema.InvalidBinaryOperandsError{},
+				}},
 			},
 		},
 	}
