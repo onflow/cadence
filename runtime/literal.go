@@ -137,15 +137,25 @@ func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression
 		})
 }
 
-func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
+func pathLiteralValue(
+	memoryGauge common.MemoryGauge,
+	expression ast.Expression,
+	ty sema.Type,
+) (
+	cadence.Value,
+	error,
+) {
 	pathExpression, ok := expression.(*ast.PathExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
 	}
 
+	pathDomain := pathExpression.Domain.Identifier
+	pathIdentifier := pathExpression.Identifier.Identifier
+
 	pathType, err := sema.CheckPathLiteral(
-		pathExpression.Domain.Identifier,
-		pathExpression.Identifier.Identifier,
+		pathDomain,
+		pathIdentifier,
 		func() ast.Range {
 			return ast.NewRangeFromPositioned(memoryGauge, pathExpression.Domain)
 		},
@@ -167,9 +177,9 @@ func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression,
 
 	return cadence.NewMeteredPath(
 		memoryGauge,
-		pathExpression.Domain.Identifier,
-		pathExpression.Identifier.Identifier,
-	), nil
+		common.PathDomainFromIdentifier(pathDomain),
+		pathIdentifier,
+	)
 }
 
 func integerLiteralValue(

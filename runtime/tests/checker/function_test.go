@@ -456,3 +456,52 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 
 	assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
 }
+
+func TestCheckResultVariable(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            pub resource R {
+                pub let id: UInt64
+                init() {
+                    self.id = 1
+                }
+            }
+
+            pub fun main(): @R  {
+                post {
+                    result.id == 1234: "Invalid id"
+                }
+                return <- create R()
+            }`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("optional resource", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            pub resource R {
+                pub let id: UInt64
+                init() {
+                    self.id = 1
+                }
+            }
+
+            pub fun main(): @R?  {
+                post {
+                    result!.id == 1234: "invalid id"
+                }
+                return nil
+            }`,
+		)
+
+		require.NoError(t, err)
+	})
+}
