@@ -105,6 +105,7 @@ func NewAuthAccountValue(
 		case sema.AuthAccountTypeForEachPublicFunctionName:
 			if forEachPublicFunction == nil {
 				forEachPublicFunction = inter.newStorageIterationFunction(
+					sema.AuthAccountTypeForEachPublicFunctionType,
 					address,
 					common.PathDomainPublic,
 					sema.PublicPathType,
@@ -115,6 +116,7 @@ func NewAuthAccountValue(
 		case sema.AuthAccountTypeForEachPrivateFunctionName:
 			if forEachPrivateFunction == nil {
 				forEachPrivateFunction = inter.newStorageIterationFunction(
+					sema.AuthAccountTypeForEachPrivateFunctionType,
 					address,
 					common.PathDomainPrivate,
 					sema.PrivatePathType,
@@ -125,6 +127,7 @@ func NewAuthAccountValue(
 		case sema.AuthAccountTypeForEachStoredFunctionName:
 			if forEachStoredFunction == nil {
 				forEachStoredFunction = inter.newStorageIterationFunction(
+					sema.AuthAccountTypeForEachStoredFunctionType,
 					address,
 					common.PathDomainStorage,
 					sema.StoragePathType,
@@ -194,7 +197,10 @@ func NewAuthAccountValue(
 
 		case sema.AuthAccountTypeGetLinkTargetFunctionName:
 			if getLinkTargetFunction == nil {
-				getLinkTargetFunction = inter.accountGetLinkTargetFunction(address)
+				getLinkTargetFunction = inter.accountGetLinkTargetFunction(
+					sema.AuthAccountTypeGetLinkTargetFunctionType,
+					address,
+				)
 			}
 			return getLinkTargetFunction
 
@@ -249,7 +255,7 @@ func NewPublicAccountValue(
 
 	fields := map[string]Value{
 		sema.PublicAccountTypeAddressFieldName: address,
-		sema.PublicAccountTypeGetCapabilityFieldName: accountGetCapabilityFunction(
+		sema.PublicAccountTypeGetCapabilityFunctionName: accountGetCapabilityFunction(
 			gauge,
 			address,
 			sema.PublicPathType,
@@ -276,12 +282,13 @@ func NewPublicAccountValue(
 			}
 			return contracts
 
-		case sema.PublicAccountTypePathsFieldName:
+		case sema.PublicAccountTypePublicPathsFieldName:
 			return inter.publicAccountPaths(address, locationRange)
 
-		case sema.PublicAccountTypeForEachPublicFieldName:
+		case sema.PublicAccountTypeForEachPublicFunctionName:
 			if forEachPublicFunction == nil {
 				forEachPublicFunction = inter.newStorageIterationFunction(
+					sema.PublicAccountTypeForEachPublicFunctionType,
 					address,
 					common.PathDomainPublic,
 					sema.PublicPathType,
@@ -301,9 +308,12 @@ func NewPublicAccountValue(
 		case sema.PublicAccountTypeStorageCapacityFieldName:
 			return storageCapacityGet(inter)
 
-		case sema.PublicAccountTypeGetTargetLinkFieldName:
+		case sema.PublicAccountTypeGetLinkTargetFunctionName:
 			if getLinkTargetFunction == nil {
-				getLinkTargetFunction = inter.accountGetLinkTargetFunction(address)
+				getLinkTargetFunction = inter.accountGetLinkTargetFunction(
+					sema.PublicAccountTypeGetLinkTargetFunctionType,
+					address,
+				)
 			}
 			return getLinkTargetFunction
 		}

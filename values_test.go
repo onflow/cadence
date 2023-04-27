@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -45,8 +46,8 @@ func newValueTestCases() map[string]valueTestCase {
 	fix64, _ := NewFix64("-32.11")
 
 	testFunctionType := NewFunctionType(
-		"((String):UInt8)",
 		FunctionPurityUnspecified,
+		nil,
 		[]Parameter{
 			{
 				Type: StringType{},
@@ -331,10 +332,10 @@ func newValueTestCases() map[string]valueTestCase {
 			},
 			string: "S.test.FooAttachment(bar: 1)",
 		},
-		"Link": {
+		"PathLink": {
 			value: NewPathLink(
 				Path{
-					Domain:     "storage",
+					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
 				"Int",
@@ -342,13 +343,34 @@ func newValueTestCases() map[string]valueTestCase {
 			string: "PathLink<Int>(/storage/foo)",
 			noType: true,
 		},
-		"Path": {
+		"AccountLink": {
+			value:  NewAccountLink(),
+			string: "AccountLink()",
+			noType: true,
+		},
+		"StoragePath": {
 			value: Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
-			expectedType: PathType{},
+			expectedType: TheStoragePathType,
 			string:       "/storage/foo",
+		},
+		"PrivatePath": {
+			value: Path{
+				Domain:     common.PathDomainPrivate,
+				Identifier: "foo",
+			},
+			expectedType: ThePrivatePathType,
+			string:       "/private/foo",
+		},
+		"PublicPath": {
+			value: Path{
+				Domain:     common.PathDomainPublic,
+				Identifier: "foo",
+			},
+			expectedType: ThePublicPathType,
+			string:       "/public/foo",
 		},
 		"Type": {
 			value:        TypeValue{StaticType: IntType{}},
@@ -357,7 +379,10 @@ func newValueTestCases() map[string]valueTestCase {
 		},
 		"Capability": {
 			value: StorageCapability{
-				Path:       Path{Domain: "storage", Identifier: "foo"},
+				Path: Path{
+					Domain:     common.PathDomainStorage,
+					Identifier: "foo",
+				},
 				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				BorrowType: IntType{},
 			},
@@ -785,10 +810,12 @@ func TestValue_Type(t *testing.T) {
 				require.Equal(t, exampleType, returnedType)
 			}
 
-			// Check if the type is not a duplicate of some other type
-			// i.e: two values can't return the same type.
-			require.NotContains(t, checkedTypes, returnedType)
-			checkedTypes[returnedType] = struct{}{}
+			if !testCase.noType {
+				// Check if the type is not a duplicate of some other type
+				// i.e: two values can't return the same type.
+				require.NotContains(t, checkedTypes, returnedType)
+				checkedTypes[returnedType] = struct{}{}
+			}
 		})
 	}
 

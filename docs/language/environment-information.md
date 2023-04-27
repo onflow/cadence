@@ -24,7 +24,7 @@ To get information about a block, the functions `getCurrentBlock` and `getBlock`
 
 -
     ```cadence
-    fun getBlock(at height: UInt64): Block?
+    fun getBlock(at: UInt64): Block?
     ```
 
   Returns the block at the given height.

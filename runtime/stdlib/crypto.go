@@ -152,7 +152,7 @@ func cryptoAlgorithmEnumConstructorType[T sema.CryptoAlgorithm](
 				Type: enumType,
 			},
 		),
-		Members: sema.GetMembersAsMap(members),
+		Members: sema.MembersAsMap(members),
 	}
 }
 

@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser/lexer"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -113,6 +114,45 @@ func (r *REPL) handleCheckerError() error {
 	return err
 }
 
+func isInputComplete(tokens lexer.TokenStream) bool {
+	var unmatchedBrackets, unmatchedParens, unmatchedBraces int
+
+	for {
+
+		token := tokens.Next()
+
+		switch token.Type {
+		case lexer.TokenBracketOpen:
+			unmatchedBrackets++
+
+		case lexer.TokenBracketClose:
+			unmatchedBrackets--
+
+		case lexer.TokenParenOpen:
+			unmatchedParens++
+
+		case lexer.TokenParenClose:
+			unmatchedParens--
+
+		case lexer.TokenBraceOpen:
+			unmatchedBraces++
+
+		case lexer.TokenBraceClose:
+			unmatchedBraces--
+		}
+
+		if token.Is(lexer.TokenEOF) {
+			break
+		}
+	}
+
+	tokens.Revert(0)
+
+	return unmatchedBrackets <= 0 &&
+		unmatchedParens <= 0 &&
+		unmatchedBraces <= 0
+}
+
 var lineSep = []byte{'\n'}
 
 func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
@@ -188,19 +228,21 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
 		code = prefixedCode
 	}
 
-	// TODO: detect if the input is complete
-	inputIsComplete = true
+	tokens := lexer.Lex(code, nil)
+	defer tokens.Reclaim()
 
-	result, errs := parser.ParseStatements(nil, code, parser.Config{})
+	inputIsComplete = isInputComplete(tokens)
+
+	if !inputIsComplete {
+		return
+	}
+
+	result, errs := parser.ParseStatementsFromTokenStream(nil, tokens, parser.Config{})
 	if len(errs) > 0 {
 		err = parser.Error{
 			Code:   code,
 			Errors: errs,
 		}
-	}
-
-	if !inputIsComplete {
-		return
 	}
 
 	if err != nil {
