@@ -544,3 +544,413 @@ resource ExampleToken: FungibleToken {
     }
 }
 ```
+
+
+## Interface inheritance
+
+An interface can inherit (conform to) other interfaces of same kind.
+For example, A resource interface can inherit from another resource interface, but cannot inherit from a struct interface.
+When an interface inherits from another, all the fields, functions and types of the parent interface would be implicitly
+available to the inheriting interface.
+
+```cadence
+pub resource interface Receiver {
+    pub fun deposit(_ something: @AnyResource)
+}
+
+// `Vault` interface inherits from `Receiver` interface.
+pub resource interface Vault: Receiver {
+    pub fun withdraw(_ amount: Int): @Vault
+}
+```
+
+In above example, `Vault` inherits `Receiver`. Anyone implementing the `Vault` interface would also have to
+implement the `Receiver` interface.
+
+```cadence
+pub resource MyVault: Vault {
+
+    // Must implement all the methods coming from both `Vault` and `Receiver` interfaces.
+
+    pub fun deposit(_ something: @AnyResource) {}
+    
+    pub fun withdraw(_ amount: Int): @Vault {}
+}
+```
+
+### Duplicate interface members
+
+When an interface implements another interface, it is possible for the two interfaces to have members
+(functions, fields, and type requirements) with the same name.
+The following sections explain how these ambiguities are resolved for different scenarios.
+
+#### Fields
+
+If two fields with identical-names have identical types, then it will be valid.
+
+```cadence
+pub resource interface Receiver {
+    pub var id: UInt64
+}
+
+pub resource interface Vault: Receiver {
+    // `id` field has same type as the `Receiver.id`. Hence this is valid.
+    pub var id: UInt64
+}
+```
+
+Otherwise, interface conformance is not valid.
+
+```cadence
+pub resource interface Receiver {
+    pub var id: Int
+}
+
+pub resource interface Vault: Receiver {
+    // `id` field has a different type than the `Receiver.id`. Hence this is invalid.
+    pub var id: UInt64
+}
+```
+
+
+#### Functions
+
+If two functions with identical names also have identical signatures, then it will be valid.
+
+```cadence
+pub resource interface Receiver {
+    pub fun deposit(_ something: @AnyResource)
+}
+
+pub resource interface Vault: Receiver {
+
+    // `deposit` function has the same signature as the `Receiver.deposit`. 
+    // Also none of them have any default implementations. 
+    // Hence this is valid.
+    pub fun deposit(_ something: @AnyResource)
+}
+```
+
+If the signatures of the two functions are different, then the interface conformance is not valid.
+
+```cadence
+pub resource interface Receiver {
+    pub fun deposit(_ something: @AnyResource)
+}
+
+pub resource interface Vault: Receiver {
+    // Error: `deposit` function has a different signature compared to the `Receiver.deposit`.
+    // So these two cannot co-exist.
+    pub fun deposit()
+}
+```
+
+#### Functions with conditions
+
+If the two functions with identical names and signatures have pre/post conditions, then it will still be valid.
+However, the pre/post conditions are linearized (refer [linearizing conditions section](#linearizing-conditions))
+to determine the order of the execution of the conditions.
+Given the pre/post conditions are `view` only, the order of execution would not have an impact on the conditions.
+
+```cadence
+pub resource interface Receiver {
+    pub fun deposit(_ something: @AnyResource) {
+        pre{ self.balance > 100 }
+    }
+}
+
+pub resource interface Vault: Receiver {
+
+    // `deposit` function has the same signature as the `Receiver.deposit`. 
+    // Having pre/post condition is valid.
+    // Both conditions would be executed, in a pre-determined order.
+    pub fun deposit(_ something: @AnyResource) {
+        pre{ self.balance > 50 }
+    }
+}
+```
+
+#### Default functions
+
+An interface can provide a default implementation to an inherited function.
+
+```cadence
+pub resource interface Receiver {
+    pub fun log(_ message: String)
+}
+
+pub resource interface Vault: Receiver {
+    // Valid: Provides the implementation for `Receiver.log` method.
+    pub fun log(_ message: String) {
+        log(message.append("from Vault"))
+    }
+}
+```
+
+However, an interface cannot override an inherited default implementation of a function.
+
+```cadence
+pub resource interface Receiver {
+    pub fun log(_ message: String) {
+        log(message.append("from Receiver"))
+    }
+}
+
+pub resource interface Vault: Receiver {
+    // Invalid: Cannot override the `Receiver.log` method.
+    pub fun log(_ message: String) {
+        log(message.append("from Vault"))
+    }
+}
+```
+
+It is also invalid to have two or more inherited default implementations for an interface.
+
+```cadence
+pub resource interface Receiver {
+    pub fun log(_ message: String) {
+        log(message.append("from Receiver"))
+    }
+}
+
+pub resource interface Provider {
+    pub fun log(_ message: String) {
+        log(message.append("from Provider"))
+    }
+}
+
+// Invalid: Two default functions from two interfaces.
+pub resource interface Vault: Receiver, Provider {}
+```
+
+Having said that, there can be situations where the same default function can be available via different
+inheritance paths.
+
+```cadence
+pub resource interface Logger {
+    pub fun log(_ message: String) {
+        log(message.append("from Logger"))
+    }
+}
+
+pub resource interface Receiver: Logger {}
+
+pub resource interface Provider: Logger {}
+
+// Valid: `Logger.log()` default function is visible to the `Vault` interface
+// via both `Receiver` and `Provider`.
+pub resource interface Vault: Receiver, Provider {}
+```
+
+In the above example, `Logger.log()` default function is visible to the `Vault` interface via both `Receiver`
+and `Provider`. Even though it is available from two different interfaces, they are both referring to the same
+default implementation. Therefore, the above code is valid.
+
+#### Conditions with Default functions
+
+A more complex situation is where a default function is available via one inheritance path and a pre/post condition
+is available via another inheritance path.
+
+```cadence
+pub resource interface Receiver {
+    pub fun log(_ message: String) {
+        log(message.append("from Receiver"))
+    }
+}
+
+pub resource interface Provider {
+    pub fun log(_ message: String) {
+        pre{ message != "" }
+    }
+}
+
+// Valid: Both the default function and the condition would be available.
+pub resource interface Vault: Receiver, Provider {}
+```
+
+In such situations, all rules applicable for default functions inheritance as well as condition inheritance
+would be applied.
+Thus, the default function from coming from the `Receiver` interface, and the condition comes from the `Provider`
+interface would be made available for the inherited interface.
+
+#### Types and event definitions
+
+Type and event definitions would also behave similarly to the default functions.
+Inherited interfaces can override type definitions and event definitions.
+
+```cadence
+pub contract interface Token {
+    pub struct Foo {}
+}
+
+pub contract interface NonFungibleToken: Token {
+    pub struct Foo {}
+}
+
+pub contract MyToken: NonFungibleToken {
+    pub fun test() {
+        let foo: Foo  // This will refer to the `NonFungibleToken.Foo`
+    }
+}
+```
+
+If a user needed to access the `Foo` struct coming from the super interface `Token`, then they can
+access it using the fully qualified name. e.g: `let foo: Token.Foo`.
+
+However, it is not allowed to have two or more inherited type/events definitions with identical names for an interface.
+
+```cadence
+pub contract interface Token {
+    pub struct Foo {}
+}
+
+pub contract interface Collectible {
+    pub struct Foo {}
+}
+
+// Invalid: Two type definitions with the same name from two interfaces.
+pub contract NonFungibleToken: Token, Collectible {
+}
+```
+Similar to default functions, there can be situations where the same type/event definition can be available
+via different inheritance paths.
+
+```cadence
+pub contract interface Logger {
+    pub struct Foo {}
+}
+
+pub contract interface Token: Logger {}
+
+pub contract interface Collectible: Logger {}
+
+// Valid: `Logger.Foo` struct is visible to the `NonFungibleToken` interface via both `Token` and `Collectible`.
+pub contract interface NonFungibleToken: Token, Collectible {}
+```
+
+In the above example, `Logger.Foo` type definition is visible to the `NonFungibleToken` interface via both `Token`
+and `Collectible`. Even though it is available from two different interfaces, they are both referring to the same
+type definition. Therefore, the above code is valid.
+
+However, if at least one of the interfaces in the middle of the chain also overrides the type definition `Foo`,
+then the code becomes invalid, as there are multiple implementations present now, which leads to ambiguity.
+
+```cadence
+pub contract interface Logger {
+    pub struct Foo {}
+}
+
+pub contract interface Token: Logger {
+    pub struct Foo {}
+}
+
+pub contract interface Collectible: Logger {}
+
+// Invalid: The default implementation of the `Foo` struct by the `Logger`
+// interface is visible to the `NonFungibleToken` via the `Collectible` interface.
+// Another implementation of `Foo` struct is visible to the `NonFungibleToken` via the `Token` interface.
+// This creates ambiguity.
+pub resource interface NonFungibleToken: Token, Provider {}
+```
+
+
+### Linearizing Conditions
+
+As mentioned in the [functions with conditions](#functions-with-conditions) section, it would be required to linearize
+the function conditions, to determine the order in which pre- and post-conditions are executed.
+This is done by linearizing the interfaces, and hence conditions, in a **depth-first pre-ordered manner, without duplicates**.
+
+For example, consider an interface inheritance hierarchy as below:
+```
+       A
+      / \
+     B   C
+    / \ /
+   D   E
+
+where an edge from A (top) to B (bottom) means A inherits B.
+```
+
+This would convert to a Cadence implementation similar to:
+
+```cadence
+struct interface A: B, C {
+    pub fun test() {
+        pre { print("A") }
+    }
+}
+struct interface B: D, E {
+    pub fun test() {
+        pre { print("B") }
+    }
+}
+struct interface C: E {
+    pub fun test() {
+        pre { print("C") }
+    }
+}
+struct interface D {
+    pub fun test() {
+        pre { print("D") }
+    }
+}
+struct interface E {
+    pub fun test() {
+        pre { print("E") }
+    }
+}
+```
+
+Any concrete type implementing interface `A` would be equivalent to implementing all interfaces from `A` to `E`, linearized.
+
+```cadence
+struct Foo: A {
+    pub fun test() {
+        pre { print("Foo") }
+    }
+}
+```
+
+The linearized interface order would be: [A, B, D, E, C].
+
+i.e: same as having:
+```cadence
+struct Foo: A, B, D, C, E {
+    pub fun test() {
+        pre { print("Foo") }
+    }
+}
+```
+
+Thus, invoking `test` method of `Foo` would first invoke the pre-conditions of [A, B, D, E, C], in that particular order,
+and eventually runs the pre-condition of the concrete implementation `Foo`.
+
+```cadence
+let foo = Foo()
+foo.test()
+```
+
+Above will print:
+
+```
+A
+B
+D
+E
+C
+Foo
+```
+
+Similarly, for post-conditions, same linearization of interfaces would be used, and the post-conditions are executed
+on the reverse order.
+i.e: Replacing the `pre` conditions in above example with `post` conditions with exact same content, would result in an
+output similar to:
+
+```
+Foo
+C
+E
+D
+B
+A
+```
