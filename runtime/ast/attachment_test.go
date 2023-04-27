@@ -441,15 +441,17 @@ func TestAttachExpression_Doc(t *testing.T) {
 			prettier.Text(" "),
 			prettier.Text("with"),
 			prettier.Text(" "),
+			prettier.Text("("),
 			prettier.Text("X"),
 			prettier.Text(","),
 			prettier.Text(" "),
 			prettier.Text("Y"),
+			prettier.Text(")"),
 		},
 		decl.Doc(),
 	)
 
-	require.Equal(t, "attach bar() to foo with X, Y", decl.String())
+	require.Equal(t, "attach bar() to foo with (X, Y)", decl.String())
 }
 
 func TestRemoveStatement_MarshallJSON(t *testing.T) {

@@ -306,13 +306,14 @@ func (e *AttachExpression) Doc() prettier.Doc {
 	)
 	if e.Entitlements != nil && len(e.Entitlements) > 0 {
 		entitlementsLen := len(e.Entitlements)
-		doc = append(doc, prettier.Space, attachExpressionWithDoc, prettier.Space)
+		doc = append(doc, prettier.Space, attachExpressionWithDoc, prettier.Space, openParenthesisDoc)
 		for i, entitlement := range e.Entitlements {
 			doc = append(doc, entitlement.Doc())
 			if i < entitlementsLen-1 {
 				doc = append(doc, attachExpressionCommaDoc, prettier.Space)
 			}
 		}
+		doc = append(doc, closeParenthesisDoc)
 	}
 	return doc
 }
