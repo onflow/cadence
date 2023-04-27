@@ -1431,6 +1431,7 @@ func parseAttachmentDeclaration(
 		identifier,
 		baseNominalType,
 		conformances,
+		[]*ast.NominalType{},
 		members,
 		docString,
 		declarationRange,
