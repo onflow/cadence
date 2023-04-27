@@ -4073,6 +4073,22 @@ func (e *DuplicateEntitlementRequirementError) Error() string {
 	return fmt.Sprintf("entitlement %s is already required by this attachment", e.Entitlement.QualifiedString())
 }
 
+type DuplicateEntitlementProvidedError struct {
+	Entitlement *EntitlementType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementProvidedError{}
+var _ errors.UserError = &DuplicateEntitlementProvidedError{}
+
+func (*DuplicateEntitlementProvidedError) isSemanticError() {}
+
+func (*DuplicateEntitlementProvidedError) IsUserError() {}
+
+func (e *DuplicateEntitlementProvidedError) Error() string {
+	return fmt.Sprintf("entitlement %s is already provided to this attachment", e.Entitlement.QualifiedString())
+}
+
 // InvalidNonEntitlementRequirement
 type InvalidNonEntitlementRequirement struct {
 	InvalidType Type
@@ -4088,6 +4104,45 @@ func (*InvalidNonEntitlementRequirement) IsUserError() {}
 
 func (e *InvalidNonEntitlementRequirement) Error() string {
 	return fmt.Sprintf("cannot use %s as an entitlement requirement", e.InvalidType.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type InvalidNonEntitlementProvidedError struct {
+	InvalidType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementProvidedError{}
+var _ errors.UserError = &InvalidNonEntitlementProvidedError{}
+
+func (*InvalidNonEntitlementProvidedError) isSemanticError() {}
+
+func (*InvalidNonEntitlementProvidedError) IsUserError() {}
+
+func (e *InvalidNonEntitlementProvidedError) Error() string {
+	return fmt.Sprintf("cannot provide %s as an entitlement to this attachment", e.InvalidType.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type RequiredEntitlementNotProvidedError struct {
+	RequiredEntitlement *EntitlementType
+	AttachmentType      *CompositeType
+	ast.Range
+}
+
+var _ SemanticError = &RequiredEntitlementNotProvidedError{}
+var _ errors.UserError = &RequiredEntitlementNotProvidedError{}
+
+func (*RequiredEntitlementNotProvidedError) isSemanticError() {}
+
+func (*RequiredEntitlementNotProvidedError) IsUserError() {}
+
+func (e *RequiredEntitlementNotProvidedError) Error() string {
+	return fmt.Sprintf(
+		"attachment type %s requires entitlement %s to be provided when attaching",
+		e.AttachmentType.QualifiedString(),
+		e.RequiredEntitlement.QualifiedString(),
+	)
 }
 
 // InvalidBaseTypeError
