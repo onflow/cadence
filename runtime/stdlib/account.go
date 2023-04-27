@@ -3009,6 +3009,94 @@ func newPublicAccountCapabilitiesValue(
 	)
 }
 
+func borrowIDCapability(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	capabilityAddressValue interpreter.AddressValue,
+	capabilityIDValue interpreter.UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+	borrow bool,
+) interpreter.Value {
+
+	if wantedBorrowType == nil {
+		wantedBorrowType = capabilityBorrowType
+	} else {
+		// Ensure requested borrow type is not more permissive
+		// than the capability's borrow type:
+		// The requested type must be a supertype
+
+		if !sema.IsSubType(capabilityBorrowType, wantedBorrowType) {
+			return nil
+		}
+	}
+
+	capabilityAddress := capabilityAddressValue.ToAddress()
+	capabilityID := uint64(capabilityIDValue)
+
+	controller := getCapabilityController(inter, capabilityAddress, capabilityID)
+	if controller == nil {
+		return nil
+	}
+
+	// Ensure requested borrow type is not more permissive
+	// than the controller's borrow type:
+	// The requested type must be a supertype
+
+	controllerBorrowStaticType := controller.CapabilityControllerBorrowType()
+
+	controllerBorrowType, ok :=
+		inter.MustConvertStaticToSemaType(controllerBorrowStaticType).(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if !sema.IsSubType(controllerBorrowType, wantedBorrowType) {
+		return nil
+	}
+
+	// Return reference / capability value
+
+	if borrow {
+		switch controller := controller.(type) {
+		case *interpreter.AccountCapabilityControllerValue:
+			return interpreter.NewAccountReferenceValue(
+				inter,
+				capabilityAddress,
+				// TODO:
+				interpreter.EmptyPathValue,
+				wantedBorrowType,
+			)
+
+		case *interpreter.StorageCapabilityControllerValue:
+			return interpreter.NewStorageReferenceValue(
+				inter,
+				wantedBorrowType.Authorized,
+				capabilityAddress,
+				controller.TargetPath,
+				wantedBorrowType.Type,
+			)
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+	} else {
+		wantedBorrowStaticType :=
+			interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, wantedBorrowType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return interpreter.NewIDCapabilityValue(
+			inter,
+			capabilityIDValue,
+			capabilityAddressValue,
+			wantedBorrowStaticType,
+		)
+	}
+}
+
 func newAccountCapabilitiesGetFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
@@ -3066,53 +3154,26 @@ func newAccountCapabilitiesGetFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			allowedBorrowType, ok := inter.MustConvertStaticToSemaType(readCapabilityValue.BorrowType).(*sema.ReferenceType)
+			capabilityBorrowType, ok :=
+				inter.MustConvertStaticToSemaType(readCapabilityValue.BorrowType).(*sema.ReferenceType)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			// Ensure requested borrow type is not more permissive
+			capabilityID := readCapabilityValue.ID
+			capabilityAddress := readCapabilityValue.Address
 
-			if !sema.IsSubType(allowedBorrowType, wantedBorrowType) {
-				return interpreter.Nil
-			}
-
-			// Return capability value
-
-			readCapabilityValue, ok = readCapabilityValue.Transfer(
+			resultValue := borrowIDCapability(
 				inter,
 				locationRange,
-				atree.Address{},
-				false,
-				nil,
-			).(*interpreter.IDCapabilityValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			wantedBorrowStaticType :=
-				interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, wantedBorrowType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			var resultValue interpreter.Value
-			if borrow {
-				// TODO:
-				panic("TODO")
-				//resultValue = inter.BorrowCapability(
-				//	readCapabilityValue.Address.ToAddress(),
-				//	readCapabilityValue.ID,
-				//	wantedBorrowType,
-				//	locationRange,
-				//)
-			} else {
-				resultValue = interpreter.NewIDCapabilityValue(
-					inter,
-					readCapabilityValue.ID,
-					readCapabilityValue.Address,
-					wantedBorrowStaticType,
-				)
+				capabilityAddress,
+				capabilityID,
+				wantedBorrowType,
+				capabilityBorrowType,
+				borrow,
+			)
+			if resultValue == nil {
+				return interpreter.Nil
 			}
 
 			return interpreter.NewSomeValueNonCopying(

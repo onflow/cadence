@@ -208,6 +208,44 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.NoError(t, err)
 			})
 
+			t.Run("get existing, with valid type", func(t *testing.T) {
+
+				t.Parallel()
+
+				err, _, _ := test(
+					fmt.Sprintf(
+						// language=cadence
+						`
+                          import Test from 0x1
+
+                          transaction {
+                              prepare(signer: AuthAccount) {
+                                  let storagePath = /storage/r
+                                  let publicPath = /public/r
+                                  let expectedCapID: UInt64 = 1
+                                  let resourceID = 42
+
+                                  // Arrange
+                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                  let issuedCap: Capability<&Test.R> =
+                                      signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                  signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                  // Act
+                                  let gotCap: Capability<&Test.R> = %s.capabilities.get<&Test.R>(publicPath)!
+
+                                  // Assert
+                                  assert(issuedCap.id == expectedCapID)
+                                  assert(gotCap.id == expectedCapID)
+                              }
+                          }
+                        `,
+						accountExpression,
+					),
+				)
+				require.NoError(t, err)
+			})
+
 			t.Run("get and borrow existing, with valid type", func(t *testing.T) {
 
 				t.Parallel()

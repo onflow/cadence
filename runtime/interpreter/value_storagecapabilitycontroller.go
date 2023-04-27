@@ -30,6 +30,7 @@ import (
 type CapabilityControllerValue interface {
 	Value
 	isCapabilityControllerValue()
+	CapabilityControllerBorrowType() ReferenceStaticType
 }
 
 // StorageCapabilityControllerValue
@@ -77,6 +78,10 @@ var _ MemberAccessibleValue = &StorageCapabilityControllerValue{}
 func (*StorageCapabilityControllerValue) isValue() {}
 
 func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
+
+func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() ReferenceStaticType {
+	return v.BorrowType
+}
 
 func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStorageCapabilityControllerValue(interpreter, v)

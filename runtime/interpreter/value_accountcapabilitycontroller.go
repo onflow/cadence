@@ -67,6 +67,10 @@ func (*AccountCapabilityControllerValue) isValue() {}
 
 func (*AccountCapabilityControllerValue) isCapabilityControllerValue() {}
 
+func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() ReferenceStaticType {
+	return v.BorrowType
+}
+
 func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
 }
