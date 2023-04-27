@@ -427,7 +427,7 @@ Comparison operators work with boolean and integer values.
   d3 != d4 // is `false`
   ```
 
-- Less than: `<`, for integers, booleans and characters
+- Less than: `<`, for integers, booleans, characters and strings
 
   ```cadence
   1 < 1  // is `false`
@@ -445,9 +445,17 @@ Comparison operators work with boolean and integer values.
   "z" < "a"    // is `false`
 
   "a" < "A"    // is `false`
+
+  "" < ""      // is `false`
+
+  "" < "a"     // is `true`
+
+  "az" < "b"   // is `true`
+
+  "xAB" < "Xab"  // is `false`
   ```
 
-- Less or equal than: `<=`, for integers, booleans and characters
+- Less or equal than: `<=`, for integers, booleans, characters and strings
 
   ```cadence
   1 <= 1  // is `true`
@@ -467,9 +475,17 @@ Comparison operators work with boolean and integer values.
   "z"  <= "z"   // is `true`
 
   "a" <= "A"    // is `false`
+
+  "" <= ""      // is `true`
+
+  "" <= "a"     // is `true`
+
+  "az" <= "b"   // is `true`
+
+  "xAB" <= "Xab"  // is `false`
   ```
 
-- Greater than: `>`, for integers, booleans and characters
+- Greater than: `>`, for integers, booleans, characters and strings
 
   ```cadence
   1 > 1  // is `false`
@@ -489,9 +505,17 @@ Comparison operators work with boolean and integer values.
   "g"  > "g"   // is `false`
 
   "a" > "A"    // is `true`
+
+  "" > ""      // is `false`
+
+  "" > "a"     // is `false`
+
+  "az" > "b"   // is `false`
+
+  "xAB" > "Xab"  // is `true`
   ```
 
-- Greater or equal than: `>=`, for integers, booleans and characters
+- Greater or equal than: `>=`, for integers, booleans, characters and strings
 
   ```cadence
   1 >= 1  // is `true`
@@ -511,6 +535,14 @@ Comparison operators work with boolean and integer values.
   "q"  >= "q"   // is `true`
 
   "a" >= "A"    // is `true`
+
+  "" >= ""      // is `true`
+
+  "" >= "a"     // is `true`
+
+  "az" >= "b"   // is `true`
+
+  "xAB" >= "Xab"  // is `false`
   ```
 
 ### Comparing number super-types
