@@ -3931,66 +3931,6 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	)
 }
 
-func (interpreter *Interpreter) BorrowPathCapability(
-	address common.Address,
-	pathValue PathValue,
-	borrowType *sema.ReferenceType,
-	locationRange LocationRange,
-) ReferenceValue {
-	target, authorized, err :=
-		interpreter.GetPathCapabilityFinalTarget(
-			address,
-			pathValue,
-			borrowType,
-			locationRange,
-		)
-	if err != nil {
-		panic(err)
-	}
-
-	if target == nil {
-		return nil
-	}
-
-	switch target := target.(type) {
-	case AccountCapabilityTarget:
-		return NewAccountReferenceValue(
-			interpreter,
-			address,
-			pathValue,
-			borrowType.Type,
-		)
-
-	case PathCapabilityTarget:
-		targetPath := PathValue(target)
-
-		reference := NewStorageReferenceValue(
-			interpreter,
-			authorized,
-			address,
-			targetPath,
-			borrowType.Type,
-		)
-
-		// Attempt to dereference,
-		// which reads the stored value
-		// and performs a dynamic type check
-
-		value, err := reference.dereference(interpreter, locationRange)
-		if err != nil {
-			panic(err)
-		}
-		if value == nil {
-			return nil
-		}
-
-		return reference
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
 func (interpreter *Interpreter) pathCapabilityBorrowFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
@@ -4006,6 +3946,7 @@ func (interpreter *Interpreter) pathCapabilityBorrowFunction(
 		func(invocation Invocation) Value {
 
 			interpreter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// NOTE: if a type argument is provided for the function,
 			// use it *instead* of the type of the value (if any)
@@ -4024,7 +3965,58 @@ func (interpreter *Interpreter) pathCapabilityBorrowFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			reference := interpreter.BorrowPathCapability(address, pathValue, borrowType, invocation.LocationRange)
+			target, authorized, err :=
+				interpreter.GetPathCapabilityFinalTarget(
+					address,
+					pathValue,
+					borrowType,
+					locationRange,
+				)
+			if err != nil {
+				panic(err)
+			}
+
+			var reference ReferenceValue
+
+			switch target := target.(type) {
+			case nil:
+				reference = nil
+
+			case AccountCapabilityTarget:
+				reference = NewAccountReferenceValue(
+					interpreter,
+					address,
+					pathValue,
+					borrowType.Type,
+				)
+
+			case PathCapabilityTarget:
+				targetPath := PathValue(target)
+
+				storageReference := NewStorageReferenceValue(
+					interpreter,
+					authorized,
+					address,
+					targetPath,
+					borrowType.Type,
+				)
+
+				// Attempt to dereference,
+				// which reads the stored value
+				// and performs a dynamic type check
+
+				value, err := storageReference.dereference(interpreter, locationRange)
+				if err != nil {
+					panic(err)
+				}
+				if value != nil {
+					reference = storageReference
+				}
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
 			if reference == nil {
 				return Nil
 			}
@@ -4172,6 +4164,10 @@ func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
 			return AccountCapabilityTarget(address),
 				false,
 				nil
+
+		case *IDCapabilityValue:
+			// TODO: follow target?
+			return nil, false, nil
 
 		default:
 			return PathCapabilityTarget(path),
