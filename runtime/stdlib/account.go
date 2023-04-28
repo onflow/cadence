@@ -2229,13 +2229,12 @@ func newAuthAccountAccountCapabilitiesValue(
 	accountIDGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	// TODO:
 	return interpreter.NewAuthAccountAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		nil,
-		nil,
-		nil,
+		newAuthAccountAccountCapabilitiesGetControllerFunction(gauge, addressValue),
+		newAuthAccountAccountCapabilitiesGetControllersFunction(gauge, addressValue),
+		newAuthAccountAccountCapabilitiesForEachControllerFunction(gauge, addressValue),
 		newAuthAccountAccountCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
 	)
 }
@@ -2372,7 +2371,8 @@ func newAuthAccountStorageCapabilitiesGetControllersFunction(
 	)
 }
 
-// the AccountKey in ` forEachController(forPath: StoragePath, _ function: ((&StorageCapabilityController): Bool))`
+// `(&StorageCapabilityController)` in
+// `forEachController(forPath: StoragePath, _ function: ((&StorageCapabilityController): Bool))`
 var authAccountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 	&sema.ReferenceType{
 		Type: sema.StorageCapabilityControllerType,
@@ -2849,6 +2849,43 @@ func recordAccountCapabilityController(
 	}
 }
 
+func getAccountCapabilityControllerIDsIterator(
+	inter *interpreter.Interpreter,
+	address common.Address,
+) (
+	nextCapabilityID func() (uint64, bool),
+	count uint64,
+) {
+	storageMap := inter.Storage().GetStorageMap(
+		address,
+		AccountCapabilityStorageDomain,
+		false,
+	)
+	if storageMap == nil {
+		return func() (uint64, bool) {
+			return 0, false
+		}, 0
+	}
+
+	iterator := storageMap.Iterator(inter)
+
+	count = uint64(storageMap.Count())
+	nextCapabilityID = func() (uint64, bool) {
+		keyValue := iterator.NextKey()
+		if keyValue == nil {
+			return 0, false
+		}
+
+		capabilityIDValue, ok := keyValue.(interpreter.Uint64AtreeValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return uint64(capabilityIDValue), true
+	}
+	return
+}
+
 func newAuthAccountCapabilitiesPublishFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
@@ -3271,6 +3308,190 @@ func newAccountCapabilitiesGetFunction(
 				inter,
 				resultValue,
 			)
+		},
+	)
+}
+
+func getAccountCapabilityControllerReference(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityID uint64,
+) *interpreter.EphemeralReferenceValue {
+
+	capabilityController := getCapabilityController(inter, address, capabilityID)
+	if capabilityController == nil {
+		return nil
+	}
+
+	accountCapabilityController, ok := capabilityController.(*interpreter.AccountCapabilityControllerValue)
+	if !ok {
+		return nil
+	}
+
+	return interpreter.NewEphemeralReferenceValue(
+		inter,
+		false,
+		accountCapabilityController,
+		sema.AccountCapabilityControllerType,
+	)
+}
+
+func newAuthAccountAccountCapabilitiesGetControllerFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.FunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountAccountCapabilitiesTypeGetControllerFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			// Get capability ID argument
+
+			capabilityIDValue, ok := invocation.Arguments[0].(interpreter.UInt64Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityID := uint64(capabilityIDValue)
+
+			referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID)
+			if referenceValue == nil {
+				return interpreter.Nil
+			}
+
+			return interpreter.NewSomeValueNonCopying(inter, referenceValue)
+		},
+	)
+}
+
+var accountCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
+	Type: interpreter.ReferenceStaticType{
+		BorrowedType: interpreter.PrimitiveStaticTypeAccountCapabilityController,
+	},
+}
+
+func newAuthAccountAccountCapabilitiesGetControllersFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.FunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountAccountCapabilitiesTypeGetControllersFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			// Get capability controllers iterator
+
+			nextCapabilityID, count :=
+				getAccountCapabilityControllerIDsIterator(inter, address)
+
+			var capabilityControllerIndex uint64 = 0
+
+			return interpreter.NewArrayValueWithIterator(
+				inter,
+				accountCapabilityControllerReferencesArrayStaticType,
+				common.Address{},
+				count,
+				func() interpreter.Value {
+					if capabilityControllerIndex >= count {
+						return nil
+					}
+					capabilityControllerIndex++
+
+					capabilityID, ok := nextCapabilityID()
+					if !ok {
+						return nil
+					}
+
+					referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID)
+					if referenceValue == nil {
+						panic(errors.NewUnreachableError())
+					}
+
+					return referenceValue
+				},
+			)
+		},
+	)
+}
+
+// `(&AccountCapabilityController)` in
+// `forEachController(_ function: ((&AccountCapabilityController): Bool))`
+var authAccountAccountCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
+	&sema.ReferenceType{
+		Type: sema.AccountCapabilityControllerType,
+	},
+}
+
+func newAuthAccountAccountCapabilitiesForEachControllerFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountAccountCapabilitiesTypeForEachControllerFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get function argument
+
+			functionValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get capability controllers iterator
+
+			nextCapabilityID, _ :=
+				getAccountCapabilityControllerIDsIterator(inter, address)
+
+			for {
+				capabilityID, ok := nextCapabilityID()
+				if !ok {
+					break
+				}
+
+				referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID)
+				if referenceValue == nil {
+					panic(errors.NewUnreachableError())
+				}
+
+				subInvocation := interpreter.NewInvocation(
+					inter,
+					nil,
+					nil,
+					[]interpreter.Value{referenceValue},
+					authAccountAccountCapabilitiesForEachControllerCallbackTypeParams,
+					nil,
+					locationRange,
+				)
+
+				res, err := inter.InvokeFunction(functionValue, subInvocation)
+				if err != nil {
+					// interpreter panicked while invoking the inner function value
+					panic(err)
+				}
+
+				shouldContinue, ok := res.(interpreter.BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !shouldContinue {
+					break
+				}
+			}
+
+			return interpreter.Void
 		},
 	)
 }
