@@ -2839,16 +2839,97 @@ func TestParseAttach(t *testing.T) {
 		)
 	})
 
-	t.Run("non-invocation", func(t *testing.T) {
+	t.Run("with provided entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("attach A to E")
+		result, errs := testParseExpression("attach E() to r with (X, Y)")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.AttachExpression{
+				Base: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "r",
+						Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+					},
+				},
+				Attachment: &ast.InvocationExpression{
+					InvokedExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "E",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					ArgumentsStartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					EndPos:            ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
+				Entitlements: []*ast.NominalType{
+					ast.NewNominalType(
+						nil,
+						ast.Identifier{
+							Identifier: "X",
+							Pos:        ast.Position{Line: 1, Column: 22, Offset: 22},
+						},
+						nil,
+					),
+					ast.NewNominalType(
+						nil,
+						ast.Identifier{
+							Identifier: "Y",
+							Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+						},
+						nil,
+					),
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("with provided entitlements not closed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach E() to r with (X, Y")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid end of input, expected ')'",
+					Pos:     ast.Position{Offset: 26, Line: 1, Column: 26},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("with provided entitlements extra comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach E() to r with (X, Y,)")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "missing type after separator",
+					Pos:     ast.Position{Offset: 27, Line: 1, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("with provided entitlements unopened", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach E() to r with X, Y)")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '('",
-					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+					Pos:     ast.Position{Offset: 21, Line: 1, Column: 21},
 				},
 			},
 			errs,

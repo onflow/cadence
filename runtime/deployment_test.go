@@ -338,4 +338,17 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		})
 	})
 
+	t.Run("Path subtype", func(t *testing.T) {
+		test(t, testCase{
+			contract: `
+              pub contract Test {
+                  init(_ path: StoragePath) {}
+              }
+            `,
+			arguments: []argument{
+				interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+			},
+			check: expectSuccess,
+		})
+	})
 }

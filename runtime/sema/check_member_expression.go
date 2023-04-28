@@ -279,6 +279,9 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 
 		// the resulting authorization was mapped through an entitlement map, so we need to substitute this new authorization into the resulting type
+		// i.e. if the field was declared with `access(M) let x: auth(M) &T?`, and we computed that the output of the map would give entitlement `E`,
+		// we substitute this entitlement in for the "variable" `M` to produce `auth(E) &T?`, the access with which the type is actually produced.
+		// Equivalently, this can be thought of like generic instantiation.
 		substituteConcreteAuthorization := func(resultingType Type) Type {
 			switch ty := resultingType.(type) {
 			case *ReferenceType:

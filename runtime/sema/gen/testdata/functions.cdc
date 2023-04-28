@@ -19,4 +19,7 @@ pub struct Test {
 
     /// This is a test function with a type parameter and a parameter using it.
     pub fun typeParamWithBoundAndParam<T>(t: T) {}
+
+    /// This is a function with 'view' modifier
+    pub view fun viewFunction() {}
 }

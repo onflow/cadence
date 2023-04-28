@@ -752,12 +752,37 @@ func (interpreter *Interpreter) visitFunctionBody(
 	}
 
 	// If there is a return type, declare the constant `result`.
-	// If it is a resource type, the constant has the same type as a reference to the return type.
-	// If it is not a resource type, the constant has the same type as the return type.
 
 	if returnType != sema.VoidType {
-		var resultValue Value
-		if returnType.IsResourceType() {
+		resultValue := interpreter.resultValue(returnValue, returnType)
+		interpreter.declareVariable(
+			sema.ResultIdentifier,
+			resultValue,
+		)
+	}
+
+	interpreter.visitConditions(postConditions)
+
+	return returnValue
+}
+
+// resultValue returns the value for the `result` constant.
+// If the return type is not a resource:
+//   - The constant has the same type as the return type.
+//   - `result` value is the same as the return value.
+//
+// If the return type is a resource:
+//   - The constant has the same type as a reference to the return type.
+//   - `result` value is a reference to the return value.
+func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.Type) Value {
+	if !returnType.IsResourceType() {
+		return returnValue
+	}
+
+	if optionalType, ok := returnType.(*sema.OptionalType); ok {
+		switch returnValue := returnValue.(type) {
+		// If this value is an optional value (T?), then transform it into an optional reference (&T)?.
+		case *SomeValue:
 			var auth Authorization = UnauthorizedAccess
 			// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
 			if entitlementSupportingType, ok := returnType.(sema.EntitlementSupportingType); ok {
@@ -770,19 +795,24 @@ func (interpreter *Interpreter) visitFunctionBody(
 					auth = ConvertSemaAccesstoStaticAuthorization(interpreter, access)
 				}
 			}
-			resultValue = NewEphemeralReferenceValue(interpreter, auth, returnValue, returnType)
-		} else {
-			resultValue = returnValue
+
+			innerValue := NewEphemeralReferenceValue(
+				interpreter,
+				auth,
+				returnValue.value,
+				optionalType.Type,
+			)
+
+			interpreter.maybeTrackReferencedResourceKindedValue(returnValue.value)
+			return NewSomeValueNonCopying(interpreter, innerValue)
+		case NilValue:
+			return NilValue{}
 		}
-		interpreter.declareVariable(
-			sema.ResultIdentifier,
-			resultValue,
-		)
 	}
 
-	interpreter.visitConditions(postConditions)
-
-	return returnValue
+	interpreter.maybeTrackReferencedResourceKindedValue(returnValue)
+	// ENTITLEMENTS TODO: the result value should be fully qualified to the return type, since it is created from an existing resource in scope
+	return NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, returnValue, returnType)
 }
 
 func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
@@ -3425,6 +3455,7 @@ func (interpreter *Interpreter) recordStorageMutation() {
 }
 
 func (interpreter *Interpreter) newStorageIterationFunction(
+	functionType *sema.FunctionType,
 	addressValue AddressValue,
 	domain common.PathDomain,
 	pathType sema.Type,
@@ -3435,7 +3466,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AccountForEachFunctionType(pathType),
+		functionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -3937,14 +3968,17 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 	)
 }
 
-func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) accountGetLinkTargetFunction(
+	functionType *sema.FunctionType,
+	addressValue AddressValue,
+) *HostFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AccountTypeGetLinkTargetFunctionType,
+		functionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4804,6 +4838,12 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 				panic(errors.NewExternalError(err))
 			}
 		}
+	}
+}
+
+func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
+	if value, ok := value.(ReferenceTrackedResourceKindedValue); ok {
+		interpreter.trackReferencedResourceKindedValue(value.StorageID(), value)
 	}
 }
 

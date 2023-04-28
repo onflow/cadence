@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	goerrors "errors"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -71,7 +73,8 @@ func (s StorageMap) ValueExists(key string) bool {
 		StringAtreeValue(key),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return false
 		}
 		panic(errors.NewExternalError(err))
@@ -89,7 +92,8 @@ func (s StorageMap) ReadValue(gauge common.MemoryGauge, key string) Value {
 		StringAtreeValue(key),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return nil
 		}
 		panic(errors.NewExternalError(err))
@@ -139,7 +143,8 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key string) {
 		StringAtreeValue(key),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return
 		}
 		panic(errors.NewExternalError(err))

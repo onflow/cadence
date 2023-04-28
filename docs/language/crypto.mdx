@@ -157,7 +157,7 @@ The raw key value depends on the supported signature scheme:
   The raw public key is 64-bytes long.
 
 - `BLS_BLS_12_381`:
-  The public key is a G_2 (curve over the prime field extension) element.
+  The public key is a G_2 element (on the curve over the prime field extension).
   The encoding follows the compressed serialization defined in the
   [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
   A public key is 96-bytes long.
@@ -173,9 +173,16 @@ The validation of the public key depends on the supported signature scheme:
 
 - `BLS_BLS_12_381`:
   The given key is correctly serialized following the compressed serialization in [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
-  The coordinates represent valid prime field extension elemnents. The resulting point is on the curve, and is on the correct subgroup G_2. 
+  The coordinates represent valid prime field extension elements. The resulting point is on the curve, and is on the correct subgroup G_2. 
+  Note that the point at infinity is accepted and yields the identity public key. Such identity key can be useful when aggregating multiple keys.
 
-Since the validation happen only at the time of creation, public keys are immutable.
+<Callout type="info">
+
+🚧 Status: Accepting the BLS identity key is going to be available in the upcoming release of Cadence on Mainnet.
+
+</Callout>
+
+Since the validation happens only at the time of creation, public keys are immutable.
 
 ```cadence
 publicKey.signatureAlgorithm = SignatureAlgorithm.ECDSA_secp256k1   // Not allowed
@@ -225,15 +232,22 @@ ECDSA verification is implemented as defined in ANS X9.62 (also referred by [FIP
 A valid signature would be generated using the expected `signedData`, `domainSeparationTag` and `hashAlgorithm` used to verify. 
 
 - BLS (`BLS_BLS_12_381`):
-  - `signature` expects a G_1 (subgroup of the curve over the prime field) point.
+  - `signature` expects a G_1 point (on the curve over the prime field).
   The encoding follows the compressed serialization defined in the [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
   A signature is 48-bytes long. 
   - `signedData` is the arbitrary message to verify the signature against.
   - `domainSeparationTag` is the expected domain tag. All tags are accepted (check [KMAC128 for BLS](#KMAC128-for-BLS)).
   - `hashAlgorithm` only accepts `KMAC128_BLS_BLS12_381`. It is the algorithm used to hash the message along with the given tag (check [KMAC128 for BLS](#KMAC128-for-BLS)).
 
-BLS verification performs the necessary membership check of the signature while the membership check of the public key is performed at the creation of the `PublicKey` object
-and not repeated during the signature verification. 
+BLS verification performs the necessary membership check on the signature while the membership check of the public key is performed at the creation of the `PublicKey` object
+and is not repeated during the signature verification. In order to prevent equivocation issues, a verification under the identity public key always returns `false`.
+
+<Callout type="info">
+
+🚧 Status: Returning `false` when verifying against a BLS identity key is going to be available in the upcoming release of Cadence on Mainnet. 
+Currently, BLS identity keys can only be constructed as an output of `aggregatePublicKeys`.
+
+</Callout>
 
 The verificaction uses a hash-to-curve algorithm to hash the `signedData` into a `G_1` point, following the `hash_to_curve` method described in the [draft-irtf-cfrg-hash-to-curve-14](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#section-3).
 While KMAC128 is used as a hash-to-field method resulting in two field elements, the mapping to curve is implemented using the [simplified SWU](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#section-6.6.3).
@@ -252,7 +266,7 @@ These tools are defined in the built-in `BLS` contract, which does not need to b
 ### Proof of Possession (PoP)
 
 Multi-signature verification in BLS requires a defense against rogue public-key attacks. Multiple ways are 
-available to protect BLS verification. The language provides the proof of possession of private key as a defense tool. 
+available to protect BLS verification. Cadence provides the proof of possession of private key as a defense tool. 
 The proof of possession of private key is a BLS signature over the public key itself. 
 The PoP signature follows the same requirements of a BLS signature (detailed in [Signature verification](#Signature-verification)),
 except it uses a special domain separation tag. The key expected to be used in KMAC128 is the UTF-8 encoding of `"BLS_POP_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`.
@@ -270,7 +284,7 @@ Signatures could be generated from the same or distinct messages, they
 could also be the aggregation of other signatures.
 The order of the signatures in the slice does not matter since the aggregation is commutative.
 There is no subgroup membership check performed on the input signatures.
-If the array is empty or if decoding one of the signature fails, the program aborts
+If the array is empty or if decoding one of the signatures fails, the program aborts.
 
 The output signature can be verified against an aggregated public key to authenticate multiple 
 signers at once. Since the `verify` method accepts a single data to verify against, it is only possible to 
@@ -287,11 +301,18 @@ Aggregates multiple BLS public keys into one.
 The order of the public keys in the slice does not matter since the aggregation is commutative.
 The input keys are guaranteed to be in the correct subgroup since subgroup membership is checked
 at the key creation time. 
-If the array is empty or any of the input keys is not a BLS key, the program aborts
+If the array is empty or any of the input keys is not a BLS key, the program aborts.
+Note that the identity public key is a valid input to this function and it represents the 
+identity element of aggregation. 
 
 The output public key can be used to verify aggregated signatures to authenticate multiple 
 signers at once. Since the `verify` method accepts a single data to verify against, it is only possible to 
 verfiy multiple signatures of the same message. 
+The identity public key is a possible output of the function, though signature verifications 
+against identity result in `false`.
+
+In order to prevent rogue key attacks when verifying aggregated signatures, it is important to verfiy the 
+PoP of each individual key involved in the aggregation process.
 
 ## Crypto Contract
 

@@ -136,9 +136,9 @@ func TestExportValue(t *testing.T) {
 	}
 
 	testFunctionType := cadence.NewFunctionType(
-		"fun():Void",
 		sema.FunctionPurityImpure,
-		[]cadence.Parameter{},
+		nil,
+		nil,
 		cadence.VoidType{},
 	)
 
@@ -386,7 +386,7 @@ func TestExportValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			expected: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 		},
@@ -816,7 +816,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label: "Path",
 			value: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			expected: interpreter.PathValue{
@@ -825,10 +825,10 @@ func TestImportValue(t *testing.T) {
 			},
 		},
 		{
-			label: "Link (invalid)",
+			label: "Path Link (invalid)",
 			value: cadence.PathLink{
 				TargetPath: cadence.Path{
-					Domain:     "storage",
+					Domain:     common.PathDomainStorage,
 					Identifier: "test",
 				},
 				BorrowType: "Int",
@@ -836,10 +836,15 @@ func TestImportValue(t *testing.T) {
 			expected: nil,
 		},
 		{
+			label:    "Account Link (invalid)",
+			value:    cadence.AccountLink{},
+			expected: nil,
+		},
+		{
 			label: "Capability (invalid)",
 			value: cadence.StorageCapability{
 				Path: cadence.Path{
-					Domain:     "public",
+					Domain:     common.PathDomainPublic,
 					Identifier: "test",
 				},
 				BorrowType: cadence.IntType{},
@@ -1862,6 +1867,78 @@ func TestExportReferenceValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run("storage, recursive, same reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(): &AnyStruct {
+                var acct = getAuthAccount(0x01)
+	            var v:[AnyStruct] = []
+	            acct.save(v, to: /storage/x)
+
+                var ref = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+	            ref.append(ref)
+	            return ref
+            }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cannot store non-storable value")
+	})
+
+	t.Run("storage, recursive, two references", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(): &AnyStruct {
+                var acct = getAuthAccount(0x01)
+	            var v:[AnyStruct] = []
+	            acct.save(v, to: /storage/x)
+
+                var ref1 = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+                var ref2 = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+
+	            ref1.append(ref2)
+	            return ref1
+            }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cannot store non-storable value")
+	})
 }
 
 func TestExportTypeValue(t *testing.T) {
@@ -1994,7 +2071,7 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.TypeValue{
-				StaticType: (&cadence.RestrictedType{
+				StaticType: &cadence.RestrictedType{
 					Type: &cadence.StructType{
 						QualifiedIdentifier: "S",
 						Location:            TestLocation,
@@ -2007,7 +2084,7 @@ func TestExportTypeValue(t *testing.T) {
 							Fields:              []cadence.Field{},
 						},
 					},
-				}).WithID("S.test.S{S.test.SI}"),
+				},
 			},
 			actual,
 		)
@@ -2040,7 +2117,7 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 
 		expected := cadence.StorageCapability{
 			Path: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			Address:    cadence.Address{0x1},
@@ -2094,7 +2171,7 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 
 		expected := cadence.StorageCapability{
 			Path: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			Address: cadence.Address{0x1},
@@ -2128,7 +2205,7 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 
 		expected := cadence.StorageCapability{
 			Path: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			Address: cadence.Address{0x1},
@@ -2162,7 +2239,7 @@ func TestExportPathLinkValue(t *testing.T) {
 
 		expected := cadence.PathLink{
 			TargetPath: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			BorrowType: "Int",
@@ -2213,7 +2290,7 @@ func TestExportPathLinkValue(t *testing.T) {
 
 		expected := cadence.PathLink{
 			TargetPath: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			BorrowType: "S.test.S",
@@ -2221,6 +2298,25 @@ func TestExportPathLinkValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+}
+
+func TestExportAccountLinkValue(t *testing.T) {
+
+	t.Parallel()
+
+	link := interpreter.AccountLinkValue{}
+
+	actual, err := exportValueWithInterpreter(
+		link,
+		newTestInterpreter(t),
+		interpreter.EmptyLocationRange,
+		seenReferences{},
+	)
+	require.NoError(t, err)
+
+	expected := cadence.AccountLink{}
+
+	assert.Equal(t, expected, actual)
 }
 
 func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
@@ -2253,10 +2349,9 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 			},
 			{
 				Identifier: "f",
-				Type: (&cadence.FunctionType{
-					Parameters: []cadence.Parameter{},
+				Type: &cadence.FunctionType{
 					ReturnType: cadence.VoidType{},
-				}).WithID("fun():Void"),
+				},
 			},
 		},
 	}
@@ -2265,10 +2360,9 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 	expected := cadence.NewStruct([]cadence.Value{
 		cadence.NewInt(42),
 		cadence.Function{
-			FunctionType: (&cadence.FunctionType{
-				Parameters: []cadence.Parameter{},
+			FunctionType: &cadence.FunctionType{
 				ReturnType: cadence.VoidType{},
-			}).WithID("fun():Void"),
+			},
 		},
 	}).WithType(fooStructType)
 
@@ -2626,7 +2720,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "StoragePath",
 			typeSignature: "StoragePath",
 			exportedValue: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			skipExport: true,
@@ -2635,7 +2729,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "PrivatePath",
 			typeSignature: "PrivatePath",
 			exportedValue: cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			skipExport: true,
@@ -2644,7 +2738,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "PublicPath",
 			typeSignature: "PublicPath",
 			exportedValue: cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			skipExport: true,
@@ -2791,15 +2885,15 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
 			cadence.NewBool(true),
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			cadence.String("foo"),
@@ -2922,7 +3016,7 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 				Size:        2,
 			}),
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 		},
@@ -3957,7 +4051,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}, Authorization: cadence.UnauthorizedAccess},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainPublic.Identifier(),
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 		}
@@ -4011,7 +4105,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			BorrowType: cadence.IntType{},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainPublic.Identifier(),
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 		}
@@ -4058,7 +4152,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}, Authorization: cadence.UnauthorizedAccess},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainPrivate.Identifier(),
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 		}
@@ -4105,7 +4199,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}, Authorization: cadence.UnauthorizedAccess},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainStorage.Identifier(),
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 		}
@@ -4161,7 +4255,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			BorrowType: borrowType,
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainPublic.Identifier(),
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 		}
@@ -5267,4 +5361,45 @@ func TestNestedStructArgPassing(t *testing.T) {
 		var argErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &argErr)
 	})
+}
+
+func TestDestroyedResourceReferenceExport(t *testing.T) {
+	t.Parallel()
+
+	rt := newTestInterpreterRuntimeWithAttachments()
+
+	script := []byte(`
+        pub resource S {}
+
+        pub fun main(): &S  {
+            var s <- create S()
+            var ref = &s as &S
+
+            // Just to trick the checker,
+            // and get pass the static referenced resource invalidation analysis.
+            var ref2 = getRef(ref)
+
+            destroy s
+            return ref2!
+        }
+
+        pub fun getRef(_ ref: &S): &S  {
+            return ref
+        }
+	 `)
+
+	runtimeInterface := &testRuntimeInterface{}
+
+	nextScriptLocation := newScriptLocationGenerator()
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
