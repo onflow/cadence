@@ -9070,8 +9070,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		testValueStringConversion(t,
 			script,
 			interpreter.NewUnmeteredIDCapabilityValue(
-				// TODO:
-				interpreter.TodoCapabilityID,
+				4,
 				interpreter.AddressValue{1},
 				interpreter.CompositeStaticType{
 					Location:            utils.TestLocation,

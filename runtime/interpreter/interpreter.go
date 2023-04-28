@@ -119,6 +119,26 @@ type OnAccountLinkedFunc func(
 	path PathValue,
 ) error
 
+// IDCapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
+type IDCapabilityBorrowHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	capabilityID UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) ReferenceValue
+
+// IDCapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
+type IDCapabilityCheckHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	capabilityID UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) BoolValue
+
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 type InjectedCompositeFieldsHandlerFunc func(
 	inter *Interpreter,
@@ -4818,4 +4838,81 @@ func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
 	}
 
 	config.AccountLinkingAllowed = true
+}
+
+func (interpreter *Interpreter) idCapabilityBorrowFunction(
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+) *HostFunctionValue {
+
+	return NewHostFunctionValue(
+		interpreter,
+		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
+		func(invocation Invocation) Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			var wantedBorrowType *sema.ReferenceType
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				wantedBorrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+			}
+
+			return inter.SharedState.Config.IDCapabilityBorrowHandler(
+				inter,
+				locationRange,
+				addressValue,
+				capabilityID,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+		},
+	)
+}
+
+func (interpreter *Interpreter) idCapabilityCheckFunction(
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+) *HostFunctionValue {
+
+	return NewHostFunctionValue(
+		interpreter,
+		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
+		func(invocation Invocation) Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// NOTE: if a type argument is provided for the function,
+			// use it *instead* of the type of the value (if any)
+
+			var wantedBorrowType *sema.ReferenceType
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				wantedBorrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+			}
+
+			return inter.SharedState.Config.IDCapabilityCheckHandler(
+				inter,
+				locationRange,
+				addressValue,
+				capabilityID,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+		},
+	)
 }

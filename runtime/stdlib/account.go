@@ -3009,15 +3009,16 @@ func newPublicAccountCapabilitiesValue(
 	)
 }
 
-func borrowIDCapability(
+func getCheckedCapabilityController(
 	inter *interpreter.Interpreter,
-	locationRange interpreter.LocationRange,
 	capabilityAddressValue interpreter.AddressValue,
 	capabilityIDValue interpreter.UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
-	borrow bool,
-) interpreter.Value {
+) (
+	interpreter.CapabilityControllerValue,
+	*sema.ReferenceType,
+) {
 
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
@@ -3027,7 +3028,7 @@ func borrowIDCapability(
 		// The requested type must be a supertype
 
 		if !sema.IsSubType(capabilityBorrowType, wantedBorrowType) {
-			return nil
+			return nil, nil
 		}
 	}
 
@@ -3036,7 +3037,7 @@ func borrowIDCapability(
 
 	controller := getCapabilityController(inter, capabilityAddress, capabilityID)
 	if controller == nil {
-		return nil
+		return nil, nil
 	}
 
 	// Ensure requested borrow type is not more permissive
@@ -3052,49 +3053,68 @@ func borrowIDCapability(
 	}
 
 	if !sema.IsSubType(controllerBorrowType, wantedBorrowType) {
+		return nil, nil
+	}
+
+	return controller, wantedBorrowType
+}
+
+func uncheckedBorrowCapabilityController(
+	inter *interpreter.Interpreter,
+	controller interpreter.CapabilityControllerValue,
+	capabilityAddress common.Address,
+	wantedBorrowType *sema.ReferenceType,
+) interpreter.ReferenceValue {
+
+	// TODO: dereference?
+
+	switch controller := controller.(type) {
+	case *interpreter.AccountCapabilityControllerValue:
+		return interpreter.NewAccountReferenceValue(
+			inter,
+			capabilityAddress,
+			// TODO:
+			interpreter.EmptyPathValue,
+			wantedBorrowType,
+		)
+
+	case *interpreter.StorageCapabilityControllerValue:
+		return interpreter.NewStorageReferenceValue(
+			inter,
+			wantedBorrowType.Authorized,
+			capabilityAddress,
+			controller.TargetPath,
+			wantedBorrowType.Type,
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func BorrowCapabilityController(
+	inter *interpreter.Interpreter,
+	capabilityAddress interpreter.AddressValue,
+	capabilityID interpreter.UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) interpreter.ReferenceValue {
+	controller, resultBorrowType := getCheckedCapabilityController(
+		inter,
+		capabilityAddress,
+		capabilityID,
+		wantedBorrowType,
+		capabilityBorrowType,
+	)
+	if controller == nil {
 		return nil
 	}
-
-	// Return reference / capability value
-
-	if borrow {
-		switch controller := controller.(type) {
-		case *interpreter.AccountCapabilityControllerValue:
-			return interpreter.NewAccountReferenceValue(
-				inter,
-				capabilityAddress,
-				// TODO:
-				interpreter.EmptyPathValue,
-				wantedBorrowType,
-			)
-
-		case *interpreter.StorageCapabilityControllerValue:
-			return interpreter.NewStorageReferenceValue(
-				inter,
-				wantedBorrowType.Authorized,
-				capabilityAddress,
-				controller.TargetPath,
-				wantedBorrowType.Type,
-			)
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-
-	} else {
-		wantedBorrowStaticType :=
-			interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, wantedBorrowType)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		return interpreter.NewIDCapabilityValue(
-			inter,
-			capabilityIDValue,
-			capabilityAddressValue,
-			wantedBorrowStaticType,
-		)
-	}
+	return uncheckedBorrowCapabilityController(
+		inter,
+		controller,
+		capabilityAddress.ToAddress(),
+		resultBorrowType,
+	)
 }
 
 func newAccountCapabilitiesGetFunction(
@@ -3111,7 +3131,6 @@ func newAccountCapabilitiesGetFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
 
 			// Get path argument
 
@@ -3163,15 +3182,38 @@ func newAccountCapabilitiesGetFunction(
 			capabilityID := readCapabilityValue.ID
 			capabilityAddress := readCapabilityValue.Address
 
-			resultValue := borrowIDCapability(
+			var resultValue interpreter.Value
+			controller, resultBorrowType := getCheckedCapabilityController(
 				inter,
-				locationRange,
 				capabilityAddress,
 				capabilityID,
 				wantedBorrowType,
 				capabilityBorrowType,
-				borrow,
 			)
+			if controller != nil {
+				if borrow {
+					resultValue = uncheckedBorrowCapabilityController(
+						inter,
+						controller,
+						capabilityAddress.ToAddress(),
+						resultBorrowType,
+					)
+				} else {
+					resultBorrowStaticType :=
+						interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, resultBorrowType)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					resultValue = interpreter.NewIDCapabilityValue(
+						inter,
+						capabilityID,
+						capabilityAddress,
+						resultBorrowStaticType,
+					)
+				}
+			}
+
 			if resultValue == nil {
 				return interpreter.Nil
 			}
