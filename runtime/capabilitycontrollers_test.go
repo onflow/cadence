@@ -1241,7 +1241,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			)
 			require.NoError(t, err)
 		})
+
+		// TODO: delete
 	})
 
-	// TODO: AccountCapabilityController
+	// TODO: AccountCapabilityController: delete
 }

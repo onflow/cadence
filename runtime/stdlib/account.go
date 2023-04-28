@@ -2626,7 +2626,8 @@ func getCapabilityController(
 		capabilityController.RetargetFunction =
 			newStorageCapabilityControllerRetargetFunction(inter, address, capabilityController)
 
-		// TODO: inject delete function
+		// TODO: inject delete function in *interpreter.StorageCapabilityControllerValue
+		// TODO: inject delete function in *interpreter.AccountCapabilityControllerValue
 	}
 
 	return capabilityController
