@@ -3713,6 +3713,136 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("required entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`pub attachment E for S {
+			require entitlement X
+			require entitlement Y
+			destroy() {}
+		}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.AttachmentDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+					BaseType: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "S",
+							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+						},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindDestructor,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
+									Identifier: ast.Identifier{
+										Identifier: "destroy",
+										Pos:        ast.Position{Offset: 78, Line: 4, Column: 3},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 85, Line: 4, Column: 10},
+											EndPos:   ast.Position{Offset: 86, Line: 4, Column: 11},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 88, Line: 4, Column: 13},
+												EndPos:   ast.Position{Offset: 89, Line: 4, Column: 14},
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 78, Line: 4, Column: 3},
+								},
+							},
+						},
+					),
+					RequiredEntitlements: []*ast.NominalType{
+						ast.NewNominalType(
+							nil,
+							ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 2, Column: 23, Offset: 48},
+							},
+							nil,
+						),
+						ast.NewNominalType(
+							nil,
+							ast.Identifier{
+								Identifier: "Y",
+								Pos:        ast.Position{Line: 3, Column: 23, Offset: 73},
+							},
+							nil,
+						),
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 5, Column: 2, Offset: 93},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("required entitlements error no identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`pub attachment E for S {
+			require entitlement 
+			destroy() {}
+		}`)
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 3, Column: 10, Offset: 59},
+				Message: "unexpected '('",
+			},
+		}, errs)
+	})
+
+	t.Run("required entitlements error no entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`pub attachment E for S {
+			require X 
+			destroy() {}
+		}`)
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 2, Column: 11, Offset: 36},
+				Message: "expected 'entitlement', got identifier",
+			},
+		}, errs)
+	})
+
+	t.Run("required entitlements error non-nominal type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`pub attachment E for S {
+			require entitlement [X]
+			destroy() {}
+		}`)
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 2, Column: 26, Offset: 51},
+				Message: "unexpected non-nominal type: [X]",
+			},
+		}, errs)
+	})
+
 	t.Run("entitlement access", func(t *testing.T) {
 
 		t.Parallel()

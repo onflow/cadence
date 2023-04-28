@@ -21,6 +21,7 @@ package interpreter
 import (
 	"encoding/binary"
 	"encoding/hex"
+	goerrors "errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -351,7 +352,7 @@ func (v TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 
 func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
-	case "identifier":
+	case sema.MetaTypeIdentifierFieldName:
 		var typeID string
 		staticType := v.Type
 		if staticType != nil {
@@ -364,7 +365,8 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		return NewStringValue(interpreter, memoryUsage, func() string {
 			return typeID
 		})
-	case "isSubtype":
+
+	case sema.MetaTypeIsSubtypeFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.MetaTypeIsSubtypeFunctionType,
@@ -1122,14 +1124,14 @@ func (*StringValue) RemoveKey(_ *Interpreter, _ LocationRange, _ Value) Value {
 
 func (v *StringValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	switch name {
-	case "length":
+	case sema.StringTypeLengthFieldName:
 		length := v.Length()
 		return NewIntValueFromInt64(interpreter, int64(length))
 
-	case "utf8":
+	case sema.StringTypeUtf8FieldName:
 		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
 
-	case "concat":
+	case sema.StringTypeConcatFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeConcatFunctionType,
@@ -1143,7 +1145,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
-	case "slice":
+	case sema.StringTypeSliceFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeSliceFunctionType,
@@ -1162,7 +1164,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
-	case "decodeHex":
+	case sema.StringTypeDecodeHexFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeDecodeHexFunctionType,
@@ -1174,7 +1176,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
-	case "toLower":
+	case sema.StringTypeToLowerFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.StringTypeToLowerFunctionType,
@@ -1733,7 +1735,8 @@ func (v *ArrayValue) GetKey(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, locationRange LocationRange) {
-	if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
+	var indexOutOfBoundsError *atree.IndexOutOfBoundsError
+	if goerrors.As(err, &indexOutOfBoundsError) {
 		panic(ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
@@ -2636,16 +2639,18 @@ func (v *ArrayValue) Slice(
 	iterator, err := v.array.RangeIterator(uint64(fromIndex), uint64(toIndex))
 	if err != nil {
 
-		switch err.(type) {
-		case *atree.SliceOutOfBoundsError:
+		var sliceOutOfBoundsError *atree.SliceOutOfBoundsError
+		if goerrors.As(err, &sliceOutOfBoundsError) {
 			panic(ArraySliceIndicesError{
 				FromIndex:     fromIndex,
 				UpToIndex:     toIndex,
 				Size:          v.Count(),
 				LocationRange: locationRange,
 			})
+		}
 
-		case *atree.InvalidSliceIndexError:
+		var invalidSliceIndexError *atree.InvalidSliceIndexError
+		if goerrors.As(err, &invalidSliceIndexError) {
 			panic(InvalidSliceIndexError{
 				FromIndex:     fromIndex,
 				UpToIndex:     toIndex,
@@ -14172,7 +14177,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); !ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if !goerrors.As(err, &keyNotFoundError) {
 			panic(errors.NewExternalError(err))
 		}
 	}
@@ -14319,7 +14325,8 @@ func (v *CompositeValue) RemoveMember(
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return nil
 		}
 		panic(errors.NewExternalError(err))
@@ -14497,7 +14504,8 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return nil
 		}
 		panic(errors.NewExternalError(err))
@@ -15054,7 +15062,8 @@ func (v *CompositeValue) RemoveField(
 		StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return
 		}
 		panic(errors.NewExternalError(err))
@@ -15129,6 +15138,8 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 	// the base reference can only be borrowed with the declared type of the attachment's base
 	// ENTITLEMENTS TODO: map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
 	v.base = NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, base, baseType)
+
+	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 }
 
 func attachmentMemberName(ty sema.Type) string {
@@ -15163,6 +15174,7 @@ func attachmentBaseAndSelfValues(
 	// in attachment functions, self is a reference value
 	// ENTITLEMENTS TODO: map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
 	self = NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, v, interpreter.MustSemaTypeOfValue(v))
+	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
 	return
 }
 
@@ -15212,10 +15224,11 @@ func (v *CompositeValue) GetTypeKey(
 	// dynamically set the attachment's base to this composite
 	attachment.setBaseValue(interpreter, v)
 
+	// ENTITLEMENTS TODO: map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
+	attachmentRef := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, attachment, ty)
 	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
 
-	// ENTITLEMENTS TODO: map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
-	return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, attachment, ty))
+	return NewSomeValueNonCopying(interpreter, attachmentRef)
 }
 
 func (v *CompositeValue) SetTypeKey(
@@ -15576,7 +15589,8 @@ func (v *DictionaryValue) ContainsKey(
 		keyValue,
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return FalseValue
 		}
 		panic(errors.NewExternalError(err))
@@ -15600,7 +15614,8 @@ func (v *DictionaryValue) Get(
 		keyValue,
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return nil, false
 		}
 		panic(errors.NewExternalError(err))
@@ -15925,7 +15940,8 @@ func (v *DictionaryValue) Remove(
 		keyValue,
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
 			return NilOptionalValue
 		}
 		panic(errors.NewExternalError(err))
@@ -16968,6 +16984,10 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
+type ReferenceValue interface {
+	isReference()
+}
+
 // StorageReferenceValue
 
 type StorageReferenceValue struct {
@@ -16982,6 +17002,7 @@ var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
 var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
+var _ ReferenceValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
 	authorization Authorization,
@@ -17317,6 +17338,8 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
+func (*StorageReferenceValue) isReference() {}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
@@ -17330,6 +17353,7 @@ var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
+var _ ReferenceValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
 	authorization Authorization,
@@ -17424,7 +17448,7 @@ func (v *EphemeralReferenceValue) ReferencedValue(
 	}
 }
 
-func (v *EphemeralReferenceValue) mustReferencedValue(
+func (v *EphemeralReferenceValue) MustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 ) Value {
@@ -17447,7 +17471,7 @@ func (v *EphemeralReferenceValue) GetMember(
 	locationRange LocationRange,
 	name string,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return interpreter.getMember(self, locationRange, name)
 }
@@ -17457,7 +17481,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	locationRange LocationRange,
 	identifier string,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
@@ -17472,7 +17496,7 @@ func (v *EphemeralReferenceValue) SetMember(
 	name string,
 	value Value,
 ) bool {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return interpreter.setMember(self, locationRange, name, value)
 }
@@ -17482,7 +17506,7 @@ func (v *EphemeralReferenceValue) GetKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, locationRange, key)
@@ -17494,7 +17518,7 @@ func (v *EphemeralReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, locationRange, key, value)
@@ -17506,7 +17530,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, locationRange, key, value)
@@ -17517,7 +17541,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, locationRange, key)
@@ -17528,7 +17552,7 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(TypeIndexableValue).
 		GetTypeKey(interpreter, locationRange, key)
@@ -17540,7 +17564,7 @@ func (v *EphemeralReferenceValue) SetTypeKey(
 	key sema.Type,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	self.(TypeIndexableValue).
 		SetTypeKey(interpreter, locationRange, key, value)
@@ -17551,7 +17575,7 @@ func (v *EphemeralReferenceValue) RemoveTypeKey(
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(TypeIndexableValue).
 		RemoveTypeKey(interpreter, locationRange, key)
@@ -17653,6 +17677,8 @@ func (v *EphemeralReferenceValue) Clone(*Interpreter) Value {
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
+
+func (*EphemeralReferenceValue) isReference() {}
 
 // AddressValue
 type AddressValue common.Address

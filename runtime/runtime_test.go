@@ -1706,6 +1706,23 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			expectedLogs: []string{`"bar"`},
 		},
+		{
+			name: "Path subtype",
+			script: `
+                pub fun main(x: StoragePath) {
+                    log(x)
+                }
+            `,
+			args: [][]byte{
+				jsoncdc.MustEncode(cadence.Path{
+					Domain:     common.PathDomainStorage,
+					Identifier: "foo",
+				}),
+			},
+			expectedLogs: []string{
+				"/storage/foo",
+			},
+		},
 	}
 
 	test := func(tt testCase) {
@@ -2736,10 +2753,9 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                   }
                 `,
 				expected: cadence.Function{
-					FunctionType: (&cadence.FunctionType{
-						Parameters: []cadence.Parameter{},
+					FunctionType: &cadence.FunctionType{
 						ReturnType: cadence.IntType{},
-					}).WithID("fun():Int"),
+					},
 				},
 			},
 		)
@@ -2757,7 +2773,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                   }
                 `,
 				expected: cadence.Function{
-					FunctionType: (&cadence.FunctionType{
+					FunctionType: &cadence.FunctionType{
 						Purity: sema.FunctionPurityView,
 						Parameters: []cadence.Parameter{
 							{
@@ -2767,7 +2783,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 							},
 						},
 						ReturnType: cadence.NeverType{},
-					}).WithID("view fun(String):Never"),
+					},
 				},
 			},
 		)
@@ -2790,10 +2806,9 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                   }
                 `,
 				expected: cadence.Function{
-					FunctionType: (&cadence.FunctionType{
-						Parameters: []cadence.Parameter{},
+					FunctionType: &cadence.FunctionType{
 						ReturnType: cadence.VoidType{},
-					}).WithID("fun():Void"),
+					},
 				},
 			},
 		)
@@ -7028,7 +7043,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 			cadence.StorageCapability{
 				Address: cadence.BytesToAddress([]byte{0x1}),
 				Path: cadence.Path{
-					Domain:     "public",
+					Domain:     common.PathDomainPublic,
 					Identifier: "xxx",
 				},
 			},
@@ -7358,7 +7373,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		_, err = runtime.ReadStored(
 			address,
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "test",
 			},
 			Context{
@@ -7391,7 +7406,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		_, err = runtime.ReadLinked(
 			address,
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "test",
 			},
 			Context{

@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -240,7 +241,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			value,
@@ -256,7 +257,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			value,
@@ -272,7 +273,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			value,
@@ -299,7 +300,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			value,
@@ -348,7 +349,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			value,
@@ -360,7 +361,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			value,
@@ -386,7 +387,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			value,
@@ -419,7 +420,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			value,

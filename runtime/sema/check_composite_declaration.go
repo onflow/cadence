@@ -622,13 +622,38 @@ func (checker *Checker) declareNestedDeclarations(
 }
 
 func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclaration) *CompositeType {
+
 	composite := checker.declareCompositeType(declaration)
+
 	composite.baseType = checker.convertNominalType(declaration.BaseType)
+
 	attachmentAccess := checker.accessFromAstAccess(declaration.Access)
 	switch attachmentAccess := attachmentAccess.(type) {
 	case EntitlementMapAccess:
 		composite.attachmentEntitlementAccess = &attachmentAccess
 	}
+
+	// add all the required entitlements to a set for this attachment
+	requiredEntitlements := orderedmap.New[EntitlementOrderedSet](len(declaration.RequiredEntitlements))
+	for _, entitlement := range declaration.RequiredEntitlements {
+		nominalType := checker.convertNominalType(entitlement)
+		if entitlementType, isEntitlement := nominalType.(*EntitlementType); isEntitlement {
+			_, present := requiredEntitlements.Set(entitlementType, struct{}{})
+			if present {
+				checker.report(&DuplicateEntitlementRequirementError{
+					Range:       ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
+					Entitlement: entitlementType,
+				})
+			}
+			continue
+		}
+		checker.report(&InvalidNonEntitlementRequirement{
+			Range:       ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
+			InvalidType: nominalType,
+		})
+	}
+	composite.requiredEntitlements = requiredEntitlements
+
 	return composite
 }
 
