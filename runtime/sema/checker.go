@@ -1129,7 +1129,7 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet})
 		switch mapAccess := access.(type) {
 		case EntitlementMapAccess:
-			// mapped auth types are only allowed in the annotations of composite fields
+			// mapped auth types are only allowed in the annotations of composite fields and accessor functions
 			if checker.entitlementMappingInScope == nil || !checker.entitlementMappingInScope.Equal(mapAccess.Type) {
 				checker.report(&InvalidMappedAuthorizationOutsideOfFieldError{
 					Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
@@ -1360,6 +1360,9 @@ func (checker *Checker) functionType(
 
 	convertedReturnTypeAnnotation := VoidTypeAnnotation
 	if returnTypeAnnotation != nil {
+		// to allow entitlement mapping types to be used in the return annotation only of
+		// a mapped accessor function, we introduce a "variable" into the typing scope while
+		// checking the return
 		if mapAccess, isMapAccess := access.(EntitlementMapAccess); isMapAccess {
 			checker.entitlementMappingInScope = mapAccess.Type
 		}

@@ -236,6 +236,25 @@ func (e EntitlementMapAccess) PermitsAccess(other Access) bool {
 	// of the map. That is, for some field declared `access(M) let x: auth(M) &T`, when `x` is intialized
 	// by `self.x = y`, `y` must be a reference of type `auth(X, Y, Z, ...) &T` where `{X, Y, Z, ...}` is
 	// a superset of all the possible output types of `M` (all the possible entitlements `x` may have)
+	//
+	// as an example:
+	//
+	// entitlement mapping M {
+	//    X -> Y
+	//    E -> F
+	// }
+	// resource R {
+	//    access(M) let x: auth(M) &T
+	//    init(tref: auth(Y, F) &T) {
+	//        self.x = tref
+	//    }
+	// }
+	//
+	// the tref value used to initialize `x` must be entitled to the full output of `M` (in this case)
+	// `(Y, F)`, because the mapped access of `x` may provide either (or both) `Y` and `F` depending on
+	// the input entitlement. It is only safe for `R` to give out these entitlements if it actually
+	// possesses them, so we require the initializing value to have every possible entitlement that may
+	// be produced by the map
 	case EntitlementSetAccess:
 		return e.Codomain().PermitsAccess(otherAccess)
 	default:
@@ -271,6 +290,8 @@ func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
 	return NewEntitlementSetAccess(maps.Keys(codomain), Conjunction)
 }
 
+// produces the image set of a single entitlement through a map
+// the image set of one element is always a conjunction
 func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (output *EntitlementOrderedSet) {
 	output = orderedmap.New[EntitlementOrderedSet](0)
 	for _, relation := range e.Type.Relations {
@@ -281,19 +302,9 @@ func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (ou
 	return
 }
 
-func (e EntitlementMapAccess) entitlementPreImage(entitlement *EntitlementType) (input *EntitlementOrderedSet) {
-	input = orderedmap.New[EntitlementOrderedSet](0)
-	for _, relation := range e.Type.Relations {
-		if relation.Output.Equal(entitlement) {
-			input.Set(relation.Input, struct{}{})
-		}
-	}
-	return
-}
-
 // Image applies all the entitlements in the `argumentAccess` to the function
 // defined by the map in `e`, producing a new entitlement set of the image of the
-// arguments
+// arguments.
 func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, error) {
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map
@@ -328,53 +339,6 @@ func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, 
 		return EntitlementSetAccess{
 			Entitlements: output,
 			SetKind:      inputs.SetKind,
-		}, nil
-	}
-	return UnauthorizedAccess, nil
-}
-
-// Preimage applies all the entitlements in the `argumentAccess` to the inverse of the function
-// defined by the map in `e`, producing a new entitlement set of the preimage of the
-// arguments
-func (e EntitlementMapAccess) Preimage(outputs Access, astRange ast.Range) (Access, error) {
-	switch outputs := outputs.(type) {
-	// primitive access always passes trivially through the map
-	case PrimitiveAccess:
-		return outputs, nil
-	case EntitlementSetAccess:
-		var input *EntitlementOrderedSet = orderedmap.New[EntitlementOrderedSet](outputs.Entitlements.Len())
-		var err error = nil
-		outputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-			entitlementPreImage := e.entitlementPreImage(entitlement)
-			// the preimage of a single element is always a disjunctive set; consider a mapping
-			// M defined as Y -> X, Z -> X, B -> A, C -> A. M^-1(X) = Y | Z and M^-1(A) = B | C, since either an
-			// Y or a Z can result in an X and either a B or a C can result in an A.
-			// Thus M^-1(X | A) would be ((Y | Z) & (B | C)), which is a conjunction of two disjunctions,
-			// which is too complex to be represented in Cadence as a type. Thus whenever such a type
-			// would arise, we raise an error instead
-			if (outputs.SetKind == Conjunction && outputs.Entitlements.Len() > 1) && entitlementPreImage.Len() > 1 {
-				err = &UnrepresentableEntitlementMapOutputError{
-					Input: outputs,
-					Map:   e.Type,
-					Range: astRange,
-				}
-			}
-			input.SetAll(entitlementPreImage)
-		})
-		if err != nil {
-			return nil, err
-		}
-		// the preimage of a set through a map is the disjunction of all the input sets
-		if input.Len() == 0 {
-			return UnauthorizedAccess, nil
-		}
-		setKind := outputs.SetKind
-		if outputs.SetKind == Conjunction && outputs.Entitlements.Len() == 1 {
-			setKind = Disjunction
-		}
-		return EntitlementSetAccess{
-			Entitlements: input,
-			SetKind:      setKind,
 		}, nil
 	}
 	return UnauthorizedAccess, nil

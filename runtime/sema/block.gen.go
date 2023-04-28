@@ -19,11 +19,6 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
-
 const BlockTypeHeightFieldName = "height"
 
 var BlockTypeHeightFieldType = UInt64Type
@@ -78,72 +73,35 @@ var BlockType = &SimpleType{
 	Equatable:     false,
 	Exportable:    false,
 	Importable:    false,
-	Members: func(t *SimpleType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			BlockTypeHeightFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
+}
 
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						BlockTypeHeightFieldType,
-						BlockTypeHeightFieldDocString,
-					)
-				},
-			},
-			BlockTypeViewFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						BlockTypeViewFieldType,
-						BlockTypeViewFieldDocString,
-					)
-				},
-			},
-			BlockTypeTimestampFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						BlockTypeTimestampFieldType,
-						BlockTypeTimestampFieldDocString,
-					)
-				},
-			},
-			BlockTypeIdFieldName: {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error)) *Member {
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						BlockTypeIdFieldType,
-						BlockTypeIdFieldDocString,
-					)
-				},
-			},
-		}
-	},
+func init() {
+	BlockType.Members = func(t *SimpleType) map[string]MemberResolver {
+		return MembersAsResolvers([]*Member{
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				BlockTypeHeightFieldName,
+				BlockTypeHeightFieldType,
+				BlockTypeHeightFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				BlockTypeViewFieldName,
+				BlockTypeViewFieldType,
+				BlockTypeViewFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				BlockTypeTimestampFieldName,
+				BlockTypeTimestampFieldType,
+				BlockTypeTimestampFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				BlockTypeIdFieldName,
+				BlockTypeIdFieldType,
+				BlockTypeIdFieldDocString,
+			),
+		})
+	}
 }

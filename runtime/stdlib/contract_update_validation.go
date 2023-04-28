@@ -147,6 +147,12 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 			validator.checkConformances(oldDecl, newDecl)
 		}
 	}
+
+	if newDecl, ok := newDeclaration.(*ast.AttachmentDeclaration); ok {
+		if oldDecl, ok := oldDeclaration.(*ast.AttachmentDeclaration); ok {
+			validator.checkRequiredEntitlements(oldDecl, newDecl)
+		}
+	}
 }
 
 func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
@@ -197,6 +203,21 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	// Check nested structs, enums, etc.
 	newNestedCompositeDecls := newDeclaration.DeclarationMembers().Composites()
 	for _, newNestedDecl := range newNestedCompositeDecls {
+		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
+		if !found {
+			// Then it's a new declaration
+			continue
+		}
+
+		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+
+		// If there's a matching new decl, then remove the old one from the map.
+		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
+	}
+
+	// Check nested attachments, etc.
+	newNestedAttachmentDecls := newDeclaration.DeclarationMembers().Attachments()
+	for _, newNestedDecl := range newNestedAttachmentDecls {
 		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then it's a new declaration
@@ -261,6 +282,11 @@ func getNestedCompositeAndInterfaceDecls(declaration ast.Declaration) map[string
 		compositeAndInterfaceDecls[identifier] = nestedDecl
 	}
 
+	nestedAttachmentDecls := declaration.DeclarationMembers().AttachmentsByIdentifier()
+	for identifier, nestedDecl := range nestedAttachmentDecls { //nolint:maprange
+		compositeAndInterfaceDecls[identifier] = nestedDecl
+	}
+
 	nestedInterfaceDecls := declaration.DeclarationMembers().InterfacesByIdentifier()
 	for identifier, nestedDecl := range nestedInterfaceDecls { //nolint:maprange
 		compositeAndInterfaceDecls[identifier] = nestedDecl
@@ -308,6 +334,41 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 				FoundName:    newEnumCase.Identifier.Identifier,
 				Range:        ast.NewUnmeteredRangeFromPositioned(newEnumCase),
 			})
+		}
+	}
+}
+
+func (validator *ContractUpdateValidator) checkRequiredEntitlements(
+	oldDecl *ast.AttachmentDeclaration,
+	newDecl *ast.AttachmentDeclaration,
+) {
+	oldEntitlements := oldDecl.RequiredEntitlements
+	newEntitlements := newDecl.RequiredEntitlements
+
+	// updates cannot add new entitlement requirements, or equivalently,
+	// the new entitlements must all be present in the old entitlements list
+
+	for _, newEntitlement := range newEntitlements {
+		found := false
+		for index, oldEntitlement := range oldEntitlements {
+			err := oldEntitlement.CheckEqual(newEntitlement, validator)
+			if err == nil {
+				found = true
+
+				// Remove the matched entitlement, so we don't have to check it again.
+				// i.e: optimization
+				oldEntitlements = append(oldEntitlements[:index], oldEntitlements[index+1:]...)
+				break
+			}
+		}
+
+		if !found {
+			validator.report(&RequiredEntitlementMismatchError{
+				DeclName: newDecl.Identifier.Identifier,
+				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+			})
+
+			return
 		}
 	}
 }
@@ -526,6 +587,21 @@ func (*ConformanceMismatchError) IsUserError() {}
 
 func (e *ConformanceMismatchError) Error() string {
 	return fmt.Sprintf("conformances does not match in `%s`", e.DeclName)
+}
+
+// RequiredEntitlementMismatchError is reported during a contract update, when the required entitlements of the new attachment
+// does not match the existing one.
+type RequiredEntitlementMismatchError struct {
+	DeclName string
+	ast.Range
+}
+
+var _ errors.UserError = &RequiredEntitlementMismatchError{}
+
+func (*RequiredEntitlementMismatchError) IsUserError() {}
+
+func (e *RequiredEntitlementMismatchError) Error() string {
+	return fmt.Sprintf("required entitlements do not match in `%s`", e.DeclName)
 }
 
 // EnumCaseMismatchError is reported during an enum update, when an updated enum case

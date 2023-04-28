@@ -1108,9 +1108,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	if result, ok := result.(ReferenceTrackedResourceKindedValue); ok {
-		interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
-	}
+	interpreter.maybeTrackReferencedResourceKindedValue(result)
 
 	switch typ := borrowType.(type) {
 	case *sema.OptionalType:
@@ -1131,9 +1129,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			}
 
 			innerValue := result.InnerValue(interpreter, locationRange)
-			if result, ok := innerValue.(ReferenceTrackedResourceKindedValue); ok {
-				interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
-			}
+			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
 
 			return NewSomeValueNonCopying(
 				interpreter,
@@ -1225,7 +1221,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	attachTarget := interpreter.evalExpression(attachExpression.Base)
 	base, ok := attachTarget.(*CompositeValue)
 
-	// we enforce this in the checker, but check defensively anyways
+	// we enforce this in the checker, but check defensively anyway
 	if !ok || !base.Kind.SupportsAttachments() {
 		panic(InvalidAttachmentOperationTargetError{
 			Value:         attachTarget,
@@ -1241,8 +1237,8 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	}
 
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
-	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
-	// we create an implicit constructor argument containing a reference to the base
+	// set it on the attachment's `CompositeValue` yet, because the value does not exist.
+	// Instead, we create an implicit constructor argument containing a reference to the base.
 
 	// ENTITLEMENTS TODO: the entitlements of the base value should be fully qualified for the preimage
 	// of the map for this attachment

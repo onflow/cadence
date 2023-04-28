@@ -34,7 +34,7 @@ var rlpContractType = func() *sema.CompositeType {
 		Kind:       common.CompositeKindContract,
 	}
 
-	ty.Members = sema.GetMembersAsMap([]*sema.Member{
+	ty.Members = sema.MembersAsMap([]*sema.Member{
 		sema.NewUnmeteredPublicFunctionMember(
 			ty,
 			rlpDecodeListFunctionName,
