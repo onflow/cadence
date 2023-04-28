@@ -527,7 +527,14 @@ func (p *parser) endAmbiguity() {
 	}
 }
 
-func ParseExpression(memoryGauge common.MemoryGauge, input []byte, config Config) (expression ast.Expression, errs []error) {
+func ParseExpression(
+	memoryGauge common.MemoryGauge,
+	input []byte,
+	config Config,
+) (
+	expression ast.Expression,
+	errs []error,
+) {
 	return Parse(
 		memoryGauge,
 		input,
@@ -549,6 +556,24 @@ func ParseStatements(
 	return Parse(
 		memoryGauge,
 		input,
+		func(p *parser) ([]ast.Statement, error) {
+			return parseStatements(p, nil)
+		},
+		config,
+	)
+}
+
+func ParseStatementsFromTokenStream(
+	memoryGauge common.MemoryGauge,
+	tokens lexer.TokenStream,
+	config Config,
+) (
+	statements []ast.Statement,
+	errs []error,
+) {
+	return ParseTokenStream(
+		memoryGauge,
+		tokens,
 		func(p *parser) ([]ast.Statement, error) {
 			return parseStatements(p, nil)
 		},

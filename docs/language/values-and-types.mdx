@@ -405,6 +405,16 @@ let aNumber = 0x436164656E636521
 // `aNumber` has type `Int`
 ```
 
+Address can also be created using a byte array.
+
+```cadence
+// Declare an address with hex representation as 0x436164656E636521.
+let someAddress: Address = Address.fromBytes([67, 97, 100, 101, 110, 99, 101, 33])
+
+// Invalid: Provided value is not compatible with type `Address`. The function panics.
+let invalidAddress: Address = Address.fromBytes([12, 34, 56, 11, 22, 33, 44, 55, 66, 77, 88, 99, 111])
+```
+
 ### Address Functions
 
 Addresses have multiple built-in functions you can use.

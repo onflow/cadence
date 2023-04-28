@@ -1853,28 +1853,6 @@ func TestTypeEquality(t *testing.T) {
 			assert.True(t, source.Equal(target))
 		})
 
-		t.Run("different raw type", func(t *testing.T) {
-			t.Parallel()
-
-			source := &EnumType{
-				Location: common.AddressLocation{
-					Name:    "Foo",
-					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
-				},
-				QualifiedIdentifier: "Bar",
-				RawType:             IntType{},
-			}
-			target := &EnumType{
-				Location: common.AddressLocation{
-					Name:    "Foo",
-					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
-				},
-				QualifiedIdentifier: "Bar",
-				RawType:             StringType{},
-			}
-			assert.False(t, source.Equal(target))
-		})
-
 		t.Run("different location name", func(t *testing.T) {
 			t.Parallel()
 

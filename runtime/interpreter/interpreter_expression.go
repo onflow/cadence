@@ -383,37 +383,11 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		}
 		return left.BitwiseRightShift(interpreter, right, locationRange)
 
-	case ast.OperationLess:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.Less(interpreter, right, locationRange)
-
-	case ast.OperationLessEqual:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.LessEqual(interpreter, right, locationRange)
-
-	case ast.OperationGreater:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.Greater(interpreter, right, locationRange)
-
-	case ast.OperationGreaterEqual:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.GreaterEqual(interpreter, right, locationRange)
+	case ast.OperationLess,
+		ast.OperationLessEqual,
+		ast.OperationGreater,
+		ast.OperationGreaterEqual:
+		return interpreter.testComparison(leftValue, rightValue(), expression)
 
 	case ast.OperationEqual:
 		return interpreter.testEqual(leftValue, rightValue(), expression)
@@ -521,6 +495,62 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 			right,
 		),
 	)
+}
+
+func (interpreter *Interpreter) testComparison(left, right Value, expression *ast.BinaryExpression) BoolValue {
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
+
+	leftComparable, leftOk := left.(ComparableValue)
+	rightComparable, rightOk := right.(ComparableValue)
+
+	if !leftOk || !rightOk {
+		panic(InvalidOperandsError{
+			Operation:     expression.Operation,
+			LeftType:      left.StaticType(interpreter),
+			RightType:     right.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	switch expression.Operation {
+	case ast.OperationLess:
+		return leftComparable.Less(
+			interpreter,
+			rightComparable,
+			locationRange,
+		)
+
+	case ast.OperationLessEqual:
+		return leftComparable.LessEqual(
+			interpreter,
+			rightComparable,
+			locationRange,
+		)
+
+	case ast.OperationGreater:
+		return leftComparable.Greater(
+			interpreter,
+			rightComparable,
+			locationRange,
+		)
+
+	case ast.OperationGreaterEqual:
+		return leftComparable.GreaterEqual(
+			interpreter,
+			rightComparable,
+			locationRange,
+		)
+
+	default:
+		panic(&unsupportedOperation{
+			kind:      common.OperationKindBinary,
+			operation: expression.Operation,
+			Range:     ast.NewUnmeteredRangeFromPositioned(expression),
+		})
+	}
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) Value {
@@ -1108,9 +1138,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	if result, ok := result.(ReferenceTrackedResourceKindedValue); ok {
-		interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
-	}
+	interpreter.maybeTrackReferencedResourceKindedValue(result)
 
 	switch typ := borrowType.(type) {
 	case *sema.OptionalType:
@@ -1131,9 +1159,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			}
 
 			innerValue := result.InnerValue(interpreter, locationRange)
-			if result, ok := innerValue.(ReferenceTrackedResourceKindedValue); ok {
-				interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
-			}
+			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
 
 			return NewSomeValueNonCopying(
 				interpreter,
@@ -1225,7 +1251,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	attachTarget := interpreter.evalExpression(attachExpression.Base)
 	base, ok := attachTarget.(*CompositeValue)
 
-	// we enforce this in the checker, but check defensively anyways
+	// we enforce this in the checker, but check defensively anyway
 	if !ok || !base.Kind.SupportsAttachments() {
 		panic(InvalidAttachmentOperationTargetError{
 			Value:         attachTarget,
@@ -1241,8 +1267,8 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	}
 
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
-	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
-	// we create an implicit constructor argument containing a reference to the base
+	// set it on the attachment's `CompositeValue` yet, because the value does not exist.
+	// Instead, we create an implicit constructor argument containing a reference to the base.
 	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
 		false,

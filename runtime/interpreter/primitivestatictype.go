@@ -593,13 +593,20 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypePublicAccountCapabilities
 	}
 
-	switch t.(type) {
+	switch t := t.(type) {
 	case *sema.AddressType:
 		typ = PrimitiveStaticTypeAddress
 
 	// Storage
 	case *sema.CapabilityType:
-		typ = PrimitiveStaticTypeCapability
+		// Only convert unparameterized Capability type
+		if t.BorrowType == nil {
+			typ = PrimitiveStaticTypeCapability
+		}
+	}
+
+	if typ == PrimitiveStaticTypeUnknown {
+		return
 	}
 
 	return NewPrimitiveStaticType(memoryGauge, typ) // default is 0 aka PrimitiveStaticTypeUnknown

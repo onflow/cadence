@@ -27,8 +27,9 @@ var AnyType = &SimpleType{
 	tag:           AnyTypeTag,
 	IsResource:    false,
 	// `Any` is never a valid type in user programs
-	Storable:  true,
-	Equatable: false,
+	Storable:   true,
+	Equatable:  false,
+	Comparable: false,
 	// `Any` is never a valid type in user programs
 	Exportable: false,
 	Importable: false,

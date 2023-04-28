@@ -990,12 +990,12 @@ func newPublicAccountContractsValue(
 
 const InboxStorageDomain = "inbox"
 
-func accountInboxPublishFunction(
+func newAuthAccountInboxPublishFunction(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
-	address common.Address,
 	providerValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
+	provider := providerValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		sema.AuthAccountInboxTypePublishFunctionType,
@@ -1033,7 +1033,7 @@ func accountInboxPublishFunction(
 			publishedValue := interpreter.NewPublishedValue(inter, recipientValue, value).Transfer(
 				inter,
 				locationRange,
-				atree.Address(address),
+				atree.Address(provider),
 				true,
 				nil,
 			)
@@ -1041,7 +1041,7 @@ func accountInboxPublishFunction(
 			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
 
 			inter.WriteStored(
-				address,
+				provider,
 				InboxStorageDomain,
 				storageMapKey,
 				publishedValue,
@@ -1052,15 +1052,15 @@ func accountInboxPublishFunction(
 	)
 }
 
-func accountInboxUnpublishFunction(
+func newAuthAccountInboxUnpublishFunction(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
-	address common.Address,
 	providerValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
+	provider := providerValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountInboxTypePublishFunctionType,
+		sema.AuthAccountInboxTypeUnpublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -1072,7 +1072,7 @@ func accountInboxUnpublishFunction(
 
 			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
 
-			readValue := inter.ReadStored(address, InboxStorageDomain, storageMapKey)
+			readValue := inter.ReadStored(provider, InboxStorageDomain, storageMapKey)
 			if readValue == nil {
 				return interpreter.Nil
 			}
@@ -1105,7 +1105,7 @@ func accountInboxUnpublishFunction(
 			)
 
 			inter.WriteStored(
-				address,
+				provider,
 				InboxStorageDomain,
 				storageMapKey,
 				nil,
@@ -1126,7 +1126,7 @@ func accountInboxUnpublishFunction(
 	)
 }
 
-func accountInboxClaimFunction(
+func newAuthAccountInboxClaimFunction(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
 	recipientValue interpreter.AddressValue,
@@ -1217,13 +1217,12 @@ func newAuthAccountInboxValue(
 	handler EventEmitter,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	address := addressValue.ToAddress()
 	return interpreter.NewAuthAccountInboxValue(
 		gauge,
 		addressValue,
-		accountInboxPublishFunction(gauge, handler, address, addressValue),
-		accountInboxUnpublishFunction(gauge, handler, address, addressValue),
-		accountInboxClaimFunction(gauge, handler, addressValue),
+		newAuthAccountInboxPublishFunction(gauge, handler, addressValue),
+		newAuthAccountInboxUnpublishFunction(gauge, handler, addressValue),
+		newAuthAccountInboxClaimFunction(gauge, handler, addressValue),
 	)
 }
 
@@ -1406,6 +1405,8 @@ func newAccountContractsBorrowFunction(
 				return interpreter.Nil
 			}
 
+			// No need to track the referenced value, since the reference is taken to a contract value.
+			// A contract value would never be moved or destroyed, within the execution of a program.
 			reference := interpreter.NewEphemeralReferenceValue(
 				inter,
 				false,
