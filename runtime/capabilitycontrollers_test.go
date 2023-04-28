@@ -208,7 +208,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("get existing, with valid type", func(t *testing.T) {
+			t.Run("get and check existing, with valid type", func(t *testing.T) {
 
 				t.Parallel()
 
@@ -236,6 +236,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                   // Assert
                                   assert(issuedCap.id == expectedCapID)
+                                  assert(gotCap.check())
                                   assert(gotCap.id == expectedCapID)
                               }
                           }
@@ -246,7 +247,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("get and borrow existing, with valid type", func(t *testing.T) {
+			t.Run("get, borrow, and check existing, with valid type", func(t *testing.T) {
 
 				t.Parallel()
 
@@ -275,6 +276,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                   // Assert
                                   assert(issuedCap.id == expectedCapID)
+                                  assert(gotCap.check())
                                   assert(gotCap.id == expectedCapID)
                                   assert(ref.id == resourceID)
                               }
