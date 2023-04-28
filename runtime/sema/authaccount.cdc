@@ -374,6 +374,6 @@ pub struct AuthAccount {
         pub fun forEachController(_ function: ((&AccountCapabilityController): Bool))
 
         /// Issue/create a new account capability.
-        pub fun issue<T: &AuthAccount>(): Capability<T>
+        pub fun issue<T: &AuthAccount{}>(): Capability<T>
     }
 }
