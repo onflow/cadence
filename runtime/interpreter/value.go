@@ -17019,6 +17019,7 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 type ReferenceValue interface {
 	Value
 	isReference()
+	ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value
 }
 
 // StorageReferenceValue
@@ -17141,7 +17142,7 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value {
-	referencedValue, err := v.dereference(interpreter, EmptyLocationRange)
+	referencedValue, err := v.dereference(interpreter, locationRange)
 	if err == nil {
 		return referencedValue
 	}
@@ -17445,7 +17446,7 @@ func (v *EphemeralReferenceValue) MeteredString(memoryGauge common.MemoryGauge, 
 }
 
 func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
-	referencedValue := v.ReferencedValue(inter, EmptyLocationRange)
+	referencedValue := v.ReferencedValue(inter, EmptyLocationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			Cause: "the value being referenced has been destroyed or moved",
@@ -17469,6 +17470,7 @@ func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
 func (v *EphemeralReferenceValue) ReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
+	_ bool,
 ) *Value {
 	// Just like for storage references, references to optionals are unwrapped,
 	// i.e. a reference to `nil` aborts when dereferenced.
@@ -17488,7 +17490,7 @@ func (v *EphemeralReferenceValue) mustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			Cause:         "the value being referenced has been destroyed or moved",
@@ -17638,7 +17640,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		return false
 	}

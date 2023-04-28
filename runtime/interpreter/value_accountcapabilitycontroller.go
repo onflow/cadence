@@ -204,3 +204,17 @@ func (*AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRan
 	// Storage capability controllers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
+
+func (v *AccountCapabilityControllerValue) ReferenceValue(
+	interpreter *Interpreter,
+	capabilityAddress common.Address,
+	resultBorrowType *sema.ReferenceType,
+) ReferenceValue {
+	return NewAccountReferenceValue(
+		interpreter,
+		capabilityAddress,
+		// TODO:
+		EmptyPathValue,
+		resultBorrowType,
+	)
+}

@@ -31,6 +31,11 @@ type CapabilityControllerValue interface {
 	Value
 	isCapabilityControllerValue()
 	CapabilityControllerBorrowType() ReferenceStaticType
+	ReferenceValue(
+		interpreter *Interpreter,
+		capabilityAddress common.Address,
+		resultBorrowType *sema.ReferenceType,
+	) ReferenceValue
 }
 
 // StorageCapabilityControllerValue
@@ -232,4 +237,18 @@ func (*StorageCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 func (*StorageCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Storage capability controllers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
+}
+
+func (v *StorageCapabilityControllerValue) ReferenceValue(
+	interpreter *Interpreter,
+	capabilityAddress common.Address,
+	resultBorrowType *sema.ReferenceType,
+) ReferenceValue {
+	return NewStorageReferenceValue(
+		interpreter,
+		resultBorrowType.Authorized,
+		capabilityAddress,
+		v.TargetPath,
+		resultBorrowType.Type,
+	)
 }

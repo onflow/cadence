@@ -665,6 +665,7 @@ func (e *interpreterEnvironment) newIDCapabilityBorrowHandler() interpreter.IDCa
 
 		return stdlib.BorrowCapabilityController(
 			inter,
+			locationRange,
 			address,
 			capabilityID,
 			wantedBorrowType,
@@ -683,8 +684,14 @@ func (e *interpreterEnvironment) newIDCapabilityCheckHandler() interpreter.IDCap
 		capabilityBorrowType *sema.ReferenceType,
 	) interpreter.BoolValue {
 
-		// TODO:
-		panic("TODO")
+		return stdlib.CheckCapabilityController(
+			inter,
+			locationRange,
+			address,
+			capabilityID,
+			wantedBorrowType,
+			capabilityBorrowType,
+		)
 	}
 }
 

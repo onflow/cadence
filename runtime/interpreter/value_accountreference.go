@@ -296,3 +296,8 @@ func (v *AccountReferenceValue) authAccount(interpreter *Interpreter) Value {
 	}
 	return v._authAccount
 }
+
+func (v *AccountReferenceValue) ReferencedValue(interpreter *Interpreter, _ LocationRange, _ bool) *Value {
+	authAccount := v.authAccount(interpreter)
+	return &authAccount
+}
