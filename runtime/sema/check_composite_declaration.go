@@ -2228,7 +2228,7 @@ func (checker *Checker) checkSpecialFunction(
 
 	fnAccess := checker.accessFromAstAccess(specialFunction.FunctionDeclaration.Access)
 
-	checker.declareSelfValue(containerType, fnAccess, containerDocString)
+	checker.declareSelfValue(containerType, containerDocString)
 	if containerType.GetCompositeKind() == common.CompositeKindAttachment {
 		// attachments cannot be interfaces, so this cast must succeed
 		attachmentType, ok := containerType.(*CompositeType)
@@ -2237,8 +2237,7 @@ func (checker *Checker) checkSpecialFunction(
 		}
 		checker.declareBaseValue(
 			attachmentType.baseType,
-			attachmentType.attachmentEntitlementAccess,
-			fnAccess,
+			attachmentType,
 			ast.NewRangeFromPositioned(checker.memoryGauge, specialFunction),
 			attachmentType.baseTypeDocString)
 	}
@@ -2294,14 +2293,11 @@ func (checker *Checker) checkCompositeFunctions(
 			checker.enterValueScope()
 			defer checker.leaveValueScope(function.EndPosition, true)
 
-			fnAccess := checker.accessFromAstAccess(function.Access)
-
-			checker.declareSelfValue(selfType, fnAccess, selfDocString)
+			checker.declareSelfValue(selfType, selfDocString)
 			if selfType.GetCompositeKind() == common.CompositeKindAttachment {
 				checker.declareBaseValue(
 					selfType.baseType,
-					selfType.attachmentEntitlementAccess,
-					fnAccess,
+					selfType,
 					ast.NewRangeFromPositioned(checker.memoryGauge, function),
 					selfType.baseTypeDocString,
 				)
@@ -2357,31 +2353,22 @@ func (checker *Checker) declareLowerScopedValue(
 	}
 }
 
-func (checker *Checker) declareSelfValue(selfType Type, selfAccess Access, selfDocString string) {
+func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 	// inside of an attachment, self is a reference to the attachment's type, because
 	// attachments are never first class values, they must always exist inside references
 	if typedSelfType, ok := selfType.(*CompositeType); ok && typedSelfType.Kind == common.CompositeKindAttachment {
-		// the `self` value in an attachment function has the set of entitlements with which that function was declared. Consider
-		// that a function will only be callable on a reference type that possesses the required entitlements, so within that
-		// function the `self` value will necessarily possess those entitlements. e.g.
-		//
-		// entitlement map M {
-		//     E -> F
-		//     X -> Y
-		// }
-		//
-		// access(M) attachment A for R {
-		//	  access(Y | F) fun foo() {}
-		// }
-		//
-		// within the body of `foo`, `self` would have a `(Y | F)` entitlement, since we know for sure the reference to `A` that
-		// was used to call `foo` (and hence the value of `self`) must have had either `Y` or `F`.
+		// the `self` value in an attachment is considered fully-entitled to that attachment, or
+		// equivalently the entire codomain of the attachment's map
+		var selfAccess Access = UnauthorizedAccess
+		if typedSelfType.attachmentEntitlementAccess != nil {
+			selfAccess = typedSelfType.attachmentEntitlementAccess.Codomain()
+		}
 		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, selfAccess)
 	}
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }
 
-func (checker *Checker) declareBaseValue(baseType Type, attachmentAccess *EntitlementMapAccess, selfAccess Access, fnRange ast.Range, superDocString string) {
+func (checker *Checker) declareBaseValue(baseType Type, attachmentType *CompositeType, fnRange ast.Range, superDocString string) {
 	switch typedBaseType := baseType.(type) {
 	case *InterfaceType:
 		restrictedType := AnyStructType
@@ -2392,29 +2379,21 @@ func (checker *Checker) declareBaseValue(baseType Type, attachmentAccess *Entitl
 		// to be referenced by `base`
 		baseType = NewRestrictedType(checker.memoryGauge, restrictedType, []*InterfaceType{typedBaseType})
 	}
-	// the `base` value in an attachment function has the set of entitlements defined by the preimage through the attachment's entitlement mapping
-	// of the set with which the attachment function was declared. I.e. given:
+	// the `base` value in an attachment function has the set of entitlements defined by the required entitlements specified in the attachment's declaration
 	// -------------------------------
 	// entitlement E
 	// entitlement F
-	// entitlement mapping M {
-	//     E -> F
-	// }
-	// access(M) attachment A for R {
-	//     access(F) fun foo() { ... }
+	// pub attachment A for R {
+	//     require entitlement E
+	//     pub fun foo() { ... }
 	// }
 	// -------------------------------
-	// within the body of `foo`, the `base` value will be an `auth(E) &R`; entitled to the preimage of `F` through `M`. To see why this is safe, consider that
-	// `foo` can only be called with an attachment of type `auth(F)` &A` (this is also the type of `self` inside `foo`). The attachment access semantics dictate
-	// that we map the entitlements of the base reference through `M` to get the resulting entitlements for the attachment, so therefore we can see that the only
-	// way to obtain a `auth(F)` &A` reference to the attachment is if the `base` we accessed it on was entitled to `E`.
+	// within the body of `foo`, the `base` value will be entitled to `E` but not `F`, because only `E` was required in the attachment's declaration
 	var baseAccess Access = UnauthorizedAccess
-	if attachmentAccess != nil {
-		var err error
-		baseAccess, err = attachmentAccess.Preimage(selfAccess, fnRange)
-		if err != nil {
-			checker.report(err)
-			baseAccess = UnauthorizedAccess
+	if attachmentType.requiredEntitlements != nil && attachmentType.requiredEntitlements.Len() > 0 {
+		baseAccess = EntitlementSetAccess{
+			Entitlements: attachmentType.requiredEntitlements,
+			SetKind:      Conjunction,
 		}
 	}
 	base := NewReferenceType(checker.memoryGauge, baseType, baseAccess)

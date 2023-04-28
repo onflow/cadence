@@ -3931,10 +3931,10 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		access(M) attachment A for S {
 			access(Y) fun entitled() {
 				let a: auth(Y) &A = self 
-				let b: auth(X) &S = base 
+				let b: &S = base 
 			} 
 			pub fun unentitled() {
-				let a: auth(Y) &A = self // err
+				let a: auth(X, Y) &A = self // err
 				let b: auth(X) &S = base // err
 			}
 		}
@@ -3943,11 +3943,88 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X, Y) &A")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &A")
 		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 		require.Equal(t, errs[1].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X) &S")
 		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&S")
+	})
+
+	t.Run("base type with too few requirements", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {}
+		access(M) attachment A for S {
+			require entitlement X
+			pub fun unentitled() {
+				let b: &S = base 
+			} 
+			pub fun entitled() {
+				let b: auth(X, Y) &S = base
+			}
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X, Y) &S")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(X) &S")
+	})
+
+	t.Run("base type with no requirements", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {}
+		access(M) attachment A for S {
+			pub fun unentitled() {
+				let b: &S = base 
+			} 
+			pub fun entitled() {
+				let b: auth(X) &S = base
+			}
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X) &S")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&S")
+	})
+
+	t.Run("base type", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y 
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {}
+		access(M) attachment A for S {
+			require entitlement X
+			require entitlement Y
+			pub fun unentitled() {
+				let b: &S = base 
+			} 
+			pub fun entitled() {
+				let b: auth(X, Y) &S = base
+			}
+		}
+		`)
+
+		assert.NoError(t, err)
 	})
 
 	t.Run("multiple mappings", func(t *testing.T) {
@@ -3967,89 +4044,18 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		access(M) attachment A for S {
 			access(F, Y) fun entitled() {
 				let a: auth(F, Y) &A = self 
-				let b: auth(E, X) &S = base 
 			} 
 			pub fun unentitled() {
-				let a: auth(F, Y) &A = self // err
-				let b: auth(E, X) &S = base // err
+				let a: auth(F, Y, E) &A = self // err
 			}
 		}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F, Y) &A")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A")
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(E, X) &S")
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&S")
-	})
-
-	t.Run("multiple mappings preimage", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-		entitlement X
-		entitlement Y 
-		entitlement E
-		entitlement F
-		entitlement mapping M {
-			X -> Y
-			E -> F
-		}
-		struct S {}
-		access(M) attachment A for S {
-			access(F | Y) fun entitled() {
-				let a: auth(F, Y) &A = self 
-				let b: auth(E, X) &S = base 
-			} 
-		}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 2)
-
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F, Y) &A")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(F | Y) &A")
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(E, X) &S")
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(E | X) &S")
-	})
-
-	t.Run("multiple mappings non 1-1 preimage", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-		entitlement X
-		entitlement Y 
-		entitlement Z
-		entitlement E
-		entitlement F
-		entitlement G
-		entitlement mapping M {
-			X -> Y
-			Z -> Y
-			E -> F
-			G -> F
-		}
-		struct S {
-			access(E) fun foo() {}
-		}
-		access(M) attachment A for S {
-			access(F | Y) fun entitled() {
-				let a: auth(F, Y) &A = self 
-				let b: auth(E) &S = base 
-			} 
-		}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 2)
-
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F, Y) &A")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(F | Y) &A")
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(E) &S")
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(E | G | X | Z) &S")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F, Y, E) &A")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y, F) &A")
 	})
 
 	t.Run("missing in codomain", func(t *testing.T) {
@@ -4190,103 +4196,6 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
 	})
 
-	t.Run("complex preimage disjunction", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-		entitlement X
-		entitlement Y 
-		entitlement Z 
-		entitlement mapping M {
-			X -> Y
-			X -> Z
-		}
-		struct S {}
-		access(M) attachment A for S {
-			access(Y | Z) fun entitled() {
-				let a: auth(Y | Z) &A = self 
-				let b: auth(X) &S = base 
-			} 
-		}
-		`)
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("complex preimage conjunction", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-		entitlement X
-		entitlement Y 
-		entitlement Z 
-		entitlement mapping M {
-			X -> Y
-			X -> Z
-		}
-		struct S {
-			access(X) fun foo() {}
-		}
-		access(M) attachment A for S {
-			access(Y, Z) fun entitled() {
-				let a: auth(Y, Z) &A = self 
-				let b: auth(X) &S = base 
-			} 
-		}
-		`)
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("non-1-to-1 preimage", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-		entitlement X
-		entitlement Y 
-		entitlement Z 
-		entitlement mapping M {
-			X -> Z
-			Y -> Z
-		}
-		struct S {}
-		access(M) attachment A for S {
-			access(Z) fun entitled() {
-				let a: auth(Z) &A = self 
-				let b: auth(X | Y) &S = base 
-				let c: auth(X, Y) &S = base // err
-			} 
-		}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X, Y) &S")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(X | Y) &S")
-	})
-
-	t.Run("unrepresentable", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-		entitlement X
-		entitlement Y 
-		entitlement Z 
-		entitlement C
-		entitlement B
-		entitlement mapping M {
-			X -> Z
-			Y -> Z
-			C -> B
-		}
-		struct S {}
-		access(M) attachment A for S {
-			access(Z, B) fun entitled() {} 
-		}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		// preimage of (Z, B) through M would be `(X | Y, C)` which is not respresentable
-		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
-	})
 }
 
 func TestCheckAttachmentAccessEntitlements(t *testing.T) {
@@ -4479,7 +4388,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 	})
 }
 
-func TestCheckAttachmentEntitlementConditions(t *testing.T) {
+func TestCheckEntitlementConditions(t *testing.T) {
 	t.Parallel()
 	t.Run("use of function on owned value", func(t *testing.T) {
 		t.Parallel()
