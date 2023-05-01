@@ -207,6 +207,50 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.NoError(t, err)
 			})
 
+			t.Run("get linked capability", func(t *testing.T) {
+
+				t.Parallel()
+
+				t.Run("storage link", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
+
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      signer.link<&Test.R>(publicPath, target: storagePath)!
+
+                                      // Act
+                                      let gotCap1: Capability<&Test.R>? =
+                                          %[1]s.getCapability<&Test.R>(publicPath)
+                                      let gotCap2: Capability<&Test.R>? =
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)
+
+                                      // Assert
+                                      assert(gotCap1!.check())
+
+                                      assert(gotCap2 == nil)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				// NOTE: account link cannot be tested
+			})
+
 			t.Run("get and check existing, with valid type", func(t *testing.T) {
 
 				t.Parallel()
@@ -281,7 +325,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					)
 					require.NoError(t, err)
 				})
-
 			})
 
 			t.Run("get, borrow, and check existing, with valid type", func(t *testing.T) {
