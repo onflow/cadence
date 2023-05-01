@@ -3003,7 +3003,7 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("duplicate fields mismatching", func(t *testing.T) {
+	t.Run("duplicate fields, mismatching type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3014,6 +3014,50 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
             struct interface Bar: Foo {
                 pub var x: Int
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "x", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate fields, mismatching kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub var x: String
+            }
+
+            struct interface Bar: Foo {
+                pub let x: String
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "x", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate fields, mismatching access modifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub(set) var x: String
+            }
+
+            struct interface Bar: Foo {
+                pub var x: String
             }
         `)
 
