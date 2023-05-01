@@ -4083,30 +4083,6 @@ func (e *UnrepresentableEntitlementMapOutputError) EndPosition(common.MemoryGaug
 	return e.EndPos
 }
 
-// ExplicitDisjointEntitlementSetReferenceCreationError
-type ExplicitDisjointEntitlementSetReferenceCreationError struct {
-	ast.Range
-}
-
-var _ SemanticError = &ExplicitDisjointEntitlementSetReferenceCreationError{}
-var _ errors.UserError = &ExplicitDisjointEntitlementSetReferenceCreationError{}
-
-func (*ExplicitDisjointEntitlementSetReferenceCreationError) isSemanticError() {}
-
-func (*ExplicitDisjointEntitlementSetReferenceCreationError) IsUserError() {}
-
-func (e *ExplicitDisjointEntitlementSetReferenceCreationError) Error() string {
-	return "cannot create a reference with a disjoint entitlement set"
-}
-
-func (e *ExplicitDisjointEntitlementSetReferenceCreationError) StartPosition() ast.Position {
-	return e.StartPos
-}
-
-func (e *ExplicitDisjointEntitlementSetReferenceCreationError) EndPosition(common.MemoryGauge) ast.Position {
-	return e.EndPos
-}
-
 // InvalidMappedAuthorizationOutsideOfFieldError
 type InvalidMappedAuthorizationOutsideOfFieldError struct {
 	Map *EntitlementMapType
