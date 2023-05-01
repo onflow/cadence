@@ -1009,6 +1009,7 @@ func NewStringValue(
 var _ Value = &StringValue{}
 var _ atree.Storable = &StringValue{}
 var _ EquatableValue = &StringValue{}
+var _ ComparableValue = &StringValue{}
 var _ HashableValue = &StringValue{}
 var _ ValueIndexableValue = &StringValue{}
 var _ MemberAccessibleValue = &StringValue{}
@@ -1060,6 +1061,58 @@ func (v *StringValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 		return false
 	}
 	return v.NormalForm() == otherString.NormalForm()
+}
+
+func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() < otherString.NormalForm())
+}
+
+func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() <= otherString.NormalForm())
+}
+
+func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() > otherString.NormalForm())
+}
+
+func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() >= otherString.NormalForm())
 }
 
 // HashInput returns a byte slice containing:
@@ -17994,6 +18047,22 @@ func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func AddressFromBytes(invocation Invocation) Value {
+	argument, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	inter := invocation.Interpreter
+
+	bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+	if err != nil {
+		panic(err)
+	}
+
+	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
 }
 
 func accountGetCapabilityFunction(

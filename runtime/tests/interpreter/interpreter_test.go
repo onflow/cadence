@@ -4737,6 +4737,22 @@ func TestInterpretComparison(t *testing.T) {
 		{"a >= b", false, "let left: Character = \"a\";\nlet right: Character = \"b\"; return left >= right"},
 		{"a >= a", true, "let left: Character = \"a\";\nlet right: Character = \"a\"; return left >= right"},
 		{"A >= a", false, "let left: Character = \"A\";\nlet right: Character = \"a\"; return left >= right"},
+		{"\"\" < \"\"", false, "let left: String = \"\";\nlet right: String = \"\"; return left < right"},
+		{"\"\" <= \"\"", true, "let left: String = \"\";\nlet right: String = \"\"; return left <= right"},
+		{"\"\" > \"\"", false, "let left: String = \"\";\nlet right: String = \"\"; return left > right"},
+		{"\"\" >= \"\"", true, "let left: String = \"\";\nlet right: String = \"\"; return left >= right"},
+		{"\"\" < \"a\"", true, "let left: String = \"\";\nlet right: String = \"a\"; return left < right"},
+		{"\"\" <= \"a\"", true, "let left: String = \"\";\nlet right: String = \"a\"; return left <= right"},
+		{"\"\" > \"a\"", false, "let left: String = \"\";\nlet right: String = \"a\"; return left > right"},
+		{"\"\" >= \"a\"", false, "let left: String = \"\";\nlet right: String = \"a\"; return left >= right"},
+		{"\"az\" < \"b\"", true, "let left: String = \"az\";\nlet right: String = \"b\"; return left < right"},
+		{"\"az\" <= \"b\"", true, "let left: String = \"az\";\nlet right: String = \"b\"; return left <= right"},
+		{"\"az\" > \"b\"", false, "let left: String = \"az\";\nlet right: String = \"b\"; return left > right"},
+		{"\"az\" >= \"b\"", false, "let left: String = \"az\";\nlet right: String = \"b\"; return left >= right"},
+		{"\"xAB\" < \"Xab\"", false, "let left: String = \"xAB\";\nlet right: String = \"Xab\"; return left < right"},
+		{"\"xAB\" <= \"Xab\"", false, "let left: String = \"xAB\";\nlet right: String = \"Xab\"; return left <= right"},
+		{"\"xAB\" > \"Xab\"", true, "let left: String = \"xAB\";\nlet right: String = \"Xab\"; return left > right"},
+		{"\"xAB\" >= \"Xab\"", true, "let left: String = \"xAB\";\nlet right: String = \"Xab\"; return left >= right"},
 	}
 
 	for _, test := range tests {
