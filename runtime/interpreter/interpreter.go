@@ -1869,7 +1869,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				return NewAccountReferenceValue(
 					interpreter,
 					ref.Address,
-					ref.Path,
+					ref.SourcePath,
 					unwrappedTargetType.Type,
 				)
 
