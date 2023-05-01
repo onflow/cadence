@@ -41,6 +41,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 	) {
 
 		rt := newTestInterpreterRuntime()
+		rt.defaultConfig.AccountLinkingEnabled = true
 
 		accountCodes := map[Location][]byte{}
 		accountIDs := map[common.Address]uint64{}
@@ -222,7 +223,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                   prepare(signer: AuthAccount) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
-                                      let expectedCapID: UInt64 = 1
                                       let resourceID = 42
 
                                       // Arrange
@@ -1056,6 +1056,65 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                         `,
 					)
 					require.NoError(t, err)
+				})
+
+				t.Run("publish linked capability", func(t *testing.T) {
+
+					t.Parallel()
+
+					t.Run("storage link", func(t *testing.T) {
+						err, _, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let publicPath2 = /public/r2
+                                      let resourceID = 42
+
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let linkedCap: Capability<&Test.R> =
+                                          signer.link<&Test.R>(publicPath, target: storagePath)!
+
+                                      // Act
+                                      signer.capabilities.publish(linkedCap, at: publicPath2)
+                                  }
+                              }
+                            `,
+						)
+						require.ErrorContains(t, err, "cannot publish linked capability")
+					})
+
+					t.Run("account link", func(t *testing.T) {
+						err, _, _ := test(
+							// language=cadence
+							`
+                              #allowAccountLinking
+
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let privatePath = /private/acct
+                                      let publicPath = /public/acct
+
+                                      // Arrange
+                                      let linkedCap: Capability<&AuthAccount> =
+                                          signer.linkAccount(privatePath)!
+
+                                      // Act
+                                      signer.capabilities.publish(linkedCap, at: publicPath)
+                                  }
+                              }
+                            `,
+						)
+						require.ErrorContains(t, err, "cannot publish linked capability")
+					})
 				})
 			}
 		})
