@@ -128,8 +128,8 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 	}
 
 	// if the attachment requires entitlements, check that they are provided as requested
-	if attachmentCompositeType.requiredEntitlements != nil {
-		attachmentCompositeType.requiredEntitlements.Foreach(func(key *EntitlementType, _ struct{}) {
+	if attachmentCompositeType.RequiredEntitlements != nil {
+		attachmentCompositeType.RequiredEntitlements.Foreach(func(key *EntitlementType, _ struct{}) {
 			if !providedEntitlements.Contains(key) {
 				checker.report(&RequiredEntitlementNotProvidedError{
 					Range:               ast.NewRangeFromPositioned(checker.memoryGauge, expression),

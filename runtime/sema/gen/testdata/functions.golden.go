@@ -113,7 +113,8 @@ const TestTypeTypeParamWithBoundFunctionName = "typeParamWithBound"
 var TestTypeTypeParamWithBoundFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 

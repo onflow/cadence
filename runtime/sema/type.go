@@ -3716,7 +3716,7 @@ type CompositeType struct {
 	// Alas, this is Go, so for now these fields are only non-nil when Kind is CompositeKindAttachment
 	baseType                    Type
 	baseTypeDocString           string
-	requiredEntitlements        *EntitlementOrderedSet
+	RequiredEntitlements        *EntitlementOrderedSet
 	AttachmentEntitlementAccess *EntitlementMapAccess
 
 	cachedIdentifiers *struct {

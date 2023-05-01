@@ -14074,15 +14074,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		// is a necessary pre-requisite for calling any members of the attachment. However, in
 		// the case of a destructor, this is called implicitly, and thus must have its `base`
 		// set manually
-		var auth Authorization = UnauthorizedAccess
-		attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
-		// if the attachment is declared with entitlement map access, the base reference inside the attachment desructor
-		// should be fully qualified for the domain of the map, since the remover must own the actual base value
-		// if the attachment is declared with pub access, then the base reference is unauthorized
-		if attachmentType.AttachmentEntitlementAccess != nil {
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Domain())
-		}
-		attachment.setBaseValue(interpreter, v, auth)
+		attachment.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, attachment))
 		attachment.Destroy(interpreter, locationRange)
 	})
 
@@ -15182,6 +15174,22 @@ func attachmentReferenceAuthorization(
 	return attachmentReferenceAuth, nil
 }
 
+func attachmentBaseAuthorization(
+	interpreter *Interpreter,
+	attachment *CompositeValue,
+) Authorization {
+	var auth Authorization = UnauthorizedAccess
+	attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
+	if attachmentType.RequiredEntitlements.Len() > 0 {
+		baseAccess := sema.EntitlementSetAccess{
+			SetKind:      sema.Conjunction,
+			Entitlements: attachmentType.RequiredEntitlements,
+		}
+		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
+	}
+	return auth
+}
+
 func attachmentBaseAndSelfValues(
 	interpreter *Interpreter,
 	locationRange LocationRange,
@@ -15190,18 +15198,13 @@ func attachmentBaseAndSelfValues(
 	base = v.getBaseValue(interpreter, locationRange)
 
 	attachmentType := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
-	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
-	attachmentReferenceAuth, err := attachmentReferenceAuthorization(
-		interpreter,
-		attachmentType,
-		interpreter.MustConvertStaticAuthorizationToSemaAccess(base.Authorization),
-	)
-	if err != nil {
-		panic(err)
+
+	var attachmentReferenceAuth Authorization = UnauthorizedAccess
+	if attachmentType.AttachmentEntitlementAccess != nil {
+		attachmentReferenceAuth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
 	}
 
 	// in attachment functions, self is a reference value
-
 	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v))
 	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
 
@@ -15253,8 +15256,8 @@ func (v *CompositeValue) getTypeKey(
 		return Nil
 	}
 	attachmentType := keyType.(*sema.CompositeType)
-	// dynamically set the attachment's base to this composite
-	attachment.setBaseValue(interpreter, v, ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess))
+	// dynamically set the attachment's base to this composite, but with authorization based on the requested access on that attachment
+	attachment.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, attachment))
 
 	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
 	attachmentReferenceAuth, err := attachmentReferenceAuthorization(interpreter, attachmentType, baseAccess)

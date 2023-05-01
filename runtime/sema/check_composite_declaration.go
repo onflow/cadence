@@ -652,7 +652,7 @@ func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclara
 			InvalidType: nominalType,
 		})
 	}
-	composite.requiredEntitlements = requiredEntitlements
+	composite.RequiredEntitlements = requiredEntitlements
 
 	return composite
 }
@@ -2390,9 +2390,9 @@ func (checker *Checker) declareBaseValue(baseType Type, attachmentType *Composit
 	// -------------------------------
 	// within the body of `foo`, the `base` value will be entitled to `E` but not `F`, because only `E` was required in the attachment's declaration
 	var baseAccess Access = UnauthorizedAccess
-	if attachmentType.requiredEntitlements != nil && attachmentType.requiredEntitlements.Len() > 0 {
+	if attachmentType.RequiredEntitlements.Len() > 0 {
 		baseAccess = EntitlementSetAccess{
-			Entitlements: attachmentType.requiredEntitlements,
+			Entitlements: attachmentType.RequiredEntitlements,
 			SetKind:      Conjunction,
 		}
 	}

@@ -1251,11 +1251,13 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	var auth Authorization = UnauthorizedAccess
 	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
-	// if the attachment is declared with entitlement map access, the base reference inside the attachment constructor
-	// should be fully qualified for the domain of the map, since the attacher must own the actual base value
-	// if the attachment is declared with pub access, then the base reference is unauthorized
-	if attachmentType.AttachmentEntitlementAccess != nil {
-		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Domain())
+
+	if attachmentType.RequiredEntitlements.Len() > 0 {
+		baseAccess := sema.EntitlementSetAccess{
+			SetKind:      sema.Conjunction,
+			Entitlements: attachmentType.RequiredEntitlements,
+		}
+		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
 	}
 
 	var baseValue Value = NewEphemeralReferenceValue(

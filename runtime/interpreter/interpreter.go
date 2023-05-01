@@ -779,26 +779,30 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 		return returnValue
 	}
 
+	resultAuth := func(ty sema.Type) Authorization {
+		var auth Authorization = UnauthorizedAccess
+		// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
+		if entitlementSupportingType, ok := ty.(sema.EntitlementSupportingType); ok {
+			supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+			if supportedEntitlements.Len() > 0 {
+				access := sema.EntitlementSetAccess{
+					SetKind:      sema.Conjunction,
+					Entitlements: supportedEntitlements,
+				}
+				auth = ConvertSemaAccesstoStaticAuthorization(interpreter, access)
+			}
+		}
+		return auth
+	}
+
 	if optionalType, ok := returnType.(*sema.OptionalType); ok {
 		switch returnValue := returnValue.(type) {
 		// If this value is an optional value (T?), then transform it into an optional reference (&T)?.
 		case *SomeValue:
-			var auth Authorization = UnauthorizedAccess
-			// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
-			if entitlementSupportingType, ok := returnType.(sema.EntitlementSupportingType); ok {
-				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-				if supportedEntitlements.Len() > 0 {
-					access := sema.EntitlementSetAccess{
-						SetKind:      sema.Conjunction,
-						Entitlements: supportedEntitlements,
-					}
-					auth = ConvertSemaAccesstoStaticAuthorization(interpreter, access)
-				}
-			}
 
 			innerValue := NewEphemeralReferenceValue(
 				interpreter,
-				auth,
+				resultAuth(returnType),
 				returnValue.value,
 				optionalType.Type,
 			)
@@ -811,8 +815,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 	}
 
 	interpreter.maybeTrackReferencedResourceKindedValue(returnValue)
-	// ENTITLEMENTS TODO: the result value should be fully qualified to the return type, since it is created from an existing resource in scope
-	return NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, returnValue, returnType)
+	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType)
 }
 
 func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
