@@ -111,30 +111,32 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey          = "type"
-	kindKey          = "kind"
-	valueKey         = "value"
-	keyKey           = "key"
-	nameKey          = "name"
-	fieldsKey        = "fields"
-	initializersKey  = "initializers"
-	idKey            = "id"
-	targetPathKey    = "targetPath"
-	borrowTypeKey    = "borrowType"
-	domainKey        = "domain"
-	identifierKey    = "identifier"
-	staticTypeKey    = "staticType"
-	addressKey       = "address"
-	pathKey          = "path"
-	authorizationKey = "authorization"
-	entitlementsKey  = "entitlements"
-	sizeKey          = "size"
-	typeIDKey        = "typeID"
-	restrictionsKey  = "restrictions"
-	labelKey         = "label"
-	parametersKey    = "parameters"
-	returnKey        = "return"
-	purityKey        = "purity"
+	typeKey           = "type"
+	kindKey           = "kind"
+	valueKey          = "value"
+	keyKey            = "key"
+	nameKey           = "name"
+	fieldsKey         = "fields"
+	initializersKey   = "initializers"
+	idKey             = "id"
+	targetPathKey     = "targetPath"
+	borrowTypeKey     = "borrowType"
+	domainKey         = "domain"
+	identifierKey     = "identifier"
+	staticTypeKey     = "staticType"
+	addressKey        = "address"
+	pathKey           = "path"
+	authorizationKey  = "authorization"
+	entitlementsKey   = "entitlements"
+	sizeKey           = "size"
+	typeIDKey         = "typeID"
+	restrictionsKey   = "restrictions"
+	labelKey          = "label"
+	parametersKey     = "parameters"
+	typeParametersKey = "typeParameters"
+	returnKey         = "return"
+	typeBoundKey      = "typeBound"
+	purityKey         = "purity"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -217,8 +219,6 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeEvent(valueJSON)
 	case contractTypeStr:
 		return d.decodeContract(valueJSON)
-	case linkTypeStr:
-		return d.decodeLink(valueJSON)
 	case pathTypeStr:
 		return d.decodePath(valueJSON)
 	case typeTypeStr:
@@ -825,57 +825,57 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 	))
 }
 
-func (d *Decoder) decodeLink(valueJSON any) cadence.PathLink {
-	obj := toObject(valueJSON)
-
-	targetPath, ok := d.decodeJSON(obj.Get(targetPathKey)).(cadence.Path)
-	if !ok {
-		panic(errors.NewDefaultUserError("invalid link: missing or invalid target path"))
-	}
-
-	borrowType := obj.GetString(borrowTypeKey)
-
-	common.UseMemory(d.gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// no need to add 1 to account for empty string: string is metered in Link struct
-		Amount: uint64(len(borrowType)),
-	})
-
-	return cadence.NewMeteredLink(
-		d.gauge,
-		targetPath,
-		borrowType,
-	)
-}
-
 func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 	obj := toObject(valueJSON)
 
-	domain := obj.GetString(domainKey)
-
-	common.UseMemory(d.gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// no need to add 1 to account for empty string: string is metered in Path struct
-		Amount: uint64(len(domain)),
-	})
+	domain := common.PathDomainFromIdentifier(obj.GetString(domainKey))
 
 	identifier := obj.GetString(identifierKey)
-	common.UseMemory(d.gauge, common.MemoryUsage{
-		Kind: common.MemoryKindRawString,
-		// no need to add 1 to account for empty string: string is metered in Path struct
-		Amount: uint64(len(identifier)),
-	})
+	common.UseMemory(d.gauge, common.NewRawStringMemoryUsage(len(identifier)))
 
-	return cadence.NewMeteredPath(
+	path, err := cadence.NewMeteredPath(
 		d.gauge,
 		domain,
 		identifier,
 	)
+	if err != nil {
+		panic(errors.NewDefaultUserError("failed to decode path: %w", err))
+	}
+	return path
 }
 
-func (d *Decoder) decodeParamType(valueJSON any, results typeDecodingResults) cadence.Parameter {
+func (d *Decoder) decodeTypeParameter(valueJSON any, results typeDecodingResults) cadence.TypeParameter {
 	obj := toObject(valueJSON)
-	// Unmetered because decodeParamType is metered in decodeParamTypes and called nowhere else
+	// Unmetered because decodeTypeParameter is metered in decodeTypeParameters and called nowhere else
+	typeBoundObj, ok := obj[typeBoundKey]
+	var typeBound cadence.Type
+	if ok {
+		typeBound = d.decodeType(typeBoundObj, results)
+	}
+
+	return cadence.NewTypeParameter(
+		toString(obj.Get(nameKey)),
+		typeBound,
+	)
+}
+
+func (d *Decoder) decodeTypeParameters(typeParams []any, results typeDecodingResults) []cadence.TypeParameter {
+	common.UseMemory(d.gauge, common.MemoryUsage{
+		Kind:   common.MemoryKindCadenceTypeParameter,
+		Amount: uint64(len(typeParams)),
+	})
+	typeParameters := make([]cadence.TypeParameter, 0, len(typeParams))
+
+	for _, param := range typeParams {
+		typeParameters = append(typeParameters, d.decodeTypeParameter(param, results))
+	}
+
+	return typeParameters
+}
+
+func (d *Decoder) decodeParameter(valueJSON any, results typeDecodingResults) cadence.Parameter {
+	obj := toObject(valueJSON)
+	// Unmetered because decodeParameter is metered in decodeParameters and called nowhere else
 	return cadence.NewParameter(
 		toString(obj.Get(labelKey)),
 		toString(obj.Get(idKey)),
@@ -883,7 +883,7 @@ func (d *Decoder) decodeParamType(valueJSON any, results typeDecodingResults) ca
 	)
 }
 
-func (d *Decoder) decodeParamTypes(params []any, results typeDecodingResults) []cadence.Parameter {
+func (d *Decoder) decodeParameters(params []any, results typeDecodingResults) []cadence.Parameter {
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceParameter,
 		Amount: uint64(len(params)),
@@ -891,7 +891,7 @@ func (d *Decoder) decodeParamTypes(params []any, results typeDecodingResults) []
 	parameters := make([]cadence.Parameter, 0, len(params))
 
 	for _, param := range params {
-		parameters = append(parameters, d.decodeParamType(param, results))
+		parameters = append(parameters, d.decodeParameter(param, results))
 	}
 
 	return parameters
@@ -929,18 +929,19 @@ func (d *Decoder) decodePurity(purity any) cadence.FunctionPurity {
 	return cadence.FunctionPurityUnspecified
 }
 
-func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id any, purity any, results typeDecodingResults) cadence.Type {
-	parameters := d.decodeParamTypes(toSlice(parametersValue), results)
+func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, returnValue any, purity any, results typeDecodingResults) cadence.Type {
+	typeParameters := d.decodeTypeParameters(toSlice(typeParametersValue), results)
+	parameters := d.decodeParameters(toSlice(parametersValue), results)
 	returnType := d.decodeType(returnValue, results)
 	functionPurity := d.decodePurity(purity)
 
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
-		"",
 		functionPurity,
+		typeParameters,
 		parameters,
 		returnType,
-	).WithID(toString(id))
+	)
 }
 
 func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorization {
@@ -987,7 +988,7 @@ func (d *Decoder) decodeNominalType(
 	for _, params := range initializers {
 		inits = append(
 			inits,
-			d.decodeParamTypes(toSlice(params), results),
+			d.decodeParameters(toSlice(params), results),
 		)
 	}
 
@@ -1095,10 +1096,10 @@ func (d *Decoder) decodeNominalType(
 func (d *Decoder) decodeRestrictedType(
 	typeValue any,
 	restrictionsValue []any,
-	typeIDValue string,
 	results typeDecodingResults,
 ) cadence.Type {
 	typ := d.decodeType(typeValue, results)
+
 	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
 	for _, restriction := range restrictionsValue {
 		restrictions = append(restrictions, d.decodeType(restriction, results))
@@ -1106,10 +1107,9 @@ func (d *Decoder) decodeRestrictedType(
 
 	return cadence.NewMeteredRestrictedType(
 		d.gauge,
-		"",
 		typ,
 		restrictions,
-	).WithID(typeIDValue)
+	)
 }
 
 type typeDecodingResults map[string]cadence.Type
@@ -1136,22 +1136,20 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 
 	switch kindValue {
 	case "Function":
-		returnValue := obj.Get(returnKey)
+		typeParametersValue := obj.Get(typeParametersKey)
 		parametersValue := obj.Get(parametersKey)
-		idValue := obj.Get(typeIDKey)
+		returnValue := obj.Get(returnKey)
 		purity, hasPurity := obj[purityKey]
 		if !hasPurity {
 			purity = "impure"
 		}
-		return d.decodeFunctionType(returnValue, parametersValue, idValue, purity, results)
+		return d.decodeFunctionType(typeParametersValue, parametersValue, returnValue, purity, results)
 	case "Restriction":
 		restrictionsValue := obj.Get(restrictionsKey)
-		typeIDValue := toString(obj.Get(typeIDKey))
 		typeValue := obj.Get(typeKey)
 		return d.decodeRestrictedType(
 			typeValue,
 			toSlice(restrictionsValue),
-			typeIDValue,
 			results,
 		)
 	case "Optional":

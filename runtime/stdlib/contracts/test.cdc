@@ -132,13 +132,22 @@ pub contract Test {
         pub case failed
     }
 
+    /// Result is the interface to be implemented by the various execution
+    /// operations, such as transactions and scripts.
+    ///
+    pub struct interface Result {
+        /// The resulted status of an executed operation.
+        ///
+        pub let status: ResultStatus
+    }
+
     /// The result of a transaction execution.
     ///
-    pub struct TransactionResult {
+    pub struct TransactionResult: Result {
         pub let status: ResultStatus
         pub let error: Error?
 
-        init(status: ResultStatus, error: Error) {
+        init(status: ResultStatus, error: Error?) {
             self.status = status
             self.error = error
         }
@@ -146,7 +155,7 @@ pub contract Test {
 
     /// The result of a script execution.
     ///
-    pub struct ScriptResult {
+    pub struct ScriptResult: Result {
         pub let status: ResultStatus
         pub let returnValue: AnyStruct?
         pub let error: Error?
@@ -250,4 +259,41 @@ pub contract Test {
         ///
         pub fun useConfiguration(_ configuration: Configuration)
     }
+
+    /// Returns a new matcher that negates the test of the given matcher.
+    ///
+    pub fun not(_ matcher: Matcher): Matcher {
+        return Matcher(test: fun (value: AnyStruct): Bool {
+            return !matcher.test(value)
+        })
+    }
+
+    /// Returns a new matcher that checks if the given test value is either
+    /// a ScriptResult or TransactionResult and the ResultStatus is succeeded.
+    /// Returns false in any other case.
+    ///
+    pub fun beSucceeded(): Matcher {
+        return Matcher(test: fun (value: AnyStruct): Bool {
+            return (value as! {Result}).status == ResultStatus.succeeded
+        })
+    }
+
+    /// Returns a new matcher that checks if the given test value is either
+    /// a ScriptResult or TransactionResult and the ResultStatus is failed.
+    /// Returns false in any other case.
+    ///
+    pub fun beFailed(): Matcher {
+        return Matcher(test: fun (value: AnyStruct): Bool {
+            return (value as! {Result}).status == ResultStatus.failed
+        })
+    }
+
+    /// Returns a new matcher that checks if the given test value is nil.
+    ///
+    pub fun beNil(): Matcher {
+        return Matcher(test: fun (value: AnyStruct): Bool {
+            return value == nil
+        })
+    }
+
 }

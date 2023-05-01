@@ -24,7 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 func (interpreter *Interpreter) evalStatement(statement ast.Statement) StatementResult {
@@ -473,15 +472,7 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 
 	if attachment.IsResourceKinded(interpreter) {
 		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
-		var auth Authorization = UnauthorizedAccess
-		attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
-		// if the attachment is declared with entitlement map access, the base reference inside the attachment desructor
-		// should be fully qualified for the domain of the map, since the remover must own the actual base value
-		// if the attachment is declared with pub access, then the base reference is unauthorized
-		if attachmentType.AttachmentEntitlementAccess != nil {
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Domain())
-		}
-		attachment.setBaseValue(interpreter, base, auth)
+		attachment.setBaseValue(interpreter, base, attachmentBaseAuthorization(interpreter, attachment))
 		attachment.Destroy(interpreter, locationRange)
 	}
 

@@ -1108,9 +1108,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	if result, ok := result.(ReferenceTrackedResourceKindedValue); ok {
-		interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
-	}
+	interpreter.maybeTrackReferencedResourceKindedValue(result)
 
 	makeReference := func(value Value, typ *sema.ReferenceType) *EphemeralReferenceValue {
 		var auth Authorization
@@ -1150,9 +1148,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			}
 
 			innerValue := result.InnerValue(interpreter, locationRange)
-			if result, ok := innerValue.(ReferenceTrackedResourceKindedValue); ok {
-				interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
-			}
+			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
 
 			return NewSomeValueNonCopying(
 				interpreter,
@@ -1234,7 +1230,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	attachTarget := interpreter.evalExpression(attachExpression.Base)
 	base, ok := attachTarget.(*CompositeValue)
 
-	// we enforce this in the checker, but check defensively anyways
+	// we enforce this in the checker, but check defensively anyway
 	if !ok || !base.Kind.SupportsAttachments() {
 		panic(InvalidAttachmentOperationTargetError{
 			Value:         attachTarget,
@@ -1250,16 +1246,18 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	}
 
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
-	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
-	// we create an implicit constructor argument containing a reference to the base
+	// set it on the attachment's `CompositeValue` yet, because the value does not exist.
+	// Instead, we create an implicit constructor argument containing a reference to the base.
 
 	var auth Authorization = UnauthorizedAccess
 	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
-	// if the attachment is declared with entitlement map access, the base reference inside the attachment constructor
-	// should be fully qualified for the domain of the map, since the attacher must own the actual base value
-	// if the attachment is declared with pub access, then the base reference is unauthorized
-	if attachmentType.AttachmentEntitlementAccess != nil {
-		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Domain())
+
+	if attachmentType.RequiredEntitlements.Len() > 0 {
+		baseAccess := sema.EntitlementSetAccess{
+			SetKind:      sema.Conjunction,
+			Entitlements: attachmentType.RequiredEntitlements,
+		}
+		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
 	}
 
 	var baseValue Value = NewEphemeralReferenceValue(

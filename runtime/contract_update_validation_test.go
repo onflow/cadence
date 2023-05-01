@@ -59,7 +59,7 @@ func newContractAddTransaction(name string, code string) string {
 
 func newContractUpdateTransaction(name string, code string) string {
 	return newContractDeployTransaction(
-		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
+		sema.AuthAccountContractsTypeUpdate__experimentalFunctionName,
 		name,
 		code,
 	)
@@ -81,6 +81,7 @@ func newContractRemovalTransaction(contractName string) string {
 
 func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 	rt := newTestInterpreterRuntime()
+	rt.defaultConfig.AttachmentsEnabled = true
 
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
@@ -1882,6 +1883,17 @@ func assertConformanceMismatchError(
 	assert.Equal(t, erroneousDeclName, conformanceMismatchError.DeclName)
 }
 
+func assertEntitlementRequirementMismatchError(
+	t *testing.T,
+	err error,
+	erroneousDeclName string,
+) {
+	var entitlementMismatchError *stdlib.RequiredEntitlementMismatchError
+	require.ErrorAs(t, err, &entitlementMismatchError)
+
+	assert.Equal(t, erroneousDeclName, entitlementMismatchError.DeclName)
+}
+
 func assertEnumCaseMismatchError(t *testing.T, err error, expectedEnumCase string, foundEnumCase string) {
 	var enumMismatchError *stdlib.EnumCaseMismatchError
 	require.ErrorAs(t, err, &enumMismatchError)
@@ -2108,6 +2120,130 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
 		require.NoError(t, err)
+	})
+
+	t.Run("removing required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+				pub entitlement X
+				pub entitlement Y
+				pub attachment Foo for AnyStruct {
+					require entitlement X
+					require entitlement Y
+				}
+            }
+        `
+
+		const newCode = `
+            pub contract Test {
+                pub entitlement X
+				pub entitlement Y
+                pub attachment Foo for AnyStruct {
+					require entitlement X
+				}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("reordering required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+				pub entitlement X
+				pub entitlement Y
+				pub attachment Foo for AnyStruct {
+					require entitlement X
+					require entitlement Y
+				}
+            }
+        `
+
+		const newCode = `
+            pub contract Test {
+                pub entitlement X
+				pub entitlement Y
+                pub attachment Foo for AnyStruct {
+					require entitlement Y
+					require entitlement X
+				}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("renaming required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+				pub entitlement X
+				pub entitlement Y
+				pub attachment Foo for AnyStruct {
+					require entitlement Y
+				}
+            }
+        `
+
+		const newCode = `
+            pub contract Test {
+                pub entitlement X
+				pub entitlement Y
+                pub attachment Foo for AnyStruct {
+					require entitlement X
+				}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+
+		assertEntitlementRequirementMismatchError(t, cause, "Foo")
+	})
+
+	t.Run("adding required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+				pub entitlement X
+				pub entitlement Y
+				pub attachment Foo for AnyStruct {
+					require entitlement X
+				}
+            }
+        `
+
+		const newCode = `
+            pub contract Test {
+                pub entitlement X
+				pub entitlement Y
+                pub attachment Foo for AnyStruct {
+					require entitlement X
+					require entitlement Y
+				}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+
+		assertEntitlementRequirementMismatchError(t, cause, "Foo")
 	})
 
 	t.Run("missing comma in parameter list of old contract", func(t *testing.T) {

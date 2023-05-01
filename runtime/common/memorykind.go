@@ -104,6 +104,7 @@ const (
 	MemoryKindCadenceEnumValueBase
 	MemoryKindCadenceEnumValueSize
 	MemoryKindCadencePathLinkValue
+	MemoryKindCadenceAccountLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
 	MemoryKindCadenceStorageCapabilityValue
@@ -116,6 +117,7 @@ const (
 	MemoryKindCadenceDictionaryType
 	MemoryKindCadenceField
 	MemoryKindCadenceParameter
+	MemoryKindCadenceTypeParameter
 	MemoryKindCadenceStructType
 	MemoryKindCadenceResourceType
 	MemoryKindCadenceAttachmentType

@@ -1267,6 +1267,11 @@ func NewMeteredFix64(gauge common.MemoryGauge, constructor func() (string, error
 	return NewFix64(value)
 }
 
+func NewMeteredFix64FromRawFixedPointNumber(gauge common.MemoryGauge, n int64) (Fix64, error) {
+	common.UseMemory(gauge, fix64MemoryUsage)
+	return Fix64(n), nil
+}
+
 func (Fix64) isValue() {}
 
 func (Fix64) Type() Type {
@@ -1334,6 +1339,11 @@ func ParseUFix64(s string) (uint64, error) {
 		return 0, err
 	}
 	return v.Uint64(), nil
+}
+
+func NewMeteredUFix64FromRawFixedPointNumber(gauge common.MemoryGauge, n uint64) (UFix64, error) {
+	common.UseMemory(gauge, ufix64MemoryUsage)
+	return UFix64(n), nil
 }
 
 func (UFix64) isValue() {}
@@ -1862,7 +1872,7 @@ func NewPathLink(targetPath Path, borrowType string) PathLink {
 	}
 }
 
-func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) PathLink {
+func NewMeteredPathLink(gauge common.MemoryGauge, targetPath Path, borrowType string) PathLink {
 	common.UseMemory(gauge, common.CadencePathLinkValueMemoryUsage)
 	return NewPathLink(targetPath, borrowType)
 }
@@ -1888,31 +1898,77 @@ func (v PathLink) String() string {
 	)
 }
 
+// AccountLink
+
+type AccountLink struct{}
+
+var _ Value = AccountLink{}
+
+func NewAccountLink() AccountLink {
+	return AccountLink{}
+}
+
+func NewMeteredAccountLink(gauge common.MemoryGauge) AccountLink {
+	common.UseMemory(gauge, common.CadenceAccountLinkValueMemoryUsage)
+	return NewAccountLink()
+}
+
+func (AccountLink) isValue() {}
+
+func (v AccountLink) Type() Type {
+	return nil
+}
+
+func (v AccountLink) MeteredType(_ common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v AccountLink) ToGoValue() any {
+	return nil
+}
+
+func (v AccountLink) String() string {
+	return format.AccountLink
+}
+
 // Path
 
 type Path struct {
-	Domain     string
+	Domain     common.PathDomain
 	Identifier string
 }
 
 var _ Value = Path{}
 
-func NewPath(domain, identifier string) Path {
+func NewPath(domain common.PathDomain, identifier string) (Path, error) {
+	if domain == common.PathDomainUnknown {
+		return Path{}, errors.NewDefaultUserError("unknown domain in path")
+	}
+
 	return Path{
 		Domain:     domain,
 		Identifier: identifier,
-	}
+	}, nil
 }
 
-func NewMeteredPath(gauge common.MemoryGauge, domain, identifier string) Path {
+func NewMeteredPath(gauge common.MemoryGauge, domain common.PathDomain, identifier string) (Path, error) {
 	common.UseMemory(gauge, common.CadencePathValueMemoryUsage)
 	return NewPath(domain, identifier)
 }
 
 func (Path) isValue() {}
 
-func (Path) Type() Type {
-	return ThePathType
+func (v Path) Type() Type {
+	switch v.Domain {
+	case common.PathDomainStorage:
+		return TheStoragePathType
+	case common.PathDomainPrivate:
+		return ThePrivatePathType
+	case common.PathDomainPublic:
+		return ThePublicPathType
+	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func (v Path) MeteredType(common.MemoryGauge) Type {
@@ -1925,7 +1981,7 @@ func (Path) ToGoValue() any {
 
 func (v Path) String() string {
 	return format.Path(
-		v.Domain,
+		v.Domain.Identifier(),
 		v.Identifier,
 	)
 }

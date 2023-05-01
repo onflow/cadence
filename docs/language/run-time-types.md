@@ -32,7 +32,7 @@ Type<Int>() == Type<Int>()
 Type<Int>() != Type<String>()
 ```
 
-The method `fun isSubtype(of otherType: Type): Bool` can be used to compare the run-time types of values.
+The method `fun isSubtype(of: Type): Bool` can be used to compare the run-time types of values.
 
 ```cadence
 Type<Int>().isSubtype(of: Type<Int>()) // true

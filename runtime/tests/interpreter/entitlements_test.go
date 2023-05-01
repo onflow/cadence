@@ -1711,10 +1711,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		require.True(
 			t,
-			interpreter.NewEntitlementSetAuthorization(
-				nil,
-				[]common.TypeID{"S.test.X"},
-			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+			interpreter.UnauthorizedAccess.Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
@@ -1795,7 +1792,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.F", "S.test.G"},
+				[]common.TypeID{"S.test.F", "S.test.G", "S.test.Y", "S.test.Z"},
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
@@ -1826,6 +1823,47 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			}
 			fun test(): &S {
 				let s = attach A() to S()
+				let ref = &s as auth(E) &S
+				return ref[A]!.entitled()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.UnauthorizedAccess.Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("basic ref call return base entitlement requested", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y 
+			entitlement Z 
+			entitlement E
+			entitlement F
+			entitlement G
+			entitlement mapping M {
+				X -> Y
+				X -> Z
+				E -> F
+				X -> F
+				E -> G
+			}
+			struct S {}
+			access(M) attachment A for S {
+				require entitlement E
+				access(F | Z) fun entitled(): &S {
+					return base
+				} 
+			}
+			fun test(): &S {
+				let s = attach A() to S() with (E)
 				let ref = &s as auth(E) &S
 				return ref[A]!.entitled()
 			}
@@ -1970,7 +2008,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.F", "S.test.G"},
+				[]common.TypeID{"S.test.F", "S.test.G", "S.test.Y", "S.test.Z"},
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
@@ -1997,12 +2035,13 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			}
 			resource R {}
 			access(M) attachment A for R {
+				require entitlement X
 				access(F | Z) fun entitled(): &R {
 					return base
 				} 
 			}
 			fun test(): &R {
-				let r <- attach A() to <-create R()
+				let r <- attach A() to <-create R() with (X)
 				account.save(<-r, to: /storage/foo)
 				let ref = account.borrow<auth(E) &R>(from: /storage/foo)!
 				return ref[A]!.entitled()
@@ -2018,7 +2057,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.E"},
+				[]common.TypeID{"S.test.X"},
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
@@ -2043,6 +2082,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			}
 			resource R {}
 			access(M) attachment A for R {
+				require entitlement E
+				require entitlement X
 				init() {
 					let x = self as! auth(Y, Z, F, G) &A
 					let y = base as! auth(X, E) &R
@@ -2053,7 +2094,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 				}
 			}
 			fun test() {
-				let r <- attach A() to <-create R()
+				let r <- attach A() to <-create R() with (E, X)
 				destroy r
 			}
 		`)
