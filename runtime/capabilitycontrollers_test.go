@@ -1092,7 +1092,33 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		// TODO: getController, non-storage capability controller
+		t.Run("getController, account capability controller", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                import Test from 0x1
+
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        // Arrange
+                        let issuedCap: Capability<&AuthAccount> =
+                            signer.capabilities.account.issue<&AuthAccount>()
+
+                        // Act
+                        let controller: &StorageCapabilityController? =
+                            signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                        // Assert
+                        assert(controller == nil)
+                    }
+                }
+              `,
+			)
+			require.NoError(t, err)
+		})
 
 		t.Run("getController, multiple controllers to various paths, with same or different type", func(t *testing.T) {
 
@@ -1375,7 +1401,33 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		// TODO: getController, non-account capability controller
+		t.Run("getController, storage capability controller", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                import Test from 0x1
+
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        // Arrange
+                        let issuedCap: Capability<&AnyStruct> =
+                            signer.capabilities.storage.issue<&AnyStruct>(/storage/x)
+
+                        // Act
+                        let controller: &AccountCapabilityController? =
+                            signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
+
+                        // Assert
+                        assert(controller == nil)
+                    }
+                }
+              `,
+			)
+			require.NoError(t, err)
+		})
 
 		t.Run("getController, multiple controllers to various paths, with same or different type", func(t *testing.T) {
 
