@@ -1613,7 +1613,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			// TODO: assert borrow, getControllers, and forEachController after retarget
+			// TODO: assert borrow after retarget
 
 			err, _, _ := test(
 				// language=cadence
@@ -1646,6 +1646,32 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           let controller4: &StorageCapabilityController? =
                               signer.capabilities.storage.getController(byCapabilityID: issuedCap4.id)
 
+                          let controllers1Before = signer.capabilities.storage.getControllers(forPath: storagePath1)
+                          Test.quickSort(
+                              &controllers1Before as &[AnyStruct],
+                              isLess: fun(i: Int, j: Int): Bool {
+                                  let a = controllers1Before[i]
+                                  let b = controllers1Before[j]
+                                  return a.capabilityID < b.capabilityID
+                              }
+                          )
+                          assert(controllers1Before.length == 3)
+                          assert(controllers1Before[0].capabilityID == 1)
+                          assert(controllers1Before[1].capabilityID == 2)
+                          assert(controllers1Before[2].capabilityID == 3)
+
+                          let controllers2Before = signer.capabilities.storage.getControllers(forPath: storagePath2)
+                          Test.quickSort(
+                              &controllers2Before as &[AnyStruct],
+                              isLess: fun(i: Int, j: Int): Bool {
+                                  let a = controllers2Before[i]
+                                  let b = controllers2Before[j]
+                                  return a.capabilityID < b.capabilityID
+                              }
+                          )
+                          assert(controllers2Before.length == 1)
+                          assert(controllers2Before[0].capabilityID == 4)
+
                           // Act
                           controller1!.retarget(storagePath2)
 
@@ -1654,12 +1680,35 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           let controller1After: &StorageCapabilityController? =
                               signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
                           assert(controller1After!.target() == storagePath2)
-
                           assert(controller2!.target() == storagePath1)
-
                           assert(controller3!.target() == storagePath1)
-
                           assert(controller4!.target() == storagePath2)
+
+                          let controllers1After = signer.capabilities.storage.getControllers(forPath: storagePath1)
+                          Test.quickSort(
+                              &controllers1After as &[AnyStruct],
+                              isLess: fun(i: Int, j: Int): Bool {
+                                  let a = controllers1After[i]
+                                  let b = controllers1After[j]
+                                  return a.capabilityID < b.capabilityID
+                              }
+                          )
+                          assert(controllers1After.length == 2)
+                          assert(controllers1After[0].capabilityID == 2)
+                          assert(controllers1After[1].capabilityID == 3)
+
+                          let controllers2After = signer.capabilities.storage.getControllers(forPath: storagePath2)
+                          Test.quickSort(
+                              &controllers2After as &[AnyStruct],
+                              isLess: fun(i: Int, j: Int): Bool {
+                                  let a = controllers2After[i]
+                                  let b = controllers2After[j]
+                                  return a.capabilityID < b.capabilityID
+                              }
+                          )
+                          assert(controllers2After.length == 2)
+                          assert(controllers2After[0].capabilityID == 1)
+                          assert(controllers2After[1].capabilityID == 4)
                       }
                   }
                 `,
