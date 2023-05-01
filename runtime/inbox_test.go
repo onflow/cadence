@@ -33,8 +33,8 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -97,14 +97,23 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// successful publish
-	require.Equal(t, logs[0], "()")
+	require.Equal(t,
+		[]string{
+			// successful publish
+			"()",
+			// correct value returned from unpublish
+			"3",
+		},
+		logs,
+	)
 
-	// correct value returned from unpublish
-	require.Equal(t, logs[1], "3")
-
-	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueUnpublished(provider: 0x0000000000000001, name: \"foo\")")
+	require.Equal(t,
+		[]string{
+			"flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())",
+			"flow.InboxValueUnpublished(provider: 0x0000000000000001, name: \"foo\")",
+		},
+		events,
+	)
 }
 
 func TestAccountInboxUnpublishWrongType(t *testing.T) {
@@ -113,8 +122,8 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -178,10 +187,12 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to force-cast value: expected type `Capability<&[String]>`, got `Capability<&[Int]>`")
 
-	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-
-	// no event emitted on unsuccessful unpublish
-	require.Len(t, events, 1)
+	require.Equal(t,
+		[]string{
+			"flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())",
+		},
+		events,
+	)
 }
 
 func TestAccountInboxUnpublishAbsent(t *testing.T) {
@@ -190,8 +201,8 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -254,16 +265,23 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// successful publish
-	require.Equal(t, logs[0], "()")
+	require.Equal(t,
+		[]string{
+			// successful publish
+			"()",
 
-	// correct value returned from unpublish
-	require.Equal(t, logs[1], "nil")
+			// correct value returned from unpublish
+			"nil",
+		},
+		logs,
+	)
 
-	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-
-	// no event emitted on unsuccessful unpublish
-	require.Len(t, events, 1)
+	require.Equal(t,
+		[]string{
+			"flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())",
+		},
+		events,
+	)
 }
 
 func TestAccountInboxUnpublishRemove(t *testing.T) {
@@ -272,8 +290,8 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -337,20 +355,27 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// successful publish
-	require.Equal(t, logs[0], "()")
+	require.Equal(t,
+		[]string{
+			// successful publish
+			"()",
 
-	// correct value returned from unpublish
-	require.Equal(t, logs[1], "3")
+			// correct value returned from unpublish
+			"3",
 
-	// unpublish successfully removes the value
-	require.Equal(t, logs[2], "nil")
+			// unpublish successfully removes the value
+			"nil",
+		},
+		logs,
+	)
 
-	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueUnpublished(provider: 0x0000000000000001, name: \"foo\")")
-
-	// no event emitted on unsuccessful unpublish
-	require.Len(t, events, 2)
+	require.Equal(t,
+		[]string{
+			"flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())",
+			"flow.InboxValueUnpublished(provider: 0x0000000000000001, name: \"foo\")",
+		},
+		events,
+	)
 }
 
 func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
@@ -359,8 +384,8 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -459,20 +484,25 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// successful publish
-	require.Equal(t, logs[0], "()")
+	require.Equal(t,
+		[]string{
+			// successful publish
+			"()",
+			// unpublish not successful from wrong account
+			"nil",
+			// correct value returned from unpublish
+			"3",
+		},
+		logs,
+	)
 
-	// unpublish not successful from wrong account
-	require.Equal(t, logs[1], "nil")
-
-	// correct value returned from unpublish
-	require.Equal(t, logs[2], "3")
-
-	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueUnpublished(provider: 0x0000000000000001, name: \"foo\")")
-
-	// no event emitted on unsuccessful unpublish
-	require.Len(t, events, 2)
+	require.Equal(t,
+		[]string{
+			"flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())",
+			"flow.InboxValueUnpublished(provider: 0x0000000000000001, name: \"foo\")",
+		},
+		events,
+	)
 }
 
 func TestAccountInboxPublishClaim(t *testing.T) {
@@ -481,8 +511,8 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -559,14 +589,24 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// successful publish
-	require.Equal(t, logs[0], "()")
+	require.Equal(t,
+		[]string{
+			// successful publish
+			"()",
 
-	// correct value returned from claim
-	require.Equal(t, logs[1], "3")
+			// correct value returned from claim
+			"3",
+		},
+		logs,
+	)
 
-	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\")")
+	require.Equal(t,
+		[]string{
+			"flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())",
+			"flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\")",
+		},
+		events,
+	)
 }
 
 func TestAccountInboxPublishClaimWrongType(t *testing.T) {
@@ -575,8 +615,8 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -652,15 +692,22 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 	)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to force-cast value: expected type `Capability<&[String]>`, got `Capability<&[Int]>`")
+	assert.ErrorContains(t, err, "failed to force-cast value: expected type `Capability<&[String]>`, got `Capability<&[Int]>`")
 
-	// successful publish
-	require.Equal(t, logs[0], "()")
+	require.Equal(t,
+		[]string{
+			// successful publish
+			"()",
+		},
+		logs,
+	)
 
-	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-
-	// no event emitted on unsuccessful claim
-	require.Len(t, events, 1)
+	require.Equal(t,
+		[]string{
+			"flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())",
+		},
+		events,
+	)
 }
 
 func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
@@ -669,8 +716,8 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -747,16 +794,22 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// successful publish
-	require.Equal(t, logs[0], "()")
+	require.Equal(t,
+		[]string{
+			// successful publish
+			"()",
+			// no value claimed
+			"nil",
+		},
+		logs,
+	)
 
-	// no value claimed
-	require.Equal(t, logs[1], "nil")
-
-	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-
-	// no event emitted on unsuccessful claim
-	require.Len(t, events, 1)
+	require.Equal(t,
+		[]string{
+			"flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())",
+		},
+		events,
+	)
 }
 
 func TestAccountInboxPublishClaimRemove(t *testing.T) {
@@ -765,8 +818,8 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -865,20 +918,25 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// successful publish
-	require.Equal(t, logs[0], "()")
+	require.Equal(t,
+		[]string{
+			// successful publish
+			"()",
+			// correct value returned from claim
+			"3",
+			// claimed value properly removed
+			"nil",
+		},
+		logs,
+	)
 
-	// correct value returned from claim
-	require.Equal(t, logs[1], "3")
-
-	// claimed value properly removed
-	require.Equal(t, logs[2], "nil")
-
-	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\")")
-
-	// no event emitted on unsuccessful claim
-	require.Len(t, events, 2)
+	require.Equal(t,
+		[]string{
+			"flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())",
+			"flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\")",
+		},
+		events,
+	)
 }
 
 func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
@@ -887,8 +945,8 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntime()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 
 	transaction1 := []byte(`
 		transaction {
@@ -1001,18 +1059,23 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// successful publish
-	require.Equal(t, logs[0], "()")
+	require.Equal(t,
+		[]string{
+			// successful publish
+			"()",
+			// value is not claimed by 3
+			"nil",
+			// value is claimed by 2
+			"3",
+		},
+		logs,
+	)
 
-	// value is not claimed by 3
-	require.Equal(t, logs[1], "nil")
-
-	// value is claimed by 2
-	require.Equal(t, logs[2], "3")
-
-	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\")")
-
-	// no event emitted on unsuccessful claim
-	require.Len(t, events, 2)
+	require.Equal(t,
+		[]string{
+			"flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())",
+			"flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\")",
+		},
+		events,
+	)
 }
