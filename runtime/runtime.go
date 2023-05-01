@@ -212,7 +212,7 @@ type interpreterRuntime struct {
 	defaultConfig Config
 }
 
-// NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
+// NewInterpreterRuntime returns an interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(defaultConfig Config) Runtime {
 	return &interpreterRuntime{
 		defaultConfig: defaultConfig,
