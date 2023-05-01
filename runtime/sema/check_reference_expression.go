@@ -65,20 +65,6 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 				},
 			)
 		} else {
-			switch auth := referenceType.Authorization.(type) {
-			case EntitlementSetAccess:
-				if auth.SetKind == Disjunction {
-					checker.report(
-						// it's not possible to create a reference whose runtime authorization is a disjoint set; disjoint sets are
-						// use to represent possible runtime sets values, and don't make sense as concrete runtime values in and of themselves
-						&ExplicitDisjointEntitlementSetReferenceCreationError{
-							Range: ast.NewRangeFromPositioned(checker.memoryGauge, referenceExpression),
-						},
-					)
-					return InvalidType
-				}
-			}
-
 			targetType = referenceType.Type
 			returnType = referenceType
 			if optOk {
