@@ -15177,33 +15177,8 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, bas
 
 				attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
 
-				var baseAccess sema.Access
-
-				// if we have no specific authorization associate with this call to `forEachAttachment`, we assume we
-				// possess the fully entitled value, and thus use the domain of the attachment map in each case
-				if baseAuthorization == nil {
-					baseAccess = sema.UnauthorizedAccess
-					if attachmentType.AttachmentEntitlementAccess != nil {
-						baseAccess = attachmentType.AttachmentEntitlementAccess.Domain()
-					}
-					baseAuthorization = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
-				} else {
-					baseAccess = interpreter.MustConvertStaticAuthorizationToSemaAccess(baseAuthorization)
-				}
-
-				attachment.setBaseValue(interpreter, v, baseAuthorization)
-
-				// the access given to each attachment in the iteration is the specific image of the base's access through that attachment's map
-				var attachmentReferenceAccess sema.Access = sema.UnauthorizedAccess
-				var err error
-				if attachmentType.AttachmentEntitlementAccess != nil {
-					attachmentReferenceAccess, err = attachmentType.AttachmentEntitlementAccess.Image(baseAccess, ast.EmptyRange)
-					if err != nil {
-						panic(err)
-					}
-				}
-
-				attachmentReferenceAuth := ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentReferenceAccess)
+				// attachments are unauthorized during iteration
+				attachmentReferenceAuth := UnauthorizedAccess
 
 				attachmentReference := NewEphemeralReferenceValue(
 					interpreter,
@@ -15218,7 +15193,7 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, bas
 					nil,
 					nil,
 					[]Value{attachmentReference},
-					[]sema.Type{sema.NewReferenceType(interpreter, attachmentType, attachmentReferenceAccess)},
+					[]sema.Type{sema.NewReferenceType(interpreter, attachmentType, sema.UnauthorizedAccess)},
 					nil,
 					locationRange,
 				)

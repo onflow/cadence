@@ -2074,13 +2074,10 @@ func TestInterpretForEachAttachment(t *testing.T) {
                 var i = 0
                 ref.forEachAttachment(fun(attachment: &AnyStructAttachment) {
                     if let a = attachment as? auth(F) &A {
-                        // is called
                         i = i + a.foo(1)
                     } else if let b = attachment as? auth(Y) &B {
-                        // is not called
                         i = i + b.foo()
                     } else if let c = attachment as? auth(Y) &C {
-                        // is called
                         i = i + c.foo(1)
                     }
                 }) 
@@ -2091,7 +2088,8 @@ func TestInterpretForEachAttachment(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(17), value)
+		// the attachment reference is never entitled
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(0), value)
 	})
 
 	t.Run("access fields", func(t *testing.T) {
