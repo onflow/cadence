@@ -4919,7 +4919,7 @@ func (interpreter *Interpreter) idCapabilityBorrowFunction(
 				}
 			}
 
-			return inter.SharedState.Config.IDCapabilityBorrowHandler(
+			referenceValue := inter.SharedState.Config.IDCapabilityBorrowHandler(
 				inter,
 				locationRange,
 				addressValue,
@@ -4927,6 +4927,10 @@ func (interpreter *Interpreter) idCapabilityBorrowFunction(
 				wantedBorrowType,
 				capabilityBorrowType,
 			)
+			if referenceValue == nil {
+				return Nil
+			}
+			return NewSomeValueNonCopying(inter, referenceValue)
 		},
 	)
 }

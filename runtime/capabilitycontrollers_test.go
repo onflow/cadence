@@ -64,8 +64,15 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       pub resource S {}
 
                       pub fun createAndSaveR(id: Int, storagePath: StoragePath) {
-                              self.account.save(
+                          self.account.save(
                               <-create R(id: id),
+                              to: storagePath
+                          )
+                      }
+
+                      pub fun createAndSaveS(storagePath: StoragePath) {
+                          self.account.save(
+                              <-create S(),
                               to: storagePath
                           )
                       }
@@ -1715,107 +1722,230 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			// TODO: assert borrow after retarget
+			t.Run("target, getControllers", func(t *testing.T) {
+				t.Parallel()
 
-			err, _, _ := test(
-				// language=cadence
-				`
-                  import Test from 0x1
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
 
-                  transaction {
-                      prepare(signer: AuthAccount) {
-                          let storagePath1 = /storage/r
-                          let storagePath2 = /storage/r2
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath1 = /storage/r
+                              let storagePath2 = /storage/r2
 
-                          // Arrange
-                          let issuedCap1: Capability<&Test.R> =
-                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
-                          let controller1: &StorageCapabilityController? =
-                              signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
+				    		  // Arrange
+                              let issuedCap1: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                              let controller1: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
 
-                          let issuedCap2: Capability<&Test.R> =
-                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
-                          let controller2: &StorageCapabilityController? =
-                              signer.capabilities.storage.getController(byCapabilityID: issuedCap2.id)
+                              let issuedCap2: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                              let controller2: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap2.id)
 
-                          let issuedCap3: Capability<&Test.R{}> =
-                              signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
-                          let controller3: &StorageCapabilityController? =
-                              signer.capabilities.storage.getController(byCapabilityID: issuedCap3.id)
+                              let issuedCap3: Capability<&Test.R{}> =
+                                  signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
+                              let controller3: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap3.id)
 
-                          let issuedCap4: Capability<&Test.R> =
-                              signer.capabilities.storage.issue<&Test.R>(storagePath2)
-                          let controller4: &StorageCapabilityController? =
-                              signer.capabilities.storage.getController(byCapabilityID: issuedCap4.id)
+                              let issuedCap4: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath2)
+                              let controller4: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap4.id)
 
-                          let controllers1Before = signer.capabilities.storage.getControllers(forPath: storagePath1)
-                          Test.quickSort(
-                              &controllers1Before as &[AnyStruct],
-                              isLess: fun(i: Int, j: Int): Bool {
-                                  let a = controllers1Before[i]
-                                  let b = controllers1Before[j]
-                                  return a.capabilityID < b.capabilityID
-                              }
-                          )
-                          assert(controllers1Before.length == 3)
-                          assert(controllers1Before[0].capabilityID == 1)
-                          assert(controllers1Before[1].capabilityID == 2)
-                          assert(controllers1Before[2].capabilityID == 3)
+                              let controllers1Before = signer.capabilities.storage.getControllers(forPath: storagePath1)
+                              Test.quickSort(
+                                  &controllers1Before as &[AnyStruct],
+                                  isLess: fun(i: Int, j: Int): Bool {
+                                      let a = controllers1Before[i]
+                                      let b = controllers1Before[j]
+                                      return a.capabilityID < b.capabilityID
+                                  }
+                              )
+                              assert(controllers1Before.length == 3)
+                              assert(controllers1Before[0].capabilityID == 1)
+                              assert(controllers1Before[1].capabilityID == 2)
+                              assert(controllers1Before[2].capabilityID == 3)
 
-                          let controllers2Before = signer.capabilities.storage.getControllers(forPath: storagePath2)
-                          Test.quickSort(
-                              &controllers2Before as &[AnyStruct],
-                              isLess: fun(i: Int, j: Int): Bool {
-                                  let a = controllers2Before[i]
-                                  let b = controllers2Before[j]
-                                  return a.capabilityID < b.capabilityID
-                              }
-                          )
-                          assert(controllers2Before.length == 1)
-                          assert(controllers2Before[0].capabilityID == 4)
+                              let controllers2Before = signer.capabilities.storage.getControllers(forPath: storagePath2)
+                              Test.quickSort(
+                                  &controllers2Before as &[AnyStruct],
+                                  isLess: fun(i: Int, j: Int): Bool {
+                                      let a = controllers2Before[i]
+                                      let b = controllers2Before[j]
+                                      return a.capabilityID < b.capabilityID
+                                  }
+                              )
+                              assert(controllers2Before.length == 1)
+                              assert(controllers2Before[0].capabilityID == 4)
 
-                          // Act
-                          controller1!.retarget(storagePath2)
+                              // Act
+                              controller1!.retarget(storagePath2)
 
-                          // Assert
-                          assert(controller1!.target() == storagePath2)
-                          let controller1After: &StorageCapabilityController? =
-                              signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
-                          assert(controller1After!.target() == storagePath2)
-                          assert(controller2!.target() == storagePath1)
-                          assert(controller3!.target() == storagePath1)
-                          assert(controller4!.target() == storagePath2)
+                              // Assert
+                              assert(controller1!.target() == storagePath2)
+                              let controller1After: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
+                              assert(controller1After!.target() == storagePath2)
+                              assert(controller2!.target() == storagePath1)
+                              assert(controller3!.target() == storagePath1)
+                              assert(controller4!.target() == storagePath2)
 
-                          let controllers1After = signer.capabilities.storage.getControllers(forPath: storagePath1)
-                          Test.quickSort(
-                              &controllers1After as &[AnyStruct],
-                              isLess: fun(i: Int, j: Int): Bool {
-                                  let a = controllers1After[i]
-                                  let b = controllers1After[j]
-                                  return a.capabilityID < b.capabilityID
-                              }
-                          )
-                          assert(controllers1After.length == 2)
-                          assert(controllers1After[0].capabilityID == 2)
-                          assert(controllers1After[1].capabilityID == 3)
+                              let controllers1After = signer.capabilities.storage.getControllers(forPath: storagePath1)
+                              Test.quickSort(
+                                  &controllers1After as &[AnyStruct],
+                                  isLess: fun(i: Int, j: Int): Bool {
+                                      let a = controllers1After[i]
+                                      let b = controllers1After[j]
+                                      return a.capabilityID < b.capabilityID
+                                  }
+                              )
+                              assert(controllers1After.length == 2)
+                              assert(controllers1After[0].capabilityID == 2)
+                              assert(controllers1After[1].capabilityID == 3)
 
-                          let controllers2After = signer.capabilities.storage.getControllers(forPath: storagePath2)
-                          Test.quickSort(
-                              &controllers2After as &[AnyStruct],
-                              isLess: fun(i: Int, j: Int): Bool {
-                                  let a = controllers2After[i]
-                                  let b = controllers2After[j]
-                                  return a.capabilityID < b.capabilityID
-                              }
-                          )
-                          assert(controllers2After.length == 2)
-                          assert(controllers2After[0].capabilityID == 1)
-                          assert(controllers2After[1].capabilityID == 4)
+                              let controllers2After = signer.capabilities.storage.getControllers(forPath: storagePath2)
+                              Test.quickSort(
+                                  &controllers2After as &[AnyStruct],
+                                  isLess: fun(i: Int, j: Int): Bool {
+                                      let a = controllers2After[i]
+                                      let b = controllers2After[j]
+                                      return a.capabilityID < b.capabilityID
+                                  }
+                              )
+                              assert(controllers2After.length == 2)
+                              assert(controllers2After[0].capabilityID == 1)
+                              assert(controllers2After[1].capabilityID == 4)
+                          }
                       }
-                  }
-                `,
-			)
-			require.NoError(t, err)
+                    `,
+				)
+				require.NoError(t, err)
+			})
+
+			t.Run("retarget empty, borrow", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath1 = /storage/r
+                              let storagePath2 = /storage/empty
+							  let resourceID = 42
+
+							  // Arrange
+							  Test.createAndSaveR(id: resourceID, storagePath: storagePath1)
+
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                              let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              assert(issuedCap.borrow() != nil)
+                              assert(issuedCap.check())
+                              assert(issuedCap.borrow()!.id == resourceID)
+
+                              // Act
+                              controller!.retarget(storagePath2)
+
+                              // Assert
+							  assert(issuedCap.borrow() == nil)
+                              assert(!issuedCap.check())
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
+			})
+
+			t.Run("retarget to value with same type, borrow", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath1 = /storage/r
+                              let storagePath2 = /storage/r2
+							  let resourceID1 = 42
+							  let resourceID2 = 43
+
+							  // Arrange
+							  Test.createAndSaveR(id: resourceID1, storagePath: storagePath1)
+							  Test.createAndSaveR(id: resourceID2, storagePath: storagePath2)
+
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                              let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              assert(issuedCap.borrow() != nil)
+                              assert(issuedCap.check())
+                              assert(issuedCap.borrow()!.id == resourceID1)
+
+                              // Act
+                              controller!.retarget(storagePath2)
+
+                              // Assert
+                              assert(issuedCap.borrow() != nil)
+                              assert(issuedCap.check())
+                              assert(issuedCap.borrow()!.id == resourceID2)
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
+			})
+
+			t.Run("retarget to value with different type, borrow", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath1 = /storage/r
+                              let storagePath2 = /storage/s
+							  let resourceID = 42
+
+							  // Arrange
+							  Test.createAndSaveR(id: resourceID, storagePath: storagePath1)
+							  Test.createAndSaveS(storagePath: storagePath2)
+
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                              let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              assert(issuedCap.borrow() != nil)
+                              assert(issuedCap.check())
+                              assert(issuedCap.borrow()!.id == resourceID)
+
+                              // Act
+                              controller!.retarget(storagePath2)
+
+                              // Assert
+							  assert(issuedCap.borrow() == nil)
+                              assert(!issuedCap.check())
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
+			})
 		})
 
 		// TODO: delete

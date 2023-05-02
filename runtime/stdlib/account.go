@@ -3151,9 +3151,8 @@ func BorrowCapabilityController(
 	referencedValue := referenceValue.ReferencedValue(
 		inter,
 		locationRange,
-		true,
+		false,
 	)
-
 	if referencedValue == nil {
 		return nil
 	}
