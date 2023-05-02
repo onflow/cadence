@@ -41,7 +41,6 @@ type InterfaceDeclaration struct {
 var _ Element = &InterfaceDeclaration{}
 var _ Declaration = &InterfaceDeclaration{}
 var _ Statement = &InterfaceDeclaration{}
-var _ CompositeLikeDeclaration = &InterfaceDeclaration{}
 
 func NewInterfaceDeclaration(
 	gauge common.MemoryGauge,
@@ -132,8 +131,4 @@ func (d *InterfaceDeclaration) ConformanceList() []*NominalType {
 
 func (d *InterfaceDeclaration) Kind() common.CompositeKind {
 	return d.CompositeKind
-}
-
-func (d *InterfaceDeclaration) IsInterface() bool {
-	return true
 }

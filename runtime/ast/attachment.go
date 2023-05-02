@@ -80,6 +80,8 @@ func (*AttachmentDeclaration) isDeclaration() {}
 // but will be rejected in semantic analysis
 func (*AttachmentDeclaration) isStatement() {}
 
+func (*AttachmentDeclaration) isCompositeLikeDeclaration() {}
+
 func (d *AttachmentDeclaration) DeclarationIdentifier() *Identifier {
 	return &d.Identifier
 }
@@ -117,13 +119,13 @@ var attachmentConformanceSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Line{},
 }
 
-func (e *AttachmentDeclaration) Doc() prettier.Doc {
+func (d *AttachmentDeclaration) Doc() prettier.Doc {
 	var doc prettier.Concat
 
-	if e.Access != AccessNotSpecified {
+	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			prettier.Text(e.Access.Keyword()),
+			prettier.Text(d.Access.Keyword()),
 			prettier.Space,
 		)
 	}
@@ -132,19 +134,19 @@ func (e *AttachmentDeclaration) Doc() prettier.Doc {
 		doc,
 		attachmentStatementDoc,
 		prettier.Space,
-		prettier.Text(e.Identifier.Identifier),
+		prettier.Text(d.Identifier.Identifier),
 		prettier.Space,
 		attachmentStatementForDoc,
 		prettier.Space,
-		e.BaseType.Doc(),
+		d.BaseType.Doc(),
 	)
-	if len(e.Conformances) > 0 {
+	if len(d.Conformances) > 0 {
 
 		conformancesDoc := prettier.Concat{
 			prettier.Line{},
 		}
 
-		for i, conformance := range e.Conformances {
+		for i, conformance := range d.Conformances {
 			if i > 0 {
 				conformancesDoc = append(
 					conformancesDoc,
@@ -163,7 +165,7 @@ func (e *AttachmentDeclaration) Doc() prettier.Doc {
 			prettier.Dedent{
 				Doc: prettier.Concat{
 					prettier.Line{},
-					e.Members.Doc(),
+					d.Members.Doc(),
 				},
 			},
 		)
@@ -182,7 +184,7 @@ func (e *AttachmentDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Space,
-			e.Members.Doc(),
+			d.Members.Doc(),
 		)
 	}
 
@@ -202,10 +204,6 @@ func (d *AttachmentDeclaration) MarshalJSON() ([]byte, error) {
 
 func (d *AttachmentDeclaration) String() string {
 	return Prettier(d)
-}
-
-func (d *AttachmentDeclaration) IsInterface() bool {
-	return false
 }
 
 // AttachExpression

@@ -311,7 +311,7 @@ func (checker *Checker) declareCompositeLikeNestedTypes(
 
 			nestedCompositeDeclaration, isCompositeDeclaration := nestedDeclaration.(ast.CompositeLikeDeclaration)
 
-			if isCompositeDeclaration && !nestedCompositeDeclaration.IsInterface() {
+			if isCompositeDeclaration {
 
 				nestedCompositeType, ok := nestedType.(*CompositeType)
 				if !ok {
@@ -1050,14 +1050,14 @@ func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctio
 }
 
 func (checker *Checker) explicitInterfaceConformances(
-	declaration ast.CompositeLikeDeclaration,
+	conformingDeclaration ast.ConformingDeclaration,
 	compositeType CompositeKindedType,
 ) []*InterfaceType {
 
 	var interfaceTypes []*InterfaceType
 	seenConformances := map[*InterfaceType]bool{}
 
-	for _, conformance := range declaration.ConformanceList() {
+	for _, conformance := range conformingDeclaration.ConformanceList() {
 		convertedType := checker.ConvertType(conformance)
 
 		if interfaceType, ok := convertedType.(*InterfaceType); ok {
@@ -1325,7 +1325,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 // checkConformanceKindMatch ensures the composite kinds match.
 // e.g. a structure shouldn't be able to conform to a resource interface.
 func (checker *Checker) checkConformanceKindMatch(
-	compositeDeclaration ast.CompositeLikeDeclaration,
+	conformingDeclaration ast.ConformingDeclaration,
 	compositeKindedType CompositeKindedType,
 	interfaceConformance *InterfaceType,
 ) {
@@ -1345,12 +1345,12 @@ func (checker *Checker) checkConformanceKindMatch(
 
 	var compositeKindMismatchIdentifier *ast.Identifier
 
-	conformances := compositeDeclaration.ConformanceList()
+	conformances := conformingDeclaration.ConformanceList()
 
 	if len(conformances) == 0 {
 		// For type requirements, there is no explicit conformance.
 		// Hence, log the error at the type requirement (i.e: declaration identifier)
-		compositeKindMismatchIdentifier = compositeDeclaration.DeclarationIdentifier()
+		compositeKindMismatchIdentifier = conformingDeclaration.DeclarationIdentifier()
 	} else {
 		// Otherwise, find the conformance which resulted in the mismatch,
 		// and log the error there.
