@@ -630,45 +630,49 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 		return typeVarIdent(identifier)
 
 	case *ast.OptionalType:
+		innerType := typeExpr(t.Type, typeParams)
 		return &dst.UnaryExpr{
 			Op: token.AND,
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("OptionalType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type, typeParams)),
+					goKeyValue("Type", innerType),
 				},
 			},
 		}
 
 	case *ast.ReferenceType:
+		borrowType := typeExpr(t.Type, typeParams)
 		return &dst.UnaryExpr{
 			Op: token.AND,
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("ReferenceType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type, typeParams)),
+					goKeyValue("Type", borrowType),
 				},
 			},
 		}
 
 	case *ast.VariableSizedType:
+		elementType := typeExpr(t.Type, typeParams)
 		return &dst.UnaryExpr{
 			Op: token.AND,
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("VariableSizedType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type, typeParams)),
+					goKeyValue("Type", elementType),
 				},
 			},
 		}
 
 	case *ast.ConstantSizedType:
+		elementType := typeExpr(t.Type, typeParams)
 		return &dst.UnaryExpr{
 			Op: token.AND,
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("ConstantSizedType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type, typeParams)),
+					goKeyValue("Type", elementType),
 					goKeyValue(
 						"Size",
 						&dst.BasicLit{
@@ -704,6 +708,46 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 		return &dst.CallExpr{
 			Fun:  dst.NewIdent("MustInstantiate"),
 			Args: argumentExprs,
+		}
+
+	case *ast.RestrictedType:
+		var elements []dst.Expr
+		if t.Type != nil {
+			restrictedType := typeExpr(t.Type, typeParams)
+			elements = append(elements,
+				goKeyValue("Type", restrictedType),
+			)
+		}
+
+		if len(t.Restrictions) > 0 {
+			restrictions := make([]dst.Expr, 0, len(t.Restrictions))
+			for _, restriction := range t.Restrictions {
+				restrictions = append(
+					restrictions,
+					typeExpr(restriction, typeParams),
+				)
+			}
+			elements = append(
+				elements,
+				goKeyValue("Restrictions",
+					&dst.CompositeLit{
+						Type: &dst.ArrayType{
+							Elt: &dst.StarExpr{
+								X: dst.NewIdent("InterfaceType"),
+							},
+						},
+						Elts: restrictions,
+					},
+				),
+			)
+		}
+
+		return &dst.UnaryExpr{
+			Op: token.AND,
+			X: &dst.CompositeLit{
+				Type: dst.NewIdent("RestrictedType"),
+				Elts: elements,
+			},
 		}
 
 	default:

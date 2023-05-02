@@ -100,7 +100,7 @@ const TestTypeTestCapFieldName = "testCap"
 var TestTypeTestCapFieldType = &CapabilityType{}
 
 const TestTypeTestCapFieldDocString = `
-This is a test capability field.
+This is a test unparameterized capability field.
 `
 
 const TestTypeTestCapIntFieldName = "testCapInt"
@@ -111,7 +111,38 @@ var TestTypeTestCapIntFieldType = MustInstantiate(
 )
 
 const TestTypeTestCapIntFieldDocString = `
-This is a test specific capability field.
+This is a test parameterized capability field.
+`
+
+const TestTypeTestRestrictedWithoutTypeFieldName = "testRestrictedWithoutType"
+
+var TestTypeTestRestrictedWithoutTypeFieldType = &RestrictedType{
+	Restrictions: []*InterfaceType{BarType, BazType},
+}
+
+const TestTypeTestRestrictedWithoutTypeFieldDocString = `
+This is a test restricted type (without type) field.
+`
+
+const TestTypeTestRestrictedWithTypeFieldName = "testRestrictedWithType"
+
+var TestTypeTestRestrictedWithTypeFieldType = &RestrictedType{
+	Type:         FooType,
+	Restrictions: []*InterfaceType{BarType, BazType},
+}
+
+const TestTypeTestRestrictedWithTypeFieldDocString = `
+This is a test restricted type (with type) field.
+`
+
+const TestTypeTestRestrictedWithoutRestrictionsFieldName = "testRestrictedWithoutRestrictions"
+
+var TestTypeTestRestrictedWithoutRestrictionsFieldType = &RestrictedType{
+	Type: FooType,
+}
+
+const TestTypeTestRestrictedWithoutRestrictionsFieldDocString = `
+This is a test restricted type (without restrictions) field.
 `
 
 const TestTypeName = "Test"
@@ -191,6 +222,24 @@ func init() {
 				TestTypeTestCapIntFieldName,
 				TestTypeTestCapIntFieldType,
 				TestTypeTestCapIntFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestRestrictedWithoutTypeFieldName,
+				TestTypeTestRestrictedWithoutTypeFieldType,
+				TestTypeTestRestrictedWithoutTypeFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestRestrictedWithTypeFieldName,
+				TestTypeTestRestrictedWithTypeFieldType,
+				TestTypeTestRestrictedWithTypeFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				TestTypeTestRestrictedWithoutRestrictionsFieldName,
+				TestTypeTestRestrictedWithoutRestrictionsFieldType,
+				TestTypeTestRestrictedWithoutRestrictionsFieldDocString,
 			),
 		})
 	}

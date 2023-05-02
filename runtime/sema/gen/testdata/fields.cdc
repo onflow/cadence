@@ -23,9 +23,18 @@ pub struct Test {
     /// This is a test type field.
     let testType: Type
 
-    /// This is a test capability field.
+    /// This is a test unparameterized capability field.
     let testCap: Capability
 
-    /// This is a test specific capability field.
+    /// This is a test parameterized capability field.
     let testCapInt: Capability<Int>
+
+    /// This is a test restricted type (without type) field.
+    let testRestrictedWithoutType: {Bar, Baz}
+
+    /// This is a test restricted type (with type) field.
+    let testRestrictedWithType: Foo{Bar, Baz}
+
+    /// This is a test restricted type (without restrictions) field.
+    let testRestrictedWithoutRestrictions: Foo{}
 }
