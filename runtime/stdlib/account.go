@@ -2339,7 +2339,7 @@ func newAuthAccountStorageCapabilitiesGetControllersFunction(
 			// Get capability controllers iterator
 
 			nextCapabilityID, count :=
-				getPathCapabilityControllerIDsIterator(inter, address, targetPathValue)
+				getStorageCapabilityControllerIDsIterator(inter, address, targetPathValue)
 
 			var capabilityControllerIndex uint64 = 0
 
@@ -2410,7 +2410,7 @@ func newAuthAccountStorageCapabilitiesForEachControllerFunction(
 			// Get capability controllers iterator
 
 			nextCapabilityID, _ :=
-				getPathCapabilityControllerIDsIterator(inter, address, targetPathValue)
+				getStorageCapabilityControllerIDsIterator(inter, address, targetPathValue)
 
 			for {
 				capabilityID, ok := nextCapabilityID()
@@ -2506,7 +2506,7 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 			)
 
 			storeCapabilityController(inter, address, capabilityIDValue, controller)
-			recordPathCapabilityController(inter, locationRange, address, targetPathValue, capabilityIDValue)
+			recordStorageCapabilityController(inter, locationRange, address, targetPathValue, capabilityIDValue)
 
 			return interpreter.NewIDCapabilityValue(
 				gauge,
@@ -2714,8 +2714,8 @@ func newStorageCapabilityControllerRetargetFunction(
 			oldTargetPathValue := controller.TargetPath
 
 			capabilityID := controller.CapabilityID
-			unrecordPathCapabilityController(inter, locationRange, address, oldTargetPathValue, capabilityID)
-			recordPathCapabilityController(inter, locationRange, address, newTargetPathValue, capabilityID)
+			unrecordStorageCapabilityController(inter, locationRange, address, oldTargetPathValue, capabilityID)
+			recordStorageCapabilityController(inter, locationRange, address, newTargetPathValue, capabilityID)
 
 			controller.TargetPath = newTargetPathValue
 
@@ -2738,7 +2738,7 @@ func newStorageCapabilityControllerDeleteFunction(
 
 			capabilityID := controller.CapabilityID
 
-			unrecordPathCapabilityController(
+			unrecordStorageCapabilityController(
 				inter,
 				locationRange,
 				address,
@@ -2767,7 +2767,7 @@ var capabilityIDSetStaticType = interpreter.DictionaryStaticType{
 // capability ID dictionaries (sets) by storage path identifier
 const PathCapabilityStorageDomain = "path_cap"
 
-func recordPathCapabilityController(
+func recordStorageCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	address common.Address,
@@ -2843,7 +2843,7 @@ func getPathCapabilityIDSet(
 	return capabilityIDSet
 }
 
-func unrecordPathCapabilityController(
+func unrecordStorageCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	address common.Address,
@@ -2863,7 +2863,7 @@ func unrecordPathCapabilityController(
 	// TODO: remove capability set if empty
 }
 
-func getPathCapabilityControllerIDsIterator(
+func getStorageCapabilityControllerIDsIterator(
 	inter *interpreter.Interpreter,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
