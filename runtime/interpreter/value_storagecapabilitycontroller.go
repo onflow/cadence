@@ -41,10 +41,14 @@ type CapabilityControllerValue interface {
 // StorageCapabilityControllerValue
 
 type StorageCapabilityControllerValue struct {
-	BorrowType       ReferenceStaticType
-	TargetPath       PathValue
+	BorrowType   ReferenceStaticType
+	CapabilityID UInt64Value
+	TargetPath   PathValue
+
+	// Injected functions
+	TargetFunction   FunctionValue
 	RetargetFunction FunctionValue
-	CapabilityID     UInt64Value
+	DeleteFunction   FunctionValue
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
@@ -204,8 +208,6 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 
 func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 
-	// TODO: sema.StorageCapabilityControllerTypeDeleteFunctionName
-
 	switch name {
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -214,16 +216,13 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 		return NewTypeValue(inter, v.BorrowType)
 
 	case sema.StorageCapabilityControllerTypeTargetFunctionName:
-		return NewHostFunctionValue(
-			inter,
-			sema.StorageCapabilityControllerTypeTargetFunctionType,
-			func(invocation Invocation) Value {
-				return v.TargetPath
-			},
-		)
+		return v.TargetFunction
 
 	case sema.StorageCapabilityControllerTypeRetargetFunctionName:
 		return v.RetargetFunction
+
+	case sema.StorageCapabilityControllerTypeDeleteFunctionName:
+		return v.DeleteFunction
 	}
 
 	return nil
@@ -250,5 +249,29 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 		capabilityAddress,
 		v.TargetPath,
 		resultBorrowType.Type,
+	)
+}
+
+// SetDeleted sets the controller as deleted, i.e. functions panic from now on
+func (v *StorageCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) {
+
+	panicFunction := func(invocation Invocation) Value {
+		panic(errors.NewDefaultUserError("controller is deleted"))
+	}
+
+	v.TargetFunction = NewHostFunctionValue(
+		gauge,
+		sema.StorageCapabilityControllerTypeTargetFunctionType,
+		panicFunction,
+	)
+	v.RetargetFunction = NewHostFunctionValue(
+		gauge,
+		sema.StorageCapabilityControllerTypeRetargetFunctionType,
+		panicFunction,
+	)
+	v.DeleteFunction = NewHostFunctionValue(
+		gauge,
+		sema.StorageCapabilityControllerTypeDeleteFunctionType,
+		panicFunction,
 	)
 }

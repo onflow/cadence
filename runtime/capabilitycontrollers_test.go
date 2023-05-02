@@ -1948,7 +1948,141 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			})
 		})
 
-		// TODO: delete
+		// TODO:
+		t.Run("delete", func(t *testing.T) {
+
+			t.Parallel()
+
+			// TODO:
+			t.Run("getController, getControllers", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath = /storage/r
+
+				    		  // Arrange
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath)
+							  let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              let controllersBefore = signer.capabilities.storage.getControllers(forPath: storagePath)
+                              assert(controllersBefore.length == 1)
+                              assert(controllersBefore[0].capabilityID == 1)
+
+                              // Act
+                              controller!.delete()
+
+                              // Assert
+                              let controllerAfter: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+                              assert(controllerAfter == nil)
+
+                              let controllersAfter = signer.capabilities.storage.getControllers(forPath: storagePath)
+                              assert(controllersAfter.length == 0)
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
+			})
+
+			t.Run("target", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath = /storage/r
+
+				    		  // Arrange
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath)
+							  let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              // Act
+                              controller!.delete()
+
+                              // Assert
+                              controller!.target()
+                          }
+                      }
+                    `,
+				)
+				require.ErrorContains(t, err, "controller is deleted")
+			})
+
+			t.Run("retarget", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath = /storage/r
+
+				    		  // Arrange
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath)
+							  let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              // Act
+                              controller!.delete()
+
+                              // Assert
+                              controller!.retarget(/storage/r2)
+                          }
+                      }
+                    `,
+				)
+				require.ErrorContains(t, err, "controller is deleted")
+			})
+
+			t.Run("delete", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath = /storage/r
+
+				    		  // Arrange
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath)
+							  let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              // Act
+                              controller!.delete()
+
+                              // Assert
+                              controller!.delete()
+                          }
+                      }
+                    `,
+				)
+				require.ErrorContains(t, err, "controller is deleted")
+			})
+		})
 	})
 
 	// TODO: AccountCapabilityController: delete

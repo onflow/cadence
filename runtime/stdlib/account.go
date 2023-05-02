@@ -2597,6 +2597,25 @@ func storeCapabilityController(
 	}
 }
 
+// removeCapabilityController removes a capability controller from the account's capability ID to controller storage map
+func removeCapabilityController(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) {
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
+
+	existed := inter.WriteStored(
+		address,
+		CapabilityControllerStorageDomain,
+		storageMapKey,
+		nil,
+	)
+	if !existed {
+		panic(errors.NewUnreachableError())
+	}
+}
+
 // getCapabilityController gets the capability controller for the given capability ID
 func getCapabilityController(
 	inter *interpreter.Interpreter,
@@ -2615,22 +2634,26 @@ func getCapabilityController(
 		return nil
 	}
 
-	capabilityController, ok := readValue.(interpreter.CapabilityControllerValue)
+	controller, ok := readValue.(interpreter.CapabilityControllerValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
 	// Inject functions
-	switch capabilityController := capabilityController.(type) {
+	switch controller := controller.(type) {
 	case *interpreter.StorageCapabilityControllerValue:
-		capabilityController.RetargetFunction =
-			newStorageCapabilityControllerRetargetFunction(inter, address, capabilityController)
+		controller.TargetFunction =
+			newStorageCapabilityControllerTargetFunction(inter, controller)
+		controller.RetargetFunction =
+			newStorageCapabilityControllerRetargetFunction(inter, address, controller)
+		controller.DeleteFunction =
+			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
 
-		// TODO: inject delete function in *interpreter.StorageCapabilityControllerValue
-		// TODO: inject delete function in *interpreter.AccountCapabilityControllerValue
+	case *interpreter.AccountCapabilityControllerValue:
+		// TODO: inject delete function
 	}
 
-	return capabilityController
+	return controller
 }
 
 func getStorageCapabilityControllerReference(
@@ -2654,6 +2677,19 @@ func getStorageCapabilityControllerReference(
 		false,
 		storageCapabilityController,
 		sema.StorageCapabilityControllerType,
+	)
+}
+
+func newStorageCapabilityControllerTargetFunction(
+	inter *interpreter.Interpreter,
+	controller *interpreter.StorageCapabilityControllerValue,
+) interpreter.FunctionValue {
+	return interpreter.NewHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeTargetFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			return controller.TargetPath
+		},
 	)
 }
 
@@ -2682,6 +2718,40 @@ func newStorageCapabilityControllerRetargetFunction(
 			recordPathCapabilityController(inter, locationRange, address, newTargetPathValue, capabilityID)
 
 			controller.TargetPath = newTargetPathValue
+
+			return interpreter.Void
+		},
+	)
+}
+
+func newStorageCapabilityControllerDeleteFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	controller *interpreter.StorageCapabilityControllerValue,
+) interpreter.FunctionValue {
+	return interpreter.NewHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeTargetFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			capabilityID := controller.CapabilityID
+
+			unrecordPathCapabilityController(
+				inter,
+				locationRange,
+				address,
+				controller.TargetPath,
+				capabilityID,
+			)
+			removeCapabilityController(
+				inter,
+				address,
+				capabilityID,
+			)
+
+			controller.SetDeleted(inter)
 
 			return interpreter.Void
 		},
