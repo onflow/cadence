@@ -1885,7 +1885,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *EphemeralReferenceValue:
 				return NewEphemeralReferenceValue(
 					interpreter,
-					ref.Authorization,
+					ConvertSemaAccesstoStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
 					ref.Value,
 					unwrappedTargetType.Type,
 				)
@@ -1893,7 +1893,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *StorageReferenceValue:
 				return NewStorageReferenceValue(
 					interpreter,
-					ref.Authorization,
+					ConvertSemaAccesstoStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
 					ref.TargetStorageAddress,
 					ref.TargetPath,
 					unwrappedTargetType.Type,
@@ -2959,7 +2959,7 @@ func referenceTypeFunction(invocation Invocation) Value {
 	}
 
 	if len(entitlements) > 0 {
-		authorization = NewEntitlementSetAuthorization(invocation.Interpreter, entitlements)
+		authorization = NewEntitlementSetAuthorization(invocation.Interpreter, entitlements, sema.Conjunction)
 	}
 
 	return NewSomeValueNonCopying(
@@ -3764,15 +3764,6 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				panic(errors.NewUnreachableError())
 			}
 
-			if entitlementSet, ok := referenceType.Authorization.(sema.EntitlementSetAccess); ok {
-				if entitlementSet.SetKind == sema.Disjunction {
-					panic(InvalidDisjointRuntimeEntitlementSetCreationError{
-						Authorization: referenceType.Authorization,
-						LocationRange: invocation.LocationRange,
-					})
-				}
-			}
-
 			reference := NewStorageReferenceValue(
 				interpreter,
 				ConvertSemaAccesstoStaticAuthorization(interpreter, referenceType.Authorization),
@@ -3817,15 +3808,6 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
 			if !ok {
 				panic(errors.NewUnreachableError())
-			}
-
-			if entitlementSet, ok := borrowType.Authorization.(sema.EntitlementSetAccess); ok {
-				if entitlementSet.SetKind == sema.Disjunction {
-					panic(InvalidDisjointRuntimeEntitlementSetCreationError{
-						Authorization: borrowType.Authorization,
-						LocationRange: invocation.LocationRange,
-					})
-				}
 			}
 
 			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)

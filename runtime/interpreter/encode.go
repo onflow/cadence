@@ -1253,11 +1253,30 @@ func (t EntitlementMapAuthorization) Encode(e *cbor.StreamEncoder) error {
 	return e.EncodeString(string(t.TypeID))
 }
 
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// encodedSetAuthorizationStaticTypeKindKey                uint64 = 0
+	// encodedSetAuthorizationStaticTypeEntitlementsKey        uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedSetAuthorizationStaticTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded reference static type length during decoding.
+	encodedSetAuthorizationStaticTypeLength = 2
+)
+
 func (t EntitlementSetAuthorization) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagEntitlementSetStaticAuthorization,
+		// array, 2 items follow
+		0x82,
 	})
+	if err != nil {
+		return err
+	}
+
+	err = e.EncodeUint8(uint8(t.SetKind))
 	if err != nil {
 		return err
 	}
@@ -1266,9 +1285,9 @@ func (t EntitlementSetAuthorization) Encode(e *cbor.StreamEncoder) error {
 	if err != nil {
 		return err
 	}
-	for _, restriction := range t.Entitlements {
+	for _, entitlement := range t.Entitlements {
 		// Encode entitlement as array entitlements element
-		err = e.EncodeString(string(restriction))
+		err = e.EncodeString(string(entitlement))
 		if err != nil {
 			return err
 		}
@@ -1293,7 +1312,7 @@ const (
 //	cbor.Tag{
 //			Number: CBORTagReferenceStaticType,
 //			Content: cborArray{
-//					encodedReferenceStaticTypeAuthorizationFieldKey: bool(v.Authorized),
+//					encodedReferenceStaticTypeAuthorizationFieldKey: v.Authorization,
 //					encodedReferenceStaticTypeTypeFieldKey:          StaticType(v.Type),
 //			},
 //		}

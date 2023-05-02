@@ -1201,6 +1201,25 @@ func TestImportRuntimeType(t *testing.T) {
 			expected: interpreter.ReferenceStaticType{
 				Authorization: interpreter.EntitlementSetAuthorization{
 					Entitlements: []common.TypeID{"E", "F"},
+					SetKind:      sema.Conjunction,
+				},
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+
+		{
+			label: "Entitlement Disjoint Set Reference",
+			actual: &cadence.ReferenceType{
+				Authorization: cadence.EntitlementSetAuthorization{
+					Kind:         cadence.Disjunction,
+					Entitlements: []common.TypeID{"E", "F"},
+				},
+				Type: cadence.IntType{},
+			},
+			expected: interpreter.ReferenceStaticType{
+				Authorization: interpreter.EntitlementSetAuthorization{
+					Entitlements: []common.TypeID{"E", "F"},
+					SetKind:      sema.Disjunction,
 				},
 				ReferencedType: interpreter.PrimitiveStaticTypeInt,
 			},
