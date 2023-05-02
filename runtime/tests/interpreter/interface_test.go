@@ -671,10 +671,22 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
+		logFunctionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityView,
+			[]sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.AnyStructTypeAnnotation,
+				},
+			},
+			sema.VoidTypeAnnotation,
+		)
+
 		var logs []string
 		valueDeclaration := stdlib.NewStandardLibraryFunction(
 			"log",
-			stdlib.LogFunctionType,
+			logFunctionType,
 			"",
 			func(invocation interpreter.Invocation) interpreter.Value {
 				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
@@ -735,7 +747,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
                 }
             }
 
-            pub fun print(_ msg: String): Bool {
+            pub view fun print(_ msg: String): Bool {
                 log(msg)
                 return true
             }
@@ -767,10 +779,22 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
+		logFunctionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityView,
+			[]sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.AnyStructTypeAnnotation,
+				},
+			},
+			sema.VoidTypeAnnotation,
+		)
+
 		var logs []string
 		valueDeclaration := stdlib.NewStandardLibraryFunction(
 			"log",
-			stdlib.LogFunctionType,
+			logFunctionType,
 			"",
 			func(invocation interpreter.Invocation) interpreter.Value {
 				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
@@ -831,7 +855,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
                 }
             }
 
-            pub fun print(_ msg: String): Bool {
+            pub view fun print(_ msg: String): Bool {
                 log(msg)
                 return true
             }
