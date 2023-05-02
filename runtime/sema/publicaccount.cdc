@@ -43,7 +43,7 @@ pub struct PublicAccount {
     ///
     /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
     /// is undefined.
-    pub fun forEachPublic(_ function: ((PublicPath, Type): Bool))
+    pub fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
 
     pub struct Contracts {
 
@@ -74,7 +74,7 @@ pub struct PublicAccount {
         ///
         /// Iteration is stopped early if the function returns `false`.
         /// The order of iteration is undefined.
-        pub fun forEach(_ function: ((AccountKey): Bool))
+        pub fun forEach(_ function: fun(AccountKey): Bool)
 
         /// The total number of unrevoked keys in this account.
         pub let count: UInt64

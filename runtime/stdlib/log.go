@@ -24,20 +24,17 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var LogFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
+var LogFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	[]sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.AnyStructType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: sema.AnyStructTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
-}
+	sema.VoidTypeAnnotation,
+)
 
 const logFunctionDocString = `
 Logs a string representation of the given value

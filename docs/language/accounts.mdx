@@ -54,7 +54,7 @@ pub struct PublicAccount {
     ///
     /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
     /// is undefined.
-    pub fun forEachPublic(_ function: ((PublicPath, Type): Bool))
+    pub fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
 
     pub struct Contracts {
 
@@ -85,7 +85,7 @@ pub struct PublicAccount {
         ///
         /// Iteration is stopped early if the function returns `false`.
         /// The order of iteration is undefined.
-        pub fun forEach(_ function: ((AccountKey): Bool))
+        pub fun forEach(_ function: fun(AccountKey): Bool)
 
         /// The total number of unrevoked keys in this account.
         pub let count: UInt64
@@ -148,17 +148,11 @@ pub struct AuthAccount {
     /// All storage paths of this account.
     pub let storagePaths: [StoragePath]
 
-    /// **DEPRECATED**: Use `keys.add` instead.
-    ///
-    /// Adds a public key to the account.
-    ///
-    /// The public key must be encoded together with their signature algorithm, hashing algorithm and weight.
-    pub fun addPublicKey(_ publicKey: [UInt8])
+    // Account storage API (see the section below for documentation)
 
-    /// **DEPRECATED**: Use `keys.revoke` instead.
-    ///
-    /// Revokes the key at the given index.
-    pub fun removePublicKey(_ index: Int)
+    // Provides a API for bootstrapping (sending and receiving) capabilities
+
+    let inbox: AuthAccount.Inbox
 
     /// Saves the given object into the account's storage at the given path.
     ///
@@ -381,7 +375,7 @@ pub struct AuthAccount {
         ///
         /// Iteration is stopped early if the function returns `false`.
         /// The order of iteration is undefined.
-        pub fun forEach(_ function: ((AccountKey): Bool))
+        pub fun forEach(_ function: fun(AccountKey): Bool)
 
         /// The total number of unrevoked keys in this account.
         pub let count: UInt64
@@ -502,23 +496,6 @@ transaction(publicKey: [UInt8]) {
 }
 ```
 
-<Callout type="info">
-⚠️  Note: Keys can also be added using the `addPublicKey` function.
-However, this method is currently deprecated and is available only for the backward compatibility.
-The `addPublicKey` method accepts the public key encoded together with their signature algorithm,
-hashing algorithm and weight.
-
-```cadence
-transaction(key: [UInt8]) {
-    prepare(signer: AuthAccount) {
-        let account = AuthAccount(payer: signer)
-        account.addPublicKey(key)
-    }
-}
-```
-</Callout>
-
-
 #### Get Account Keys
 
 Keys that are added to an account can be retrieved using `get()` function, using the index of the key.
@@ -553,11 +530,6 @@ transaction() {
     }
 }
 ```
-
-<Callout type="info">
-⚠️  Note: Keys can also be removed using the `removePublicKey` function.
-However, this method is deprecated and is available only for the backward compatibility.
-</Callout>
 
 ## Account Inbox
 
@@ -940,9 +912,9 @@ let nonExistentRef = authAccount.borrow<&{HasCount}>(from: /storage/nonExistent)
 It is possible to iterate over an account's storage using the following iteration functions:
 
 ```cadence
-fun forEachPublic(_ function: ((PublicPath, Type): Bool))
-fun forEachPrivate(_ function: ((PrivatePath, Type): Bool))
-fun forEachStored(_ function: ((StoragePath, Type): Bool))
+fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
+fun forEachPrivate(_ function: fun(PrivatePath, Type): Bool)
+fun forEachStored(_ function: fun(StoragePath, Type): Bool)
 ```
 
 Each of these iterates over every element in the specified domain (public, private, and storage),
@@ -980,6 +952,7 @@ account.forEachStored(fun (path: StoragePath, type: Type): Bool {
     return true
 })
 ```
+
 </Callout>
 
 <Callout type="info">

@@ -1712,19 +1712,29 @@ func (t *ContractInterfaceType) Equal(other Type) bool {
 
 // Function
 
+type FunctionPurity int
+
+const (
+	FunctionPurityUnspecified FunctionPurity = iota
+	FunctionPurityView
+)
+
 type FunctionType struct {
 	TypeParameters []TypeParameter
 	Parameters     []Parameter
 	ReturnType     Type
+	Purity         FunctionPurity
 	typeID         string
 }
 
 func NewFunctionType(
+	purity FunctionPurity,
 	typeParameters []TypeParameter,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	return &FunctionType{
+		Purity:         purity,
 		TypeParameters: typeParameters,
 		Parameters:     parameters,
 		ReturnType:     returnType,
@@ -1733,18 +1743,24 @@ func NewFunctionType(
 
 func NewMeteredFunctionType(
 	gauge common.MemoryGauge,
+	purity FunctionPurity,
 	typeParameters []TypeParameter,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	common.UseMemory(gauge, common.CadenceFunctionTypeMemoryUsage)
-	return NewFunctionType(typeParameters, parameters, returnType)
+	return NewFunctionType(purity, typeParameters, parameters, returnType)
 }
 
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) ID() string {
 	if t.typeID == "" {
+
+		var purity string
+		if t.Purity == FunctionPurityView {
+			purity = "view"
+		}
 
 		typeParameterCount := len(t.TypeParameters)
 		var typeParameters []string
@@ -1767,6 +1783,7 @@ func (t *FunctionType) ID() string {
 		returnType := t.ReturnType.ID()
 
 		t.typeID = sema.FormatFunctionTypeID(
+			purity,
 			typeParameters,
 			parameters,
 			returnType,

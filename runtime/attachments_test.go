@@ -25,6 +25,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -145,6 +146,86 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	require.Equal(t, []string{"3"}, logs)
 }
 
+func TestAccountAttachmentExportFailure(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntimeWithAttachments()
+
+	logs := make([]string, 0)
+	events := make([]string, 0)
+	accountCodes := map[Location][]byte{}
+
+	deployTx := DeploymentTransaction("Test", []byte(`
+		pub contract Test {
+			pub resource R {}
+			pub attachment A for R {}
+			pub fun makeRWithA(): @R {
+				return <- attach A() to <-create R()
+			}
+		}
+	`))
+
+	script := []byte(`
+		import Test from 0x1
+		pub fun main(): &Test.A? { 
+			let r <- Test.makeRWithA()
+			let a = r[Test.A]
+			destroy r
+			return a
+		}
+	 `)
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log: func(message string) {
+			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+}
+
 func TestAccountAttachmentExport(t *testing.T) {
 	t.Parallel()
 
@@ -169,12 +250,10 @@ func TestAccountAttachmentExport(t *testing.T) {
 		import Test from 0x1
 		pub fun main(): &Test.A? { 
 			let r <- Test.makeRWithA()
-
-			let acc = getAuthAccount(0x1)
-			acc.save(<-r, to: /storage/r)
-			var rRef = acc.borrow<&Test.R>(from: /storage/r)!
-
-			let a = rRef[Test.A]
+			let authAccount = getAuthAccount(0x1)
+			authAccount.save(<-r, to: /storage/foo)
+			let ref = authAccount.borrow<&Test.R>(from: /storage/foo)!
+			let a = ref[Test.A]
 			return a
 		}
 	 `)
@@ -226,7 +305,6 @@ func TestAccountAttachmentExport(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-
 	require.IsType(t, cadence.Optional{}, v)
 	require.IsType(t, cadence.Attachment{}, v.(cadence.Optional).Value)
 	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Optional).Value.String())

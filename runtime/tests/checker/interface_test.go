@@ -1954,7 +1954,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 	checker, err := ParseAndCheckWithPanic(t, `
       struct interface I {}
 
-      let s: ((I): {Int: I}) = panic("")
+      let s: fun(I): {Int: I} = panic("")
     `)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -2672,7 +2672,7 @@ func TestCheckInterfaceDefaultImplementationConcreteTypeUsage(t *testing.T) {
 func TestCheckBadStructInterface(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, "struct interface var { contract h : var { contract h { } contract h { contract h { } } } }")
+	_, err := ParseAndCheck(t, "struct interface foo { contract h : foo { contract h { } contract h { contract h { } } } }")
 
 	errs := RequireCheckerErrors(t, err, 12)
 

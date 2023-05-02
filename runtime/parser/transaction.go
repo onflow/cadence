@@ -82,7 +82,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		keyword := p.currentTokenSource()
 
 		switch string(keyword) {
-		case keywordPrepare:
+		case KeywordPrepare:
 			identifier := p.tokenToIdentifier(p.current)
 			// Skip the `prepare` keyword
 			p.next()
@@ -90,6 +90,8 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				p,
 				false,
 				ast.AccessNotSpecified,
+				nil,
+				ast.FunctionPurityUnspecified,
 				nil,
 				nil,
 				nil,
@@ -100,7 +102,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				return nil, err
 			}
 
-		case keywordExecute:
+		case KeywordExecute:
 			execute, err = parseTransactionExecute(p)
 			if err != nil {
 				return nil, err
@@ -109,8 +111,8 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		default:
 			return nil, p.syntaxError(
 				"unexpected identifier, expected keyword %q or %q, got %q",
-				keywordPrepare,
-				keywordExecute,
+				KeywordPrepare,
+				KeywordExecute,
 				keyword,
 			)
 		}
@@ -122,7 +124,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 	if execute == nil {
 		p.skipSpaceAndComments()
-		if p.isToken(p.current, lexer.TokenIdentifier, keywordPre) {
+		if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
 			// Skip the `pre` keyword
 			p.next()
 			conditions, err := parseConditions(p, ast.ConditionKindPre)
@@ -150,9 +152,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 			keyword := p.currentTokenSource()
 			switch string(keyword) {
-			case keywordExecute:
+			case KeywordExecute:
 				if execute != nil {
-					return nil, p.syntaxError("unexpected second %q block", keywordExecute)
+					return nil, p.syntaxError("unexpected second %q block", KeywordExecute)
 				}
 
 				execute, err = parseTransactionExecute(p)
@@ -160,7 +162,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 					return nil, err
 				}
 
-			case keywordPost:
+			case KeywordPost:
 				if sawPost {
 					return nil, p.syntaxError("unexpected second post-conditions")
 				}
@@ -177,8 +179,8 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			default:
 				return nil, p.syntaxError(
 					"unexpected identifier, expected keyword %q or %q, got %q",
-					keywordExecute,
-					keywordPost,
+					KeywordExecute,
+					KeywordPost,
 					keyword,
 				)
 			}
@@ -229,7 +231,7 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 
 		case lexer.TokenIdentifier:
 			switch string(p.currentTokenSource()) {
-			case keywordLet, keywordVar:
+			case KeywordLet, KeywordVar:
 				field, err := parseFieldWithVariableKind(
 					p,
 					ast.AccessNotSpecified,
@@ -272,6 +274,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
+			ast.FunctionPurityUnspecified,
 			false,
 			false,
 			identifier,

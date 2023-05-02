@@ -2420,6 +2420,7 @@ func TestEncodeType(t *testing.T) {
                 "value": {
                   "staticType": {
                     "kind": "Function",
+					"purity": "",
                     "return": {
                       "kind": "Int"
                     },
@@ -2446,6 +2447,63 @@ func TestEncodeType(t *testing.T) {
             `,
 		)
 
+	})
+
+	t.Run("with view static function", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.FunctionType{
+					Purity: cadence.FunctionPurityView,
+					Parameters: []cadence.Parameter{
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+					},
+					ReturnType:     cadence.IntType{},
+					TypeParameters: []cadence.TypeParameter{},
+				},
+			},
+			`{"type":"Type","value":{"staticType":
+				{	
+					"kind" : "Function",
+					"purity": "view",
+					"return" : {"kind" : "Int"},
+					"typeParameters": [],
+					"parameters" : [
+						{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
+					]}
+				}
+			}`,
+		)
+
+	})
+
+	t.Run("with implicit purity", func(t *testing.T) {
+
+		encodedValue := `{"type":"Type","value":{"staticType":
+			{	
+				"kind" : "Function",
+				"return" : {"kind" : "Int"},
+				"typeParameters": [],
+				"parameters" : [
+					{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
+				]}
+			}
+		}`
+
+		value := cadence.TypeValue{
+			StaticType: &cadence.FunctionType{
+				Parameters: []cadence.Parameter{
+					{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+				},
+				ReturnType:     cadence.IntType{},
+				TypeParameters: []cadence.TypeParameter{},
+			},
+		}
+
+		decodedValue, err := json.Decode(nil, []byte(encodedValue))
+		require.NoError(t, err)
+		require.Equal(t, value, decodedValue)
 	})
 
 	t.Run("with static Capability<Int>", func(t *testing.T) {
@@ -3332,6 +3390,7 @@ func TestExportFunctionValue(t *testing.T) {
                 "kind": "Function",
                 "parameters": [],
                 "typeParameters": [],
+                "purity":"",
                 "return": {
                   "kind": "Void"
                 }

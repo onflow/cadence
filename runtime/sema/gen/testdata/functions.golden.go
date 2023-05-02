@@ -54,15 +54,15 @@ const TestTypeParamsFunctionDocString = `
 This is a test function with parameters.
 `
 
-const TestTypeReturnFunctionName = "return"
+const TestTypeReturnBoolFunctionName = "returnBool"
 
-var TestTypeReturnFunctionType = &FunctionType{
+var TestTypeReturnBoolFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		BoolType,
 	),
 }
 
-const TestTypeReturnFunctionDocString = `
+const TestTypeReturnBoolFunctionDocString = `
 This is a test function with a return type.
 `
 
@@ -157,6 +157,19 @@ const TestTypeTypeParamWithBoundAndParamFunctionDocString = `
 This is a test function with a type parameter and a parameter using it.
 `
 
+const TestTypeViewFunctionFunctionName = "viewFunction"
+
+var TestTypeViewFunctionFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const TestTypeViewFunctionFunctionDocString = `
+This is a function with 'view' modifier
+`
+
 const TestTypeName = "Test"
 
 var TestType = &SimpleType{
@@ -189,9 +202,9 @@ func init() {
 			),
 			NewUnmeteredPublicFunctionMember(
 				t,
-				TestTypeReturnFunctionName,
-				TestTypeReturnFunctionType,
-				TestTypeReturnFunctionDocString,
+				TestTypeReturnBoolFunctionName,
+				TestTypeReturnBoolFunctionType,
+				TestTypeReturnBoolFunctionDocString,
 			),
 			NewUnmeteredPublicFunctionMember(
 				t,
@@ -216,6 +229,12 @@ func init() {
 				TestTypeTypeParamWithBoundAndParamFunctionName,
 				TestTypeTypeParamWithBoundAndParamFunctionType,
 				TestTypeTypeParamWithBoundAndParamFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				TestTypeViewFunctionFunctionName,
+				TestTypeViewFunctionFunctionType,
+				TestTypeViewFunctionFunctionDocString,
 			),
 		})
 	}

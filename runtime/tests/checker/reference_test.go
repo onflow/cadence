@@ -25,9 +25,122 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
+
+func TestCheckReference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("variable declaration type annotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("non-auth", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x: &Int = &1
+            `)
+
+			require.NoError(t, err)
+
+		})
+
+		t.Run("auth", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x: auth &Int = &1
+            `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non-reference type", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x: Int = &1
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+		})
+	})
+
+	t.Run("variable declaration type annotation", func(t *testing.T) {
+
+		t.Run("non-auth", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x = &1 as &Int
+            `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non-auth", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x = &1 as auth &Int
+            `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non-reference type", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x = &1 as Int
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+		})
+	})
+
+	t.Run("invalid non-auth to auth cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let x = &1 as &Int as auth &Int
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("missing type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let x = &1
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+	})
+
+}
 
 func TestCheckReferenceTypeOuter(t *testing.T) {
 
@@ -1134,10 +1247,12 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
       let y = &x as AnyResource{}
     `)
 
-	errs := RequireCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 4)
 
-	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
+	assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
+	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[2])
+	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[3])
 }
 
 func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
@@ -1298,5 +1413,1329 @@ func TestCheckReferenceTypeImplicitConformance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+}
+
+func TestCheckInvalidatedReferenceUse(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no errors", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                xRef.a
+                destroy x
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("after destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                destroy x
+                xRef.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("after destroy - array", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- [<-create R()]
+                let xRef = &x as &[R]
+                destroy x
+                xRef[0].a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("after destroy - dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- {1: <- create R()}
+                let xRef = &x as &{Int: R}
+                destroy x
+                xRef[1]?.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("after move", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                consume(<-x)
+                xRef.a
+            }
+
+            pub fun consume(_ r: @AnyResource) {
+                destroy r
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("after move - array", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- [<-create R()]
+                let xRef = &x as &[R]
+                consume(<-x)
+                xRef[0].a
+            }
+
+            pub fun consume(_ r: @AnyResource) {
+                destroy r
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("after move - dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- {1: <- create R()}
+                let xRef = &x as &{Int: R}
+                consume(<-x)
+                xRef[1]?.a
+            }
+
+            pub fun consume(_ r: @AnyResource) {
+                destroy r
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("after swap", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                var x <- create R()
+                var y <- create R()
+                let xRef = &x as &R
+                x <-> y
+                destroy x
+                destroy y
+                xRef.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                if true {
+                    destroy x
+                } else {
+                    destroy x
+                }
+
+                if true {
+                    if true {
+                    } else {
+                        xRef.a
+                    }
+                }
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("storage reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`
+            pub fun test() {
+                authAccount.save(<-[<-create R()], to: /storage/a)
+
+                let collectionRef = authAccount.borrow<&[R]>(from: /storage/a)!
+                let ref = &collectionRef[0] as &R
+
+                let collection <- authAccount.load<@[R]>(from: /storage/a)!
+                authAccount.save(<- collection, to: /storage/b)
+
+                ref.a = 2
+            }
+
+            pub resource R {
+                pub(set) var a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		// Cannot detect storage transfers
+		require.NoError(t, err)
+	})
+
+	t.Run("inside func expr", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let f = fun() {
+                    let x <- create R()
+                    let xRef = &x as &R
+                    destroy x
+                    xRef.a
+                }
+
+                f()
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("self var", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                priv var x: @R
+                init() {
+                    self.x <- create R()
+                }
+
+                pub fun test() {
+                    let xRef = &self.x as &R
+                    xRef.a
+                }
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("self var using contract name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                priv var x: @R
+                init() {
+                    self.x <- create R()
+                }
+
+                pub fun test() {
+                    let xRef = &Test.x as &R
+                    xRef.a
+                }
+            }
+
+            pub resource R {
+                pub let a: Int
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("ref to ref", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                var r: @{UInt64: {UInt64: [R]}} <- {}
+                let ref1 = (&r[0] as &{UInt64: [R]}?)!
+                let ref2 = (&ref1[0] as &[R]?)!
+                let ref3 = &ref2[0] as &R
+                ref3.a
+
+                destroy r
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("ref to ref invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                var r: @{UInt64: {UInt64: [R]}} <- {}
+                let ref1 = (&r[0] as &{UInt64: [R]}?)!
+                let ref2 = (&ref1[0] as &[R]?)!
+                let ref3 = &ref2[0] as &R
+                destroy r
+                ref3.a
+            }
+
+            pub resource R {
+                pub let a: Int
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("create ref with force expr", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- create R()
+                let xRef = (&x as &R?)!
+                destroy x
+                xRef.a
+            }
+
+            pub resource R {
+                pub let a: Int
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("contract field ref", func(t *testing.T) {
+
+		t.Parallel()
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+                    pub contract Foo {
+                        pub let field: @AnyResource
+                        init() {
+                            self.field <- create R()
+                        }
+                    }
+
+                    pub resource R {
+                        pub let a: Int
+                        init() {
+                            self.a = 5
+                        }
+                    }
+                `,
+			ParseAndCheckOptions{
+				Location: utils.ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(
+			t,
+			`
+            import Foo from "imported"
+
+            pub fun test() {
+                let xRef = &Foo.field as &AnyResource
+                xRef
+            }
+        `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("self as reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+
+                pub fun test() {
+                    let xRef = &self as &R
+                    xRef.a
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("contract field nested ref", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub let a: @{UInt64: {UInt64: Test.R}}
+
+                init() {
+                    self.a <- {}
+                }
+
+                pub resource R {
+                    pub fun test() {
+                        if let storage = &Test.a[0] as &{UInt64: Test.R}? {
+                            let nftRef = (&storage[0] as &Test.R?)!
+                            nftRef
+                        }
+                    }
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("non resource refs", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub resource R {
+                    pub fun test () {
+                        let sourceRefNFTs: {UInt64: &Test.R} = {}
+                        let sourceNFTs: @[Test.R] <- []
+
+                        while true {
+                            let nft <- create Test.R()
+                            let nftRef = &nft as &Test.R
+                            sourceRefNFTs[nftRef.uuid] = nftRef
+                            sourceNFTs.append(<- nft)
+                        }
+
+                        let nftRef = sourceRefNFTs[0]!
+                        nftRef
+
+                        destroy sourceNFTs
+                    }
+
+                    pub fun bar(): Bool {
+                        return true
+                    }
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("non resource refs param", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub resource R {
+                    pub fun test(packList: &[Test.R]) {
+                        var i = 0;
+                        while i < packList.length {
+                            let pack = &packList[i] as &Test.R;
+                            pack
+                            i = i + 1
+                        }
+
+                        return
+                    }
+                }
+            }
+
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("partial invalidation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                if true {
+                    destroy x
+                } else {
+                    // nothing
+                }
+                xRef.a
+
+                destroy x
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 3)
+
+		var invalidatedRefError *sema.InvalidatedResourceReferenceError
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+
+		var resourceUseAfterInvalidationErr *sema.ResourceUseAfterInvalidationError
+		assert.ErrorAs(t, errors[1], &resourceUseAfterInvalidationErr)
+
+		var resourceLossErr *sema.ResourceLossError
+		assert.ErrorAs(t, errors[2], &resourceLossErr)
+	})
+
+	t.Run("nil coalescing lhs", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x: @R? <- create R()
+                let ref = (&x as &R?) ?? nil
+                destroy x
+                ref!.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("nil coalescing rhs", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x: @R? <- create R()
+                let y: @R <- create R()
+
+                let ref = nil ?? (&y as &R?)
+                destroy y
+                ref!.a
+                destroy x
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("nil coalescing both sides", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x: @R? <- create R()
+                let y: @R <- create R()
+
+                let ref = (&x as &R?) ?? (&y as &R?)
+                destroy y
+                destroy x
+                ref!.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 2)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
+	})
+
+	t.Run("nil coalescing nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x: @R? <- create R()
+                let y: @R <- create R()
+                let z: @R? <- create R()
+
+                let ref1 = (&x as &R?) ?? ((&y as &R?) ?? (&z as &R?))
+                let ref2 = ref1
+                destroy y
+                destroy x
+                destroy z
+                ref2!.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 3)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
+		assert.ErrorAs(t, errors[2], &invalidatedRefError)
+	})
+
+	t.Run("ref assignment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- create R()
+                var ref1: &R? = nil
+                ref1 = &x as &R
+
+                destroy x
+                ref1!.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("ref assignment non resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x = S()
+                var ref1: &S? = nil
+                ref1 = &x as &S
+                consume(x)
+                ref1!.a
+            }
+
+            pub fun consume(_ s:S) {}
+
+            pub struct S {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("ref assignment chain", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- create R()
+                let ref1 = &x as &R
+                let ref2 = ref1
+                let ref3 = ref2
+                destroy x
+                ref3.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("ref target is field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let r <- create R()
+                let s = S()
+
+                s.b = &r as &R
+                destroy r
+                s.b!.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+
+            pub struct S {
+                pub(set) var b: &R?
+
+                init() {
+                    self.b = nil
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("ref source is field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let r <- create R()
+                let s = S()
+                s.b = &r as &R
+
+                let x = s.b!
+                destroy r
+                x.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+
+            pub struct S {
+                pub(set) var b: &R?
+
+                init() {
+                    self.b = nil
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("conditional expr lhs", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x: @R? <- create R()
+                let ref = true ? (&x as &R?) : nil
+                destroy x
+                ref!.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("conditional expr rhs", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x: @R? <- create R()
+                let y: @R <- create R()
+
+                let ref = true ? nil : (&y as &R?)
+                destroy y
+                ref!.a
+                destroy x
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("conditional expr both sides", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x: @R? <- create R()
+                let y: @R <- create R()
+
+                let ref = true ? (&x as &R?) : (&y as &R?)
+                destroy y
+                destroy x
+                ref!.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 2)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
+	})
+
+	t.Run("error notes", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                destroy x
+                xRef.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+
+		errorNotes := invalidatedRefError.ErrorNotes()
+		require.Len(t, errorNotes, 1)
+
+		require.IsType(t, errorNotes[0], sema.PreviousResourceInvalidationNote{})
+		prevInvalidationNote := errorNotes[0].(sema.PreviousResourceInvalidationNote)
+
+		assert.Equal(
+			t,
+			prevInvalidationNote.Range.StartPos,
+			ast.Position{
+				Offset: 126,
+				Line:   5,
+				Column: 24,
+			})
+		assert.Equal(
+			t,
+			prevInvalidationNote.Range.EndPos,
+			ast.Position{
+				Offset: 126,
+				Line:   5,
+				Column: 24,
+			})
+	})
+}
+
+func TestCheckReferenceUseAfterCopy(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource, field write", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {
+              var name: String
+              init(name: String) {
+                  self.name = name
+              }
+          }
+
+          fun test() {
+              let r <- create R(name: "1")
+              let ref = &r as &R
+              let container <- [<-r]
+              ref.name = "2"
+              destroy container
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource, field read", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {
+              var name: String
+              init(name: String) {
+                  self.name = name
+              }
+          }
+
+          fun test(): String {
+              let r <- create R(name: "1")
+              let ref = &r as &R
+              let container <- [<-r]
+              let name = ref.name
+              destroy container
+              return name
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource array, insert", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              ref.insert(at: 1, <-create R())
+              destroy container
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource array, append", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              ref.append(<-create R())
+              destroy container
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource array, get/set", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              var r <- create R()
+              ref[0] <-> r
+              destroy container
+              destroy r
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+		assert.ErrorAs(t, errs[1], &invalidatedRefError)
+	})
+
+	t.Run("resource array, remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              let r <- ref.remove(at: 0)
+              destroy container
+              destroy r
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource dictionary, insert", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- {0: <-create R()}
+              let ref = &rs as &{Int: R}
+              let container <- [<-rs]
+              ref[1] <-! create R()
+              destroy container
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource dictionary, remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- {0: <-create R()}
+              let ref = &rs as &{Int: R}
+              let container <- [<-rs]
+              let r <- ref.remove(key: 0)
+              destroy container
+              destroy r
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 }

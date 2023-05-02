@@ -26,6 +26,8 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -171,7 +173,9 @@ func TestInterpretResultVariable(t *testing.T) {
 	t.Run("reference invalidation, optional type", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		var checkerErrors []error
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
             pub resource R {
                 pub(set) var id: UInt8
                 init() {
@@ -183,12 +187,12 @@ func TestInterpretResultVariable(t *testing.T) {
 
             pub fun main(): @R? {
                 var r <- createAndStoreRef()
-                if var r <- r {
-                    r.id = 2
-                    return <- r
+                if var r2 <- r {
+                    r2.id = 2
+                    return <- r2
                 }
 
-                return <- r
+                return nil
             }
 
             pub fun createAndStoreRef(): @R? {
@@ -206,20 +210,30 @@ func TestInterpretResultVariable(t *testing.T) {
             pub fun getID(): UInt8 {
                 return ref!.id
             }`,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					checkerErrors = append(checkerErrors, err)
+				},
+			},
 		)
+		require.NoError(t, err)
+		require.Len(t, checkerErrors, 1)
+		checkerError := checker.RequireCheckerErrors(t, checkerErrors[0], 1)
+		require.IsType(t, &sema.PurityError{}, checkerError[0])
 
-		_, err := inter.Invoke("main")
+		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		result, err := inter.Invoke("getID")
-		require.NoError(t, err)
-		utils.AssertValuesEqual(t, inter, interpreter.UInt8Value(2), result)
+		_, err = inter.Invoke("getID")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("reference invalidation, non optional", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		var checkerErrors []error
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
             pub resource R {
                 pub(set) var id: UInt8
                 init() {
@@ -250,13 +264,21 @@ func TestInterpretResultVariable(t *testing.T) {
             pub fun getID(): UInt8 {
                 return ref!.id
             }`,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					checkerErrors = append(checkerErrors, err)
+				},
+			},
 		)
+		require.NoError(t, err)
+		require.Len(t, checkerErrors, 1)
+		checkerError := checker.RequireCheckerErrors(t, checkerErrors[0], 1)
+		require.IsType(t, &sema.PurityError{}, checkerError[0])
 
-		_, err := inter.Invoke("main")
+		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		result, err := inter.Invoke("getID")
-		require.NoError(t, err)
-		utils.AssertValuesEqual(t, inter, interpreter.UInt8Value(2), result)
+		_, err = inter.Invoke("getID")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }

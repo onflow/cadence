@@ -2003,8 +2003,12 @@ func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cade
 		return nil, errors.New("unexpected nil function return type")
 	}
 
+	// TODO:
+	purity := cadence.FunctionPurityUnspecified
+
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
+		purity,
 		typeParameters,
 		parameters,
 		returnType,

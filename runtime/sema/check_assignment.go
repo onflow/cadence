@@ -26,6 +26,7 @@ import (
 
 func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentStatement) (_ struct{}) {
 	targetType, valueType := checker.checkAssignment(
+		assignment,
 		assignment.Target,
 		assignment.Value,
 		assignment.Transfer,
@@ -44,6 +45,7 @@ func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentState
 }
 
 func (checker *Checker) checkAssignment(
+	assignment ast.Statement,
 	target, value ast.Expression,
 	transfer *ast.Transfer,
 	isSecondaryAssignment bool,
@@ -101,6 +103,7 @@ func (checker *Checker) checkAssignment(
 		}
 	}
 
+	checker.enforceViewAssignment(assignment, target)
 	checker.checkVariableMove(value)
 
 	checker.recordResourceInvalidation(
@@ -109,9 +112,104 @@ func (checker *Checker) checkAssignment(
 		ResourceInvalidationKindMoveDefinite,
 	)
 
+	checker.recordReferenceCreation(target, value)
+
 	return
 }
 
+// We have to prevent any writes to references, since we cannot know where the value
+// pointed to by the reference may have come from. Similarly, we can never safely assign
+// to a resource; because resources are moved instead of copied, we cannot currently
+// track the origin of a write target when it is a resource. Consider:
+//
+//	pub resource R {
+//	  pub(set) var x: Int
+//	  init(x: Int) {
+//	    self.x = x
+//	  }
+//	 }
+//
+//	view fun foo(_ f: @R): @R {
+//	  let b <- f
+//	  b.x = 3 // b was created in the current scope but modifies the resource value
+//	  return <-b
+//	}
+func isWriteableInViewContext(t Type) bool {
+	_, isReference := t.(*ReferenceType)
+	return !isReference && !t.IsResourceType()
+}
+
+func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target ast.Expression) {
+	if !checker.CurrentPurityScope().EnforcePurity {
+		return
+	}
+
+	var baseVariable *Variable
+	var accessChain = make([]Type, 0)
+	var inAccessChain = true
+
+	// seek the variable expression (if it exists) at the base of the access chain
+	for inAccessChain {
+		switch targetExp := target.(type) {
+		case *ast.IdentifierExpression:
+			baseVariable = checker.valueActivations.Find(targetExp.Identifier.Identifier)
+			if baseVariable != nil {
+				accessChain = append(accessChain, baseVariable.Type)
+			}
+			inAccessChain = false
+		case *ast.IndexExpression:
+			target = targetExp.TargetExpression
+			elementType := checker.Elaboration.IndexExpressionTypes(targetExp).IndexedType.ElementType(true)
+			accessChain = append(accessChain, elementType)
+		case *ast.MemberExpression:
+			target = targetExp.Expression
+			memberType, _, _ := checker.visitMember(targetExp)
+			accessChain = append(accessChain, memberType)
+		default:
+			inAccessChain = false
+		}
+	}
+
+	// if the base of the access chain is not a variable, then we cannot make any static guarantees about
+	// whether or not it is a local struct-kinded variable. E.g. in the case of `(b ? s1 : s2).x`, we can't
+	// know whether `s1` or `s2` is being accessed here
+	if baseVariable == nil {
+		checker.ObserveImpureOperation(assignment)
+		return
+	}
+
+	// `self` technically exists in param scope, but should still not be writeable outside of an initializer.
+	// Within an initializer, writing to `self` is considered view:
+	// whenever we call a constructor from inside a view scope, the value being constructed
+	// (i.e. the one referred to by self in the constructor) is local to that scope,
+	// so it is safe to create a new value from within a view scope.
+	// This means that functions that just construct new values can technically be view
+	// (in the same way that they pure are in a functional programming sense),
+	// as long as they don't modify anything else while constructing those values.
+	// They will still need a view annotation though (e.g. view init(...)).
+	if baseVariable.DeclarationKind == common.DeclarationKindSelf {
+		if checker.functionActivations.Current().InitializationInfo == nil {
+			checker.ObserveImpureOperation(assignment)
+		}
+		return
+	}
+
+	// Check that all the types in the access chain are not resources or references
+	for _, t := range accessChain {
+		if !isWriteableInViewContext(t) {
+			checker.ObserveImpureOperation(assignment)
+			return
+		}
+	}
+
+	// when the variable is neither a resource nor a reference,
+	// we can write to if its activation depth is greater than or equal
+	// to the depth at which the current purity scope was created;
+	// i.e. if it is a parameter to the current function or was created within it
+	if checker.CurrentPurityScope().ActivationDepth > baseVariable.ActivationDepth {
+		checker.ObserveImpureOperation(assignment)
+	}
+}
 func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 	memberExpression, isMemberExpression := expression.(*ast.MemberExpression)
 	if !isMemberExpression {

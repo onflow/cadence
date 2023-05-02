@@ -708,12 +708,12 @@ func TestCheckInvalidArrayEqual(t *testing.T) {
 	}
 
 	assertInvalid("variable size array", `
-		let xs = [fun(){}]
+		let xs = [fun() {}]
 		return xs == xs
 	`)
 
 	assertInvalid("fixed size array", `
-		let xs: [((): Void); 1] = [fun(){}]
+		let xs: [fun (): Void; 1] = [fun() {}]
 		return xs == xs
 	`)
 

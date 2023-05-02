@@ -21,7 +21,6 @@ package interpreter_test
 import (
 	"fmt"
 	"math/big"
-	"sort"
 	"strings"
 	"testing"
 
@@ -1895,17 +1894,15 @@ func TestInterpretHostFunction(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "a",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "b",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.IntType,
-			),
+			ReturnTypeAnnotation: sema.IntTypeAnnotation,
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -1979,12 +1976,10 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.VoidType,
-			),
+			ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 			RequiredArgumentCount: sema.RequiredArgumentCount(1),
 		},
 		``,
@@ -4889,28 +4884,31 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
           resource R: RI {}
 
-          fun testInvalidUnauthorized(): &R? {
+          fun testInvalidUnauthorized(): Bool {
               let r  <- create R()
               let ref: AnyStruct = &r as &R{RI}
               let ref2 = ref as? &R
+              let isNil = ref2 == nil
               destroy r
-              return ref2
+              return isNil
           }
 
-          fun testValidAuthorized(): &R? {
+          fun testValidAuthorized(): Bool {
               let r  <- create R()
               let ref: AnyStruct = &r as auth &R{RI}
               let ref2 = ref as? &R
+              let isNil = ref2 == nil
               destroy r
-              return ref2
+              return isNil
           }
 
-          fun testValidRestricted(): &R{RI}? {
+          fun testValidRestricted(): Bool {
               let r  <- create R()
               let ref: AnyStruct = &r as &R{RI}
               let ref2 = ref as? &R{RI}
+              let isNil = ref2 == nil
               destroy r
-              return ref2
+              return isNil
           }
         `)
 
@@ -4920,7 +4918,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.Nil,
+			interpreter.TrueValue,
 			result,
 		)
 
@@ -4928,7 +4926,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.IsType(t,
-			&interpreter.SomeValue{},
+			interpreter.BoolValue(false),
 			result,
 		)
 
@@ -4936,7 +4934,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.IsType(t,
-			&interpreter.SomeValue{},
+			interpreter.BoolValue(false),
 			result,
 		)
 	})
@@ -4967,16 +4965,12 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		getStorageReferenceFunctionType := &sema.FunctionType{
 			Parameters: []sema.Parameter{
 				{
-					Label:      "authorized",
-					Identifier: "authorized",
-					TypeAnnotation: sema.NewTypeAnnotation(
-						sema.BoolType,
-					),
+					Label:          "authorized",
+					Identifier:     "authorized",
+					TypeAnnotation: sema.BoolTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.AnyStructType,
-			),
+			ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
 		}
 
 		valueDeclaration := stdlib.NewStandardLibraryFunction(
@@ -6453,7 +6447,7 @@ func TestInterpretClosure(t *testing.T) {
 	// a variable each time it is invoked.
 
 	inter := parseCheckAndInterpret(t, `
-        fun makeCounter(): ((): Int) {
+        fun makeCounter(): fun(): Int {
             var count = 0
             return fun (): Int {
                 count = count + 1
@@ -7549,21 +7543,30 @@ func TestInterpretReferenceExpression(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      resource R {}
+      resource R {
+          pub let x: Int
 
-      fun test(): &R {
-          let r <- create R()
+          init(_ x: Int) {
+              self.x = x
+          }
+      }
+
+      fun test(): Int {
+          let r <- create R(4)
           let ref = &r as &R
+          let x = ref.x
           destroy r
-          return ref
+          return x
       }
     `)
 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.IsType(t,
-		&interpreter.EphemeralReferenceValue{},
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(4),
 		value,
 	)
 }
@@ -7676,29 +7679,6 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 	)
 }
 
-func TestInterpretReferenceDereferenceFailure(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      pub resource R {
-          pub fun foo() {}
-      }
-
-      pub fun test() {
-          let r <- create R()
-          let ref = &r as &R
-          destroy r
-          ref.foo()
-      }
-    `)
-
-	_, err := inter.Invoke("test")
-	RequireError(t, err)
-
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
-}
-
 func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 
 	t.Parallel()
@@ -7779,205 +7759,6 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		interpreter.NewUnmeteredIntValueFromInt64(1),
 		secondResource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 	)
-}
-
-func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("stack to stack", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R2 {
-                let value: String
-
-                init() {
-                    self.value = "test"
-                }
-            }
-
-            resource R1 {
-                var r2: @R2?
-
-                init() {
-                    self.r2 <- nil
-                }
-
-                destroy() {
-                    destroy self.r2
-                }
-
-                fun moveToStack_Borrow_AndMoveBack(): &R2 {
-                    // The second assignment should not lead to the resource being cleared
-                    let optR2 <- self.r2 <- nil
-                    let r2 <- optR2!
-                    let ref = &r2 as &R2
-                    self.r2 <-! r2
-                    return ref
-                }
-            }
-
-            fun test(): [String?] {
-                let r2 <- create R2()
-                let r1 <- create R1()
-                r1.r2 <-! r2
-                let ref = r1.moveToStack_Borrow_AndMoveBack()
-                let value = r1.r2?.value
-                let refValue = ref.value
-                destroy r1
-                return [value, refValue]
-            }
-        `)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.OptionalStaticType{
-						Type: interpreter.PrimitiveStaticTypeString,
-					},
-				},
-				common.ZeroAddress,
-				interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredStringValue("test"),
-				),
-				interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredStringValue("test"),
-				),
-			),
-			value,
-		)
-
-	})
-
-	t.Run("from account to stack and back", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R2 {
-                let value: String
-
-                init() {
-                    self.value = "test"
-                }
-            }
-
-            resource R1 {
-                var r2: @R2?
-
-                init() {
-                    self.r2 <- nil
-                }
-
-                destroy() {
-                    destroy self.r2
-                }
-
-                fun moveToStack_Borrow_AndMoveBack(): &R2 {
-                    // The second assignment should not lead to the resource being cleared
-                    let optR2 <- self.r2 <- nil
-                    let r2 <- optR2!
-                    let ref = &r2 as &R2
-                    self.r2 <-! r2
-                    return ref
-                }
-            }
-
-            fun createR1(): @R1 {
-                return <- create R1()
-            }
-
-            fun test(r1: &R1): [String?] {
-                let r2 <- create R2()
-                r1.r2 <-! r2
-                let ref = r1.moveToStack_Borrow_AndMoveBack()
-                let value = r1.r2?.value
-                let refValue = ref.value
-                return [value, refValue]
-            }
-        `)
-
-		r1, err := inter.Invoke("createR1")
-		require.NoError(t, err)
-
-		r1 = r1.Transfer(inter, interpreter.EmptyLocationRange, atree.Address{1}, false, nil)
-
-		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
-
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
-
-		value, err := inter.Invoke("test", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.OptionalStaticType{
-						Type: interpreter.PrimitiveStaticTypeString,
-					},
-				},
-				common.ZeroAddress,
-				interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredStringValue("test"),
-				),
-				interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredStringValue("test"),
-				),
-			),
-			value,
-		)
-
-		storage := inter.Storage()
-
-		var permanentSlabs []atree.Slab
-
-		for _, slab := range storage.(interpreter.InMemoryStorage).Slabs {
-			if slab.ID().Address == (atree.Address{}) {
-				continue
-			}
-
-			permanentSlabs = append(permanentSlabs, slab)
-		}
-
-		require.Equal(t, 2, len(permanentSlabs))
-
-		sort.Slice(permanentSlabs, func(i, j int) bool {
-			a := permanentSlabs[i].ID()
-			b := permanentSlabs[j].ID()
-			return a.Compare(b) < 0
-		})
-
-		var storedValues []string
-
-		for _, slab := range permanentSlabs {
-			storedValue := interpreter.StoredValue(inter, slab, storage)
-			storedValues = append(storedValues, storedValue.String())
-		}
-
-		require.Equal(t,
-			[]string{
-				`S.test.R1(r2: S.test.R2(value: "test", uuid: 2), uuid: 1)`,
-				`S.test.R2(value: "test", uuid: 2)`,
-			},
-			storedValues,
-		)
-	})
 }
 
 func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
@@ -8694,35 +8475,6 @@ func TestInterpretNonStorageReference(t *testing.T) {
 		inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 }
 
-func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t,
-		`
-          resource NFT {
-              var id: Int
-
-              init(id: Int) {
-                  self.id = id
-              }
-          }
-
-          fun test(): Int {
-              let nft <- create NFT(id: 1)
-              let nftRef = &nft as &NFT
-              destroy nft
-              return nftRef.id
-          }
-        `,
-	)
-
-	_, err := inter.Invoke("test")
-	RequireError(t, err)
-
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
-}
-
 func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
 	t.Parallel()
@@ -8889,10 +8641,10 @@ func TestInterpretHexDecode(t *testing.T) {
                   var res: [UInt8] = []
                   while i < length {
                       let c = s.slice(from: i * 2, upTo: i * 2 + 1)
-                      let in = table[c] ?? panic("Invalid character ".concat(c))
+                      let in1 = table[c] ?? panic("Invalid character ".concat(c))
                       let c2 = s.slice(from: i * 2 + 1, upTo: i * 2 + 2)
                       let in2 = table[c2] ?? panic("Invalid character ".concat(c2))
-                      res.append((16 as UInt8) * in + in2)
+                      res.append((16 as UInt8) * in1 + in2)
                       i = i + 1
                   }
                   return res
@@ -8985,182 +8737,6 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 
 	t.Parallel()
-
-	t.Run("resource, field write", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          resource R {
-              var name: String
-              init(name: String) {
-                  self.name = name
-              }
-          }
-
-          fun test() {
-              let r <- create R(name: "1")
-              let ref = &r as &R
-              let container <- [<-r]
-              ref.name = "2"
-              destroy container
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-	})
-
-	t.Run("resource, field read", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          resource R {
-              var name: String
-              init(name: String) {
-                  self.name = name
-              }
-          }
-
-          fun test(): String {
-              let r <- create R(name: "1")
-              let ref = &r as &R
-              let container <- [<-r]
-              let name = ref.name
-              destroy container
-              return name
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("resource array, insert", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          resource R {}
-
-          fun test() {
-              let rs <- [<-create R()]
-              let ref = &rs as &[R]
-              let container <- [<-rs]
-              ref.insert(at: 1, <-create R())
-              destroy container
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("resource array, append", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          resource R {}
-
-          fun test() {
-              let rs <- [<-create R()]
-              let ref = &rs as &[R]
-              let container <- [<-rs]
-              ref.append(<-create R())
-              destroy container
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("resource array, get/set", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          resource R {}
-
-          fun test() {
-              let rs <- [<-create R()]
-              let ref = &rs as &[R]
-              let container <- [<-rs]
-              var r <- create R()
-              ref[0] <-> r
-              destroy container
-              destroy r
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("resource array, remove", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          resource R {}
-
-          fun test() {
-              let rs <- [<-create R()]
-              let ref = &rs as &[R]
-              let container <- [<-rs]
-              let r <- ref.remove(at: 0)
-              destroy container
-              destroy r
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("resource dictionary, insert", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          resource R {}
-
-          fun test() {
-              let rs <- {0: <-create R()}
-              let ref = &rs as &{Int: R}
-              let container <- [<-rs]
-              ref[1] <-! create R()
-              destroy container
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("resource dictionary, remove", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          resource R {}
-
-          fun test() {
-              let rs <- {0: <-create R()}
-              let ref = &rs as &{Int: R}
-              let container <- [<-rs]
-              let r <- ref.remove(key: 0)
-              destroy container
-              destroy r
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
 
 	t.Run("struct, field write and read", func(t *testing.T) {
 
@@ -9295,8 +8871,6 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 		returnZeroUFix64,
 		returnZeroUInt64,
 		returnZeroUInt64,
-		panicFunctionValue,
-		panicFunctionValue,
 		func() interpreter.Value {
 			return interpreter.NewAuthAccountContractsValue(
 				gauge,
@@ -9329,9 +8903,9 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunctionValue,
 				panicFunctionValue,
 				panicFunctionValue,
-				interpreter.AccountKeysCountGetter(func() interpreter.UInt64Value {
+				func() interpreter.UInt64Value {
 					panic(errors.NewUnreachableError())
-				}),
+				},
 			)
 		},
 		func() interpreter.Value {
@@ -9800,12 +9374,10 @@ func TestInterpretNestedDestroy(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					TypeAnnotation: sema.AnyStructTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.VoidType,
-			),
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -10193,7 +9765,8 @@ func TestHostFunctionStaticType(t *testing.T) {
 			interpreter.ConvertSemaToStaticType(
 				nil,
 				&sema.FunctionType{
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+					Purity:               sema.FunctionPurityView,
+					ReturnTypeAnnotation: sema.MetaTypeAnnotation,
 				},
 			),
 			value.StaticType(inter),

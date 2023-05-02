@@ -255,3 +255,42 @@ func TestInterpretForString(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretForStatementCapturing(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+       fun test(): [Int] {
+           let fs: [fun(): Int] = []
+           for x in [1, 2, 3] {
+               fs.append(fun (): Int {
+                   return x
+               })
+           }
+
+           let values: [Int] = []
+           for f in fs {
+              values.append(f())
+           }
+           return values
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		},
+		arrayElements(inter, arrayValue),
+	)
+}

@@ -44,17 +44,13 @@ func NewAuthAccountValue(
 	accountAvailableBalanceGet func() UFix64Value,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
-	addPublicKeyFunction FunctionValue,
-	removePublicKeyFunction FunctionValue,
 	contractsConstructor func() Value,
 	keysConstructor func() Value,
 	inboxConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountTypeAddressFieldName:            address,
-		sema.AuthAccountTypeAddPublicKeyFunctionName:    addPublicKeyFunction,
-		sema.AuthAccountTypeRemovePublicKeyFunctionName: removePublicKeyFunction,
+		sema.AuthAccountTypeAddressFieldName: address,
 		sema.AuthAccountTypeGetCapabilityFunctionName: accountGetCapabilityFunction(
 			gauge,
 			address,

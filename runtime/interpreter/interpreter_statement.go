@@ -306,11 +306,6 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
 
-	variable := interpreter.declareVariable(
-		statement.Identifier.Identifier,
-		nil,
-	)
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: statement,
@@ -332,12 +327,9 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 
 	iterator := iterable.Iterator(interpreter)
 
-	var indexVariable *Variable
+	var index IntValue
 	if statement.Index != nil {
-		indexVariable = interpreter.declareVariable(
-			statement.Index.Identifier,
-			NewIntValueFromInt64(interpreter, 0),
-		)
+		index = NewIntValueFromInt64(interpreter, 0)
 	}
 
 	for {
@@ -346,29 +338,56 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 			return nil
 		}
 
-		interpreter.reportLoopIteration(statement)
-
-		variable.SetValue(value)
-
-		result := interpreter.visitBlock(statement.Block)
-
-		switch result.(type) {
-		case BreakResult:
-			return nil
-
-		case ContinueResult:
-			// NO-OP
-
-		case ReturnResult:
-			return result
+		statementResult, done := interpreter.visitForStatementBody(statement, index, value)
+		if done {
+			return statementResult
 		}
 
-		if indexVariable != nil {
-			currentIndex := indexVariable.GetValue().(IntValue)
-			nextIndex := currentIndex.Plus(interpreter, intOne, locationRange)
-			indexVariable.SetValue(nextIndex)
+		if statement.Index != nil {
+			index = index.Plus(interpreter, intOne, locationRange).(IntValue)
 		}
 	}
+}
+
+func (interpreter *Interpreter) visitForStatementBody(
+	statement *ast.ForStatement,
+	index IntValue,
+	value Value,
+) (
+	result StatementResult,
+	done bool,
+) {
+	interpreter.reportLoopIteration(statement)
+
+	interpreter.activations.PushNewWithCurrent()
+	defer interpreter.activations.Pop()
+
+	if index.BigInt != nil {
+		interpreter.declareVariable(
+			statement.Index.Identifier,
+			index,
+		)
+	}
+
+	interpreter.declareVariable(
+		statement.Identifier.Identifier,
+		value,
+	)
+
+	result = interpreter.visitBlock(statement.Block)
+
+	switch result.(type) {
+	case BreakResult:
+		return nil, true
+
+	case ContinueResult:
+		// NO-OP
+
+	case ReturnResult:
+		return result, true
+	}
+
+	return nil, false
 }
 
 func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {

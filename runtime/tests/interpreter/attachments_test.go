@@ -466,31 +466,6 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(45), value)
 	})
-
-	t.Run("attachment does not mutate original, but original is moved", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-        resource R {}
-        attachment A for R {
-            fun foo(): Int { return 3 }
-        }
-        fun test(): Int {
-            var r <- create R()
-            let ref = &r as &R
-            var r2 <- attach A() to <-r
-            let i = ref[A]?.foo()!
-            destroy r2
-            return i
-        }
-    `)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
-	})
 }
 
 func TestAttachExecutionOrdering(t *testing.T) {
@@ -833,33 +808,31 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            resource interface I {
-                fun foo(): Int
-            }
-            resource R: I {
-                fun foo(): Int {
-                    return 3
-                }
-            }
-            attachment A for I {
-                let base: &{I} 
-                init() {
-                    self.base = base
-                }
-            }
-            fun test(): Int {
-                let r <- attach A() to <-create R()
-                let ref = &r as &{I}
-                let i = ref[A]!.base.foo()
-                destroy r
-                return i
-            }
-    `)
+	            resource interface I {
+	                fun foo(): Int
+	            }
+	            resource R: I {
+	                fun foo(): Int {
+	                    return 3
+	                }
+	            }
+	            attachment A for I {
+	                let base: &{I}
+	                init() {
+	                    self.base = base
+	                }
+	            }
+	            fun test(): Int {
+	                let r <- attach A() to <-create R()
+	                let ref = &r as &{I}
+	                let i = ref[A]!.base.foo()
+	                destroy r
+	                return i
+	            }
+	    `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("return from function", func(t *testing.T) {
@@ -1001,28 +974,26 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            resource R { }
-            attachment A for R {
-                let self: &A
-                init() {
-                    self.self = self
-                }
-                fun foo(): Int {
-                    return 3
-                }
-            }
-            fun test(): Int {
-                let r <- attach A() to <-create R()
-                let i = r[A]!.self.foo()
-                destroy r
-                return i
-            }
-    `)
+	            resource R { }
+	            attachment A for R {
+	                let self: &A
+	                init() {
+	                    self.self = self
+	                }
+	                fun foo(): Int {
+	                    return 3
+	                }
+	            }
+	            fun test(): Int {
+	                let r <- attach A() to <-create R()
+	                let i = r[A]!.self.foo()
+	                destroy r
+	                return i
+	            }
+	    `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("return from function", func(t *testing.T) {
@@ -1032,7 +1003,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             resource R { }
             attachment A for R {
-                fun self(): &A {
+                fun returnSelf(): &A {
                     return self
                 }
                 fun foo(): Int {
@@ -1041,7 +1012,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
             }
             fun test(): Int {
                 let r <- attach A() to <-create R()
-                let i = r[A]!.self().foo()
+                let i = r[A]!.returnSelf().foo()
                 destroy r
                 return i
             }
@@ -1625,11 +1596,35 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 			},
 		)
 
-		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` should be invalidated after the save
-		result, err := inter.Invoke("test")
-		require.NoError(t, err)
-		AssertValuesEqual(t, inter, interpreter.UInt8Value(5), result)
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("destroyed", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+            resource R {}
+            attachment A for R {
+                fun foo(): Int { return 3 }
+            }
+            fun test() {
+                let r <- create R()
+                let r2 <- attach A() to <-r
+                let a = r2[A]!
+                destroy r2
+                let i = a.foo()
+            }
+        `, sema.Config{
+			AttachmentsEnabled: true,
+		},
+		)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 	})
 
 	t.Run("nested", func(t *testing.T) {
@@ -1674,11 +1669,8 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 			},
 		)
 
-		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` should be invalidated after the save
-		result, err := inter.Invoke("test")
-		require.NoError(t, err)
-		AssertValuesEqual(t, inter, interpreter.UInt8Value(5), result)
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("base reference", func(t *testing.T) {
@@ -1719,11 +1711,44 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 			},
 		)
 
-		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` should be invalidated after the save
-		result, err := inter.Invoke("test")
-		require.NoError(t, err)
-		AssertValuesEqual(t, inter, interpreter.UInt8Value(5), result)
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested destroyed", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+            resource R {}
+            resource R2 {
+                let r: @R 
+                init(r: @R) {
+                    self.r <- r
+                }
+                destroy() {
+                    destroy self.r
+                }
+            }
+            attachment A for R {
+                fun foo(): Int { return 3 }
+            }
+            fun test() {
+                let r2 <- create R2(r: <-attach A() to <-create R())
+                let a = r2.r[A]!
+                destroy r2
+                let i = a.foo()
+            }
+        
+        `, sema.Config{
+			AttachmentsEnabled: true,
+		},
+		)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 	})
 
 	t.Run("self reference", func(t *testing.T) {
@@ -1763,11 +1788,8 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 			},
 		)
 
-		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` should be invalidated after the save
-		result, err := inter.Invoke("test")
-		require.NoError(t, err)
-		AssertValuesEqual(t, inter, interpreter.UInt8Value(5), result)
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
 

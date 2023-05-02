@@ -115,52 +115,6 @@ const AuthAccountTypeStoragePathsFieldDocString = `
 All storage paths of this account.
 `
 
-const AuthAccountTypeAddPublicKeyFunctionName = "addPublicKey"
-
-var AuthAccountTypeAddPublicKeyFunctionType = &FunctionType{
-	Parameters: []Parameter{
-		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "publicKey",
-			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
-				Type: UInt8Type,
-			}),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
-	),
-}
-
-const AuthAccountTypeAddPublicKeyFunctionDocString = `
-**DEPRECATED**: Use ` + "`keys.add`" + ` instead.
-
-Adds a public key to the account.
-
-The public key must be encoded together with their signature algorithm, hashing algorithm and weight.
-`
-
-const AuthAccountTypeRemovePublicKeyFunctionName = "removePublicKey"
-
-var AuthAccountTypeRemovePublicKeyFunctionType = &FunctionType{
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "index",
-			TypeAnnotation: NewTypeAnnotation(IntType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
-	),
-}
-
-const AuthAccountTypeRemovePublicKeyFunctionDocString = `
-**DEPRECATED**: Use ` + "`keys.revoke`" + ` instead.
-
-Revokes the key at the given index.
-`
-
 const AuthAccountTypeSaveFunctionName = "save"
 
 var AuthAccountTypeSaveFunctionTypeParameterT = &TypeParameter{
@@ -203,6 +157,7 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 const AuthAccountTypeTypeFunctionName = "type"
 
 var AuthAccountTypeTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Label:          "at",
@@ -1257,18 +1212,6 @@ func init() {
 			AuthAccountTypeStoragePathsFieldName,
 			AuthAccountTypeStoragePathsFieldType,
 			AuthAccountTypeStoragePathsFieldDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			AuthAccountType,
-			AuthAccountTypeAddPublicKeyFunctionName,
-			AuthAccountTypeAddPublicKeyFunctionType,
-			AuthAccountTypeAddPublicKeyFunctionDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			AuthAccountType,
-			AuthAccountTypeRemovePublicKeyFunctionName,
-			AuthAccountTypeRemovePublicKeyFunctionType,
-			AuthAccountTypeRemovePublicKeyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			AuthAccountType,

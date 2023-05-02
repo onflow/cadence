@@ -128,12 +128,15 @@ func TestExportValue(t *testing.T) {
 	testCharacter, _ := cadence.NewCharacter("a")
 
 	testFunction := &interpreter.InterpretedFunctionValue{
-		Type: &sema.FunctionType{
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
-		},
+		Type: sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.VoidTypeAnnotation,
+		),
 	}
 
 	testFunctionType := cadence.NewFunctionType(
+		sema.FunctionPurityImpure,
 		nil,
 		nil,
 		cadence.VoidType{},
@@ -2290,7 +2293,7 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 	script := `
         pub struct Foo {
             pub let answer: Int
-            pub let f: ((): Void)
+            pub let f: fun(): Void
 
             init() {
                 self.answer = 42
@@ -5338,7 +5341,16 @@ func TestDestroyedResourceReferenceExport(t *testing.T) {
         pub fun main(): &S  {
             var s <- create S()
             var ref = &s as &S
+
+            // Just to trick the checker,
+            // and get pass the static referenced resource invalidation analysis.
+            var ref2 = getRef(ref)
+
             destroy s
+            return ref2!
+        }
+
+        pub fun getRef(_ ref: &S): &S  {
             return ref
         }
 	 `)

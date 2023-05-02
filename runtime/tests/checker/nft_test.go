@@ -128,7 +128,7 @@ pub contract interface NonFungibleToken {
     // and returns it to the caller so that they can own NFTs
     pub fun createEmptyCollection(): @Collection {
         post {
-            result.getIDs().length == 0: "The created collection must be empty!"
+            result.ownedNFTs.length == 0: "The created collection must be empty!"
         }
     }
 }

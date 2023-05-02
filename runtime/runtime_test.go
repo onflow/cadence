@@ -2774,6 +2774,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                 `,
 				expected: cadence.Function{
 					FunctionType: &cadence.FunctionType{
+						Purity: sema.FunctionPurityView,
 						Parameters: []cadence.Parameter{
 							{
 								Label:      sema.ArgumentLabelNotRequired,
@@ -2868,7 +2869,7 @@ func TestRuntimeScriptParameterTypeNotImportableError(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-      pub fun main(x: ((): Int)) {
+      pub fun main(x: fun(): Int) {
         return
       }
     `)

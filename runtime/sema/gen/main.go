@@ -273,6 +273,7 @@ func (g *generator) addFunctionTypeDeclaration(
 			functionTypeVarName(fullTypeName, functionName),
 			functionTypeExpr(
 				&ast.FunctionType{
+					PurityAnnotation:         decl.Purity,
 					ReturnTypeAnnotation:     decl.ReturnTypeAnnotation,
 					ParameterTypeAnnotations: parameterTypeAnnotations,
 				},
@@ -718,6 +719,13 @@ func functionTypeExpr(
 	typeParams map[string]string,
 ) dst.Expr {
 
+	// Function purity
+
+	var purityExpr dst.Expr
+	if t.PurityAnnotation == ast.FunctionPurityView {
+		purityExpr = dst.NewIdent("FunctionPurityView")
+	}
+
 	// Type parameters
 
 	var typeParameterTypeAnnotations []*ast.TypeParameter
@@ -840,6 +848,16 @@ func functionTypeExpr(
 	// Composite literal elements
 
 	var compositeElements []dst.Expr
+
+	if purityExpr != nil {
+		compositeElements = append(
+			compositeElements,
+			goKeyValue(
+				"Purity",
+				purityExpr,
+			),
+		)
+	}
 
 	if typeParametersExpr != nil {
 		compositeElements = append(

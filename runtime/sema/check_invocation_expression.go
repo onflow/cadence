@@ -121,6 +121,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 		return InvalidType
 	}
+	checker.EnforcePurity(invocationExpression, functionType.Purity)
 
 	// The invoked expression has a function type,
 	// check the invocation including all arguments.
@@ -187,6 +188,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	if returnType == NeverType {
 		returnInfo := checker.functionActivations.Current().ReturnInfo
 		returnInfo.DefinitelyHalted = true
+		returnInfo.DefinitelyExited = true
 	}
 
 	if isOptionalChainingResult {

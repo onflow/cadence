@@ -1175,7 +1175,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		const newCode = `
             pub contract Test {
 
-                pub var add: ((Int, Int): Int)
+                pub var add: fun(Int, Int): Int
 
                 init() {
                     self.add = fun (a: Int, b: Int): Int {
@@ -1196,7 +1196,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "error: field add has non-storable type: ((Int, Int): Int)")
+		assert.Contains(t, err.Error(), "error: field add has non-storable type: fun(Int, Int): Int")
 	})
 
 	t.Run("Test conformance", func(t *testing.T) {
@@ -1296,7 +1296,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                 pub var h:  Capability<&TestStruct>?
 
                 // function type
-                pub var i: Capability<&((Int, Int): Int)>?
+                pub var i: Capability<&fun(Int, Int): Int>?
 
                 init() {
                     var count: Int = 567
@@ -1329,7 +1329,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 
                 // function type
-                pub var i: Capability<&((Int, Int): Int)>?
+                pub var i: Capability<&fun(Int, Int): Int>?
 
                 // instantiation and reference types
                 pub var h:  Capability<&TestStruct>?

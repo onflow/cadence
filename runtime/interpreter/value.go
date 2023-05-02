@@ -218,6 +218,7 @@ type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
 	StorageID() atree.StorageID
+	IsStaleResource(*Interpreter) bool
 }
 
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
@@ -1717,11 +1718,15 @@ func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 }
 
 func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
-	if v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter)) {
+	if v.isDestroyed || v.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
+	return v.array == nil && v.IsResourceKinded(interpreter)
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
@@ -2617,7 +2622,9 @@ func (v *ArrayValue) Transfer(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				arrayValue.array = array
+
+				// Any kind of move would invalidate the references.
+				arrayValue.array = nil
 			},
 		)
 	}
@@ -2860,11 +2867,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.ByteArrayType,
-				),
-			},
+			sema.ToBigEndianBytesFunctionType,
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(
 					invocation.Interpreter,
@@ -2876,11 +2879,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingAddFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2897,11 +2896,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2918,11 +2913,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2939,11 +2930,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingDivideFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -6529,7 +6516,7 @@ func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value)
 }
 
 func (v Int128Value) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return SignedBigIntToSizedBigEndianBytes(v.BigInt, sema.Int128TypeSize)
 }
 
 func (v Int128Value) ConformsToStaticType(
@@ -7215,7 +7202,7 @@ func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value)
 }
 
 func (v Int256Value) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return SignedBigIntToSizedBigEndianBytes(v.BigInt, sema.Int256TypeSize)
 }
 
 func (v Int256Value) ConformsToStaticType(
@@ -10547,7 +10534,7 @@ func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 }
 
 func (v UInt128Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.UInt128TypeSize)
 }
 
 func (v UInt128Value) ConformsToStaticType(
@@ -11179,7 +11166,7 @@ func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 }
 
 func (v UInt256Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.UInt256TypeSize)
 }
 
 func (v UInt256Value) ConformsToStaticType(
@@ -14203,7 +14190,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	storageID := v.StorageID()
@@ -14306,7 +14293,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if config.TracingEnabled {
@@ -14396,12 +14383,16 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	return nil
 }
 
-func (v *CompositeValue) checkInvalidatedResourceUse(locationRange LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource) {
+func (v *CompositeValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
+	if v.isDestroyed || v.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (v *CompositeValue) IsStaleResource(inter *Interpreter) bool {
+	return v.dictionary == nil && v.IsResourceKinded(inter)
 }
 
 func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
@@ -14452,7 +14443,7 @@ func (v *CompositeValue) RemoveMember(
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if config.TracingEnabled {
@@ -14518,7 +14509,7 @@ func (v *CompositeValue) SetMember(
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if config.TracingEnabled {
@@ -14651,7 +14642,7 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	storable, err := v.dictionary.Get(
@@ -14906,7 +14897,7 @@ func (v *CompositeValue) Transfer(
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if config.TracingEnabled {
@@ -15029,7 +15020,9 @@ func (v *CompositeValue) Transfer(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				compositeValue.dictionary = dictionary
+
+				// Any kind of move would invalidate the references.
+				compositeValue.dictionary = nil
 			},
 		)
 	}
@@ -15307,6 +15300,10 @@ func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRa
 }
 
 func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange LocationRange) []*CompositeValue {
+	if interpreter.SharedState.Config.InvalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
+	}
+
 	var attachments []*CompositeValue
 	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
 		attachments = append(attachments, attachment)
@@ -15615,11 +15612,15 @@ func (v *DictionaryValue) IsDestroyed() bool {
 }
 
 func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter)) {
+	if v.isDestroyed || v.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
+	return v.dictionary == nil && v.IsResourceKinded(interpreter)
 }
 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
@@ -16471,7 +16472,9 @@ func (v *DictionaryValue) Transfer(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				dictionaryValue.dictionary = dictionary
+
+				// Any kind of move would invalidate the references.
+				dictionaryValue.dictionary = nil
 			},
 		)
 	}
@@ -16683,11 +16686,7 @@ func (v NilValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences
 // nilValueMapFunction is created only once per interpreter.
 // Hence, no need to meter, as it's a constant.
 var nilValueMapFunction = NewUnmeteredHostFunctionValue(
-	&sema.FunctionType{
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			sema.NeverType,
-		),
-	},
+	sema.OptionalTypeMapFunctionType(sema.NeverType),
 	func(invocation Invocation) Value {
 		return Nil
 	},
@@ -17607,7 +17606,7 @@ func (v *EphemeralReferenceValue) MustReferencedValue(
 
 	self := *referencedValue
 
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
 	return self
 }
 
@@ -17752,6 +17751,8 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 		return false
 	}
 
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(*referencedValue, locationRange)
+
 	self := *referencedValue
 
 	staticType := self.StaticType(interpreter)
@@ -17813,7 +17814,7 @@ func (v *EphemeralReferenceValue) Transfer(
 	return v
 }
 
-func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
+func (v *EphemeralReferenceValue) Clone(*Interpreter) Value {
 	return NewUnmeteredEphemeralReferenceValue(v.Authorized, v.Value, v.BorrowedType)
 }
 

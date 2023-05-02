@@ -2112,13 +2112,13 @@ pub contract Test {
     }
 
     pub resource interface Receiver {
-        pub fun receive(as: Role, capability: Capability)
+        pub fun receive(asRole: Role, capability: Capability)
     }
 
     pub resource Holder: Receiver {
         access(self) let roles: { Role: Capability }
-        pub fun receive(as: Role, capability: Capability) {
-            self.roles[as] = capability
+        pub fun receive(asRole: Role, capability: Capability) {
+            self.roles[asRole] = capability
         }
 
         pub fun borrowA(): &AAA {
@@ -2142,11 +2142,11 @@ pub contract Test {
         return <- create Holder()
     }
 
-    pub fun attach(as: Role, receiver: &AnyResource{Receiver}) {
+    pub fun attach(asRole: Role, receiver: &AnyResource{Receiver}) {
         // TODO: Now verify that the owner is valid.
 
-        let capability = self.capabilities[as]!
-        receiver.receive(as: as, capability: capability)
+        let capability = self.capabilities[asRole]!
+        receiver.receive(asRole: asRole, capability: capability)
     }
 
     init() {
@@ -2168,7 +2168,7 @@ transaction {
     prepare(acct: AuthAccount) {}
     execute {
         let holder <- Test.createHolder()
-        Test.attach(as: Test.Role.aaa, receiver: &holder as &AnyResource{Test.Receiver})
+        Test.attach(asRole: Test.Role.aaa, receiver: &holder as &AnyResource{Test.Receiver})
         destroy holder
     }
 }
@@ -2270,29 +2270,32 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
               prepare(accountA: AuthAccount, accountB: AuthAccount) {
 
                   let testResource <- TestContract.makeTestResource()
-                  let ref = &testResource as &TestContract.TestResource
+                  let ref1 = &testResource as &TestContract.TestResource
 
                   // At this point the resource is not in storage
-                  log(ref.owner?.address)
+                  log(ref1.owner?.address)
 
                   accountA.save(<-testResource, to: /storage/test)
 
                   // At this point the resource is in storage A
-                  log(ref.owner?.address)
+                  accountA.link<&TestContract.TestResource>(/public/test, target: /storage/test)
+                  let ref2 = accountA.getCapability<&TestContract.TestResource>(/public/test).borrow()!
+                  log(ref2.owner?.address)
 
                   let testResource2 <- accountA.load<@TestContract.TestResource>(from: /storage/test)!
 
-                  let ref2 = &testResource2 as &TestContract.TestResource
+                  let ref3 = &testResource2 as &TestContract.TestResource
 
                    // At this point the resource is not in storage
-                  log(ref.owner?.address)
-                  log(ref2.owner?.address)
+                  log(ref3.owner?.address)
 
                   accountB.save(<-testResource2, to: /storage/test)
 
+                  accountB.link<&TestContract.TestResource>(/public/test, target: /storage/test)
+                  let ref4 = accountB.getCapability<&TestContract.TestResource>(/public/test).borrow()!
+
                   // At this point the resource is in storage B
-                  log(ref.owner?.address)
-                  log(ref2.owner?.address)
+                  log(ref4.owner?.address)
               }
           }
         `
@@ -2374,6 +2377,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
+
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -2381,8 +2385,6 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				"nil",
 				"0x0000000000000001",
 				"nil",
-				"nil",
-				"0x0000000000000002",
 				"0x0000000000000002",
 			},
 			loggedMessages,
@@ -2411,15 +2413,18 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
               prepare(account: AuthAccount) {
 
                   let testResources <- [<-TestContract.makeTestResource()]
-                  let ref = &testResources[0] as &TestContract.TestResource
+                  let ref1 = &testResources[0] as &TestContract.TestResource
 
                   // At this point the resource is not in storage
-                  log(ref.owner?.address)
+                  log(ref1.owner?.address)
 
                   account.save(<-testResources, to: /storage/test)
 
                   // At this point the resource is in storage
-                  log(ref.owner?.address)
+                  account.link<&[TestContract.TestResource]>(/public/test, target: /storage/test)
+                  let ref2 = account.getCapability<&[TestContract.TestResource]>(/public/test).borrow()!
+                  let ref3 = &ref2[0] as &TestContract.TestResource
+                  log(ref3.owner?.address)
               }
           }
         `
@@ -2496,6 +2501,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
+
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -2541,8 +2547,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
               prepare(account: AuthAccount) {
 
                   let nestingResource <- TestContract.makeTestNestingResource()
-                  let nestingResourceRef = &nestingResource as &TestContract.TestNestingResource
-                  let nestedElementResourceRef = &nestingResource.nestedResources[0] as &TestContract.TestNestedResource
+                  var nestingResourceRef = &nestingResource as &TestContract.TestNestingResource
+                  var nestedElementResourceRef = &nestingResource.nestedResources[0] as &TestContract.TestNestedResource
 
                   // At this point the nesting and nested resources are not in storage
                   log(nestingResourceRef.owner?.address)
@@ -2551,6 +2557,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   account.save(<-nestingResource, to: /storage/test)
 
                   // At this point the nesting and nested resources are both in storage
+                  account.link<&TestContract.TestNestingResource>(/public/test, target: /storage/test)
+                  nestingResourceRef = account.getCapability<&TestContract.TestNestingResource>(/public/test).borrow()!
+                  nestedElementResourceRef = &nestingResourceRef.nestedResources[0] as &TestContract.TestNestedResource
+
                   log(nestingResourceRef.owner?.address)
                   log(nestedElementResourceRef.owner?.address)
               }
@@ -2629,6 +2639,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
+
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -2664,7 +2675,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
               prepare(account: AuthAccount) {
 
                   let testResources <- [<-[<-TestContract.makeTestResource()]]
-                  let ref = &testResources[0] as &[TestContract.TestResource]
+                  var ref = &testResources[0] as &[TestContract.TestResource]
 
                   // At this point the resource is not in storage
                   log(ref[0].owner?.address)
@@ -2672,6 +2683,9 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   account.save(<-testResources, to: /storage/test)
 
                   // At this point the resource is in storage
+                  account.link<&[[TestContract.TestResource]]>(/public/test, target: /storage/test)
+                  let testResourcesRef = account.getCapability<&[[TestContract.TestResource]]>(/public/test).borrow()!
+                  ref = &testResourcesRef[0] as &[TestContract.TestResource]
                   log(ref[0].owner?.address)
               }
           }
@@ -2749,6 +2763,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
+
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -2782,7 +2797,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
               prepare(account: AuthAccount) {
 
                   let testResources <- [<-{0: <-TestContract.makeTestResource()}]
-                  let ref = &testResources[0] as &{Int: TestContract.TestResource}
+                  var ref = &testResources[0] as &{Int: TestContract.TestResource}
 
                   // At this point the resource is not in storage
                   log(ref[0]?.owner?.address)
@@ -2790,6 +2805,9 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   account.save(<-testResources, to: /storage/test)
 
                   // At this point the resource is in storage
+                  account.link<&[{Int: TestContract.TestResource}]>(/public/test, target: /storage/test)
+                  let testResourcesRef = account.getCapability<&[{Int: TestContract.TestResource}]>(/public/test).borrow()!
+                  ref = &testResourcesRef[0] as &{Int: TestContract.TestResource}
                   log(ref[0]?.owner?.address)
               }
           }
@@ -2867,6 +2885,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
+
 		require.NoError(t, err)
 
 		require.Equal(t,

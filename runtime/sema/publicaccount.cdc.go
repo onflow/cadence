@@ -19,3 +19,5 @@
 package sema
 
 //go:generate go run ./gen publicaccount.cdc publicaccount.gen.go
+
+var PublicAccountTypeAnnotation = NewTypeAnnotation(PublicAccountType)

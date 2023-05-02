@@ -4289,6 +4289,33 @@ func TestInterpretAttachmentBaseNonMember(t *testing.T) {
 	})
 }
 
+func TestCheckAttachmentsResourceReference(t *testing.T) {
+	t.Parallel()
+
+	t.Run("attachment base moved", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        resource R {}
+        attachment A for R {
+            fun foo(): Int { return 3 }
+        }
+        fun test(): Int {
+            var r <- create R()
+            let ref = &r as &R
+            var r2 <- attach A() to <-r
+            let i = ref[A]?.foo()!
+            destroy r2
+            return i
+        }
+    `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[0])
+	})
+}
+
 func TestCheckAttachmentsNotEnabled(t *testing.T) {
 
 	t.Parallel()

@@ -720,7 +720,7 @@ func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
 func TestCheckBadContractNesting(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, "contract signatureAlgorithm { resource interface payer { contract fun : payer { contract fun { contract fun { } contract fun { contract interface account { } } contract account { } } } } }")
+	_, err := ParseAndCheck(t, "contract signatureAlgorithm { resource interface payer { contract foo : payer { contract foo { contract foo { } contract foo { contract interface account { } } contract account { } } } } }")
 
 	errs := RequireCheckerErrors(t, err, 14)
 
@@ -743,7 +743,7 @@ func TestCheckBadContractNesting(t *testing.T) {
 func TestCheckContractEnumAccessRestricted(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheckWithOptions(t, "contract enum{}let x = enum!",
+	_, err := ParseAndCheckWithOptions(t, "contract foo{}let x = foo!",
 		ParseAndCheckOptions{
 			Config: &sema.Config{
 				AccessCheckMode: sema.AccessCheckModeStrict,

@@ -455,6 +455,7 @@ func exportFunctionType(
 
 	return cadence.NewMeteredFunctionType(
 		gauge,
+		cadence.FunctionPurity(t.Purity),
 		convertedTypeParameters,
 		convertedParameters,
 		convertedReturnType,

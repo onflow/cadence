@@ -138,7 +138,8 @@ func cryptoAlgorithmEnumConstructorType[T sema.CryptoAlgorithm](
 		)
 	}
 
-	constructorType := &sema.FunctionType{
+	return &sema.FunctionType{
+		Purity:        sema.FunctionPurityView,
 		IsConstructor: true,
 		Parameters: []sema.Parameter{
 			{
@@ -153,8 +154,6 @@ func cryptoAlgorithmEnumConstructorType[T sema.CryptoAlgorithm](
 		),
 		Members: sema.MembersAsMap(members),
 	}
-
-	return constructorType
 }
 
 type enumCaseConstructor func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue

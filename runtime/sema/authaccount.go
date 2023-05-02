@@ -22,6 +22,8 @@ package sema
 
 var AuthAccountTypeLinkAccountFunctionTypePathParameterTypeAnnotation = AuthAccountTypeLinkAccountFunctionType.Parameters[0].TypeAnnotation
 
+var AuthAccountTypeAnnotation = NewTypeAnnotation(AuthAccountType)
+
 func init() {
 	AuthAccountContractsTypeAddFunctionType.RequiredArgumentCount = RequiredArgumentCount(2)
 	AuthAccountTypeGetCapabilityFunctionType.TypeParameters[0].Optional = true

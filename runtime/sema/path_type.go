@@ -36,6 +36,8 @@ var PathType = &SimpleType{
 	},
 }
 
+var PathTypeAnnotation = NewTypeAnnotation(PathType)
+
 // StoragePathType
 var StoragePathType = &SimpleType{
 	Name:          "StoragePath",
@@ -49,6 +51,8 @@ var StoragePathType = &SimpleType{
 	Exportable:    true,
 	Importable:    true,
 }
+
+var StoragePathTypeAnnotation = NewTypeAnnotation(StoragePathType)
 
 // CapabilityPathType
 var CapabilityPathType = &SimpleType{
@@ -68,6 +72,8 @@ var CapabilityPathType = &SimpleType{
 	},
 }
 
+var CapabilityPathTypeAnnotation = NewTypeAnnotation(CapabilityPathType)
+
 // PublicPathType
 var PublicPathType = &SimpleType{
 	Name:          "PublicPath",
@@ -82,6 +88,8 @@ var PublicPathType = &SimpleType{
 	Importable:    true,
 }
 
+var PublicPathTypeAnnotation = NewTypeAnnotation(PublicPathType)
+
 // PrivatePathType
 var PrivatePathType = &SimpleType{
 	Name:          "PrivatePath",
@@ -95,3 +103,5 @@ var PrivatePathType = &SimpleType{
 	Exportable:    true,
 	Importable:    true,
 }
+
+var PrivatePathTypeAnnotation = NewTypeAnnotation(PrivatePathType)
