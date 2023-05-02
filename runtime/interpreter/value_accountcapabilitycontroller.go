@@ -32,6 +32,9 @@ import (
 type AccountCapabilityControllerValue struct {
 	BorrowType   ReferenceStaticType
 	CapabilityID UInt64Value
+
+	// Injected functions
+	DeleteFunction FunctionValue
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
@@ -181,8 +184,6 @@ func (v *AccountCapabilityControllerValue) ChildStorables() []atree.Storable {
 
 func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 
-	// TODO: sema.AccountCapabilityControllerTypeDeleteFunctionName
-
 	switch name {
 	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -190,6 +191,8 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 	case sema.AccountCapabilityControllerTypeBorrowTypeFieldName:
 		return NewTypeValue(inter, v.BorrowType)
 
+	case sema.AccountCapabilityControllerTypeDeleteFunctionName:
+		return v.DeleteFunction
 	}
 
 	return nil
@@ -216,5 +219,19 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 		// NOTE: no source path, not a path capability (linking API)
 		EmptyPathValue,
 		resultBorrowType.Type,
+	)
+}
+
+// SetDeleted sets the controller as deleted, i.e. functions panic from now on
+func (v *AccountCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) {
+
+	panicFunction := func(invocation Invocation) Value {
+		panic(errors.NewDefaultUserError("controller is deleted"))
+	}
+
+	v.DeleteFunction = NewHostFunctionValue(
+		gauge,
+		sema.AccountCapabilityControllerTypeDeleteFunctionType,
+		panicFunction,
 	)
 }

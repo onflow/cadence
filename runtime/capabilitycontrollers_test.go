@@ -1948,12 +1948,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			})
 		})
 
-		// TODO:
 		t.Run("delete", func(t *testing.T) {
 
 			t.Parallel()
 
-			// TODO:
 			t.Run("getController, getControllers", func(t *testing.T) {
 				t.Parallel()
 
@@ -2085,5 +2083,79 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		})
 	})
 
-	// TODO: AccountCapabilityController: delete
+	t.Run("AccountCapabilityController", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("delete", func(t *testing.T) {
+
+			t.Parallel()
+
+			t.Run("getController, getControllers", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+				    		  // Arrange
+                              let issuedCap: Capability<&AuthAccount> =
+                                  signer.capabilities.account.issue<&AuthAccount>()
+							  let controller: &AccountCapabilityController? =
+                                  signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
+
+                              let controllersBefore = signer.capabilities.account.getControllers()
+                              assert(controllersBefore.length == 1)
+                              assert(controllersBefore[0].capabilityID == 1)
+
+                              // Act
+                              controller!.delete()
+
+                              // Assert
+                              let controllerAfter: &AccountCapabilityController? =
+                                  signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
+                              assert(controllerAfter == nil)
+
+                              let controllersAfter = signer.capabilities.account.getControllers()
+                              assert(controllersAfter.length == 0)
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
+			})
+
+			t.Run("delete", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+				    		  // Arrange
+                              let issuedCap: Capability<&AuthAccount> =
+                                  signer.capabilities.account.issue<&AuthAccount>()
+							  let controller: &AccountCapabilityController? =
+                                  signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
+
+                              // Act
+                              controller!.delete()
+
+                              // Assert
+                              controller!.delete()
+                          }
+                      }
+                    `,
+				)
+				require.ErrorContains(t, err, "controller is deleted")
+			})
+		})
+
+	})
 }

@@ -2650,7 +2650,8 @@ func getCapabilityController(
 			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
 
 	case *interpreter.AccountCapabilityControllerValue:
-		// TODO: inject delete function
+		controller.DeleteFunction =
+			newAccountCapabilityControllerDeleteFunction(inter, address, controller)
 	}
 
 	return controller
@@ -2916,6 +2917,25 @@ func recordAccountCapabilityController(
 
 	existed := storageMap.SetValue(inter, storageMapKey, interpreter.NilValue{})
 	if existed {
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func unrecordAccountCapabilityController(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) {
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
+
+	storageMap := inter.Storage().GetStorageMap(
+		address,
+		AccountCapabilityStorageDomain,
+		true,
+	)
+
+	existed := storageMap.RemoveValue(inter, storageMapKey)
+	if !existed {
 		panic(errors.NewUnreachableError())
 	}
 }
@@ -3560,6 +3580,37 @@ func newAuthAccountAccountCapabilitiesForEachControllerFunction(
 					break
 				}
 			}
+
+			return interpreter.Void
+		},
+	)
+}
+
+func newAccountCapabilityControllerDeleteFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	controller *interpreter.AccountCapabilityControllerValue,
+) interpreter.FunctionValue {
+	return interpreter.NewHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeTargetFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
+			capabilityID := controller.CapabilityID
+
+			unrecordAccountCapabilityController(
+				inter,
+				address,
+				capabilityID,
+			)
+			removeCapabilityController(
+				inter,
+				address,
+				capabilityID,
+			)
+
+			controller.SetDeleted(inter)
 
 			return interpreter.Void
 		},
