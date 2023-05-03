@@ -42,6 +42,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 		rt := newTestInterpreterRuntime()
 		rt.defaultConfig.AccountLinkingEnabled = true
+		rt.defaultConfig.CapabilityControllersEnabled = true
 
 		accountCodes := map[Location][]byte{}
 		accountIDs := map[common.Address]uint64{}

@@ -163,6 +163,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		CheckHandler:                     e.newCheckHandler(),
 		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
 		AttachmentsEnabled:               e.config.AttachmentsEnabled,
+		CapabilityControllersEnabled:     e.config.CapabilityControllersEnabled,
 	}
 }
 
