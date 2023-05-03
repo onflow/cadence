@@ -2699,7 +2699,25 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	// TODO: once interfaces can conform to interfaces, add more tests here for interface hierarchy
+	t.Run("attach to super interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			resource interface I2: I {}
+			resource R: I2 {}
+			attachment A for I {}
+			pub fun foo() {
+				let r: @{I2} <- create R()
+				destroy attach A() to <-r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckAttachWithArguments(t *testing.T) {

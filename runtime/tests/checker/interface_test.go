@@ -3857,3 +3857,135 @@ func TestCheckInterfaceEventsInheritance(t *testing.T) {
 		require.ErrorAs(t, errs[1], &conformanceError)
 	})
 }
+
+func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("restricted type subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct S: B {}
+
+
+            fun foo(): {A} {
+                var s: S{B} = S()
+                return s
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("reference type subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct S: B {}
+
+
+            fun foo(): &{A} {
+                var s = S()
+                return &s as &S
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment on restricted type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface A {}
+
+            resource interface B: A  {}
+
+            resource R: B {}
+
+            attachment X for A {}
+
+            fun foo() {
+                var r: @{B} <- create R()
+                let x = r[X]
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment on reference type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface A {}
+
+            resource interface B: A  {}
+
+            resource R: B {}
+
+            attachment X for A {}
+
+            fun foo() {
+                var r <- create R()
+                let b = &r as &{B}
+                let x = b[X]
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("concrete type subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {}
+
+            contract interface B: A  {}
+
+            contract S: B {}
+
+            fun foo(a: [S]): [A] {
+                return a   // must be covariant
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inheriting interface subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {}
+
+            contract interface B: A  {}
+
+            contract S: B {}
+
+            fun foo(a: [B]): [A] {
+                return a  // must be covariant
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}

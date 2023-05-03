@@ -4327,17 +4327,19 @@ type InterfaceType struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
 	}
-	Identifier            string
-	Fields                []string
-	InitializerParameters []Parameter
-	CompositeKind         common.CompositeKind
-	cachedIdentifiersLock sync.RWMutex
-	memberResolversOnce   sync.Once
-	InitializerPurity     FunctionPurity
+	Identifier                           string
+	Fields                               []string
+	InitializerParameters                []Parameter
+	CompositeKind                        common.CompositeKind
+	cachedIdentifiersLock                sync.RWMutex
+	memberResolversOnce                  sync.Once
+	effectiveInterfaceConformancesOnce   sync.Once
+	effectiveInterfaceConformanceSetOnce sync.Once
+	InitializerPurity                    FunctionPurity
 
-	ExplicitInterfaceConformances      []*InterfaceType
-	effectiveInterfaceConformancesOnce sync.Once
-	effectiveInterfaceConformances     []Conformance
+	ExplicitInterfaceConformances    []*InterfaceType
+	effectiveInterfaceConformances   []Conformance
+	effectiveInterfaceConformanceSet *InterfaceSet
 }
 
 var _ Type = &InterfaceType{}
@@ -4573,6 +4575,21 @@ func (t *InterfaceType) EffectiveInterfaceConformances() []Conformance {
 	})
 
 	return t.effectiveInterfaceConformances
+}
+
+func (t *InterfaceType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	t.initializeEffectiveInterfaceConformanceSet()
+	return t.effectiveInterfaceConformanceSet
+}
+
+func (t *InterfaceType) initializeEffectiveInterfaceConformanceSet() {
+	t.effectiveInterfaceConformanceSetOnce.Do(func() {
+		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
+
+		for _, conformance := range t.EffectiveInterfaceConformances() {
+			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
+		}
+	})
 }
 
 // distinctConformances recursively visit conformances and their conformances,
@@ -5656,7 +5673,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					//
 					// The holder of the reference may only restrict the reference.
 
-					// TODO: once interfaces can conform to interfaces, include
 					return IsSubType(typedInnerSubType, restrictedSuperType) &&
 						typedInnerSuperType.RestrictionSet().
 							IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
@@ -5759,7 +5775,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 			// An unauthorized reference to an interface type `&T`
 			// is a supertype of a reference to a restricted type `&{U}`:
-			// if the restriction set contains that explicit interface type.
+			// if at least one value in the restriction set is a subtype of the interface supertype.
 
 			// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
 			// resource interface I { /* ... */ }
@@ -5773,11 +5789,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			// when checking whether an attachment declared for `I` is accessible on a value of type `&R{X}`,
 			// even if `R <: I`, we only want to allow access if `X <: I`
 
-			// Once interfaces can conform to interfaces,
-			// this should instead check that at least one value in the restriction set
-			// is a subtype of the interface supertype
 			case *RestrictedType:
-				return typedInnerSubType.RestrictionSet().Contains(typedInnerSuperType)
+				return isRestrictedTypeASubTypeOfInterface(typedInnerSubType, typedInnerSuperType)
 			}
 
 			return false
@@ -5935,7 +5948,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// and `T` conforms to `Vs`.
 					// `Us` and `Vs` do *not* have to be subsets.
 
-					// TODO: once interfaces can conform to interfaces, include
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
 						typedSuperType.RestrictionSet().
 							IsSubsetOf(restrictedSubtype.EffectiveInterfaceConformanceSet())
@@ -6043,13 +6055,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				return false
 			}
 
-			// TODO: once interfaces can conform to interfaces, include
 			return typedSubType.EffectiveInterfaceConformanceSet().
 				Contains(typedSuperType)
 
-		// An interface type is a supertype of a restricted type if the restricted set contains
-		// that explicit interface type. Once interfaces can conform to interfaces, this should instead
-		// check that at least one value in the restriction set is a subtype of the interface supertype
+		// An interface type is a supertype of a restricted type if at least one value
+		// in the restriction set is a subtype of the interface supertype.
 
 		// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
 		// resource interface I { /* ... */ }
@@ -6058,11 +6068,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// let i : {I} = ... // some operation constructing `i`
 		// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
 		case *RestrictedType:
-			return typedSubType.RestrictionSet().Contains(typedSuperType)
+			return isRestrictedTypeASubTypeOfInterface(typedSubType, typedSuperType)
 
 		case *InterfaceType:
-			// TODO: Once interfaces can conform to interfaces, check conformances here
-			return false
+			return typedSubType.EffectiveInterfaceConformanceSet().
+				Contains(typedSuperType)
 		}
 
 	case ParameterizedType:
@@ -6115,6 +6125,15 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		}
 	}
 
+	return false
+}
+
+func isRestrictedTypeASubTypeOfInterface(restrictedType *RestrictedType, interfaceType *InterfaceType) bool {
+	for _, restriction := range restrictedType.Restrictions {
+		if IsSubType(restriction, interfaceType) {
+			return true
+		}
+	}
 	return false
 }
 
