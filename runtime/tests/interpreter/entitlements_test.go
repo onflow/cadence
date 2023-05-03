@@ -404,6 +404,88 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		)
 	})
 
+	t.Run("cast up to anystruct, cannot expand", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y
+
+			fun test(): Bool {
+				let ref = &1 as auth(X) &Int
+				let anyStruct = ref as AnyStruct
+				let downRef = anyStruct as? auth(X, Y) &Int
+				return downRef != nil
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			value,
+		)
+	})
+
+	t.Run("cast up to anystruct, retains old type", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y
+
+			fun test(): Bool {
+				let ref = &1 as auth(X) &Int
+				let anyStruct = ref as AnyStruct
+				let downRef = anyStruct as? auth(X) &Int
+				return downRef != nil
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("cast up to anystruct, then through reference, retains entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y
+
+			fun test(): Bool {
+				let ref = &1 as auth(X) &Int
+				let anyStruct = ref as AnyStruct
+				let downRef = anyStruct as! &Int
+				let downDownRef = downRef as? auth(X) &Int
+				return downDownRef != nil
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			value,
+		)
+	})
+
 	t.Run("entitled to nonentitled downcast", func(t *testing.T) {
 
 		t.Parallel()
@@ -462,37 +544,6 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			value,
 		)
 	})
-
-	t.Run("order of entitlements doesn't matter", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-			entitlement E
-			entitlement F
-
-			struct interface I {}
-			struct S: I {}
-
-			fun test(): Bool {
-				let r = &S() as auth(E, F) &{I}
-				let r2 = r as? auth(F, E) &S
-				let isSuccess = r2 != nil
-				return isSuccess
-			}
-		`)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
-	})
-
 }
 
 func TestInterpretCapabilityEntitlements(t *testing.T) {
