@@ -1037,6 +1037,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
 		valueStaticType := value.StaticType(interpreter)
+		valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
 		switch expression.Operation {
@@ -1046,14 +1047,12 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			value = interpreter.BoxOptional(locationRange, value, expectedType)
+			value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
 
 			return NewSomeValueNonCopying(interpreter, value)
 
 		case ast.OperationForceCast:
 			if !isSubType {
-				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
-
 				locationRange := LocationRange{
 					Location:    interpreter.Location,
 					HasPosition: expression.Expression,
@@ -1067,7 +1066,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			return interpreter.BoxOptional(locationRange, value, expectedType)
+			return interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
 
 		default:
 			panic(errors.NewUnreachableError())
