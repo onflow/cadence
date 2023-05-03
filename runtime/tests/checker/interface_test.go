@@ -3862,7 +3862,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("restricted type subtyping", func(t *testing.T) {
+	t.Run("restricted composite type subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3883,7 +3883,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("reference type subtyping", func(t *testing.T) {
+	t.Run("restricted anystruct type subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3894,6 +3894,46 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             struct S: B {}
 
+
+            fun foo(): {A} {
+                var s: {B} = S()
+                return s
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite type subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct S: B {}
+
+            fun foo(): {A} {
+                var s = S()
+                return s
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("reference type subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct S: B {}
 
             fun foo(): &{A} {
                 var s = S()
@@ -3983,6 +4023,93 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             fun foo(a: [B]): [A] {
                 return a  // must be covariant
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted anystruct reference subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct interface C {}
+
+            struct S: B, C {}
+
+            // Case I: &{B, C} is a subtype of &{B}
+            fun foo(): &{B} {
+                var s: S{B, C} = S()
+                return &s as &{B, C}
+            }
+
+            // Case II: &{B} is a subtype of &{A}
+            fun bar(): &{A} {
+               var s: S{B} = S()
+               return &s as &{B}
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted composite type reference subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct interface C {}
+
+            struct S: B, C {}
+
+            // Case I: &S{B, C} is a subtype of &S{B}
+            fun foo(): &S{B} {
+                var s: S{B, C} = S()
+                return &s as &S{B, C}
+            }
+
+            // Case II: &S{B} is a subtype of &S{A}
+            fun bar(): &S{A} {
+               var s: S{B} = S()
+               return &s as &S{B}
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("multi-restricted composite type reference subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct interface C {}
+
+            struct S: B, C {}
+
+            // Case I: &S{B, C} is a subtype of &S{B}
+            fun foo(): &S{B} {
+                var s: S{B, C} = S()
+                return &s as &S{B, C}
+            }
+
+            // Case II: &S{B, C} is also a subtype of &S{A}
+            fun bar(): &S{A} {
+               var s: S{B, C} = S()
+               return &s as &S{B, C}
             }
         `)
 

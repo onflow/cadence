@@ -1059,7 +1059,7 @@ func TestCommonSuperType(t *testing.T) {
 						Restrictions: []*InterfaceType{interfaceType2},
 					}
 					// just initialize for equality
-					typ.initializeRestrictionSet()
+					typ.initializeEffectiveRestrictionSet()
 					return typ
 				}(),
 			},
@@ -1075,7 +1075,7 @@ func TestCommonSuperType(t *testing.T) {
 						Restrictions: []*InterfaceType{interfaceType1, interfaceType2},
 					}
 					// just initialize for equality
-					typ.initializeRestrictionSet()
+					typ.initializeEffectiveRestrictionSet()
 					return typ
 				}(),
 			},
@@ -1101,7 +1101,7 @@ func TestCommonSuperType(t *testing.T) {
 					}
 
 					// just initialize for equality
-					typ.initializeRestrictionSet()
+					typ.initializeEffectiveRestrictionSet()
 					return typ
 				}(),
 			},

@@ -5665,8 +5665,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// The requirement for `T` to conform to `Vs` is implied by the subset requirement.
 
 					return IsSubType(typedInnerSubType.Type, restrictedSuperType) &&
-						typedInnerSuperType.RestrictionSet().
-							IsSubsetOf(typedInnerSubType.RestrictionSet())
+						typedInnerSuperType.EffectiveRestrictionSet().
+							IsSubsetOf(typedInnerSubType.EffectiveRestrictionSet())
 
 				case *CompositeType:
 					// An unauthorized reference to an unrestricted type `&T`
@@ -5678,7 +5678,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// The holder of the reference may only restrict the reference.
 
 					return IsSubType(typedInnerSubType, restrictedSuperType) &&
-						typedInnerSuperType.RestrictionSet().
+						typedInnerSuperType.EffectiveRestrictionSet().
 							IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
 				}
 
@@ -5710,8 +5710,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 						// and may only further restrict the reference to the composite.
 
 						return typedInnerSubType.Type == typedInnerSuperType.Type &&
-							typedInnerSuperType.RestrictionSet().
-								IsSubsetOf(typedInnerSubType.RestrictionSet())
+							typedInnerSuperType.EffectiveRestrictionSet().
+								IsSubsetOf(typedInnerSubType.EffectiveRestrictionSet())
 					}
 
 					switch typedInnerSubType.Type {
@@ -5794,7 +5794,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			// even if `R <: I`, we only want to allow access if `X <: I`
 
 			case *RestrictedType:
-				return isRestrictedTypeASubTypeOfInterface(typedInnerSubType, typedInnerSuperType)
+				return typedInnerSubType.EffectiveRestrictionSet().Contains(typedInnerSuperType)
 			}
 
 			return false
@@ -5941,8 +5941,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// and `Vs` is a subset of `Us`.
 
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
-						typedSuperType.RestrictionSet().
-							IsSubsetOf(typedSubType.RestrictionSet())
+						typedSuperType.EffectiveRestrictionSet().
+							IsSubsetOf(typedSubType.EffectiveRestrictionSet())
 				}
 
 				if restrictedSubtype, ok := restrictedSubtype.(*CompositeType); ok {
@@ -5953,7 +5953,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// `Us` and `Vs` do *not* have to be subsets.
 
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
-						typedSuperType.RestrictionSet().
+						typedSuperType.EffectiveRestrictionSet().
 							IsSubsetOf(restrictedSubtype.EffectiveInterfaceConformanceSet())
 				}
 
@@ -5964,7 +5964,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				// and `T` conforms to `Us`.
 
 				return IsSubType(typedSubType, typedSuperType.Type) &&
-					typedSuperType.RestrictionSet().
+					typedSuperType.EffectiveRestrictionSet().
 						IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 			}
 
@@ -6072,7 +6072,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// let i : {I} = ... // some operation constructing `i`
 		// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
 		case *RestrictedType:
-			return isRestrictedTypeASubTypeOfInterface(typedSubType, typedSuperType)
+			return typedSubType.EffectiveRestrictionSet().Contains(typedSuperType)
 
 		case *InterfaceType:
 			return typedSubType.EffectiveInterfaceConformanceSet().
@@ -6129,15 +6129,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		}
 	}
 
-	return false
-}
-
-func isRestrictedTypeASubTypeOfInterface(restrictedType *RestrictedType, interfaceType *InterfaceType) bool {
-	for _, restriction := range restrictedType.Restrictions {
-		if IsSubType(restriction, interfaceType) {
-			return true
-		}
-	}
 	return false
 }
 
@@ -6317,11 +6308,11 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 type RestrictedType struct {
 	Type Type
 	// an internal set of field `Restrictions`
-	restrictionSet      *InterfaceSet
-	Restrictions        []*InterfaceType
-	restrictionSetOnce  sync.Once
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	effectiveRestrictionSet     *InterfaceSet
+	Restrictions                []*InterfaceType
+	effectiveRestrictionSetOnce sync.Once
+	memberResolvers             map[string]MemberResolver
+	memberResolversOnce         sync.Once
 }
 
 var _ Type = &RestrictedType{}
@@ -6329,7 +6320,7 @@ var _ Type = &RestrictedType{}
 func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []*InterfaceType) *RestrictedType {
 	common.UseMemory(memoryGauge, common.RestrictedSemaTypeMemoryUsage)
 
-	// Also meter the cost for the `restrictionSet` here, since ordered maps are not separately metered.
+	// Also meter the cost for the `effectiveRestrictionSet` here, since ordered maps are not separately metered.
 	wrapperUsage, entryListUsage, entriesUsage := common.NewOrderedMapMemoryUsages(uint64(len(restrictions)))
 	common.UseMemory(memoryGauge, wrapperUsage)
 	common.UseMemory(memoryGauge, entryListUsage)
@@ -6341,16 +6332,21 @@ func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []
 	}
 }
 
-func (t *RestrictedType) RestrictionSet() *InterfaceSet {
-	t.initializeRestrictionSet()
-	return t.restrictionSet
+func (t *RestrictedType) EffectiveRestrictionSet() *InterfaceSet {
+	t.initializeEffectiveRestrictionSet()
+	return t.effectiveRestrictionSet
 }
 
-func (t *RestrictedType) initializeRestrictionSet() {
-	t.restrictionSetOnce.Do(func() {
-		t.restrictionSet = NewInterfaceSet()
+func (t *RestrictedType) initializeEffectiveRestrictionSet() {
+	t.effectiveRestrictionSetOnce.Do(func() {
+		t.effectiveRestrictionSet = NewInterfaceSet()
 		for _, restriction := range t.Restrictions {
-			t.restrictionSet.Add(restriction)
+			t.effectiveRestrictionSet.Add(restriction)
+
+			// Also add the interfaces to which this restricting interface conforms.
+			for _, conformance := range restriction.EffectiveInterfaceConformances() {
+				t.effectiveRestrictionSet.Add(conformance.InterfaceType)
+			}
 		}
 	})
 }
@@ -6424,8 +6420,8 @@ func (t *RestrictedType) Equal(other Type) bool {
 
 	// Check that the set of restrictions are equal; order does not matter
 
-	restrictionSet := t.RestrictionSet()
-	otherRestrictionSet := otherRestrictedType.RestrictionSet()
+	restrictionSet := t.EffectiveRestrictionSet()
+	otherRestrictionSet := otherRestrictedType.EffectiveRestrictionSet()
 
 	if restrictionSet.Len() != otherRestrictionSet.Len() {
 		return false
