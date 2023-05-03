@@ -1051,7 +1051,7 @@ func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctio
 
 func (checker *Checker) explicitInterfaceConformances(
 	conformingDeclaration ast.ConformingDeclaration,
-	compositeType CompositeKindedType,
+	compositeKindedType CompositeKindedType,
 ) []*InterfaceType {
 
 	var interfaceTypes []*InterfaceType
@@ -1066,9 +1066,9 @@ func (checker *Checker) explicitInterfaceConformances(
 			if seenConformances[interfaceType] {
 				checker.report(
 					&DuplicateConformanceError{
-						CompositeType: compositeType,
-						InterfaceType: interfaceType,
-						Range:         ast.NewRangeFromPositioned(checker.memoryGauge, conformance.Identifier),
+						CompositeKindedType: compositeKindedType,
+						InterfaceType:       interfaceType,
+						Range:               ast.NewRangeFromPositioned(checker.memoryGauge, conformance.Identifier),
 					},
 				)
 			}

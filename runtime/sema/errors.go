@@ -1414,8 +1414,8 @@ func (n NestedConformanceMismatchNote) Message() string {
 //
 // TODO: just make this a warning?
 type DuplicateConformanceError struct {
-	CompositeType CompositeKindedType
-	InterfaceType *InterfaceType
+	CompositeKindedType CompositeKindedType
+	InterfaceType       *InterfaceType
 	ast.Range
 }
 
@@ -1429,8 +1429,8 @@ func (*DuplicateConformanceError) IsUserError() {}
 func (e *DuplicateConformanceError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` repeats conformance to %s `%s`",
-		e.CompositeType.GetCompositeKind().Name(),
-		e.CompositeType.QualifiedString(),
+		e.CompositeKindedType.GetCompositeKind().Name(),
+		e.CompositeKindedType.QualifiedString(),
 		e.InterfaceType.CompositeKind.DeclarationKind(true).Name(),
 		e.InterfaceType.QualifiedString(),
 	)

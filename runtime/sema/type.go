@@ -4600,6 +4600,10 @@ func distinctConformances(
 	seenConformances map[*InterfaceType]struct{},
 ) []Conformance {
 
+	if len(conformances) == 0 {
+		return nil
+	}
+
 	collectedConformances := make([]Conformance, 0)
 
 	var conformanceChainRoot *InterfaceType
