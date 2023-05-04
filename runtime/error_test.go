@@ -185,6 +185,66 @@ func TestRuntimeError(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
+			pub resource Resource {
+				init(s:String){
+					panic("42")
+				}
+			}
+		
+			pub fun createResource(): @Resource{
+				return <- create Resource(
+					s: "argument"
+				)
+			}
+			
+			pub fun main() {
+				destroy createResource()
+			}
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		location := common.ScriptLocation{0x1}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  location,
+			},
+		)
+
+		require.EqualError(t, err,
+			"Execution failed:\n"+
+				"  --> 0100000000000000000000000000000000000000000000000000000000000000:15:12\n"+
+				"   |\n"+
+				"15 | 				destroy createResource()\n"+
+				"   | 				        ^^^^^^^^^^^^^^^^\n"+
+				"\n"+
+				"  --> 0100000000000000000000000000000000000000000000000000000000000000:9:21\n"+
+				"   |\n"+
+				" 9 | 				return <- create Resource(\n"+
+				"10 | 					s: \"argument\"\n"+
+				"11 | 				)\n"+
+				"   | 				^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
+				"\n"+
+				"error: panic: 42\n"+
+				" --> 0100000000000000000000000000000000000000000000000000000000000000:4:5\n"+
+				"  |\n"+
+				"4 | 					panic(\"42\")\n"+
+				"  | 					^^^^^^^^^^^\n",
+		)
+	})
+
+	t.Run("execution multiline nested error endline longer", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
 			pub resource R {
 				init(s:String){
 					panic("42")
@@ -194,7 +254,7 @@ func TestRuntimeError(t *testing.T) {
 			pub fun createR(): @R{
 				return <- create R(
 					s: "argument"
-				)
+				/*comment here to fill line */)
 			}
 			
 			pub fun main() {
@@ -227,8 +287,8 @@ func TestRuntimeError(t *testing.T) {
 				"   |\n"+
 				" 9 | 				return <- create R(\n"+
 				"10 | 					s: \"argument\"\n"+
-				"11 | 				)\n"+
-				"   | 				^^^^^^^^^^^^^^^^^^\n"+
+				"11 | 				/*comment here to fill line */)\n"+
+				"   | 				                 ^^^^^^^^^^^^^^\n"+
 				"\n"+
 				"error: panic: 42\n"+
 				" --> 0100000000000000000000000000000000000000000000000000000000000000:4:5\n"+
