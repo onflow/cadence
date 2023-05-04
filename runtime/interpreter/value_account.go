@@ -386,6 +386,8 @@ func accountGetCapabilityFunction(
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 
+	address := addressValue.ToAddress()
+
 	return NewHostFunctionValue(
 		gauge,
 		funcType,
@@ -423,6 +425,24 @@ func accountGetCapabilityFunction(
 			var borrowStaticType StaticType
 			if borrowType != nil {
 				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
+			}
+
+			// Read stored capability, if any
+
+			domain := path.Domain.Identifier()
+			identifier := path.Identifier
+
+			storageMapKey := StringStorageMapKey(identifier)
+
+			readValue := interpreter.ReadStored(address, domain, storageMapKey)
+			if capabilityValue, ok := readValue.(*IDCapabilityValue); ok {
+				// TODO: only if interpreter.IsSubType(capabilityValue.BorrowType, borrowStaticType) ?
+				return NewIDCapabilityValue(
+					gauge,
+					capabilityValue.ID,
+					addressValue,
+					borrowStaticType,
+				)
 			}
 
 			return NewPathCapabilityValue(
