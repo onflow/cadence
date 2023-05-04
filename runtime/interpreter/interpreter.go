@@ -26,13 +26,14 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
 
-	"github.com/onflow/cadence/runtime/activations"
-
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -3479,11 +3480,17 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
 	defer func() {
 		if r := recover(); r != nil {
-			switch r := r.(type) {
-			case errors.UserError, errors.ExternalError:
-				typeError = r.(error)
-			default:
-				panic(r)
+			rootError := r
+			for {
+				switch err := r.(type) {
+				case errors.UserError, errors.ExternalError:
+					typeError = err.(error)
+					return
+				case xerrors.Wrapper:
+					r = err.Unwrap()
+				default:
+					panic(rootError)
+				}
 			}
 		}
 	}()
