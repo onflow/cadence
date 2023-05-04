@@ -337,6 +337,9 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			columns := 1
 			if excerpt.endPos != nil {
 				endColumn := excerpt.endPos.Column
+				if excerpt.startPos.Column > endColumn {
+					endColumn = excerpt.startPos.Column
+				}
 				if endColumn >= maxLineLength {
 					endColumn = maxLineLength - 1
 				}
