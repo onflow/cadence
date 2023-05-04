@@ -343,7 +343,11 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 				if endColumn >= maxLineLength {
 					endColumn = maxLineLength - 1
 				}
-				columns = endColumn - excerpt.startPos.Column + 1
+				startColumn := excerpt.endPos.Column
+				if excerpt.startPos.Column < startColumn {
+					startColumn = excerpt.startPos.Column
+				}
+				columns = endColumn - startColumn + 1
 			}
 
 			indicator := "-"
