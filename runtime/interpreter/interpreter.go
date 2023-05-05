@@ -2492,11 +2492,15 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 }()
 
 type ValueConverterDeclaration struct {
-	min          Value
-	max          Value
-	convert      func(*Interpreter, Value, LocationRange) Value
-	functionType *sema.FunctionType
-	name         string
+	min             Value
+	max             Value
+	convert         func(*Interpreter, Value, LocationRange) Value
+	functionType    *sema.FunctionType
+	nestedVariables []struct {
+		Name  string
+		Value Value
+	}
+	name string
 }
 
 // It would be nice if return types in Go's function types would be covariant
@@ -2684,6 +2688,16 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
 			return ConvertAddress(interpreter, value, locationRange)
 		},
+		nestedVariables: []struct {
+			Name  string
+			Value Value
+		}{{
+			Name: sema.AddressTypeFromBytesFunctionName,
+			Value: NewUnmeteredHostFunctionValue(
+				sema.AddressConversionFunctionType,
+				AddressFromBytes,
+			),
+		}},
 	},
 	{
 		name:         sema.PublicPathType.Name,
@@ -3071,6 +3085,12 @@ var converterFunctionValues = func() []converterFunction {
 
 		addMember(sema.FromStringFunctionName, fromStringVal.hostFunction)
 
+		if declaration.nestedVariables != nil {
+			for _, variable := range declaration.nestedVariables {
+				addMember(variable.Name, variable.Value)
+			}
+		}
+
 		converterFuncValues[index] = converterFunction{
 			name:      declaration.name,
 			converter: converterFunctionValue,
@@ -3413,7 +3433,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			}
 			storageIterator := storageMap.Iterator(interpreter)
 
-			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
+			invocationArgumentTypes := []sema.Type{pathType, sema.MetaType}
 
 			inIteration := inter.SharedState.inStorageIteration
 			inter.SharedState.inStorageIteration = true
@@ -3439,7 +3459,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 					nil,
 					nil,
 					[]Value{pathValue, runtimeType},
-					invocationTypeParams,
+					invocationArgumentTypes,
 					nil,
 					locationRange,
 				)

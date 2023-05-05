@@ -27,6 +27,7 @@ var BoolType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
+	Comparable:    true,
 	Exportable:    true,
 	Importable:    true,
 }

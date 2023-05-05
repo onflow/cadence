@@ -36,6 +36,7 @@ var StorableType = &SimpleType{
 	IsResource: false,
 	Storable:   true,
 	Equatable:  false,
+	Comparable: false,
 	Exportable: false,
 	Importable: false,
 	IsSuperTypeOf: func(subType Type) bool {
