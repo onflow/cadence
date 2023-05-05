@@ -19,6 +19,18 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
+const StorageCapabilityControllerTypeTagFieldName = "tag"
+
+var StorageCapabilityControllerTypeTagFieldType = StringType
+
+const StorageCapabilityControllerTypeTagFieldDocString = `
+An arbitrary "tag" for the controller.
+For example, it could be used to describe the purpose of the capability.
+Empty by default.
+`
+
 const StorageCapabilityControllerTypeBorrowTypeFieldName = "borrowType"
 
 var StorageCapabilityControllerTypeBorrowTypeFieldType = MetaType
@@ -99,6 +111,7 @@ var StorageCapabilityControllerType = &SimpleType{
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
+	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
 }
@@ -106,32 +119,47 @@ var StorageCapabilityControllerType = &SimpleType{
 func init() {
 	StorageCapabilityControllerType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublicSettable,
+				ast.VariableKindVariable,
+				StorageCapabilityControllerTypeTagFieldName,
+				StorageCapabilityControllerTypeTagFieldType,
+				StorageCapabilityControllerTypeTagFieldDocString,
+			),
+			NewUnmeteredFieldMember(
+				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				StorageCapabilityControllerTypeBorrowTypeFieldName,
 				StorageCapabilityControllerTypeBorrowTypeFieldType,
 				StorageCapabilityControllerTypeBorrowTypeFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				StorageCapabilityControllerTypeCapabilityIDFieldName,
 				StorageCapabilityControllerTypeCapabilityIDFieldType,
 				StorageCapabilityControllerTypeCapabilityIDFieldDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				StorageCapabilityControllerTypeDeleteFunctionName,
 				StorageCapabilityControllerTypeDeleteFunctionType,
 				StorageCapabilityControllerTypeDeleteFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				StorageCapabilityControllerTypeTargetFunctionName,
 				StorageCapabilityControllerTypeTargetFunctionType,
 				StorageCapabilityControllerTypeTargetFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				StorageCapabilityControllerTypeRetargetFunctionName,
 				StorageCapabilityControllerTypeRetargetFunctionType,
 				StorageCapabilityControllerTypeRetargetFunctionDocString,

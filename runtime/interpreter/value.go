@@ -999,6 +999,7 @@ func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Val
 
 // StringValue
 
+
 type StringValue struct {
 	// graphemes is a grapheme cluster segmentation iterator,
 	// which is initialized lazily and reused/reset in functions
@@ -1181,7 +1182,7 @@ func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locat
 	)
 }
 
-var emptyString = NewUnmeteredStringValue("")
+var EmptyString = NewUnmeteredStringValue("")
 
 func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRange) Value {
 	fromIndex := from.ToInt(locationRange)
@@ -1208,7 +1209,7 @@ func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRa
 	}
 
 	if fromIndex == toIndex {
-		return emptyString
+		return EmptyString
 	}
 
 	v.prepareGraphemes()

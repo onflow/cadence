@@ -34,6 +34,11 @@ type AccountCapabilityControllerValue struct {
 	CapabilityID UInt64Value
 
 	// Injected functions
+	// Tags are not stored directly inside the controller
+	// to avoid unnecessary storage reads
+	// when the controller is loaded for borrowing/checking
+	GetTag         func() *StringValue
+	SetTag         func(*StringValue)
 	DeleteFunction FunctionValue
 }
 
@@ -157,7 +162,7 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	return v
 }
 
-func (v *AccountCapabilityControllerValue) Clone(interpreter *Interpreter) Value {
+func (v *AccountCapabilityControllerValue) Clone(_ *Interpreter) Value {
 	return &AccountCapabilityControllerValue{
 		BorrowType:   v.BorrowType,
 		CapabilityID: v.CapabilityID,
@@ -185,6 +190,9 @@ func (v *AccountCapabilityControllerValue) ChildStorables() []atree.Storable {
 func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 
 	switch name {
+	case sema.AccountCapabilityControllerTypeTagFieldName:
+		return v.GetTag()
+
 	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
 
@@ -203,8 +211,17 @@ func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 	panic(errors.NewUnreachableError())
 }
 
-func (*AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
-	// Storage capability controllers have no settable members (fields / functions)
+func (v *AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
+	switch identifier {
+	case sema.AccountCapabilityControllerTypeTagFieldName:
+		stringValue, ok := value.(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		v.SetTag(stringValue)
+		return true
+	}
+
 	panic(errors.NewUnreachableError())
 }
 
@@ -225,13 +242,26 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 // SetDeleted sets the controller as deleted, i.e. functions panic from now on
 func (v *AccountCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) {
 
-	panicFunction := func(invocation Invocation) Value {
+	raiseError := func() {
 		panic(errors.NewDefaultUserError("controller is deleted"))
+	}
+
+	v.SetTag = func(s *StringValue) {
+		raiseError()
+	}
+	v.GetTag = func() *StringValue {
+		raiseError()
+		return nil
+	}
+
+	panicHostFunction := func(invocation Invocation) Value {
+		raiseError()
+		return nil
 	}
 
 	v.DeleteFunction = NewHostFunctionValue(
 		gauge,
 		sema.AccountCapabilityControllerTypeDeleteFunctionType,
-		panicFunction,
+		panicHostFunction,
 	)
 }

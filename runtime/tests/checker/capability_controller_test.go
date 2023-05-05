@@ -73,10 +73,15 @@ func TestCheckStorageCapabilityController(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
+          let tag: String = controller.tag
           let borrowType: Type = controller.borrowType
           let capabilityID: UInt64 = controller.capabilityID
           let target: StoragePath = controller.target()
           let _: Void = controller.retarget(/storage/test)
+
+          fun setTag() {
+              controller.tag = "something"
+          }
         `)
 
 		require.NoError(t, err)
@@ -128,8 +133,13 @@ func TestCheckAccountCapabilityController(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
+          let tag: String = controller.tag
           let borrowType: Type = controller.borrowType
           let capabilityID: UInt64 = controller.capabilityID
+
+          fun setTag() {
+              controller.tag = "something"
+          }
         `)
 
 		require.NoError(t, err)

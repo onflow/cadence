@@ -1794,6 +1794,46 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 		t.Parallel()
 
+		t.Run("tag", func(t *testing.T) {
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath = /storage/r
+
+                          // Arrange
+                          let issuedCap: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath)
+                          let controller1: &StorageCapabilityController =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)!
+						  let controller2: &StorageCapabilityController =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)!
+
+                          assert(controller1.tag == "")
+                          assert(controller2.tag == "")
+
+                          // Act
+                          controller1.tag = "something"
+
+                          // Assert
+                          let controller3: &StorageCapabilityController =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)!
+
+						  assert(controller1.tag == "something")
+                          assert(controller2.tag == "something")
+                          assert(controller3.tag == "something")
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
 		t.Run("retarget", func(t *testing.T) {
 
 			t.Parallel()
@@ -2162,6 +2202,44 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 	t.Run("AccountCapabilityController", func(t *testing.T) {
 
 		t.Parallel()
+
+		t.Run("tag", func(t *testing.T) {
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Arrange
+                          let issuedCap: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let controller1: &AccountCapabilityController =
+                              signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
+						  let controller2: &AccountCapabilityController =
+                              signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
+
+                          assert(controller1.tag == "")
+                          assert(controller2.tag == "")
+
+                          // Act
+                          controller1.tag = "something"
+
+                          // Assert
+                          let controller3: &AccountCapabilityController =
+                              signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
+
+						  assert(controller1.tag == "something")
+                          assert(controller2.tag == "something")
+                          assert(controller3.tag == "something")
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
 
 		t.Run("delete", func(t *testing.T) {
 

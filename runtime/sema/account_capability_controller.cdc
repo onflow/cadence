@@ -1,4 +1,10 @@
 pub struct AccountCapabilityController {
+
+    /// An arbitrary "tag" for the controller.
+    /// For example, it could be used to describe the purpose of the capability.
+    /// Empty by default.
+    pub(set) var tag: String
+
     /// The type of the controlled capability, i.e. the T in `Capability<T>`.
     pub let borrowType: Type
 

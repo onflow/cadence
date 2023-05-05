@@ -19,6 +19,18 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
+const AccountCapabilityControllerTypeTagFieldName = "tag"
+
+var AccountCapabilityControllerTypeTagFieldType = StringType
+
+const AccountCapabilityControllerTypeTagFieldDocString = `
+An arbitrary "tag" for the controller.
+For example, it could be used to describe the purpose of the capability.
+Empty by default.
+`
+
 const AccountCapabilityControllerTypeBorrowTypeFieldName = "borrowType"
 
 var AccountCapabilityControllerTypeBorrowTypeFieldType = MetaType
@@ -67,6 +79,7 @@ var AccountCapabilityControllerType = &SimpleType{
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
+	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
 }
@@ -74,20 +87,33 @@ var AccountCapabilityControllerType = &SimpleType{
 func init() {
 	AccountCapabilityControllerType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublicSettable,
+				ast.VariableKindVariable,
+				AccountCapabilityControllerTypeTagFieldName,
+				AccountCapabilityControllerTypeTagFieldType,
+				AccountCapabilityControllerTypeTagFieldDocString,
+			),
+			NewUnmeteredFieldMember(
+				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				AccountCapabilityControllerTypeBorrowTypeFieldName,
 				AccountCapabilityControllerTypeBorrowTypeFieldType,
 				AccountCapabilityControllerTypeBorrowTypeFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				AccountCapabilityControllerTypeCapabilityIDFieldName,
 				AccountCapabilityControllerTypeCapabilityIDFieldType,
 				AccountCapabilityControllerTypeCapabilityIDFieldDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				AccountCapabilityControllerTypeDeleteFunctionName,
 				AccountCapabilityControllerTypeDeleteFunctionType,
 				AccountCapabilityControllerTypeDeleteFunctionDocString,
