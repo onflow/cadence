@@ -427,7 +427,7 @@ Comparison operators work with boolean and integer values.
   d3 != d4 // is `false`
   ```
 
-- Less than: `<`, for integers
+- Less than: `<`, for integers, booleans, characters and strings
 
   ```cadence
   1 < 1  // is `false`
@@ -435,9 +435,27 @@ Comparison operators work with boolean and integer values.
   1 < 2  // is `true`
 
   2 < 1  // is `false`
+
+  false < true // is `true`
+
+  true < true  // is `false`
+
+  "a" < "b"    // is `true`
+
+  "z" < "a"    // is `false`
+
+  "a" < "A"    // is `false`
+
+  "" < ""      // is `false`
+
+  "" < "a"     // is `true`
+
+  "az" < "b"   // is `true`
+
+  "xAB" < "Xab"  // is `false`
   ```
 
-- Less or equal than: `<=`, for integers
+- Less or equal than: `<=`, for integers, booleans, characters and strings
 
   ```cadence
   1 <= 1  // is `true`
@@ -445,9 +463,29 @@ Comparison operators work with boolean and integer values.
   1 <= 2  // is `true`
 
   2 <= 1  // is `false`
+
+  false <= true // is `true`
+
+  true <= true  // is `true`
+
+  true <= false // is `false`
+
+  "c"  <= "a"   // is `false`
+
+  "z"  <= "z"   // is `true`
+
+  "a" <= "A"    // is `false`
+
+  "" <= ""      // is `true`
+
+  "" <= "a"     // is `true`
+
+  "az" <= "b"   // is `true`
+
+  "xAB" <= "Xab"  // is `false`
   ```
 
-- Greater than: `>`, for integers
+- Greater than: `>`, for integers, booleans, characters and strings
 
   ```cadence
   1 > 1  // is `false`
@@ -455,9 +493,29 @@ Comparison operators work with boolean and integer values.
   1 > 2  // is `false`
 
   2 > 1  // is `true`
+
+  false > true // is `false`
+
+  true > true  // is `false`
+
+  true > false // is `true`
+
+  "c"  > "a"   // is `true`
+
+  "g"  > "g"   // is `false`
+
+  "a" > "A"    // is `true`
+
+  "" > ""      // is `false`
+
+  "" > "a"     // is `false`
+
+  "az" > "b"   // is `false`
+
+  "xAB" > "Xab"  // is `true`
   ```
 
-- Greater or equal than: `>=`, for integers
+- Greater or equal than: `>=`, for integers, booleans, characters and strings
 
   ```cadence
   1 >= 1  // is `true`
@@ -465,6 +523,26 @@ Comparison operators work with boolean and integer values.
   1 >= 2  // is `false`
 
   2 >= 1  // is `true`
+
+  false >= true // is `false`
+
+  true >= true  // is `true`
+
+  true >= false // is `true`
+
+  "c"  >= "a"   // is `true`
+
+  "q"  >= "q"   // is `true`
+
+  "a" >= "A"    // is `true`
+
+  "" >= ""      // is `true`
+
+  "" >= "a"     // is `true`
+
+  "az" >= "b"   // is `true`
+
+  "xAB" >= "Xab"  // is `false`
   ```
 
 ### Comparing number super-types

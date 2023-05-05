@@ -31,7 +31,7 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestLiteralValue(t *testing.T) {
+func TestParseLiteral(t *testing.T) {
 	t.Parallel()
 
 	t.Run("String, valid literal", func(t *testing.T) {
@@ -79,6 +79,25 @@ func TestLiteralValue(t *testing.T) {
 		)
 	})
 
+	t.Run("nested Optional, nil", func(t *testing.T) {
+		value, err := ParseLiteral(
+			`nil`,
+			&sema.OptionalType{
+				Type: &sema.OptionalType{
+					Type: sema.BoolType,
+				},
+			},
+			newTestInterpreter(t),
+		)
+		require.NoError(t, err)
+		require.Equal(t,
+			cadence.NewOptional(
+				cadence.NewOptional(nil),
+			),
+			value,
+		)
+	})
+
 	t.Run("Optional, valid literal", func(t *testing.T) {
 		value, err := ParseLiteral(
 			`true`,
@@ -88,6 +107,27 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewOptional(cadence.NewBool(true)),
+			value,
+		)
+	})
+
+	t.Run("nested Optional, valid literal", func(t *testing.T) {
+		value, err := ParseLiteral(
+			`true`,
+			&sema.OptionalType{
+				Type: &sema.OptionalType{
+					Type: sema.BoolType,
+				},
+			},
+			newTestInterpreter(t),
+		)
+		require.NoError(t, err)
+		require.Equal(t,
+			cadence.NewOptional(
+				cadence.NewOptional(
+					cadence.NewBool(true),
+				),
+			),
 			value,
 		)
 	})
