@@ -19,6 +19,9 @@
 package stdlib
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -42,6 +45,7 @@ type TestContractType struct {
 	beGreaterThanFunction             interpreter.FunctionValue
 	containFunction                   interpreter.FunctionValue
 	beLessThanFunction                interpreter.FunctionValue
+	expectFailureFunction             interpreter.FunctionValue
 }
 
 // 'Test.assert' function
@@ -796,6 +800,93 @@ func newTestTypeBeLessThanFunctionType(matcherType *sema.CompositeType) *sema.Fu
 	}
 }
 
+// Test.expectFailure function
+
+const testExpectFailureFunctionName = "expectFailure"
+
+const testExpectFailureFunctionDocString = `
+Wraps a function call in a closure, and expects it to fail with
+an error message that contains the given error message portion.
+`
+
+func newTestTypeExpectFailureFunctionType() *sema.FunctionType {
+	return &sema.FunctionType{
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "functionWrapper",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.FunctionType{
+						Parameters: nil,
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(
+							sema.VoidType,
+						),
+					},
+				),
+			},
+			{
+				Identifier: "errorMessageSubstring",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.StringType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			sema.VoidType,
+		),
+		RequiredArgumentCount: sema.RequiredArgumentCount(2),
+	}
+}
+
+func newTestTypeExpectFailureFunction(
+	testExpectFailureFunctionType *sema.FunctionType,
+) interpreter.FunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		testExpectFailureFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+			functionValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			functionType := functionValue.FunctionType()
+
+			errorMessage, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			failedAsExpected := true
+
+			defer inter.RecoverErrors(func(internalErr error) {
+				if !failedAsExpected {
+					panic(internalErr)
+				} else if !strings.Contains(internalErr.Error(), errorMessage.Str) {
+					msg := fmt.Sprintf(
+						"Expected error message to include: %s.",
+						errorMessage,
+					)
+					panic(
+						errors.NewDefaultUserError(msg),
+					)
+				}
+			})
+
+			_, err := inter.InvokeExternally(
+				functionValue,
+				functionType,
+				nil,
+			)
+			if err == nil {
+				failedAsExpected = false
+				panic(errors.NewDefaultUserError("Expected a failure, but found none."))
+			}
+
+			return interpreter.Void
+		},
+	)
+}
+
 func newTestTypeBeLessThanFunction(
 	beLessThanFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
@@ -1076,6 +1167,21 @@ func newTestContractType() *TestContractType {
 		matcherTestFunctionType,
 	)
 
+	// Test.expectFailure()
+	expectFailureFunctionType := newTestTypeExpectFailureFunctionType()
+	compositeType.Members.Set(
+		testExpectFailureFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testExpectFailureFunctionName,
+			expectFailureFunctionType,
+			testExpectFailureFunctionDocString,
+		),
+	)
+	ty.expectFailureFunction = newTestTypeExpectFailureFunction(
+		expectFailureFunctionType,
+	)
+
 	return ty
 }
 
@@ -1172,6 +1278,7 @@ func (t *TestContractType) NewTestContract(
 	compositeValue.Functions[testTypeContainFunctionName] = t.containFunction
 	compositeValue.Functions[testTypeBeGreaterThanFunctionName] = t.beGreaterThanFunction
 	compositeValue.Functions[testTypeBeLessThanFunctionName] = t.beLessThanFunction
+	compositeValue.Functions[testExpectFailureFunctionName] = t.expectFailureFunction
 
 	return compositeValue, nil
 }
