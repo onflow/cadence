@@ -1,8 +1,8 @@
 # The documentation has been moved to a new location. Please check the links below:
 
-https://github.com/onflow/docs/tree/main/docs/cadence/json-cadence-spec.md
+https://developers.flow.com/cadence
 
 ### To edit this document, go to:
 
-https://developers.flow.com/docs/cadence/json-cadence-spec
+https://github.com/onflow/docs/tree/main/docs/cadence/json-cadence-spec.md
 
