@@ -1,4 +1,4 @@
-// Code generated from testdata/simple-struct.cdc. DO NOT EDIT.
+// Code generated from testdata/comparable.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -29,7 +29,7 @@ var TestType = &SimpleType{
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
-	Comparable:    false,
+	Comparable:    true,
 	Exportable:    false,
 	Importable:    false,
 }
