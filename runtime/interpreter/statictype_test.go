@@ -25,6 +25,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -971,4 +972,488 @@ func TestPrimitiveStaticTypeCount(t *testing.T) {
 	t.Run("No new types added in between", func(t *testing.T) {
 		require.Equal(t, byte(99), byte(PrimitiveStaticType_Count))
 	})
+}
+
+func TestStaticTypeConversion(t *testing.T) {
+
+	t.Parallel()
+
+	const testLocation = common.StringLocation("test")
+
+	const testInterfaceQualifiedIdentifier = "TestInterface"
+
+	testInterfaceSemaType := &sema.InterfaceType{
+		Location:   testLocation,
+		Identifier: testInterfaceQualifiedIdentifier,
+	}
+
+	testInterfaceStaticType := InterfaceStaticType{
+		Location:            testLocation,
+		QualifiedIdentifier: testInterfaceQualifiedIdentifier,
+	}
+
+	const testCompositeQualifiedIdentifier = "TestComposite"
+
+	testCompositeSemaType := &sema.CompositeType{
+		Location:   testLocation,
+		Identifier: testCompositeQualifiedIdentifier,
+	}
+
+	testCompositeStaticType := CompositeStaticType{
+		Location:            testLocation,
+		QualifiedIdentifier: testCompositeQualifiedIdentifier,
+		TypeID:              "S.test.TestComposite",
+	}
+
+	testFunctionType := &sema.FunctionType{}
+
+	tests := []struct {
+		name         string
+		semaType     sema.Type
+		staticType   StaticType
+		getInterface func(
+			location common.Location,
+			qualifiedIdentifier string,
+		) (
+			*sema.InterfaceType,
+			error,
+		)
+		getComposite func(
+			location common.Location,
+			qualifiedIdentifier string,
+			typeID common.TypeID,
+		) (
+			*sema.CompositeType,
+			error,
+		)
+	}{
+		{
+			name:       "Void",
+			semaType:   sema.VoidType,
+			staticType: PrimitiveStaticTypeVoid,
+		},
+		{
+			name:       "Any",
+			semaType:   sema.AnyType,
+			staticType: PrimitiveStaticTypeAny,
+		},
+		{
+			name:       "Never",
+			semaType:   sema.NeverType,
+			staticType: PrimitiveStaticTypeNever,
+		},
+		{
+			name:       "AnyStruct",
+			semaType:   sema.AnyStructType,
+			staticType: PrimitiveStaticTypeAnyStruct,
+		},
+		{
+			name:       "AnyResource",
+			semaType:   sema.AnyResourceType,
+			staticType: PrimitiveStaticTypeAnyResource,
+		},
+		{
+			name:       "Bool",
+			semaType:   sema.BoolType,
+			staticType: PrimitiveStaticTypeBool,
+		},
+		{
+			name:       "Address",
+			semaType:   sema.TheAddressType,
+			staticType: PrimitiveStaticTypeAddress,
+		},
+		{
+			name:       "String",
+			semaType:   sema.StringType,
+			staticType: PrimitiveStaticTypeString,
+		},
+		{
+			name:       "Character",
+			semaType:   sema.CharacterType,
+			staticType: PrimitiveStaticTypeCharacter,
+		},
+		{
+			name:       "MetaType",
+			semaType:   sema.MetaType,
+			staticType: PrimitiveStaticTypeMetaType,
+		},
+		{
+			name:       "Block",
+			semaType:   sema.BlockType,
+			staticType: PrimitiveStaticTypeBlock,
+		},
+
+		{
+			name:       "Number",
+			semaType:   sema.NumberType,
+			staticType: PrimitiveStaticTypeNumber,
+		},
+		{
+			name:       "SignedNumber",
+			semaType:   sema.SignedNumberType,
+			staticType: PrimitiveStaticTypeSignedNumber,
+		},
+
+		{
+			name:       "Integer",
+			semaType:   sema.IntegerType,
+			staticType: PrimitiveStaticTypeInteger,
+		},
+		{
+			name:       "SignedInteger",
+			semaType:   sema.SignedIntegerType,
+			staticType: PrimitiveStaticTypeSignedInteger,
+		},
+
+		{
+			name:       "FixedPoint",
+			semaType:   sema.FixedPointType,
+			staticType: PrimitiveStaticTypeFixedPoint,
+		},
+		{
+			name:       "SignedFixedPoint",
+			semaType:   sema.SignedFixedPointType,
+			staticType: PrimitiveStaticTypeSignedFixedPoint,
+		},
+
+		{
+			name:       "Int",
+			semaType:   sema.IntType,
+			staticType: PrimitiveStaticTypeInt,
+		},
+		{
+			name:       "Int8",
+			semaType:   sema.Int8Type,
+			staticType: PrimitiveStaticTypeInt8,
+		},
+		{
+			name:       "Int16",
+			semaType:   sema.Int16Type,
+			staticType: PrimitiveStaticTypeInt16,
+		},
+		{
+			name:       "Int32",
+			semaType:   sema.Int32Type,
+			staticType: PrimitiveStaticTypeInt32,
+		},
+		{
+			name:       "Int64",
+			semaType:   sema.Int64Type,
+			staticType: PrimitiveStaticTypeInt64,
+		},
+		{
+			name:       "Int128",
+			semaType:   sema.Int128Type,
+			staticType: PrimitiveStaticTypeInt128,
+		},
+		{
+			name:       "Int256",
+			semaType:   sema.Int256Type,
+			staticType: PrimitiveStaticTypeInt256,
+		},
+
+		{
+			name:       "UInt",
+			semaType:   sema.UIntType,
+			staticType: PrimitiveStaticTypeUInt,
+		},
+		{
+			name:       "UInt8",
+			semaType:   sema.UInt8Type,
+			staticType: PrimitiveStaticTypeUInt8,
+		},
+		{
+			name:       "UInt16",
+			semaType:   sema.UInt16Type,
+			staticType: PrimitiveStaticTypeUInt16,
+		},
+		{
+			name:       "UInt32",
+			semaType:   sema.UInt32Type,
+			staticType: PrimitiveStaticTypeUInt32,
+		},
+		{
+			name:       "UInt64",
+			semaType:   sema.UInt64Type,
+			staticType: PrimitiveStaticTypeUInt64,
+		},
+		{
+			name:       "UInt128",
+			semaType:   sema.UInt128Type,
+			staticType: PrimitiveStaticTypeUInt128,
+		},
+		{
+			name:       "UInt256",
+			semaType:   sema.UInt256Type,
+			staticType: PrimitiveStaticTypeUInt256,
+		},
+
+		{
+			name:       "Word8",
+			semaType:   sema.Word8Type,
+			staticType: PrimitiveStaticTypeWord8,
+		},
+		{
+			name:       "Word16",
+			semaType:   sema.Word16Type,
+			staticType: PrimitiveStaticTypeWord16,
+		},
+		{
+			name:       "Word32",
+			semaType:   sema.Word32Type,
+			staticType: PrimitiveStaticTypeWord32,
+		},
+		{
+			name:       "Word64",
+			semaType:   sema.Word64Type,
+			staticType: PrimitiveStaticTypeWord64,
+		},
+
+		{
+			name:       "Fix64",
+			semaType:   sema.Fix64Type,
+			staticType: PrimitiveStaticTypeFix64,
+		},
+
+		{
+			name:       "UFix64",
+			semaType:   sema.UFix64Type,
+			staticType: PrimitiveStaticTypeUFix64,
+		},
+
+		{
+			name:       "Path",
+			semaType:   sema.PathType,
+			staticType: PrimitiveStaticTypePath,
+		},
+		{
+			name:       "Capability",
+			semaType:   &sema.CapabilityType{},
+			staticType: PrimitiveStaticTypeCapability,
+		},
+		{
+			name:       "StoragePath",
+			semaType:   sema.StoragePathType,
+			staticType: PrimitiveStaticTypeStoragePath,
+		},
+		{
+			name:       "CapabilityPath",
+			semaType:   sema.CapabilityPathType,
+			staticType: PrimitiveStaticTypeCapabilityPath,
+		},
+		{
+			name:       "PublicPath",
+			semaType:   sema.PublicPathType,
+			staticType: PrimitiveStaticTypePublicPath,
+		},
+		{
+			name:       "PrivatePath",
+			semaType:   sema.PrivatePathType,
+			staticType: PrimitiveStaticTypePrivatePath,
+		},
+
+		{
+			name:       "AuthAccount",
+			semaType:   sema.AuthAccountType,
+			staticType: PrimitiveStaticTypeAuthAccount,
+		},
+		{
+			name:       "PublicAccount",
+			semaType:   sema.PublicAccountType,
+			staticType: PrimitiveStaticTypePublicAccount,
+		},
+
+		{
+			name:       "DeployedContract",
+			semaType:   sema.DeployedContractType,
+			staticType: PrimitiveStaticTypeDeployedContract,
+		},
+		{
+			name:       "AuthAccount.Contracts",
+			semaType:   sema.AuthAccountContractsType,
+			staticType: PrimitiveStaticTypeAuthAccountContracts,
+		},
+		{
+			name:       "PublicAccount.Contracts",
+			semaType:   sema.PublicAccountContractsType,
+			staticType: PrimitiveStaticTypePublicAccountContracts,
+		},
+		{
+			name:       "AuthAccount.Keys",
+			semaType:   sema.AuthAccountKeysType,
+			staticType: PrimitiveStaticTypeAuthAccountKeys,
+		},
+		{
+			name:       "PublicAccount.Keys",
+			semaType:   sema.PublicAccountKeysType,
+			staticType: PrimitiveStaticTypePublicAccountKeys,
+		},
+		{
+			name:       "AccountKey",
+			semaType:   sema.AccountKeyType,
+			staticType: PrimitiveStaticTypeAccountKey,
+		},
+		{
+			name:       "AuthAccount.Inbox",
+			semaType:   sema.AuthAccountInboxType,
+			staticType: PrimitiveStaticTypeAuthAccountInbox,
+		},
+
+		{
+			name:       "Unparameterized Capability",
+			semaType:   &sema.CapabilityType{},
+			staticType: PrimitiveStaticTypeCapability,
+		},
+		{
+			name: "Parameterized  Capability",
+			semaType: &sema.CapabilityType{
+				BorrowType: sema.IntType,
+			},
+			staticType: CapabilityStaticType{
+				BorrowType: PrimitiveStaticTypeInt,
+			},
+		},
+
+		{
+			name: "Variable-sized array",
+			semaType: &sema.VariableSizedType{
+				Type: sema.IntType,
+			},
+			staticType: VariableSizedStaticType{
+				Type: PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			name: "Constant-sized array",
+			semaType: &sema.ConstantSizedType{
+				Type: sema.IntType,
+				Size: 42,
+			},
+			staticType: ConstantSizedStaticType{
+				Type: PrimitiveStaticTypeInt,
+				Size: 42,
+			},
+		},
+		{
+			name: "Optional",
+			semaType: &sema.OptionalType{
+				Type: sema.IntType,
+			},
+			staticType: OptionalStaticType{
+				Type: PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			name: "Reference",
+			semaType: &sema.ReferenceType{
+				Type:       sema.IntType,
+				Authorized: true,
+			},
+			staticType: ReferenceStaticType{
+				BorrowedType: PrimitiveStaticTypeInt,
+				Authorized:   true,
+			},
+		},
+		{
+			name: "Dictionary",
+			semaType: &sema.DictionaryType{
+				KeyType:   sema.IntType,
+				ValueType: sema.StringType,
+			},
+			staticType: DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeInt,
+				ValueType: PrimitiveStaticTypeString,
+			},
+		},
+		{
+			name: "Restricted",
+			semaType: &sema.RestrictedType{
+				Type: sema.IntType,
+				Restrictions: []*sema.InterfaceType{
+					testInterfaceSemaType,
+				},
+			},
+			staticType: &RestrictedStaticType{
+				Type: PrimitiveStaticTypeInt,
+				Restrictions: []InterfaceStaticType{
+					testInterfaceStaticType,
+				},
+			},
+			getInterface: func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+				require.Equal(t, testLocation, location)
+				require.Equal(t, testInterfaceQualifiedIdentifier, qualifiedIdentifier)
+				return testInterfaceSemaType, nil
+			},
+		},
+		{
+			name:       "Interface",
+			semaType:   testInterfaceSemaType,
+			staticType: testInterfaceStaticType,
+			getInterface: func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+				require.Equal(t, testLocation, location)
+				require.Equal(t, testInterfaceQualifiedIdentifier, qualifiedIdentifier)
+				return testInterfaceSemaType, nil
+			},
+		},
+		{
+			name:       "Composite",
+			semaType:   testCompositeSemaType,
+			staticType: testCompositeStaticType,
+			getComposite: func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+				require.Equal(t, testLocation, location)
+				require.Equal(t, testCompositeQualifiedIdentifier, qualifiedIdentifier)
+				return testCompositeSemaType, nil
+			},
+		},
+		{
+			name:     "Function",
+			semaType: testFunctionType,
+			staticType: FunctionStaticType{
+				Type: testFunctionType,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			// Test sema to static
+
+			convertedStaticType := ConvertSemaToStaticType(nil, test.semaType)
+			require.Equal(t,
+				test.staticType,
+				convertedStaticType,
+			)
+
+			// Test static to sema
+
+			getInterface := test.getInterface
+			if getInterface == nil {
+				getInterface = func(_ common.Location, _ string) (*sema.InterfaceType, error) {
+					require.FailNow(t, "getInterface should not be called")
+					return nil, nil
+				}
+			}
+
+			getComposite := test.getComposite
+			if getComposite == nil {
+				getComposite = func(_ common.Location, _ string, _ common.TypeID) (*sema.CompositeType, error) {
+					require.FailNow(t, "getComposite should not be called")
+					return nil, nil
+				}
+			}
+
+			convertedSemaType, err := ConvertStaticToSemaType(
+				nil,
+				test.staticType,
+				getInterface,
+				getComposite,
+			)
+			require.NoError(t, err)
+			require.Equal(t,
+				test.semaType,
+				convertedSemaType,
+			)
+		})
+	}
 }

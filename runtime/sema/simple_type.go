@@ -47,6 +47,7 @@ type SimpleType struct {
 	Importable          bool
 	Exportable          bool
 	Equatable           bool
+	Comparable          bool
 	Storable            bool
 	IsResource          bool
 }
@@ -91,6 +92,10 @@ func (t *SimpleType) IsStorable(_ map[*Member]bool) bool {
 
 func (t *SimpleType) IsEquatable() bool {
 	return t.Equatable
+}
+
+func (t *SimpleType) IsComparable() bool {
+	return t.Comparable
 }
 
 func (t *SimpleType) IsExportable(_ map[*Member]bool) bool {
