@@ -7980,3 +7980,58 @@ error: unexpectedly found nil while forcing an Optional value
 
 	require.Equal(t, errorString, err.Error())
 }
+
+// https://github.com/onflow/cadence/issues/2464
+func TestRuntimeAccountTypeEquality(t *testing.T) {
+
+	t.Parallel()
+
+	rt := testInterpreterRuntime{
+		interpreterRuntime: NewInterpreterRuntime(
+			Config{
+				AccountLinkingEnabled: true,
+			},
+		).(*interpreterRuntime),
+	}
+	rt.Config()
+
+	script := []byte(`
+      #allowAccountLinking
+
+      pub fun main(address: Address): AnyStruct {
+          let acct = getAuthAccount(address)
+          let p = /private/tmp
+
+          acct.linkAccount(p)
+          let capType = acct.getCapability<&AuthAccount>(p).borrow()!.getType()
+
+          return Type<AuthAccount>() == capType
+      }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return jsoncdc.Decode(nil, b)
+		},
+		emitEvent: func(_ cadence.Event) error {
+			return nil
+		},
+	}
+
+	result, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+			Arguments: encodeArgs([]cadence.Value{
+				cadence.Address(common.MustBytesToAddress([]byte{0x1})),
+			}),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t, cadence.Bool(true), result)
+}

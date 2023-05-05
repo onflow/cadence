@@ -695,6 +695,12 @@ func (t CapabilityStaticType) Equal(other StaticType) bool {
 // Conversion
 
 func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) StaticType {
+
+	primitiveStaticType := ConvertSemaToPrimitiveStaticType(memoryGauge, t)
+	if primitiveStaticType != PrimitiveStaticTypeUnknown {
+		return primitiveStaticType
+	}
+
 	switch t := t.(type) {
 	case *sema.CompositeType:
 		return NewCompositeStaticType(memoryGauge, t.Location, t.QualifiedIdentifier(), t.ID())
@@ -735,21 +741,19 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		return ConvertSemaReferenceTypeToStaticReferenceType(memoryGauge, t)
 
 	case *sema.CapabilityType:
-		var borrowType StaticType
-		if t.BorrowType != nil {
-			borrowType = ConvertSemaToStaticType(memoryGauge, t.BorrowType)
+		if t.BorrowType == nil {
+			// Unparameterized Capability type should have been
+			// converted to primitive static type earlier
+			panic(errors.NewUnreachableError())
 		}
+		borrowType := ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		return NewCapabilityStaticType(memoryGauge, borrowType)
 
 	case *sema.FunctionType:
 		return NewFunctionStaticType(memoryGauge, t)
 	}
 
-	primitiveStaticType := ConvertSemaToPrimitiveStaticType(memoryGauge, t)
-	if primitiveStaticType == PrimitiveStaticTypeUnknown {
-		return nil
-	}
-	return primitiveStaticType
+	return nil
 }
 
 func ConvertSemaArrayTypeToStaticArrayType(

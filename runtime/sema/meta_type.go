@@ -41,6 +41,7 @@ var MetaType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
+	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
 }
