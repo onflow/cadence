@@ -26,6 +26,7 @@ import (
 )
 
 var AddressOverflowError = goErrors.New("address too large")
+var InvalidHexAddressError = goErrors.New("invalid hex string for address")
 
 const AddressLength = 8
 
@@ -119,7 +120,7 @@ func HexToAddress(h string) (Address, error) {
 	}
 	b, err := hex.DecodeString(trimmed)
 	if err != nil {
-		return Address{}, err
+		return Address{}, InvalidHexAddressError
 	}
 	return BytesToAddress(b)
 }
