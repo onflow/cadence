@@ -4018,6 +4018,53 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 	)
 }
 
+func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressValue) *HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return NewHostFunctionValue(
+		interpreter,
+		sema.AuthAccountTypeCheckFunctionType,
+		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
+			path, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			ty := typeParameterPair.Value
+
+			referenceType, ok := ty.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			reference := NewStorageReferenceValue(
+				interpreter,
+				referenceType.Authorized,
+				address,
+				path,
+				referenceType.Type,
+			)
+
+			// Attempt to dereference,
+			// which reads the stored value
+			// and performs a dynamic type check
+
+			return AsBoolValue(
+				reference.ReferencedValue(interpreter, invocation.LocationRange, false) != nil,
+			)
+		},
+	)
+}
+
 func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) *HostFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
