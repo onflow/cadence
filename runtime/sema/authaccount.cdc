@@ -109,6 +109,12 @@ pub struct AuthAccount {
     /// The path must be a storage path, i.e., only the domain `storage` is allowed
     pub fun borrow<T: &Any>(from: StoragePath): T?
 
+    /// Returns true if the object in account storage under the given path satisfies the given type, 
+    /// i.e. could be borrowed using the given type.
+    ///
+    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
+    pub fun check<T: &Any>(from: StoragePath): Bool
+
     /// **DEPRECATED**: Instead, use `capabilities.storage.issue`, and `capabilities.publish` if the path is public.
     ///
     /// Creates a capability at the given public or private path,
