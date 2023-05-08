@@ -2692,14 +2692,14 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 			{
 				Name: sema.AddressTypeFromBytesFunctionName,
 				Value: NewUnmeteredHostFunctionValue(
-					sema.AddressConversionFunctionType,
+					sema.AddressTypeFromBytesFunctionType,
 					AddressFromBytes,
 				),
 			},
 			{
 				Name: sema.AddressTypeFromStringFunctionName,
 				Value: NewUnmeteredHostFunctionValue(
-					sema.AddressConversionFunctionType,
+					sema.AddressTypeFromStringFunctionType,
 					AddressFromString,
 				),
 			},
