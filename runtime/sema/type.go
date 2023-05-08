@@ -3387,16 +3387,7 @@ const AddressTypeFromStringFunctionDocString = `
 Attempts to parse an Address from the input string. Panics on invalid input.
 `
 
-var AddressTypeFromStringFunctionType = &FunctionType{
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "input",
-			TypeAnnotation: NewTypeAnnotation(StringType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
-}
+var AddressTypeFromStringFunctionType = FromStringFunctionType(StringType)
 
 func init() {
 	// Declare a conversion function for the address type
