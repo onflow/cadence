@@ -3384,7 +3384,7 @@ var AddressTypeFromBytesFunctionType = &FunctionType{
 
 const AddressTypeFromStringFunctionName = "fromString"
 const AddressTypeFromStringFunctionDocString = `
-Attempts to parse an Address from the input string. Panics on invalid input.
+Attempts to parse an Address from the input string. Returns nil on invalid input.
 `
 
 var AddressTypeFromStringFunctionType = FromStringFunctionType(TheAddressType)
