@@ -112,6 +112,16 @@ func (a Address) HexWithPrefix() string {
 	return fmt.Sprintf("0x%x", [AddressLength]byte(a))
 }
 
+// HexToAddress converts a hex string to an Address after
+// ensuring that the hex string starts with the prefix 0x.
+func HexToAddressAssertPrefix(h string) (Address, error) {
+	if !strings.HasPrefix(h, "0x") {
+		return Address{}, InvalidHexAddressError
+	}
+
+	return HexToAddress(h)
+}
+
 // HexToAddress converts a hex string to an Address.
 func HexToAddress(h string) (Address, error) {
 	trimmed := strings.TrimPrefix(h, "0x")

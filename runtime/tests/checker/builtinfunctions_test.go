@@ -146,9 +146,10 @@ func TestCheckAddressFromString(t *testing.T) {
 			require.NoError(t, err)
 
 			resType := RequireGlobalValue(t, checker.Elaboration, "address")
-
-			assert.Equal(t,
-				sema.TheAddressType,
+			require.Equal(t,
+				&sema.OptionalType{
+					Type: sema.TheAddressType,
+				},
 				resType,
 			)
 		})
@@ -167,10 +168,12 @@ func TestCheckAddressFromString(t *testing.T) {
 		})
 	}
 
-	runValidCase(t, "\"1\"")
-	runValidCase(t, "\"ab\"")
 	runValidCase(t, "\"0x1\"")
 	runValidCase(t, "\"0x436164656E636521\"")
+
+	// While these inputs will return Nil, for the checker these are valid inputs.
+	runValidCase(t, "\"1\"")
+	runValidCase(t, "\"ab\"")
 
 	runInvalidCase(t, "[1232]", &sema.TypeMismatchError{})
 	runInvalidCase(t, "1", &sema.TypeMismatchError{})

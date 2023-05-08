@@ -244,7 +244,7 @@ func TestInterpretAddressFromString(t *testing.T) {
 			t.Parallel()
 
 			code := fmt.Sprintf(`
-                  fun test(): Address {
+                  fun test(): Address? {
                       return Address.fromString(%s)
                   }
             	`,
@@ -256,9 +256,12 @@ func TestInterpretAddressFromString(t *testing.T) {
 
 			require.NoError(t, err)
 
-			addressVal, ok := res.(interpreter.AddressValue)
+			addressOpt, ok := res.(*interpreter.SomeValue)
 			require.True(t, ok)
 
+			innerValue := addressOpt.InnerValue(inter, interpreter.EmptyLocationRange)
+			addressVal, ok := innerValue.(interpreter.AddressValue)
+			require.True(t, ok)
 			require.Equal(t, expected, addressVal.ToAddress().HexWithPrefix())
 		})
 	}
@@ -268,11 +271,11 @@ func TestInterpretAddressFromString(t *testing.T) {
 			t.Parallel()
 
 			code := fmt.Sprintf(`
-                  fun test(): Bool {
-                    let address : Address = %s;
-					return address == Address.fromString(address.toString());
-                  }
-            	`,
+	              fun test(): Bool {
+	                let address : Address? = %s;
+					return address == Address.fromString(address!.toString());
+	              }
+	        	`,
 				innerCode,
 			)
 
@@ -288,12 +291,12 @@ func TestInterpretAddressFromString(t *testing.T) {
 		})
 	}
 
-	runInvalidCase := func(t *testing.T, innerCode string, expectedErrorType error) {
+	runInvalidCase := func(t *testing.T, innerCode string) {
 		t.Run(innerCode, func(t *testing.T) {
 			t.Parallel()
 
 			code := fmt.Sprintf(`
-	              fun test(): Address {
+	              fun test(): Address? {
 	                  return Address.fromString(%s)
 	              }
 	        	`,
@@ -301,17 +304,13 @@ func TestInterpretAddressFromString(t *testing.T) {
 			)
 
 			inter := parseCheckAndInterpret(t, code)
-			_, err := inter.Invoke("test")
+			res, err := inter.Invoke("test")
+			require.NoError(t, err)
 
-			RequireError(t, err)
-			require.ErrorIs(t, err, expectedErrorType)
+			_, ok := res.(interpreter.NilValue)
+			require.True(t, ok)
 		})
 	}
-
-	// Without '0x' prefix.
-	runValidCase(t, "0x0000000000000000", "\"0\"")
-	runValidCase(t, "0x0000000000000001", "\"01\"")
-	runValidCase(t, "0x436164656e636521", "\"436164656E636521\"")
 
 	// Note: output of HexWithPrefix() lowercases the 'E'.
 	runValidCase(t, "0x436164656e636521", "\"0x436164656E636521\"")
@@ -322,10 +321,10 @@ func TestInterpretAddressFromString(t *testing.T) {
 	runValidRoundTripCase(t, "0x01")
 	runValidRoundTripCase(t, "0x46716465AE633188")
 
-	runInvalidCase(t, "\"ZZZ\"", common.InvalidHexAddressError)
-	runInvalidCase(t, "\"436164656E63652146757265766572\"", common.AddressOverflowError)
-	runInvalidCase(t, "\"0xZZZ\"", common.InvalidHexAddressError)
-	runInvalidCase(t, "\"0x436164656E63652146757265766572\"", common.AddressOverflowError)
+	runInvalidCase(t, "\"436164656E636521\"")
+	runInvalidCase(t, "\"ZZZ\"")
+	runInvalidCase(t, "\"0xZZZ\"")
+	runInvalidCase(t, "\"0x436164656E63652146757265766572\"")
 }
 
 func TestInterpretToBigEndianBytes(t *testing.T) {

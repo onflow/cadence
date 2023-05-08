@@ -18071,12 +18071,13 @@ func AddressFromString(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	addr, err := common.HexToAddress(argument.Str)
+	addr, err := common.HexToAddressAssertPrefix(argument.Str)
 	if err != nil {
-		panic(err)
+		return Nil
 	}
 
-	return NewAddressValue(invocation.Interpreter, addr)
+	inter := invocation.Interpreter
+	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
 }
 
 func accountGetCapabilityFunction(
