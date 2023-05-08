@@ -19,7 +19,10 @@
 
 package sema
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+)
 
 const PublicAccountTypeAddressFieldName = "address"
 
@@ -266,20 +269,24 @@ var PublicAccountContractsType = func() *CompositeType {
 
 func init() {
 	var members = []*Member{
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountContractsType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
 			PublicAccountContractsTypeNamesFieldName,
 			PublicAccountContractsTypeNamesFieldType,
 			PublicAccountContractsTypeNamesFieldDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountContractsType,
+			ast.AccessPublic,
 			PublicAccountContractsTypeGetFunctionName,
 			PublicAccountContractsTypeGetFunctionType,
 			PublicAccountContractsTypeGetFunctionDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountContractsType,
+			ast.AccessPublic,
 			PublicAccountContractsTypeBorrowFunctionName,
 			PublicAccountContractsTypeBorrowFunctionType,
 			PublicAccountContractsTypeBorrowFunctionDocString,
@@ -367,20 +374,24 @@ var PublicAccountKeysType = func() *CompositeType {
 
 func init() {
 	var members = []*Member{
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountKeysType,
+			ast.AccessPublic,
 			PublicAccountKeysTypeGetFunctionName,
 			PublicAccountKeysTypeGetFunctionType,
 			PublicAccountKeysTypeGetFunctionDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountKeysType,
+			ast.AccessPublic,
 			PublicAccountKeysTypeForEachFunctionName,
 			PublicAccountKeysTypeForEachFunctionType,
 			PublicAccountKeysTypeForEachFunctionDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountKeysType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
 			PublicAccountKeysTypeCountFieldName,
 			PublicAccountKeysTypeCountFieldType,
 			PublicAccountKeysTypeCountFieldDocString,
@@ -408,68 +419,87 @@ var PublicAccountType = func() *CompositeType {
 
 func init() {
 	var members = []*Member{
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
 			PublicAccountTypeAddressFieldName,
 			PublicAccountTypeAddressFieldType,
 			PublicAccountTypeAddressFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
 			PublicAccountTypeBalanceFieldName,
 			PublicAccountTypeBalanceFieldType,
 			PublicAccountTypeBalanceFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
 			PublicAccountTypeAvailableBalanceFieldName,
 			PublicAccountTypeAvailableBalanceFieldType,
 			PublicAccountTypeAvailableBalanceFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
 			PublicAccountTypeStorageUsedFieldName,
 			PublicAccountTypeStorageUsedFieldType,
 			PublicAccountTypeStorageUsedFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
 			PublicAccountTypeStorageCapacityFieldName,
 			PublicAccountTypeStorageCapacityFieldType,
 			PublicAccountTypeStorageCapacityFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
 			PublicAccountTypeContractsFieldName,
 			PublicAccountTypeContractsFieldType,
 			PublicAccountTypeContractsFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
 			PublicAccountTypeKeysFieldName,
 			PublicAccountTypeKeysFieldType,
 			PublicAccountTypeKeysFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
 			PublicAccountTypePublicPathsFieldName,
 			PublicAccountTypePublicPathsFieldType,
 			PublicAccountTypePublicPathsFieldDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountType,
+			ast.AccessPublic,
 			PublicAccountTypeGetCapabilityFunctionName,
 			PublicAccountTypeGetCapabilityFunctionType,
 			PublicAccountTypeGetCapabilityFunctionDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountType,
+			ast.AccessPublic,
 			PublicAccountTypeGetLinkTargetFunctionName,
 			PublicAccountTypeGetLinkTargetFunctionType,
 			PublicAccountTypeGetLinkTargetFunctionDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountType,
+			ast.AccessPublic,
 			PublicAccountTypeForEachPublicFunctionName,
 			PublicAccountTypeForEachPublicFunctionType,
 			PublicAccountTypeForEachPublicFunctionDocString,
