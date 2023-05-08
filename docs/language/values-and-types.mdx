@@ -415,16 +415,16 @@ let someAddress: Address = Address.fromBytes([67, 97, 100, 101, 110, 99, 101, 33
 let invalidAddress: Address = Address.fromBytes([12, 34, 56, 11, 22, 33, 44, 55, 66, 77, 88, 99, 111])
 
 // Declare an address with the string representation as "0x436164656E636521".
-let addressFromString: Address = Address.fromString("0x436164656E636521")
+let addressFromString: Address? = Address.fromString("0x436164656E636521")
 
-// Declare an address with the string representation without the "0x" prefix.
-let addressFromStringWithoutPrefix: Address = Address.fromString("436164656E636521")
+// Invalid: Provided value does not have the "0x" prefix. Returns Nil
+let addressFromStringWithoutPrefix: Address? = Address.fromString("436164656E636521")
 
-// Invalid: Provided value is a valid hex string. The function panics.
-let invalidAddressForInvalidHex: Address = Address.fromString("0xZZZ")
+// Invalid: Provided value is an invalid hex string. Return Nil.
+let invalidAddressForInvalidHex: Address? = Address.fromString("0xZZZ")
 
-// Invalid: Provided value is larger than 64 bits. The function panics.
-let invalidAddressForOverflow: Address = Address.fromString("0x436164656E63652146757265766572")
+// Invalid: Provided value is larger than 64 bits. Return Nil.
+let invalidAddressForOverflow: Address? = Address.fromString("0x436164656E63652146757265766572")
 ```
 
 ### Address Functions
