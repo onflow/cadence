@@ -263,8 +263,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Parallel()
 
-				// TODO: add support for private paths
-
 				// Test that it is possible to construct a path capability with getCapability,
 				// issue a capability controller and publish it at the public path,
 				// then check/borrow the path capability.
@@ -272,7 +270,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// This requires that the existing link-based capability API supports following ID capabilities,
 				// i.e. looking up the target path from the controller.
 
-				t.Run("storage capability", func(t *testing.T) {
+				t.Run("public path, storage capability", func(t *testing.T) {
 					err, _, _ := test(
 						fmt.Sprintf(
 							// language=cadence
@@ -307,7 +305,40 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.NoError(t, err)
 				})
 
-				// TODO: account capability
+				t.Run("public path, account capability", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+
+                                      // Arrange
+                                      let gotCap: Capability<&AuthAccount> =
+                                          %s.getCapability<&AuthAccount>(publicPath)
+
+                                      // Act
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Assert
+                                      assert(gotCap.id == 0)
+                                      assert(gotCap.check())
+                                      assert(gotCap.borrow()!.address == 0x1)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				// Private storage/account capability is tested in migrateLink test
 			})
 
 			t.Run("get and check existing, with valid type", func(t *testing.T) {
