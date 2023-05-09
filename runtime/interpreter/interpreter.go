@@ -4056,35 +4056,7 @@ func (interpreter *Interpreter) pathCapabilityBorrowFunction(
 
 			switch target := target.(type) {
 			case nil:
-				// For backwards-compatibility, follow ID capability values
-				// which are published in the public domain
-				// TODO: maybe also support private (using internal mapping, after migration)
-				if pathValue.Domain == common.PathDomainPublic {
-
-					domain := pathValue.Domain.Identifier()
-					identifier := pathValue.Identifier
-
-					storageMapKey := StringStorageMapKey(identifier)
-
-					value := interpreter.ReadStored(address, domain, storageMapKey)
-
-					if capabilityValue, ok := value.(*IDCapabilityValue); ok {
-						capabilityBorrowType, ok :=
-							interpreter.MustConvertStaticToSemaType(capabilityValue.BorrowType).(*sema.ReferenceType)
-						if !ok {
-							panic(errors.NewUnreachableError())
-						}
-
-						reference = interpreter.SharedState.Config.IDCapabilityBorrowHandler(
-							interpreter,
-							locationRange,
-							addressValue,
-							capabilityValue.ID,
-							borrowType,
-							capabilityBorrowType,
-						)
-					}
-				}
+				reference = nil
 
 			case AccountCapabilityTarget:
 				reference = NewAccountReferenceValue(
@@ -4142,6 +4114,7 @@ func (interpreter *Interpreter) pathCapabilityCheckFunction(
 		interpreter,
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 		func(invocation Invocation) Value {
+
 			interpreter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
@@ -4167,43 +4140,13 @@ func (interpreter *Interpreter) pathCapabilityCheckFunction(
 					address,
 					pathValue,
 					borrowType,
-					invocation.LocationRange,
+					locationRange,
 				)
 			if err != nil {
 				panic(err)
 			}
 
 			if target == nil {
-				// For backwards-compatibility, follow ID capability values
-				// which are published in the public domain
-				// TODO: maybe also support private (using internal mapping, after migration)
-				if pathValue.Domain == common.PathDomainPublic {
-
-					domain := pathValue.Domain.Identifier()
-					identifier := pathValue.Identifier
-
-					storageMapKey := StringStorageMapKey(identifier)
-
-					value := interpreter.ReadStored(address, domain, storageMapKey)
-
-					if capabilityValue, ok := value.(*IDCapabilityValue); ok {
-						capabilityBorrowType, ok :=
-							interpreter.MustConvertStaticToSemaType(capabilityValue.BorrowType).(*sema.ReferenceType)
-						if !ok {
-							panic(errors.NewUnreachableError())
-						}
-
-						return interpreter.SharedState.Config.IDCapabilityCheckHandler(
-							interpreter,
-							locationRange,
-							addressValue,
-							capabilityValue.ID,
-							borrowType,
-							capabilityBorrowType,
-						)
-					}
-				}
-
 				return FalseValue
 			}
 
@@ -4301,7 +4244,48 @@ func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
 				nil
 
 		case *IDCapabilityValue:
-			return nil, false, nil
+
+			// For backwards-compatibility, follow ID capability values
+			// which are published in the public or private domain
+
+			switch path.Domain {
+			case common.PathDomainPublic,
+				common.PathDomainPrivate:
+
+				capabilityBorrowType, ok :=
+					interpreter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				reference := interpreter.SharedState.Config.IDCapabilityBorrowHandler(
+					interpreter,
+					locationRange,
+					value.Address,
+					value.ID,
+					wantedBorrowType,
+					capabilityBorrowType,
+				)
+				if reference == nil {
+					return nil, false, nil
+				}
+
+				switch reference := reference.(type) {
+				case *StorageReferenceValue:
+					address = reference.TargetStorageAddress
+					targetPath := reference.TargetPath
+					paths = append(paths, targetPath)
+					path = targetPath
+
+				case *AccountReferenceValue:
+					return AccountCapabilityTarget(reference.Address),
+						false,
+						nil
+
+				default:
+					return nil, false, nil
+				}
+			}
 
 		default:
 			return PathCapabilityTarget(path),

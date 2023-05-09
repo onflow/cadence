@@ -1314,13 +1314,16 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           transaction {
                               prepare(signer: AuthAccount) {
                                   let storagePath = /storage/r
+                                  let publicPath = /public/r
                                   let privatePath = /private/r
                                   let expectedCapID: UInt64 = 1
                                   let resourceID = 42
 
                                   // Arrange
                                   Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let linkedCap: Capability<&Test.R> =
+                                  let linkedCap1: Capability<&Test.R> =
+                                      signer.link<&Test.R>(publicPath, target: privatePath)!
+                                  let linkedCap2: Capability<&Test.R> =
                                       signer.link<&Test.R>(privatePath, target: storagePath)!
 
                                   // Act
@@ -1333,16 +1336,25 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       signer.capabilities.storage.getController(byCapabilityID: capID!)!
                                   assert(controller.target() == storagePath)
 
-                                  let gotCap = signer.getCapability<&Test.R>(privatePath)
-                                  assert(gotCap.id == expectedCapID)
+                                  assert(linkedCap1.borrow() != nil)
+                                  assert(linkedCap1.check())
+                                  assert(linkedCap1.borrow()!.id == resourceID)
 
-                                  assert(linkedCap.borrow() != nil)
-                                  assert(linkedCap.check())
-                                  assert(linkedCap.borrow()!.id == resourceID)
+                                  assert(linkedCap2.borrow() != nil)
+                                  assert(linkedCap2.check())
+                                  assert(linkedCap2.borrow()!.id == resourceID)
 
-                                  assert(gotCap.borrow() != nil)
-                                  assert(gotCap.check())
-                                  assert(gotCap.borrow()!.id == resourceID)
+                                  let gotCap1 = signer.getCapability<&Test.R>(publicPath)
+                                  assert(gotCap1.id == 0)
+                                  assert(gotCap1.borrow() != nil)
+                                  assert(gotCap1.check())
+                                  assert(gotCap1.borrow()!.id == resourceID)
+
+                                  let gotCap2 = signer.getCapability<&Test.R>(privatePath)
+                                  assert(gotCap2.id == expectedCapID)
+                                  assert(gotCap2.borrow() != nil)
+                                  assert(gotCap2.check())
+                                  assert(gotCap2.borrow()!.id == resourceID)
                               }
                           }
                         `,
@@ -1362,11 +1374,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                           transaction {
                               prepare(signer: AuthAccount) {
+                                  let publicPath = /public/account
                                   let privatePath = /private/account
                                   let expectedCapID: UInt64 = 1
 
                                   // Arrange
-                                  let linkedCap: Capability<&AuthAccount> =
+                                  let linkedCap1: Capability<&AuthAccount> =
+                                      signer.link<&AuthAccount>(publicPath, target: privatePath)!
+                                  let linkedCap2: Capability<&AuthAccount> =
                                       signer.linkAccount(privatePath)!
 
                                   // Act
@@ -1378,16 +1393,25 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                   let controller: &AccountCapabilityController =
                                       signer.capabilities.account.getController(byCapabilityID: capID!)!
 
-                                  let gotCap = signer.getCapability<&AuthAccount>(privatePath)
-                                  assert(gotCap.id == expectedCapID)
+                                  assert(linkedCap1.borrow() != nil)
+                                  assert(linkedCap1.check())
+                                  assert(linkedCap1.borrow()!.address == 0x1)
 
-                                  assert(linkedCap.borrow() != nil)
-                                  assert(linkedCap.check())
-                                  assert(linkedCap.borrow()!.address == 0x1)
+                                  assert(linkedCap2.borrow() != nil)
+                                  assert(linkedCap2.check())
+                                  assert(linkedCap2.borrow()!.address == 0x1)
 
-                                  assert(gotCap.borrow() != nil)
-                                  assert(gotCap.check())
-                                  assert(gotCap.borrow()!.address == 0x1)
+                                  let gotCap1 = signer.getCapability<&AuthAccount>(publicPath)
+                                  assert(gotCap1.id == 0)
+                                  assert(gotCap1.borrow() != nil)
+                                  assert(gotCap1.check())
+                                  assert(gotCap1.borrow()!.address == 0x1)
+
+                                  let gotCap2 = signer.getCapability<&AuthAccount>(privatePath)
+                                  assert(gotCap2.id == expectedCapID)
+                                  assert(gotCap2.borrow() != nil)
+                                  assert(gotCap2.check())
+                                  assert(gotCap2.borrow()!.address == 0x1)
                               }
                           }
                         `,
