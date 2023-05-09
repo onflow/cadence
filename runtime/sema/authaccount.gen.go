@@ -508,7 +508,7 @@ var AuthAccountTypeGetLinkTargetFunctionType = &FunctionType{
 }
 
 const AuthAccountTypeGetLinkTargetFunctionDocString = `
-**DEPRECATED**
+**DEPRECATED**: Use ` + "`capabilities.storage.getController`" + ` and ` + "`StorageCapabilityController.target()`" + `.
 
 Returns the target path of the capability at the given public or private path,
 or nil if there exists no capability at the given path.
@@ -1357,6 +1357,32 @@ Returns the capability if one was published at the path.
 Returns nil if no capability was published at the path.
 `
 
+const AuthAccountCapabilitiesTypeMigrateLinkFunctionName = "migrateLink"
+
+var AuthAccountCapabilitiesTypeMigrateLinkFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "newCapabilityPath",
+			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: UInt64Type,
+		},
+	),
+}
+
+const AuthAccountCapabilitiesTypeMigrateLinkFunctionDocString = `
+**DEPRECATED**: This function only exists temporarily to aid in the migration of links.
+This function will not be part of the final Capability Controller API.
+
+Migrates the link at the given path to a capability controller.
+
+Does not migrate intermediate links of the chain.
+`
+
 const AuthAccountCapabilitiesTypeName = "Capabilities"
 
 var AuthAccountCapabilitiesType = func() *CompositeType {
@@ -1415,6 +1441,13 @@ func init() {
 			AuthAccountCapabilitiesTypeUnpublishFunctionName,
 			AuthAccountCapabilitiesTypeUnpublishFunctionType,
 			AuthAccountCapabilitiesTypeUnpublishFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			AuthAccountCapabilitiesType,
+			ast.AccessPublic,
+			AuthAccountCapabilitiesTypeMigrateLinkFunctionName,
+			AuthAccountCapabilitiesTypeMigrateLinkFunctionType,
+			AuthAccountCapabilitiesTypeMigrateLinkFunctionDocString,
 		),
 	}
 

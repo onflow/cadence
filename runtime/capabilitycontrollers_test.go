@@ -1251,6 +1251,150 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.NoError(t, err)
 				})
 			})
+
+			t.Run("migrateLink", func(t *testing.T) {
+
+				t.Parallel()
+
+				t.Run("public path link", func(t *testing.T) {
+					t.Parallel()
+
+					err, _, _ := test(
+						// language=cadence
+						`
+                          import Test from 0x1
+
+                          transaction {
+                              prepare(signer: AuthAccount) {
+                                  let storagePath = /storage/r
+                                  let publicPath = /public/r
+                                  let expectedCapID: UInt64 = 1
+                                  let resourceID = 42
+
+                                  // Arrange
+                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                  let linkedCap: Capability<&Test.R> =
+                                      signer.link<&Test.R>(publicPath, target: storagePath)!
+
+                                  // Act
+                                  let capID = signer.capabilities.migrateLink(publicPath)
+
+                                  // Assert
+                                  assert(capID == expectedCapID)
+
+                                  let controller: &StorageCapabilityController =
+                                      signer.capabilities.storage.getController(byCapabilityID: capID!)!
+                                  assert(controller.target() == storagePath)
+
+                                  let gotCap = signer.getCapability<&Test.R>(publicPath)
+                                  assert(gotCap.id == expectedCapID)
+
+                                  assert(linkedCap.borrow() != nil)
+                                  assert(linkedCap.check())
+                                  assert(linkedCap.borrow()!.id == resourceID)
+
+                                  assert(gotCap.borrow() != nil)
+                                  assert(gotCap.check())
+                                  assert(gotCap.borrow()!.id == resourceID)
+                              }
+                          }
+                        `,
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("private path link", func(t *testing.T) {
+					t.Parallel()
+
+					err, _, _ := test(
+						// language=cadence
+						`
+                          import Test from 0x1
+
+                          transaction {
+                              prepare(signer: AuthAccount) {
+                                  let storagePath = /storage/r
+                                  let privatePath = /private/r
+                                  let expectedCapID: UInt64 = 1
+                                  let resourceID = 42
+
+                                  // Arrange
+                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                  let linkedCap: Capability<&Test.R> =
+                                      signer.link<&Test.R>(privatePath, target: storagePath)!
+
+                                  // Act
+                                  let capID = signer.capabilities.migrateLink(privatePath)
+
+                                  // Assert
+                                  assert(capID == expectedCapID)
+
+                                  let controller: &StorageCapabilityController =
+                                      signer.capabilities.storage.getController(byCapabilityID: capID!)!
+                                  assert(controller.target() == storagePath)
+
+                                  let gotCap = signer.getCapability<&Test.R>(privatePath)
+                                  assert(gotCap.id == expectedCapID)
+
+                                  assert(linkedCap.borrow() != nil)
+                                  assert(linkedCap.check())
+                                  assert(linkedCap.borrow()!.id == resourceID)
+
+                                  assert(gotCap.borrow() != nil)
+                                  assert(gotCap.check())
+                                  assert(gotCap.borrow()!.id == resourceID)
+                              }
+                          }
+                        `,
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("private account link", func(t *testing.T) {
+					t.Parallel()
+
+					err, _, _ := test(
+						// language=cadence
+						`
+                          #allowAccountLinking
+
+                          import Test from 0x1
+
+                          transaction {
+                              prepare(signer: AuthAccount) {
+                                  let privatePath = /private/account
+                                  let expectedCapID: UInt64 = 1
+
+                                  // Arrange
+                                  let linkedCap: Capability<&AuthAccount> =
+                                      signer.linkAccount(privatePath)!
+
+                                  // Act
+                                  let capID = signer.capabilities.migrateLink(privatePath)
+
+                                  // Assert
+                                  assert(capID == expectedCapID)
+
+                                  let controller: &AccountCapabilityController =
+                                      signer.capabilities.account.getController(byCapabilityID: capID!)!
+
+                                  let gotCap = signer.getCapability<&AuthAccount>(privatePath)
+                                  assert(gotCap.id == expectedCapID)
+
+                                  assert(linkedCap.borrow() != nil)
+                                  assert(linkedCap.check())
+                                  assert(linkedCap.borrow()!.address == 0x1)
+
+                                  assert(gotCap.borrow() != nil)
+                                  assert(gotCap.check())
+                                  assert(gotCap.borrow()!.address == 0x1)
+                              }
+                          }
+                        `,
+					)
+					require.NoError(t, err)
+				})
+			})
 		})
 	}
 
@@ -1862,7 +2006,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               signer.capabilities.storage.issue<&Test.R>(storagePath)
                           let controller1: &StorageCapabilityController =
                               signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)!
-						  let controller2: &StorageCapabilityController =
+                          let controller2: &StorageCapabilityController =
                               signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)!
 
                           assert(controller1.tag == "")
@@ -1875,7 +2019,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           let controller3: &StorageCapabilityController =
                               signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)!
 
-						  assert(controller1.tag == "something")
+                          assert(controller1.tag == "something")
                           assert(controller2.tag == "something")
                           assert(controller3.tag == "something")
                       }
@@ -2269,7 +2413,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               signer.capabilities.account.issue<&AuthAccount>()
                           let controller1: &AccountCapabilityController =
                               signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
-						  let controller2: &AccountCapabilityController =
+                          let controller2: &AccountCapabilityController =
                               signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
 
                           assert(controller1.tag == "")
@@ -2282,7 +2426,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           let controller3: &AccountCapabilityController =
                               signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
 
-						  assert(controller1.tag == "something")
+                          assert(controller1.tag == "something")
                           assert(controller2.tag == "something")
                           assert(controller3.tag == "something")
                       }
@@ -2362,4 +2506,5 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			})
 		})
 	})
+
 }

@@ -143,7 +143,7 @@ pub struct AuthAccount {
     /// Returns the capability at the given private or public path.
     pub fun getCapability<T: &Any>(_ path: CapabilityPath): Capability<T>
 
-    /// **DEPRECATED**
+    /// **DEPRECATED**: Use `capabilities.storage.getController` and `StorageCapabilityController.target()`.
     ///
     /// Returns the target path of the capability at the given public or private path,
     /// or nil if there exists no capability at the given path.
@@ -338,6 +338,14 @@ pub struct AuthAccount {
         /// Returns the capability if one was published at the path.
         /// Returns nil if no capability was published at the path.
         pub fun unpublish(_ path: PublicPath): Capability?
+
+        /// **DEPRECATED**: This function only exists temporarily to aid in the migration of links.
+        /// This function will not be part of the final Capability Controller API.
+        ///
+        /// Migrates the link at the given path to a capability controller.
+        ///
+        /// Does not migrate intermediate links of the chain.
+        pub fun migrateLink(_ newCapabilityPath: CapabilityPath): UInt64?
     }
 
     pub struct StorageCapabilities {
