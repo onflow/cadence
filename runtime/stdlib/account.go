@@ -2483,30 +2483,14 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			// Create and write StorageCapabilityController
-
-			borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(gauge, borrowType)
-
-			var capabilityID uint64
-			var err error
-			errors.WrapPanic(func() {
-				capabilityID, err = idGenerator.GenerateAccountID(address)
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			capabilityIDValue := interpreter.UInt64Value(capabilityID)
-
-			controller := interpreter.NewStorageCapabilityControllerValue(
-				gauge,
-				borrowStaticType,
-				capabilityIDValue,
+			capabilityIDValue, borrowStaticType := issueStorageCapabilityController(
+				inter,
+				locationRange,
+				idGenerator,
+				address,
+				borrowType,
 				targetPathValue,
 			)
-
-			storeCapabilityController(inter, address, capabilityIDValue, controller)
-			recordStorageCapabilityController(inter, locationRange, address, targetPathValue, capabilityIDValue)
 
 			return interpreter.NewIDCapabilityValue(
 				gauge,
@@ -2516,6 +2500,45 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 			)
 		},
 	)
+}
+
+func issueStorageCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	idGenerator AccountIDGenerator,
+	address common.Address,
+	borrowType *sema.ReferenceType,
+	targetPathValue interpreter.PathValue,
+) (
+	interpreter.UInt64Value,
+	interpreter.ReferenceStaticType,
+) {
+	// Create and write StorageCapabilityController
+
+	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, borrowType)
+
+	var capabilityID uint64
+	var err error
+	errors.WrapPanic(func() {
+		capabilityID, err = idGenerator.GenerateAccountID(address)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	capabilityIDValue := interpreter.UInt64Value(capabilityID)
+
+	controller := interpreter.NewStorageCapabilityControllerValue(
+		inter,
+		borrowStaticType,
+		capabilityIDValue,
+		targetPathValue,
+	)
+
+	storeCapabilityController(inter, address, capabilityIDValue, controller)
+	recordStorageCapabilityController(inter, locationRange, address, targetPathValue, capabilityIDValue)
+
+	return capabilityIDValue, borrowStaticType
 }
 
 func newAuthAccountAccountCapabilitiesIssueFunction(
@@ -2539,29 +2562,8 @@ func newAuthAccountAccountCapabilitiesIssueFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			// Create and write AccountCapabilityController
-
-			borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(gauge, borrowType)
-
-			var capabilityID uint64
-			var err error
-			errors.WrapPanic(func() {
-				capabilityID, err = idGenerator.GenerateAccountID(address)
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			capabilityIDValue := interpreter.UInt64Value(capabilityID)
-
-			controller := interpreter.NewAccountCapabilityControllerValue(
-				gauge,
-				borrowStaticType,
-				capabilityIDValue,
-			)
-
-			storeCapabilityController(inter, address, capabilityIDValue, controller)
-			recordAccountCapabilityController(inter, address, capabilityIDValue)
+			capabilityIDValue, borrowStaticType :=
+				issueAccountCapabilityController(inter, idGenerator, address, borrowType)
 
 			return interpreter.NewIDCapabilityValue(
 				gauge,
@@ -2571,6 +2573,42 @@ func newAuthAccountAccountCapabilitiesIssueFunction(
 			)
 		},
 	)
+}
+
+func issueAccountCapabilityController(
+	inter *interpreter.Interpreter,
+	idGenerator AccountIDGenerator,
+	address common.Address,
+	borrowType *sema.ReferenceType,
+) (
+	interpreter.UInt64Value,
+	interpreter.ReferenceStaticType,
+) {
+	// Create and write AccountCapabilityController
+
+	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, borrowType)
+
+	var capabilityID uint64
+	var err error
+	errors.WrapPanic(func() {
+		capabilityID, err = idGenerator.GenerateAccountID(address)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	capabilityIDValue := interpreter.UInt64Value(capabilityID)
+
+	controller := interpreter.NewAccountCapabilityControllerValue(
+		inter,
+		borrowStaticType,
+		capabilityIDValue,
+	)
+
+	storeCapabilityController(inter, address, capabilityIDValue, controller)
+	recordAccountCapabilityController(inter, address, capabilityIDValue)
+
+	return capabilityIDValue, borrowStaticType
 }
 
 // CapabilityControllerStorageDomain is the storage domain which stores
