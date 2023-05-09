@@ -259,6 +259,57 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// NOTE: account link cannot be tested
 			})
 
+			t.Run("getCapability for public path, issue, check/borrow", func(t *testing.T) {
+
+				t.Parallel()
+
+				// TODO: add support for private paths
+
+				// Test that it is possible to construct a path capability with getCapability,
+				// issue a capability controller and publish it at the public path,
+				// then check/borrow the path capability.
+				//
+				// This requires that the existing link-based capability API supports following ID capabilities,
+				// i.e. looking up the target path from the controller.
+
+				t.Run("storage capability", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let resourceID = 42
+
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let gotCap: Capability<&Test.R> = %s.getCapability<&Test.R>(publicPath)
+
+                                      // Act
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Assert
+                                      assert(gotCap.id == 0)
+                                      assert(gotCap.check())
+                                      assert(gotCap.borrow()!.id == resourceID)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				// TODO: account capability
+			})
+
 			t.Run("get and check existing, with valid type", func(t *testing.T) {
 
 				t.Parallel()
@@ -2310,6 +2361,5 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.ErrorContains(t, err, "controller is deleted")
 			})
 		})
-
 	})
 }

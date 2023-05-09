@@ -4056,7 +4056,35 @@ func (interpreter *Interpreter) pathCapabilityBorrowFunction(
 
 			switch target := target.(type) {
 			case nil:
-				reference = nil
+				// For backwards-compatibility, follow ID capability values
+				// which are published in the public domain
+				// TODO: maybe also support private (using internal mapping, after migration)
+				if pathValue.Domain == common.PathDomainPublic {
+
+					domain := pathValue.Domain.Identifier()
+					identifier := pathValue.Identifier
+
+					storageMapKey := StringStorageMapKey(identifier)
+
+					value := interpreter.ReadStored(address, domain, storageMapKey)
+
+					if capabilityValue, ok := value.(*IDCapabilityValue); ok {
+						capabilityBorrowType, ok :=
+							interpreter.MustConvertStaticToSemaType(capabilityValue.BorrowType).(*sema.ReferenceType)
+						if !ok {
+							panic(errors.NewUnreachableError())
+						}
+
+						reference = interpreter.SharedState.Config.IDCapabilityBorrowHandler(
+							interpreter,
+							locationRange,
+							addressValue,
+							capabilityValue.ID,
+							borrowType,
+							capabilityBorrowType,
+						)
+					}
+				}
 
 			case AccountCapabilityTarget:
 				reference = NewAccountReferenceValue(
@@ -4115,6 +4143,7 @@ func (interpreter *Interpreter) pathCapabilityCheckFunction(
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// NOTE: if a type argument is provided for the function,
 			// use it *instead* of the type of the value (if any)
@@ -4145,6 +4174,36 @@ func (interpreter *Interpreter) pathCapabilityCheckFunction(
 			}
 
 			if target == nil {
+				// For backwards-compatibility, follow ID capability values
+				// which are published in the public domain
+				// TODO: maybe also support private (using internal mapping, after migration)
+				if pathValue.Domain == common.PathDomainPublic {
+
+					domain := pathValue.Domain.Identifier()
+					identifier := pathValue.Identifier
+
+					storageMapKey := StringStorageMapKey(identifier)
+
+					value := interpreter.ReadStored(address, domain, storageMapKey)
+
+					if capabilityValue, ok := value.(*IDCapabilityValue); ok {
+						capabilityBorrowType, ok :=
+							interpreter.MustConvertStaticToSemaType(capabilityValue.BorrowType).(*sema.ReferenceType)
+						if !ok {
+							panic(errors.NewUnreachableError())
+						}
+
+						return interpreter.SharedState.Config.IDCapabilityCheckHandler(
+							interpreter,
+							locationRange,
+							addressValue,
+							capabilityValue.ID,
+							borrowType,
+							capabilityBorrowType,
+						)
+					}
+				}
+
 				return FalseValue
 			}
 
@@ -4242,7 +4301,6 @@ func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
 				nil
 
 		case *IDCapabilityValue:
-			// TODO: follow target?
 			return nil, false, nil
 
 		default:
