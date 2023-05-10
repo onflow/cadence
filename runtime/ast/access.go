@@ -44,6 +44,7 @@ type EntitlementSet interface {
 type ConjunctiveEntitlementSet struct {
 	Elements []*NominalType `json:"ConjunctiveElements"`
 }
+var _ EntitlementSet = ConjunctiveEntitlementSet{}
 
 func (s ConjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
@@ -60,6 +61,7 @@ func NewConjunctiveEntitlementSet(entitlements []*NominalType) ConjunctiveEntitl
 type DisjunctiveEntitlementSet struct {
 	Elements []*NominalType `json:"DisjunctiveElements"`
 }
+var _ EntitlementSet = DisjunctiveEntitlementSet{}
 
 func (s DisjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
