@@ -135,14 +135,14 @@ func (e EntitlementAccess) subset(other EntitlementAccess) bool {
 }
 
 func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
-	if primitive, isPrimitive := other.(PrimitiveAccess); isPrimitive {
-		return primitive == AccessPublic || primitive == AccessPublicSettable
-	}
-	conjunctiveEntitlementAccess, ok := other.(EntitlementAccess)
-	if !ok {
+	switch other := other.(type) {
+	case PrimitiveAccess:
+		return other == AccessPublic || other == AccessPublicSettable
+	case EntitlementAccess:
+		return e.subset(other)
+	default:
 		return false
 	}
-	return e.subset(conjunctiveEntitlementAccess)
 }
 
 type PrimitiveAccess uint8

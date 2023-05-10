@@ -558,12 +558,11 @@ func parseNominalType(
 	if !ok {
 		return nil, p.syntaxError("unexpected non-nominal type: %s", ty)
 	}
-	if rejectAccessKeywords &&
-		nominalType.Identifier.Identifier == KeywordAll ||
-		nominalType.Identifier.Identifier == KeywordAccess ||
-		nominalType.Identifier.Identifier == KeywordAccount ||
-		nominalType.Identifier.Identifier == KeywordSelf {
-		return nil, p.syntaxError("unexpected non-nominal type: %s", ty)
+	if rejectAccessKeywords {
+		switch nominalType.Identifier.Identifier {
+		case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
+			return nil, p.syntaxError("unexpected non-nominal type: %s", ty)
+		}
 	}
 	return nominalType, nil
 }
