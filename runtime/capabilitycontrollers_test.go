@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -36,8 +37,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 	test := func(tx string) (
 		err error,
-		logs []string,
-		events []string,
+		storage *Storage,
 	) {
 
 		rt := newTestInterpreterRuntime()
@@ -125,10 +125,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		runtimeInterface := &testRuntimeInterface{
 			storage: newTestLedger(nil, nil),
 			log: func(message string) {
-				logs = append(logs, message)
+				// NO-OP
 			},
 			emitEvent: func(event cadence.Event) error {
-				events = append(events, event.String())
+				// NO-OP
 				return nil
 			},
 			getSigningAccounts: func() ([]Address, error) {
@@ -177,6 +177,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			},
 		)
 
+		storage, _, _ = rt.Storage(Context{
+			Interface: runtimeInterface,
+		})
+
 		return
 	}
 
@@ -195,7 +199,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -221,7 +225,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				t.Run("storage link", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -271,7 +275,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// i.e. looking up the target path from the controller.
 
 				t.Run("public path, storage capability", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -306,7 +310,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				})
 
 				t.Run("public path, account capability", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -346,7 +350,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				t.Run("storage capability", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -383,7 +387,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				})
 
 				t.Run("account capability", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -423,7 +427,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -463,7 +467,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -505,7 +509,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -542,7 +546,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -581,7 +585,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -618,7 +622,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -656,7 +660,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				t.Run("storage capability", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -694,7 +698,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				})
 
 				t.Run("account capability", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -734,7 +738,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -760,7 +764,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				t.Run("storage capability", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -796,7 +800,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				})
 
 				t.Run("account capability", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -835,7 +839,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -872,7 +876,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -911,7 +915,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -948,7 +952,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -986,7 +990,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				t.Run("storage capability", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -1024,7 +1028,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				})
 
 				t.Run("account capability", func(t *testing.T) {
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -1066,7 +1070,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					t.Parallel()
 
 					t.Run("storage capability", func(t *testing.T) {
-						err, _, _ := test(
+						err, _ := test(
 							// language=cadence
 							`
                               import Test from 0x1
@@ -1095,7 +1099,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					})
 
 					t.Run("storage capability", func(t *testing.T) {
-						err, _, _ := test(
+						err, _ := test(
 							// language=cadence
 							`
                               import Test from 0x1
@@ -1127,7 +1131,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 					t.Parallel()
 
-					err, _, _ := test(
+					err, _ := test(
 						// language=cadence
 						`
                           import Test from 0x1
@@ -1153,7 +1157,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					t.Parallel()
 
 					t.Run("storage link", func(t *testing.T) {
-						err, _, _ := test(
+						err, _ := test(
 							// language=cadence
 							`
                               import Test from 0x1
@@ -1180,7 +1184,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					})
 
 					t.Run("account link", func(t *testing.T) {
-						err, _, _ := test(
+						err, _ := test(
 							// language=cadence
 							`
                               #allowAccountLinking
@@ -1214,7 +1218,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("AuthAccount.AccountCapabilities", func(t *testing.T) {
 					t.Parallel()
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -1247,7 +1251,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("AuthAccount.StorageCapabilities", func(t *testing.T) {
 					t.Parallel()
 
-					err, _, _ := test(
+					err, _ := test(
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -1290,7 +1294,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("public path link", func(t *testing.T) {
 					t.Parallel()
 
-					err, _, _ := test(
+					err, _ := test(
 						// language=cadence
 						`
                           import Test from 0x1
@@ -1337,7 +1341,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("private path link", func(t *testing.T) {
 					t.Parallel()
 
-					err, _, _ := test(
+					err, _ := test(
 						// language=cadence
 						`
                           import Test from 0x1
@@ -1396,7 +1400,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("private account link", func(t *testing.T) {
 					t.Parallel()
 
-					err, _, _ := test(
+					err, _ := test(
 						// language=cadence
 						`
                           #allowAccountLinking
@@ -1468,7 +1472,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1504,7 +1508,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1531,7 +1535,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                 import Test from 0x1
@@ -1559,7 +1563,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1616,7 +1620,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1671,7 +1675,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1739,7 +1743,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1783,7 +1787,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1813,7 +1817,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                 import Test from 0x1
@@ -1840,7 +1844,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                 import Test from 0x1
@@ -1868,7 +1872,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                  import Test from 0x1
@@ -1911,7 +1915,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                  import Test from 0x1
@@ -1957,7 +1961,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                  import Test from 0x1
@@ -2007,7 +2011,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                  import Test from 0x1
@@ -2047,7 +2051,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		t.Run("tag", func(t *testing.T) {
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                   import Test from 0x1
@@ -2091,7 +2095,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("target, getControllers", func(t *testing.T) {
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2195,7 +2199,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("retarget empty, borrow", func(t *testing.T) {
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2234,7 +2238,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("retarget to value with same type, borrow", func(t *testing.T) {
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2276,7 +2280,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("retarget to value with different type, borrow", func(t *testing.T) {
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2321,7 +2325,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("getController, getControllers", func(t *testing.T) {
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2360,7 +2364,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("target", func(t *testing.T) {
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2390,7 +2394,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("retarget", func(t *testing.T) {
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2420,7 +2424,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("delete", func(t *testing.T) {
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2446,6 +2450,41 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				)
 				require.ErrorContains(t, err, "controller is deleted")
 			})
+
+			t.Run("capability set cleared from storage", func(t *testing.T) {
+				t.Parallel()
+
+				err, storage := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath = /storage/r
+
+                              // Arrange
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath)
+                              let controller: &StorageCapabilityController =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)!
+
+                              // Act
+                              controller.delete()
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
+
+				storageMap := storage.GetStorageMap(
+					common.MustBytesToAddress([]byte{0x1}),
+					stdlib.PathCapabilityStorageDomain,
+					false,
+				)
+				require.Zero(t, storageMap.Count())
+
+			})
 		})
 	})
 
@@ -2456,7 +2495,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		t.Run("tag", func(t *testing.T) {
 			t.Parallel()
 
-			err, _, _ := test(
+			err, _ := test(
 				// language=cadence
 				`
                   import Test from 0x1
@@ -2498,7 +2537,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("getController, getControllers", func(t *testing.T) {
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2535,7 +2574,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("delete", func(t *testing.T) {
 				t.Parallel()
 
-				err, _, _ := test(
+				err, _ := test(
 					// language=cadence
 					`
                       import Test from 0x1

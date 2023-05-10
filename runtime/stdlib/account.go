@@ -2896,8 +2896,11 @@ func getPathCapabilityIDSet(
 	storageMap := inter.Storage().GetStorageMap(
 		address,
 		PathCapabilityStorageDomain,
-		true,
+		false,
 	)
+	if storageMap == nil {
+		return nil
+	}
 
 	readValue := storageMap.ReadValue(inter, storageMapKey)
 	if readValue == nil {
@@ -2929,7 +2932,26 @@ func unrecordStorageCapabilityController(
 		panic(errors.NewUnreachableError())
 	}
 
-	// TODO: remove capability set if empty
+	// Remove capability set if empty
+
+	if capabilityIDSet.Count() == 0 {
+		storageMap := inter.Storage().GetStorageMap(
+			address,
+			PathCapabilityStorageDomain,
+			true,
+		)
+		if storageMap == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		identifier := targetPathValue.Identifier
+
+		storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+		if !storageMap.RemoveValue(inter, storageMapKey) {
+			panic(errors.NewUnreachableError())
+		}
+	}
 }
 
 func getStorageCapabilityControllerIDsIterator(

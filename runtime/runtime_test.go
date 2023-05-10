@@ -97,7 +97,7 @@ func newTestLedger(
 
 	storageIndices := map[string]uint64{}
 
-	storage := testLedger{
+	return testLedger{
 		storedValues: storedValues,
 		valueExists: func(owner, key []byte) (bool, error) {
 			value := storedValues[storageKey(string(owner), string(key))]
@@ -124,8 +124,6 @@ func newTestLedger(
 			return
 		},
 	}
-
-	return storage
 }
 
 type testInterpreterRuntime struct {
