@@ -1186,6 +1186,41 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						require.ErrorContains(t, err, "cannot publish linked capability")
 					})
 				})
+
+				t.Run("unpublish linked capability", func(t *testing.T) {
+
+					t.Parallel()
+
+					t.Run("storage link", func(t *testing.T) {
+						err, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let resourceID = 42
+
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let linkedCap: Capability<&Test.R> =
+                                          signer.link<&Test.R>(publicPath, target: storagePath)!
+
+                                      // Act
+                                      signer.capabilities.unpublish(publicPath)
+                                  }
+                              }
+                            `,
+						)
+						require.ErrorContains(t, err, "cannot unpublish linked capability")
+					})
+
+					// NOTE: cannot test account link,
+					// as account links can only be created for private paths,
+					// but unpublish only accepts public paths
+				})
 			}
 
 			t.Run("issue, publish, getCapability, borrow", func(t *testing.T) {
