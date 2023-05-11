@@ -1390,6 +1390,9 @@ const AuthAccountCapabilitiesTypeMigrateLinkFunctionDocString = `
 This function will not be part of the final Capability Controller API.
 
 Migrates the link at the given path to a capability controller.
+Returns the capability ID of the newly issued controller.
+Returns nil if the migration fails,
+e.g. when the path does not lead to a storage path.
 
 Does not migrate intermediate links of the chain.
 `
