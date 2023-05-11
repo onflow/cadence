@@ -2935,6 +2935,43 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Zero(t, storageMap.Count())
 
 			})
+
+			t.Run("check, borrow", func(t *testing.T) {
+				t.Parallel()
+
+				err, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath = /storage/r
+							  let resourceID = 42
+
+                              // Arrange
+							  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath)
+                              assert(issuedCap.check())
+                              assert(issuedCap.borrow() != nil)
+
+                              let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              // Act
+                              controller!.delete()
+
+                              // Assert
+                              assert(!issuedCap.check())
+                              assert(issuedCap.borrow() == nil)
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
+			})
+
 		})
 	})
 
@@ -3041,6 +3078,36 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.ErrorContains(t, err, "controller is deleted")
+			})
+
+			t.Run("check, borrow", func(t *testing.T) {
+				t.Parallel()
+
+				err, _ := test(
+					// language=cadence
+					`
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              // Arrange
+                              let issuedCap: Capability<&AuthAccount> =
+                                  signer.capabilities.account.issue<&AuthAccount>()
+                              assert(issuedCap.check())
+                              assert(issuedCap.borrow() != nil)
+
+                              let controller: &AccountCapabilityController? =
+                                  signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
+
+                              // Act
+                              controller!.delete()
+
+                              // Assert
+                              assert(!issuedCap.check())
+                              assert(issuedCap.borrow() == nil)
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
 			})
 		})
 	})
