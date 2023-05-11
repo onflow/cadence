@@ -2408,15 +2408,20 @@ func newAuthAccountStorageCapabilitiesForEachControllerFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			// Prevent mutations during iteration (record/unrecord)
+			// Prevent mutations (record/unrecord) to storage capability controllers
+			// for this address/path during iteration
 
 			addressPath := interpreter.AddressPath{
 				Address: address,
 				Path:    targetPathValue,
 			}
-			inter.SharedState.StorageCapabilityControllerIterations[addressPath]++
+			iterations := inter.SharedState.StorageCapabilityControllerIterations
+			iterations[addressPath]++
 			defer func() {
-				inter.SharedState.StorageCapabilityControllerIterations[addressPath]--
+				iterations[addressPath]--
+				if iterations[addressPath] <= 0 {
+					delete(iterations, addressPath)
+				}
 			}()
 
 			// Get capability controllers iterator
@@ -3847,11 +3852,16 @@ func newAuthAccountAccountCapabilitiesForEachControllerFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			// Prevent mutations during iteration (record/unrecord)
+			// Prevent mutations (record/unrecord) to account capability controllers
+			// for this address during iteration
 
-			inter.SharedState.AccountCapabilityControllerIterations[address]++
+			iterations := inter.SharedState.AccountCapabilityControllerIterations
+			iterations[address]++
 			defer func() {
-				inter.SharedState.AccountCapabilityControllerIterations[address]--
+				iterations[address]--
+				if iterations[address] <= 0 {
+					delete(iterations, address)
+				}
 			}()
 
 			// Get capability controllers iterator
