@@ -3315,7 +3315,7 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 
 			readValue := inter.ReadStored(address, domain, storageMapKey)
 			if readValue == nil {
-				return interpreter.Void
+				return interpreter.Nil
 			}
 
 			var borrowStaticType interpreter.ReferenceStaticType
@@ -3323,7 +3323,7 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 			switch readValue := readValue.(type) {
 			case *interpreter.IDCapabilityValue:
 				// Already migrated
-				return interpreter.Void
+				return interpreter.Nil
 
 			case interpreter.PathLinkValue:
 				borrowStaticType, ok = readValue.Type.(interpreter.ReferenceStaticType)

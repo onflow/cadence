@@ -1221,6 +1221,314 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					// as account links can only be created for private paths,
 					// but unpublish only accepts public paths
 				})
+
+				t.Run("migrateLink", func(t *testing.T) {
+
+					t.Parallel()
+
+					t.Run("non-existing link", func(t *testing.T) {
+						t.Parallel()
+
+						err, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/r
+
+                                      // Act
+                                      let capID = signer.capabilities.migrateLink(publicPath)
+
+                                      // Assert
+                                      assert(capID == nil)
+                                  }
+                              }
+                            `,
+						)
+						require.NoError(t, err)
+					})
+
+					t.Run("ID capability (storage)", func(t *testing.T) {
+						t.Parallel()
+
+						err, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+
+                                      // Arrange
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Act
+                                      let capID = signer.capabilities.migrateLink(publicPath)
+
+                                      // Assert
+                                      assert(capID == nil)
+                                  }
+                              }
+                            `,
+						)
+						require.NoError(t, err)
+					})
+
+					t.Run("ID capability (account)", func(t *testing.T) {
+						t.Parallel()
+
+						err, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Act
+                                      let capID = signer.capabilities.migrateLink(publicPath)
+
+                                      // Assert
+                                      assert(capID == nil)
+                                  }
+                              }
+                            `,
+						)
+						require.NoError(t, err)
+					})
+
+					t.Run("working public path link", func(t *testing.T) {
+						t.Parallel()
+
+						err, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
+
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let linkedCap: Capability<&Test.R> =
+                                          signer.link<&Test.R>(publicPath, target: storagePath)!
+
+                                      // Act
+                                      let capID = signer.capabilities.migrateLink(publicPath)
+
+                                      // Assert
+                                      assert(capID == expectedCapID)
+
+                                      let controller: &StorageCapabilityController =
+                                          signer.capabilities.storage.getController(byCapabilityID: capID!)!
+                                      assert(controller.target() == storagePath)
+
+                                      let gotCap = signer.getCapability<&Test.R>(publicPath)
+                                      assert(gotCap.id == expectedCapID)
+
+                                      assert(linkedCap.borrow() != nil)
+                                      assert(linkedCap.check())
+                                      assert(linkedCap.borrow()!.id == resourceID)
+
+                                      assert(gotCap.borrow() != nil)
+                                      assert(gotCap.check())
+                                      assert(gotCap.borrow()!.id == resourceID)
+                                  }
+                              }
+                            `,
+						)
+						require.NoError(t, err)
+					})
+
+					t.Run("broken public path link", func(t *testing.T) {
+						t.Parallel()
+
+						err, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/r
+                                      let privatePath = /private/r
+
+                                      // Arrange
+                                      let linkedCap: Capability<&Test.R> =
+                                          signer.link<&Test.R>(publicPath, target: privatePath)!
+
+                                      // Act
+                                      let capID = signer.capabilities.migrateLink(publicPath)
+
+                                      // Assert
+                                      assert(capID == nil)
+                                  }
+                              }
+                            `,
+						)
+						require.NoError(t, err)
+					})
+
+					t.Run("working private path link", func(t *testing.T) {
+						t.Parallel()
+
+						err, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let privatePath = /private/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
+
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let linkedCap1: Capability<&Test.R> =
+                                          signer.link<&Test.R>(publicPath, target: privatePath)!
+                                      let linkedCap2: Capability<&Test.R> =
+                                          signer.link<&Test.R>(privatePath, target: storagePath)!
+
+                                      // Act
+                                      let capID = signer.capabilities.migrateLink(privatePath)
+
+                                      // Assert
+                                      assert(capID == expectedCapID)
+
+                                      let controller: &StorageCapabilityController =
+                                          signer.capabilities.storage.getController(byCapabilityID: capID!)!
+                                      assert(controller.target() == storagePath)
+
+                                      assert(linkedCap1.borrow() != nil)
+                                      assert(linkedCap1.check())
+                                      assert(linkedCap1.borrow()!.id == resourceID)
+
+                                      assert(linkedCap2.borrow() != nil)
+                                      assert(linkedCap2.check())
+                                      assert(linkedCap2.borrow()!.id == resourceID)
+
+                                      let gotCap1 = signer.getCapability<&Test.R>(publicPath)
+                                      assert(gotCap1.id == 0)
+                                      assert(gotCap1.borrow() != nil)
+                                      assert(gotCap1.check())
+                                      assert(gotCap1.borrow()!.id == resourceID)
+
+                                      let gotCap2 = signer.getCapability<&Test.R>(privatePath)
+                                      assert(gotCap2.id == expectedCapID)
+                                      assert(gotCap2.borrow() != nil)
+                                      assert(gotCap2.check())
+                                      assert(gotCap2.borrow()!.id == resourceID)
+                                  }
+                              }
+                            `,
+						)
+						require.NoError(t, err)
+					})
+
+					t.Run("broken private path link", func(t *testing.T) {
+						t.Parallel()
+
+						err, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let privatePath1 = /private/r1
+                                      let privatePath2 = /private/r2
+
+                                      // Arrange
+                                      let linkedCap: Capability<&Test.R> =
+                                          signer.link<&Test.R>(privatePath1, target: privatePath2)!
+
+                                      // Act
+                                      let capID = signer.capabilities.migrateLink(privatePath1)
+
+                                      // Assert
+                                      assert(capID == nil)
+                                  }
+                              }
+                            `,
+						)
+						require.NoError(t, err)
+					})
+
+					t.Run("working private account link", func(t *testing.T) {
+						t.Parallel()
+
+						err, _ := test(
+							// language=cadence
+							`
+                              #allowAccountLinking
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/account
+                                      let privatePath = /private/account
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let linkedCap1: Capability<&AuthAccount> =
+                                          signer.link<&AuthAccount>(publicPath, target: privatePath)!
+                                      let linkedCap2: Capability<&AuthAccount> =
+                                          signer.linkAccount(privatePath)!
+
+                                      // Act
+                                      let capID = signer.capabilities.migrateLink(privatePath)
+
+                                      // Assert
+                                      assert(capID == expectedCapID)
+
+                                      let controller: &AccountCapabilityController =
+                                          signer.capabilities.account.getController(byCapabilityID: capID!)!
+
+                                      assert(linkedCap1.borrow() != nil)
+                                      assert(linkedCap1.check())
+                                      assert(linkedCap1.borrow()!.address == 0x1)
+
+                                      assert(linkedCap2.borrow() != nil)
+                                      assert(linkedCap2.check())
+                                      assert(linkedCap2.borrow()!.address == 0x1)
+
+                                      let gotCap1 = signer.getCapability<&AuthAccount>(publicPath)
+                                      assert(gotCap1.id == 0)
+                                      assert(gotCap1.borrow() != nil)
+                                      assert(gotCap1.check())
+                                      assert(gotCap1.borrow()!.address == 0x1)
+
+                                      let gotCap2 = signer.getCapability<&AuthAccount>(privatePath)
+                                      assert(gotCap2.id == expectedCapID)
+                                      assert(gotCap2.borrow() != nil)
+                                      assert(gotCap2.check())
+                                      assert(gotCap2.borrow()!.address == 0x1)
+                                  }
+                              }
+                            `,
+						)
+						require.NoError(t, err)
+					})
+				})
+
 			}
 
 			t.Run("issue, publish, getCapability, borrow", func(t *testing.T) {
@@ -1296,171 +1604,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				})
 			})
 
-			t.Run("migrateLink", func(t *testing.T) {
-
-				t.Parallel()
-
-				t.Run("public path link", func(t *testing.T) {
-					t.Parallel()
-
-					err, _ := test(
-						// language=cadence
-						`
-                          import Test from 0x1
-
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
-
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let linkedCap: Capability<&Test.R> =
-                                      signer.link<&Test.R>(publicPath, target: storagePath)!
-
-                                  // Act
-                                  let capID = signer.capabilities.migrateLink(publicPath)
-
-                                  // Assert
-                                  assert(capID == expectedCapID)
-
-                                  let controller: &StorageCapabilityController =
-                                      signer.capabilities.storage.getController(byCapabilityID: capID!)!
-                                  assert(controller.target() == storagePath)
-
-                                  let gotCap = signer.getCapability<&Test.R>(publicPath)
-                                  assert(gotCap.id == expectedCapID)
-
-                                  assert(linkedCap.borrow() != nil)
-                                  assert(linkedCap.check())
-                                  assert(linkedCap.borrow()!.id == resourceID)
-
-                                  assert(gotCap.borrow() != nil)
-                                  assert(gotCap.check())
-                                  assert(gotCap.borrow()!.id == resourceID)
-                              }
-                          }
-                        `,
-					)
-					require.NoError(t, err)
-				})
-
-				t.Run("private path link", func(t *testing.T) {
-					t.Parallel()
-
-					err, _ := test(
-						// language=cadence
-						`
-                          import Test from 0x1
-
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let privatePath = /private/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
-
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let linkedCap1: Capability<&Test.R> =
-                                      signer.link<&Test.R>(publicPath, target: privatePath)!
-                                  let linkedCap2: Capability<&Test.R> =
-                                      signer.link<&Test.R>(privatePath, target: storagePath)!
-
-                                  // Act
-                                  let capID = signer.capabilities.migrateLink(privatePath)
-
-                                  // Assert
-                                  assert(capID == expectedCapID)
-
-                                  let controller: &StorageCapabilityController =
-                                      signer.capabilities.storage.getController(byCapabilityID: capID!)!
-                                  assert(controller.target() == storagePath)
-
-                                  assert(linkedCap1.borrow() != nil)
-                                  assert(linkedCap1.check())
-                                  assert(linkedCap1.borrow()!.id == resourceID)
-
-                                  assert(linkedCap2.borrow() != nil)
-                                  assert(linkedCap2.check())
-                                  assert(linkedCap2.borrow()!.id == resourceID)
-
-                                  let gotCap1 = signer.getCapability<&Test.R>(publicPath)
-                                  assert(gotCap1.id == 0)
-                                  assert(gotCap1.borrow() != nil)
-                                  assert(gotCap1.check())
-                                  assert(gotCap1.borrow()!.id == resourceID)
-
-                                  let gotCap2 = signer.getCapability<&Test.R>(privatePath)
-                                  assert(gotCap2.id == expectedCapID)
-                                  assert(gotCap2.borrow() != nil)
-                                  assert(gotCap2.check())
-                                  assert(gotCap2.borrow()!.id == resourceID)
-                              }
-                          }
-                        `,
-					)
-					require.NoError(t, err)
-				})
-
-				t.Run("private account link", func(t *testing.T) {
-					t.Parallel()
-
-					err, _ := test(
-						// language=cadence
-						`
-                          #allowAccountLinking
-
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let publicPath = /public/account
-                                  let privatePath = /private/account
-                                  let expectedCapID: UInt64 = 1
-
-                                  // Arrange
-                                  let linkedCap1: Capability<&AuthAccount> =
-                                      signer.link<&AuthAccount>(publicPath, target: privatePath)!
-                                  let linkedCap2: Capability<&AuthAccount> =
-                                      signer.linkAccount(privatePath)!
-
-                                  // Act
-                                  let capID = signer.capabilities.migrateLink(privatePath)
-
-                                  // Assert
-                                  assert(capID == expectedCapID)
-
-                                  let controller: &AccountCapabilityController =
-                                      signer.capabilities.account.getController(byCapabilityID: capID!)!
-
-                                  assert(linkedCap1.borrow() != nil)
-                                  assert(linkedCap1.check())
-                                  assert(linkedCap1.borrow()!.address == 0x1)
-
-                                  assert(linkedCap2.borrow() != nil)
-                                  assert(linkedCap2.check())
-                                  assert(linkedCap2.borrow()!.address == 0x1)
-
-                                  let gotCap1 = signer.getCapability<&AuthAccount>(publicPath)
-                                  assert(gotCap1.id == 0)
-                                  assert(gotCap1.borrow() != nil)
-                                  assert(gotCap1.check())
-                                  assert(gotCap1.borrow()!.address == 0x1)
-
-                                  let gotCap2 = signer.getCapability<&AuthAccount>(privatePath)
-                                  assert(gotCap2.id == expectedCapID)
-                                  assert(gotCap2.borrow() != nil)
-                                  assert(gotCap2.check())
-                                  assert(gotCap2.borrow()!.address == 0x1)
-                              }
-                          }
-                        `,
-					)
-					require.NoError(t, err)
-				})
-			})
 		})
 	}
 
