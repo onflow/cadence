@@ -3479,11 +3479,14 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 					break
 				}
 
-				// it is not safe to check this at the beginning of the loop (i.e. on the next invocation of the callback)
-				// because if the mutation performed in the callback reorganized storage such that the iteration pointer is now
-				// at the end, we will not invoke the callback again but will still silently skip elements of storage. In order
-				// to be safe, we perform this check here to effectively enforce that users return `false` from their callback
-				// in all cases where storage is mutated
+				// It is not safe to check this at the beginning of the loop
+				// (i.e. on the next invocation of the callback),
+				// because if the mutation performed in the callback reorganized storage
+				// such that the iteration pointer is now at the end,
+				// we will not invoke the callback again but will still silently skip elements of storage.
+				//
+				// In order to be safe, we perform this check here to effectively enforce
+				// that users return `false` from their callback in all cases where storage is mutated.
 				if inter.SharedState.storageMutatedDuringIteration {
 					panic(StorageMutatedDuringIterationError{
 						LocationRange: locationRange,

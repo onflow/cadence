@@ -1745,6 +1745,144 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			)
 			require.NoError(t, err)
 		})
+
+		t.Run("forEachController, mutation (issue), stop", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath = /storage/r
+
+                          // Arrange
+                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+
+                          // Act
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath,
+                              fun (controller: &StorageCapabilityController): Bool {
+
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath)
+
+                                  return false
+                              }
+                          )
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("forEachController, mutation (issue), continue", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath = /storage/r
+
+                          // Arrange
+                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+
+                          // Act
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath,
+                              fun (controller: &StorageCapabilityController): Bool {
+
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath)
+
+                                  return true
+                              }
+                          )
+                      }
+                  }
+                `,
+			)
+			RequireError(t, err)
+
+			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
+			require.ErrorAs(t, err, &mutationErr)
+		})
+
+		t.Run("forEachController, mutation (delete), stop", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath = /storage/r
+
+                          // Arrange
+                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+
+                          // Act
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath,
+                              fun (controller: &StorageCapabilityController): Bool {
+
+                                  controller.delete()
+
+                                  return false
+                              }
+                          )
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("forEachController, mutation (delete), continue", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath = /storage/r
+
+                          // Arrange
+                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+
+                          // Act
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath,
+                              fun (controller: &StorageCapabilityController): Bool {
+
+                                  controller.delete()
+
+                                  return true
+                              }
+                          )
+                      }
+                  }
+                `,
+			)
+			RequireError(t, err)
+
+			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
+			require.ErrorAs(t, err, &mutationErr)
+		})
 	})
 
 	t.Run("AuthAccount.AccountCapabilities", func(t *testing.T) {
@@ -1997,7 +2135,124 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       }
                   }
                 `,
+			)
+			require.NoError(t, err)
+		})
 
+		t.Run("forEachController, mutation (issue), continue", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Arrange
+                          signer.capabilities.account.issue<&AuthAccount>()
+
+                          // Act
+                          signer.capabilities.account.forEachController(
+                              fun (controller: &AccountCapabilityController): Bool {
+
+                                  signer.capabilities.account.issue<&AuthAccount>()
+
+                                  return true
+                              }
+                          )
+                      }
+                  }
+                `,
+			)
+			RequireError(t, err)
+
+			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
+			require.ErrorAs(t, err, &mutationErr)
+		})
+
+		t.Run("forEachController, mutation (issue), stop", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Arrange
+                          signer.capabilities.account.issue<&AuthAccount>()
+
+                          // Act
+                          signer.capabilities.account.forEachController(
+                              fun (controller: &AccountCapabilityController): Bool {
+
+                                  signer.capabilities.account.issue<&AuthAccount>()
+
+                                  return false
+                              }
+                          )
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("forEachController, mutation (delete), continue", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Arrange
+                          signer.capabilities.account.issue<&AuthAccount>()
+
+                          // Act
+                          signer.capabilities.account.forEachController(
+                              fun (controller: &AccountCapabilityController): Bool {
+
+                                  controller.delete()
+
+                                  return true
+                              }
+                          )
+                      }
+                  }
+                `,
+			)
+			RequireError(t, err)
+
+			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
+			require.ErrorAs(t, err, &mutationErr)
+		})
+
+		t.Run("forEachController, mutation (delete), stop", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Arrange
+                          signer.capabilities.account.issue<&AuthAccount>()
+
+                          // Act
+                          signer.capabilities.account.forEachController(
+                              fun (controller: &AccountCapabilityController): Bool {
+
+                                  controller.delete()
+
+                                  return false
+                              }
+                          )
+                      }
+                  }
+                `,
 			)
 			require.NoError(t, err)
 		})

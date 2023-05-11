@@ -25,6 +25,11 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+type AddressPath struct {
+	Address common.Address
+	Path    PathValue
+}
+
 type SharedState struct {
 	attachmentIterationMap map[*CompositeValue]bool
 	typeCodes              TypeCodes
@@ -32,10 +37,13 @@ type SharedState struct {
 	allInterpreters        map[common.Location]*Interpreter
 	callStack              *CallStack
 	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues ReferencedResourceKindedValues
-	resourceVariables              map[ResourceKindedValue]*Variable
-	inStorageIteration             bool
-	storageMutatedDuringIteration  bool
+	referencedResourceKindedValues              ReferencedResourceKindedValues
+	resourceVariables                           map[ResourceKindedValue]*Variable
+	inStorageIteration                          bool
+	storageMutatedDuringIteration               bool
+	AccountCapabilityControllerIterations       map[common.Address]int
+	StorageCapabilityControllerIterations       map[AddressPath]int
+	MutationDuringCapabilityControllerIteration bool
 }
 
 func NewSharedState(config *Config) *SharedState {
@@ -48,10 +56,12 @@ func NewSharedState(config *Config) *SharedState {
 			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		},
-		inStorageIteration:             false,
-		storageMutatedDuringIteration:  false,
-		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
-		resourceVariables:              map[ResourceKindedValue]*Variable{},
+		inStorageIteration:                    false,
+		storageMutatedDuringIteration:         false,
+		referencedResourceKindedValues:        map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
+		resourceVariables:                     map[ResourceKindedValue]*Variable{},
+		AccountCapabilityControllerIterations: map[common.Address]int{},
+		StorageCapabilityControllerIterations: map[AddressPath]int{},
 	}
 }
 
