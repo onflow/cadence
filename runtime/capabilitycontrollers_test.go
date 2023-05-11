@@ -314,8 +314,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -391,8 +389,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -471,8 +467,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -626,8 +620,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -702,8 +694,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -804,8 +794,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -880,8 +868,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -956,8 +942,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -1032,8 +1016,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -1102,8 +1084,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						err, _ := test(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -1134,8 +1114,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					err, _ := test(
 						// language=cadence
 						`
-                          import Test from 0x1
-
                           transaction {
                               prepare(signer: AuthAccount) {
                                   let publicPath = /public/r
@@ -1189,8 +1167,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							`
                               #allowAccountLinking
 
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let storagePath = /storage/r
@@ -1222,8 +1198,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1
-
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
@@ -1405,8 +1379,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						`
                           #allowAccountLinking
 
-                          import Test from 0x1
-
                           transaction {
                               prepare(signer: AuthAccount) {
                                   let publicPath = /public/account
@@ -1511,8 +1483,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _ := test(
 				// language=cadence
 				`
-                  import Test from 0x1
-
                   transaction {
                       prepare(signer: AuthAccount) {
                           // Act
@@ -1538,23 +1508,21 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _ := test(
 				// language=cadence
 				`
-                import Test from 0x1
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Arrange
+                          let issuedCap: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
 
-                transaction {
-                    prepare(signer: AuthAccount) {
-                        // Arrange
-                        let issuedCap: Capability<&AuthAccount> =
-                            signer.capabilities.account.issue<&AuthAccount>()
+                          // Act
+                          let controller: &StorageCapabilityController? =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
 
-                        // Act
-                        let controller: &StorageCapabilityController? =
-                            signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
-
-                        // Assert
-                        assert(controller == nil)
-                    }
-                }
-              `,
+                          // Assert
+                          assert(controller == nil)
+                      }
+                  }
+                `,
 			)
 			require.NoError(t, err)
 		})
@@ -1790,8 +1758,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _ := test(
 				// language=cadence
 				`
-                  import Test from 0x1
-
                   transaction {
                       prepare(signer: AuthAccount) {
                           // Act
@@ -1820,22 +1786,20 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _ := test(
 				// language=cadence
 				`
-                import Test from 0x1
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Act
+                          let controller1: &AccountCapabilityController? =
+                              signer.capabilities.account.getController(byCapabilityID: 0)
+                          let controller2: &AccountCapabilityController? =
+                              signer.capabilities.account.getController(byCapabilityID: 1)
 
-                transaction {
-                    prepare(signer: AuthAccount) {
-                        // Act
-                        let controller1: &AccountCapabilityController? =
-                            signer.capabilities.account.getController(byCapabilityID: 0)
-                        let controller2: &AccountCapabilityController? =
-                            signer.capabilities.account.getController(byCapabilityID: 1)
-
-                        // Assert
-                        assert(controller1 == nil)
-                        assert(controller2 == nil)
-                    }
-                }
-              `,
+                          // Assert
+                          assert(controller1 == nil)
+                          assert(controller2 == nil)
+                      }
+                  }
+                `,
 			)
 			require.NoError(t, err)
 		})
@@ -1847,23 +1811,21 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _ := test(
 				// language=cadence
 				`
-                import Test from 0x1
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Arrange
+                          let issuedCap: Capability<&AnyStruct> =
+                              signer.capabilities.storage.issue<&AnyStruct>(/storage/x)
 
-                transaction {
-                    prepare(signer: AuthAccount) {
-                        // Arrange
-                        let issuedCap: Capability<&AnyStruct> =
-                            signer.capabilities.storage.issue<&AnyStruct>(/storage/x)
+                          // Act
+                          let controller: &AccountCapabilityController? =
+                              signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
 
-                        // Act
-                        let controller: &AccountCapabilityController? =
-                            signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
-
-                        // Assert
-                        assert(controller == nil)
-                    }
-                }
-              `,
+                          // Assert
+                          assert(controller == nil)
+                      }
+                  }
+                `,
 			)
 			require.NoError(t, err)
 		})
@@ -1875,38 +1837,36 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _ := test(
 				// language=cadence
 				`
-                 import Test from 0x1
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Arrange
+                          let issuedCap1: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap2: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap3: Capability<&AuthAccount{}> =
+                              signer.capabilities.account.issue<&AuthAccount{}>()
 
-                 transaction {
-                     prepare(signer: AuthAccount) {
-                         // Arrange
-                         let issuedCap1: Capability<&AuthAccount> =
-                             signer.capabilities.account.issue<&AuthAccount>()
-                         let issuedCap2: Capability<&AuthAccount> =
-                             signer.capabilities.account.issue<&AuthAccount>()
-                         let issuedCap3: Capability<&AuthAccount{}> =
-                             signer.capabilities.account.issue<&AuthAccount{}>()
+                          // Act
+                          let controller1: &AccountCapabilityController? =
+                              signer.capabilities.account.getController(byCapabilityID: issuedCap1.id)
+                          let controller2: &AccountCapabilityController? =
+                              signer.capabilities.account.getController(byCapabilityID: issuedCap2.id)
+                          let controller3: &AccountCapabilityController? =
+                              signer.capabilities.account.getController(byCapabilityID: issuedCap3.id)
 
-                         // Act
-                         let controller1: &AccountCapabilityController? =
-                             signer.capabilities.account.getController(byCapabilityID: issuedCap1.id)
-                         let controller2: &AccountCapabilityController? =
-                             signer.capabilities.account.getController(byCapabilityID: issuedCap2.id)
-                         let controller3: &AccountCapabilityController? =
-                             signer.capabilities.account.getController(byCapabilityID: issuedCap3.id)
+                          // Assert
+                          assert(controller1!.capabilityID == 1)
+                          assert(controller1!.borrowType == Type<&AuthAccount>())
 
-                         // Assert
-                         assert(controller1!.capabilityID == 1)
-                         assert(controller1!.borrowType == Type<&AuthAccount>())
+                          assert(controller2!.capabilityID == 2)
+                          assert(controller2!.borrowType == Type<&AuthAccount>())
 
-                         assert(controller2!.capabilityID == 2)
-                         assert(controller2!.borrowType == Type<&AuthAccount>())
-
-                         assert(controller3!.capabilityID == 3)
-                         assert(controller3!.borrowType == Type<&AuthAccount{}>())
-                     }
-                 }
-               `,
+                          assert(controller3!.capabilityID == 3)
+                          assert(controller3!.borrowType == Type<&AuthAccount{}>())
+                      }
+                  }
+                `,
 			)
 			require.NoError(t, err)
 		})
@@ -1918,41 +1878,41 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _ := test(
 				// language=cadence
 				`
-                 import Test from 0x1
+                  import Test from 0x1
 
-                 transaction {
-                     prepare(signer: AuthAccount) {
+                  transaction {
+                      prepare(signer: AuthAccount) {
 
-                         // Arrange
-                         let issuedCap1: Capability<&AuthAccount> =
-                             signer.capabilities.account.issue<&AuthAccount>()
-                         let issuedCap2: Capability<&AuthAccount> =
-                             signer.capabilities.account.issue<&AuthAccount>()
-                         let issuedCap3: Capability<&AuthAccount{}> =
-                             signer.capabilities.account.issue<&AuthAccount{}>()
+                          // Arrange
+                          let issuedCap1: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap2: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap3: Capability<&AuthAccount{}> =
+                              signer.capabilities.account.issue<&AuthAccount{}>()
 
-                         // Act
-                         let controllers: [&AccountCapabilityController] =
-                             signer.capabilities.account.getControllers()
+                          // Act
+                          let controllers: [&AccountCapabilityController] =
+                              signer.capabilities.account.getControllers()
 
-                         // Assert
-                         assert(controllers.length == 3)
+                          // Assert
+                          assert(controllers.length == 3)
 
-                         Test.quickSort(
-                             &controllers as &[AnyStruct],
-                             isLess: fun(i: Int, j: Int): Bool {
-                                 let a = controllers[i]
-                                 let b = controllers[j]
-                                 return a.capabilityID < b.capabilityID
-                             }
-                         )
+                          Test.quickSort(
+                              &controllers as &[AnyStruct],
+                              isLess: fun(i: Int, j: Int): Bool {
+                                  let a = controllers[i]
+                                  let b = controllers[j]
+                                  return a.capabilityID < b.capabilityID
+                              }
+                          )
 
-                         assert(controllers[0].capabilityID == 1)
-                         assert(controllers[1].capabilityID == 2)
-                         assert(controllers[2].capabilityID == 3)
-                     }
-                 }
-               `,
+                          assert(controllers[0].capabilityID == 1)
+                          assert(controllers[1].capabilityID == 2)
+                          assert(controllers[2].capabilityID == 3)
+                      }
+                  }
+                `,
 			)
 			require.NoError(t, err)
 		})
@@ -1964,45 +1924,45 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _ := test(
 				// language=cadence
 				`
-                 import Test from 0x1
+                  import Test from 0x1
 
-                 transaction {
-                     prepare(signer: AuthAccount) {
-                         // Arrange
-                         let issuedCap1: Capability<&AuthAccount> =
-                             signer.capabilities.account.issue<&AuthAccount>()
-                         let issuedCap2: Capability<&AuthAccount> =
-                             signer.capabilities.account.issue<&AuthAccount>()
-                         let issuedCap3: Capability<&AuthAccount{}> =
-                             signer.capabilities.account.issue<&AuthAccount{}>()
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Arrange
+                          let issuedCap1: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap2: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap3: Capability<&AuthAccount{}> =
+                              signer.capabilities.account.issue<&AuthAccount{}>()
 
-                         // Act
-                         let controllers: [&AccountCapabilityController] = []
-                         signer.capabilities.account.forEachController(
-                             fun (controller: &AccountCapabilityController): Bool {
-                                 controllers.append(controller)
-                                 return true
-                             }
-                         )
+                          // Act
+                          let controllers: [&AccountCapabilityController] = []
+                          signer.capabilities.account.forEachController(
+                              fun (controller: &AccountCapabilityController): Bool {
+                                  controllers.append(controller)
+                                  return true
+                              }
+                          )
 
-                         // Assert
-                         assert(controllers.length == 3)
+                          // Assert
+                          assert(controllers.length == 3)
 
-                         Test.quickSort(
-                             &controllers as &[AnyStruct],
-                             isLess: fun(i: Int, j: Int): Bool {
-                                 let a = controllers[i]
-                                 let b = controllers[j]
-                                 return a.capabilityID < b.capabilityID
-                             }
-                         )
+                          Test.quickSort(
+                              &controllers as &[AnyStruct],
+                              isLess: fun(i: Int, j: Int): Bool {
+                                  let a = controllers[i]
+                                  let b = controllers[j]
+                                  return a.capabilityID < b.capabilityID
+                              }
+                          )
 
-                         assert(controllers[0].capabilityID == 1)
-                         assert(controllers[1].capabilityID == 2)
-                         assert(controllers[2].capabilityID == 3)
-                     }
-                 }
-               `,
+                          assert(controllers[0].capabilityID == 1)
+                          assert(controllers[1].capabilityID == 2)
+                          assert(controllers[2].capabilityID == 3)
+                      }
+                  }
+                `,
 			)
 			require.NoError(t, err)
 		})
@@ -2014,31 +1974,30 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _ := test(
 				// language=cadence
 				`
-                 import Test from 0x1
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Arrange
+                          let issuedCap1: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap2: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
 
-                 transaction {
-                     prepare(signer: AuthAccount) {
-                         // Arrange
-                         let issuedCap1: Capability<&AuthAccount> =
-                             signer.capabilities.account.issue<&AuthAccount>()
-                         let issuedCap2: Capability<&AuthAccount> =
-                             signer.capabilities.account.issue<&AuthAccount>()
+                          // Act
+                          var stopped = false
+                          signer.capabilities.account.forEachController(
+                              fun (controller: &AccountCapabilityController): Bool {
+                                  assert(!stopped)
+                                  stopped = true
+                                  return false
+                              }
+                          )
 
-                         // Act
-                         var stopped = false
-                         signer.capabilities.account.forEachController(
-                             fun (controller: &AccountCapabilityController): Bool {
-                                 assert(!stopped)
-                                 stopped = true
-                                 return false
-                             }
-                         )
+                          // Assert
+                          assert(stopped)
+                      }
+                  }
+                `,
 
-                         // Assert
-                         assert(stopped)
-                     }
-                 }
-               `,
 			)
 			require.NoError(t, err)
 		})
@@ -2498,8 +2457,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _ := test(
 				// language=cadence
 				`
-                  import Test from 0x1
-
                   transaction {
                       prepare(signer: AuthAccount) {
                           // Arrange
@@ -2540,8 +2497,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				err, _ := test(
 					// language=cadence
 					`
-                      import Test from 0x1
-
                       transaction {
                           prepare(signer: AuthAccount) {
                               // Arrange
@@ -2577,8 +2532,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				err, _ := test(
 					// language=cadence
 					`
-                      import Test from 0x1
-
                       transaction {
                           prepare(signer: AuthAccount) {
                               // Arrange
