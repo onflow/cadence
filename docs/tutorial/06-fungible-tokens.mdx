@@ -415,10 +415,10 @@ Click the `Deploy` button at the top right of the editor to deploy the code.
 
 </Callout>
 
-<img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-deploy.png" />
+![Deploy BasicToken on 0x01](deploy_basic_token.png)
 
 This deployment stores the contract for the basic fungible token
-in your active account (account `0x01`) so that it can be imported into transactions.
+in the selected account (account `0x01`) so that it can be imported into transactions.
 
 A contract's `init` function runs at contract creation, and never again afterwards.
 In our example, this function stores an instance of the `Vault` object with an initial balance of 30.
@@ -519,7 +519,7 @@ Capabilities allow us to accomplish this safely.
 
 ---
 
-Another important feature in Cadence is its utilization of [**Capability Security.**](../language/capability-based-access-control)
+Another important feature in Cadence is its utilization of [**Capability-Based Security.**](../language/capability-based-access-control)
 This feature ensures that while the withdraw function is declared public on the resource,
 no one except the intended user and those they approve of can withdraw tokens from their vault.
 
@@ -686,6 +686,15 @@ the `deposit` function will be there since it is in the `ExampleToken.Receiver` 
 
 Let's create capabilities to your `Vault` so that a separate account can send tokens to you.
 
+Before we submit a transaction interacting with ExampleToken resources, we'll need to deploy the contract to account `0x02`:
+1. Select Contract 2 in the playground sidebar (the ExampleToken contract)
+1. Make sure that signer `0x02` is selected as the deploying address
+1. Click "Deploy"
+
+![Deploy ExampleToken to 0x02](deploy_example_token.png)
+
+Now we can continue on to configure Capabilities on the ExampleToken Vault.
+
 <Callout type="info">
 
 Open the transaction named `Create Link`. <br/>
@@ -773,13 +782,11 @@ The `post` phase is for ensuring that certain conditions are met after the trans
 Here, we are getting the capability from its public path and calling its `check` function to ensure
 that the capability contains a valid link to a valid object in storage that is the specified type.
 
-<Callout type="info">
+Now that we understand the transaction, time to submit it:
 
-Select account `0x02` as the only signer. <br/>
-Click the `Send` button to submit the transaction. <br/>
-This transaction creates a new public reference to your `Vault` and checks that it was created correctly.
-
-</Callout>
+1. Select account `0x02` as the only signer.
+1. Click the `Send` button to submit the transaction.
+1. This transaction creates a new public reference to your `Vault` and checks that it was created correctly.
 
 ## Transfer Tokens to Another User
 
@@ -796,13 +803,9 @@ This way, Cadence protects the user if they accidentally enter the account addre
 
 Account `0x03` has not been set up to receive tokens, so we will do that now:
 
-<Callout type="info">
-
-Open the transaction `Setup Account`.<br/>
-Select account `0x03` as the only signer. <br/>
-Click the `Send` button to set up account `0x03` so that it can receive tokens.
-
-</Callout>
+1. Open the transaction `Setup Account`.
+1. Select account `0x03` as the only signer.
+1. Click the `Send` button to set up account `0x03` so that it can receive tokens.
 
 ```cadence:title=Setup Account.cdc
 // Setup Account
