@@ -418,6 +418,50 @@ func FromStringFunctionType(ty Type) *FunctionType {
 	}
 }
 
+// fromBigEndianBytes
+
+const FromBigEndianBytesFunctionName = "fromBigEndianBytes"
+
+func FromBigEndianBytesFunctionDocstring(ty Type) string {
+
+	builder := new(strings.Builder)
+	builder.WriteString(
+		fmt.Sprintf(
+			"Attempts to parse %s from a big-endian byte representation. Returns `nil` on overflow or invalid input.\n",
+			ty.String(),
+		))
+
+	if IsSameTypeKind(ty, FixedPointType) {
+		builder.WriteString(
+			`TODO\n`,
+		)
+	}
+	if IsSameTypeKind(ty, SignedIntegerType) || IsSameTypeKind(ty, SignedFixedPointType) {
+		builder.WriteString(
+			"TODO.\n",
+		)
+	}
+
+	return builder.String()
+}
+
+func FromBigEndianBytesFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "bytes",
+				TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: ty,
+			},
+		),
+	}
+}
+
 // toBigEndianBytes
 
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
@@ -3292,6 +3336,16 @@ func init() {
 				FromStringFunctionName,
 				fromStringFnType,
 				fromStringDocstring,
+			))
+
+			// add .fromBigEndianBytes() method
+			fromBigEndianBytesFnType := FromBigEndianBytesFunctionType(numberType)
+			fromBigEndianBytesDocstring := FromBigEndianBytesFunctionDocstring(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromBigEndianBytesFunctionName,
+				fromBigEndianBytesFnType,
+				fromBigEndianBytesDocstring,
 			))
 
 			BaseValueActivation.Set(

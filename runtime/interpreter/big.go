@@ -57,6 +57,31 @@ func SignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
 	}
 }
 
+func BigEndianBytesToSignedBigInt(b []byte) *big.Int {
+	// Check for special cases of 0 and 1
+	if len(b) == 1 && b[0] == 0 {
+		return big.NewInt(0)
+	} else if len(b) == 1 && b[0] <= 0x7f {
+		return big.NewInt(int64(b[0]))
+	}
+
+	// Check if number is negative (high bit set)
+	isNegative := b[0]&0x80 != 0
+
+	// Perform two's complement transformation if negative
+	if isNegative {
+		for i := range b {
+			b[i] ^= 0xff
+		}
+		result := new(big.Int).SetBytes(b)
+		result.Add(result, big.NewInt(1)).Neg(result)
+		return result
+	}
+
+	// Positive number
+	return new(big.Int).SetBytes(b)
+}
+
 func UnsignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
 
 	switch bigInt.Sign() {
@@ -72,4 +97,8 @@ func UnsignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func BigEndianBytesToUnsignedBigInt(b []byte) *big.Int {
+	return new(big.Int).SetBytes(b)
 }

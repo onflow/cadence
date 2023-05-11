@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"encoding/binary"
 	goErrors "errors"
 	"fmt"
 	"math"
@@ -2488,6 +2489,144 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 	return values
 }()
 
+type fromBigEndianBytesFunctionValue struct {
+	receiverType sema.Type
+	hostFunction *HostFunctionValue
+}
+
+// a function that attempts to create a Number from a big-endian bytes.
+type bigEndianBytesConverter func(*Interpreter, []byte) OptionalValue
+
+func newFromBigEndianBytesFunction(ty sema.Type, converter bigEndianBytesConverter) fromBigEndianBytesFunctionValue {
+	functionType := sema.FromBigEndianBytesFunctionType(ty)
+
+	hostFunctionImpl := NewUnmeteredHostFunctionValue(
+		functionType,
+		func(invocation Invocation) Value {
+			argument, ok := invocation.Arguments[0].(*ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+			if err != nil {
+				return Nil
+			}
+
+			return converter(inter, bytes)
+		},
+	)
+	return fromBigEndianBytesFunctionValue{
+		receiverType: ty,
+		hostFunction: hostFunctionImpl,
+	}
+}
+
+// TODO: Validate ranges for each type.
+var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunctionValue {
+	declarations := []fromBigEndianBytesFunctionValue{
+		// signed int values
+		newFromBigEndianBytesFunction(sema.Int8Type, func(i *Interpreter, b []byte) OptionalValue {
+			return NewSomeValueNonCopying(i, NewInt8Value(i, func() int8 { return int8(b[0]) }))
+		}),
+		newFromBigEndianBytesFunction(sema.Int16Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint16(b)
+			return NewSomeValueNonCopying(i, NewInt16Value(i, func() int16 { return int16(val) }))
+		}),
+		newFromBigEndianBytesFunction(sema.Int32Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint32(b)
+			return NewSomeValueNonCopying(i, NewInt32Value(i, func() int32 { return int32(val) }))
+		}),
+		newFromBigEndianBytesFunction(sema.Int64Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint64(b)
+			return NewSomeValueNonCopying(i, NewInt64Value(i, func() int64 { return int64(val) }))
+		}),
+		newFromBigEndianBytesFunction(sema.Int128Type, func(i *Interpreter, b []byte) OptionalValue {
+			bi := BigEndianBytesToSignedBigInt(b)
+			return NewSomeValueNonCopying(i, NewInt128ValueFromBigInt(i, func() *big.Int { return bi }))
+		}),
+		newFromBigEndianBytesFunction(sema.Int256Type, func(i *Interpreter, b []byte) OptionalValue {
+			bi := BigEndianBytesToSignedBigInt(b)
+			return NewSomeValueNonCopying(i, NewInt256ValueFromBigInt(i, func() *big.Int { return bi }))
+		}),
+		newFromBigEndianBytesFunction(sema.IntType, func(i *Interpreter, b []byte) OptionalValue {
+			bi := BigEndianBytesToSignedBigInt(b)
+			memoryUsage := common.NewBigIntMemoryUsage(
+				common.BigIntByteLength(bi),
+			)
+			return NewSomeValueNonCopying(i, NewIntValueFromBigInt(i, memoryUsage, func() *big.Int { return bi }))
+		}),
+
+		// unsigned int values
+		newFromBigEndianBytesFunction(sema.UInt8Type, func(i *Interpreter, b []byte) OptionalValue {
+			return NewSomeValueNonCopying(i, NewUInt8Value(i, func() uint8 { return uint8(b[0]) }))
+		}),
+		newFromBigEndianBytesFunction(sema.UInt16Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint16(b)
+			return NewSomeValueNonCopying(i, NewUInt16Value(i, func() uint16 { return val }))
+		}),
+		newFromBigEndianBytesFunction(sema.UInt32Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint32(b)
+			return NewSomeValueNonCopying(i, NewUInt32Value(i, func() uint32 { return val }))
+		}),
+		newFromBigEndianBytesFunction(sema.UInt64Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint64(b)
+			return NewSomeValueNonCopying(i, NewUInt64Value(i, func() uint64 { return val }))
+		}),
+		newFromBigEndianBytesFunction(sema.UInt128Type, func(i *Interpreter, b []byte) OptionalValue {
+			bi := BigEndianBytesToUnsignedBigInt(b)
+			return NewSomeValueNonCopying(i, NewUInt128ValueFromBigInt(i, func() *big.Int { return bi }))
+		}),
+		newFromBigEndianBytesFunction(sema.UInt256Type, func(i *Interpreter, b []byte) OptionalValue {
+			bi := BigEndianBytesToUnsignedBigInt(b)
+			return NewSomeValueNonCopying(i, NewUInt256ValueFromBigInt(i, func() *big.Int { return bi }))
+		}),
+		newFromBigEndianBytesFunction(sema.UIntType, func(i *Interpreter, b []byte) OptionalValue {
+			bi := BigEndianBytesToUnsignedBigInt(b)
+			memoryUsage := common.NewBigIntMemoryUsage(
+				common.BigIntByteLength(bi),
+			)
+			return NewSomeValueNonCopying(i, NewUIntValueFromBigInt(i, memoryUsage, func() *big.Int { return bi }))
+		}),
+
+		// machine-sized word types
+		newFromBigEndianBytesFunction(sema.Word8Type, func(i *Interpreter, b []byte) OptionalValue {
+			return NewSomeValueNonCopying(i, NewWord8Value(i, func() uint8 { return uint8(b[0]) }))
+		}),
+		newFromBigEndianBytesFunction(sema.Word16Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint16(b)
+			return NewSomeValueNonCopying(i, NewWord16Value(i, func() uint16 { return val }))
+		}),
+		newFromBigEndianBytesFunction(sema.Word32Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint32(b)
+			return NewSomeValueNonCopying(i, NewWord32Value(i, func() uint32 { return val }))
+		}),
+		newFromBigEndianBytesFunction(sema.Word64Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint64(b)
+			return NewSomeValueNonCopying(i, NewWord64Value(i, func() uint64 { return val }))
+		}),
+
+		// fixed-points
+		newFromBigEndianBytesFunction(sema.Fix64Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint64(b)
+			return NewSomeValueNonCopying(i, NewFix64Value(i, func() int64 { return int64(val) }))
+		}),
+		newFromBigEndianBytesFunction(sema.UFix64Type, func(i *Interpreter, b []byte) OptionalValue {
+			val := binary.BigEndian.Uint64(b)
+			return NewSomeValueNonCopying(i, NewUFix64Value(i, func() uint64 { return val }))
+		}),
+	}
+
+	values := make(map[string]fromBigEndianBytesFunctionValue, len(declarations))
+	for _, decl := range declarations {
+		// index declaration by type name
+		values[decl.receiverType.String()] = decl
+	}
+
+	return values
+}()
+
 type ValueConverterDeclaration struct {
 	min             Value
 	max             Value
@@ -2788,6 +2927,10 @@ func init() {
 		if _, ok := fromStringFunctionValues[typeName]; !ok {
 			panic(fmt.Sprintf("missing fromString implementation for number type: %s", numberType))
 		}
+
+		if _, ok := fromBigEndianBytesFunctionValues[typeName]; !ok {
+			panic(fmt.Sprintf("missing fromBigEndianBytes implementation for number type: %s", numberType))
+		}
 	}
 
 	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
@@ -3079,6 +3222,10 @@ var converterFunctionValues = func() []converterFunction {
 		fromStringVal := fromStringFunctionValues[declaration.name]
 
 		addMember(sema.FromStringFunctionName, fromStringVal.hostFunction)
+
+		fromBigEndianBytesVal := fromBigEndianBytesFunctionValues[declaration.name]
+
+		addMember(sema.FromBigEndianBytesFunctionName, fromBigEndianBytesVal.hostFunction)
 
 		if declaration.nestedVariables != nil {
 			for _, variable := range declaration.nestedVariables {
