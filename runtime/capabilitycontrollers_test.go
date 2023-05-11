@@ -1639,6 +1639,36 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.NoError(t, err)
 		})
 
+		t.Run("forEachController, no controllers", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath = /storage/r
+
+                          // Act
+                          var called = false
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath,
+                              fun (controller: &StorageCapabilityController): Bool {
+                                  called = true
+                                  return true
+                              }
+                          )
+
+                          // Assert
+                          assert(!called)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
 		t.Run("forEachController, all", func(t *testing.T) {
 
 			t.Parallel()
@@ -2048,6 +2078,34 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controllers[0].capabilityID == 1)
                           assert(controllers[1].capabilityID == 2)
                           assert(controllers[2].capabilityID == 3)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("forEachController, no controllers", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: AuthAccount) {
+
+                          // Act
+                          var called = false
+                          signer.capabilities.account.forEachController(
+                              fun (controller: &AccountCapabilityController): Bool {
+                                  called = true
+                                  return true
+                              }
+                          )
+
+                          // Assert
+                          assert(!called)
                       }
                   }
                 `,
