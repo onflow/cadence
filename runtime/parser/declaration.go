@@ -295,7 +295,7 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 	case lexer.TokenParenClose:
 		// it is impossible to disambiguate at parsing time between an access that is a single
 		// conjunctive entitlement, a single disjunctive entitlement, and the name of an entitlement mapping.
-		// Luckily, however, the former two are just equiavlent, and the latter we can disambiguate in the type checker.
+		// Luckily, however, the former two are just equivalent, and the latter we can disambiguate in the type checker.
 		return ast.NewConjunctiveEntitlementSet(entitlements), nil
 	default:
 		return nil, p.syntaxError(
@@ -394,7 +394,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			)
 		}
 
-		var access ast.Access = ast.AccessNotSpecified
+		var access ast.Access
 
 		keyword := p.currentTokenSource()
 		switch string(keyword) {
