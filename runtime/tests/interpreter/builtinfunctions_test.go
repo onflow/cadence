@@ -695,6 +695,88 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		},
 	}
 
+	invalidTests := map[string][]string{
+		// Int*
+		"Int": {},
+		"Int8": {
+			"[0, 0]",
+			"[0, 22]",
+		},
+		"Int16": {
+			"[0, 0, 0]",
+			"[0, 22, 0]",
+		},
+		"Int32": {
+			"[0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0]",
+		},
+		"Int64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Int128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Int256": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// UInt*
+		"UInt": {},
+		"UInt8": {
+			"[0, 0]",
+			"[0, 22]",
+		},
+		"UInt16": {
+			"[0, 0, 0]",
+			"[0, 22, 0]",
+		},
+		"UInt32": {
+			"[0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0]",
+		},
+		"UInt64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"UInt128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"UInt256": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// Word*
+		"Word8": {
+			"[0, 0]",
+			"[0, 22]",
+		},
+		"Word16": {
+			"[0, 0, 0]",
+			"[0, 22, 0]",
+		},
+		"Word32": {
+			"[0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0]",
+		},
+		"Word64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// Fix*
+		"Fix64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// UFix*
+		"UFix64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+	}
+
 	// Ensure the test cases are complete
 
 	for _, integerType := range sema.AllNumberTypes {
@@ -706,7 +788,11 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		}
 
 		if _, ok := validTestsWithRoundtrip[integerType.String()]; !ok {
-			panic(fmt.Sprintf("broken test: missing %s", integerType))
+			panic(fmt.Sprintf("broken test for valid cases: missing %s", integerType))
+		}
+
+		if _, ok := invalidTests[integerType.String()]; !ok {
+			panic(fmt.Sprintf("broken test for invalid cases: missing %s", integerType))
 		}
 	}
 
@@ -718,14 +804,13 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 						`
 	                      let resultOpt: %s? = %s.fromBigEndianBytes(%s)
 						  let result: %s = resultOpt!
-						  let expectedBytes: [UInt8] = %s
-						  let bytesEqual = expectedBytes == result.toBigEndianBytes()
+						  let roundTripEqual = result == %s.fromBigEndianBytes(result.toBigEndianBytes())!
 	                    `,
 						ty,
 						ty,
 						value,
 						ty,
-						value,
+						ty,
 					),
 				)
 
@@ -739,7 +824,31 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 					t,
 					inter,
 					interpreter.TrueValue,
-					inter.Globals.Get("bytesEqual").GetValue(),
+					inter.Globals.Get("roundTripEqual").GetValue(),
+				)
+			})
+		}
+	}
+
+	for ty, tests := range invalidTests {
+		for _, value := range tests {
+			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
+				inter := parseCheckAndInterpret(t,
+					fmt.Sprintf(
+						`
+	                      let result: %s? = %s.fromBigEndianBytes(%s)
+	                    `,
+						ty,
+						ty,
+						value,
+					),
+				)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.NilValue{},
+					inter.Globals.Get("result").GetValue(),
 				)
 			})
 		}
