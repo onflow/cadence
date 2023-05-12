@@ -4049,6 +4049,7 @@ func (interpreter *Interpreter) pathCapabilityBorrowFunction(
 					address,
 					pathValue,
 					borrowType,
+					true,
 					locationRange,
 				)
 			if err != nil {
@@ -4143,6 +4144,7 @@ func (interpreter *Interpreter) pathCapabilityCheckFunction(
 					address,
 					pathValue,
 					borrowType,
+					true,
 					locationRange,
 				)
 			if err != nil {
@@ -4187,6 +4189,7 @@ func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
 	address common.Address,
 	path PathValue,
 	wantedBorrowType *sema.ReferenceType,
+	checkTargetExists bool,
 	locationRange LocationRange,
 ) (
 	target CapabilityTarget,
@@ -4216,44 +4219,55 @@ func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
 
 		storageMapKey := StringStorageMapKey(identifier)
 
-		value := interpreter.ReadStored(address, domain, storageMapKey)
+		switch path.Domain {
+		case common.PathDomainStorage:
 
-		if value == nil {
-			return nil, false, nil
-		}
+			if checkTargetExists &&
+				!interpreter.StoredValueExists(address, domain, storageMapKey) {
 
-		switch value := value.(type) {
-		case PathLinkValue:
-			allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
-
-			if !sema.IsSubType(allowedType, wantedBorrowType) {
 				return nil, false, nil
 			}
 
-			targetPath := value.TargetPath
-			paths = append(paths, targetPath)
-			path = targetPath
-
-		case AccountLinkValue:
-			if !interpreter.IsSubTypeOfSemaType(
-				AuthAccountReferenceStaticType,
-				wantedBorrowType,
-			) {
-				return nil, false, nil
-			}
-
-			return AccountCapabilityTarget(address),
-				false,
+			return PathCapabilityTarget(path),
+				wantedReferenceType.Authorized,
 				nil
 
-		case *IDCapabilityValue:
+		case common.PathDomainPublic,
+			common.PathDomainPrivate:
 
-			// For backwards-compatibility, follow ID capability values
-			// which are published in the public or private domain
+			value := interpreter.ReadStored(address, domain, storageMapKey)
+			if value == nil {
+				return nil, false, nil
+			}
 
-			switch path.Domain {
-			case common.PathDomainPublic,
-				common.PathDomainPrivate:
+			switch value := value.(type) {
+			case PathLinkValue:
+				allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
+
+				if !sema.IsSubType(allowedType, wantedBorrowType) {
+					return nil, false, nil
+				}
+
+				targetPath := value.TargetPath
+				paths = append(paths, targetPath)
+				path = targetPath
+
+			case AccountLinkValue:
+				if !interpreter.IsSubTypeOfSemaType(
+					AuthAccountReferenceStaticType,
+					wantedBorrowType,
+				) {
+					return nil, false, nil
+				}
+
+				return AccountCapabilityTarget(address),
+					false,
+					nil
+
+			case *IDCapabilityValue:
+
+				// For backwards-compatibility, follow ID capability values
+				// which are published in the public or private domain
 
 				capabilityBorrowType, ok :=
 					interpreter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
@@ -4288,12 +4302,10 @@ func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
 				default:
 					return nil, false, nil
 				}
-			}
 
-		default:
-			return PathCapabilityTarget(path),
-				wantedReferenceType.Authorized,
-				nil
+			default:
+				panic(errors.NewUnreachableError())
+			}
 		}
 	}
 }

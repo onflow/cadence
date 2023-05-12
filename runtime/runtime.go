@@ -647,9 +647,11 @@ func (r *interpreterRuntime) ReadLinked(
 	target, _, err := inter.GetPathCapabilityFinalTarget(
 		address,
 		pathValue,
+		// Use top-most type to follow link all the way to final target
 		&sema.ReferenceType{
 			Type: sema.AnyType,
 		},
+		true,
 		interpreter.EmptyLocationRange,
 	)
 	if err != nil {

@@ -1325,7 +1325,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let resourceID = 42
 
                                       // Arrange
-                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
                                       let linkedCap: Capability<&Test.R> =
                                           signer.link<&Test.R>(publicPath, target: storagePath)!
 
@@ -1341,6 +1340,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       let gotCap = signer.getCapability<&Test.R>(publicPath)
                                       assert(gotCap.id == expectedCapID)
+
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
 
                                       assert(linkedCap.borrow() != nil)
                                       assert(linkedCap.check())
@@ -1402,7 +1403,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let resourceID = 42
 
                                       // Arrange
-                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
                                       let linkedCap1: Capability<&Test.R> =
                                           signer.link<&Test.R>(publicPath, target: privatePath)!
                                       let linkedCap2: Capability<&Test.R> =
@@ -1417,6 +1417,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let controller: &StorageCapabilityController =
                                           signer.capabilities.storage.getController(byCapabilityID: capID!)!
                                       assert(controller.target() == storagePath)
+
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
 
                                       assert(linkedCap1.borrow() != nil)
                                       assert(linkedCap1.check())

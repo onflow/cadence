@@ -3353,6 +3353,7 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 					&sema.ReferenceType{
 						Type: sema.AnyType,
 					},
+					false,
 					locationRange,
 				)
 			if err != nil {
