@@ -559,6 +559,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		},
 		"Int16": {
 			"[0, 0]":     interpreter.NewUnmeteredInt16Value(0),
+			"[42]":       interpreter.NewUnmeteredInt16Value(42),
 			"[0, 42]":    interpreter.NewUnmeteredInt16Value(42),
 			"[127, 255]": interpreter.NewUnmeteredInt16Value(32767),
 			"[255, 255]": interpreter.NewUnmeteredInt16Value(-1),
@@ -567,6 +568,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		},
 		"Int32": {
 			"[0, 0, 0, 0]":         interpreter.NewUnmeteredInt32Value(0),
+			"[42]":                 interpreter.NewUnmeteredInt32Value(42),
 			"[0, 0, 0, 42]":        interpreter.NewUnmeteredInt32Value(42),
 			"[127, 255, 255, 255]": interpreter.NewUnmeteredInt32Value(2147483647),
 			"[255, 255, 255, 255]": interpreter.NewUnmeteredInt32Value(-1),
@@ -574,8 +576,9 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 			"[128, 0, 0, 0]":       interpreter.NewUnmeteredInt32Value(-2147483648),
 		},
 		"Int64": {
-			"[0, 0, 0, 0, 0, 0, 0, 0]":                 interpreter.NewUnmeteredInt64Value(0),
-			"[0, 0, 0, 0, 0, 0, 0, 42]":                interpreter.NewUnmeteredInt64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 0]":  interpreter.NewUnmeteredInt64Value(0),
+			"[42]":                      interpreter.NewUnmeteredInt64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 42]": interpreter.NewUnmeteredInt64Value(42),
 			"[127, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredInt64Value(9223372036854775807),
 			"[255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredInt64Value(-1),
 			"[128, 0, 0, 0, 0, 0, 0, 1]":               interpreter.NewUnmeteredInt64Value(-9223372036854775807),
@@ -618,6 +621,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		},
 		"UInt16": {
 			"[0, 0]":     interpreter.NewUnmeteredUInt16Value(0),
+			"[42]":       interpreter.NewUnmeteredUInt16Value(42),
 			"[0, 42]":    interpreter.NewUnmeteredUInt16Value(42),
 			"[127, 255]": interpreter.NewUnmeteredUInt16Value(32767),
 			"[128, 0]":   interpreter.NewUnmeteredUInt16Value(32768),
@@ -625,14 +629,16 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		},
 		"UInt32": {
 			"[0, 0, 0, 0]":         interpreter.NewUnmeteredUInt32Value(0),
+			"[42]":                 interpreter.NewUnmeteredUInt32Value(42),
 			"[0, 0, 0, 42]":        interpreter.NewUnmeteredUInt32Value(42),
 			"[127, 255, 255, 255]": interpreter.NewUnmeteredUInt32Value(2147483647),
 			"[128, 0, 0, 0]":       interpreter.NewUnmeteredUInt32Value(2147483648),
 			"[255, 255, 255, 255]": interpreter.NewUnmeteredUInt32Value(4294967295),
 		},
 		"UInt64": {
-			"[0, 0, 0, 0, 0, 0, 0, 0]":                 interpreter.NewUnmeteredUInt64Value(0),
-			"[0, 0, 0, 0, 0, 0, 0, 42]":                interpreter.NewUnmeteredUInt64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 0]":  interpreter.NewUnmeteredUInt64Value(0),
+			"[42]":                      interpreter.NewUnmeteredUInt64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 42]": interpreter.NewUnmeteredUInt64Value(42),
 			"[127, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt64Value(9223372036854775807),
 			"[128, 0, 0, 0, 0, 0, 0, 0]":               interpreter.NewUnmeteredUInt64Value(9223372036854775808),
 			"[255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt64Value(18446744073709551615),
@@ -661,6 +667,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		},
 		"Word16": {
 			"[0, 0]":     interpreter.NewUnmeteredWord16Value(0),
+			"[42]":       interpreter.NewUnmeteredWord16Value(42),
 			"[0, 42]":    interpreter.NewUnmeteredWord16Value(42),
 			"[127, 255]": interpreter.NewUnmeteredWord16Value(32767),
 			"[128, 0]":   interpreter.NewUnmeteredWord16Value(32768),
@@ -668,14 +675,16 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		},
 		"Word32": {
 			"[0, 0, 0, 0]":         interpreter.NewUnmeteredWord32Value(0),
+			"[42]":                 interpreter.NewUnmeteredWord32Value(42),
 			"[0, 0, 0, 42]":        interpreter.NewUnmeteredWord32Value(42),
 			"[127, 255, 255, 255]": interpreter.NewUnmeteredWord32Value(2147483647),
 			"[128, 0, 0, 0]":       interpreter.NewUnmeteredWord32Value(2147483648),
 			"[255, 255, 255, 255]": interpreter.NewUnmeteredWord32Value(4294967295),
 		},
 		"Word64": {
-			"[0, 0, 0, 0, 0, 0, 0, 0]":                 interpreter.NewUnmeteredWord64Value(0),
-			"[0, 0, 0, 0, 0, 0, 0, 42]":                interpreter.NewUnmeteredWord64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 0]":  interpreter.NewUnmeteredWord64Value(0),
+			"[42]":                      interpreter.NewUnmeteredWord64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 42]": interpreter.NewUnmeteredWord64Value(42),
 			"[127, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord64Value(9223372036854775807),
 			"[128, 0, 0, 0, 0, 0, 0, 0]":               interpreter.NewUnmeteredWord64Value(9223372036854775808),
 			"[255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord64Value(18446744073709551615),
@@ -683,6 +692,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		// Fix*
 		"Fix64": {
 			"[0, 0, 0, 0, 0, 0, 0, 0]":             interpreter.NewUnmeteredFix64Value(0),
+			"[250, 86, 234, 0]":                    interpreter.NewUnmeteredFix64Value(42 * sema.Fix64Factor), // 42.0 with padding
 			"[0, 0, 0, 0, 250, 86, 234, 0]":        interpreter.NewUnmeteredFix64Value(42 * sema.Fix64Factor), // 42.0
 			"[0, 0, 0, 0, 251, 197, 32, 0]":        interpreter.NewUnmeteredFix64Value(4224_000_000),          // 42.24
 			"[255, 255, 255, 255, 250, 10, 31, 0]": interpreter.NewUnmeteredFix64Value(-1 * sema.Fix64Factor), // -1.0
@@ -690,6 +700,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		// UFix*
 		"UFix64": {
 			"[0, 0, 0, 0, 0, 0, 0, 0]":      interpreter.NewUnmeteredUFix64Value(0),
+			"[250, 86, 234, 0]":             interpreter.NewUnmeteredUFix64Value(42 * sema.Fix64Factor), // 42.0 with padding
 			"[0, 0, 0, 0, 250, 86, 234, 0]": interpreter.NewUnmeteredUFix64Value(42 * sema.Fix64Factor), // 42.0
 			"[0, 0, 0, 0, 251, 197, 32, 0]": interpreter.NewUnmeteredUFix64Value(4224_000_000),          // 42.24
 		},
