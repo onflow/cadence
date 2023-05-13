@@ -208,3 +208,60 @@ func TestCheckToBigEndianBytes(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckFromBigEndianBytes(t *testing.T) {
+
+	t.Parallel()
+
+	runValidCase := func(t *testing.T, ty sema.Type, bytesString string) {
+		t.Run(bytesString, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("let res = %s.fromBigEndianBytes(%s)", ty, bytesString)
+
+			checker, err := ParseAndCheck(t, code)
+
+			require.NoError(t, err)
+
+			resType := RequireGlobalValue(t, checker.Elaboration, "res")
+			require.Equal(t,
+				&sema.OptionalType{
+					Type: ty,
+				},
+				resType,
+			)
+		})
+	}
+
+	runInvalidCase := func(t *testing.T, ty sema.Type, bytesString string, expectedErrorType sema.SemanticError) {
+		t.Run(bytesString, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("let address = %s.fromBigEndianBytes(%s)", ty, bytesString)
+
+			_, err := ParseAndCheck(t, code)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, expectedErrorType, errs[0])
+		})
+	}
+
+	for _, ty := range sema.AllNumberTypes {
+		switch ty {
+		case sema.NumberType, sema.SignedNumberType,
+			sema.IntegerType, sema.SignedIntegerType,
+			sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+
+		default:
+			runValidCase(t, ty, "[]")
+			runValidCase(t, ty, "[1]")
+			runValidCase(t, ty, "[1, 2, 100, 4, 45, 12]")
+
+			runInvalidCase(t, ty, "\"abcd\"", &sema.TypeMismatchError{})
+			runInvalidCase(t, ty, "", &sema.ArgumentCountError{})
+			runInvalidCase(t, ty, "[1], [2, 4]", &sema.ArgumentCountError{})
+			runInvalidCase(t, ty, "typo: [1]", &sema.IncorrectArgumentLabelError{})
+		}
+	}
+}
