@@ -423,26 +423,10 @@ func FromStringFunctionType(ty Type) *FunctionType {
 const FromBigEndianBytesFunctionName = "fromBigEndianBytes"
 
 func FromBigEndianBytesFunctionDocstring(ty Type) string {
-
-	builder := new(strings.Builder)
-	builder.WriteString(
-		fmt.Sprintf(
-			"Attempts to parse %s from a big-endian byte representation. Returns `nil` on overflow or invalid input.\n",
-			ty.String(),
-		))
-
-	if IsSameTypeKind(ty, FixedPointType) {
-		builder.WriteString(
-			`TODO\n`,
-		)
-	}
-	if IsSameTypeKind(ty, SignedIntegerType) || IsSameTypeKind(ty, SignedFixedPointType) {
-		builder.WriteString(
-			"TODO.\n",
-		)
-	}
-
-	return builder.String()
+	return fmt.Sprintf(
+		"Attempts to parse %s from a big-endian byte representation. Returns `nil` on invalid input.",
+		ty.String(),
+	)
 }
 
 func FromBigEndianBytesFunctionType(ty Type) *FunctionType {

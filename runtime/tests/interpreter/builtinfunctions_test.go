@@ -708,7 +708,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 
 	invalidTests := map[string][]string{
 		// Int*
-		"Int": {},
+		"Int": {}, // No overflow
 		"Int8": {
 			"[0, 0]",
 			"[0, 22]",
@@ -734,7 +734,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
 		},
 		// UInt*
-		"UInt": {},
+		"UInt": {}, // No overflow
 		"UInt8": {
 			"[0, 0]",
 			"[0, 22]",
