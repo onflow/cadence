@@ -2530,6 +2530,7 @@ func newFromBigEndianBytesFunction(
 				return Nil
 			}
 
+			// overflow
 			if byteLength != 0 && len(bytes) > byteLength {
 				return Nil
 			}
