@@ -795,7 +795,7 @@ func TestCommonSuperType(t *testing.T) {
 		// i.e: super type of collection of T's should be T.
 		// Make sure it's true for all known types.
 
-		tests := make([]testCase, 0)
+		var tests []testCase
 
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
 			typ := variable.Type

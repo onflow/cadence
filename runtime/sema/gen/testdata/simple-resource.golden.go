@@ -29,6 +29,7 @@ var TestType = &SimpleType{
 	IsResource:    true,
 	Storable:      false,
 	Equatable:     false,
+	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
 }

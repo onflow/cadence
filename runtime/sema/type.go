@@ -132,6 +132,9 @@ type Type interface {
 	// IsEquatable returns true if values of the type can be equated
 	IsEquatable() bool
 
+	// IsComparable returns true if values of the type can be compared
+	IsComparable() bool
+
 	TypeAnnotationState() TypeAnnotationState
 	RewriteWithRestrictedTypes() (result Type, rewritten bool)
 
@@ -603,6 +606,10 @@ func (t *OptionalType) IsEquatable() bool {
 	return t.Type.IsEquatable()
 }
 
+func (*OptionalType) IsComparable() bool {
+	return false
+}
+
 func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -804,6 +811,10 @@ func (*GenericType) IsEquatable() bool {
 	return false
 }
 
+func (*GenericType) IsComparable() bool {
+	return false
+}
+
 func (*GenericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -861,8 +872,16 @@ func (t *GenericType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 	return ty
 }
 
-func (t *GenericType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
-	return f(t)
+func (t *GenericType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+	typeParameter := &TypeParameter{
+		Name:      t.TypeParameter.Name,
+		Optional:  t.TypeParameter.Optional,
+		TypeBound: t.TypeParameter.TypeBound.Map(gauge, f),
+	}
+
+	return f(&GenericType{
+		TypeParameter: typeParameter,
+	})
 }
 
 func (t *GenericType) GetMembers() map[string]MemberResolver {
@@ -1094,6 +1113,10 @@ func (*NumericType) IsEquatable() bool {
 	return true
 }
 
+func (t *NumericType) IsComparable() bool {
+	return !t.IsSuperType()
+}
+
 func (*NumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1288,6 +1311,10 @@ func (t *FixedPointNumericType) IsImportable(_ map[*Member]bool) bool {
 
 func (*FixedPointNumericType) IsEquatable() bool {
 	return true
+}
+
+func (t *FixedPointNumericType) IsComparable() bool {
+	return !t.IsSuperType()
 }
 
 func (*FixedPointNumericType) TypeAnnotationState() TypeAnnotationState {
@@ -2304,6 +2331,10 @@ func (v *VariableSizedType) IsEquatable() bool {
 	return v.Type.IsEquatable()
 }
 
+func (t *VariableSizedType) IsComparable() bool {
+	return t.Type.IsComparable()
+}
+
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -2448,6 +2479,10 @@ func (t *ConstantSizedType) IsImportable(results map[*Member]bool) bool {
 
 func (t *ConstantSizedType) IsEquatable() bool {
 	return t.Type.IsEquatable()
+}
+
+func (t *ConstantSizedType) IsComparable() bool {
+	return t.Type.IsComparable()
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -2964,6 +2999,10 @@ func (t *FunctionType) IsImportable(_ map[*Member]bool) bool {
 }
 
 func (*FunctionType) IsEquatable() bool {
+	return false
+}
+
+func (*FunctionType) IsComparable() bool {
 	return false
 }
 
@@ -3555,6 +3594,22 @@ var AddressConversionFunctionType = &FunctionType{
 	},
 }
 
+const AddressTypeFromBytesFunctionName = "fromBytes"
+const AddressTypeFromBytesFunctionDocString = `
+Returns an Address from the given byte array
+`
+
+var AddressTypeFromBytesFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "bytes",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
+}
+
 func init() {
 	// Declare a conversion function for the address type
 
@@ -3566,11 +3621,31 @@ func init() {
 		panic(errors.NewUnreachableError())
 	}
 
+	functionType := AddressConversionFunctionType
+
+	addMember := func(member *Member) {
+		if functionType.Members == nil {
+			functionType.Members = &StringMemberOrderedMap{}
+		}
+		name := member.Identifier.Identifier
+		if functionType.Members.Contains(name) {
+			panic(errors.NewUnreachableError())
+		}
+		functionType.Members.Set(name, member)
+	}
+
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		AddressTypeFromBytesFunctionName,
+		AddressTypeFromBytesFunctionType,
+		AddressTypeFromBytesFunctionDocString,
+	))
+
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
 			typeName,
-			AddressConversionFunctionType,
+			functionType,
 			numberConversionDocString("an address"),
 		),
 	)
@@ -3739,7 +3814,8 @@ type CompositeType struct {
 	ConstructorPurity                   FunctionPurity
 	hasComputedMembers                  bool
 	// Only applicable for native composite types
-	importable bool
+	importable            bool
+	supportedEntitlements *EntitlementOrderedSet
 }
 
 var _ Type = &CompositeType{}
@@ -3901,6 +3977,10 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 }
 
 func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	if t.supportedEntitlements != nil {
+		return t.supportedEntitlements
+	}
+
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
 	t.Members.Foreach(func(_ string, member *Member) {
 		switch access := member.Access.(type) {
@@ -3910,6 +3990,11 @@ func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 			set.SetAll(access.Entitlements)
 		}
 	})
+	t.ExplicitInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
+		set.SetAll(it.SupportedEntitlements())
+	})
+
+	t.supportedEntitlements = set
 	return set
 }
 
@@ -4020,6 +4105,10 @@ func (t *CompositeType) IsExportable(results map[*Member]bool) bool {
 func (t *CompositeType) IsEquatable() bool {
 	// TODO: add support for more composite kinds
 	return t.Kind == common.CompositeKindEnum
+}
+
+func (*CompositeType) IsComparable() bool {
+	return false
 }
 
 func (c *CompositeType) TypeAnnotationState() TypeAnnotationState {
@@ -4413,6 +4502,7 @@ type InterfaceType struct {
 	cachedIdentifiersLock sync.RWMutex
 	memberResolversOnce   sync.Once
 	InitializerPurity     FunctionPurity
+	supportedEntitlements *EntitlementOrderedSet
 }
 
 var _ Type = &InterfaceType{}
@@ -4516,6 +4606,10 @@ func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 }
 
 func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	if t.supportedEntitlements != nil {
+		return t.supportedEntitlements
+	}
+
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
 	t.Members.Foreach(func(_ string, member *Member) {
 		switch access := member.Access.(type) {
@@ -4529,6 +4623,9 @@ func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 			})
 		}
 	})
+	// TODO: include inherited entitlements
+
+	t.supportedEntitlements = set
 	return set
 }
 
@@ -4608,6 +4705,10 @@ func (t *InterfaceType) IsImportable(results map[*Member]bool) bool {
 
 func (*InterfaceType) IsEquatable() bool {
 	// TODO:
+	return false
+}
+
+func (*InterfaceType) IsComparable() bool {
 	return false
 }
 
@@ -4746,6 +4847,10 @@ func (t *DictionaryType) IsImportable(results map[*Member]bool) bool {
 func (t *DictionaryType) IsEquatable() bool {
 	return t.KeyType.IsEquatable() &&
 		t.ValueType.IsEquatable()
+}
+
+func (*DictionaryType) IsComparable() bool {
+	return false
 }
 
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
@@ -5209,6 +5314,10 @@ func (*ReferenceType) IsEquatable() bool {
 	return true
 }
 
+func (*ReferenceType) IsComparable() bool {
+	return false
+}
+
 func (r *ReferenceType) TypeAnnotationState() TypeAnnotationState {
 	if r.Type.TypeAnnotationState() == TypeAnnotationStateDirectEntitlementTypeAnnotation {
 		return TypeAnnotationStateDirectEntitlementTypeAnnotation
@@ -5397,6 +5506,10 @@ func (t *AddressType) IsImportable(_ map[*Member]bool) bool {
 
 func (*AddressType) IsEquatable() bool {
 	return true
+}
+
+func (*AddressType) IsComparable() bool {
+	return false
 }
 
 func (*AddressType) TypeAnnotationState() TypeAnnotationState {
@@ -6115,6 +6228,10 @@ func (*TransactionType) IsEquatable() bool {
 	return false
 }
 
+func (*TransactionType) IsComparable() bool {
+	return false
+}
+
 func (*TransactionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6157,11 +6274,12 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 type RestrictedType struct {
 	Type Type
 	// an internal set of field `Restrictions`
-	restrictionSet      *InterfaceSet
-	Restrictions        []*InterfaceType
-	restrictionSetOnce  sync.Once
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	restrictionSet        *InterfaceSet
+	Restrictions          []*InterfaceType
+	restrictionSetOnce    sync.Once
+	memberResolvers       map[string]MemberResolver
+	memberResolversOnce   sync.Once
+	supportedEntitlements *EntitlementOrderedSet
 }
 
 var _ Type = &RestrictedType{}
@@ -6342,6 +6460,10 @@ func (*RestrictedType) IsEquatable() bool {
 	return false
 }
 
+func (t *RestrictedType) IsComparable() bool {
+	return false
+}
+
 func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6353,7 +6475,14 @@ func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
 }
 
 func (t *RestrictedType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	return f(NewRestrictedType(gauge, t.Type.Map(gauge, f), t.Restrictions))
+	restrictions := make([]*InterfaceType, 0, len(t.Restrictions))
+	for _, restriction := range t.Restrictions {
+		if mappedRestriction, isRestriction := restriction.Map(gauge, f).(*InterfaceType); isRestriction {
+			restrictions = append(restrictions, mappedRestriction)
+		}
+	}
+
+	return f(NewRestrictedType(gauge, t.Type.Map(gauge, f), restrictions))
 }
 
 func (t *RestrictedType) GetMembers() map[string]MemberResolver {
@@ -6420,6 +6549,10 @@ func (t *RestrictedType) initializeMemberResolvers() {
 }
 
 func (t *RestrictedType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	if t.supportedEntitlements != nil {
+		return t.supportedEntitlements
+	}
+
 	// a restricted type supports all the entitlements of its interfaces and its restricted type
 	set = orderedmap.New[EntitlementOrderedSet](t.RestrictionSet().Len())
 	t.RestrictionSet().ForEach(func(it *InterfaceType) {
@@ -6428,6 +6561,8 @@ func (t *RestrictedType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	if supportingType, ok := t.Type.(EntitlementSupportingType); ok {
 		set.SetAll(supportingType.SupportedEntitlements())
 	}
+
+	t.supportedEntitlements = set
 	return set
 }
 
@@ -6588,6 +6723,10 @@ func (*CapabilityType) IsEquatable() bool {
 	return false
 }
 
+func (*CapabilityType) IsComparable() bool {
+	return false
+}
+
 func (t *CapabilityType) RewriteWithRestrictedTypes() (Type, bool) {
 	if t.BorrowType == nil {
 		return t, false
@@ -6734,7 +6873,12 @@ The address of the capability
 `
 
 func (t *CapabilityType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	return f(NewCapabilityType(gauge, t.BorrowType.Map(gauge, f)))
+	var borrowType Type
+	if t.BorrowType != nil {
+		borrowType = t.BorrowType.Map(gauge, f)
+	}
+
+	return f(NewCapabilityType(gauge, borrowType))
 }
 
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
@@ -6987,7 +7131,7 @@ func MembersAsMap(members []*Member) *StringMemberOrderedMap {
 }
 
 func MembersFieldNames(members []*Member) []string {
-	fields := make([]string, 0)
+	var fields []string
 	for _, member := range members {
 		if member.DeclarationKind == common.DeclarationKindField {
 			fields = append(fields, member.Identifier.Identifier)
@@ -7046,6 +7190,14 @@ type EntitlementType struct {
 var _ Type = &EntitlementType{}
 var _ ContainedType = &EntitlementType{}
 var _ LocatedType = &EntitlementType{}
+
+func NewEntitlementType(memoryGauge common.MemoryGauge, location common.Location, identifier string) *EntitlementType {
+	common.UseMemory(memoryGauge, common.EntitlementSemaTypeMemoryUsage)
+	return &EntitlementType{
+		Location:   location,
+		Identifier: identifier,
+	}
+}
 
 func (*EntitlementType) IsType() {}
 
@@ -7123,6 +7275,10 @@ func (*EntitlementType) IsEquatable() bool {
 	return false
 }
 
+func (*EntitlementType) IsComparable() bool {
+	return false
+}
+
 func (*EntitlementType) IsResourceType() bool {
 	return false
 }
@@ -7160,6 +7316,18 @@ type EntitlementMapType struct {
 var _ Type = &EntitlementMapType{}
 var _ ContainedType = &EntitlementMapType{}
 var _ LocatedType = &EntitlementMapType{}
+
+func NewEntitlementMapType(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	identifier string,
+) *EntitlementMapType {
+	common.UseMemory(memoryGauge, common.EntitlementMapSemaTypeMemoryUsage)
+	return &EntitlementMapType{
+		Location:   location,
+		Identifier: identifier,
+	}
+}
 
 func (*EntitlementMapType) IsType() {}
 
@@ -7234,6 +7402,10 @@ func (t *EntitlementMapType) IsImportable(_ map[*Member]bool) bool {
 }
 
 func (*EntitlementMapType) IsEquatable() bool {
+	return false
+}
+
+func (*EntitlementMapType) IsComparable() bool {
 	return false
 }
 

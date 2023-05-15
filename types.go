@@ -1845,7 +1845,7 @@ type Authorization interface {
 
 type Unauthorized struct{}
 
-var UnauthorizedAccess Unauthorized = Unauthorized{}
+var UnauthorizedAccess Authorization = Unauthorized{}
 
 func (Unauthorized) isAuthorization() {}
 
@@ -1872,6 +1872,8 @@ type EntitlementSetAuthorization struct {
 	Entitlements []common.TypeID
 	Kind         EntitlementSetKind
 }
+
+var _ Authorization = EntitlementSetAuthorization{}
 
 func NewEntitlementSetAuthorization(gauge common.MemoryGauge, entitlements []common.TypeID, kind EntitlementSetKind) EntitlementSetAuthorization {
 	common.UseMemory(gauge, common.MemoryUsage{
@@ -1910,6 +1912,10 @@ func (e EntitlementSetAuthorization) ID() string {
 func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
 	switch auth := auth.(type) {
 	case EntitlementSetAuthorization:
+		if len(e.Entitlements) != len(auth.Entitlements) {
+			return false
+		}
+
 		for i, entitlement := range e.Entitlements {
 			if auth.Entitlements[i] != entitlement {
 				return false
@@ -1923,6 +1929,8 @@ func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
 type EntitlementMapAuthorization struct {
 	TypeID common.TypeID
 }
+
+var _ Authorization = EntitlementMapAuthorization{}
 
 func NewEntitlementMapAuthorization(gauge common.MemoryGauge, id common.TypeID) EntitlementMapAuthorization {
 	common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindCadenceEntitlementMapAccess))

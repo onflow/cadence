@@ -44,6 +44,8 @@ type ConjunctiveEntitlementSet struct {
 	Elements []*NominalType `json:"ConjunctiveElements"`
 }
 
+var _ EntitlementSet = &ConjunctiveEntitlementSet{}
+
 func (s *ConjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
 }
@@ -59,6 +61,8 @@ func NewConjunctiveEntitlementSet(entitlements []*NominalType) *ConjunctiveEntit
 type DisjunctiveEntitlementSet struct {
 	Elements []*NominalType `json:"DisjunctiveElements"`
 }
+
+var _ EntitlementSet = &DisjunctiveEntitlementSet{}
 
 func (s *DisjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
@@ -134,14 +138,14 @@ func (e EntitlementAccess) subset(other EntitlementAccess) bool {
 }
 
 func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
-	if primitive, isPrimitive := other.(PrimitiveAccess); isPrimitive {
-		return primitive == AccessPublic || primitive == AccessPublicSettable
-	}
-	conjunctiveEntitlementAccess, ok := other.(EntitlementAccess)
-	if !ok {
+	switch other := other.(type) {
+	case PrimitiveAccess:
+		return other == AccessPublic || other == AccessPublicSettable
+	case EntitlementAccess:
+		return e.subset(other)
+	default:
 		return false
 	}
-	return e.subset(conjunctiveEntitlementAccess)
 }
 
 type PrimitiveAccess uint8

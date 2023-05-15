@@ -653,7 +653,7 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 			expectedError: &sema.MissingArgumentLabelError{},
 		},
 		{
-			name: "thsecondird label missing",
+			name: "second label missing",
 			code: `
 			  resource R {}
               let result = ReferenceType(entitlements: [], Type<@R>())

@@ -4561,6 +4561,28 @@ func TestCheckEntitlementConditions(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("result value inherited entitlement resource", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		resource interface I {
+			access(X, Y) view fun foo(): Bool {
+				return true
+			}
+		}
+		resource R: I {}
+		fun bar(r: @R): @R {
+			post {
+				result.foo(): ""
+			}
+			return <-r
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("result value usage unentitled resource", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
