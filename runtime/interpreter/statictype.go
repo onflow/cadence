@@ -504,6 +504,7 @@ type EntitlementSetAuthorization struct {
 	Entitlements []common.TypeID
 	Kind         sema.EntitlementSetKind
 }
+var _ Authorization = EntitlementSetAuthorization{}
 
 func NewEntitlementSetAuthorization(memoryGauge common.MemoryGauge, entitlements []common.TypeID, kind sema.EntitlementSetKind) EntitlementSetAuthorization {
 	common.UseMemory(memoryGauge, common.MemoryUsage{
