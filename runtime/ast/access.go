@@ -36,9 +36,16 @@ type Access interface {
 	IsLessPermissiveThan(Access) bool
 }
 
+type Separator = string
+
+const (
+	Disjunction Separator = " |"
+	Conjunction Separator = ","
+)
+
 type EntitlementSet interface {
 	Entitlements() []*NominalType
-	Separator() string
+	Separator() Separator
 }
 
 type ConjunctiveEntitlementSet struct {
@@ -51,8 +58,8 @@ func (s ConjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
 }
 
-func (s ConjunctiveEntitlementSet) Separator() string {
-	return ","
+func (s ConjunctiveEntitlementSet) Separator() Separator {
+	return Conjunction
 }
 
 func NewConjunctiveEntitlementSet(entitlements []*NominalType) ConjunctiveEntitlementSet {
@@ -69,8 +76,8 @@ func (s DisjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
 }
 
-func (s DisjunctiveEntitlementSet) Separator() string {
-	return " |"
+func (s DisjunctiveEntitlementSet) Separator() Separator {
+	return Disjunction
 }
 
 func NewDisjunctiveEntitlementSet(entitlements []*NominalType) DisjunctiveEntitlementSet {
