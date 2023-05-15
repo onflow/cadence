@@ -35,9 +35,16 @@ type Access interface {
 	MarshalJSON() ([]byte, error)
 }
 
+type Separator = string
+
+const (
+	Disjunction Separator = " |"
+	Conjunction Separator = ","
+)
+
 type EntitlementSet interface {
 	Entitlements() []*NominalType
-	Separator() string
+	Separator() Separator
 }
 
 type ConjunctiveEntitlementSet struct {
@@ -50,8 +57,8 @@ func (s *ConjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
 }
 
-func (s *ConjunctiveEntitlementSet) Separator() string {
-	return ","
+func (s *ConjunctiveEntitlementSet) Separator() Separator {
+	return Conjunction
 }
 
 func NewConjunctiveEntitlementSet(entitlements []*NominalType) *ConjunctiveEntitlementSet {
@@ -68,8 +75,8 @@ func (s *DisjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
 }
 
-func (s *DisjunctiveEntitlementSet) Separator() string {
-	return " |"
+func (s *DisjunctiveEntitlementSet) Separator() Separator {
+	return Disjunction
 }
 
 func NewDisjunctiveEntitlementSet(entitlements []*NominalType) *DisjunctiveEntitlementSet {
@@ -92,27 +99,26 @@ func (EntitlementAccess) Description() string {
 	return "entitled access"
 }
 
-func (e EntitlementAccess) entitlementsString(prefix *strings.Builder) *strings.Builder {
+func (e EntitlementAccess) entitlementsString(prefix *strings.Builder) {
 	for i, entitlement := range e.EntitlementSet.Entitlements() {
 		prefix.WriteString(entitlement.String())
 		if i < len(e.EntitlementSet.Entitlements())-1 {
-			prefix.Write([]byte(e.EntitlementSet.Separator()))
+			prefix.WriteString(e.EntitlementSet.Separator())
 		}
 	}
-	return prefix
 }
 
 func (e EntitlementAccess) String() string {
 	str := &strings.Builder{}
 	str.WriteString("ConjunctiveEntitlementAccess ")
-	str = e.entitlementsString(str)
+	e.entitlementsString(str)
 	return str.String()
 }
 
 func (e EntitlementAccess) Keyword() string {
 	str := &strings.Builder{}
 	str.WriteString("access(")
-	str = e.entitlementsString(str)
+	e.entitlementsString(str)
 	str.WriteString(")")
 	return str.String()
 }
