@@ -304,7 +304,7 @@ func (e *AttachExpression) Doc() prettier.Doc {
 		prettier.Space,
 		e.Base.Doc(),
 	)
-	if e.Entitlements != nil && len(e.Entitlements) > 0 {
+	if len(e.Entitlements) > 0 {
 		entitlementsLen := len(e.Entitlements)
 		doc = append(doc, prettier.Space, attachExpressionWithDoc, prettier.Space, openParenthesisDoc)
 		for i, entitlement := range e.Entitlements {
@@ -323,7 +323,7 @@ func (e *AttachExpression) StartPosition() Position {
 }
 
 func (e *AttachExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
-	if e.Entitlements != nil && len(e.Entitlements) > 0 {
+	if len(e.Entitlements) > 0 {
 		return e.Entitlements[len(e.Entitlements)-1].EndPosition(memoryGauge)
 	}
 	return e.Base.EndPosition(memoryGauge)

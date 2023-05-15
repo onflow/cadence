@@ -6986,6 +6986,14 @@ var _ Type = &EntitlementType{}
 var _ ContainedType = &EntitlementType{}
 var _ LocatedType = &EntitlementType{}
 
+func NewEntitlementType(memoryGauge common.MemoryGauge, location common.Location, identifier string) *EntitlementType {
+	common.UseMemory(memoryGauge, common.EntitlementSemaTypeMemoryUsage)
+	return &EntitlementType{
+		Location:   location,
+		Identifier: identifier,
+	}
+}
+
 func (*EntitlementType) IsType() {}
 
 func (t *EntitlementType) Tag() TypeTag {
@@ -7099,6 +7107,18 @@ type EntitlementMapType struct {
 var _ Type = &EntitlementMapType{}
 var _ ContainedType = &EntitlementMapType{}
 var _ LocatedType = &EntitlementMapType{}
+
+func NewEntitlementMapType(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	identifier string,
+) *EntitlementMapType {
+	common.UseMemory(memoryGauge, common.EntitlementMapSemaTypeMemoryUsage)
+	return &EntitlementMapType{
+		Location:   location,
+		Identifier: identifier,
+	}
+}
 
 func (*EntitlementMapType) IsType() {}
 
