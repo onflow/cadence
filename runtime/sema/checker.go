@@ -1990,7 +1990,7 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 				}
 				semanticEntitlements = append(semanticEntitlements, entitlementType)
 			}
-			if access.EntitlementSet.Separator() == "," {
+			if access.EntitlementSet.Separator() == ast.Conjunction {
 				result = NewEntitlementAccess(access, semanticEntitlements, Conjunction)
 				return
 			}
