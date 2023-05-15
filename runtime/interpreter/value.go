@@ -18065,6 +18065,21 @@ func AddressFromBytes(invocation Invocation) Value {
 	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
 }
 
+func AddressFromString(invocation Invocation) Value {
+	argument, ok := invocation.Arguments[0].(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	addr, err := common.HexToAddressAssertPrefix(argument.Str)
+	if err != nil {
+		return Nil
+	}
+
+	inter := invocation.Interpreter
+	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
+}
+
 func accountGetCapabilityFunction(
 	gauge common.MemoryGauge,
 	addressValue AddressValue,

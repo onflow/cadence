@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
 const TestTypeTestIntFieldName = "testInt"
 
 var TestTypeTestIntFieldType = UInt64Type
@@ -163,80 +165,106 @@ var TestType = &SimpleType{
 func init() {
 	TestType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestIntFieldName,
 				TestTypeTestIntFieldType,
 				TestTypeTestIntFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestOptIntFieldName,
 				TestTypeTestOptIntFieldType,
 				TestTypeTestOptIntFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestRefIntFieldName,
 				TestTypeTestRefIntFieldType,
 				TestTypeTestRefIntFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestVarIntsFieldName,
 				TestTypeTestVarIntsFieldType,
 				TestTypeTestVarIntsFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestConstIntsFieldName,
 				TestTypeTestConstIntsFieldType,
 				TestTypeTestConstIntsFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestParamFieldName,
 				TestTypeTestParamFieldType,
 				TestTypeTestParamFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestAddressFieldName,
 				TestTypeTestAddressFieldType,
 				TestTypeTestAddressFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestTypeFieldName,
 				TestTypeTestTypeFieldType,
 				TestTypeTestTypeFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestCapFieldName,
 				TestTypeTestCapFieldType,
 				TestTypeTestCapFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestCapIntFieldName,
 				TestTypeTestCapIntFieldType,
 				TestTypeTestCapIntFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestRestrictedWithoutTypeFieldName,
 				TestTypeTestRestrictedWithoutTypeFieldType,
 				TestTypeTestRestrictedWithoutTypeFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestRestrictedWithTypeFieldName,
 				TestTypeTestRestrictedWithTypeFieldType,
 				TestTypeTestRestrictedWithTypeFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestRestrictedWithoutRestrictionsFieldName,
 				TestTypeTestRestrictedWithoutRestrictionsFieldType,
 				TestTypeTestRestrictedWithoutRestrictionsFieldDocString,

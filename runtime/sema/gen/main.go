@@ -1246,19 +1246,44 @@ func simpleType() *dst.StarExpr {
 	return &dst.StarExpr{X: dst.NewIdent("SimpleType")}
 }
 
+func accessIdent(access ast.Access) *dst.Ident {
+	return &dst.Ident{
+		Name: access.String(),
+		Path: "github.com/onflow/cadence/runtime/ast",
+	}
+}
+
+func variableKindIdent(variableKind ast.VariableKind) *dst.Ident {
+	return &dst.Ident{
+		Name: variableKind.String(),
+		Path: "github.com/onflow/cadence/runtime/ast",
+	}
+}
+
 func newDeclarationMember(
 	fullTypeName string,
 	containerTypeVariableIdentifier string,
 	memberNameVariableIdentifier string,
 	declaration ast.Declaration,
 ) dst.Expr {
-	declarationKind := declaration.DeclarationKind()
 	declarationName := declaration.DeclarationIdentifier().Identifier
 
-	switch declarationKind {
-	case common.DeclarationKindField:
+	// Field
+
+	access := declaration.DeclarationAccess()
+	if access == ast.AccessNotSpecified {
+		panic(fmt.Errorf(
+			"member with unspecified access: %s.%s",
+			fullTypeName,
+			declarationName,
+		))
+	}
+
+	if fieldDeclaration, ok := declaration.(*ast.FieldDeclaration); ok {
 		args := []dst.Expr{
 			dst.NewIdent(containerTypeVariableIdentifier),
+			accessIdent(access),
+			variableKindIdent(fieldDeclaration.VariableKind),
 			dst.NewIdent(memberNameVariableIdentifier),
 			dst.NewIdent(fieldTypeVarName(fullTypeName, declarationName)),
 			dst.NewIdent(fieldDocStringVarName(fullTypeName, declarationName)),
@@ -1269,15 +1294,20 @@ func newDeclarationMember(
 			arg.Decorations().After = dst.NewLine
 		}
 
-		// TODO: add support for var
 		return &dst.CallExpr{
-			Fun:  dst.NewIdent("NewUnmeteredPublicConstantFieldMember"),
+			Fun:  dst.NewIdent("NewUnmeteredFieldMember"),
 			Args: args,
 		}
+	}
 
-	case common.DeclarationKindFunction:
+	declarationKind := declaration.DeclarationKind()
+
+	// Function
+
+	if declarationKind == common.DeclarationKindFunction {
 		args := []dst.Expr{
 			dst.NewIdent(containerTypeVariableIdentifier),
+			accessIdent(access),
 			dst.NewIdent(memberNameVariableIdentifier),
 			dst.NewIdent(functionTypeVarName(fullTypeName, declarationName)),
 			dst.NewIdent(functionDocStringVarName(fullTypeName, declarationName)),
@@ -1289,17 +1319,15 @@ func newDeclarationMember(
 		}
 
 		return &dst.CallExpr{
-			Fun:  dst.NewIdent("NewUnmeteredPublicFunctionMember"),
+			Fun:  dst.NewIdent("NewUnmeteredFunctionMember"),
 			Args: args,
 		}
-
-	default:
-		panic(fmt.Errorf(
-			"%s members are not supported",
-			declarationKind.Name(),
-		))
 	}
 
+	panic(fmt.Errorf(
+		"%s members are not supported",
+		declarationKind.Name(),
+	))
 }
 
 func stringMemberResolverMapType() *dst.MapType {
