@@ -7252,6 +7252,10 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			value: interpreter.NewUnmeteredWord64Value(42),
 			ty:    sema.Word64Type,
 		},
+		"Word128": {
+			value: interpreter.NewUnmeteredWord128ValueFromUint64(42),
+			ty:    sema.Word128Type,
+		},
 		// Fix*
 		"Fix64": {
 			value: interpreter.NewUnmeteredFix64Value(123000000),

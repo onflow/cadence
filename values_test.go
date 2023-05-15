@@ -146,6 +146,11 @@ func newValueTestCases() map[string]valueTestCase {
 			string:       "64",
 			expectedType: Word64Type{},
 		},
+		"Word128": {
+			value:        NewWord128(128),
+			string:       "128",
+			expectedType: Word128Type{},
+		},
 		"UFix64": {
 			value:        ufix64,
 			string:       "64.01000000",
@@ -592,6 +597,13 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 			NewWord64(9223372036854775807):  {127, 255, 255, 255, 255, 255, 255, 255},
 			NewWord64(9223372036854775808):  {128, 0, 0, 0, 0, 0, 0, 0},
 			NewWord64(18446744073709551615): {255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		"Word128": {
+			NewWord128(0):   {0},
+			NewWord128(42):  {42},
+			NewWord128(127): {127},
+			NewWord128(128): {128},
+			NewWord128(200): {200},
 		},
 		// Fix*
 		"Fix64": {

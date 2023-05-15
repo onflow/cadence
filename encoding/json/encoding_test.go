@@ -617,6 +617,26 @@ func TestEncodeWord64(t *testing.T) {
 	}...)
 }
 
+func TestEncodeWord128(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.NewWord128(0),
+			// language=json
+			`{"type":"Word128","value":"0"}`,
+		},
+		{
+			"Max",
+			cadence.Word128{Value: sema.Word128TypeMaxIntBig},
+			// language=json
+			`{"type":"Word128","value":"340282366920938463463374607431768211455"}`,
+		},
+	}...)
+}
+
 func TestEncodeFix64(t *testing.T) {
 
 	t.Parallel()
@@ -1736,6 +1756,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		cadence.Word16Type{},
 		cadence.Word32Type{},
 		cadence.Word64Type{},
+		cadence.Word128Type{},
 		cadence.Fix64Type{},
 		cadence.UFix64Type{},
 		cadence.BlockType{},

@@ -1829,6 +1829,11 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			return ConvertWord64(interpreter, value, locationRange)
 		}
 
+	case sema.Word128Type:
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertWord128(interpreter, value, locationRange)
+		}
+
 	// Fix*
 
 	case sema.Fix64Type:

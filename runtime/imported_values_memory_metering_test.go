@@ -322,6 +322,18 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		assert.Equal(t, uint64(8), meter[common.MemoryKindNumberValue])
 	})
 
+	t.Run("Word128", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Word128) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(t, script, meter, cadence.NewWord128(2))
+		assert.Equal(t, uint64(16), meter[common.MemoryKindBigInt])
+	})
+
 	t.Run("Fix64", func(t *testing.T) {
 		t.Parallel()
 

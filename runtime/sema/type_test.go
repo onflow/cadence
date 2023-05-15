@@ -816,6 +816,7 @@ func TestCommonSuperType(t *testing.T) {
 					UInt256Type,
 					IntegerType,
 					Word64Type,
+					Word128Type,
 				},
 				expectedSuperType: IntegerType,
 			},
