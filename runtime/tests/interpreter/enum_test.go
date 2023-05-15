@@ -259,7 +259,6 @@ func TestInterpretEnumInContract(t *testing.T) {
 		inter,
 		interpreter.EmptyLocationRange,
 		"rawValue",
-		nil,
 	)
 
 	RequireValuesEqual(

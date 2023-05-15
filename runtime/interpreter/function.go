@@ -255,7 +255,7 @@ func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string, _ Authorization) Value {
+func (f *HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
 			return variable.GetValue()

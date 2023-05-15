@@ -4556,7 +4556,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 }
 
 func (interpreter *Interpreter) getMemberWithAuthMapping(self Value, locationRange LocationRange, identifier string) Value {
-	result := interpreter.getMember(self, locationRange, identifier, nil)
+	result := interpreter.getMember(self, locationRange, identifier)
 	if result == nil {
 		return nil
 	}
@@ -4568,7 +4568,7 @@ func (interpreter *Interpreter) getMemberWithAuthMapping(self Value, locationRan
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
 // May return nil if the member does not exist.
-func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string, auth Authorization) Value {
+func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string) Value {
 	var result Value
 	// When the accessed value has a type that supports the declaration of members
 	// or is a built-in type that has members (`MemberAccessibleValue`),
@@ -4576,7 +4576,7 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(interpreter, locationRange, identifier, auth)
+		result = memberAccessibleValue.GetMember(interpreter, locationRange, identifier)
 	}
 	if result == nil {
 		switch identifier {

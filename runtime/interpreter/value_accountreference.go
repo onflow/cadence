@@ -133,11 +133,10 @@ func (v *AccountReferenceValue) GetMember(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	name string,
-	auth Authorization,
 ) Value {
 	v.checkLink(interpreter, locationRange)
 	self := v.authAccount(interpreter)
-	return interpreter.getMember(self, locationRange, name, auth)
+	return interpreter.getMember(self, locationRange, name)
 }
 
 func (v *AccountReferenceValue) RemoveMember(

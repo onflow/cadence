@@ -552,7 +552,6 @@ func invokeMatcherTest(
 		inter,
 		locationRange,
 		matcherTestFieldName,
-		nil,
 	)
 
 	funcValue, ok := testFunc.(interpreter.FunctionValue)
@@ -1092,7 +1091,6 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 				inter,
 				locationRange,
 				transactionCodeFieldName,
-				nil,
 			)
 			code, ok := codeValue.(*interpreter.StringValue)
 			if !ok {
@@ -1104,7 +1102,6 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 				inter,
 				locationRange,
 				transactionAuthorizerFieldName,
-				nil,
 			)
 
 			authorizers := addressesFromValue(authorizerValue)
@@ -1114,7 +1111,6 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 				inter,
 				locationRange,
 				transactionSignersFieldName,
-				nil,
 			)
 
 			signerAccounts := accountsFromValue(
@@ -1128,7 +1124,6 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 				inter,
 				locationRange,
 				transactionArgsFieldName,
-				nil,
 			)
 			args, err := arrayValueToSlice(argsValue)
 			if err != nil {
@@ -1214,7 +1209,6 @@ func accountFromValue(
 		inter,
 		locationRange,
 		accountAddressFieldName,
-		nil,
 	)
 	address, ok := addressValue.(interpreter.AddressValue)
 	if !ok {
@@ -1226,7 +1220,6 @@ func accountFromValue(
 		inter,
 		locationRange,
 		sema.AccountKeyPublicKeyFieldName,
-		nil,
 	).(interpreter.MemberAccessibleValue)
 
 	if !ok {
@@ -1787,7 +1780,6 @@ func emulatorBackendUseConfigFunction(testFramework TestFramework) *interpreter.
 				inter,
 				invocation.LocationRange,
 				addressesFieldName,
-				nil,
 			).(*interpreter.DictionaryValue)
 			if !ok {
 				panic(errors.NewUnreachableError())

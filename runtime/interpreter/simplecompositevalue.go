@@ -107,7 +107,6 @@ func (v *SimpleCompositeValue) GetMember(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	name string,
-	_ Authorization,
 ) Value {
 
 	value, ok := v.Fields[name]
