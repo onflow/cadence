@@ -190,13 +190,19 @@ func (e EntitlementSetAccess) IsLessPermissiveThan(other Access) bool {
 }
 
 type EntitlementMapAccess struct {
-	Type *EntitlementMapType
+	Type     *EntitlementMapType
+	domain   EntitlementSetAccess
+	codomain EntitlementSetAccess
+	images   map[*EntitlementType]*EntitlementOrderedSet
 }
 
 var _ Access = EntitlementMapAccess{}
 
 func NewEntitlementMapAccess(mapType *EntitlementMapType) EntitlementMapAccess {
-	return EntitlementMapAccess{Type: mapType}
+	return EntitlementMapAccess{
+		Type:   mapType,
+		images: make(map[*EntitlementType]*EntitlementOrderedSet),
+	}
 }
 
 func (EntitlementMapAccess) isAccess() {}
@@ -275,30 +281,46 @@ func (e EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
 }
 
 func (e EntitlementMapAccess) Domain() EntitlementSetAccess {
+	if e.domain.Entitlements != nil {
+		return e.domain
+	}
+
 	var domain map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
 	for _, relation := range e.Type.Relations {
 		domain[relation.Input] = struct{}{}
 	}
-	return NewEntitlementSetAccess(maps.Keys(domain), Disjunction)
+	e.domain = NewEntitlementSetAccess(maps.Keys(domain), Disjunction)
+	return e.domain
 }
 
 func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
+	if e.codomain.Entitlements != nil {
+		return e.codomain
+	}
+
 	var codomain map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
 	for _, relation := range e.Type.Relations {
 		codomain[relation.Output] = struct{}{}
 	}
-	return NewEntitlementSetAccess(maps.Keys(codomain), Conjunction)
+	e.codomain = NewEntitlementSetAccess(maps.Keys(codomain), Conjunction)
+	return e.codomain
 }
 
 // produces the image set of a single entitlement through a map
 // the image set of one element is always a conjunction
 func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (output *EntitlementOrderedSet) {
+	if e.images[entitlement] != nil {
+		return e.images[entitlement]
+	}
+
 	output = orderedmap.New[EntitlementOrderedSet](0)
 	for _, relation := range e.Type.Relations {
 		if relation.Input.Equal(entitlement) {
 			output.Set(relation.Output, struct{}{})
 		}
 	}
+
+	e.images[entitlement] = output
 	return
 }
 

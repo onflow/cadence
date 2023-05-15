@@ -3737,7 +3737,8 @@ type CompositeType struct {
 	ConstructorPurity                   FunctionPurity
 	hasComputedMembers                  bool
 	// Only applicable for native composite types
-	importable bool
+	importable            bool
+	supportedEntitlements *EntitlementOrderedSet
 }
 
 var _ Type = &CompositeType{}
@@ -3899,6 +3900,10 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 }
 
 func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	if t.supportedEntitlements != nil {
+		return t.supportedEntitlements
+	}
+
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
 	t.Members.Foreach(func(_ string, member *Member) {
 		switch access := member.Access.(type) {
@@ -3908,6 +3913,11 @@ func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 			set.SetAll(access.Entitlements)
 		}
 	})
+	t.ExplicitInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
+		set.SetAll(it.SupportedEntitlements())
+	})
+
+	t.supportedEntitlements = set
 	return set
 }
 
@@ -4356,6 +4366,7 @@ type InterfaceType struct {
 	cachedIdentifiersLock sync.RWMutex
 	memberResolversOnce   sync.Once
 	InitializerPurity     FunctionPurity
+	supportedEntitlements *EntitlementOrderedSet
 }
 
 var _ Type = &InterfaceType{}
@@ -4459,6 +4470,10 @@ func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 }
 
 func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	if t.supportedEntitlements != nil {
+		return t.supportedEntitlements
+	}
+
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
 	t.Members.Foreach(func(_ string, member *Member) {
 		switch access := member.Access.(type) {
@@ -4472,6 +4487,9 @@ func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 			})
 		}
 	})
+	// TODO: include inherited entitlements
+
+	t.supportedEntitlements = set
 	return set
 }
 
@@ -6096,11 +6114,12 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 type RestrictedType struct {
 	Type Type
 	// an internal set of field `Restrictions`
-	restrictionSet      *InterfaceSet
-	Restrictions        []*InterfaceType
-	restrictionSetOnce  sync.Once
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	restrictionSet        *InterfaceSet
+	Restrictions          []*InterfaceType
+	restrictionSetOnce    sync.Once
+	memberResolvers       map[string]MemberResolver
+	memberResolversOnce   sync.Once
+	supportedEntitlements *EntitlementOrderedSet
 }
 
 var _ Type = &RestrictedType{}
@@ -6359,6 +6378,10 @@ func (t *RestrictedType) initializeMemberResolvers() {
 }
 
 func (t *RestrictedType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	if t.supportedEntitlements != nil {
+		return t.supportedEntitlements
+	}
+
 	// a restricted type supports all the entitlements of its interfaces and its restricted type
 	set = orderedmap.New[EntitlementOrderedSet](t.RestrictionSet().Len())
 	t.RestrictionSet().ForEach(func(it *InterfaceType) {
@@ -6367,6 +6390,8 @@ func (t *RestrictedType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	if supportingType, ok := t.Type.(EntitlementSupportingType); ok {
 		set.SetAll(supportingType.SupportedEntitlements())
 	}
+
+	t.supportedEntitlements = set
 	return set
 }
 
