@@ -13072,7 +13072,11 @@ func (v Word128Value) Plus(interpreter *Interpreter, other NumberValue, location
 			sum := new(big.Int)
 			sum.Add(v.BigInt, o.BigInt)
 			// Given that this value is backed by an arbitrary size integer,
-			// we can just add and check the range of the result.
+			// we can just add and wrap around in case of overflow.
+			//
+			// Note that since v and o are both in the range [0, 2**128 - 1),
+			// their sum will be in range [0, 2*(2**128 - 1)).
+			// Hence it is sufficient to subtract 2**128 to wrap around.
 			//
 			// If Go gains a native uint128 type and we switch this value
 			// to be based on it, then we need to follow INT30-C:
@@ -13082,7 +13086,7 @@ func (v Word128Value) Plus(interpreter *Interpreter, other NumberValue, location
 			//  }
 			//
 			if sum.Cmp(sema.Word128TypeMaxIntBig) > 0 {
-				panic(OverflowError{LocationRange: locationRange})
+				sum.Sub(sum, sema.Word128TypeMaxIntPlusOneBig)
 			}
 			return sum
 		},
@@ -13109,7 +13113,11 @@ func (v Word128Value) Minus(interpreter *Interpreter, other NumberValue, locatio
 			diff := new(big.Int)
 			diff.Sub(v.BigInt, o.BigInt)
 			// Given that this value is backed by an arbitrary size integer,
-			// we can just subtract and check the range of the result.
+			// we can just subtract and wrap around in case of underflow.
+			//
+			// Note that since v and o are both in the range [0, 2**128 - 1),
+			// their difference will be in range [-(2**128 - 1), 2**128 - 1).
+			// Hence it is sufficient to add 2**128 to wrap around.
 			//
 			// If Go gains a native uint128 type and we switch this value
 			// to be based on it, then we need to follow INT30-C:
@@ -13118,8 +13126,8 @@ func (v Word128Value) Minus(interpreter *Interpreter, other NumberValue, locatio
 			// 	     ...
 			//   }
 			//
-			if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
-				panic(UnderflowError{LocationRange: locationRange})
+			if diff.Cmp(sema.Word128TypeMinIntBig) < 0 {
+				diff.Add(diff, sema.Word128TypeMaxIntPlusOneBig)
 			}
 			return diff
 		},
