@@ -6420,7 +6420,7 @@ func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
 }
 
 func (t *RestrictedType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	restrictions := make([]*InterfaceType, len(t.Restrictions))
+	restrictions := make([]*InterfaceType, 0, len(t.Restrictions))
 	for _, restriction := range t.Restrictions {
 		if mappedRestriction, isRestriction := restriction.Map(gauge, f).(*InterfaceType); isRestriction {
 			restrictions = append(restrictions, mappedRestriction)
