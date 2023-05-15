@@ -173,13 +173,15 @@ var (
 
 	// Sema types
 
-	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
-	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
-	DictionarySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
-	OptionalSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
-	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
-	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
-	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+	VariableSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
+	ConstantSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
+	DictionarySemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	OptionalSemaTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
+	RestrictedSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
+	ReferenceSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
+	EntitlementSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindEntitlementSemaType)
+	EntitlementMapSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMapSemaType)
+	CapabilitySemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
 
 	// Storage related memory usages
 

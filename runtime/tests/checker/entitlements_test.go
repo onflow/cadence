@@ -4068,7 +4068,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F, Y, E) &A")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y, F) &A")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(F, Y) &A")
 	})
 
 	t.Run("missing in codomain", func(t *testing.T) {
@@ -4553,6 +4553,28 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			post {
 				result.foo(): ""
 				result.bar(): ""
+			}
+			return <-r
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("result value inherited entitlement resource", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		resource interface I {
+			access(X, Y) view fun foo(): Bool {
+				return true
+			}
+		}
+		resource R: I {}
+		fun bar(r: @R): @R {
+			post {
+				result.foo(): ""
 			}
 			return <-r
 		}
