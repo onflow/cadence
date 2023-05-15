@@ -564,10 +564,8 @@ func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
 		if e.SetKind != auth.SetKind {
 			return false
 		}
-		for _, entitlement := range e.Entitlements {
-			if !slices.Contains(auth.Entitlements, entitlement) {
-				return false
-			}
+		if len(auth.Entitlements) != len(e.Entitlements) {
+			return false
 		}
 		for _, entitlement := range auth.Entitlements {
 			if !slices.Contains(e.Entitlements, entitlement) {

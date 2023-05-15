@@ -4068,7 +4068,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F, Y, E) &A")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(F, Y) &A")
+		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y, F) &A")
 	})
 
 	t.Run("missing in codomain", func(t *testing.T) {

@@ -15311,14 +15311,14 @@ func attachmentReferenceAuthorization(
 ) (Authorization, error) {
 	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
 	var attachmentReferenceAuth Authorization = UnauthorizedAccess
-	if attachmentType.AttachmentEntitlementAccess != nil {
-		attachmentReferenceAccess, err := attachmentType.AttachmentEntitlementAccess.Image(baseAccess, ast.EmptyRange)
-		if err != nil {
-			return nil, err
-		}
-		attachmentReferenceAuth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentReferenceAccess)
+	if attachmentType.AttachmentEntitlementAccess == nil {
+		return attachmentReferenceAuth, nil
 	}
-	return attachmentReferenceAuth, nil
+	attachmentReferenceAccess, err := attachmentType.AttachmentEntitlementAccess.Image(baseAccess, ast.EmptyRange)
+	if err != nil {
+		return nil, err
+	}
+	return ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentReferenceAccess), nil
 }
 
 func attachmentBaseAuthorization(

@@ -1680,22 +1680,23 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 }
 
 func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.Type {
-	if interpreter.SharedState.currentEntitlementMappedValue != nil {
-		return ty.Map(interpreter, func(t sema.Type) sema.Type {
-			switch refType := t.(type) {
-			case *sema.ReferenceType:
-				if _, isMappedAuth := refType.Authorization.(sema.EntitlementMapAccess); isMappedAuth {
-					return sema.NewReferenceType(
-						interpreter,
-						refType.Type,
-						interpreter.MustConvertStaticAuthorizationToSemaAccess(*interpreter.SharedState.currentEntitlementMappedValue),
-					)
-				}
-			}
-			return t
-		})
+	if interpreter.SharedState.currentEntitlementMappedValue == nil {
+		return ty
 	}
-	return ty
+
+	return ty.Map(interpreter, func(t sema.Type) sema.Type {
+		switch refType := t.(type) {
+		case *sema.ReferenceType:
+			if _, isMappedAuth := refType.Authorization.(sema.EntitlementMapAccess); isMappedAuth {
+				return sema.NewReferenceType(
+					interpreter,
+					refType.Type,
+					interpreter.MustConvertStaticAuthorizationToSemaAccess(*interpreter.SharedState.currentEntitlementMappedValue),
+				)
+			}
+		}
+		return t
+	})
 }
 
 func (interpreter *Interpreter) ValueIsSubtypeOfSemaType(value Value, targetType sema.Type) bool {
@@ -4532,7 +4533,8 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 		var auth EntitlementSetAuthorization
 		switch selfValue := self.(type) {
 		case AuthorizedValue:
-			imageAccess, err := mappedAccess.Image(interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization()), ast.EmptyRange)
+			selfAccess := interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization())
+			imageAccess, err := mappedAccess.Image(selfAccess, ast.EmptyRange)
 			if err != nil {
 				panic(err)
 			}
