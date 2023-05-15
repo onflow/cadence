@@ -390,10 +390,7 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDeclaration) *EntitlementType {
 	identifier := declaration.Identifier
 
-	entitlementType := &EntitlementType{
-		Location:   checker.Location,
-		Identifier: identifier.Identifier,
-	}
+	entitlementType := NewEntitlementType(checker.memoryGauge, checker.Location, identifier.Identifier)
 
 	variable, err := checker.typeActivations.declareType(typeDeclaration{
 		identifier:               identifier,
@@ -440,10 +437,7 @@ func (checker *Checker) VisitEntitlementDeclaration(declaration *ast.Entitlement
 func (checker *Checker) declareEntitlementMappingType(declaration *ast.EntitlementMappingDeclaration) *EntitlementMapType {
 	identifier := declaration.Identifier
 
-	entitlementMapType := &EntitlementMapType{
-		Location:   checker.Location,
-		Identifier: identifier.Identifier,
-	}
+	entitlementMapType := NewEntitlementMapType(checker.memoryGauge, checker.Location, identifier.Identifier)
 
 	variable, err := checker.typeActivations.declareType(typeDeclaration{
 		identifier:               identifier,
@@ -496,7 +490,13 @@ func (checker *Checker) declareEntitlementMappingElements(declaration *ast.Entit
 			})
 		}
 
-		entitlementRelations = append(entitlementRelations, EntitlementRelation{Input: inputEntitlement, Output: outputEntitlement})
+		entitlementRelations = append(
+			entitlementRelations,
+			EntitlementRelation{
+				Input:  inputEntitlement,
+				Output: outputEntitlement,
+			},
+		)
 	}
 
 	entitlementMapType.Relations = entitlementRelations
