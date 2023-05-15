@@ -304,22 +304,20 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		)
 	}
 
-	if separator != lexer.TokenError {
-		remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true, separator)
-		if err != nil {
-			return nil, err
-		}
-
-		entitlements = append(entitlements, remainingEntitlements...)
-
-		var entitlementSet ast.EntitlementSet
-		if separator == lexer.TokenComma {
-			entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
-		} else {
-			entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
-		}
-		return entitlementSet, nil
+	remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true, separator)
+	if err != nil {
+		return nil, err
 	}
+
+	entitlements = append(entitlements, remainingEntitlements...)
+
+	var entitlementSet ast.EntitlementSet
+	if separator == lexer.TokenComma {
+		entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
+	} else {
+		entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
+	}
+	return entitlementSet, nil
 
 	return nil, errors.NewUnreachableError()
 }
