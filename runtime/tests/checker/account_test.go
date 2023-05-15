@@ -2265,21 +2265,37 @@ func TestCheckAccountClaim(t *testing.T) {
 	})
 }
 
-func TestCheckStorageCapabilities(t *testing.T) {
+func TestCheckAccountCapabilities(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("AuthAccount.storageCapabilities", func(t *testing.T) {
+	t.Run("AuthAccount.capabilities", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t, `
           fun test() {
-		      let capabilities: &AuthAccount.StorageCapabilities = authAccount.storageCapabilities
+		      let capabilities: &AuthAccount.Capabilities = authAccount.capabilities
 
               let cap: Capability<&Int>? = capabilities.get<&Int>(/public/foo)
 
               let ref: &Int? = capabilities.borrow<&Int>(/public/foo)
+
+              capabilities.publish(cap!, at: /public/bar)
+
+              let cap2: Capability = capabilities.unpublish(/public/bar)!
+          }
+		`)
+		require.NoError(t, err)
+	})
+
+	t.Run("AuthAccount.capabilities.storage", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          fun test() {
+		      let capabilities: &AuthAccount.StorageCapabilities = authAccount.capabilities.storage
 
               let controller: &StorageCapabilityController? = capabilities.getController(byCapabilityID: 1)
 
@@ -2298,13 +2314,13 @@ func TestCheckStorageCapabilities(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("AuthAccount.accountCapabilities", func(t *testing.T) {
+	t.Run("AuthAccount.capabilities.account", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t, `
           fun test() {
-		      let capabilities: &AuthAccount.AccountCapabilities = authAccount.accountCapabilities
+		      let capabilities: &AuthAccount.AccountCapabilities = authAccount.capabilities.account
 
               let controller: &AccountCapabilityController? = capabilities.getController(byCapabilityID: 1)
 
@@ -2320,13 +2336,13 @@ func TestCheckStorageCapabilities(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("PublicAccount.storageCapabilities", func(t *testing.T) {
+	t.Run("PublicAccount.capabilities", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t, `
           fun test() {
-		      let capabilities: &PublicAccount.StorageCapabilities = publicAccount.storageCapabilities
+		      let capabilities: &PublicAccount.Capabilities = publicAccount.capabilities
 
               let cap: Capability<&Int>? = capabilities.get<&Int>(/public/foo)
 
@@ -2336,54 +2352,25 @@ func TestCheckStorageCapabilities(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("PublicAccount.storageCapabilities: invalid", func(t *testing.T) {
+	t.Run("PublicAccount.capabilities.storage: invalid", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t, `
-          fun test() {
-		      let capabilities: &PublicAccount.StorageCapabilities = publicAccount.storageCapabilities
-
-              capabilities.getController(byCapabilityID: 1)
-
-              capabilities.getControllers(forPath: /storage/foo)
-
-              capabilities.forEachController(
-                  forPath: /storage/bar,
-                  function: fun (controller: &StorageCapabilityController): Bool {
-                      return true
-                  }
-              )
-
-              capabilities.issue<&String>(/storage/baz)
-          }
+		  let capabilitiesRef: &PublicAccount.StorageCapabilities = publicAccount.capabilities.storage
 		`)
 		require.Error(t, err)
-		errors := RequireCheckerErrors(t, err, 4)
-
-		var err1 *sema.NotDeclaredMemberError
-		require.ErrorAs(t, errors[0], &err1)
-		assert.Equal(t, "getController", err1.Name)
-
-		var err2 *sema.NotDeclaredMemberError
-		require.ErrorAs(t, errors[1], &err2)
-		assert.Equal(t, "getControllers", err2.Name)
-
-		var err3 *sema.NotDeclaredMemberError
-		require.ErrorAs(t, errors[2], &err3)
-		assert.Equal(t, "forEachController", err3.Name)
-
-		var err4 *sema.NotDeclaredMemberError
-		require.ErrorAs(t, errors[3], &err4)
-		assert.Equal(t, "issue", err4.Name)
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.NotDeclaredError{}, errors[0])
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[1])
 	})
 
-	t.Run("PublicAccount.accountCapabilities", func(t *testing.T) {
+	t.Run("PublicAccount.capabilities.account: invalid", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t, `
-		  let capabilitiesRef: &PublicAccount.AccountCapabilities = publicAccount.accountCapabilities
+		  let capabilitiesRef: &PublicAccount.AccountCapabilities = publicAccount.capabilities.account
 		`)
 		require.Error(t, err)
 		errors := RequireCheckerErrors(t, err, 2)

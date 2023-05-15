@@ -34,8 +34,6 @@ var authAccountStorageCapabilitiesFieldNames []string = nil
 func NewAuthAccountStorageCapabilitiesValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	getFunction FunctionValue,
-	borrowFunction FunctionValue,
 	getControllerFunction FunctionValue,
 	getControllersFunction FunctionValue,
 	forEachControllerFunction FunctionValue,
@@ -43,8 +41,6 @@ func NewAuthAccountStorageCapabilitiesValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountStorageCapabilitiesTypeGetFunctionName:               getFunction,
-		sema.AuthAccountStorageCapabilitiesTypeBorrowFunctionName:            borrowFunction,
 		sema.AuthAccountStorageCapabilitiesTypeGetControllerFunctionName:     getControllerFunction,
 		sema.AuthAccountStorageCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
 		sema.AuthAccountStorageCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
@@ -66,45 +62,6 @@ func NewAuthAccountStorageCapabilitiesValue(
 		authAccountStorageCapabilitiesTypeID,
 		authAccountStorageCapabilitiesStaticType,
 		authAccountStorageCapabilitiesFieldNames,
-		fields,
-		nil,
-		nil,
-		stringer,
-	)
-}
-
-// PublicAccount.StorageCapabilities
-
-var publicAccountStorageCapabilitiesTypeID = sema.PublicAccountStorageCapabilitiesType.ID()
-var publicAccountStorageCapabilitiesStaticType StaticType = PrimitiveStaticTypePublicAccountStorageCapabilities
-
-func NewPublicAccountStorageCapabilitiesValue(
-	gauge common.MemoryGauge,
-	address AddressValue,
-	getFunction FunctionValue,
-	borrowFunction FunctionValue,
-) Value {
-
-	fields := map[string]Value{
-		sema.PublicAccountStorageCapabilitiesTypeGetFunctionName:    getFunction,
-		sema.PublicAccountStorageCapabilitiesTypeBorrowFunctionName: borrowFunction,
-	}
-
-	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-		if str == "" {
-			common.UseMemory(memoryGauge, common.PublicAccountStorageCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("PublicAccount.StorageCapabilities(%s)", addressStr)
-		}
-		return str
-	}
-
-	return NewSimpleCompositeValue(
-		gauge,
-		publicAccountStorageCapabilitiesTypeID,
-		publicAccountStorageCapabilitiesStaticType,
-		nil,
 		fields,
 		nil,
 		nil,

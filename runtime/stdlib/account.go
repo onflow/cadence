@@ -216,27 +216,15 @@ func NewAuthAccountValue(
 			)
 		},
 		func() interpreter.Value {
-			storageCapabilities := newAuthAccountStorageCapabilitiesValue(
+			capabilities := newAuthAccountCapabilitiesValue(
 				gauge,
 				addressValue,
 			)
 			return interpreter.NewEphemeralReferenceValue(
 				gauge,
 				false,
-				storageCapabilities,
-				sema.AuthAccountTypeStorageCapabilitiesFieldType,
-			)
-		},
-		func() interpreter.Value {
-			accountCapabilities := newAuthAccountAccountCapabilitiesValue(
-				gauge,
-				addressValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				accountCapabilities,
-				sema.AuthAccountTypeAccountCapabilitiesFieldType,
+				capabilities,
+				sema.AuthAccountTypeCapabilitiesFieldType,
 			)
 		},
 	)
@@ -2119,15 +2107,15 @@ func NewPublicAccountValue(
 			)
 		},
 		func() interpreter.Value {
-			storageCapabilities := newPublicAccountStorageCapabilitiesValue(
+			capabilities := newPublicAccountCapabilitiesValue(
 				gauge,
 				addressValue,
 			)
 			return interpreter.NewEphemeralReferenceValue(
 				gauge,
 				false,
-				storageCapabilities,
-				sema.PublicAccountTypeStorageCapabilitiesFieldType,
+				capabilities,
+				sema.PublicAccountTypeCapabilitiesFieldType,
 			)
 		},
 	)
@@ -2203,8 +2191,6 @@ func newAuthAccountStorageCapabilitiesValue(
 		nil,
 		nil,
 		nil,
-		nil,
-		nil,
 	)
 }
 
@@ -2223,12 +2209,51 @@ func newAuthAccountAccountCapabilitiesValue(
 	)
 }
 
-func newPublicAccountStorageCapabilitiesValue(
+func newAuthAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 	// TODO:
-	return interpreter.NewPublicAccountStorageCapabilitiesValue(
+	return interpreter.NewAuthAccountCapabilitiesValue(
+		gauge,
+		addressValue,
+		nil,
+		nil,
+		nil,
+		nil,
+		func() interpreter.Value {
+			storageCapabilities := newAuthAccountStorageCapabilitiesValue(
+				gauge,
+				addressValue,
+			)
+			return interpreter.NewEphemeralReferenceValue(
+				gauge,
+				false,
+				storageCapabilities,
+				sema.AuthAccountCapabilitiesTypeStorageFieldType,
+			)
+		},
+		func() interpreter.Value {
+			accountCapabilities := newAuthAccountAccountCapabilitiesValue(
+				gauge,
+				addressValue,
+			)
+			return interpreter.NewEphemeralReferenceValue(
+				gauge,
+				false,
+				accountCapabilities,
+				sema.AuthAccountCapabilitiesTypeAccountFieldType,
+			)
+		},
+	)
+}
+
+func newPublicAccountCapabilitiesValue(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	// TODO:
+	return interpreter.NewPublicAccountCapabilitiesValue(
 		gauge,
 		addressValue,
 		nil,

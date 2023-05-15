@@ -85,24 +85,14 @@ const AuthAccountTypeInboxFieldDocString = `
 The inbox allows bootstrapping (sending and receiving) capabilities.
 `
 
-const AuthAccountTypeStorageCapabilitiesFieldName = "storageCapabilities"
+const AuthAccountTypeCapabilitiesFieldName = "capabilities"
 
-var AuthAccountTypeStorageCapabilitiesFieldType = &ReferenceType{
-	Type: AuthAccountStorageCapabilitiesType,
+var AuthAccountTypeCapabilitiesFieldType = &ReferenceType{
+	Type: AuthAccountCapabilitiesType,
 }
 
-const AuthAccountTypeStorageCapabilitiesFieldDocString = `
-The storage capabilities of the account.
-`
-
-const AuthAccountTypeAccountCapabilitiesFieldName = "accountCapabilities"
-
-var AuthAccountTypeAccountCapabilitiesFieldType = &ReferenceType{
-	Type: AuthAccountAccountCapabilitiesType,
-}
-
-const AuthAccountTypeAccountCapabilitiesFieldDocString = `
-The account capabilities of the account.
+const AuthAccountTypeCapabilitiesFieldDocString = `
+The capabilities of the account.
 `
 
 const AuthAccountTypePublicPathsFieldName = "publicPaths"
@@ -409,6 +399,8 @@ var AuthAccountTypeLinkFunctionType = &FunctionType{
 }
 
 const AuthAccountTypeLinkFunctionDocString = `
+**DEPRECATED**: Instead, use ` + "`capabilities.storage.issue`" + `, and ` + "`capabilities.publish`" + ` if the path is public.
+
 Creates a capability at the given public or private path,
 which targets the given public, private, or storage path.
 
@@ -452,6 +444,8 @@ var AuthAccountTypeLinkAccountFunctionType = &FunctionType{
 }
 
 const AuthAccountTypeLinkAccountFunctionDocString = `
+**DEPRECATED**: Use ` + "`capabilities.account.issue`" + ` instead.
+
 Creates a capability at the given public or private path which targets this account.
 
 Returns nil if a link for the given capability path already exists, or the newly created capability if not.
@@ -488,6 +482,8 @@ var AuthAccountTypeGetCapabilityFunctionType = &FunctionType{
 }
 
 const AuthAccountTypeGetCapabilityFunctionDocString = `
+**DEPRECATED**: Use ` + "`capabilities.get`" + ` instead.
+
 Returns the capability at the given private or public path.
 `
 
@@ -509,6 +505,8 @@ var AuthAccountTypeGetLinkTargetFunctionType = &FunctionType{
 }
 
 const AuthAccountTypeGetLinkTargetFunctionDocString = `
+**DEPRECATED**
+
 Returns the target path of the capability at the given public or private path,
 or nil if there exists no capability at the given path.
 `
@@ -529,6 +527,8 @@ var AuthAccountTypeUnlinkFunctionType = &FunctionType{
 }
 
 const AuthAccountTypeUnlinkFunctionDocString = `
+**DEPRECATED**: Use ` + "`capabilities.unpublish`" + ` instead if the path is public.
+
 Removes the capability at the given public or private path.
 `
 
@@ -1194,18 +1194,38 @@ func init() {
 	AuthAccountInboxType.Fields = MembersFieldNames(members)
 }
 
-const AuthAccountStorageCapabilitiesTypeGetFunctionName = "get"
+const AuthAccountCapabilitiesTypeStorageFieldName = "storage"
 
-var AuthAccountStorageCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
+var AuthAccountCapabilitiesTypeStorageFieldType = &ReferenceType{
+	Type: AuthAccountStorageCapabilitiesType,
+}
+
+const AuthAccountCapabilitiesTypeStorageFieldDocString = `
+The storage capabilities of the account.
+`
+
+const AuthAccountCapabilitiesTypeAccountFieldName = "account"
+
+var AuthAccountCapabilitiesTypeAccountFieldType = &ReferenceType{
+	Type: AuthAccountAccountCapabilitiesType,
+}
+
+const AuthAccountCapabilitiesTypeAccountFieldDocString = `
+The account capabilities of the account.
+`
+
+const AuthAccountCapabilitiesTypeGetFunctionName = "get"
+
+var AuthAccountCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
 		Type: AnyType,
 	},
 }
 
-var AuthAccountStorageCapabilitiesTypeGetFunctionType = &FunctionType{
+var AuthAccountCapabilitiesTypeGetFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{
-		AuthAccountStorageCapabilitiesTypeGetFunctionTypeParameterT,
+		AuthAccountCapabilitiesTypeGetFunctionTypeParameterT,
 	},
 	Parameters: []Parameter{
 		{
@@ -1219,29 +1239,31 @@ var AuthAccountStorageCapabilitiesTypeGetFunctionType = &FunctionType{
 			Type: MustInstantiate(
 				&CapabilityType{},
 				&GenericType{
-					TypeParameter: AuthAccountStorageCapabilitiesTypeGetFunctionTypeParameterT,
+					TypeParameter: AuthAccountCapabilitiesTypeGetFunctionTypeParameterT,
 				},
 			),
 		},
 	),
 }
 
-const AuthAccountStorageCapabilitiesTypeGetFunctionDocString = `
-get returns the storage capability at the given path, if one was stored there.
+const AuthAccountCapabilitiesTypeGetFunctionDocString = `
+Returns the capability at the given public path.
+Returns nil if the capability does not exist,
+or if the given type is not a supertype of the capability's borrow type.
 `
 
-const AuthAccountStorageCapabilitiesTypeBorrowFunctionName = "borrow"
+const AuthAccountCapabilitiesTypeBorrowFunctionName = "borrow"
 
-var AuthAccountStorageCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
+var AuthAccountCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
 		Type: AnyType,
 	},
 }
 
-var AuthAccountStorageCapabilitiesTypeBorrowFunctionType = &FunctionType{
+var AuthAccountCapabilitiesTypeBorrowFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{
-		AuthAccountStorageCapabilitiesTypeBorrowFunctionTypeParameterT,
+		AuthAccountCapabilitiesTypeBorrowFunctionTypeParameterT,
 	},
 	Parameters: []Parameter{
 		{
@@ -1253,19 +1275,125 @@ var AuthAccountStorageCapabilitiesTypeBorrowFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
 			Type: &GenericType{
-				TypeParameter: AuthAccountStorageCapabilitiesTypeBorrowFunctionTypeParameterT,
+				TypeParameter: AuthAccountCapabilitiesTypeBorrowFunctionTypeParameterT,
 			},
 		},
 	),
 }
 
-const AuthAccountStorageCapabilitiesTypeBorrowFunctionDocString = `
-borrow gets the storage capability at the given path, and borrows the capability if it exists.
-
-Returns nil if the capability does not exist or cannot be borrowed using the given type.
-
+const AuthAccountCapabilitiesTypeBorrowFunctionDocString = `
+Borrows the capability at the given public path.
+Returns nil if the capability does not exist, or cannot be borrowed using the given type.
 The function is equivalent to ` + "`get(path)?.borrow()`" + `.
 `
+
+const AuthAccountCapabilitiesTypePublishFunctionName = "publish"
+
+var AuthAccountCapabilitiesTypePublishFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "capability",
+			TypeAnnotation: NewTypeAnnotation(&CapabilityType{}),
+		},
+		{
+			Identifier:     "at",
+			TypeAnnotation: NewTypeAnnotation(PublicPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const AuthAccountCapabilitiesTypePublishFunctionDocString = `
+Publish the capability at the given public path.
+
+If there is already a capability published under the given path, the program aborts.
+
+The path must be a public path, i.e., only the domain ` + "`public`" + ` is allowed.
+`
+
+const AuthAccountCapabilitiesTypeUnpublishFunctionName = "unpublish"
+
+var AuthAccountCapabilitiesTypeUnpublishFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(PublicPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: &CapabilityType{},
+		},
+	),
+}
+
+const AuthAccountCapabilitiesTypeUnpublishFunctionDocString = `
+Unpublish the capability published at the given path.
+
+Returns the capability if one was published at the path.
+Returns nil if no capability was published at the path.
+`
+
+const AuthAccountCapabilitiesTypeName = "Capabilities"
+
+var AuthAccountCapabilitiesType = func() *CompositeType {
+	var t = &CompositeType{
+		Identifier:         AuthAccountCapabilitiesTypeName,
+		Kind:               common.CompositeKindStructure,
+		importable:         false,
+		hasComputedMembers: true,
+	}
+
+	return t
+}()
+
+func init() {
+	var members = []*Member{
+		NewUnmeteredPublicConstantFieldMember(
+			AuthAccountCapabilitiesType,
+			AuthAccountCapabilitiesTypeStorageFieldName,
+			AuthAccountCapabilitiesTypeStorageFieldType,
+			AuthAccountCapabilitiesTypeStorageFieldDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			AuthAccountCapabilitiesType,
+			AuthAccountCapabilitiesTypeAccountFieldName,
+			AuthAccountCapabilitiesTypeAccountFieldType,
+			AuthAccountCapabilitiesTypeAccountFieldDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			AuthAccountCapabilitiesType,
+			AuthAccountCapabilitiesTypeGetFunctionName,
+			AuthAccountCapabilitiesTypeGetFunctionType,
+			AuthAccountCapabilitiesTypeGetFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			AuthAccountCapabilitiesType,
+			AuthAccountCapabilitiesTypeBorrowFunctionName,
+			AuthAccountCapabilitiesTypeBorrowFunctionType,
+			AuthAccountCapabilitiesTypeBorrowFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			AuthAccountCapabilitiesType,
+			AuthAccountCapabilitiesTypePublishFunctionName,
+			AuthAccountCapabilitiesTypePublishFunctionType,
+			AuthAccountCapabilitiesTypePublishFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			AuthAccountCapabilitiesType,
+			AuthAccountCapabilitiesTypeUnpublishFunctionName,
+			AuthAccountCapabilitiesTypeUnpublishFunctionType,
+			AuthAccountCapabilitiesTypeUnpublishFunctionDocString,
+		),
+	}
+
+	AuthAccountCapabilitiesType.Members = MembersAsMap(members)
+	AuthAccountCapabilitiesType.Fields = MembersFieldNames(members)
+}
 
 const AuthAccountStorageCapabilitiesTypeGetControllerFunctionName = "getController"
 
@@ -1397,18 +1525,6 @@ var AuthAccountStorageCapabilitiesType = func() *CompositeType {
 
 func init() {
 	var members = []*Member{
-		NewUnmeteredPublicFunctionMember(
-			AuthAccountStorageCapabilitiesType,
-			AuthAccountStorageCapabilitiesTypeGetFunctionName,
-			AuthAccountStorageCapabilitiesTypeGetFunctionType,
-			AuthAccountStorageCapabilitiesTypeGetFunctionDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			AuthAccountStorageCapabilitiesType,
-			AuthAccountStorageCapabilitiesTypeBorrowFunctionName,
-			AuthAccountStorageCapabilitiesTypeBorrowFunctionType,
-			AuthAccountStorageCapabilitiesTypeBorrowFunctionDocString,
-		),
 		NewUnmeteredPublicFunctionMember(
 			AuthAccountStorageCapabilitiesType,
 			AuthAccountStorageCapabilitiesTypeGetControllerFunctionName,
@@ -1596,6 +1712,7 @@ var AuthAccountType = func() *CompositeType {
 	t.SetNestedType(AuthAccountContractsTypeName, AuthAccountContractsType)
 	t.SetNestedType(AuthAccountKeysTypeName, AuthAccountKeysType)
 	t.SetNestedType(AuthAccountInboxTypeName, AuthAccountInboxType)
+	t.SetNestedType(AuthAccountCapabilitiesTypeName, AuthAccountCapabilitiesType)
 	t.SetNestedType(AuthAccountStorageCapabilitiesTypeName, AuthAccountStorageCapabilitiesType)
 	t.SetNestedType(AuthAccountAccountCapabilitiesTypeName, AuthAccountAccountCapabilitiesType)
 	return t
@@ -1653,15 +1770,9 @@ func init() {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			AuthAccountType,
-			AuthAccountTypeStorageCapabilitiesFieldName,
-			AuthAccountTypeStorageCapabilitiesFieldType,
-			AuthAccountTypeStorageCapabilitiesFieldDocString,
-		),
-		NewUnmeteredPublicConstantFieldMember(
-			AuthAccountType,
-			AuthAccountTypeAccountCapabilitiesFieldName,
-			AuthAccountTypeAccountCapabilitiesFieldType,
-			AuthAccountTypeAccountCapabilitiesFieldDocString,
+			AuthAccountTypeCapabilitiesFieldName,
+			AuthAccountTypeCapabilitiesFieldType,
+			AuthAccountTypeCapabilitiesFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			AuthAccountType,
