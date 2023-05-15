@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAccess_MarshalJSON(t *testing.T) {
+func TestPrimitiveAccess_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
@@ -37,4 +37,78 @@ func TestAccess_MarshalJSON(t *testing.T) {
 
 		assert.JSONEq(t, fmt.Sprintf(`"%s"`, access), string(actual))
 	}
+}
+
+func TestEntitlementAccess_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	e := NewNominalType(nil, NewIdentifier(nil, "E", Position{Offset: 0, Line: 0, Column: 0}), []Identifier{})
+	f := NewNominalType(nil, NewIdentifier(nil, "F", Position{Offset: 1, Line: 2, Column: 3}), []Identifier{})
+
+	t.Run("conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewConjunctiveEntitlementSet([]*NominalType{e, f})
+		actual, err := json.Marshal(access)
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `{
+			"ConjunctiveElements": [
+				{
+					"Type": "NominalType",
+					"Identifier": {
+						"Identifier": "E",
+						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+						"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+					},
+					"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+					"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+				},
+				{
+					"Type": "NominalType",
+					"Identifier": {
+						"Identifier": "F",
+						"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+						"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+					},
+					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+					"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+				}
+			]
+		}`, string(actual))
+	})
+
+	t.Run("disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewDisjunctiveEntitlementSet([]*NominalType{e, f})
+		actual, err := json.Marshal(access)
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `{
+			"DisjunctiveElements": [
+				{
+					"Type": "NominalType",
+					"Identifier": {
+						"Identifier": "E",
+						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+						"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+					},
+					"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+					"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+				},
+				{
+					"Type": "NominalType",
+					"Identifier": {
+						"Identifier": "F",
+						"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+						"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+					},
+					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+					"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+				}
+			]
+		}`, string(actual))
+	})
 }

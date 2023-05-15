@@ -295,7 +295,7 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 	case lexer.TokenParenClose:
 		// it is impossible to disambiguate at parsing time between an access that is a single
 		// conjunctive entitlement, a single disjunctive entitlement, and the name of an entitlement mapping.
-		// Luckily, however, the former two are just equiavlent, and the latter we can disambiguate in the type checker.
+		// Luckily, however, the former two are just equivalent, and the latter we can disambiguate in the type checker.
 		return ast.NewConjunctiveEntitlementSet(entitlements), nil
 	default:
 		return nil, p.syntaxError(
@@ -311,15 +311,7 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		}
 
 		entitlements = append(entitlements, remainingEntitlements...)
-		if err != nil {
-			return nil, err
-		}
-		if len(entitlements) < 1 {
-			return nil, p.syntaxError(
-				"expected keyword %s or a list of entitlements",
-				enumeratedAccessModifierKeywords,
-			)
-		}
+
 		var entitlementSet ast.EntitlementSet
 		if separator == lexer.TokenComma {
 			entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
@@ -402,7 +394,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			)
 		}
 
-		var access ast.Access = ast.AccessNotSpecified
+		var access ast.Access
 
 		keyword := p.currentTokenSource()
 		switch string(keyword) {
@@ -1030,15 +1022,15 @@ func parseFieldWithVariableKind(
 //	entitlementMapping : nominalType '->' nominalType
 func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapElement, error) {
 	inputType, err := parseType(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
 	inputNominalType, ok := inputType.(*ast.NominalType)
 	if !ok {
 		p.reportSyntaxError(
 			"expected nominal type, got %s",
 			inputType,
 		)
-	}
-	if err != nil {
-		return nil, err
 	}
 
 	p.skipSpaceAndComments()
@@ -1051,15 +1043,16 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapEl
 	p.skipSpaceAndComments()
 
 	outputType, err := parseType(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+
 	outputNominalType, ok := outputType.(*ast.NominalType)
 	if !ok {
 		p.reportSyntaxError(
 			"expected nominal type, got %s",
 			outputType,
 		)
-	}
-	if err != nil {
-		return nil, err
 	}
 
 	p.skipSpaceAndComments()
@@ -1088,10 +1081,6 @@ func parseEntitlementMappings(p *parser, endTokenType lexer.TokenType) ([]*ast.E
 			mapping, err := parseEntitlementMapping(p, docString)
 			if err != nil {
 				return nil, err
-			}
-
-			if mapping == nil {
-				return mappings, nil
 			}
 
 			mappings = append(mappings, mapping)
@@ -1365,12 +1354,7 @@ func parseRequiredEntitlement(p *parser) (*ast.NominalType, error) {
 	// skip the `entitlement` keyword
 	p.nextSemanticToken()
 
-	nominalType, err := parseNominalType(p, lowestBindingPower, true)
-	if err != nil {
-		return nil, err
-	}
-
-	return nominalType, nil
+	return parseNominalType(p, lowestBindingPower, true)
 }
 
 func parseRequiredEntitlements(p *parser) ([]*ast.NominalType, error) {

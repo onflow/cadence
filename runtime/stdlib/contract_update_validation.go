@@ -198,12 +198,12 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	newDeclaration ast.Declaration,
 ) {
 
-	oldCompositeAndInterfaceDecls := getNestedCompositeAndInterfaceDecls(oldDeclaration)
+	oldNominalTypeDecls := getNestedNominalTypeDecls(oldDeclaration)
 
 	// Check nested structs, enums, etc.
 	newNestedCompositeDecls := newDeclaration.DeclarationMembers().Composites()
 	for _, newNestedDecl := range newNestedCompositeDecls {
-		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
+		oldNestedDecl, found := oldNominalTypeDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then it's a new declaration
 			continue
@@ -212,13 +212,13 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
 
 		// If there's a matching new decl, then remove the old one from the map.
-		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
+		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
 	}
 
 	// Check nested attachments, etc.
 	newNestedAttachmentDecls := newDeclaration.DeclarationMembers().Attachments()
 	for _, newNestedDecl := range newNestedAttachmentDecls {
-		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
+		oldNestedDecl, found := oldNominalTypeDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then it's a new declaration
 			continue
@@ -227,13 +227,13 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
 
 		// If there's a matching new decl, then remove the old one from the map.
-		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
+		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
 	}
 
 	// Check nested interfaces.
 	newNestedInterfaces := newDeclaration.DeclarationMembers().Interfaces()
 	for _, newNestedDecl := range newNestedInterfaces {
-		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
+		oldNestedDecl, found := oldNominalTypeDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then this is a new declaration.
 			continue
@@ -242,16 +242,16 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
 
 		// If there's a matching new decl, then remove the old one from the map.
-		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
+		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
 	}
 
 	// The remaining old declarations don't have a corresponding new declaration,
 	// i.e., an existing declaration was removed.
 	// Hence, report an error.
 
-	missingDeclarations := make([]ast.Declaration, 0, len(oldCompositeAndInterfaceDecls))
+	missingDeclarations := make([]ast.Declaration, 0, len(oldNominalTypeDecls))
 
-	for _, declaration := range oldCompositeAndInterfaceDecls { //nolint:maprange
+	for _, declaration := range oldNominalTypeDecls { //nolint:maprange
 		missingDeclarations = append(missingDeclarations, declaration)
 	}
 
@@ -274,7 +274,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	validator.checkEnumCases(oldDeclaration, newDeclaration)
 }
 
-func getNestedCompositeAndInterfaceDecls(declaration ast.Declaration) map[string]ast.Declaration {
+func getNestedNominalTypeDecls(declaration ast.Declaration) map[string]ast.Declaration {
 	compositeAndInterfaceDecls := map[string]ast.Declaration{}
 
 	nestedCompositeDecls := declaration.DeclarationMembers().CompositesByIdentifier()

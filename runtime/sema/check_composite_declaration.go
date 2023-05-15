@@ -101,14 +101,12 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 			case EntitlementSetAccess:
 				memberAccess.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 					if !codomain.Entitlements.Contains(entitlement) {
-						if !member.Access.Equal(UnauthorizedAccess) {
-							checker.report(&InvalidAttachmentEntitlementError{
-								Attachment:               attachmentType,
-								AttachmentAccessModifier: attachmentAccess,
-								InvalidEntitlement:       entitlement,
-								Pos:                      member.Identifier.Pos,
-							})
-						}
+						checker.report(&InvalidAttachmentEntitlementError{
+							Attachment:               attachmentType,
+							AttachmentAccessModifier: attachmentAccess,
+							InvalidEntitlement:       entitlement,
+							Pos:                      member.Identifier.Pos,
+						})
 					}
 				})
 			}
