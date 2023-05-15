@@ -872,8 +872,16 @@ func (t *GenericType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 	return ty
 }
 
-func (t *GenericType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
-	return f(t)
+func (t *GenericType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+	typeParameter := &TypeParameter{
+		Name:      t.TypeParameter.Name,
+		Optional:  t.TypeParameter.Optional,
+		TypeBound: t.TypeParameter.TypeBound.Map(gauge, f),
+	}
+
+	return f(&GenericType{
+		TypeParameter: typeParameter,
+	})
 }
 
 func (t *GenericType) GetMembers() map[string]MemberResolver {
@@ -6412,7 +6420,14 @@ func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
 }
 
 func (t *RestrictedType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	return f(NewRestrictedType(gauge, t.Type.Map(gauge, f), t.Restrictions))
+	restrictions := make([]*InterfaceType, len(t.Restrictions))
+	for _, restriction := range t.Restrictions {
+		if mappedRestriction, isRestriction := restriction.Map(gauge, f).(*InterfaceType); isRestriction {
+			restrictions = append(restrictions, mappedRestriction)
+		}
+	}
+
+	return f(NewRestrictedType(gauge, t.Type.Map(gauge, f), restrictions))
 }
 
 func (t *RestrictedType) GetMembers() map[string]MemberResolver {
@@ -6803,7 +6818,12 @@ The address of the capability
 `
 
 func (t *CapabilityType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	return f(NewCapabilityType(gauge, t.BorrowType.Map(gauge, f)))
+	var borrowType Type
+	if t.BorrowType != nil {
+		borrowType = t.BorrowType.Map(gauge, f)
+	}
+
+	return f(NewCapabilityType(gauge, borrowType))
 }
 
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
