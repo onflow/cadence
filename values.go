@@ -1229,6 +1229,74 @@ func (v Word64) String() string {
 	return format.Uint(uint64(v))
 }
 
+// Word128
+
+type Word128 struct {
+	Value *big.Int
+}
+
+var _ Value = Word128{}
+
+var Word128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
+
+func NewWord128(i uint) Word128 {
+	return Word128{
+		Value: big.NewInt(int64(i)),
+	}
+}
+
+var word128NegativeError = errors.NewDefaultUserError("invalid negative value for Word128")
+var word128MaxExceededError = errors.NewDefaultUserError("value exceeds max of Word128")
+
+func NewWord128FromBig(i *big.Int) (Word128, error) {
+	if i.Sign() < 0 {
+		return Word128{}, word128NegativeError
+	}
+	if i.Cmp(sema.Word128TypeMaxIntBig) > 0 {
+		return Word128{}, word128MaxExceededError
+	}
+	return Word128{Value: i}, nil
+}
+
+func NewMeteredWord128FromBig(
+	memoryGauge common.MemoryGauge,
+	bigIntConstructor func() *big.Int,
+) (Word128, error) {
+	common.UseMemory(memoryGauge, Word128MemoryUsage)
+	value := bigIntConstructor()
+	return NewWord128FromBig(value)
+}
+
+func (Word128) isValue() {}
+
+func (Word128) Type() Type {
+	return TheWord128Type
+}
+
+func (v Word128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v Word128) ToGoValue() any {
+	return v.Big()
+}
+
+func (v Word128) Int() int {
+	return int(v.Value.Uint64())
+}
+
+func (v Word128) Big() *big.Int {
+	return v.Value
+}
+
+func (v Word128) ToBigEndianBytes() []byte {
+	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+}
+
+func (v Word128) String() string {
+	return format.BigInt(v.Value)
+}
+
 // Fix64
 
 type Fix64 int64

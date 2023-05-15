@@ -265,6 +265,7 @@ func (d *Decoder) decodeTypeAndValue(types *cadenceTypeByCCFTypeID) (cadence.Val
 //	/ word16-value
 //	/ word32-value
 //	/ word64-value
+//	/ word128-value
 //	/ fix64-value
 //	/ ufix64-value
 func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
@@ -351,6 +352,9 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 
 	case cadence.Word64Type:
 		return d.decodeWord64()
+
+	case cadence.Word128Type:
+		return d.decodeWord128()
 
 	case cadence.Fix64Type:
 		return d.decodeFix64()
@@ -796,6 +800,23 @@ func (d *Decoder) decodeWord64() (cadence.Value, error) {
 		return nil, err
 	}
 	return cadence.NewMeteredWord64(d.gauge, i), nil
+}
+
+// decodeWord128 decodes word128-value as
+// language=CDDL
+// word128-value = bigint .ge 0
+func (d *Decoder) decodeWord128() (cadence.Value, error) {
+	// NewMeteredWord128FromBig checks if decoded big.Int is positive.
+	return cadence.NewMeteredWord128FromBig(
+		d.gauge,
+		func() *big.Int {
+			bigInt, err := d.dec.DecodeBigInt()
+			if err != nil {
+				panic(fmt.Errorf("failed to decode Word128: %s", err))
+			}
+			return bigInt
+		},
+	)
 }
 
 // decodeFix64 decodes fix64-value as

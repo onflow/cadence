@@ -221,6 +221,8 @@ const (
 	storageCapabilityControllerTypeMask
 	accountCapabilityControllerTypeMask
 
+	word128TypeMask
+
 	invalidTypeMask
 )
 
@@ -248,7 +250,8 @@ var (
 				Or(Word8TypeTag).
 				Or(Word16TypeTag).
 				Or(Word32TypeTag).
-				Or(Word64TypeTag)
+				Or(Word64TypeTag).
+				Or(Word128TypeTag)
 
 	IntegerTypeTag = newTypeTagFromLowerMask(integerTypeMask).
 			Or(SignedIntegerTypeTag).
@@ -289,10 +292,11 @@ var (
 	Int128TypeTag = newTypeTagFromLowerMask(int128TypeMask)
 	Int256TypeTag = newTypeTagFromLowerMask(int256TypeMask)
 
-	Word8TypeTag  = newTypeTagFromLowerMask(word8TypeMask)
-	Word16TypeTag = newTypeTagFromLowerMask(word16TypeMask)
-	Word32TypeTag = newTypeTagFromLowerMask(word32TypeMask)
-	Word64TypeTag = newTypeTagFromLowerMask(word64TypeMask)
+	Word8TypeTag   = newTypeTagFromLowerMask(word8TypeMask)
+	Word16TypeTag  = newTypeTagFromLowerMask(word16TypeMask)
+	Word32TypeTag  = newTypeTagFromLowerMask(word32TypeMask)
+	Word64TypeTag  = newTypeTagFromLowerMask(word64TypeMask)
+	Word128TypeTag = newTypeTagFromLowerMask(word128TypeMask)
 
 	Fix64TypeTag  = newTypeTagFromLowerMask(fix64TypeMask)
 	UFix64TypeTag = newTypeTagFromLowerMask(ufix64TypeMask)
@@ -655,6 +659,9 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	case invalidTypeMask:
 		return InvalidType
+
+	case word128TypeMask:
+		return Word128Type
 
 	// All derived types goes here.
 	case capabilityTypeMask,

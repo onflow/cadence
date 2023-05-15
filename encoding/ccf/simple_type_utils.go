@@ -51,6 +51,7 @@ const ( // Cadence simple type IDs
 	TypeWord16
 	TypeWord32
 	TypeWord64
+	TypeWord128
 	TypeFix64
 	TypeUFix64
 	TypePath
@@ -193,6 +194,9 @@ func simpleTypeIDByType(typ cadence.Type) (uint64, bool) {
 
 	case cadence.Word64Type:
 		return TypeWord64, true
+
+	case cadence.Word128Type:
+		return TypeWord128, true
 
 	case cadence.Fix64Type:
 		return TypeFix64, true
