@@ -97,7 +97,7 @@ func (e EntitlementAccess) entitlementsString(prefix strings.Builder) strings.Bu
 	for i, entitlement := range e.EntitlementSet.Entitlements() {
 		prefix.WriteString(entitlement.String())
 		if i < len(e.EntitlementSet.Entitlements())-1 {
-			prefix.Write([]byte(e.EntitlementSet.Separator()))
+			prefix.WriteString(e.EntitlementSet.Separator())
 		}
 	}
 	return prefix
