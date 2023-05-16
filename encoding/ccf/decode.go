@@ -1206,10 +1206,10 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 		return nil, err
 	}
 
-	return cadence.NewMeteredStorageCapability(
+	return cadence.NewMeteredPathCapability(
 			d.gauge,
-			path.(cadence.Path),
 			address.(cadence.Address),
+			path.(cadence.Path),
 			typ.BorrowType),
 		nil
 }

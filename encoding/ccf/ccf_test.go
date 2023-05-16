@@ -9473,7 +9473,7 @@ func TestEncodeCapability(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
-			cadence.StorageCapability{
+			cadence.PathCapability{
 				Path:    path,
 				Address: cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			},
@@ -9534,13 +9534,13 @@ func TestEncodeCapability(t *testing.T) {
 		path2, err := cadence.NewPath(1, "bar")
 		require.NoError(t, err)
 
-		capability1 := cadence.StorageCapability{
+		capability1 := cadence.PathCapability{
 			Path:       path1,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		}
 
-		capability2 := cadence.StorageCapability{
+		capability2 := cadence.PathCapability{
 			Path:       path2,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: simpleStructType,
@@ -9677,7 +9677,7 @@ func TestEncodeCapability(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
-			cadence.StorageCapability{
+			cadence.PathCapability{
 				Path:       path,
 				Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				BorrowType: cadence.IntType{},
@@ -9730,12 +9730,12 @@ func TestEncodeCapability(t *testing.T) {
 		path2, err := cadence.NewPath(1, "bar")
 		require.NoError(t, err)
 
-		capability1 := cadence.StorageCapability{
+		capability1 := cadence.PathCapability{
 			Path:       path1,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		}
-		capability2 := cadence.StorageCapability{
+		capability2 := cadence.PathCapability{
 			Path:       path2,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},

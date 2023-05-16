@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	cdcErrors "github.com/onflow/cadence/runtime/errors"
@@ -64,7 +65,7 @@ func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpr
 			) {
 				if importedLocation == TestContractLocation {
 					return sema.ElaborationImport{
-						Elaboration: TestContractChecker.Elaboration,
+						Elaboration: GetTestContractType().Checker.Elaboration,
 					}, nil
 				}
 
@@ -84,14 +85,19 @@ func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpr
 
 	var uuid uint64 = 0
 
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, AssertFunction)
+	interpreter.Declare(baseActivation, PanicFunction)
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		&interpreter.Config{
-			Storage: storage,
+			Storage:        storage,
+			BaseActivation: baseActivation,
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				if location == TestContractLocation {
-					program := interpreter.ProgramFromChecker(TestContractChecker)
+					program := interpreter.ProgramFromChecker(GetTestContractType().Checker)
 					subInterpreter, err := inter.NewSubInterpreter(program, location)
 					if err != nil {
 						panic(err)
@@ -1434,6 +1440,198 @@ func TestTestExpect(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+}
+
+func TestTestExpectFailure(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("expect failure with no failure found", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        let foo = Foo(answer: 42)
+		        Test.expectFailure(fun(): Void {
+		            foo.correctAnswer(42)
+		        }, errorMessageSubstring: "wrong answer!")
+		    }
+
+		    pub struct Foo {
+		        priv let answer: UInt8
+
+		        init(answer: UInt8) {
+		            self.answer = answer
+		        }
+
+		        pub fun correctAnswer(_ input: UInt8): Bool {
+		            if self.answer != input {
+		                panic("wrong answer!")
+		            }
+		            return true
+		        }
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorContains(
+			t,
+			err,
+			"Expected a failure, but found none.",
+		)
+	})
+
+	t.Run("expect failure with matching error message", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        let foo = Foo(answer: 42)
+		        Test.expectFailure(fun(): Void {
+		            foo.correctAnswer(43)
+		        }, errorMessageSubstring: "wrong answer!")
+		    }
+
+		    pub struct Foo {
+		        priv let answer: UInt8
+
+		        init(answer: UInt8) {
+		            self.answer = answer
+		        }
+
+		        pub fun correctAnswer(_ input: UInt8): Bool {
+		            if self.answer != input {
+		                panic("wrong answer!")
+		            }
+		            return true
+		        }
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("expect failure with mismatching error message", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        let foo = Foo(answer: 42)
+		        Test.expectFailure(fun(): Void {
+		            foo.correctAnswer(43)
+		        }, errorMessageSubstring: "what is wrong?")
+		    }
+
+		    pub struct Foo {
+		        priv let answer: UInt8
+
+		        init(answer: UInt8) {
+		            self.answer = answer
+		        }
+
+		        pub fun correctAnswer(_ input: UInt8): Bool {
+		            if self.answer != input {
+		                panic("wrong answer!")
+		            }
+		            return true
+		        }
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorContains(
+			t,
+			err,
+			"Expected error message to include: \"what is wrong?\".",
+		)
+	})
+
+	t.Run("expect failure with wrong function signature", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        let foo = Foo(answer: 42)
+		        Test.expectFailure(fun(answer: UInt64): Foo {
+		            foo.correctAnswer(42)
+		            return foo
+		        }, errorMessageSubstring: "wrong answer")
+		    }
+
+		    pub struct Foo {
+		        priv let answer: UInt8
+
+		        init(answer: UInt8) {
+		            self.answer = answer
+		        }
+
+		        pub fun correctAnswer(_ input: UInt8): Bool {
+		            if self.answer != input {
+		                panic("wrong answer!")
+		            }
+		            return true
+		        }
+		    }
+		`
+
+		_, err := newTestContractInterpreter(t, script)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("expect failure with wrong error message type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        let foo = Foo(answer: 42)
+		        Test.expectFailure(fun(): Void {
+		            foo.correctAnswer(42)
+		        }, errorMessageSubstring: ["wrong answer"])
+		    }
+
+		    pub struct Foo {
+		        priv let answer: UInt8
+
+		        init(answer: UInt8) {
+		            self.answer = answer
+		        }
+
+		        pub fun correctAnswer(_ input: UInt8): Bool {
+		            if self.answer != input {
+		                panic("wrong answer!")
+		            }
+		            return true
+		        }
+		    }
+		`
+
+		_, err := newTestContractInterpreter(t, script)
 		errs := checker.RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})

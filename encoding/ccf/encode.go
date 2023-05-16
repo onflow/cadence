@@ -488,7 +488,7 @@ func (e *Encoder) encodeValue(
 		// If x.StaticType is nil, type value is encoded as nil.
 		return e.encodeNullableTypeValue(v.StaticType, ccfTypeIDByCadenceType{})
 
-	case cadence.StorageCapability:
+	case cadence.PathCapability:
 		return e.encodeCapability(v)
 
 	case cadence.Enum:
@@ -977,7 +977,7 @@ func (e *Encoder) encodePath(x cadence.Path) error {
 //	path: path-value
 //
 // ]
-func (e *Encoder) encodeCapability(capability cadence.StorageCapability) error {
+func (e *Encoder) encodeCapability(capability cadence.PathCapability) error {
 	// Encode array head with length 2.
 	err := e.enc.EncodeRawBytes([]byte{
 		// array, 2 items follow

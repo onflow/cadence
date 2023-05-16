@@ -89,12 +89,12 @@ pub struct PublicAccount {
 
     pub struct Capabilities {
         /// get returns the storage capability at the given path, if one was stored there.
-        fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+        pub fun get<T: &Any>(_ path: PublicPath): Capability<T>?
 
         /// borrow gets the storage capability at the given path, and borrows the capability if it exists.
         ///
         /// Returns nil if the capability does not exist or cannot be borrowed using the given type.
         /// The function is equivalent to `get(path)?.borrow()`.
-        fun borrow<T: &Any>(_ path: PublicPath): T?
+        pub fun borrow<T: &Any>(_ path: PublicPath): T?
     }
 }
