@@ -588,7 +588,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 			for i, entitlement := range entitlements {
 				doc = append(doc, entitlement.Doc())
 				if i < len(entitlements)-1 {
-					doc = append(doc, prettier.Text(entitlementSet.Separator()), prettier.Space)
+					doc = append(doc, prettier.Text(entitlementSet.Separator().String()), prettier.Space)
 				}
 			}
 			doc = append(doc, prettier.Text(")"))
