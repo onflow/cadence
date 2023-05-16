@@ -2303,7 +2303,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
               capabilities.forEachController(
                   forPath: /storage/bar,
-                  function: fun (controller: &StorageCapabilityController): Bool {
+                  fun (controller: &StorageCapabilityController): Bool {
                       return true
                   }
               )

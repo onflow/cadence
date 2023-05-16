@@ -1450,6 +1450,7 @@ var AuthAccountStorageCapabilitiesTypeForEachControllerFunctionType = &FunctionT
 			TypeAnnotation: NewTypeAnnotation(StoragePathType),
 		},
 		{
+			Label:      ArgumentLabelNotRequired,
 			Identifier: "function",
 			TypeAnnotation: NewTypeAnnotation(&FunctionType{
 				Parameters: []Parameter{

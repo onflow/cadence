@@ -15422,6 +15422,32 @@ func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Va
 	}
 }
 
+type DictionaryIterator struct {
+	mapIterator *atree.MapIterator
+}
+
+func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+	atreeValue, err := i.mapIterator.NextKey()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	if atreeValue == nil {
+		return nil
+	}
+	return MustConvertStoredValue(gauge, atreeValue)
+}
+
+func (v *DictionaryValue) Iterator() DictionaryIterator {
+	mapIterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return DictionaryIterator{
+		mapIterator: mapIterator,
+	}
+}
+
 func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
 	v.Iterate(interpreter, func(key, value Value) (resume bool) {
 		walkChild(key)
