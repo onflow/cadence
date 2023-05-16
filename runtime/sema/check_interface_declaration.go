@@ -418,6 +418,7 @@ func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDecla
 func (checker *Checker) VisitEntitlementDeclaration(declaration *ast.EntitlementDeclaration) (_ struct{}) {
 
 	entitlementType := checker.Elaboration.EntitlementDeclarationType(declaration)
+	// all entitlement declarations were previously declared in `declareEntitlementType`
 	if entitlementType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -465,6 +466,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 func (checker *Checker) declareEntitlementMappingElements(declaration *ast.EntitlementMappingDeclaration) {
 
 	entitlementMapType := checker.Elaboration.EntitlementMapDeclarationType(declaration)
+	// all entitlement mapping declarations were previously declared in `declareEntitlementMappingType`
 	if entitlementMapType == nil {
 		panic(errors.NewUnreachableError())
 	}

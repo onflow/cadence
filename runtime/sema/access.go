@@ -21,13 +21,14 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 type Access interface {
 	isAccess()
-	// returns whether receiver access is less permissive than argument access
+	// IsLessPermissiveThan returns whether receiver access is less permissive than argument access
 	IsLessPermissiveThan(Access) bool
-	// returns whether receiver access permits argument access
+	// PermitsAccess returns whether receiver access permits argument access
 	PermitsAccess(Access) bool
 	Access() ast.Access
 }
@@ -96,9 +97,11 @@ func (e EntitlementAccess) PermitsAccess(other Access) bool {
 				// Concretely: `auth (U1 | U2 | ... ) &X <: auth (T1, T2,  ... ) &X` whenever `∀U ∈ {U1, U2, ...}, ∀T ∈ {T1, T2, ...}, T = U`.
 				innerPredicate = func(eKey *EntitlementType) bool {
 					return e.Entitlements.ForAllKeys(func(otherKey *EntitlementType) bool {
-						return eKey.Equal(otherKey)
+						return eKey == otherKey
 					})
 				}
+			default:
+				panic(errors.NewUnreachableError())
 			}
 			return otherAccess.Entitlements.ForAllKeys(innerPredicate)
 		case Conjunction:
@@ -124,10 +127,13 @@ func (e EntitlementAccess) PermitsAccess(other Access) bool {
 				// Concretely: `auth (U1, U2, ... ) &X <: auth (T1 | T2 | ... ) &X` whenever `{U1, U2, ...}` is not disjoint from `{T1, T2, ...}`,
 				// or equivalently `∃U ∈ {U1, U2, ...}, ∃T ∈ {T1, T2, ...}, T = U`
 				outerPredicate = e.Entitlements.ForAnyKey
+			default:
+				panic(errors.NewUnreachableError())
 			}
 			return outerPredicate(otherAccess.Entitlements.Contains)
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		return false
 	default:
 		return false
 	}

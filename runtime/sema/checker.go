@@ -1777,6 +1777,17 @@ func (checker *Checker) checkDeclarationAccessModifier(
 
 		isTypeDeclaration := declarationKind.IsTypeDeclaration()
 
+		requireIsResourceMember := func() {
+			if containerKind == nil ||
+				(*containerKind != common.CompositeKindResource && *containerKind != common.CompositeKindStructure) {
+				checker.report(
+					&InvalidEntitlementAccessError{
+						Pos: startPos,
+					},
+				)
+			}
+		}
+
 		switch access := access.(type) {
 		case PrimitiveAccess:
 			switch access.Access() {
@@ -1893,23 +1904,9 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				)
 				return
 			}
-			if containerKind == nil ||
-				(*containerKind != common.CompositeKindResource && *containerKind != common.CompositeKindStructure) {
-				checker.report(
-					&InvalidEntitlementAccessError{
-						Pos: startPos,
-					},
-				)
-			}
+			requireIsResourceMember()
 		case EntitlementAccess:
-			if containerKind == nil ||
-				(*containerKind != common.CompositeKindResource && *containerKind != common.CompositeKindStructure) {
-				checker.report(
-					&InvalidEntitlementAccessError{
-						Pos: startPos,
-					},
-				)
-			}
+			requireIsResourceMember()
 		}
 	}
 }
@@ -1955,8 +1952,8 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 	switch access := access.(type) {
 	case ast.PrimitiveAccess:
 		return PrimitiveAccess(access)
-	case ast.EntitlementAccess:
 
+	case ast.EntitlementAccess:
 		semaAccess, hasAccess := checker.Elaboration.GetSemanticAccess(access)
 		if hasAccess {
 			return semaAccess
