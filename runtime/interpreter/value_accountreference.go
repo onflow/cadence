@@ -67,7 +67,7 @@ func NewAccountReferenceValue(
 	)
 }
 
-func (*AccountReferenceValue) IsValue() {}
+func (*AccountReferenceValue) isValue() {}
 
 func (*AccountReferenceValue) isReference() {}
 
@@ -295,4 +295,9 @@ func (v *AccountReferenceValue) authAccount(interpreter *Interpreter) Value {
 		v._authAccount = interpreter.SharedState.Config.AuthAccountHandler(AddressValue(v.Address))
 	}
 	return v._authAccount
+}
+
+func (v *AccountReferenceValue) ReferencedValue(interpreter *Interpreter, _ LocationRange, _ bool) *Value {
+	authAccount := v.authAccount(interpreter)
+	return &authAccount
 }

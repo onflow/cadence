@@ -204,8 +204,13 @@ type jsonTypeValue struct {
 	StaticType jsonValue `json:"staticType"`
 }
 
-type jsonStorageCapabilityValue struct {
+type jsonPathCapabilityValue struct {
 	Path       jsonValue `json:"path"`
+	BorrowType jsonValue `json:"borrowType"`
+	Address    string    `json:"address"`
+}
+
+type jsonIDCapabilityValue struct {
 	BorrowType jsonValue `json:"borrowType"`
 	Address    string    `json:"address"`
 	ID         string    `json:"id"`
@@ -260,85 +265,87 @@ const (
 // Prepare traverses the object graph of the provided value and constructs
 // a struct representation that can be marshalled to JSON.
 func Prepare(v cadence.Value) jsonValue {
-	switch x := v.(type) {
+	switch v := v.(type) {
 	case cadence.Void:
 		return prepareVoid()
 	case cadence.Optional:
-		return prepareOptional(x)
+		return prepareOptional(v)
 	case cadence.Bool:
-		return prepareBool(x)
+		return prepareBool(v)
 	case cadence.Character:
-		return prepareCharacter(x)
+		return prepareCharacter(v)
 	case cadence.String:
-		return prepareString(x)
+		return prepareString(v)
 	case cadence.Address:
-		return prepareAddress(x)
+		return prepareAddress(v)
 	case cadence.Int:
-		return prepareInt(x)
+		return prepareInt(v)
 	case cadence.Int8:
-		return prepareInt8(x)
+		return prepareInt8(v)
 	case cadence.Int16:
-		return prepareInt16(x)
+		return prepareInt16(v)
 	case cadence.Int32:
-		return prepareInt32(x)
+		return prepareInt32(v)
 	case cadence.Int64:
-		return prepareInt64(x)
+		return prepareInt64(v)
 	case cadence.Int128:
-		return prepareInt128(x)
+		return prepareInt128(v)
 	case cadence.Int256:
-		return prepareInt256(x)
+		return prepareInt256(v)
 	case cadence.UInt:
-		return prepareUInt(x)
+		return prepareUInt(v)
 	case cadence.UInt8:
-		return prepareUInt8(x)
+		return prepareUInt8(v)
 	case cadence.UInt16:
-		return prepareUInt16(x)
+		return prepareUInt16(v)
 	case cadence.UInt32:
-		return prepareUInt32(x)
+		return prepareUInt32(v)
 	case cadence.UInt64:
-		return prepareUInt64(x)
+		return prepareUInt64(v)
 	case cadence.UInt128:
-		return prepareUInt128(x)
+		return prepareUInt128(v)
 	case cadence.UInt256:
-		return prepareUInt256(x)
+		return prepareUInt256(v)
 	case cadence.Word8:
-		return prepareWord8(x)
+		return prepareWord8(v)
 	case cadence.Word16:
-		return prepareWord16(x)
+		return prepareWord16(v)
 	case cadence.Word32:
-		return prepareWord32(x)
+		return prepareWord32(v)
 	case cadence.Word64:
-		return prepareWord64(x)
+		return prepareWord64(v)
 	case cadence.Fix64:
-		return prepareFix64(x)
+		return prepareFix64(v)
 	case cadence.UFix64:
-		return prepareUFix64(x)
+		return prepareUFix64(v)
 	case cadence.Array:
-		return prepareArray(x)
+		return prepareArray(v)
 	case cadence.Dictionary:
-		return prepareDictionary(x)
+		return prepareDictionary(v)
 	case cadence.Struct:
-		return prepareStruct(x)
+		return prepareStruct(v)
 	case cadence.Resource:
-		return prepareResource(x)
+		return prepareResource(v)
 	case cadence.Event:
-		return prepareEvent(x)
+		return prepareEvent(v)
 	case cadence.Contract:
-		return prepareContract(x)
+		return prepareContract(v)
 	case cadence.PathLink:
-		return preparePathLink(x)
+		return preparePathLink(v)
 	case cadence.AccountLink:
 		return prepareAccountLink()
 	case cadence.Path:
-		return preparePath(x)
+		return preparePath(v)
 	case cadence.TypeValue:
-		return prepareTypeValue(x)
-	case cadence.StorageCapability:
-		return prepareCapability(x)
+		return prepareTypeValue(v)
+	case cadence.PathCapability:
+		return preparePathCapability(v)
+	case cadence.IDCapability:
+		return prepareIDCapability(v)
 	case cadence.Enum:
-		return prepareEnum(x)
+		return prepareEnum(v)
 	case cadence.Function:
-		return prepareFunction(x)
+		return prepareFunction(v)
 	default:
 		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
@@ -902,12 +909,22 @@ func prepareTypeValue(typeValue cadence.TypeValue) jsonValue {
 	}
 }
 
-func prepareCapability(capability cadence.StorageCapability) jsonValue {
+func preparePathCapability(capability cadence.PathCapability) jsonValue {
 	return jsonValueObject{
 		Type: capabilityTypeStr,
-		Value: jsonStorageCapabilityValue{
-			ID:         encodeUInt(uint64(capability.ID)),
+		Value: jsonPathCapabilityValue{
 			Path:       preparePath(capability.Path),
+			Address:    encodeBytes(capability.Address.Bytes()),
+			BorrowType: prepareType(capability.BorrowType, typePreparationResults{}),
+		},
+	}
+}
+
+func prepareIDCapability(capability cadence.IDCapability) jsonValue {
+	return jsonValueObject{
+		Type: capabilityTypeStr,
+		Value: jsonIDCapabilityValue{
+			ID:         encodeUInt(uint64(capability.ID)),
 			Address:    encodeBytes(capability.Address.Bytes()),
 			BorrowType: prepareType(capability.BorrowType, typePreparationResults{}),
 		},

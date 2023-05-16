@@ -30,29 +30,29 @@ import (
 // AccountCapabilityControllerValue
 
 type AccountCapabilityControllerValue struct {
-	BorrowType   StaticType
+	BorrowType   ReferenceStaticType
 	CapabilityID UInt64Value
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
-	staticType StaticType,
+	borrowType ReferenceStaticType,
 	capabilityID UInt64Value,
 ) *AccountCapabilityControllerValue {
 	return &AccountCapabilityControllerValue{
-		BorrowType:   staticType,
+		BorrowType:   borrowType,
 		CapabilityID: capabilityID,
 	}
 }
 
 func NewAccountCapabilityControllerValue(
 	memoryGauge common.MemoryGauge,
-	staticType StaticType,
+	borrowType ReferenceStaticType,
 	capabilityID UInt64Value,
 ) *AccountCapabilityControllerValue {
 	// Constant because its constituents are already metered.
 	common.UseMemory(memoryGauge, common.AccountCapabilityControllerValueMemoryUsage)
 	return NewUnmeteredAccountCapabilityControllerValue(
-		staticType,
+		borrowType,
 		capabilityID,
 	)
 }
@@ -63,9 +63,13 @@ var _ EquatableValue = &AccountCapabilityControllerValue{}
 var _ CapabilityControllerValue = &AccountCapabilityControllerValue{}
 var _ MemberAccessibleValue = &AccountCapabilityControllerValue{}
 
-func (*AccountCapabilityControllerValue) IsValue() {}
+func (*AccountCapabilityControllerValue) isValue() {}
 
 func (*AccountCapabilityControllerValue) isCapabilityControllerValue() {}
+
+func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() ReferenceStaticType {
+	return v.BorrowType
+}
 
 func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
@@ -199,4 +203,18 @@ func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 func (*AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Storage capability controllers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
+}
+
+func (v *AccountCapabilityControllerValue) ReferenceValue(
+	interpreter *Interpreter,
+	capabilityAddress common.Address,
+	resultBorrowType *sema.ReferenceType,
+) ReferenceValue {
+	return NewAccountReferenceValue(
+		interpreter,
+		capabilityAddress,
+		// TODO:
+		EmptyPathValue,
+		resultBorrowType,
+	)
 }

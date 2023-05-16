@@ -2527,38 +2527,66 @@ func TestEncodeCapability(t *testing.T) {
 
 	t.Parallel()
 
-	path, err := cadence.NewPath(common.PathDomainStorage, "foo")
-	require.NoError(t, err)
+	t.Run("path", func(t *testing.T) {
 
-	testEncodeAndDecode(
-		t,
-		cadence.NewStorageCapability(
-			6,
-			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			path,
-			cadence.IntType{},
-		),
-		// language=json
-		`
-          {
-            "type": "Capability",
-            "value": {
-              "path": {
-                "type": "Path",
+		path, err := cadence.NewPath(common.PathDomainPublic, "foo")
+		require.NoError(t, err)
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewPathCapability(
+				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				path,
+				cadence.IntType{},
+			),
+			// language=json
+			`
+              {
+                "type": "Capability",
                 "value": {
-                  "domain": "storage",
-                  "identifier": "foo"
+                  "path": {
+                    "type": "Path",
+                    "value": {
+                      "domain": "public",
+                      "identifier": "foo"
+                    }
+                  },
+                  "borrowType": {
+                    "kind": "Int"
+                  },
+                  "address": "0x0000000102030405"
                 }
-              },
-              "borrowType": {
-                "kind": "Int"
-              },
-              "address": "0x0000000102030405",
-              "id": "6"
-            }
-          }
-        `,
-	)
+              }
+            `,
+		)
+	})
+
+	t.Run("ID", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewIDCapability(
+				6,
+				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				cadence.IntType{},
+			),
+			// language=json
+			`
+              {
+                "type": "Capability",
+                "value": {
+                  "borrowType": {
+                    "kind": "Int"
+                  },
+                  "address": "0x0000000102030405",
+                  "id": "6"
+                }
+              }
+            `,
+		)
+	})
 }
 
 func TestDecodeFixedPoints(t *testing.T) {

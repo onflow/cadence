@@ -30,24 +30,30 @@ import (
 type CapabilityControllerValue interface {
 	Value
 	isCapabilityControllerValue()
+	CapabilityControllerBorrowType() ReferenceStaticType
+	ReferenceValue(
+		interpreter *Interpreter,
+		capabilityAddress common.Address,
+		resultBorrowType *sema.ReferenceType,
+	) ReferenceValue
 }
 
 // StorageCapabilityControllerValue
 
 type StorageCapabilityControllerValue struct {
-	BorrowType       StaticType
+	BorrowType       ReferenceStaticType
 	TargetPath       PathValue
 	RetargetFunction FunctionValue
 	CapabilityID     UInt64Value
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
-	staticType StaticType,
+	borrowType ReferenceStaticType,
 	capabilityID UInt64Value,
 	targetPath PathValue,
 ) *StorageCapabilityControllerValue {
 	return &StorageCapabilityControllerValue{
-		BorrowType:   staticType,
+		BorrowType:   borrowType,
 		TargetPath:   targetPath,
 		CapabilityID: capabilityID,
 	}
@@ -55,14 +61,14 @@ func NewUnmeteredStorageCapabilityControllerValue(
 
 func NewStorageCapabilityControllerValue(
 	memoryGauge common.MemoryGauge,
-	staticType StaticType,
+	borrowType ReferenceStaticType,
 	capabilityID UInt64Value,
 	targetPath PathValue,
 ) *StorageCapabilityControllerValue {
 	// Constant because its constituents are already metered.
 	common.UseMemory(memoryGauge, common.StorageCapabilityControllerValueMemoryUsage)
 	return NewUnmeteredStorageCapabilityControllerValue(
-		staticType,
+		borrowType,
 		capabilityID,
 		targetPath,
 	)
@@ -74,9 +80,13 @@ var _ EquatableValue = &StorageCapabilityControllerValue{}
 var _ CapabilityControllerValue = &StorageCapabilityControllerValue{}
 var _ MemberAccessibleValue = &StorageCapabilityControllerValue{}
 
-func (*StorageCapabilityControllerValue) IsValue() {}
+func (*StorageCapabilityControllerValue) isValue() {}
 
 func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
+
+func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() ReferenceStaticType {
+	return v.BorrowType
+}
 
 func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
@@ -227,4 +237,18 @@ func (*StorageCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 func (*StorageCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Storage capability controllers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
+}
+
+func (v *StorageCapabilityControllerValue) ReferenceValue(
+	interpreter *Interpreter,
+	capabilityAddress common.Address,
+	resultBorrowType *sema.ReferenceType,
+) ReferenceValue {
+	return NewStorageReferenceValue(
+		interpreter,
+		resultBorrowType.Authorized,
+		capabilityAddress,
+		v.TargetPath,
+		resultBorrowType.Type,
+	)
 }

@@ -425,10 +425,8 @@ func accountGetCapabilityFunction(
 				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
 			}
 
-			return NewStorageCapabilityValue(
+			return NewPathCapabilityValue(
 				gauge,
-				// TODO:
-				TodoCapabilityID,
 				addressValue,
 				path,
 				borrowStaticType,

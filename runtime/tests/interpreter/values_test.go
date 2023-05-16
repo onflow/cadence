@@ -1126,7 +1126,7 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 	if currentDepth < containerMaxDepth {
 		n = randomInt(Composite)
 	} else {
-		n = randomInt(Capability)
+		n = randomInt(IDCapability)
 	}
 
 	switch n {
@@ -1142,11 +1142,19 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 		return randomArrayValue(inter, currentDepth)
 	case Composite:
 		return randomCompositeValue(inter, common.CompositeKindStructure, currentDepth)
-	case Capability:
-		return interpreter.NewUnmeteredStorageCapabilityValue(
-			interpreter.UInt64Value(randomInt(math.MaxInt-1)),
+	case PathCapability:
+		return interpreter.NewUnmeteredPathCapabilityValue(
 			randomAddressValue(),
 			randomPathValue(),
+			interpreter.ReferenceStaticType{
+				Authorized:   false,
+				BorrowedType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+		)
+	case IDCapability:
+		return interpreter.NewUnmeteredIDCapabilityValue(
+			interpreter.UInt64Value(randomInt(math.MaxInt-1)),
+			randomAddressValue(),
 			interpreter.ReferenceStaticType{
 				Authorized:   false,
 				BorrowedType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -1529,7 +1537,8 @@ const (
 
 	Void
 	Nil // `Never?`
-	Capability
+	PathCapability
+	IDCapability
 
 	// Containers
 	Some

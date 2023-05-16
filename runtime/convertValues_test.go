@@ -838,14 +838,22 @@ func TestImportValue(t *testing.T) {
 			expected: nil,
 		},
 		{
-			label: "Capability (invalid)",
-			value: cadence.NewStorageCapability(
-				3,
+			label: "path Capability (invalid)",
+			value: cadence.NewPathCapability(
 				cadence.Address{0x1},
 				cadence.Path{
 					Domain:     common.PathDomainPublic,
 					Identifier: "test",
 				},
+				cadence.IntType{},
+			),
+			expected: nil,
+		},
+		{
+			label: "ID Capability (invalid)",
+			value: cadence.NewIDCapability(
+				4,
+				cadence.Address{0x1},
 				cadence.IntType{},
 			),
 			expected: nil,
@@ -2058,14 +2066,13 @@ func TestExportTypeValue(t *testing.T) {
 
 }
 
-func TestExportStorageCapabilityValue(t *testing.T) {
+func TestExportPathCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("Int", func(t *testing.T) {
 
-		capability := interpreter.NewUnmeteredStorageCapabilityValue(
-			3,
+		capability := interpreter.NewUnmeteredPathCapabilityValue(
 			interpreter.AddressValue{0x1},
 			interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -2082,8 +2089,7 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.NewStorageCapability(
-			3,
+		expected := cadence.NewPathCapability(
 			cadence.Address{0x1},
 			cadence.Path{
 				Domain:     common.PathDomainStorage,
@@ -2120,8 +2126,7 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 		inter := newTestInterpreter(t)
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
-		capability := interpreter.NewUnmeteredStorageCapabilityValue(
-			3,
+		capability := interpreter.NewUnmeteredPathCapabilityValue(
 			interpreter.AddressValue{0x1},
 			interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -2138,8 +2143,7 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.NewStorageCapability(
-			3,
+		expected := cadence.NewPathCapability(
 			cadence.Address{0x1},
 			cadence.Path{
 				Domain:     common.PathDomainStorage,
@@ -2157,8 +2161,7 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 
 	t.Run("no borrow type", func(t *testing.T) {
 
-		capability := interpreter.NewUnmeteredStorageCapabilityValue(
-			3,
+		capability := interpreter.NewUnmeteredPathCapabilityValue(
 			interpreter.AddressValue{0x1},
 			interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -2175,14 +2178,95 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.NewStorageCapability(
-			3,
+		expected := cadence.NewPathCapability(
 			cadence.Address{0x1},
 			cadence.Path{
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			nil,
+		)
+
+		assert.Equal(t, expected, actual)
+	})
+}
+
+func TestExportIDCapabilityValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Int", func(t *testing.T) {
+
+		capability := interpreter.NewUnmeteredIDCapabilityValue(
+			3,
+			interpreter.AddressValue{0x1},
+			interpreter.PrimitiveStaticTypeInt,
+		)
+
+		actual, err := exportValueWithInterpreter(
+			capability,
+			newTestInterpreter(t),
+			interpreter.EmptyLocationRange,
+			seenReferences{},
+		)
+		require.NoError(t, err)
+
+		expected := cadence.NewIDCapability(
+			3,
+			cadence.Address{0x1},
+			cadence.IntType{},
+		)
+
+		assert.Equal(t, expected, actual)
+
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+
+		const code = `
+          struct S {}
+        `
+		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
+		require.NoError(t, err)
+
+		checker, err := sema.NewChecker(
+			program,
+			TestLocation,
+			nil,
+			&sema.Config{
+				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+			},
+		)
+		require.NoError(t, err)
+
+		err = checker.Check()
+		require.NoError(t, err)
+
+		inter := newTestInterpreter(t)
+		inter.Program = interpreter.ProgramFromChecker(checker)
+
+		capability := interpreter.NewUnmeteredIDCapabilityValue(
+			3,
+			interpreter.AddressValue{0x1},
+			interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
+		)
+
+		actual, err := exportValueWithInterpreter(
+			capability,
+			inter,
+			interpreter.EmptyLocationRange,
+			seenReferences{},
+		)
+		require.NoError(t, err)
+
+		expected := cadence.NewIDCapability(
+			3,
+			cadence.Address{0x1},
+			&cadence.StructType{
+				QualifiedIdentifier: "S",
+				Location:            TestLocation,
+				Fields:              []cadence.Field{},
+			},
 		)
 
 		assert.Equal(t, expected, actual)
@@ -4013,7 +4097,7 @@ func TestTypeValueImport(t *testing.T) {
 	})
 }
 
-func TestStorageCapabilityValueImport(t *testing.T) {
+func TestPathCapabilityValueImport(t *testing.T) {
 
 	t.Parallel()
 
@@ -4021,14 +4105,14 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.StorageCapability{
-			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}},
-			Address:    cadence.Address{0x1},
-			Path: cadence.Path{
+		capabilityValue := cadence.NewPathCapability(
+			cadence.Address{0x1},
+			cadence.Path{
 				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
-		}
+			&cadence.ReferenceType{Type: cadence.IntType{}},
+		)
 
 		script := `
             pub fun main(s: Capability<&Int>) {
@@ -4045,7 +4129,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			log: func(s string) {
-				assert.Equal(t, "Capability<&Int>(id: 0, address: 0x0100000000000000, path: /public/foo)", s)
+				assert.Equal(t, "Capability<&Int>(address: 0x0100000000000000, path: /public/foo)", s)
 				ok = true
 			},
 			meterMemory: func(_ common.MemoryUsage) error {
@@ -4075,8 +4159,7 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.NewStorageCapability(
-			3,
+		capabilityValue := cadence.NewPathCapability(
 			cadence.Address{0x1},
 			cadence.Path{
 				Domain:     common.PathDomainPublic,
@@ -4123,16 +4206,16 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.StorageCapability{
-			Address: cadence.Address{0x1},
-			Path: cadence.Path{
+		capabilityValue := cadence.NewPathCapability(
+			cadence.Address{0x1},
+			cadence.Path{
 				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
-			BorrowType: &cadence.ReferenceType{
+			&cadence.ReferenceType{
 				Type: cadence.IntType{},
 			},
-		}
+		)
 
 		script := `
             pub fun main(s: Capability<&Int>) {
@@ -4172,14 +4255,14 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.StorageCapability{
-			BorrowType: &cadence.ReferenceType{Type: cadence.IntType{}},
-			Address:    cadence.Address{0x1},
-			Path: cadence.Path{
+		capabilityValue := cadence.NewPathCapability(
+			cadence.Address{0x1},
+			cadence.Path{
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
-		}
+			&cadence.ReferenceType{Type: cadence.IntType{}},
+		)
 
 		script := `
             pub fun main(s: Capability<&Int>) {
@@ -4192,8 +4275,6 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
-			log: func(s string) {
-			},
 			meterMemory: func(_ common.MemoryUsage) error {
 				return nil
 			},
@@ -4228,14 +4309,14 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 			Initializers:        [][]cadence.Parameter{},
 		}
 
-		capabilityValue := cadence.StorageCapability{
-			BorrowType: borrowType,
-			Address:    cadence.Address{0x1},
-			Path: cadence.Path{
+		capabilityValue := cadence.NewPathCapability(
+			cadence.Address{0x1},
+			cadence.Path{
 				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
-		}
+			borrowType,
+		)
 
 		script := `
             pub fun main(s: Capability<S>) {
@@ -4248,8 +4329,150 @@ func TestStorageCapabilityValueImport(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
-			log: func(s string) {
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		RequireError(t, err)
+		assertUserError(t, err)
+	})
+}
+
+func TestIDCapabilityValueImport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Capability<&Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		capabilityValue := cadence.NewIDCapability(
+			42,
+			cadence.Address{0x1},
+			&cadence.ReferenceType{Type: cadence.IntType{}},
+		)
+
+		script := `
+            pub fun main(s: Capability<&Int>) {
+            }
+        `
+
+		encodedArg, err := json.Encode(capabilityValue)
+		require.NoError(t, err)
+
+		rt := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		RequireError(t, err)
+		assertUserError(t, err)
+	})
+
+	t.Run("Capability<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		capabilityValue := cadence.NewIDCapability(
+			3,
+			cadence.Address{0x1},
+			cadence.IntType{},
+		)
+
+		script := `
+            pub fun main(s: Capability<Int>) {
+            }
+        `
+
+		encodedArg, err := json.Encode(capabilityValue)
+		require.NoError(t, err)
+
+		rt := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		RequireError(t, err)
+		assertUserError(t, err)
+	})
+
+	t.Run("missing struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		borrowType := &cadence.StructType{
+			QualifiedIdentifier: "S",
+			Location:            TestLocation,
+			Fields:              []cadence.Field{},
+			Initializers:        [][]cadence.Parameter{},
+		}
+
+		capabilityValue := cadence.NewIDCapability(
+			42,
+			cadence.Address{0x1},
+			borrowType,
+		)
+
+		script := `
+            pub fun main(s: Capability<S>) {
+            }
+        `
+
+		encodedArg, err := json.Encode(capabilityValue)
+		require.NoError(t, err)
+
+		rt := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
 			meterMemory: func(_ common.MemoryUsage) error {
 				return nil
 			},

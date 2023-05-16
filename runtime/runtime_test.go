@@ -3601,7 +3601,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
 
-	t.Run("function with un-importable argument errors and error propagates", func(t *testing.T) {
+	t.Run("function with un-importable argument errors and error propagates (path capability)", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3609,9 +3609,41 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloArg",
 			[]cadence.Value{
-				cadence.StorageCapability{
-					BorrowType: cadence.AddressType{}, // this will error during `importValue`
-				},
+				cadence.NewPathCapability(
+					cadence.Address{},
+					cadence.Path{
+						Domain:     common.PathDomainPublic,
+						Identifier: "test",
+					},
+					cadence.AddressType{}, // this will error during `importValue`
+				),
+			},
+			[]sema.Type{
+				&sema.CapabilityType{},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		RequireError(t, err)
+
+		require.ErrorContains(t, err, "cannot import capability")
+	})
+
+	t.Run("function with un-importable argument errors and error propagates (ID capability)", func(t *testing.T) {
+		_, err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloArg",
+			[]cadence.Value{
+				cadence.NewIDCapability(
+					42,
+					cadence.Address{},
+					cadence.AddressType{}, // this will error during `importValue`
+				),
 			},
 			[]sema.Type{
 				&sema.CapabilityType{},
@@ -7048,9 +7080,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewStorageCapability(
-				// TODO:
-				interpreter.TodoCapabilityID,
+			cadence.NewPathCapability(
 				cadence.BytesToAddress([]byte{0x1}),
 				cadence.Path{
 					Domain:     common.PathDomainPublic,

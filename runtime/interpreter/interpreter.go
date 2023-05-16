@@ -30,9 +30,8 @@ import (
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
 
-	"github.com/onflow/cadence/runtime/activations"
-
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -119,6 +118,26 @@ type OnAccountLinkedFunc func(
 	address AddressValue,
 	path PathValue,
 ) error
+
+// IDCapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
+type IDCapabilityBorrowHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	capabilityID UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) ReferenceValue
+
+// IDCapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
+type IDCapabilityCheckHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	capabilityID UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) BoolValue
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 type InjectedCompositeFieldsHandlerFunc func(
@@ -3746,10 +3765,8 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				NewStorageCapabilityValue(
+				NewPathCapabilityValue(
 					interpreter,
-					// TODO:
-					TodoCapabilityID,
 					addressValue,
 					newCapabilityPath,
 					borrowStaticType,
@@ -3760,7 +3777,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	)
 }
 
-var authAccountReferenceStaticType = ReferenceStaticType{
+var AuthAccountReferenceStaticType = ReferenceStaticType{
 	BorrowedType:   PrimitiveStaticTypeAuthAccount,
 	ReferencedType: PrimitiveStaticTypeAuthAccount,
 }
@@ -3774,7 +3791,7 @@ var authAccountReferenceStaticType = ReferenceStaticType{
 // an interpreter.AccountLink is stored in the account.
 //
 // In both cases, when acquiring a capability, e.g. using getCapability,
-// a StorageCapabilityValue is returned.
+// a PathCapabilityValue is returned.
 // This is because in both cases, we are looking up a path in an account.
 // Depending on what is stored in the path, PathLink or AccountLink,
 // we return a respective reference value, a StorageReferenceValue for PathLink
@@ -3844,13 +3861,11 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				NewStorageCapabilityValue(
+				NewPathCapabilityValue(
 					interpreter,
-					// TODO:
-					TodoCapabilityID,
 					addressValue,
 					newCapabilityPath,
-					authAccountReferenceStaticType,
+					AuthAccountReferenceStaticType,
 				),
 			)
 
@@ -3936,67 +3951,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	)
 }
 
-func (interpreter *Interpreter) BorrowCapability(
-	address common.Address,
-	pathValue PathValue,
-	borrowType *sema.ReferenceType,
-	locationRange LocationRange,
-) ReferenceValue {
-	target, authorized, err :=
-		interpreter.GetStorageCapabilityFinalTarget(
-			address,
-			pathValue,
-			borrowType,
-			locationRange,
-		)
-	if err != nil {
-		panic(err)
-	}
-
-	if target == nil {
-		return nil
-	}
-
-	switch target := target.(type) {
-	case AccountCapabilityTarget:
-		return NewAccountReferenceValue(
-			interpreter,
-			address,
-			pathValue,
-			borrowType.Type,
-		)
-
-	case PathCapabilityTarget:
-		targetPath := PathValue(target)
-
-		reference := NewStorageReferenceValue(
-			interpreter,
-			authorized,
-			address,
-			targetPath,
-			borrowType.Type,
-		)
-
-		// Attempt to dereference,
-		// which reads the stored value
-		// and performs a dynamic type check
-
-		value, err := reference.dereference(interpreter, locationRange)
-		if err != nil {
-			panic(err)
-		}
-		if value == nil {
-			return nil
-		}
-
-		return reference
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
-func (interpreter *Interpreter) storageCapabilityBorrowFunction(
+func (interpreter *Interpreter) pathCapabilityBorrowFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
@@ -4011,6 +3966,7 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 		func(invocation Invocation) Value {
 
 			interpreter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// NOTE: if a type argument is provided for the function,
 			// use it *instead* of the type of the value (if any)
@@ -4029,7 +3985,58 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			reference := interpreter.BorrowCapability(address, pathValue, borrowType, invocation.LocationRange)
+			target, authorized, err :=
+				interpreter.GetPathCapabilityFinalTarget(
+					address,
+					pathValue,
+					borrowType,
+					locationRange,
+				)
+			if err != nil {
+				panic(err)
+			}
+
+			var reference ReferenceValue
+
+			switch target := target.(type) {
+			case nil:
+				reference = nil
+
+			case AccountCapabilityTarget:
+				reference = NewAccountReferenceValue(
+					interpreter,
+					address,
+					pathValue,
+					borrowType.Type,
+				)
+
+			case PathCapabilityTarget:
+				targetPath := PathValue(target)
+
+				storageReference := NewStorageReferenceValue(
+					interpreter,
+					authorized,
+					address,
+					targetPath,
+					borrowType.Type,
+				)
+
+				// Attempt to dereference,
+				// which reads the stored value
+				// and performs a dynamic type check
+
+				value, err := storageReference.dereference(interpreter, locationRange)
+				if err != nil {
+					panic(err)
+				}
+				if value != nil {
+					reference = storageReference
+				}
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
 			if reference == nil {
 				return Nil
 			}
@@ -4038,7 +4045,7 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 	)
 }
 
-func (interpreter *Interpreter) storageCapabilityCheckFunction(
+func (interpreter *Interpreter) pathCapabilityCheckFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
@@ -4071,7 +4078,7 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 			}
 
 			target, authorized, err :=
-				interpreter.GetStorageCapabilityFinalTarget(
+				interpreter.GetPathCapabilityFinalTarget(
 					address,
 					pathValue,
 					borrowType,
@@ -4115,7 +4122,7 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 	)
 }
 
-func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
+func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
 	address common.Address,
 	path PathValue,
 	wantedBorrowType *sema.ReferenceType,
@@ -4168,7 +4175,7 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 
 		case AccountLinkValue:
 			if !interpreter.IsSubTypeOfSemaType(
-				authAccountReferenceStaticType,
+				AuthAccountReferenceStaticType,
 				wantedBorrowType,
 			) {
 				return nil, false, nil
@@ -4177,6 +4184,10 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 			return AccountCapabilityTarget(address),
 				false,
 				nil
+
+		case *IDCapabilityValue:
+			// TODO: follow target?
+			return nil, false, nil
 
 		default:
 			return PathCapabilityTarget(path),
@@ -4827,4 +4838,81 @@ func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
 	}
 
 	config.AccountLinkingAllowed = true
+}
+
+func (interpreter *Interpreter) idCapabilityBorrowFunction(
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+) *HostFunctionValue {
+
+	return NewHostFunctionValue(
+		interpreter,
+		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
+		func(invocation Invocation) Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			var wantedBorrowType *sema.ReferenceType
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				wantedBorrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+			}
+
+			return inter.SharedState.Config.IDCapabilityBorrowHandler(
+				inter,
+				locationRange,
+				addressValue,
+				capabilityID,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+		},
+	)
+}
+
+func (interpreter *Interpreter) idCapabilityCheckFunction(
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+) *HostFunctionValue {
+
+	return NewHostFunctionValue(
+		interpreter,
+		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
+		func(invocation Invocation) Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// NOTE: if a type argument is provided for the function,
+			// use it *instead* of the type of the value (if any)
+
+			var wantedBorrowType *sema.ReferenceType
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				wantedBorrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+			}
+
+			return inter.SharedState.Config.IDCapabilityCheckHandler(
+				inter,
+				locationRange,
+				addressValue,
+				capabilityID,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+		},
+	)
 }

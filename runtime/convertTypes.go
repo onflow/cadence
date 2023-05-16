@@ -680,6 +680,6 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 	case cadence.DeployedContractType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeDeployedContract)
 	default:
-		panic(fmt.Sprintf("cannot export type of type %T", t))
+		panic(fmt.Sprintf("cannot import type of type %T", t))
 	}
 }
