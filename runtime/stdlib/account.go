@@ -3022,14 +3022,12 @@ func getCheckedCapabilityController(
 
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
-	} else {
+	} else if !sema.IsSubType(capabilityBorrowType, wantedBorrowType) {
 		// Ensure requested borrow type is not more permissive
 		// than the capability's borrow type:
 		// The requested type must be a supertype
 
-		if !sema.IsSubType(capabilityBorrowType, wantedBorrowType) {
-			return nil, nil
-		}
+		return nil, nil
 	}
 
 	capabilityAddress := capabilityAddressValue.ToAddress()
