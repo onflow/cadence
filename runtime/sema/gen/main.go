@@ -149,6 +149,7 @@ type typeDecl struct {
 	storable           bool
 	equatable          bool
 	exportable         bool
+	comparable         bool
 	importable         bool
 	memberDeclarations []ast.Declaration
 	nestedTypes        []*typeDecl
@@ -401,6 +402,15 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 			}
 			typeDecl.equatable = true
 
+		case "Comparable":
+			if !canGenerateSimpleType {
+				panic(fmt.Errorf(
+					"composite types cannot be explicitly marked as comparable: %s",
+					g.currentTypeID(),
+				))
+			}
+			typeDecl.comparable = true
+
 		case "Exportable":
 			if !canGenerateSimpleType {
 				panic(fmt.Errorf(
@@ -620,45 +630,49 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 		return typeVarIdent(identifier)
 
 	case *ast.OptionalType:
+		innerType := typeExpr(t.Type, typeParams)
 		return &dst.UnaryExpr{
 			Op: token.AND,
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("OptionalType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type, typeParams)),
+					goKeyValue("Type", innerType),
 				},
 			},
 		}
 
 	case *ast.ReferenceType:
+		borrowType := typeExpr(t.Type, typeParams)
 		return &dst.UnaryExpr{
 			Op: token.AND,
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("ReferenceType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type, typeParams)),
+					goKeyValue("Type", borrowType),
 				},
 			},
 		}
 
 	case *ast.VariableSizedType:
+		elementType := typeExpr(t.Type, typeParams)
 		return &dst.UnaryExpr{
 			Op: token.AND,
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("VariableSizedType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type, typeParams)),
+					goKeyValue("Type", elementType),
 				},
 			},
 		}
 
 	case *ast.ConstantSizedType:
+		elementType := typeExpr(t.Type, typeParams)
 		return &dst.UnaryExpr{
 			Op: token.AND,
 			X: &dst.CompositeLit{
 				Type: dst.NewIdent("ConstantSizedType"),
 				Elts: []dst.Expr{
-					goKeyValue("Type", typeExpr(t.Type, typeParams)),
+					goKeyValue("Type", elementType),
 					goKeyValue(
 						"Size",
 						&dst.BasicLit{
@@ -694,6 +708,46 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 		return &dst.CallExpr{
 			Fun:  dst.NewIdent("MustInstantiate"),
 			Args: argumentExprs,
+		}
+
+	case *ast.RestrictedType:
+		var elements []dst.Expr
+		if t.Type != nil {
+			restrictedType := typeExpr(t.Type, typeParams)
+			elements = append(elements,
+				goKeyValue("Type", restrictedType),
+			)
+		}
+
+		if len(t.Restrictions) > 0 {
+			restrictions := make([]dst.Expr, 0, len(t.Restrictions))
+			for _, restriction := range t.Restrictions {
+				restrictions = append(
+					restrictions,
+					typeExpr(restriction, typeParams),
+				)
+			}
+			elements = append(
+				elements,
+				goKeyValue("Restrictions",
+					&dst.CompositeLit{
+						Type: &dst.ArrayType{
+							Elt: &dst.StarExpr{
+								X: dst.NewIdent("InterfaceType"),
+							},
+						},
+						Elts: restrictions,
+					},
+				),
+			)
+		}
+
+		return &dst.UnaryExpr{
+			Op: token.AND,
+			X: &dst.CompositeLit{
+				Type: dst.NewIdent("RestrictedType"),
+				Elts: elements,
+			},
 		}
 
 	default:
@@ -1057,6 +1111,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 	//	IsResource:    true,
 	//	Storable:      false,
 	//	Equatable:     false,
+	//	Comparable:    false,
 	//	Exportable:    false,
 	//	Importable:    false,
 	//}
@@ -1070,6 +1125,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 		goKeyValue("IsResource", goBoolLit(isResource)),
 		goKeyValue("Storable", goBoolLit(ty.storable)),
 		goKeyValue("Equatable", goBoolLit(ty.equatable)),
+		goKeyValue("Comparable", goBoolLit(ty.comparable)),
 		goKeyValue("Exportable", goBoolLit(ty.exportable)),
 		goKeyValue("Importable", goBoolLit(ty.importable)),
 	}
@@ -1190,19 +1246,44 @@ func simpleType() *dst.StarExpr {
 	return &dst.StarExpr{X: dst.NewIdent("SimpleType")}
 }
 
+func accessIdent(access ast.Access) *dst.Ident {
+	return &dst.Ident{
+		Name: access.String(),
+		Path: "github.com/onflow/cadence/runtime/ast",
+	}
+}
+
+func variableKindIdent(variableKind ast.VariableKind) *dst.Ident {
+	return &dst.Ident{
+		Name: variableKind.String(),
+		Path: "github.com/onflow/cadence/runtime/ast",
+	}
+}
+
 func newDeclarationMember(
 	fullTypeName string,
 	containerTypeVariableIdentifier string,
 	memberNameVariableIdentifier string,
 	declaration ast.Declaration,
 ) dst.Expr {
-	declarationKind := declaration.DeclarationKind()
 	declarationName := declaration.DeclarationIdentifier().Identifier
 
-	switch declarationKind {
-	case common.DeclarationKindField:
+	// Field
+
+	access := declaration.DeclarationAccess()
+	if access == ast.AccessNotSpecified {
+		panic(fmt.Errorf(
+			"member with unspecified access: %s.%s",
+			fullTypeName,
+			declarationName,
+		))
+	}
+
+	if fieldDeclaration, ok := declaration.(*ast.FieldDeclaration); ok {
 		args := []dst.Expr{
 			dst.NewIdent(containerTypeVariableIdentifier),
+			accessIdent(access),
+			variableKindIdent(fieldDeclaration.VariableKind),
 			dst.NewIdent(memberNameVariableIdentifier),
 			dst.NewIdent(fieldTypeVarName(fullTypeName, declarationName)),
 			dst.NewIdent(fieldDocStringVarName(fullTypeName, declarationName)),
@@ -1213,15 +1294,20 @@ func newDeclarationMember(
 			arg.Decorations().After = dst.NewLine
 		}
 
-		// TODO: add support for var
 		return &dst.CallExpr{
-			Fun:  dst.NewIdent("NewUnmeteredPublicConstantFieldMember"),
+			Fun:  dst.NewIdent("NewUnmeteredFieldMember"),
 			Args: args,
 		}
+	}
 
-	case common.DeclarationKindFunction:
+	declarationKind := declaration.DeclarationKind()
+
+	// Function
+
+	if declarationKind == common.DeclarationKindFunction {
 		args := []dst.Expr{
 			dst.NewIdent(containerTypeVariableIdentifier),
+			accessIdent(access),
 			dst.NewIdent(memberNameVariableIdentifier),
 			dst.NewIdent(functionTypeVarName(fullTypeName, declarationName)),
 			dst.NewIdent(functionDocStringVarName(fullTypeName, declarationName)),
@@ -1233,17 +1319,15 @@ func newDeclarationMember(
 		}
 
 		return &dst.CallExpr{
-			Fun:  dst.NewIdent("NewUnmeteredPublicFunctionMember"),
+			Fun:  dst.NewIdent("NewUnmeteredFunctionMember"),
 			Args: args,
 		}
-
-	default:
-		panic(fmt.Errorf(
-			"%s members are not supported",
-			declarationKind.Name(),
-		))
 	}
 
+	panic(fmt.Errorf(
+		"%s members are not supported",
+		declarationKind.Name(),
+	))
 }
 
 func stringMemberResolverMapType() *dst.MapType {

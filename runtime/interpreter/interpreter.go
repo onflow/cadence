@@ -26,6 +26,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
@@ -768,16 +770,9 @@ func (interpreter *Interpreter) visitFunctionBody(
 	}
 
 	// If there is a return type, declare the constant `result`.
-	// If it is a resource type, the constant has the same type as a reference to the return type.
-	// If it is not a resource type, the constant has the same type as the return type.
 
 	if returnType != sema.VoidType {
-		var resultValue Value
-		if returnType.IsResourceType() {
-			resultValue = NewEphemeralReferenceValue(interpreter, false, returnValue, returnType)
-		} else {
-			resultValue = returnValue
-		}
+		resultValue := interpreter.resultValue(returnValue, returnType)
 		interpreter.declareVariable(
 			sema.ResultIdentifier,
 			resultValue,
@@ -787,6 +782,41 @@ func (interpreter *Interpreter) visitFunctionBody(
 	interpreter.visitConditions(postConditions)
 
 	return returnValue
+}
+
+// resultValue returns the value for the `result` constant.
+// If the return type is not a resource:
+//   - The constant has the same type as the return type.
+//   - `result` value is the same as the return value.
+//
+// If the return type is a resource:
+//   - The constant has the same type as a reference to the return type.
+//   - `result` value is a reference to the return value.
+func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.Type) Value {
+	if !returnType.IsResourceType() {
+		return returnValue
+	}
+
+	if optionalType, ok := returnType.(*sema.OptionalType); ok {
+		switch returnValue := returnValue.(type) {
+		// If this value is an optional value (T?), then transform it into an optional reference (&T)?.
+		case *SomeValue:
+			innerValue := NewEphemeralReferenceValue(
+				interpreter,
+				false,
+				returnValue.value,
+				optionalType.Type,
+			)
+
+			interpreter.maybeTrackReferencedResourceKindedValue(returnValue.value)
+			return NewSomeValueNonCopying(interpreter, innerValue)
+		case NilValue:
+			return NilValue{}
+		}
+	}
+
+	interpreter.maybeTrackReferencedResourceKindedValue(returnValue)
+	return NewEphemeralReferenceValue(interpreter, false, returnValue, returnType)
 }
 
 func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
@@ -2475,11 +2505,15 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 }()
 
 type ValueConverterDeclaration struct {
-	min          Value
-	max          Value
-	convert      func(*Interpreter, Value, LocationRange) Value
-	functionType *sema.FunctionType
-	name         string
+	min             Value
+	max             Value
+	convert         func(*Interpreter, Value, LocationRange) Value
+	functionType    *sema.FunctionType
+	nestedVariables []struct {
+		Name  string
+		Value Value
+	}
+	name string
 }
 
 // It would be nice if return types in Go's function types would be covariant
@@ -2666,6 +2700,25 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		functionType: sema.AddressConversionFunctionType,
 		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
 			return ConvertAddress(interpreter, value, locationRange)
+		},
+		nestedVariables: []struct {
+			Name  string
+			Value Value
+		}{
+			{
+				Name: sema.AddressTypeFromBytesFunctionName,
+				Value: NewUnmeteredHostFunctionValue(
+					sema.AddressTypeFromBytesFunctionType,
+					AddressFromBytes,
+				),
+			},
+			{
+				Name: sema.AddressTypeFromStringFunctionName,
+				Value: NewUnmeteredHostFunctionValue(
+					sema.AddressTypeFromStringFunctionType,
+					AddressFromString,
+				),
+			},
 		},
 	},
 	{
@@ -3043,6 +3096,12 @@ var converterFunctionValues = func() []converterFunction {
 
 		addMember(sema.FromStringFunctionName, fromStringVal.hostFunction)
 
+		if declaration.nestedVariables != nil {
+			for _, variable := range declaration.nestedVariables {
+				addMember(variable.Name, variable.Value)
+			}
+		}
+
 		converterFuncValues[index] = converterFunction{
 			name:      declaration.name,
 			converter: converterFunctionValue,
@@ -3387,7 +3446,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			}
 			storageIterator := storageMap.Iterator(interpreter)
 
-			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
+			invocationArgumentTypes := []sema.Type{pathType, sema.MetaType}
 
 			inIteration := inter.SharedState.inStorageIteration
 			inter.SharedState.inStorageIteration = true
@@ -3415,7 +3474,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 					nil,
 					nil,
 					[]Value{pathValue, runtimeType},
-					invocationTypeParams,
+					invocationArgumentTypes,
 					nil,
 					locationRange,
 				)
@@ -3450,11 +3509,17 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
 	defer func() {
 		if r := recover(); r != nil {
-			switch r := r.(type) {
-			case errors.UserError, errors.ExternalError:
-				typeError = r.(error)
-			default:
-				panic(r)
+			rootError := r
+			for {
+				switch err := r.(type) {
+				case errors.UserError, errors.ExternalError:
+					typeError = err.(error)
+					return
+				case xerrors.Wrapper:
+					r = err.Unwrap()
+				default:
+					panic(rootError)
+				}
 			}
 		}
 	}()
@@ -4645,6 +4710,12 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 				panic(errors.NewExternalError(err))
 			}
 		}
+	}
+}
+
+func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
+	if value, ok := value.(ReferenceTrackedResourceKindedValue); ok {
+		interpreter.trackReferencedResourceKindedValue(value.StorageID(), value)
 	}
 }
 

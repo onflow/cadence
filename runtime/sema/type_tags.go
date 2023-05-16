@@ -713,7 +713,7 @@ func commonSuperTypeOfVariableSizedArrays(types []Type) Type {
 	// We reach here if all types are variable-sized arrays.
 	// Therefore, decide the common supertype based on the element types.
 
-	elementTypes := make([]Type, 0)
+	var elementTypes []Type
 
 	for _, typ := range types {
 		// 'Never' type doesn't affect the supertype.
@@ -745,7 +745,7 @@ func commonSuperTypeOfConstantSizedArrays(types []Type) Type {
 	// We reach here if all types are constant-sized arrays.
 	// Therefore, decide the common supertype based on the element types.
 
-	elementTypes := make([]Type, 0)
+	var elementTypes []Type
 	var prevType *ConstantSizedType
 
 	for _, typ := range types {
@@ -789,8 +789,8 @@ func commonSuperTypeOfDictionaries(types []Type) Type {
 	// We reach here if all types are dictionary types.
 	// Therefore, decide the common supertype based on the key types and value types.
 
-	keyTypes := make([]Type, 0)
-	valueTypes := make([]Type, 0)
+	var keyTypes []Type
+	var valueTypes []Type
 
 	for _, typ := range types {
 		// 'Never' type doesn't affect the supertype.

@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
 const TestTypeTestIntFieldName = "testInt"
 
 var TestTypeTestIntFieldType = UInt64Type
@@ -100,7 +102,7 @@ const TestTypeTestCapFieldName = "testCap"
 var TestTypeTestCapFieldType = &CapabilityType{}
 
 const TestTypeTestCapFieldDocString = `
-This is a test capability field.
+This is a test unparameterized capability field.
 `
 
 const TestTypeTestCapIntFieldName = "testCapInt"
@@ -111,7 +113,38 @@ var TestTypeTestCapIntFieldType = MustInstantiate(
 )
 
 const TestTypeTestCapIntFieldDocString = `
-This is a test specific capability field.
+This is a test parameterized capability field.
+`
+
+const TestTypeTestRestrictedWithoutTypeFieldName = "testRestrictedWithoutType"
+
+var TestTypeTestRestrictedWithoutTypeFieldType = &RestrictedType{
+	Restrictions: []*InterfaceType{BarType, BazType},
+}
+
+const TestTypeTestRestrictedWithoutTypeFieldDocString = `
+This is a test restricted type (without type) field.
+`
+
+const TestTypeTestRestrictedWithTypeFieldName = "testRestrictedWithType"
+
+var TestTypeTestRestrictedWithTypeFieldType = &RestrictedType{
+	Type:         FooType,
+	Restrictions: []*InterfaceType{BarType, BazType},
+}
+
+const TestTypeTestRestrictedWithTypeFieldDocString = `
+This is a test restricted type (with type) field.
+`
+
+const TestTypeTestRestrictedWithoutRestrictionsFieldName = "testRestrictedWithoutRestrictions"
+
+var TestTypeTestRestrictedWithoutRestrictionsFieldType = &RestrictedType{
+	Type: FooType,
+}
+
+const TestTypeTestRestrictedWithoutRestrictionsFieldDocString = `
+This is a test restricted type (without restrictions) field.
 `
 
 const TestTypeName = "Test"
@@ -124,6 +157,7 @@ var TestType = &SimpleType{
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
+	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
 }
@@ -131,65 +165,109 @@ var TestType = &SimpleType{
 func init() {
 	TestType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestIntFieldName,
 				TestTypeTestIntFieldType,
 				TestTypeTestIntFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestOptIntFieldName,
 				TestTypeTestOptIntFieldType,
 				TestTypeTestOptIntFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestRefIntFieldName,
 				TestTypeTestRefIntFieldType,
 				TestTypeTestRefIntFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestVarIntsFieldName,
 				TestTypeTestVarIntsFieldType,
 				TestTypeTestVarIntsFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestConstIntsFieldName,
 				TestTypeTestConstIntsFieldType,
 				TestTypeTestConstIntsFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestParamFieldName,
 				TestTypeTestParamFieldType,
 				TestTypeTestParamFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestAddressFieldName,
 				TestTypeTestAddressFieldType,
 				TestTypeTestAddressFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestTypeFieldName,
 				TestTypeTestTypeFieldType,
 				TestTypeTestTypeFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestCapFieldName,
 				TestTypeTestCapFieldType,
 				TestTypeTestCapFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				TestTypeTestCapIntFieldName,
 				TestTypeTestCapIntFieldType,
 				TestTypeTestCapIntFieldDocString,
+			),
+			NewUnmeteredFieldMember(
+				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
+				TestTypeTestRestrictedWithoutTypeFieldName,
+				TestTypeTestRestrictedWithoutTypeFieldType,
+				TestTypeTestRestrictedWithoutTypeFieldDocString,
+			),
+			NewUnmeteredFieldMember(
+				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
+				TestTypeTestRestrictedWithTypeFieldName,
+				TestTypeTestRestrictedWithTypeFieldType,
+				TestTypeTestRestrictedWithTypeFieldDocString,
+			),
+			NewUnmeteredFieldMember(
+				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
+				TestTypeTestRestrictedWithoutRestrictionsFieldName,
+				TestTypeTestRestrictedWithoutRestrictionsFieldType,
+				TestTypeTestRestrictedWithoutRestrictionsFieldDocString,
 			),
 		})
 	}

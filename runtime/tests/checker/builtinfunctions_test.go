@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -83,6 +84,102 @@ func TestCheckToBytes(t *testing.T) {
 			resType,
 		)
 	})
+}
+
+func TestCheckAddressFromBytes(t *testing.T) {
+	t.Parallel()
+
+	runValidCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("let address = Address.fromBytes(%s)", innerCode)
+
+			checker, err := ParseAndCheck(t, code)
+
+			require.NoError(t, err)
+
+			resType := RequireGlobalValue(t, checker.Elaboration, "address")
+
+			assert.Equal(t,
+				sema.TheAddressType,
+				resType,
+			)
+		})
+	}
+
+	runInvalidCase := func(t *testing.T, innerCode string, expectedErrorType sema.SemanticError) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("let address = Address.fromBytes(%s)", innerCode)
+
+			_, err := ParseAndCheck(t, code)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, expectedErrorType, errs[0])
+		})
+	}
+
+	runValidCase(t, "[1]")
+	runValidCase(t, "[12, 34, 56]")
+	runValidCase(t, "[67, 97, 100, 101, 110, 99, 101, 33]")
+
+	runInvalidCase(t, "[\"abc\"]", &sema.TypeMismatchError{})
+	runInvalidCase(t, "1", &sema.TypeMismatchError{})
+	runInvalidCase(t, "[1], [2, 3, 4]", &sema.ArgumentCountError{})
+	runInvalidCase(t, "", &sema.ArgumentCountError{})
+	runInvalidCase(t, "typo: [1]", &sema.IncorrectArgumentLabelError{})
+}
+
+func TestCheckAddressFromString(t *testing.T) {
+	t.Parallel()
+
+	runValidCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("let address = Address.fromString(%s)", innerCode)
+
+			checker, err := ParseAndCheck(t, code)
+
+			require.NoError(t, err)
+
+			resType := RequireGlobalValue(t, checker.Elaboration, "address")
+			require.Equal(t,
+				&sema.OptionalType{
+					Type: sema.TheAddressType,
+				},
+				resType,
+			)
+		})
+	}
+
+	runInvalidCase := func(t *testing.T, innerCode string, expectedErrorType sema.SemanticError) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("let address = Address.fromString(%s)", innerCode)
+
+			_, err := ParseAndCheck(t, code)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, expectedErrorType, errs[0])
+		})
+	}
+
+	runValidCase(t, "\"0x1\"")
+	runValidCase(t, "\"0x436164656E636521\"")
+
+	// While these inputs will return Nil, for the checker these are valid inputs.
+	runValidCase(t, "\"1\"")
+	runValidCase(t, "\"ab\"")
+
+	runInvalidCase(t, "[1232]", &sema.TypeMismatchError{})
+	runInvalidCase(t, "1", &sema.TypeMismatchError{})
+	runInvalidCase(t, "\"0x1\", \"0x2\"", &sema.ArgumentCountError{})
+	runInvalidCase(t, "", &sema.ArgumentCountError{})
+	runInvalidCase(t, "typo: \"0x1\"", &sema.IncorrectArgumentLabelError{})
 }
 
 func TestCheckToBigEndianBytes(t *testing.T) {

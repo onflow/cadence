@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
 const CharacterTypeToStringFunctionName = "toString"
 
 var CharacterTypeToStringFunctionType = &FunctionType{
@@ -41,6 +43,7 @@ var CharacterType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
+	Comparable:    true,
 	Exportable:    true,
 	Importable:    true,
 }
@@ -48,8 +51,9 @@ var CharacterType = &SimpleType{
 func init() {
 	CharacterType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				CharacterTypeToStringFunctionName,
 				CharacterTypeToStringFunctionType,
 				CharacterTypeToStringFunctionDocString,

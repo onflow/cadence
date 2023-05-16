@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
 const TestTypeNothingFunctionName = "nothing"
 
 var TestTypeNothingFunctionType = &FunctionType{
@@ -167,6 +169,7 @@ var TestType = &SimpleType{
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
+	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
 }
@@ -174,44 +177,51 @@ var TestType = &SimpleType{
 func init() {
 	TestType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				TestTypeNothingFunctionName,
 				TestTypeNothingFunctionType,
 				TestTypeNothingFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				TestTypeParamsFunctionName,
 				TestTypeParamsFunctionType,
 				TestTypeParamsFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				TestTypeReturnFunctionName,
 				TestTypeReturnFunctionType,
 				TestTypeReturnFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				TestTypeParamsAndReturnFunctionName,
 				TestTypeParamsAndReturnFunctionType,
 				TestTypeParamsAndReturnFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				TestTypeTypeParamFunctionName,
 				TestTypeTypeParamFunctionType,
 				TestTypeTypeParamFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				TestTypeTypeParamWithBoundFunctionName,
 				TestTypeTypeParamWithBoundFunctionType,
 				TestTypeTypeParamWithBoundFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				TestTypeTypeParamWithBoundAndParamFunctionName,
 				TestTypeTypeParamWithBoundAndParamFunctionType,
 				TestTypeTypeParamWithBoundAndParamFunctionDocString,

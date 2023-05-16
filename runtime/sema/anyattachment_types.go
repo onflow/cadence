@@ -28,8 +28,9 @@ var AnyResourceAttachmentType = &SimpleType{
 	tag:           AnyResourceAttachmentTypeTag,
 	IsResource:    true,
 	// The actual storability of a value is checked at run-time
-	Storable:  true,
-	Equatable: false,
+	Storable:   true,
+	Equatable:  false,
+	Comparable: false,
 	// The actual returnability of a value is checked at run-time
 	Exportable: true,
 	Importable: false,
@@ -45,8 +46,9 @@ var AnyStructAttachmentType = &SimpleType{
 	tag:           AnyStructAttachmentTypeTag,
 	IsResource:    false,
 	// The actual storability of a value is checked at run-time
-	Storable:  true,
-	Equatable: false,
+	Storable:   true,
+	Equatable:  false,
+	Comparable: false,
 	// The actual returnability of a value is checked at run-time
 	Exportable: true,
 	Importable: false,

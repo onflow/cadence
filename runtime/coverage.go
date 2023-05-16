@@ -103,6 +103,8 @@ func NewLocationCoverage(lineHits map[int]int) *LocationCoverage {
 	}
 }
 
+type LocationFilter func(location Location) bool
+
 // CoverageReport collects coverage information per location.
 // It keeps track of inspected locations, and can also exclude
 // locations from coverage collection.
@@ -113,6 +115,17 @@ type CoverageReport struct {
 	Locations map[common.Location]struct{} `json:"-"`
 	// Contains locations excluded from coverage collection.
 	ExcludedLocations map[common.Location]struct{} `json:"-"`
+	// This filter can be used to inject custom logic on
+	// each location/program inspection.
+	LocationFilter LocationFilter `json:"-"`
+}
+
+// WithLocationFilter sets the LocationFilter for the current
+// CoverageReport.
+func (r *CoverageReport) WithLocationFilter(
+	locationFilter LocationFilter,
+) {
+	r.LocationFilter = locationFilter
 }
 
 // ExcludeLocation adds the given location to the map of excluded
@@ -149,7 +162,12 @@ func (r *CoverageReport) AddLineHit(location Location, line int) {
 // statements. If inspection is successful, the location is marked as inspected.
 // If the given location is excluded from coverage collection, the method call
 // results in a NO-OP.
+// If the CoverageReport.LocationFilter is present, and calling it with the given
+// location results to false, the method call also results in a NO-OP.
 func (r *CoverageReport) InspectProgram(location Location, program *ast.Program) {
+	if r.LocationFilter != nil && !r.LocationFilter(location) {
+		return
+	}
 	if r.IsLocationExcluded(location) {
 		return
 	}

@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
 const DeployedContractTypeAddressFieldName = "address"
 
 var DeployedContractTypeAddressFieldType = TheAddressType
@@ -79,6 +81,7 @@ var DeployedContractType = &SimpleType{
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
+	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
 }
@@ -86,26 +89,33 @@ var DeployedContractType = &SimpleType{
 func init() {
 	DeployedContractType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				DeployedContractTypeAddressFieldName,
 				DeployedContractTypeAddressFieldType,
 				DeployedContractTypeAddressFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				DeployedContractTypeNameFieldName,
 				DeployedContractTypeNameFieldType,
 				DeployedContractTypeNameFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				DeployedContractTypeCodeFieldName,
 				DeployedContractTypeCodeFieldType,
 				DeployedContractTypeCodeFieldDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				DeployedContractTypePublicTypesFunctionName,
 				DeployedContractTypePublicTypesFunctionType,
 				DeployedContractTypePublicTypesFunctionDocString,

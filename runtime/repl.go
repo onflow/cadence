@@ -32,22 +32,22 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser/lexer"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type REPL struct {
-	checker  *sema.Checker
-	inter    *interpreter.Interpreter
-	onError  func(err error, location Location, codes map[Location][]byte)
-	onResult func(interpreter.Value)
-	codes    map[Location][]byte
+	checker          *sema.Checker
+	inter            *interpreter.Interpreter
+	OnError          func(err error, location Location, codes map[Location][]byte)
+	OnExpressionType func(sema.Type)
+	OnResult         func(interpreter.Value)
+	codes            map[Location][]byte
+	parserConfig     parser.Config
 }
 
-func NewREPL(
-	onError func(err error, location Location, codes map[Location][]byte),
-	onResult func(interpreter.Value),
-) (*REPL, error) {
+func NewREPL() (*REPL, error) {
 
 	checkers := map[Location]*sema.Checker{}
 	codes := map[Location][]byte{}
@@ -93,13 +93,27 @@ func NewREPL(
 	}
 
 	repl := &REPL{
-		checker:  checker,
-		inter:    inter,
-		onError:  onError,
-		onResult: onResult,
-		codes:    codes,
+		checker: checker,
+		inter:   inter,
+		codes:   codes,
 	}
 	return repl, nil
+}
+
+func (r *REPL) onError(err error, location common.Location, codes map[Location][]byte) {
+	onError := r.OnError
+	if onError == nil {
+		return
+	}
+	onError(err, location, codes)
+}
+
+func (r *REPL) onExpressionType(expressionType sema.Type) {
+	onExpressionType := r.OnExpressionType
+	if onExpressionType == nil {
+		return
+	}
+	onExpressionType(expressionType)
 }
 
 func (r *REPL) handleCheckerError() error {
@@ -107,15 +121,54 @@ func (r *REPL) handleCheckerError() error {
 	if err == nil {
 		return nil
 	}
-	if r.onError != nil {
-		r.onError(err, r.checker.Location, r.codes)
-	}
+
+	r.onError(err, r.checker.Location, r.codes)
+
 	return err
+}
+
+func isInputComplete(tokens lexer.TokenStream) bool {
+	var unmatchedBrackets, unmatchedParens, unmatchedBraces int
+
+	for {
+
+		token := tokens.Next()
+
+		switch token.Type {
+		case lexer.TokenBracketOpen:
+			unmatchedBrackets++
+
+		case lexer.TokenBracketClose:
+			unmatchedBrackets--
+
+		case lexer.TokenParenOpen:
+			unmatchedParens++
+
+		case lexer.TokenParenClose:
+			unmatchedParens--
+
+		case lexer.TokenBraceOpen:
+			unmatchedBraces++
+
+		case lexer.TokenBraceClose:
+			unmatchedBraces--
+		}
+
+		if token.Is(lexer.TokenEOF) {
+			break
+		}
+	}
+
+	tokens.Revert(0)
+
+	return unmatchedBrackets <= 0 &&
+		unmatchedParens <= 0 &&
+		unmatchedBraces <= 0
 }
 
 var lineSep = []byte{'\n'}
 
-func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
+func (r *REPL) Accept(code []byte, eval bool) (inputIsComplete bool, err error) {
 
 	// We need two codes:
 	//
@@ -188,19 +241,21 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
 		code = prefixedCode
 	}
 
-	// TODO: detect if the input is complete
-	inputIsComplete = true
+	tokens := lexer.Lex(code, nil)
+	defer tokens.Reclaim()
 
-	result, errs := parser.ParseStatements(nil, code, parser.Config{})
+	inputIsComplete = isInputComplete(tokens)
+
+	if !inputIsComplete {
+		return
+	}
+
+	result, errs := parser.ParseStatementsFromTokenStream(nil, tokens, r.parserConfig)
 	if len(errs) > 0 {
 		err = parser.Error{
 			Code:   code,
 			Errors: errs,
 		}
-	}
-
-	if !inputIsComplete {
-		return
 	}
 
 	if err != nil {
@@ -214,7 +269,9 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
 
 		switch element := element.(type) {
 		case ast.Declaration:
-			program := ast.NewProgram(nil, []ast.Declaration{element})
+			declaration := element
+
+			program := ast.NewProgram(nil, []ast.Declaration{declaration})
 
 			r.checker.CheckProgram(program)
 			err = r.handleCheckerError()
@@ -222,23 +279,37 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
 				return
 			}
 
-			r.inter.VisitProgram(program)
+			if eval {
+				r.inter.VisitProgram(program)
+			}
 
 		case ast.Statement:
+			statement := element
+
 			r.checker.Program = nil
 
-			r.checker.CheckStatement(element)
+			var expressionType sema.Type
+			expressionStatement, isExpression := statement.(*ast.ExpressionStatement)
+			if isExpression {
+				expressionType = r.checker.VisitExpression(expressionStatement.Expression, nil)
+				if !eval && expressionType != sema.InvalidType {
+					r.onExpressionType(expressionType)
+				}
+			} else {
+				r.checker.CheckStatement(statement)
+			}
 
 			err = r.handleCheckerError()
 			if err != nil {
 				return
 			}
 
-			result := ast.AcceptStatement[interpreter.StatementResult](element, r.inter)
+			if eval {
+				result := ast.AcceptStatement[interpreter.StatementResult](statement, r.inter)
 
-			onResult := r.onResult
-			if result, ok := result.(interpreter.ExpressionResult); ok && onResult != nil {
-				onResult(result)
+				if result, ok := result.(interpreter.ExpressionResult); ok {
+					r.onResult(result)
+				}
 			}
 
 		default:
@@ -298,4 +369,12 @@ func (r *REPL) ExportValue(value interpreter.Value) (cadence.Value, error) {
 			// TODO: hasPosition
 		},
 	)
+}
+
+func (r *REPL) onResult(result interpreter.ExpressionResult) {
+	onResult := r.OnResult
+	if onResult == nil {
+		return
+	}
+	onResult(result)
 }

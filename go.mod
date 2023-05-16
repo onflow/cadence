@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/bits-and-blooms/bitset v1.5.0
 	github.com/c-bata/go-prompt v0.2.6
-	github.com/fxamacker/cbor/v2 v2.4.1-0.20220515183430-ad2eae63303f
+	github.com/fxamacker/cbor/v2 v2.4.1-0.20230228173756-c0c9f774e40c
 	github.com/go-test/deep v1.1.0
 	github.com/leanovate/gopter v0.2.9
 	github.com/onflow/atree v0.6.0

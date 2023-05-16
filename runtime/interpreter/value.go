@@ -186,6 +186,15 @@ func newValueComparator(interpreter *Interpreter, locationRange LocationRange) a
 	}
 }
 
+// ComparableValue
+type ComparableValue interface {
+	EquatableValue
+	Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+}
+
 // ResourceKindedValue
 
 type ResourceKindedValue interface {
@@ -662,6 +671,42 @@ func (v BoolValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	return bool(v) == bool(otherBool)
 }
 
+func (v BoolValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return !v && o
+}
+
+func (v BoolValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return !v || o
+}
+
+func (v BoolValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return v && !o
+}
+
+func (v BoolValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return v || !o
+}
+
 // HashInput returns a byte slice containing:
 // - HashInputTypeBool (1 byte)
 // - 1/0 (1 byte)
@@ -771,6 +816,7 @@ func NewCharacterValue(
 var _ Value = CharacterValue("a")
 var _ atree.Storable = CharacterValue("a")
 var _ EquatableValue = CharacterValue("a")
+var _ ComparableValue = CharacterValue("a")
 var _ HashableValue = CharacterValue("a")
 var _ MemberAccessibleValue = CharacterValue("a")
 
@@ -816,6 +862,38 @@ func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool
 		return false
 	}
 	return v.NormalForm() == otherChar.NormalForm()
+}
+
+func (v CharacterValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return v.NormalForm() < otherChar.NormalForm()
+}
+
+func (v CharacterValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return v.NormalForm() <= otherChar.NormalForm()
+}
+
+func (v CharacterValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return v.NormalForm() > otherChar.NormalForm()
+}
+
+func (v CharacterValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return v.NormalForm() >= otherChar.NormalForm()
 }
 
 func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
@@ -954,6 +1032,7 @@ func NewStringValue(
 var _ Value = &StringValue{}
 var _ atree.Storable = &StringValue{}
 var _ EquatableValue = &StringValue{}
+var _ ComparableValue = &StringValue{}
 var _ HashableValue = &StringValue{}
 var _ ValueIndexableValue = &StringValue{}
 var _ MemberAccessibleValue = &StringValue{}
@@ -1005,6 +1084,58 @@ func (v *StringValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 		return false
 	}
 	return v.NormalForm() == otherString.NormalForm()
+}
+
+func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() < otherString.NormalForm())
+}
+
+func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() <= otherString.NormalForm())
+}
+
+func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() > otherString.NormalForm())
+}
+
+func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() >= otherString.NormalForm())
 }
 
 // HashInput returns a byte slice containing:
@@ -2708,7 +2839,7 @@ func (v *ArrayValue) Slice(
 
 // NumberValue
 type NumberValue interface {
-	EquatableValue
+	ComparableValue
 	ToInt(locationRange LocationRange) int
 	Negate(*Interpreter, LocationRange) NumberValue
 	Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
@@ -2720,10 +2851,6 @@ type NumberValue interface {
 	SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
 	Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
 	SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
-	LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
-	Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
-	GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
 	ToBigEndianBytes() []byte
 }
 
@@ -2932,6 +3059,7 @@ var _ atree.Storable = IntValue{}
 var _ NumberValue = IntValue{}
 var _ IntegerValue = IntValue{}
 var _ EquatableValue = IntValue{}
+var _ ComparableValue = IntValue{}
 var _ HashableValue = IntValue{}
 var _ MemberAccessibleValue = IntValue{}
 
@@ -3165,7 +3293,7 @@ func (v IntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue, loc
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v IntValue) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3179,7 +3307,7 @@ func (v IntValue) Less(interpreter *Interpreter, other NumberValue, locationRang
 	return AsBoolValue(cmp == -1)
 }
 
-func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3193,7 +3321,7 @@ func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v IntValue) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3208,7 +3336,7 @@ func (v IntValue) Greater(interpreter *Interpreter, other NumberValue, locationR
 
 }
 
-func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3460,6 +3588,7 @@ var _ atree.Storable = Int8Value(0)
 var _ NumberValue = Int8Value(0)
 var _ IntegerValue = Int8Value(0)
 var _ EquatableValue = Int8Value(0)
+var _ ComparableValue = Int8Value(0)
 var _ HashableValue = Int8Value(0)
 
 func (Int8Value) isValue() {}
@@ -3768,7 +3897,7 @@ func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3781,7 +3910,7 @@ func (v Int8Value) Less(interpreter *Interpreter, other NumberValue, locationRan
 	return AsBoolValue(v < o)
 }
 
-func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3794,7 +3923,7 @@ func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v <= o)
 }
 
-func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3807,7 +3936,7 @@ func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(v > o)
 }
 
-func (v Int8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4046,6 +4175,7 @@ var _ atree.Storable = Int16Value(0)
 var _ NumberValue = Int16Value(0)
 var _ IntegerValue = Int16Value(0)
 var _ EquatableValue = Int16Value(0)
+var _ ComparableValue = Int16Value(0)
 var _ HashableValue = Int16Value(0)
 var _ MemberAccessibleValue = Int16Value(0)
 
@@ -4354,7 +4484,7 @@ func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4367,7 +4497,7 @@ func (v Int16Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4380,7 +4510,7 @@ func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4393,7 +4523,7 @@ func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Int16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4634,6 +4764,7 @@ var _ atree.Storable = Int32Value(0)
 var _ NumberValue = Int32Value(0)
 var _ IntegerValue = Int32Value(0)
 var _ EquatableValue = Int32Value(0)
+var _ ComparableValue = Int32Value(0)
 var _ HashableValue = Int32Value(0)
 var _ MemberAccessibleValue = Int32Value(0)
 
@@ -4943,7 +5074,7 @@ func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4956,7 +5087,7 @@ func (v Int32Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4969,7 +5100,7 @@ func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4982,7 +5113,7 @@ func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Int32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5220,6 +5351,7 @@ var _ atree.Storable = Int64Value(0)
 var _ NumberValue = Int64Value(0)
 var _ IntegerValue = Int64Value(0)
 var _ EquatableValue = Int64Value(0)
+var _ ComparableValue = Int64Value(0)
 var _ HashableValue = Int64Value(0)
 var _ MemberAccessibleValue = Int64Value(0)
 
@@ -5531,7 +5663,7 @@ func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5544,7 +5676,7 @@ func (v Int64Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5557,7 +5689,7 @@ func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5571,7 +5703,7 @@ func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 
 }
 
-func (v Int64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5821,6 +5953,7 @@ var _ atree.Storable = Int128Value{}
 var _ NumberValue = Int128Value{}
 var _ IntegerValue = Int128Value{}
 var _ EquatableValue = Int128Value{}
+var _ ComparableValue = Int128Value{}
 var _ HashableValue = Int128Value{}
 var _ MemberAccessibleValue = Int128Value{}
 
@@ -6180,7 +6313,7 @@ func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6194,7 +6327,7 @@ func (v Int128Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(cmp == -1)
 }
 
-func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6208,7 +6341,7 @@ func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6222,7 +6355,7 @@ func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(cmp == 1)
 }
 
-func (v Int128Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6509,6 +6642,7 @@ var _ atree.Storable = Int256Value{}
 var _ NumberValue = Int256Value{}
 var _ IntegerValue = Int256Value{}
 var _ EquatableValue = Int256Value{}
+var _ ComparableValue = Int256Value{}
 var _ HashableValue = Int256Value{}
 var _ MemberAccessibleValue = Int256Value{}
 
@@ -6866,7 +7000,7 @@ func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6880,7 +7014,7 @@ func (v Int256Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(cmp == -1)
 }
 
-func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6894,7 +7028,7 @@ func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6908,7 +7042,7 @@ func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(cmp == 1)
 }
 
-func (v Int256Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7231,6 +7365,7 @@ var _ atree.Storable = UIntValue{}
 var _ NumberValue = UIntValue{}
 var _ IntegerValue = UIntValue{}
 var _ EquatableValue = UIntValue{}
+var _ ComparableValue = UIntValue{}
 var _ HashableValue = UIntValue{}
 var _ MemberAccessibleValue = UIntValue{}
 
@@ -7474,7 +7609,7 @@ func (v UIntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UIntValue) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7488,7 +7623,7 @@ func (v UIntValue) Less(interpreter *Interpreter, other NumberValue, locationRan
 	return AsBoolValue(cmp == -1)
 }
 
-func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7502,7 +7637,7 @@ func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7516,7 +7651,7 @@ func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(cmp == 1)
 }
 
-func (v UIntValue) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7754,6 +7889,7 @@ var _ atree.Storable = UInt8Value(0)
 var _ NumberValue = UInt8Value(0)
 var _ IntegerValue = UInt8Value(0)
 var _ EquatableValue = UInt8Value(0)
+var _ ComparableValue = UInt8Value(0)
 var _ HashableValue = UInt8Value(0)
 var _ MemberAccessibleValue = UInt8Value(0)
 
@@ -8000,7 +8136,7 @@ func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8013,7 +8149,7 @@ func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8026,7 +8162,7 @@ func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8039,7 +8175,7 @@ func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8302,6 +8438,7 @@ var _ atree.Storable = UInt16Value(0)
 var _ NumberValue = UInt16Value(0)
 var _ IntegerValue = UInt16Value(0)
 var _ EquatableValue = UInt16Value(0)
+var _ ComparableValue = UInt16Value(0)
 var _ HashableValue = UInt16Value(0)
 var _ MemberAccessibleValue = UInt16Value(0)
 
@@ -8553,7 +8690,7 @@ func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8566,7 +8703,7 @@ func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8579,7 +8716,7 @@ func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8592,7 +8729,7 @@ func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8825,6 +8962,7 @@ var _ atree.Storable = UInt32Value(0)
 var _ NumberValue = UInt32Value(0)
 var _ IntegerValue = UInt32Value(0)
 var _ EquatableValue = UInt32Value(0)
+var _ ComparableValue = UInt32Value(0)
 var _ HashableValue = UInt32Value(0)
 var _ MemberAccessibleValue = UInt32Value(0)
 
@@ -9065,7 +9203,7 @@ func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9078,7 +9216,7 @@ func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9091,7 +9229,7 @@ func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9104,7 +9242,7 @@ func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9325,6 +9463,7 @@ var _ atree.Storable = UInt64Value(0)
 var _ NumberValue = UInt64Value(0)
 var _ IntegerValue = UInt64Value(0)
 var _ EquatableValue = UInt64Value(0)
+var _ ComparableValue = UInt64Value(0)
 var _ HashableValue = UInt64Value(0)
 var _ MemberAccessibleValue = UInt64Value(0)
 
@@ -9604,7 +9743,7 @@ func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9617,7 +9756,7 @@ func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9630,7 +9769,7 @@ func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9643,7 +9782,7 @@ func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9893,6 +10032,7 @@ var _ atree.Storable = UInt128Value{}
 var _ NumberValue = UInt128Value{}
 var _ IntegerValue = UInt128Value{}
 var _ EquatableValue = UInt128Value{}
+var _ ComparableValue = UInt128Value{}
 var _ HashableValue = UInt128Value{}
 var _ MemberAccessibleValue = UInt128Value{}
 
@@ -10190,7 +10330,7 @@ func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue,
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10204,7 +10344,7 @@ func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(cmp == -1)
 }
 
-func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10218,7 +10358,7 @@ func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue, loc
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10232,7 +10372,7 @@ func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(cmp == 1)
 }
 
-func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10524,6 +10664,7 @@ var _ atree.Storable = UInt256Value{}
 var _ NumberValue = UInt256Value{}
 var _ IntegerValue = UInt256Value{}
 var _ EquatableValue = UInt256Value{}
+var _ ComparableValue = UInt256Value{}
 var _ HashableValue = UInt256Value{}
 var _ MemberAccessibleValue = UInt256Value{}
 
@@ -10823,7 +10964,7 @@ func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue,
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10837,7 +10978,7 @@ func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(cmp == -1)
 }
 
-func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10851,7 +10992,7 @@ func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue, loc
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10865,7 +11006,7 @@ func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(cmp == 1)
 }
 
-func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11125,6 +11266,7 @@ var _ atree.Storable = Word8Value(0)
 var _ NumberValue = Word8Value(0)
 var _ IntegerValue = Word8Value(0)
 var _ EquatableValue = Word8Value(0)
+var _ ComparableValue = Word8Value(0)
 var _ HashableValue = Word8Value(0)
 var _ MemberAccessibleValue = Word8Value(0)
 
@@ -11295,7 +11437,7 @@ func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Numb
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11308,7 +11450,7 @@ func (v Word8Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11321,7 +11463,7 @@ func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11334,7 +11476,7 @@ func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Word8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11542,6 +11684,7 @@ var _ atree.Storable = Word16Value(0)
 var _ NumberValue = Word16Value(0)
 var _ IntegerValue = Word16Value(0)
 var _ EquatableValue = Word16Value(0)
+var _ ComparableValue = Word16Value(0)
 var _ HashableValue = Word16Value(0)
 var _ MemberAccessibleValue = Word16Value(0)
 
@@ -11711,7 +11854,7 @@ func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11724,7 +11867,7 @@ func (v Word16Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11737,7 +11880,7 @@ func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11750,7 +11893,7 @@ func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v Word16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11960,6 +12103,7 @@ var _ atree.Storable = Word32Value(0)
 var _ NumberValue = Word32Value(0)
 var _ IntegerValue = Word32Value(0)
 var _ EquatableValue = Word32Value(0)
+var _ ComparableValue = Word32Value(0)
 var _ HashableValue = Word32Value(0)
 var _ MemberAccessibleValue = Word32Value(0)
 
@@ -12130,7 +12274,7 @@ func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12143,7 +12287,7 @@ func (v Word32Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12156,7 +12300,7 @@ func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12169,7 +12313,7 @@ func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v Word32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12379,6 +12523,7 @@ var _ atree.Storable = Word64Value(0)
 var _ NumberValue = Word64Value(0)
 var _ IntegerValue = Word64Value(0)
 var _ EquatableValue = Word64Value(0)
+var _ ComparableValue = Word64Value(0)
 var _ HashableValue = Word64Value(0)
 var _ MemberAccessibleValue = Word64Value(0)
 
@@ -12573,7 +12718,7 @@ func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12586,7 +12731,7 @@ func (v Word64Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12599,7 +12744,7 @@ func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12612,7 +12757,7 @@ func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v Word64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12861,6 +13006,7 @@ var _ atree.Storable = Fix64Value(0)
 var _ NumberValue = Fix64Value(0)
 var _ FixedPointValue = Fix64Value(0)
 var _ EquatableValue = Fix64Value(0)
+var _ ComparableValue = Fix64Value(0)
 var _ HashableValue = Fix64Value(0)
 var _ MemberAccessibleValue = Fix64Value(0)
 
@@ -13157,7 +13303,7 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 	)
 }
 
-func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13170,7 +13316,7 @@ func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13183,7 +13329,7 @@ func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13196,7 +13342,7 @@ func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13396,6 +13542,7 @@ var _ atree.Storable = UFix64Value(0)
 var _ NumberValue = UFix64Value(0)
 var _ FixedPointValue = Fix64Value(0)
 var _ EquatableValue = UFix64Value(0)
+var _ ComparableValue = UFix64Value(0)
 var _ HashableValue = UFix64Value(0)
 var _ MemberAccessibleValue = UFix64Value(0)
 
@@ -13654,7 +13801,7 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 	)
 }
 
-func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13667,7 +13814,7 @@ func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13680,7 +13827,7 @@ func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13693,7 +13840,7 @@ func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -15162,6 +15309,8 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 
 	// the base reference can only be borrowed with the declared type of the attachment's base
 	v.base = NewEphemeralReferenceValue(interpreter, false, base, baseType)
+
+	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 }
 
 func attachmentMemberName(ty sema.Type) string {
@@ -15191,6 +15340,7 @@ func attachmentBaseAndSelfValues(
 	base = v.getBaseValue(interpreter, locationRange)
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
+	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
 	return
 }
 
@@ -15239,7 +15389,11 @@ func (v *CompositeValue) GetTypeKey(
 	}
 	// dynamically set the attachment's base to this composite
 	attachment.setBaseValue(interpreter, v)
-	return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, false, attachment, ty))
+
+	attachmentRef := NewEphemeralReferenceValue(interpreter, false, attachment, ty)
+	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
+
+	return NewSomeValueNonCopying(interpreter, attachmentRef)
 }
 
 func (v *CompositeValue) SetTypeKey(
@@ -17487,7 +17641,7 @@ func (v *EphemeralReferenceValue) ReferencedValue(
 	}
 }
 
-func (v *EphemeralReferenceValue) mustReferencedValue(
+func (v *EphemeralReferenceValue) MustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 ) Value {
@@ -17510,7 +17664,7 @@ func (v *EphemeralReferenceValue) GetMember(
 	locationRange LocationRange,
 	name string,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return interpreter.getMember(self, locationRange, name)
 }
@@ -17520,7 +17674,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	locationRange LocationRange,
 	identifier string,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
@@ -17535,7 +17689,7 @@ func (v *EphemeralReferenceValue) SetMember(
 	name string,
 	value Value,
 ) bool {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return interpreter.setMember(self, locationRange, name, value)
 }
@@ -17545,7 +17699,7 @@ func (v *EphemeralReferenceValue) GetKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, locationRange, key)
@@ -17557,7 +17711,7 @@ func (v *EphemeralReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, locationRange, key, value)
@@ -17569,7 +17723,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, locationRange, key, value)
@@ -17580,7 +17734,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, locationRange, key)
@@ -17591,7 +17745,7 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(TypeIndexableValue).
 		GetTypeKey(interpreter, locationRange, key)
@@ -17603,7 +17757,7 @@ func (v *EphemeralReferenceValue) SetTypeKey(
 	key sema.Type,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	self.(TypeIndexableValue).
 		SetTypeKey(interpreter, locationRange, key, value)
@@ -17614,7 +17768,7 @@ func (v *EphemeralReferenceValue) RemoveTypeKey(
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.MustReferencedValue(interpreter, locationRange)
 
 	return self.(TypeIndexableValue).
 		RemoveTypeKey(interpreter, locationRange, key)
@@ -17941,6 +18095,37 @@ func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func AddressFromBytes(invocation Invocation) Value {
+	argument, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	inter := invocation.Interpreter
+
+	bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+	if err != nil {
+		panic(err)
+	}
+
+	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
+}
+
+func AddressFromString(invocation Invocation) Value {
+	argument, ok := invocation.Arguments[0].(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	addr, err := common.HexToAddressAssertPrefix(argument.Str)
+	if err != nil {
+		return Nil
+	}
+
+	inter := invocation.Interpreter
+	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
 }
 
 // PathValue
