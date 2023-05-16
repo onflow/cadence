@@ -221,6 +221,7 @@ const (
 	storageCapabilityControllerTypeMask
 	accountCapabilityControllerTypeMask
 
+	// This is here because we didn't reserve type-tags for Word128 and Word256.
 	word128TypeMask
 
 	invalidTypeMask
@@ -296,7 +297,7 @@ var (
 	Word16TypeTag  = newTypeTagFromLowerMask(word16TypeMask)
 	Word32TypeTag  = newTypeTagFromLowerMask(word32TypeMask)
 	Word64TypeTag  = newTypeTagFromLowerMask(word64TypeMask)
-	Word128TypeTag = newTypeTagFromLowerMask(word128TypeMask)
+	Word128TypeTag = newTypeTagFromUpperMask(word128TypeMask)
 
 	Fix64TypeTag  = newTypeTagFromLowerMask(fix64TypeMask)
 	UFix64TypeTag = newTypeTagFromLowerMask(ufix64TypeMask)
