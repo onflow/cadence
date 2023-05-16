@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	stdErrors "errors"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -328,19 +329,26 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 func userPanicToError(f func()) (returnedError error) {
 	defer func() {
 		if r := recover(); r != nil {
-			switch err := r.(type) {
-			case errors.UserError:
+			err, ok := r.(error)
+			if !ok {
+				panic(errors.NewUnexpectedError("%s", r))
+			}
+
+			var userError errors.UserError
+			if stdErrors.As(err, &userError) {
 				// Return user errors
 				returnedError = err
+				return
+			}
+
+			switch err.(type) {
 			case errors.InternalError, errors.ExternalError:
 				panic(err)
 
 			// Otherwise, panic.
 			// Also wrap with a `UnexpectedError` to mark it as an `InternalError`.
-			case error:
-				panic(errors.NewUnexpectedErrorFromCause(err))
 			default:
-				panic(errors.NewUnexpectedError("%s", r))
+				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 		}
 	}()
