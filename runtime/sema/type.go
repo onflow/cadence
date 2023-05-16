@@ -3384,6 +3384,13 @@ var AddressTypeFromBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
 }
 
+const AddressTypeFromStringFunctionName = "fromString"
+const AddressTypeFromStringFunctionDocString = `
+Attempts to parse an Address from the input string. Returns nil on invalid input.
+`
+
+var AddressTypeFromStringFunctionType = FromStringFunctionType(TheAddressType)
+
 func init() {
 	// Declare a conversion function for the address type
 
@@ -3413,6 +3420,12 @@ func init() {
 		AddressTypeFromBytesFunctionName,
 		AddressTypeFromBytesFunctionType,
 		AddressTypeFromBytesFunctionDocString,
+	))
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		AddressTypeFromStringFunctionName,
+		AddressTypeFromStringFunctionType,
+		AddressTypeFromStringFunctionDocString,
 	))
 
 	BaseValueActivation.Set(
@@ -4028,10 +4041,45 @@ func NewPublicFunctionMember(
 	functionType *FunctionType,
 	docString string,
 ) *Member {
+	return NewFunctionMember(
+		memoryGauge,
+		containerType,
+		ast.AccessPublic,
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewUnmeteredFunctionMember(
+	containerType Type,
+	access ast.Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+	return NewFunctionMember(
+		nil,
+		containerType,
+		access,
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewFunctionMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access ast.Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
 
 	return &Member{
 		ContainerType: containerType,
-		Access:        ast.AccessPublic,
+		Access:        access,
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
@@ -4067,16 +4115,55 @@ func NewPublicConstantFieldMember(
 	fieldType Type,
 	docString string,
 ) *Member {
+	return NewFieldMember(
+		memoryGauge,
+		containerType,
+		ast.AccessPublic,
+		ast.VariableKindConstant,
+		identifier,
+		fieldType,
+		docString,
+	)
+}
+
+func NewUnmeteredFieldMember(
+	containerType Type,
+	access ast.Access,
+	variableKind ast.VariableKind,
+	identifier string,
+	fieldType Type,
+	docString string,
+) *Member {
+	return NewFieldMember(
+		nil,
+		containerType,
+		access,
+		variableKind,
+		identifier,
+		fieldType,
+		docString,
+	)
+}
+
+func NewFieldMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access ast.Access,
+	variableKind ast.VariableKind,
+	identifier string,
+	fieldType Type,
+	docString string,
+) *Member {
 	return &Member{
 		ContainerType: containerType,
-		Access:        ast.AccessPublic,
+		Access:        access,
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
 			ast.EmptyPosition,
 		),
 		DeclarationKind: common.DeclarationKindField,
-		VariableKind:    ast.VariableKindConstant,
+		VariableKind:    variableKind,
 		TypeAnnotation:  NewTypeAnnotation(fieldType),
 		DocString:       docString,
 	}
