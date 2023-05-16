@@ -288,6 +288,7 @@ func safeMul(a, b int, locationRange LocationRange) int {
 // TypeValue
 
 type TypeValue struct {
+	// Optional. nil represents "unknown"/"invalid" type
 	Type StaticType
 }
 
