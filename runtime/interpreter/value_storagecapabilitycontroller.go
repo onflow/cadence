@@ -255,7 +255,7 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 // SetDeleted sets the controller as deleted, i.e. functions panic from now on
 func (v *StorageCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) {
 
-	panicFunction := func(invocation Invocation) Value {
+	panicFunction := func(Invocation) Value {
 		panic(errors.NewDefaultUserError("controller is deleted"))
 	}
 

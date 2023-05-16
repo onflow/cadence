@@ -225,7 +225,7 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 // SetDeleted sets the controller as deleted, i.e. functions panic from now on
 func (v *AccountCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) {
 
-	panicFunction := func(invocation Invocation) Value {
+	panicFunction := func(Invocation) Value {
 		panic(errors.NewDefaultUserError("controller is deleted"))
 	}
 
