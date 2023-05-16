@@ -1964,7 +1964,7 @@ func TestParseAccess(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "unexpected non-nominal type: self",
-					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
 				},
 			},
 			errs,
@@ -1985,7 +1985,7 @@ func TestParseAccess(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "unexpected non-nominal type: self",
-					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
 				},
 			},
 			errs,
