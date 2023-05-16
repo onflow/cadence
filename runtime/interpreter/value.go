@@ -13175,8 +13175,8 @@ func (v Word128Value) Mul(interpreter *Interpreter, other NumberValue, locationR
 		func() *big.Int {
 			res := new(big.Int)
 			res.Mul(v.BigInt, o.BigInt)
-			if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{LocationRange: locationRange})
+			if res.Cmp(sema.Word128TypeMaxIntBig) > 0 {
+				res.Rem(res, sema.Word128TypeMaxIntBig)
 			}
 			return res
 		},
@@ -13280,7 +13280,7 @@ func (v Word128Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 }
 
 // HashInput returns a byte slice containing:
-// - HashInputTypeUInt128 (1 byte)
+// - HashInputTypeWord128 (1 byte)
 // - big int encoded in big endian (n bytes)
 func (v Word128Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
 	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
@@ -13293,7 +13293,7 @@ func (v Word128Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte)
 		buffer = make([]byte, length)
 	}
 
-	buffer[0] = byte(HashInputTypeUInt128)
+	buffer[0] = byte(HashInputTypeWord128)
 	copy(buffer[1:], b)
 	return buffer
 }
@@ -13316,10 +13316,10 @@ func ConvertWord128(memoryGauge common.MemoryGauge, value Value, locationRange L
 				panic(errors.NewUnreachableError())
 			}
 
-			if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{LocationRange: locationRange})
+			if v.Cmp(sema.Word128TypeMaxIntBig) > 0 {
+				v.Rem(v, sema.Word128TypeMaxIntBig)
 			} else if v.Sign() < 0 {
-				panic(UnderflowError{LocationRange: locationRange})
+				v.Mod(v, sema.AddressTypeMaxIntBig).Add(v, sema.AddressTypeMaxIntBig)
 			}
 
 			return v
@@ -13436,7 +13436,7 @@ func (v Word128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 }
 
 func (v Word128Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.UInt128Type, locationRange)
+	return getNumberValueMember(interpreter, v, name, sema.Word128Type, locationRange)
 }
 
 func (Word128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
