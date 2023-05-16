@@ -51,7 +51,6 @@ const ( // Cadence simple type IDs
 	TypeWord16
 	TypeWord32
 	TypeWord64
-	TypeWord128
 	TypeFix64
 	TypeUFix64
 	TypePath
@@ -82,6 +81,7 @@ const ( // Cadence simple type IDs
 	TypeBytes
 	TypeVoid
 	TypeFunction
+	TypeWord128
 )
 
 // NOTE: cadence.FunctionType isn't included in simpleTypeIDByType

@@ -1248,6 +1248,7 @@ func NewWord128(i uint) Word128 {
 var word128NegativeError = errors.NewDefaultUserError("invalid negative value for Word128")
 var word128MaxExceededError = errors.NewDefaultUserError("value exceeds max of Word128")
 
+// TODO: fix
 func NewWord128FromBig(i *big.Int) (Word128, error) {
 	if i.Sign() < 0 {
 		return Word128{}, word128NegativeError

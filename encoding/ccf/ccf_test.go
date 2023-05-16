@@ -2482,7 +2482,7 @@ func TestEncodeWord128(t *testing.T) {
 				// {"type":"Word128","value":"0"}
 				//
 				// language=edn, format=ccf
-				// 130([137(16), 0])
+				// 130([137(52), 0])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -2491,8 +2491,8 @@ func TestEncodeWord128(t *testing.T) {
 				0x82,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
-				// Word128 type ID (16)
-				0x10,
+				// Word128 type ID (52)
+				0x18, 0x34,
 				// tag (big num)
 				0xc2,
 				// bytes, 0 bytes follow
@@ -2507,7 +2507,7 @@ func TestEncodeWord128(t *testing.T) {
 				// {"type":"Word128","value":"340282366920938463463374607431768211455"}
 				//
 				// language=edn, format=ccf
-				// 130([137(16), 340282366920938463463374607431768211455])
+				// 130([137(52), 340282366920938463463374607431768211455])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -2516,8 +2516,8 @@ func TestEncodeWord128(t *testing.T) {
 				0x82,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
-				// Word128 type ID (16)
-				0x10,
+				// Word128 type ID (52)
+				0x18, 0x34,
 				// tag (big num)
 				0xc2,
 				// bytes, 16 bytes follow
