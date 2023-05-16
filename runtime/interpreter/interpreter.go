@@ -2232,10 +2232,9 @@ func (interpreter *Interpreter) NewSubInterpreter(
 func (interpreter *Interpreter) StoredValueExists(
 	storageAddress common.Address,
 	domain string,
-	identifier string,
+	identifier StorageMapKey,
 ) bool {
-	config := interpreter.SharedState.Config
-	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
 	}
@@ -2245,10 +2244,9 @@ func (interpreter *Interpreter) StoredValueExists(
 func (interpreter *Interpreter) ReadStored(
 	storageAddress common.Address,
 	domain string,
-	identifier string,
+	identifier StorageMapKey,
 ) Value {
-	config := interpreter.SharedState.Config
-	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return nil
 	}
@@ -2258,13 +2256,11 @@ func (interpreter *Interpreter) ReadStored(
 func (interpreter *Interpreter) WriteStored(
 	storageAddress common.Address,
 	domain string,
-	identifier string,
+	key StorageMapKey,
 	value Value,
-) {
-	config := interpreter.SharedState.Config
-	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, true)
-	accountStorage.WriteValue(interpreter, identifier, value)
-	interpreter.recordStorageMutation()
+) (existed bool) {
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, true)
+	return accountStorage.WriteValue(interpreter, key, value)
 }
 
 type fromStringFunctionValue struct {
@@ -3292,22 +3288,24 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	config := interpreter.SharedState.Config
-	storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
+	storageMap := interpreter.Storage().GetStorageMap(address, domain.Identifier(), false)
 	if storageMap == nil {
 		return []Value{}
 	}
 	iterator := storageMap.Iterator(interpreter)
-	var values []Value
+	var paths []Value
 
 	count := storageMap.Count()
 	if count > 0 {
-		values = make([]Value, 0, count)
-		for key := iterator.NextKey(); key != ""; key = iterator.NextKey() {
-			values = append(values, NewPathValue(interpreter, domain, key))
+		paths = make([]Value, 0, count)
+		for key := iterator.NextKey(); key != nil; key = iterator.NextKey() {
+			// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+			identifier := string(key.(StringAtreeValue))
+			path := NewPathValue(interpreter, domain, identifier)
+			paths = append(paths, path)
 		}
 	}
-	return values
+	return paths
 }
 
 func (interpreter *Interpreter) accountPaths(addressValue AddressValue, locationRange LocationRange, domain common.PathDomain, pathType StaticType) *ArrayValue {
@@ -3378,7 +3376,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 				inter.SharedState.inStorageIteration = inIteration
 			}()
 
-			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
+			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
 				staticType := value.StaticType(inter)
 
 				// Perform a forced type loading to see if the underlying type is not broken.
@@ -3388,7 +3386,9 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 					continue
 				}
 
-				pathValue := NewPathValue(inter, domain, key)
+				// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+				identifier := string(key.(StringAtreeValue))
+				pathValue := NewPathValue(inter, domain, identifier)
 				runtimeType := NewTypeValue(inter, staticType)
 
 				subInvocation := NewInvocation(
@@ -3471,11 +3471,9 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			locationRange := invocation.LocationRange
 
-			if interpreter.StoredValueExists(
-				address,
-				domain,
-				identifier,
-			) {
+			storageMapKey := StringStorageMapKey(identifier)
+
+			if interpreter.StoredValueExists(address, domain, storageMapKey) {
 				panic(
 					OverwriteError{
 						Address:       addressValue,
@@ -3495,7 +3493,12 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			// Write new value
 
-			interpreter.WriteStored(address, domain, identifier, value)
+			interpreter.WriteStored(
+				address,
+				domain,
+				storageMapKey,
+				value,
+			)
 
 			return Void
 		},
@@ -3521,7 +3524,9 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 			domain := path.Domain.Identifier()
 			identifier := path.Identifier
 
-			value := interpreter.ReadStored(address, domain, identifier)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
 
 			if value == nil {
 				return Nil
@@ -3566,7 +3571,9 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			domain := path.Domain.Identifier()
 			identifier := path.Identifier
 
-			value := interpreter.ReadStored(address, domain, identifier)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
 
 			if value == nil {
 				return Nil
@@ -3610,7 +3617,12 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			// Remove the value from storage,
 			// but only if the type check succeeded.
 			if clear {
-				interpreter.WriteStored(address, domain, identifier, nil)
+				interpreter.WriteStored(
+					address,
+					domain,
+					storageMapKey,
+					nil,
+				)
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, transferredValue)
@@ -3708,10 +3720,12 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
 			newCapabilityIdentifier := newCapabilityPath.Identifier
 
+			storageMapKey := StringStorageMapKey(newCapabilityIdentifier)
+
 			if interpreter.StoredValueExists(
 				address,
 				newCapabilityDomain,
-				newCapabilityIdentifier,
+				storageMapKey,
 			) {
 				return Nil
 			}
@@ -3726,7 +3740,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			interpreter.WriteStored(
 				address,
 				newCapabilityDomain,
-				newCapabilityIdentifier,
+				storageMapKey,
 				pathLink,
 			)
 
@@ -3796,10 +3810,12 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
 			newCapabilityIdentifier := newCapabilityPath.Identifier
 
+			storageMapKey := StringStorageMapKey(newCapabilityIdentifier)
+
 			if interpreter.StoredValueExists(
 				address,
 				newCapabilityDomain,
-				newCapabilityIdentifier,
+				storageMapKey,
 			) {
 				return Nil
 			}
@@ -3809,7 +3825,7 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 			interpreter.WriteStored(
 				address,
 				newCapabilityDomain,
-				newCapabilityIdentifier,
+				storageMapKey,
 				accountLinkValue,
 			)
 
@@ -3864,7 +3880,9 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(
 			domain := capabilityPath.Domain.Identifier()
 			identifier := capabilityPath.Identifier
 
-			value := interpreter.ReadStored(address, domain, identifier)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
 
 			if value == nil {
 				return Nil
@@ -3904,7 +3922,14 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 			// Write new value
 
-			interpreter.WriteStored(address, domain, identifier, nil)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			interpreter.WriteStored(
+				address,
+				domain,
+				storageMapKey,
+				nil,
+			)
 
 			return Void
 		},
@@ -4118,11 +4143,12 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 			seenPaths[path] = struct{}{}
 		}
 
-		value := interpreter.ReadStored(
-			address,
-			path.Domain.Identifier(),
-			path.Identifier,
-		)
+		domain := path.Domain.Identifier()
+		identifier := path.Identifier
+
+		storageMapKey := StringStorageMapKey(identifier)
+
+		value := interpreter.ReadStored(address, domain, storageMapKey)
 
 		if value == nil {
 			return nil, false, nil
@@ -4459,10 +4485,8 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 		return
 	}
 
-	config := interpreter.SharedState.Config
-
 	storageID := atree.StorageID(storageIDStorable)
-	err := config.Storage.Remove(storageID)
+	err := interpreter.Storage().Remove(storageID)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -4504,11 +4528,14 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	defaultHIP := newHashInputProvider(interpreter, EmptyLocationRange)
 
 	hip := func(value atree.Value, buffer []byte) ([]byte, error) {
-		if _, ok := value.(StringAtreeValue); ok {
-			return StringAtreeHashInput(value, buffer)
+		switch value := value.(type) {
+		case StringAtreeValue:
+			return StringAtreeValueHashInput(value, buffer)
+		case Uint64AtreeValue:
+			return Uint64AtreeValueHashInput(value, buffer)
+		default:
+			return defaultHIP(value, buffer)
 		}
-
-		return defaultHIP(value, buffer)
 	}
 
 	config := interpreter.SharedState.Config
@@ -4520,8 +4547,9 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			panic(err)
 		}
 
-		if _, ok := value.(StringAtreeValue); ok {
-			equal, err := StringAtreeComparator(
+		switch value := value.(type) {
+		case StringAtreeValue:
+			equal, err := StringAtreeValueComparator(
 				storage,
 				value,
 				otherStorable,
@@ -4531,15 +4559,27 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			}
 
 			return equal
-		}
 
-		if equatableValue, ok := value.(EquatableValue); ok {
+		case Uint64AtreeValue:
+			equal, err := Uint64AtreeValueComparator(
+				storage,
+				value,
+				otherStorable,
+			)
+			if err != nil {
+				panic(err)
+			}
+
+			return equal
+
+		case EquatableValue:
 			otherValue := StoredValue(interpreter, otherStorable, storage)
-			return equatableValue.Equal(interpreter, EmptyLocationRange, otherValue)
-		}
+			return value.Equal(interpreter, EmptyLocationRange, otherValue)
 
-		// Not all values are comparable, assume valid for now
-		return true
+		default:
+			// Not all values are comparable, assume valid for now
+			return true
+		}
 	}
 
 	switch value := value.(type) {

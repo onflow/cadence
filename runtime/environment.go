@@ -268,6 +268,10 @@ func (e *interpreterEnvironment) CreateAccount(payer common.Address) (address co
 	return e.runtimeInterface.CreateAccount(payer)
 }
 
+func (e *interpreterEnvironment) GenerateAccountID(address common.Address) (uint64, error) {
+	return e.runtimeInterface.GenerateAccountID(address)
+}
+
 func (e *interpreterEnvironment) EmitEvent(
 	inter *interpreter.Interpreter,
 	eventType *sema.CompositeType,
@@ -892,7 +896,7 @@ func (e *interpreterEnvironment) loadContract(
 				false,
 			)
 			if storageMap != nil {
-				storedValue = storageMap.ReadValue(inter, location.Name)
+				storedValue = storageMap.ReadValue(inter, interpreter.StringStorageMapKey(location.Name))
 			}
 		}
 

@@ -66,11 +66,11 @@ func NewStorageMapWithRootID(storage atree.SlabStorage, storageID atree.StorageI
 }
 
 // ValueExists returns true if the given key exists in the storage map.
-func (s StorageMap) ValueExists(key string) bool {
+func (s StorageMap) ValueExists(key StorageMapKey) bool {
 	_, err := s.orderedMap.Get(
-		StringAtreeComparator,
-		StringAtreeHashInput,
-		StringAtreeValue(key),
+		key.AtreeValueCompare,
+		key.AtreeValueHashInput,
+		key.AtreeValue(),
 	)
 	if err != nil {
 		var keyNotFoundError *atree.KeyNotFoundError
@@ -85,11 +85,11 @@ func (s StorageMap) ValueExists(key string) bool {
 
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
-func (s StorageMap) ReadValue(gauge common.MemoryGauge, key string) Value {
+func (s StorageMap) ReadValue(gauge common.MemoryGauge, key StorageMapKey) Value {
 	storable, err := s.orderedMap.Get(
-		StringAtreeComparator,
-		StringAtreeHashInput,
-		StringAtreeValue(key),
+		key.AtreeValueCompare,
+		key.AtreeValueHashInput,
+		key.AtreeValue(),
 	)
 	if err != nil {
 		var keyNotFoundError *atree.KeyNotFoundError
@@ -105,21 +105,25 @@ func (s StorageMap) ReadValue(gauge common.MemoryGauge, key string) Value {
 // WriteValue sets or removes a value in the storage map.
 // If the given value is nil, the key is removed.
 // If the given value is non-nil, the key is added/updated.
-func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value atree.Value) {
+// Returns true if a value previously existed at the given key.
+func (s StorageMap) WriteValue(interpreter *Interpreter, key StorageMapKey, value atree.Value) (existed bool) {
 	if value == nil {
-		s.RemoveValue(interpreter, key)
+		return s.RemoveValue(interpreter, key)
 	} else {
-		s.SetValue(interpreter, key, value)
+		return s.SetValue(interpreter, key, value)
 	}
 }
 
 // SetValue sets a value in the storage map.
 // If the given key already stores a value, it is overwritten.
-func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.Value) {
+// Returns true if
+func (s StorageMap) SetValue(interpreter *Interpreter, key StorageMapKey, value atree.Value) (existed bool) {
+	interpreter.recordStorageMutation()
+
 	existingStorable, err := s.orderedMap.Set(
-		StringAtreeComparator,
-		StringAtreeHashInput,
-		StringAtreeValue(key),
+		key.AtreeValueCompare,
+		key.AtreeValueHashInput,
+		key.AtreeValue(),
 		value,
 	)
 	if err != nil {
@@ -127,20 +131,23 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.V
 	}
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
 
-	if existingStorable != nil {
-		config := interpreter.SharedState.Config
-		existingValue := StoredValue(interpreter, existingStorable, config.Storage)
+	existed = existingStorable != nil
+	if existed {
+		existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
 		existingValue.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(existingStorable)
 	}
+	return
 }
 
 // RemoveValue removes a value in the storage map, if it exists.
-func (s StorageMap) RemoveValue(interpreter *Interpreter, key string) {
+func (s StorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (existed bool) {
+	interpreter.recordStorageMutation()
+
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
-		StringAtreeComparator,
-		StringAtreeHashInput,
-		StringAtreeValue(key),
+		key.AtreeValueCompare,
+		key.AtreeValueHashInput,
+		key.AtreeValue(),
 	)
 	if err != nil {
 		var keyNotFoundError *atree.KeyNotFoundError
@@ -153,18 +160,19 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key string) {
 
 	// Key
 
-	// NOTE: key / field name is stringAtreeValue,
-	// and not a Value, so no need to deep remove
+	// NOTE: Key is just an atree.Value, not an interpreter.Value,
+	// so do not need (can) convert and not need to deep remove
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
 
-	if existingValueStorable != nil {
-		config := interpreter.SharedState.Config
-		existingValue := StoredValue(interpreter, existingValueStorable, config.Storage)
+	existed = existingValueStorable != nil
+	if existed {
+		existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
 		existingValue.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(existingValueStorable)
 	}
+	return
 }
 
 // Iterator returns an iterator (StorageMapIterator),
@@ -199,35 +207,33 @@ type StorageMapIterator struct {
 
 // Next returns the next key and value of the storage map iterator.
 // If there is no further key-value pair, ("", nil) is returned.
-func (i StorageMapIterator) Next() (string, Value) {
+func (i StorageMapIterator) Next() (atree.Value, Value) {
 	k, v, err := i.mapIterator.Next()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
 	if k == nil || v == nil {
-		return "", nil
+		return nil, nil
 	}
 
-	key := string(k.(StringAtreeValue))
+	// NOTE: Key is just an atree.Value, not an interpreter.Value,
+	// so do not need (can) convert
+
 	value := MustConvertStoredValue(i.gauge, v)
 
-	return key, value
+	return k, value
 }
 
 // NextKey returns the next key of the storage map iterator.
 // If there is no further key, "" is returned.
-func (i StorageMapIterator) NextKey() string {
+func (i StorageMapIterator) NextKey() atree.Value {
 	k, err := i.mapIterator.NextKey()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	if k == nil {
-		return ""
-	}
-
-	return string(k.(StringAtreeValue))
+	return k
 }
 
 // NextValue returns the next value in the storage map iterator.

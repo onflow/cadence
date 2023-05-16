@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/assert"
@@ -39,7 +41,7 @@ import (
 type storageKey struct {
 	address common.Address
 	domain  string
-	key     string
+	key     atree.Value
 }
 
 func testAccount(
@@ -123,7 +125,7 @@ func testAccount(
 			iterator := accountStorage.Iterator(inter)
 			for {
 				key, value := iterator.Next()
-				if key == "" {
+				if key == nil {
 					break
 				}
 				storageKey := storageKey{

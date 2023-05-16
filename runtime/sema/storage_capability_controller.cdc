@@ -22,7 +22,7 @@ pub struct StorageCapabilityController {
     /// Returns the targeted storage path of the controlled capability.
     pub fun target(): StoragePath
 
-    /// Retarget the capability.
-    /// This moves the CapCon from one CapCon array to another.
-    pub fun retarget(target: StoragePath)
+    /// Retarget the controlled capability to the given storage path.
+    /// The path may be different or the same as the current path.
+    pub fun retarget(_ target: StoragePath)
 }

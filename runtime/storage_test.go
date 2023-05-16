@@ -3240,7 +3240,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	// Read first
 
-	firstValue := storageMap.ReadValue(nil, "first")
+	firstValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("first"))
 	RequireValuesEqual(
 		t,
 		inter,
@@ -3250,7 +3250,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	// Read second
 
-	secondValue := storageMap.ReadValue(nil, "second")
+	secondValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("second"))
 	require.IsType(t, &interpreter.ArrayValue{}, secondValue)
 
 	arrayValue := secondValue.(*interpreter.ArrayValue)
@@ -3265,7 +3265,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	// Read r
 
-	rValue := storageMap.ReadValue(nil, "r")
+	rValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("r"))
 	require.IsType(t, &interpreter.CompositeValue{}, rValue)
 
 	_, err = ExportValue(rValue, inter, interpreter.EmptyLocationRange)

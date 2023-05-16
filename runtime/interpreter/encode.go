@@ -200,7 +200,7 @@ const (
 	CBORTagPathLinkValue
 	CBORTagPublishedValue
 	CBORTagAccountLinkValue
-	_
+	CBORTagStorageCapabilityControllerValue
 	_
 	_
 	_
@@ -278,6 +278,11 @@ func (v *StringValue) Encode(e *atree.Encoder) error {
 // Encode encodes the value as a CBOR string
 func (v StringAtreeValue) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeString(string(v))
+}
+
+// Encode encodes the value as a CBOR unsigned integer
+func (v Uint64AtreeValue) Encode(e *atree.Encoder) error {
+	return e.CBOR.EncodeUint64(uint64(v))
 }
 
 // cborVoidValue represents the CBOR value:
@@ -1031,6 +1036,56 @@ func (v TypeValue) Encode(e *atree.Encoder) error {
 
 	// Encode type at array index encodedTypeValueTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.Type)
+}
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// encodedStorageCapabilityControllerValueTargetPathFieldKey   uint64 = 0
+	// encodedStorageCapabilityControllerValueBorrowTypeFieldKey   uint64 = 1
+	// encodedStorageCapabilityControllerValueCapabilityIDFieldKey uint64 = 2
+
+	// !!! *WARNING* !!!
+	//
+	// encodedStorageCapabilityControllerValueLength MUST be updated when new element is added.
+	// It is used to verify encoded storage capability controller length during decoding.
+	encodedStorageCapabilityControllerValueLength = 3
+)
+
+// Encode encodes StorageCapabilityControllerValue as
+//
+//	cbor.Tag{
+//				Number: CBORTagStorageCapabilityControllerValue,
+//				Content: []any{
+//					encodedStorageCapabilityControllerValueTargetPathFieldKey:   PathValue(v.TargetPath),
+//					encodedStorageCapabilityControllerValueBorrowTypeFieldKey:   StaticType(v.BorrowType),
+//					encodedStorageCapabilityControllerValueCapabilityIDFieldKey: UInt64Value(v.CapabilityID),
+//				},
+//	}
+func (v *StorageCapabilityControllerValue) Encode(e *atree.Encoder) error {
+	// Encode tag number and array head
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagStorageCapabilityControllerValue,
+		// array, 3 items follow
+		0x83,
+	})
+	if err != nil {
+		return err
+	}
+	// Encode target path at array index encodedStorageCapabilityControllerValueTargetPathFieldKey
+	err = v.TargetPath.Encode(e)
+	if err != nil {
+		return err
+	}
+
+	// Encode borrow type at array index encodedStorageCapabilityControllerValueBorrowTypeFieldKey
+	err = EncodeStaticType(e.CBOR, v.BorrowType)
+	if err != nil {
+		return err
+	}
+
+	// Encode ID at array index encodedStorageCapabilityControllerValueCapabilityIDFieldKey
+	return e.CBOR.EncodeUint64(uint64(v.CapabilityID))
 }
 
 func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {

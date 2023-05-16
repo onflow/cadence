@@ -601,7 +601,9 @@ func (r *interpreterRuntime) ReadStored(
 	domain := pathValue.Domain.Identifier()
 	identifier := pathValue.Identifier
 
-	value := inter.ReadStored(address, domain, identifier)
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	value := inter.ReadStored(address, domain, storageMapKey)
 
 	var exportedValue cadence.Value
 	if value != nil {
@@ -670,11 +672,12 @@ func (r *interpreterRuntime) ReadLinked(
 			return nil, nil
 		}
 
-		value := inter.ReadStored(
-			address,
-			targetPath.Domain.Identifier(),
-			targetPath.Identifier,
-		)
+		domain := targetPath.Domain.Identifier()
+		identifier := targetPath.Identifier
+
+		storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+		value := inter.ReadStored(address, domain, storageMapKey)
 
 		var exportedValue cadence.Value
 		if value != nil {

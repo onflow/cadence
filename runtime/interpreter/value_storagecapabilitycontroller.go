@@ -19,7 +19,7 @@
 package interpreter
 
 import (
-	"fmt"
+	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -27,107 +27,204 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var storageCapabilityControllerFieldNames = []string{
-	sema.StorageCapabilityControllerTypeBorrowTypeFieldName,
-	sema.StorageCapabilityControllerTypeCapabilityIDFieldName,
+type CapabilityControllerValue interface {
+	Value
+	isCapabilityControllerValue()
+}
+
+// StorageCapabilityControllerValue
+
+type StorageCapabilityControllerValue struct {
+	BorrowType       StaticType
+	TargetPath       PathValue
+	CapabilityID     UInt64Value
+	RetargetFunction FunctionValue
+}
+
+func NewUnmeteredStorageCapabilityControllerValue(
+	staticType StaticType,
+	targetPath PathValue,
+	capabilityID UInt64Value,
+) *StorageCapabilityControllerValue {
+	return &StorageCapabilityControllerValue{
+		BorrowType:   staticType,
+		TargetPath:   targetPath,
+		CapabilityID: capabilityID,
+	}
 }
 
 func NewStorageCapabilityControllerValue(
-	gauge common.MemoryGauge,
-	capabilityID uint64,
-	borrowType StaticType,
-	delete func() error,
-	getTarget func() (PathValue, error),
-	retarget func(newPath PathValue) error,
-) Value {
-
-	borrowTypeValue := NewTypeValue(gauge, borrowType)
-	fields := map[string]Value{
-		sema.StorageCapabilityControllerTypeBorrowTypeFieldName: borrowTypeValue,
-		sema.StorageCapabilityControllerTypeCapabilityIDFieldName: NewUInt64Value(gauge, func() uint64 {
-			return capabilityID
-		}),
-	}
-
-	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
-		switch name {
-		case sema.StorageCapabilityControllerTypeTargetFunctionName:
-			return NewHostFunctionValue(
-				gauge,
-				sema.StorageCapabilityControllerTypeTargetFunctionType,
-				func(invocation Invocation) Value {
-					target, err := getTarget()
-					if err != nil {
-						panic(err)
-					}
-
-					return target
-				},
-			)
-
-		case sema.StorageCapabilityControllerTypeDeleteFunctionName:
-			return NewHostFunctionValue(
-				gauge,
-				sema.StorageCapabilityControllerTypeDeleteFunctionType,
-				func(invocation Invocation) Value {
-					err := delete()
-					if err != nil {
-						panic(err)
-					}
-
-					return Void
-				},
-			)
-
-		case sema.StorageCapabilityControllerTypeRetargetFunctionName:
-			return NewHostFunctionValue(
-				gauge,
-				sema.StorageCapabilityControllerTypeRetargetFunctionType,
-				func(invocation Invocation) Value {
-					newTarget, ok := invocation.Arguments[0].(PathValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					err := retarget(newTarget)
-					if !ok {
-						panic(err)
-					}
-
-					return Void
-				},
-			)
-		}
-
-		return nil
-	}
-
-	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-		if str == "" {
-			common.UseMemory(memoryGauge, common.StorageCapabilityControllerStringMemoryUsage)
-
-			borrowTypeStr := borrowTypeValue.MeteredString(gauge, seenReferences)
-
-			memoryUsage := common.NewStringMemoryUsage(OverEstimateUintStringLength(uint(capabilityID)))
-			common.UseMemory(memoryGauge, memoryUsage)
-
-			idStr := fmt.Sprint(capabilityID)
-
-			str = format.StorageCapabilityController(borrowTypeStr, idStr)
-		}
-
-		return str
-	}
-
-	return NewSimpleCompositeValue(
-		gauge,
-		sema.StorageCapabilityControllerType.ID(),
-		PrimitiveStaticTypeStorageCapabilityController,
-		storageCapabilityControllerFieldNames,
-		fields,
-		computeField,
-		nil,
-		stringer,
+	memoryGauge common.MemoryGauge,
+	staticType StaticType,
+	targetPath PathValue,
+	capabilityID UInt64Value,
+) *StorageCapabilityControllerValue {
+	// Constant because its constituents are already metered.
+	common.UseMemory(memoryGauge, common.StorageCapabilityControllerValueMemoryUsage)
+	return NewUnmeteredStorageCapabilityControllerValue(
+		staticType,
+		targetPath,
+		capabilityID,
 	)
+}
+
+var _ Value = &StorageCapabilityControllerValue{}
+var _ atree.Value = &StorageCapabilityControllerValue{}
+var _ EquatableValue = &StorageCapabilityControllerValue{}
+var _ CapabilityControllerValue = &StorageCapabilityControllerValue{}
+var _ MemberAccessibleValue = &StorageCapabilityControllerValue{}
+
+func (*StorageCapabilityControllerValue) IsValue() {}
+
+func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
+
+func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
+}
+
+func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value)) {
+	walkChild(v.TargetPath)
+	walkChild(v.CapabilityID)
+}
+
+func (v *StorageCapabilityControllerValue) StaticType(_ *Interpreter) StaticType {
+	return PrimitiveStaticTypeStorageCapabilityController
+}
+
+func (*StorageCapabilityControllerValue) IsImportable(_ *Interpreter) bool {
+	return false
+}
+
+func (v *StorageCapabilityControllerValue) String() string {
+	return v.RecursiveString(SeenReferences{})
+}
+
+func (v *StorageCapabilityControllerValue) RecursiveString(seenReferences SeenReferences) string {
+	return format.StorageCapabilityController(
+		v.BorrowType.String(),
+		v.TargetPath.RecursiveString(seenReferences),
+		v.CapabilityID.RecursiveString(seenReferences),
+	)
+}
+
+func (v *StorageCapabilityControllerValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.StorageCapabilityControllerValueStringMemoryUsage)
+
+	return format.StorageCapabilityController(
+		v.BorrowType.MeteredString(memoryGauge),
+		v.CapabilityID.MeteredString(memoryGauge, seenReferences),
+		v.TargetPath.MeteredString(memoryGauge, seenReferences),
+	)
+}
+
+func (v *StorageCapabilityControllerValue) ConformsToStaticType(
+	_ *Interpreter,
+	_ LocationRange,
+	_ TypeConformanceResults,
+) bool {
+	return true
+}
+
+func (v *StorageCapabilityControllerValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+	otherController, ok := other.(*StorageCapabilityControllerValue)
+	if !ok {
+		return false
+	}
+
+	return otherController.TargetPath.Equal(interpreter, locationRange, v.TargetPath) &&
+		otherController.BorrowType.Equal(v.BorrowType) &&
+		otherController.CapabilityID.Equal(interpreter, locationRange, v.CapabilityID)
+}
+
+func (*StorageCapabilityControllerValue) IsStorable() bool {
+	return true
+}
+
+func (v *StorageCapabilityControllerValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+}
+
+func (*StorageCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (*StorageCapabilityControllerValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v *StorageCapabilityControllerValue) Transfer(
+	interpreter *Interpreter,
+	_ LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v *StorageCapabilityControllerValue) Clone(interpreter *Interpreter) Value {
+	return &StorageCapabilityControllerValue{
+		TargetPath:   v.TargetPath.Clone(interpreter).(PathValue),
+		BorrowType:   v.BorrowType,
+		CapabilityID: v.CapabilityID,
+	}
+}
+
+func (v *StorageCapabilityControllerValue) DeepRemove(_ *Interpreter) {
+	// NO-OP
+}
+
+func (v *StorageCapabilityControllerValue) ByteSize() uint32 {
+	return mustStorableSize(v)
+}
+
+func (v *StorageCapabilityControllerValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
+	return []atree.Storable{
+		v.TargetPath,
+		v.CapabilityID,
+	}
+}
+
+func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+
+	// TODO: sema.StorageCapabilityControllerTypeDeleteFunctionName
+
+	switch name {
+	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
+		return v.CapabilityID
+
+	case sema.StorageCapabilityControllerTypeBorrowTypeFieldName:
+		return NewTypeValue(inter, v.BorrowType)
+
+	case sema.StorageCapabilityControllerTypeTargetFunctionName:
+		return NewHostFunctionValue(
+			inter,
+			sema.StorageCapabilityControllerTypeTargetFunctionType,
+			func(invocation Invocation) Value {
+				return v.TargetPath
+			},
+		)
+
+	case sema.StorageCapabilityControllerTypeRetargetFunctionName:
+		return v.RetargetFunction
+	}
+
+	return nil
+}
+
+func (*StorageCapabilityControllerValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+	// Storage capability controllers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (*StorageCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+	// Storage capability controllers have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
 }

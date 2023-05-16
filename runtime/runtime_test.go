@@ -222,6 +222,15 @@ type testRuntimeInterface struct {
 	memoryUsed                 func() (uint64, error)
 	interactionUsed            func() (uint64, error)
 	updatedContractCode        bool
+	generateAccountID          func(address common.Address) (uint64, error)
+}
+
+func (i *testRuntimeInterface) GenerateAccountID(address common.Address) (uint64, error) {
+	if i.generateAccountID == nil {
+		return 0, nil
+	}
+
+	return i.generateAccountID(address)
 }
 
 // testRuntimeInterface should implement Interface
