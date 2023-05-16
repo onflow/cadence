@@ -13126,7 +13126,7 @@ func (v Word128Value) Minus(interpreter *Interpreter, other NumberValue, locatio
 			// 	     ...
 			//   }
 			//
-			if diff.Cmp(sema.Word128TypeMinIntBig) < 0 {
+			if diff.Sign() < 0 {
 				diff.Add(diff, sema.Word128TypeMaxIntPlusOneBig)
 			}
 			return diff
@@ -13176,7 +13176,7 @@ func (v Word128Value) Mul(interpreter *Interpreter, other NumberValue, locationR
 			res := new(big.Int)
 			res.Mul(v.BigInt, o.BigInt)
 			if res.Cmp(sema.Word128TypeMaxIntBig) > 0 {
-				res.Rem(res, sema.Word128TypeMaxIntBig)
+				res.Mod(res, sema.Word128TypeMaxIntPlusOneBig)
 			}
 			return res
 		},
@@ -13316,10 +13316,10 @@ func ConvertWord128(memoryGauge common.MemoryGauge, value Value, locationRange L
 				panic(errors.NewUnreachableError())
 			}
 
-			if v.Cmp(sema.Word128TypeMaxIntBig) > 0 {
-				v.Rem(v, sema.Word128TypeMaxIntBig)
-			} else if v.Sign() < 0 {
-				v.Mod(v, sema.AddressTypeMaxIntBig).Add(v, sema.AddressTypeMaxIntBig)
+			if v.Cmp(sema.Word128TypeMaxIntBig) > 0 || v.Sign() < 0 {
+				// When Sign() < 0, Mod will add sema.Word128TypeMaxIntPlusOneBig
+				// to ensure the range is [0, sema.Word128TypeMaxIntPlusOneBig)
+				v.Mod(v, sema.Word128TypeMaxIntPlusOneBig)
 			}
 
 			return v
@@ -13385,6 +13385,7 @@ func (v Word128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, l
 
 }
 
+// TODO: Fix
 func (v Word128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word128Value)
 	if !ok {
@@ -13410,6 +13411,7 @@ func (v Word128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 	)
 }
 
+// TODO: Fix
 func (v Word128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word128Value)
 	if !ok {
