@@ -279,8 +279,25 @@ var enumeratedAccessModifierKeywords = common.EnumerateWords(
 	"or",
 )
 
+func rejectAccessKeywords(p *parser, produceNominalType func() (*ast.NominalType, error)) (*ast.NominalType, error) {
+	nominalType, err := produceNominalType()
+
+	if err != nil {
+		return nil, err
+	}
+
+	switch nominalType.Identifier.Identifier {
+	case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
+		return nil, p.syntaxError("unexpected non-nominal type: %s", nominalType)
+	}
+	return nominalType, nil
+}
+
 func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
-	firstTy, err := parseNominalType(p, lowestBindingPower, true)
+	firstTy, err := rejectAccessKeywords(p, func() (*ast.NominalType, error) {
+		return parseNominalType(p, lowestBindingPower)
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -304,12 +321,17 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		)
 	}
 
-	remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true, separator)
+	remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, separator)
 	if err != nil {
 		return nil, err
 	}
-
-	entitlements = append(entitlements, remainingEntitlements...)
+	for _, entitlement := range remainingEntitlements {
+		switch entitlement.Identifier.Identifier {
+		case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
+			return nil, p.syntaxError("unexpected non-nominal type: %s", entitlement)
+		}
+		entitlements = append(entitlements, entitlement)
+	}
 
 	var entitlementSet ast.EntitlementSet
 	if separator == lexer.TokenComma {
@@ -318,8 +340,6 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
 	}
 	return entitlementSet, nil
-
-	return nil, errors.NewUnreachableError()
 }
 
 // parseAccess parses an access modifier
@@ -1188,7 +1208,7 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 		// Skip the colon
 		p.next()
 
-		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen, false, lexer.TokenComma)
+		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen, lexer.TokenComma)
 		if err != nil {
 			return nil, err
 		}
@@ -1352,7 +1372,9 @@ func parseRequiredEntitlement(p *parser) (*ast.NominalType, error) {
 	// skip the `entitlement` keyword
 	p.nextSemanticToken()
 
-	return parseNominalType(p, lowestBindingPower, true)
+	return rejectAccessKeywords(p, func() (*ast.NominalType, error) {
+		return parseNominalType(p, lowestBindingPower)
+	})
 }
 
 func parseRequiredEntitlements(p *parser) ([]*ast.NominalType, error) {

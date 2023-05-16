@@ -35,7 +35,7 @@ type Access interface {
 	MarshalJSON() ([]byte, error)
 }
 
-type Separator = string
+type Separator string
 
 const (
 	Disjunction Separator = " |"
@@ -103,7 +103,7 @@ func (e EntitlementAccess) entitlementsString(prefix *strings.Builder) {
 	for i, entitlement := range e.EntitlementSet.Entitlements() {
 		prefix.WriteString(entitlement.String())
 		if i < len(e.EntitlementSet.Entitlements())-1 {
-			prefix.WriteString(e.EntitlementSet.Separator())
+			prefix.WriteString(string(e.EntitlementSet.Separator()))
 		}
 	}
 }
