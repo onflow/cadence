@@ -2247,8 +2247,8 @@ func newAuthAccountCapabilitiesValue(
 	return interpreter.NewAuthAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountCapabilitiesTypeGetFunctionType, false),
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountCapabilitiesTypeBorrowFunctionType, true),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, true),
 		newAuthAccountCapabilitiesPublishFunction(gauge, addressValue),
 		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
 		func() interpreter.Value {
@@ -3004,8 +3004,8 @@ func newPublicAccountCapabilitiesValue(
 	return interpreter.NewPublicAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountCapabilitiesTypeGetFunctionType, false),
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountCapabilitiesTypeBorrowFunctionType, true),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountType, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountType, true),
 	)
 }
 
@@ -3157,10 +3157,28 @@ func CheckCapabilityController(
 func newAccountCapabilitiesGetFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
-	funcType *sema.FunctionType,
+	accountType *sema.CompositeType,
 	borrow bool,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
+
+	var funcType *sema.FunctionType
+	switch accountType {
+	case sema.AuthAccountType:
+		if borrow {
+			funcType = sema.AuthAccountCapabilitiesTypeBorrowFunctionType
+		} else {
+			funcType = sema.AuthAccountCapabilitiesTypeGetFunctionType
+		}
+	case sema.PublicAccountType:
+		if borrow {
+			funcType = sema.PublicAccountCapabilitiesTypeBorrowFunctionType
+		} else {
+			funcType = sema.PublicAccountCapabilitiesTypeGetFunctionType
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
