@@ -6563,27 +6563,6 @@ func (t *CapabilityType) initializeMemberResolvers() {
 	})
 }
 
-var NativeCompositeTypes = map[string]*CompositeType{}
-
-func init() {
-	types := []*CompositeType{
-		AccountKeyType,
-		PublicKeyType,
-		HashAlgorithmType,
-		SignatureAlgorithmType,
-		AuthAccountType,
-		AuthAccountKeysType,
-		AuthAccountContractsType,
-		PublicAccountType,
-		PublicAccountKeysType,
-		PublicAccountContractsType,
-	}
-
-	for _, semaType := range types {
-		NativeCompositeTypes[semaType.QualifiedIdentifier()] = semaType
-	}
-}
-
 const AccountKeyTypeName = "AccountKey"
 const AccountKeyKeyIndexFieldName = "keyIndex"
 const AccountKeyPublicKeyFieldName = "publicKey"
@@ -6824,4 +6803,40 @@ func isNumericSuperType(typ Type) bool {
 	}
 
 	return false
+}
+
+var NativeCompositeTypes = map[string]*CompositeType{}
+
+func init() {
+	compositeTypes := []*CompositeType{
+		AccountKeyType,
+		PublicKeyType,
+		HashAlgorithmType,
+		SignatureAlgorithmType,
+		AuthAccountType,
+		PublicAccountType,
+	}
+
+	for len(compositeTypes) > 0 {
+		lastIndex := len(compositeTypes) - 1
+		compositeType := compositeTypes[lastIndex]
+		compositeTypes[lastIndex] = nil
+		compositeTypes = compositeTypes[:lastIndex]
+
+		NativeCompositeTypes[compositeType.QualifiedIdentifier()] = compositeType
+
+		nestedTypes := compositeType.NestedTypes
+		if nestedTypes == nil {
+			continue
+		}
+
+		nestedTypes.Foreach(func(_ string, nestedType Type) {
+			nestedCompositeType, ok := nestedType.(*CompositeType)
+			if !ok {
+				return
+			}
+
+			compositeTypes = append(compositeTypes, nestedCompositeType)
+		})
+	}
 }

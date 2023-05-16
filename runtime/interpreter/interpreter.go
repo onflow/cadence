@@ -2229,7 +2229,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 	)
 }
 
-func (interpreter *Interpreter) storedValueExists(
+func (interpreter *Interpreter) StoredValueExists(
 	storageAddress common.Address,
 	domain string,
 	identifier string,
@@ -3471,7 +3471,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			locationRange := invocation.LocationRange
 
-			if interpreter.storedValueExists(
+			if interpreter.StoredValueExists(
 				address,
 				domain,
 				identifier,
@@ -3708,7 +3708,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
 			newCapabilityIdentifier := newCapabilityPath.Identifier
 
-			if interpreter.storedValueExists(
+			if interpreter.StoredValueExists(
 				address,
 				newCapabilityDomain,
 				newCapabilityIdentifier,
@@ -3796,7 +3796,7 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
 			newCapabilityIdentifier := newCapabilityPath.Identifier
 
-			if interpreter.storedValueExists(
+			if interpreter.StoredValueExists(
 				address,
 				newCapabilityDomain,
 				newCapabilityIdentifier,
@@ -3911,6 +3911,66 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	)
 }
 
+func (interpreter *Interpreter) BorrowCapability(
+	address common.Address,
+	pathValue PathValue,
+	borrowType *sema.ReferenceType,
+	locationRange LocationRange,
+) ReferenceValue {
+	target, authorized, err :=
+		interpreter.GetStorageCapabilityFinalTarget(
+			address,
+			pathValue,
+			borrowType,
+			locationRange,
+		)
+	if err != nil {
+		panic(err)
+	}
+
+	if target == nil {
+		return nil
+	}
+
+	switch target := target.(type) {
+	case AccountCapabilityTarget:
+		return NewAccountReferenceValue(
+			interpreter,
+			address,
+			pathValue,
+			borrowType.Type,
+		)
+
+	case PathCapabilityTarget:
+		targetPath := PathValue(target)
+
+		reference := NewStorageReferenceValue(
+			interpreter,
+			authorized,
+			address,
+			targetPath,
+			borrowType.Type,
+		)
+
+		// Attempt to dereference,
+		// which reads the stored value
+		// and performs a dynamic type check
+
+		value, err := reference.dereference(interpreter, locationRange)
+		if err != nil {
+			panic(err)
+		}
+		if value == nil {
+			return nil
+		}
+
+		return reference
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
@@ -3944,61 +4004,11 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			target, authorized, err :=
-				interpreter.GetStorageCapabilityFinalTarget(
-					address,
-					pathValue,
-					borrowType,
-					invocation.LocationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			if target == nil {
+			reference := interpreter.BorrowCapability(address, pathValue, borrowType, invocation.LocationRange)
+			if reference == nil {
 				return Nil
 			}
-
-			switch target := target.(type) {
-			case AccountCapabilityTarget:
-				return NewSomeValueNonCopying(
-					interpreter,
-					NewAccountReferenceValue(
-						interpreter,
-						address,
-						pathValue,
-						borrowType.Type,
-					),
-				)
-
-			case PathCapabilityTarget:
-				targetPath := PathValue(target)
-
-				reference := NewStorageReferenceValue(
-					interpreter,
-					authorized,
-					address,
-					targetPath,
-					borrowType.Type,
-				)
-
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				value, err := reference.dereference(interpreter, invocation.LocationRange)
-				if err != nil {
-					panic(err)
-				}
-				if value == nil {
-					return Nil
-				}
-
-				return NewSomeValueNonCopying(interpreter, reference)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
+			return NewSomeValueNonCopying(interpreter, reference)
 		},
 	)
 }

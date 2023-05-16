@@ -9285,7 +9285,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 						gauge,
 						false,
 						storageCapabilities,
-						sema.AuthAccountCapabilitiesTypeStorageFieldType,
+						sema.AuthAccountCapabilitiesTypeStorageFieldType.Type,
 					)
 				},
 				func() interpreter.Value {
@@ -9301,7 +9301,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 						gauge,
 						false,
 						accountCapabilities,
-						sema.AuthAccountCapabilitiesTypeAccountFieldType,
+						sema.AuthAccountCapabilitiesTypeAccountFieldType.Type,
 					)
 				},
 			)
@@ -9309,7 +9309,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				gauge,
 				false,
 				capabilities,
-				sema.AuthAccountTypeCapabilitiesFieldType,
+				sema.AuthAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)
@@ -9369,7 +9369,7 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 				gauge,
 				false,
 				capabilities,
-				sema.PublicAccountTypeCapabilitiesFieldType,
+				sema.PublicAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)

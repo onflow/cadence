@@ -224,7 +224,7 @@ func NewAuthAccountValue(
 				gauge,
 				false,
 				capabilities,
-				sema.AuthAccountTypeCapabilitiesFieldType,
+				sema.AuthAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)
@@ -2115,7 +2115,7 @@ func NewPublicAccountValue(
 				gauge,
 				false,
 				capabilities,
-				sema.PublicAccountTypeCapabilitiesFieldType,
+				sema.PublicAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)
@@ -2190,7 +2190,7 @@ func newAuthAccountStorageCapabilitiesValue(
 		nil,
 		nil,
 		nil,
-		nil,
+		newAuthAccountStorageCapabilitiesIssueFunction(gauge, addressValue),
 	)
 }
 
@@ -2217,10 +2217,10 @@ func newAuthAccountCapabilitiesValue(
 	return interpreter.NewAuthAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		nil,
-		nil,
-		nil,
-		nil,
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, true),
+		newAuthAccountCapabilitiesPublishFunction(gauge, addressValue),
+		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
 		func() interpreter.Value {
 			storageCapabilities := newAuthAccountStorageCapabilitiesValue(
 				gauge,
@@ -2230,7 +2230,7 @@ func newAuthAccountCapabilitiesValue(
 				gauge,
 				false,
 				storageCapabilities,
-				sema.AuthAccountCapabilitiesTypeStorageFieldType,
+				sema.AuthAccountCapabilitiesTypeStorageFieldType.Type,
 			)
 		},
 		func() interpreter.Value {
@@ -2242,8 +2242,159 @@ func newAuthAccountCapabilitiesValue(
 				gauge,
 				false,
 				accountCapabilities,
-				sema.AuthAccountCapabilitiesTypeAccountFieldType,
+				sema.AuthAccountCapabilitiesTypeAccountFieldType.Type,
 			)
+		},
+	)
+}
+
+func newAuthAccountStorageCapabilitiesIssueFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountStorageCapabilitiesTypeIssueFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			// Get path argument
+
+			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainStorage {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get borrow type type argument
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// TODO: create and write StorageCapabilityController
+
+			borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(gauge, borrowType)
+
+			return interpreter.NewStorageCapabilityValue(
+				gauge,
+				// TODO:
+				interpreter.TodoCapabilityID,
+				addressValue,
+				pathValue,
+				borrowStaticType,
+			)
+		},
+	)
+}
+
+func newAuthAccountCapabilitiesPublishFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountCapabilitiesTypePublishFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
+			capabilityValue, ok := invocation.Arguments[0].(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			pathValue, ok := invocation.Arguments[1].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainPublic {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			// Prevent an overwrite
+
+			locationRange := invocation.LocationRange
+
+			if inter.StoredValueExists(
+				address,
+				domain,
+				identifier,
+			) {
+				panic(
+					interpreter.OverwriteError{
+						Address:       addressValue,
+						Path:          pathValue,
+						LocationRange: locationRange,
+					},
+				)
+			}
+
+			capabilityValue, ok = capabilityValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(address),
+				true,
+				nil,
+			).(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Write new value
+
+			inter.WriteStored(address, domain, identifier, capabilityValue)
+
+			return interpreter.Void
+		},
+	)
+}
+
+func newAuthAccountCapabilitiesUnpublishFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountCapabilitiesTypeUnpublishFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainPublic {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			readValue := inter.ReadStored(address, domain, identifier)
+			if readValue == nil {
+				return interpreter.Nil
+			}
+
+			capabilityValue := readValue.(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityValue, ok = capabilityValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address{},
+				true,
+				nil,
+			).(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter.WriteStored(address, domain, identifier, nil)
+
+			return interpreter.NewSomeValueNonCopying(inter, capabilityValue)
 		},
 	)
 }
@@ -2256,7 +2407,127 @@ func newPublicAccountCapabilitiesValue(
 	return interpreter.NewPublicAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		nil,
-		nil,
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountType, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountType, true),
+	)
+}
+
+func newAccountCapabilitiesGetFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+	accountType *sema.CompositeType,
+	borrow bool,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	var funcType *sema.FunctionType
+	switch accountType {
+	case sema.AuthAccountType:
+		if borrow {
+			funcType = sema.AuthAccountCapabilitiesTypeBorrowFunctionType
+		} else {
+			funcType = sema.AuthAccountCapabilitiesTypeGetFunctionType
+		}
+	case sema.PublicAccountType:
+		if borrow {
+			funcType = sema.PublicAccountCapabilitiesTypeBorrowFunctionType
+		} else {
+			funcType = sema.PublicAccountCapabilitiesTypeGetFunctionType
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		funcType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainPublic {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			// Get borrow type type argument
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			wantedBorrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Read stored capability, if any
+
+			readValue := inter.ReadStored(address, domain, identifier)
+			if readValue == nil {
+				return interpreter.Nil
+			}
+
+			readCapabilityValue := readValue.(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			allowedBorrowType, ok := inter.MustConvertStaticToSemaType(readCapabilityValue.BorrowType).(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Ensure requested borrow type is not more permissive
+
+			if !sema.IsSubType(allowedBorrowType, wantedBorrowType) {
+				return interpreter.Nil
+			}
+
+			// Return capability value
+
+			readCapabilityValue, ok = readCapabilityValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+			).(*interpreter.StorageCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			wantedBorrowStaticType :=
+				interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, wantedBorrowType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			var resultValue interpreter.Value
+			if borrow {
+				resultValue = inter.BorrowCapability(
+					readCapabilityValue.Address.ToAddress(),
+					readCapabilityValue.Path,
+					wantedBorrowType,
+					locationRange,
+				)
+			} else {
+				resultValue = interpreter.NewStorageCapabilityValue(
+					inter,
+					readCapabilityValue.ID,
+					readCapabilityValue.Address,
+					readCapabilityValue.Path,
+					wantedBorrowStaticType,
+				)
+			}
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				resultValue,
+			)
+		},
 	)
 }
