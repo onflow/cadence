@@ -2225,6 +2225,7 @@ func newAuthAccountStorageCapabilitiesValue(
 
 func newAuthAccountAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
+	accountIDGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 	// TODO:
@@ -2234,7 +2235,7 @@ func newAuthAccountAccountCapabilitiesValue(
 		nil,
 		nil,
 		nil,
-		nil,
+		newAuthAccountAccountCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
 	)
 }
 
@@ -2266,6 +2267,7 @@ func newAuthAccountCapabilitiesValue(
 		func() interpreter.Value {
 			accountCapabilities := newAuthAccountAccountCapabilitiesValue(
 				gauge,
+				idGenerator,
 				addressValue,
 			)
 			return interpreter.NewEphemeralReferenceValue(
@@ -2498,8 +2500,8 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 			controller := interpreter.NewStorageCapabilityControllerValue(
 				gauge,
 				borrowStaticType,
-				targetPathValue,
 				capabilityIDValue,
+				targetPathValue,
 			)
 
 			storeCapabilityController(inter, address, capabilityIDValue, controller)
@@ -2509,7 +2511,65 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 				gauge,
 				capabilityIDValue,
 				addressValue,
-				targetPathValue,
+				// TODO: remove
+				interpreter.EmptyPathValue,
+				borrowStaticType,
+			)
+		},
+	)
+}
+
+func newAuthAccountAccountCapabilitiesIssueFunction(
+	gauge common.MemoryGauge,
+	idGenerator AccountIDGenerator,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountAccountCapabilitiesTypeIssueFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			// Get borrow type type argument
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Create and write AccountCapabilityController
+
+			borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(gauge, borrowType)
+
+			var capabilityID uint64
+			var err error
+			errors.WrapPanic(func() {
+				capabilityID, err = idGenerator.GenerateAccountID(address)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			capabilityIDValue := interpreter.UInt64Value(capabilityID)
+
+			controller := interpreter.NewAccountCapabilityControllerValue(
+				gauge,
+				borrowStaticType,
+				capabilityIDValue,
+			)
+
+			storeCapabilityController(inter, address, capabilityIDValue, controller)
+			recordAccountCapabilityController(inter, address, capabilityIDValue)
+
+			return interpreter.NewStorageCapabilityValue(
+				gauge,
+				capabilityIDValue,
+				addressValue,
+				// TODO: remove
+				interpreter.EmptyPathValue,
 				borrowStaticType,
 			)
 		},
@@ -2767,6 +2827,29 @@ func getPathCapabilityControllerIDsIterator(
 		return uint64(capabilityIDValue), true
 	}
 	return
+}
+
+// AccountCapabilityStorageDomain is the storage domain which
+// records active account capability controller IDs
+const AccountCapabilityStorageDomain = "acc_cap"
+
+func recordAccountCapabilityController(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) {
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
+
+	storageMap := inter.Storage().GetStorageMap(
+		address,
+		AccountCapabilityStorageDomain,
+		true,
+	)
+
+	existed := storageMap.SetValue(inter, storageMapKey, interpreter.NilValue{})
+	if existed {
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func newAuthAccountCapabilitiesPublishFunction(

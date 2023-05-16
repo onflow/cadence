@@ -19,80 +19,184 @@
 package interpreter
 
 import (
-	"fmt"
+	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var AccountCapabilityControllerFieldNames = []string{
-	sema.AccountCapabilityControllerTypeBorrowTypeFieldName,
-	sema.AccountCapabilityControllerTypeCapabilityIDFieldName,
+// AccountCapabilityControllerValue
+
+type AccountCapabilityControllerValue struct {
+	BorrowType   StaticType
+	CapabilityID UInt64Value
+}
+
+func NewUnmeteredAccountCapabilityControllerValue(
+	staticType StaticType,
+	capabilityID UInt64Value,
+) *AccountCapabilityControllerValue {
+	return &AccountCapabilityControllerValue{
+		BorrowType:   staticType,
+		CapabilityID: capabilityID,
+	}
 }
 
 func NewAccountCapabilityControllerValue(
-	gauge common.MemoryGauge,
-	capabilityID uint64,
-	borrowType StaticType,
-	delete func() error,
-) Value {
-
-	borrowTypeValue := NewTypeValue(gauge, borrowType)
-	fields := map[string]Value{
-		sema.AccountCapabilityControllerTypeBorrowTypeFieldName: borrowTypeValue,
-		sema.AccountCapabilityControllerTypeCapabilityIDFieldName: NewUInt64Value(gauge, func() uint64 {
-			return capabilityID
-		}),
-	}
-
-	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
-		switch name {
-		case sema.AccountCapabilityControllerTypeDeleteFunctionName:
-			return NewHostFunctionValue(
-				gauge,
-				sema.AccountCapabilityControllerTypeDeleteFunctionType,
-				func(invocation Invocation) Value {
-					err := delete()
-					if err != nil {
-						panic(err)
-					}
-
-					return Void
-				},
-			)
-
-		}
-
-		return nil
-	}
-
-	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-		if str == "" {
-			common.UseMemory(memoryGauge, common.AccountCapabilityControllerValueStringMemoryUsage)
-
-			borrowTypeStr := borrowTypeValue.MeteredString(gauge, seenReferences)
-
-			memoryUsage := common.NewStringMemoryUsage(OverEstimateUintStringLength(uint(capabilityID)))
-			common.UseMemory(memoryGauge, memoryUsage)
-
-			idStr := fmt.Sprint(capabilityID)
-
-			str = format.AccountCapabilityController(borrowTypeStr, idStr)
-		}
-
-		return str
-	}
-
-	return NewSimpleCompositeValue(
-		gauge,
-		sema.AccountCapabilityControllerType.ID(),
-		PrimitiveStaticTypeAccountCapabilityController,
-		AccountCapabilityControllerFieldNames,
-		fields,
-		computeField,
-		nil,
-		stringer,
+	memoryGauge common.MemoryGauge,
+	staticType StaticType,
+	capabilityID UInt64Value,
+) *AccountCapabilityControllerValue {
+	// Constant because its constituents are already metered.
+	common.UseMemory(memoryGauge, common.AccountCapabilityControllerValueMemoryUsage)
+	return NewUnmeteredAccountCapabilityControllerValue(
+		staticType,
+		capabilityID,
 	)
+}
+
+var _ Value = &AccountCapabilityControllerValue{}
+var _ atree.Value = &AccountCapabilityControllerValue{}
+var _ EquatableValue = &AccountCapabilityControllerValue{}
+var _ CapabilityControllerValue = &AccountCapabilityControllerValue{}
+var _ MemberAccessibleValue = &AccountCapabilityControllerValue{}
+
+func (*AccountCapabilityControllerValue) IsValue() {}
+
+func (*AccountCapabilityControllerValue) isCapabilityControllerValue() {}
+
+func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
+}
+
+func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value)) {
+	walkChild(v.CapabilityID)
+}
+
+func (v *AccountCapabilityControllerValue) StaticType(_ *Interpreter) StaticType {
+	return PrimitiveStaticTypeAccountCapabilityController
+}
+
+func (*AccountCapabilityControllerValue) IsImportable(_ *Interpreter) bool {
+	return false
+}
+
+func (v *AccountCapabilityControllerValue) String() string {
+	return v.RecursiveString(SeenReferences{})
+}
+
+func (v *AccountCapabilityControllerValue) RecursiveString(seenReferences SeenReferences) string {
+	return format.AccountCapabilityController(
+		v.BorrowType.String(),
+		v.CapabilityID.RecursiveString(seenReferences),
+	)
+}
+
+func (v *AccountCapabilityControllerValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.AccountCapabilityControllerValueStringMemoryUsage)
+
+	return format.AccountCapabilityController(
+		v.BorrowType.MeteredString(memoryGauge),
+		v.CapabilityID.MeteredString(memoryGauge, seenReferences),
+	)
+}
+
+func (v *AccountCapabilityControllerValue) ConformsToStaticType(
+	_ *Interpreter,
+	_ LocationRange,
+	_ TypeConformanceResults,
+) bool {
+	return true
+}
+
+func (v *AccountCapabilityControllerValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+	otherController, ok := other.(*AccountCapabilityControllerValue)
+	if !ok {
+		return false
+	}
+
+	return otherController.BorrowType.Equal(v.BorrowType) &&
+		otherController.CapabilityID.Equal(interpreter, locationRange, v.CapabilityID)
+}
+
+func (*AccountCapabilityControllerValue) IsStorable() bool {
+	return true
+}
+
+func (v *AccountCapabilityControllerValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+}
+
+func (*AccountCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (*AccountCapabilityControllerValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v *AccountCapabilityControllerValue) Transfer(
+	interpreter *Interpreter,
+	_ LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v *AccountCapabilityControllerValue) Clone(interpreter *Interpreter) Value {
+	return &AccountCapabilityControllerValue{
+		BorrowType:   v.BorrowType,
+		CapabilityID: v.CapabilityID,
+	}
+}
+
+func (v *AccountCapabilityControllerValue) DeepRemove(_ *Interpreter) {
+	// NO-OP
+}
+
+func (v *AccountCapabilityControllerValue) ByteSize() uint32 {
+	return mustStorableSize(v)
+}
+
+func (v *AccountCapabilityControllerValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v *AccountCapabilityControllerValue) ChildStorables() []atree.Storable {
+	return []atree.Storable{
+		v.CapabilityID,
+	}
+}
+
+func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+
+	// TODO: sema.AccountCapabilityControllerTypeDeleteFunctionName
+
+	switch name {
+	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
+		return v.CapabilityID
+
+	case sema.AccountCapabilityControllerTypeBorrowTypeFieldName:
+		return NewTypeValue(inter, v.BorrowType)
+
+	}
+
+	return nil
+}
+
+func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+	// Storage capability controllers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (*AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+	// Storage capability controllers have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
 }

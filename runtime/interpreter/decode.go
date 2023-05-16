@@ -321,6 +321,9 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagStorageCapabilityControllerValue:
 			storable, err = d.decodeStorageCapabilityController()
 
+		case CBORTagAccountCapabilityControllerValue:
+			storable, err = d.decodeAccountCapabilityController()
+
 		default:
 			return nil, UnsupportedTagDecodingError{
 				Tag: num,
@@ -996,6 +999,22 @@ func (d StorableDecoder) decodeStorageCapabilityController() (*StorageCapability
 		)
 	}
 
+	// Decode borrow type at array index encodedStorageCapabilityControllerValueBorrowTypeFieldKey
+	borrowStaticType, err := d.DecodeStaticType()
+	if err != nil {
+		return nil, errors.NewUnexpectedError("invalid storage capability controller borrow type encoding: %w", err)
+	}
+
+	// Decode capability ID at array index encodedStorageCapabilityControllerValueCapabilityIDFieldKey
+
+	capabilityID, err := d.decoder.DecodeUint64()
+	if err != nil {
+		return nil, errors.NewUnexpectedError(
+			"invalid storage capability controller capability ID: %w",
+			err,
+		)
+	}
+
 	// Decode path at array index encodedStorageCapabilityControllerValueTargetPathFieldKey
 	num, err := d.decoder.DecodeTagNumber()
 	if err != nil {
@@ -1013,26 +1032,57 @@ func (d StorableDecoder) decodeStorageCapabilityController() (*StorageCapability
 		return nil, errors.NewUnexpectedError("invalid storage capability controller target path encoding: %w", err)
 	}
 
-	// Decode borrow type at array index encodedStorageCapabilityControllerValueBorrowTypeFieldKey
-	borrowStaticType, err := d.DecodeStaticType()
+	return NewStorageCapabilityControllerValue(
+		d.memoryGauge,
+		borrowStaticType,
+		UInt64Value(capabilityID),
+		pathValue,
+	), nil
+}
+
+func (d StorableDecoder) decodeAccountCapabilityController() (*AccountCapabilityControllerValue, error) {
+
+	const expectedLength = encodedAccountCapabilityControllerValueLength
+
+	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
-		return nil, errors.NewUnexpectedError("invalid storage capability controller borrow type encoding: %w", err)
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, errors.NewUnexpectedError(
+				"invalid account capability controller encoding: expected [%d]any, got %s",
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
 	}
 
-	// Decode capability ID at array index encodedStorageCapabilityControllerValueCapabilityIDFieldKey
+	if size != expectedLength {
+		return nil, errors.NewUnexpectedError(
+			"invalid account capability controller encoding: expected [%d]any, got [%d]any",
+			expectedLength,
+			size,
+		)
+	}
+
+	// Decode borrow type at array index encodedAccountCapabilityControllerValueBorrowTypeFieldKey
+	borrowStaticType, err := d.DecodeStaticType()
+	if err != nil {
+		return nil, errors.NewUnexpectedError("invalid account capability controller borrow type encoding: %w", err)
+	}
+
+	// Decode capability ID at array index encodedAccountCapabilityControllerValueCapabilityIDFieldKey
 
 	capabilityID, err := d.decoder.DecodeUint64()
 	if err != nil {
 		return nil, errors.NewUnexpectedError(
-			"invalid storage capability controller capability ID: %w",
+			"invalid account capability controller capability ID: %w",
 			err,
 		)
 	}
 
-	return NewStorageCapabilityControllerValue(
+	return NewAccountCapabilityControllerValue(
 		d.memoryGauge,
 		borrowStaticType,
-		pathValue,
 		UInt64Value(capabilityID),
 	), nil
 }

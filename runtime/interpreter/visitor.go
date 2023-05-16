@@ -63,6 +63,7 @@ type Visitor interface {
 	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
 	VisitStorageCapabilityControllerValue(interpreter *Interpreter, v *StorageCapabilityControllerValue)
+	VisitAccountCapabilityControllerValue(interpreter *Interpreter, v *AccountCapabilityControllerValue)
 }
 
 type EmptyVisitor struct {
@@ -110,6 +111,7 @@ type EmptyVisitor struct {
 	HostFunctionValueVisitor                func(interpreter *Interpreter, value *HostFunctionValue)
 	BoundFunctionValueVisitor               func(interpreter *Interpreter, value BoundFunctionValue)
 	StorageCapabilityControllerValueVisitor func(interpreter *Interpreter, value *StorageCapabilityControllerValue)
+	AccountCapabilityControllerValueVisitor func(interpreter *Interpreter, value *AccountCapabilityControllerValue)
 }
 
 var _ Visitor = &EmptyVisitor{}
@@ -420,4 +422,11 @@ func (v EmptyVisitor) VisitStorageCapabilityControllerValue(interpreter *Interpr
 		return
 	}
 	v.StorageCapabilityControllerValueVisitor(interpreter, value)
+}
+
+func (v EmptyVisitor) VisitAccountCapabilityControllerValue(interpreter *Interpreter, value *AccountCapabilityControllerValue) {
+	if v.AccountCapabilityControllerValueVisitor == nil {
+		return
+	}
+	v.AccountCapabilityControllerValueVisitor(interpreter, value)
 }
