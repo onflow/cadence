@@ -734,15 +734,15 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 						if member.HasImplementation {
 							checker.report(
 								&MultipleInterfaceDefaultImplementationsError{
-									CompositeType: nestedCompositeType,
-									Member:        member,
+									CompositeKindedType: nestedCompositeType,
+									Member:              member,
 								},
 							)
 						} else {
 							checker.report(
 								&DefaultFunctionConflictError{
-									CompositeType: nestedCompositeType,
-									Member:        member,
+									CompositeKindedType: nestedCompositeType,
+									Member:              member,
 								},
 							)
 						}
@@ -1246,15 +1246,15 @@ func (checker *Checker) checkCompositeLikeConformance(
 					if interfaceMember.HasImplementation {
 						checker.report(
 							&MultipleInterfaceDefaultImplementationsError{
-								CompositeType: compositeType,
-								Member:        interfaceMember,
+								CompositeKindedType: compositeType,
+								Member:              interfaceMember,
 							},
 						)
 					} else {
 						checker.report(
 							&DefaultFunctionConflictError{
-								CompositeType: compositeType,
-								Member:        interfaceMember,
+								CompositeKindedType: compositeType,
+								Member:              interfaceMember,
 							},
 						)
 					}
@@ -1381,7 +1381,7 @@ func (checker *Checker) checkConformanceKindMatch(
 
 // TODO: return proper error
 func (checker *Checker) memberSatisfied(
-	compositeType CompositeKindedType,
+	compositeKindedType CompositeKindedType,
 	compositeMember, interfaceMember *Member,
 ) bool {
 
@@ -1471,7 +1471,7 @@ func (checker *Checker) memberSatisfied(
 			common.DeclarationKindEnum:
 			// Interfaces and their conformances cannot have nested composite declarations
 			// with conflicting names (i.e: no type requirements for interfaces).
-			if _, isInterface := compositeType.(*InterfaceType); isInterface {
+			if _, isInterface := compositeKindedType.(*InterfaceType); isInterface {
 				return false
 			}
 		}

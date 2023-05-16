@@ -1407,7 +1407,10 @@ type NestedConformanceMismatchNote struct {
 }
 
 func (n NestedConformanceMismatchNote) Message() string {
-	return fmt.Sprintf("does not conform to nested interface requirement `%s`", n.nestedInterfaceType)
+	return fmt.Sprintf(
+		"does not conform to nested interface requirement `%s`",
+		n.nestedInterfaceType,
+	)
 }
 
 // DuplicateConformanceError
@@ -1458,8 +1461,8 @@ func (e CyclicConformanceError) Error() string {
 
 // MultipleInterfaceDefaultImplementationsError
 type MultipleInterfaceDefaultImplementationsError struct {
-	CompositeType CompositeKindedType
-	Member        *Member
+	CompositeKindedType CompositeKindedType
+	Member              *Member
 }
 
 var _ SemanticError = &MultipleInterfaceDefaultImplementationsError{}
@@ -1472,8 +1475,8 @@ func (*MultipleInterfaceDefaultImplementationsError) IsUserError() {}
 func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` has multiple interface default implementations for function `%s`",
-		e.CompositeType.GetCompositeKind().Name(),
-		e.CompositeType.QualifiedString(),
+		e.CompositeKindedType.GetCompositeKind().Name(),
+		e.CompositeKindedType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
 }
@@ -1519,8 +1522,8 @@ func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge comm
 
 // DefaultFunctionConflictError
 type DefaultFunctionConflictError struct {
-	CompositeType CompositeKindedType
-	Member        *Member
+	CompositeKindedType CompositeKindedType
+	Member              *Member
 }
 
 var _ SemanticError = &DefaultFunctionConflictError{}
@@ -1533,8 +1536,8 @@ func (*DefaultFunctionConflictError) IsUserError() {}
 func (e *DefaultFunctionConflictError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` has conflicting requirements for function `%s`",
-		e.CompositeType.GetCompositeKind().Name(),
-		e.CompositeType.QualifiedString(),
+		e.CompositeKindedType.GetCompositeKind().Name(),
+		e.CompositeKindedType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
 }
@@ -1569,9 +1572,9 @@ func (e *InterfaceMemberConflictError) Error() string {
 		"`%s` %s of `%s` conflicts with a %s with the same name in `%s`",
 		e.MemberName,
 		e.MemberKind.Name(),
-		e.InterfaceType.Identifier,
+		e.InterfaceType.QualifiedIdentifier(),
 		e.ConflictingMemberKind.Name(),
-		e.ConflictingInterfaceType.Identifier,
+		e.ConflictingInterfaceType.QualifiedString(),
 	)
 }
 
