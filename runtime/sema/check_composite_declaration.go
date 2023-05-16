@@ -1465,15 +1465,6 @@ func (checker *Checker) memberSatisfied(
 
 				return false
 			}
-
-		case common.DeclarationKindStructure,
-			common.DeclarationKindResource,
-			common.DeclarationKindEnum:
-			// Interfaces and their conformances cannot have nested composite declarations
-			// with conflicting names (i.e: no type requirements for interfaces).
-			if _, isInterface := compositeKindedType.(*InterfaceType); isInterface {
-				return false
-			}
 		}
 	}
 

@@ -3657,6 +3657,35 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.ConflictingMemberKind)
 	})
 
+	t.Run("nested identical struct conflict", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B: A {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.MemberKind)
+		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.ConflictingMemberKind)
+	})
+
 	t.Run("nested resource interface conflicting", func(t *testing.T) {
 
 		t.Parallel()
