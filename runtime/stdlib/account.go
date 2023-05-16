@@ -3023,9 +3023,9 @@ func getCheckedCapabilityController(
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
 	} else if !sema.IsSubType(capabilityBorrowType, wantedBorrowType) {
-		// Ensure requested borrow type is not more permissive
+		// Ensure wanted borrow type is not more permissive
 		// than the capability's borrow type:
-		// The requested type must be a supertype
+		// The wanted type must be a supertype
 
 		return nil, nil
 	}
@@ -3038,9 +3038,9 @@ func getCheckedCapabilityController(
 		return nil, nil
 	}
 
-	// Ensure requested borrow type is not more permissive
+	// Ensure wanted borrow type is not more permissive
 	// than the controller's borrow type:
-	// The requested type must be a supertype
+	// The wanted type must be a supertype
 
 	controllerBorrowStaticType := controller.CapabilityControllerBorrowType()
 
