@@ -1994,6 +1994,7 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 			result = NewEntitlementAccess(access, semanticEntitlements, Disjunction)
 			return
 		case *EntitlementMapType:
+			// 0-length entitlement lists are rejected by the parser
 			if len(astEntitlements) != 1 {
 				checker.report(
 					&InvalidMultipleMappedEntitlementError{
