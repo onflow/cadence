@@ -2870,7 +2870,7 @@ func getAccountCapabilityControllerIDsIterator(
 
 	iterator := storageMap.Iterator(inter)
 
-	count = uint64(storageMap.Count())
+	count = storageMap.Count()
 	nextCapabilityID = func() (uint64, bool) {
 		keyValue := iterator.NextKey()
 		if keyValue == nil {
