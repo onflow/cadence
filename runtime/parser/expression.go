@@ -983,10 +983,9 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 
 		entitlements, _, err = parseNominalTypes(p, lexer.TokenParenClose, lexer.TokenComma)
 		for _, entitlement := range entitlements {
-			switch entitlement.Identifier.Identifier {
-			case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
-				return nil, p.syntaxError("unexpected non-nominal type: %s", entitlement)
-			}
+			rejectAccessKeywords(p, func() (*ast.NominalType, error) {
+				return entitlement, nil
+			})
 		}
 		if err != nil {
 			return nil, err

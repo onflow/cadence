@@ -35,12 +35,22 @@ type Access interface {
 	MarshalJSON() ([]byte, error)
 }
 
-type Separator string
+type Separator uint8
 
 const (
-	Disjunction Separator = " |"
-	Conjunction Separator = ","
+	Disjunction Separator = iota
+	Conjunction
 )
+
+func (s Separator) String() string {
+	switch s {
+	case Disjunction:
+		return " |"
+	case Conjunction:
+		return ","
+	}
+	panic(errors.NewUnreachableError())
+}
 
 type EntitlementSet interface {
 	Entitlements() []*NominalType
@@ -103,7 +113,7 @@ func (e EntitlementAccess) entitlementsString(prefix *strings.Builder) {
 	for i, entitlement := range e.EntitlementSet.Entitlements() {
 		prefix.WriteString(entitlement.String())
 		if i < len(e.EntitlementSet.Entitlements())-1 {
-			prefix.WriteString(string(e.EntitlementSet.Separator()))
+			prefix.WriteString(e.EntitlementSet.Separator().String())
 		}
 	}
 }
