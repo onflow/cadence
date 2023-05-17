@@ -208,7 +208,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("get existing, with valid type", func(t *testing.T) {
+			t.Run("get and check existing, with valid type", func(t *testing.T) {
 
 				t.Parallel()
 
@@ -236,6 +236,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                   // Assert
                                   assert(issuedCap.id == expectedCapID)
+                                  assert(gotCap.check())
                                   assert(gotCap.id == expectedCapID)
                               }
                           }
@@ -246,7 +247,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("get and borrow existing, with valid type", func(t *testing.T) {
+			t.Run("get, borrow, and check existing, with valid type", func(t *testing.T) {
 
 				t.Parallel()
 
@@ -275,6 +276,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                   // Assert
                                   assert(issuedCap.id == expectedCapID)
+                                  assert(gotCap.check())
                                   assert(gotCap.id == expectedCapID)
                                   assert(ref.id == resourceID)
                               }
@@ -939,7 +941,244 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		})
 	})
 
-	// TODO: AuthAccount.AccountCapabilities
+	t.Run("AuthAccount.AccountCapabilities", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("issue, multiple controllers, with same or different type", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          // Act
+                          let issuedCap1: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap2: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap3: Capability<&AuthAccount{}> =
+                              signer.capabilities.account.issue<&AuthAccount{}>()
+
+                          // Assert
+                          assert(issuedCap1.id == 1)
+                          assert(issuedCap2.id == 2)
+                          assert(issuedCap3.id == 3)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("getController, non-existing", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+		        import Test from 0x1
+
+		        transaction {
+		            prepare(signer: AuthAccount) {
+		                // Act
+		                let controller1: &AccountCapabilityController? =
+		                    signer.capabilities.account.getController(byCapabilityID: 0)
+		                let controller2: &AccountCapabilityController? =
+		                    signer.capabilities.account.getController(byCapabilityID: 1)
+
+		                // Assert
+		                assert(controller1 == nil)
+		                assert(controller2 == nil)
+		            }
+		        }
+		      `,
+			)
+			require.NoError(t, err)
+		})
+
+		// TODO: getController, non-account capability controller
+
+		t.Run("getController, multiple controllers to various paths, with same or different type", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+		         import Test from 0x1
+
+		         transaction {
+		             prepare(signer: AuthAccount) {
+		                 // Arrange
+		                 let issuedCap1: Capability<&AuthAccount> =
+		                     signer.capabilities.account.issue<&AuthAccount>()
+		                 let issuedCap2: Capability<&AuthAccount> =
+		                     signer.capabilities.account.issue<&AuthAccount>()
+		                 let issuedCap3: Capability<&AuthAccount{}> =
+		                     signer.capabilities.account.issue<&AuthAccount{}>()
+
+		                 // Act
+		                 let controller1: &AccountCapabilityController? =
+		                     signer.capabilities.account.getController(byCapabilityID: issuedCap1.id)
+		                 let controller2: &AccountCapabilityController? =
+		                     signer.capabilities.account.getController(byCapabilityID: issuedCap2.id)
+		                 let controller3: &AccountCapabilityController? =
+		                     signer.capabilities.account.getController(byCapabilityID: issuedCap3.id)
+
+		                 // Assert
+		                 assert(controller1!.capabilityID == 1)
+		                 assert(controller1!.borrowType == Type<&AuthAccount>())
+
+		                 assert(controller2!.capabilityID == 2)
+		                 assert(controller2!.borrowType == Type<&AuthAccount>())
+
+		                 assert(controller3!.capabilityID == 3)
+		                 assert(controller3!.borrowType == Type<&AuthAccount{}>())
+		             }
+		         }
+		       `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("getControllers", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+		         import Test from 0x1
+
+		         transaction {
+		             prepare(signer: AuthAccount) {
+
+		                 // Arrange
+		                 let issuedCap1: Capability<&AuthAccount> =
+		                     signer.capabilities.account.issue<&AuthAccount>()
+		                 let issuedCap2: Capability<&AuthAccount> =
+		                     signer.capabilities.account.issue<&AuthAccount>()
+		                 let issuedCap3: Capability<&AuthAccount{}> =
+		                     signer.capabilities.account.issue<&AuthAccount{}>()
+
+		                 // Act
+		                 let controllers: [&AccountCapabilityController] =
+		                     signer.capabilities.account.getControllers()
+
+		                 // Assert
+		                 assert(controllers.length == 3)
+
+		                 Test.quickSort(
+		                     &controllers as &[AnyStruct],
+		                     isLess: fun(i: Int, j: Int): Bool {
+		                         let a = controllers[i]
+		                         let b = controllers[j]
+		                         return a.capabilityID < b.capabilityID
+		                     }
+		                 )
+
+		                 assert(controllers[0].capabilityID == 1)
+		                 assert(controllers[1].capabilityID == 2)
+		                 assert(controllers[2].capabilityID == 3)
+		             }
+		         }
+		       `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("forEachController, all", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+		         import Test from 0x1
+
+		         transaction {
+		             prepare(signer: AuthAccount) {
+		                 // Arrange
+		                 let issuedCap1: Capability<&AuthAccount> =
+		                     signer.capabilities.account.issue<&AuthAccount>()
+		                 let issuedCap2: Capability<&AuthAccount> =
+		                     signer.capabilities.account.issue<&AuthAccount>()
+		                 let issuedCap3: Capability<&AuthAccount{}> =
+		                     signer.capabilities.account.issue<&AuthAccount{}>()
+
+		                 // Act
+		                 let controllers: [&AccountCapabilityController] = []
+		                 signer.capabilities.account.forEachController(
+		                     fun (controller: &AccountCapabilityController): Bool {
+		                         controllers.append(controller)
+		                         return true
+		                     }
+		                 )
+
+		                 // Assert
+		                 assert(controllers.length == 3)
+
+		                 Test.quickSort(
+		                     &controllers as &[AnyStruct],
+		                     isLess: fun(i: Int, j: Int): Bool {
+		                         let a = controllers[i]
+		                         let b = controllers[j]
+		                         return a.capabilityID < b.capabilityID
+		                     }
+		                 )
+
+		                 assert(controllers[0].capabilityID == 1)
+		                 assert(controllers[1].capabilityID == 2)
+		                 assert(controllers[2].capabilityID == 3)
+		             }
+		         }
+		       `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("forEachController, stop immediately", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+		         import Test from 0x1
+
+		         transaction {
+		             prepare(signer: AuthAccount) {
+		                 // Arrange
+		                 let issuedCap1: Capability<&AuthAccount> =
+		                     signer.capabilities.account.issue<&AuthAccount>()
+		                 let issuedCap2: Capability<&AuthAccount> =
+		                     signer.capabilities.account.issue<&AuthAccount>()
+
+		                 // Act
+		                 var stopped = false
+		                 signer.capabilities.account.forEachController(
+		                     fun (controller: &AccountCapabilityController): Bool {
+		                         assert(!stopped)
+		                         stopped = true
+		                         return false
+		                     }
+		                 )
+
+		                 // Assert
+		                 assert(stopped)
+		             }
+		         }
+		       `,
+			)
+			require.NoError(t, err)
+		})
+	})
 
 	t.Run("StorageCapabilityController", func(t *testing.T) {
 
@@ -1002,7 +1241,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			)
 			require.NoError(t, err)
 		})
+
+		// TODO: delete
 	})
 
-	// TODO: AccountCapabilityController
+	// TODO: AccountCapabilityController: delete
 }

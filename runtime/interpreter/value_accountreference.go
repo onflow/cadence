@@ -107,6 +107,8 @@ func (*AccountReferenceValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (v *AccountReferenceValue) checkLink(interpreter *Interpreter, locationRange LocationRange) {
+	// TODO: do not check for account capability controller capability, no link path
+
 	address := v.Address
 	domain := v.Path.Domain.Identifier()
 	identifier := v.Path.Identifier

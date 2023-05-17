@@ -1664,7 +1664,9 @@ const AuthAccountAccountCapabilitiesTypeIssueFunctionName = "issue"
 var AuthAccountAccountCapabilitiesTypeIssueFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AuthAccountType,
+		Type: &RestrictedType{
+			Type: AuthAccountType,
+		},
 	},
 }
 

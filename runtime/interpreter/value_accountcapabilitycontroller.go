@@ -215,6 +215,6 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 		capabilityAddress,
 		// TODO:
 		EmptyPathValue,
-		resultBorrowType,
+		resultBorrowType.Type,
 	)
 }
