@@ -142,6 +142,7 @@ var softKeywords = []string{
 	KeywordAll,
 	KeywordView,
 	keywordTo,
+	keywordRemove,
 }
 
 var softKeywordsTable = mph.Build(softKeywords)
