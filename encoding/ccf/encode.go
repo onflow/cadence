@@ -284,7 +284,8 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 //	/ dict-value
 //	/ composite-value
 //	/ path-value
-//	/ capability-value
+//	/ path-capability-value
+//	/ id-capability-value
 //	/ function-value
 //	/ type-value
 //
@@ -489,7 +490,10 @@ func (e *Encoder) encodeValue(
 		return e.encodeNullableTypeValue(v.StaticType, ccfTypeIDByCadenceType{})
 
 	case cadence.PathCapability:
-		return e.encodeCapability(v)
+		return e.encodePathCapability(v)
+
+	case cadence.IDCapability:
+		return e.encodeIDCapability(v)
 
 	case cadence.Enum:
 		return e.encodeEnum(v, tids)
@@ -969,15 +973,15 @@ func (e *Encoder) encodePath(x cadence.Path) error {
 	return e.enc.EncodeString(x.Identifier)
 }
 
-// encodeCapability encodes cadence.StorageCapability as
+// encodePathCapability encodes cadence.PathCapability as
 // language=CDDL
-// capability-value = [
+// path-capability-value = [
 //
 //	address: address-value,
 //	path: path-value
 //
 // ]
-func (e *Encoder) encodeCapability(capability cadence.PathCapability) error {
+func (e *Encoder) encodePathCapability(capability cadence.PathCapability) error {
 	// Encode array head with length 2.
 	err := e.enc.EncodeRawBytes([]byte{
 		// array, 2 items follow
@@ -995,6 +999,34 @@ func (e *Encoder) encodeCapability(capability cadence.PathCapability) error {
 
 	// element 1: path
 	return e.encodePath(capability.Path)
+}
+
+// encodeIDCapability encodes cadence.IDCapability as
+// language=CDDL
+// id-capability-value = [
+//
+//	address: address-value,
+//	id: uint64-value
+//
+// ]
+func (e *Encoder) encodeIDCapability(capability cadence.IDCapability) error {
+	// Encode array head with length 2.
+	err := e.enc.EncodeRawBytes([]byte{
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	// element 0: address
+	err = e.encodeAddress(capability.Address)
+	if err != nil {
+		return err
+	}
+
+	// element 1: id
+	return e.encodeUInt64(capability.ID)
 }
 
 // encodeFunction encodes cadence.FunctionType as

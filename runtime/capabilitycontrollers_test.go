@@ -41,6 +41,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 	) {
 
 		rt := newTestInterpreterRuntime()
+		rt.defaultConfig.AccountLinkingEnabled = true
 
 		accountCodes := map[Location][]byte{}
 		accountIDs := map[common.Address]uint64{}
@@ -63,8 +64,15 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       pub resource S {}
 
                       pub fun createAndSaveR(id: Int, storagePath: StoragePath) {
-                              self.account.save(
+                          self.account.save(
                               <-create R(id: id),
+                              to: storagePath
+                          )
+                      }
+
+                      pub fun createAndSaveS(storagePath: StoragePath) {
+                          self.account.save(
+                              <-create S(),
                               to: storagePath
                           )
                       }
@@ -171,7 +179,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		return
 	}
 
-	// TODO: account capability
 	testAccount := func(accountType sema.Type, accountExpression string) {
 
 		testName := fmt.Sprintf(
@@ -195,7 +202,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                 prepare(signer: AuthAccount) {
                                     // Act
                                     let gotCap: Capability<&AnyStruct>? =
-                                        %s.capabilities.get<&AnyStruct>(/public/r)
+                                        %s.capabilities.get<&AnyStruct>(/public/x)
 
                                     // Assert
                                     assert(gotCap == nil)
@@ -208,200 +215,436 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.NoError(t, err)
 			})
 
+			t.Run("get linked capability", func(t *testing.T) {
+
+				t.Parallel()
+
+				t.Run("storage link", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let resourceID = 42
+
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      signer.link<&Test.R>(publicPath, target: storagePath)!
+
+                                      // Act
+                                      let gotCap1: Capability<&Test.R>? =
+                                          %[1]s.getCapability<&Test.R>(publicPath)
+                                      let gotCap2: Capability<&Test.R>? =
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)
+
+                                      // Assert
+                                      assert(gotCap1!.check())
+
+                                      assert(gotCap2 == nil)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				// NOTE: account link cannot be tested
+			})
+
 			t.Run("get and check existing, with valid type", func(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
-					fmt.Sprintf(
-						// language=cadence
-						`
-                          import Test from 0x1
+				t.Run("storage capability", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
 
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
 
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let issuedCap: Capability<&Test.R> =
-                                      signer.capabilities.storage.issue<&Test.R>(storagePath)
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
 
-                                  // Act
-                                  let gotCap: Capability<&Test.R> = %s.capabilities.get<&Test.R>(publicPath)!
+                                      // Act
+                                      let gotCap: Capability<&Test.R> =
+                                          %s.capabilities.get<&Test.R>(publicPath)!
 
-                                  // Assert
-                                  assert(issuedCap.id == expectedCapID)
-                                  assert(gotCap.check())
-                                  assert(gotCap.id == expectedCapID)
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(gotCap.check())
+                                      assert(gotCap.id == expectedCapID)
+                                  }
                               }
-                          }
-                        `,
-						accountExpression,
-					),
-				)
-				require.NoError(t, err)
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("account capability", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Act
+                                      let gotCap: Capability<&AuthAccount> =
+                                          %s.capabilities.get<&AuthAccount>(publicPath)!
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(gotCap.check())
+                                      assert(gotCap.id == expectedCapID)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
 			})
 
 			t.Run("get, borrow, and check existing, with valid type", func(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
-					fmt.Sprintf(
-						// language=cadence
-						`
-                          import Test from 0x1
+				t.Run("storage capability", func(t *testing.T) {
 
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
 
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let issuedCap: Capability<&Test.R> =
-                                      signer.capabilities.storage.issue<&Test.R>(storagePath)
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
 
-                                  // Act
-                                  let gotCap: Capability<&Test.R> = %s.capabilities.get<&Test.R>(publicPath)!
-                                  let ref: &Test.R = gotCap.borrow()!
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
 
-                                  // Assert
-                                  assert(issuedCap.id == expectedCapID)
-                                  assert(gotCap.check())
-                                  assert(gotCap.id == expectedCapID)
-                                  assert(ref.id == resourceID)
+                                      // Act
+                                      let gotCap: Capability<&Test.R> =
+                                          %s.capabilities.get<&Test.R>(publicPath)!
+                                      let ref: &Test.R = gotCap.borrow()!
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(gotCap.check())
+                                      assert(gotCap.id == expectedCapID)
+                                      assert(ref.id == resourceID)
+                                  }
                               }
-                          }
-                        `,
-						accountExpression,
-					),
-				)
-				require.NoError(t, err)
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("account capability", func(t *testing.T) {
+
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Act
+                                      let gotCap: Capability<&AuthAccount> =
+                                          %s.capabilities.get<&AuthAccount>(publicPath)!
+                                      let ref: &AuthAccount = gotCap.borrow()!
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(gotCap.check())
+                                      assert(gotCap.id == expectedCapID)
+                                      assert(ref.address == 0x1)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
 			})
 
 			t.Run("get existing, with subtype", func(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
-					fmt.Sprintf(
-						// language=cadence
-						`
-                          import Test from 0x1
+				t.Run("storage capability", func(t *testing.T) {
 
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
 
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let issuedCap: Capability<&Test.R{}> =
-                                      signer.capabilities.storage.issue<&Test.R{}>(storagePath)
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
 
-                                  // Act
-                                  let gotCap: Capability<&Test.R>? = %s.capabilities.get<&Test.R>(publicPath)
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let issuedCap: Capability<&Test.R{}> =
+                                          signer.capabilities.storage.issue<&Test.R{}>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
 
-                                  // Assert
-                                  assert(issuedCap.id == expectedCapID)
-                                  assert(gotCap == nil)
+                                      // Act
+                                      let gotCap: Capability<&Test.R>? =
+                                          %s.capabilities.get<&Test.R>(publicPath)
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(gotCap == nil)
+                                  }
                               }
-                          }
-                        `,
-						accountExpression,
-					),
-				)
-				require.NoError(t, err)
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("account capability", func(t *testing.T) {
+
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount{}> =
+                                          signer.capabilities.account.issue<&AuthAccount{}>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Act
+                                      let gotCap: Capability<&Test.R>? =
+                                          %s.capabilities.get<&Test.R>(publicPath)
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(gotCap == nil)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
 			})
 
 			t.Run("get existing, with different type", func(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
-					fmt.Sprintf(
-						// language=cadence
-						`
-                          import Test from 0x1
+				t.Run("storage capability", func(t *testing.T) {
 
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
 
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let issuedCap: Capability<&Test.R> =
-                                      signer.capabilities.storage.issue<&Test.R>(storagePath)
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
 
-                                  // Act
-                                  let gotCap: Capability<&Test.S>? = %s.capabilities.get<&Test.S>(publicPath)
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
 
-                                  // Assert
-                                  assert(issuedCap.id == expectedCapID)
-                                  assert(gotCap == nil)
+                                      // Act
+                                      let gotCap: Capability<&Test.S>? =
+                                          %s.capabilities.get<&Test.S>(publicPath)
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(gotCap == nil)
+                                  }
                               }
-                          }
-                        `,
-						accountExpression,
-					),
-				)
-				require.NoError(t, err)
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("account capability", func(t *testing.T) {
+
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Act
+                                      let gotCap: Capability<&AnyResource>? =
+                                          %s.capabilities.get<&AnyResource>(publicPath)
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(gotCap == nil)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
 			})
 
 			t.Run("get unpublished", func(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
-					fmt.Sprintf(
-						// language=cadence
-						`
-                          import Test from 0x1
+				t.Run("storage capability", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
 
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
 
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let issuedCap: Capability<&Test.R> =
-                                      signer.capabilities.storage.issue<&Test.R>(storagePath)
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
-                                  let unpublishedcap = signer.capabilities.unpublish(publicPath)
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+                                      let unpublishedcap = signer.capabilities.unpublish(publicPath)
 
-                                  // Act
-                                  let gotCap: Capability<&Test.R>? = %s.capabilities.get<&Test.R>(publicPath)
+                                      // Act
+                                      let gotCap: Capability<&Test.R>? =
+                                          %s.capabilities.get<&Test.R>(publicPath)
 
-                                  // Assert
-                                  assert(issuedCap.id == expectedCapID)
-                                  assert(unpublishedcap!.id == expectedCapID)
-                                  assert(gotCap == nil)
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(unpublishedcap!.id == expectedCapID)
+                                      assert(gotCap == nil)
+                                  }
                               }
-                          }
-                        `,
-						accountExpression,
-					),
-				)
-				require.NoError(t, err)
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("account capability", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+                                      let unpublishedcap = signer.capabilities.unpublish(publicPath)
+
+                                      // Act
+                                      let gotCap: Capability<&AuthAccount>? =
+                                          %s.capabilities.get<&AuthAccount>(publicPath)
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(unpublishedcap!.id == expectedCapID)
+                                      assert(gotCap == nil)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
 			})
 
 			t.Run("borrow non-existing", func(t *testing.T) {
@@ -416,7 +659,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                             prepare(signer: AuthAccount) {
                                 // Act
                                 let ref: &AnyStruct? =
-                                    %s.capabilities.borrow<&AnyStruct>(/public/r)
+                                    %s.capabilities.borrow<&AnyStruct>(/public/x)
 
                                 // Assert
                                 assert(ref == nil)
@@ -433,154 +676,304 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
-					fmt.Sprintf(
-						// language=cadence
-						`
-                          import Test from 0x1
+				t.Run("storage capability", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
 
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
 
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let issuedCap: Capability<&Test.R> =
-                                      signer.capabilities.storage.issue<&Test.R>(storagePath)
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
 
-                                  // Act
-                                  let ref: &Test.R = %s.capabilities.borrow<&Test.R>(publicPath)!
+                                      // Act
+                                      let ref: &Test.R =
+                                          %s.capabilities.borrow<&Test.R>(publicPath)!
 
-                                  // Assert
-                                  assert(issuedCap.id == expectedCapID)
-                                  assert(ref.id == resourceID)
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(ref.id == resourceID)
+                                  }
                               }
-                          }
-                        `,
-						accountExpression,
-					),
-				)
-				require.NoError(t, err)
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("account capability", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Act
+                                      let ref: &AuthAccount =
+                                          %s.capabilities.borrow<&AuthAccount>(publicPath)!
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(ref.address == 0x1)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
 			})
 
 			t.Run("borrow existing, with subtype", func(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
-					fmt.Sprintf(
-						// language=cadence
-						`
-                          import Test from 0x1
+				t.Run("storage capability", func(t *testing.T) {
 
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
 
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let issuedCap: Capability<&Test.R{}> =
-                                      signer.capabilities.storage.issue<&Test.R{}>(storagePath)
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
 
-                                  // Act
-                                  let ref: &Test.R? = %s.capabilities.borrow<&Test.R>(publicPath)
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let issuedCap: Capability<&Test.R{}> =
+                                          signer.capabilities.storage.issue<&Test.R{}>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
 
-                                  // Assert
-                                  assert(issuedCap.id == expectedCapID)
-                                  assert(ref == nil)
+                                      // Act
+                                      let ref: &Test.R? =
+                                          %s.capabilities.borrow<&Test.R>(publicPath)
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(ref == nil)
+                                  }
                               }
-                          }
-                        `,
-						accountExpression,
-					),
-				)
-				require.NoError(t, err)
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("account capability", func(t *testing.T) {
+
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount{}> =
+                                          signer.capabilities.account.issue<&AuthAccount{}>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Act
+                                      let ref: &AuthAccount? =
+                                          %s.capabilities.borrow<&AuthAccount>(publicPath)
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(ref == nil)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
 			})
 
 			t.Run("borrow existing, with different type", func(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
-					fmt.Sprintf(
-						// language=cadence
-						`
-                          import Test from 0x1
+				t.Run("storage capability", func(t *testing.T) {
 
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
 
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let issuedCap: Capability<&Test.R> =
-                                      signer.capabilities.storage.issue<&Test.R>(storagePath)
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
 
-                                  // Act
-                                  let ref: &Test.S? = %s.capabilities.borrow<&Test.S>(publicPath)
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
 
-                                  // Assert
-                                  assert(issuedCap.id == expectedCapID)
-                                  assert(ref == nil)
+                                      // Act
+                                      let ref: &Test.S? =
+                                          %s.capabilities.borrow<&Test.S>(publicPath)
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(ref == nil)
+                                  }
                               }
-                          }
-                        `,
-						accountExpression,
-					),
-				)
-				require.NoError(t, err)
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("account capability", func(t *testing.T) {
+
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Act
+                                      let ref: &AnyResource? =
+                                          %s.capabilities.borrow<&AnyResource>(publicPath)
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(ref == nil)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
 			})
 
 			t.Run("borrow unpublished", func(t *testing.T) {
 
 				t.Parallel()
 
-				err, _, _ := test(
-					fmt.Sprintf(
-						// language=cadence
-						`
-                          import Test from 0x1
+				t.Run("storage capability", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
 
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
-                                  let resourceID = 42
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
+                                      let resourceID = 42
 
-                                  // Arrange
-                                  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                  let issuedCap: Capability<&Test.R> =
-                                      signer.capabilities.storage.issue<&Test.R>(storagePath)
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
-                                  let unpublishedcap = signer.capabilities.unpublish(publicPath)
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+                                      let unpublishedcap = signer.capabilities.unpublish(publicPath)
 
-                                  // Act
-                                  let ref: &Test.R? = %s.capabilities.borrow<&Test.R>(publicPath)
+                                      // Act
+                                      let ref: &Test.R? =
+                                          %s.capabilities.borrow<&Test.R>(publicPath)
 
-                                  // Assert
-                                  assert(issuedCap.id == expectedCapID)
-                                  assert(unpublishedcap!.id == expectedCapID)
-                                  assert(ref == nil)
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(unpublishedcap!.id == expectedCapID)
+                                      assert(ref == nil)
+                                  }
                               }
-                          }
-                        `,
-						accountExpression,
-					),
-				)
-				require.NoError(t, err)
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
+
+				t.Run("account capability", func(t *testing.T) {
+					err, _, _ := test(
+						fmt.Sprintf(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+                                      let unpublishedcap = signer.capabilities.unpublish(publicPath)
+
+                                      // Act
+                                      let ref: &AuthAccount? =
+                                          %s.capabilities.borrow<&AuthAccount>(publicPath)
+
+                                      // Assert
+                                      assert(issuedCap.id == expectedCapID)
+                                      assert(unpublishedcap!.id == expectedCapID)
+                                      assert(ref == nil)
+                                  }
+                              }
+                            `,
+							accountExpression,
+						),
+					)
+					require.NoError(t, err)
+				})
 			})
 
 			if accountType == sema.AuthAccountType {
@@ -589,32 +982,62 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 					t.Parallel()
 
-					err, _, _ := test(
-						// language=cadence
-						`
-                          import Test from 0x1
+					t.Run("storage capability", func(t *testing.T) {
+						err, _, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
 
-                          transaction {
-                              prepare(signer: AuthAccount) {
-                                  let storagePath = /storage/r
-                                  let publicPath = /public/r
-                                  let expectedCapID: UInt64 = 1
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let expectedCapID: UInt64 = 1
 
-                                  // Arrange
-                                  let issuedCap: Capability<&Test.R> =
-                                      signer.capabilities.storage.issue<&Test.R>(storagePath)
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
+                                      // Arrange
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
 
-                                  // Act
-                                  signer.capabilities.publish(issuedCap, at: publicPath)
+                                      // Act
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+                                  }
                               }
-                          }
-                        `,
-					)
-					RequireError(t, err)
+                            `,
+						)
+						RequireError(t, err)
 
-					var overwriteErr interpreter.OverwriteError
-					require.ErrorAs(t, err, &overwriteErr)
+						var overwriteErr interpreter.OverwriteError
+						require.ErrorAs(t, err, &overwriteErr)
+					})
+
+					t.Run("storage capability", func(t *testing.T) {
+						err, _, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let publicPath = /public/acct
+                                      let expectedCapID: UInt64 = 1
+
+                                      // Arrange
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+
+                                      // Act
+                                      signer.capabilities.publish(issuedCap, at: publicPath)
+                                  }
+                              }
+                            `,
+						)
+						RequireError(t, err)
+
+						var overwriteErr interpreter.OverwriteError
+						require.ErrorAs(t, err, &overwriteErr)
+					})
 				})
 
 				t.Run("unpublish non-existing", func(t *testing.T) {
@@ -640,6 +1063,65 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                         `,
 					)
 					require.NoError(t, err)
+				})
+
+				t.Run("publish linked capability", func(t *testing.T) {
+
+					t.Parallel()
+
+					t.Run("storage link", func(t *testing.T) {
+						err, _, _ := test(
+							// language=cadence
+							`
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let publicPath = /public/r
+                                      let publicPath2 = /public/r2
+                                      let resourceID = 42
+
+                                      // Arrange
+                                      Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                                      let linkedCap: Capability<&Test.R> =
+                                          signer.link<&Test.R>(publicPath, target: storagePath)!
+
+                                      // Act
+                                      signer.capabilities.publish(linkedCap, at: publicPath2)
+                                  }
+                              }
+                            `,
+						)
+						require.ErrorContains(t, err, "cannot publish linked capability")
+					})
+
+					t.Run("account link", func(t *testing.T) {
+						err, _, _ := test(
+							// language=cadence
+							`
+                              #allowAccountLinking
+
+                              import Test from 0x1
+
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let storagePath = /storage/r
+                                      let privatePath = /private/acct
+                                      let publicPath = /public/acct
+
+                                      // Arrange
+                                      let linkedCap: Capability<&AuthAccount> =
+                                          signer.linkAccount(privatePath)!
+
+                                      // Act
+                                      signer.capabilities.publish(linkedCap, at: publicPath)
+                                  }
+                              }
+                            `,
+						)
+						require.ErrorContains(t, err, "cannot publish linked capability")
+					})
 				})
 			}
 		})
@@ -719,7 +1201,33 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		// TODO: getController, non-storage capability controller
+		t.Run("getController, account capability controller", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                import Test from 0x1
+
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        // Arrange
+                        let issuedCap: Capability<&AuthAccount> =
+                            signer.capabilities.account.issue<&AuthAccount>()
+
+                        // Act
+                        let controller: &StorageCapabilityController? =
+                            signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                        // Assert
+                        assert(controller == nil)
+                    }
+                }
+              `,
+			)
+			require.NoError(t, err)
+		})
 
 		t.Run("getController, multiple controllers to various paths, with same or different type", func(t *testing.T) {
 
@@ -982,27 +1490,53 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _, _ := test(
 				// language=cadence
 				`
-		        import Test from 0x1
+                import Test from 0x1
 
-		        transaction {
-		            prepare(signer: AuthAccount) {
-		                // Act
-		                let controller1: &AccountCapabilityController? =
-		                    signer.capabilities.account.getController(byCapabilityID: 0)
-		                let controller2: &AccountCapabilityController? =
-		                    signer.capabilities.account.getController(byCapabilityID: 1)
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        // Act
+                        let controller1: &AccountCapabilityController? =
+                            signer.capabilities.account.getController(byCapabilityID: 0)
+                        let controller2: &AccountCapabilityController? =
+                            signer.capabilities.account.getController(byCapabilityID: 1)
 
-		                // Assert
-		                assert(controller1 == nil)
-		                assert(controller2 == nil)
-		            }
-		        }
-		      `,
+                        // Assert
+                        assert(controller1 == nil)
+                        assert(controller2 == nil)
+                    }
+                }
+              `,
 			)
 			require.NoError(t, err)
 		})
 
-		// TODO: getController, non-account capability controller
+		t.Run("getController, storage capability controller", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				// language=cadence
+				`
+                import Test from 0x1
+
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        // Arrange
+                        let issuedCap: Capability<&AnyStruct> =
+                            signer.capabilities.storage.issue<&AnyStruct>(/storage/x)
+
+                        // Act
+                        let controller: &AccountCapabilityController? =
+                            signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
+
+                        // Assert
+                        assert(controller == nil)
+                    }
+                }
+              `,
+			)
+			require.NoError(t, err)
+		})
 
 		t.Run("getController, multiple controllers to various paths, with same or different type", func(t *testing.T) {
 
@@ -1011,38 +1545,38 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _, _ := test(
 				// language=cadence
 				`
-		         import Test from 0x1
+                 import Test from 0x1
 
-		         transaction {
-		             prepare(signer: AuthAccount) {
-		                 // Arrange
-		                 let issuedCap1: Capability<&AuthAccount> =
-		                     signer.capabilities.account.issue<&AuthAccount>()
-		                 let issuedCap2: Capability<&AuthAccount> =
-		                     signer.capabilities.account.issue<&AuthAccount>()
-		                 let issuedCap3: Capability<&AuthAccount{}> =
-		                     signer.capabilities.account.issue<&AuthAccount{}>()
+                 transaction {
+                     prepare(signer: AuthAccount) {
+                         // Arrange
+                         let issuedCap1: Capability<&AuthAccount> =
+                             signer.capabilities.account.issue<&AuthAccount>()
+                         let issuedCap2: Capability<&AuthAccount> =
+                             signer.capabilities.account.issue<&AuthAccount>()
+                         let issuedCap3: Capability<&AuthAccount{}> =
+                             signer.capabilities.account.issue<&AuthAccount{}>()
 
-		                 // Act
-		                 let controller1: &AccountCapabilityController? =
-		                     signer.capabilities.account.getController(byCapabilityID: issuedCap1.id)
-		                 let controller2: &AccountCapabilityController? =
-		                     signer.capabilities.account.getController(byCapabilityID: issuedCap2.id)
-		                 let controller3: &AccountCapabilityController? =
-		                     signer.capabilities.account.getController(byCapabilityID: issuedCap3.id)
+                         // Act
+                         let controller1: &AccountCapabilityController? =
+                             signer.capabilities.account.getController(byCapabilityID: issuedCap1.id)
+                         let controller2: &AccountCapabilityController? =
+                             signer.capabilities.account.getController(byCapabilityID: issuedCap2.id)
+                         let controller3: &AccountCapabilityController? =
+                             signer.capabilities.account.getController(byCapabilityID: issuedCap3.id)
 
-		                 // Assert
-		                 assert(controller1!.capabilityID == 1)
-		                 assert(controller1!.borrowType == Type<&AuthAccount>())
+                         // Assert
+                         assert(controller1!.capabilityID == 1)
+                         assert(controller1!.borrowType == Type<&AuthAccount>())
 
-		                 assert(controller2!.capabilityID == 2)
-		                 assert(controller2!.borrowType == Type<&AuthAccount>())
+                         assert(controller2!.capabilityID == 2)
+                         assert(controller2!.borrowType == Type<&AuthAccount>())
 
-		                 assert(controller3!.capabilityID == 3)
-		                 assert(controller3!.borrowType == Type<&AuthAccount{}>())
-		             }
-		         }
-		       `,
+                         assert(controller3!.capabilityID == 3)
+                         assert(controller3!.borrowType == Type<&AuthAccount{}>())
+                     }
+                 }
+               `,
 			)
 			require.NoError(t, err)
 		})
@@ -1054,41 +1588,41 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _, _ := test(
 				// language=cadence
 				`
-		         import Test from 0x1
+                 import Test from 0x1
 
-		         transaction {
-		             prepare(signer: AuthAccount) {
+                 transaction {
+                     prepare(signer: AuthAccount) {
 
-		                 // Arrange
-		                 let issuedCap1: Capability<&AuthAccount> =
-		                     signer.capabilities.account.issue<&AuthAccount>()
-		                 let issuedCap2: Capability<&AuthAccount> =
-		                     signer.capabilities.account.issue<&AuthAccount>()
-		                 let issuedCap3: Capability<&AuthAccount{}> =
-		                     signer.capabilities.account.issue<&AuthAccount{}>()
+                         // Arrange
+                         let issuedCap1: Capability<&AuthAccount> =
+                             signer.capabilities.account.issue<&AuthAccount>()
+                         let issuedCap2: Capability<&AuthAccount> =
+                             signer.capabilities.account.issue<&AuthAccount>()
+                         let issuedCap3: Capability<&AuthAccount{}> =
+                             signer.capabilities.account.issue<&AuthAccount{}>()
 
-		                 // Act
-		                 let controllers: [&AccountCapabilityController] =
-		                     signer.capabilities.account.getControllers()
+                         // Act
+                         let controllers: [&AccountCapabilityController] =
+                             signer.capabilities.account.getControllers()
 
-		                 // Assert
-		                 assert(controllers.length == 3)
+                         // Assert
+                         assert(controllers.length == 3)
 
-		                 Test.quickSort(
-		                     &controllers as &[AnyStruct],
-		                     isLess: fun(i: Int, j: Int): Bool {
-		                         let a = controllers[i]
-		                         let b = controllers[j]
-		                         return a.capabilityID < b.capabilityID
-		                     }
-		                 )
+                         Test.quickSort(
+                             &controllers as &[AnyStruct],
+                             isLess: fun(i: Int, j: Int): Bool {
+                                 let a = controllers[i]
+                                 let b = controllers[j]
+                                 return a.capabilityID < b.capabilityID
+                             }
+                         )
 
-		                 assert(controllers[0].capabilityID == 1)
-		                 assert(controllers[1].capabilityID == 2)
-		                 assert(controllers[2].capabilityID == 3)
-		             }
-		         }
-		       `,
+                         assert(controllers[0].capabilityID == 1)
+                         assert(controllers[1].capabilityID == 2)
+                         assert(controllers[2].capabilityID == 3)
+                     }
+                 }
+               `,
 			)
 			require.NoError(t, err)
 		})
@@ -1100,45 +1634,45 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _, _ := test(
 				// language=cadence
 				`
-		         import Test from 0x1
+                 import Test from 0x1
 
-		         transaction {
-		             prepare(signer: AuthAccount) {
-		                 // Arrange
-		                 let issuedCap1: Capability<&AuthAccount> =
-		                     signer.capabilities.account.issue<&AuthAccount>()
-		                 let issuedCap2: Capability<&AuthAccount> =
-		                     signer.capabilities.account.issue<&AuthAccount>()
-		                 let issuedCap3: Capability<&AuthAccount{}> =
-		                     signer.capabilities.account.issue<&AuthAccount{}>()
+                 transaction {
+                     prepare(signer: AuthAccount) {
+                         // Arrange
+                         let issuedCap1: Capability<&AuthAccount> =
+                             signer.capabilities.account.issue<&AuthAccount>()
+                         let issuedCap2: Capability<&AuthAccount> =
+                             signer.capabilities.account.issue<&AuthAccount>()
+                         let issuedCap3: Capability<&AuthAccount{}> =
+                             signer.capabilities.account.issue<&AuthAccount{}>()
 
-		                 // Act
-		                 let controllers: [&AccountCapabilityController] = []
-		                 signer.capabilities.account.forEachController(
-		                     fun (controller: &AccountCapabilityController): Bool {
-		                         controllers.append(controller)
-		                         return true
-		                     }
-		                 )
+                         // Act
+                         let controllers: [&AccountCapabilityController] = []
+                         signer.capabilities.account.forEachController(
+                             fun (controller: &AccountCapabilityController): Bool {
+                                 controllers.append(controller)
+                                 return true
+                             }
+                         )
 
-		                 // Assert
-		                 assert(controllers.length == 3)
+                         // Assert
+                         assert(controllers.length == 3)
 
-		                 Test.quickSort(
-		                     &controllers as &[AnyStruct],
-		                     isLess: fun(i: Int, j: Int): Bool {
-		                         let a = controllers[i]
-		                         let b = controllers[j]
-		                         return a.capabilityID < b.capabilityID
-		                     }
-		                 )
+                         Test.quickSort(
+                             &controllers as &[AnyStruct],
+                             isLess: fun(i: Int, j: Int): Bool {
+                                 let a = controllers[i]
+                                 let b = controllers[j]
+                                 return a.capabilityID < b.capabilityID
+                             }
+                         )
 
-		                 assert(controllers[0].capabilityID == 1)
-		                 assert(controllers[1].capabilityID == 2)
-		                 assert(controllers[2].capabilityID == 3)
-		             }
-		         }
-		       `,
+                         assert(controllers[0].capabilityID == 1)
+                         assert(controllers[1].capabilityID == 2)
+                         assert(controllers[2].capabilityID == 3)
+                     }
+                 }
+               `,
 			)
 			require.NoError(t, err)
 		})
@@ -1150,31 +1684,31 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			err, _, _ := test(
 				// language=cadence
 				`
-		         import Test from 0x1
+                 import Test from 0x1
 
-		         transaction {
-		             prepare(signer: AuthAccount) {
-		                 // Arrange
-		                 let issuedCap1: Capability<&AuthAccount> =
-		                     signer.capabilities.account.issue<&AuthAccount>()
-		                 let issuedCap2: Capability<&AuthAccount> =
-		                     signer.capabilities.account.issue<&AuthAccount>()
+                 transaction {
+                     prepare(signer: AuthAccount) {
+                         // Arrange
+                         let issuedCap1: Capability<&AuthAccount> =
+                             signer.capabilities.account.issue<&AuthAccount>()
+                         let issuedCap2: Capability<&AuthAccount> =
+                             signer.capabilities.account.issue<&AuthAccount>()
 
-		                 // Act
-		                 var stopped = false
-		                 signer.capabilities.account.forEachController(
-		                     fun (controller: &AccountCapabilityController): Bool {
-		                         assert(!stopped)
-		                         stopped = true
-		                         return false
-		                     }
-		                 )
+                         // Act
+                         var stopped = false
+                         signer.capabilities.account.forEachController(
+                             fun (controller: &AccountCapabilityController): Bool {
+                                 assert(!stopped)
+                                 stopped = true
+                                 return false
+                             }
+                         )
 
-		                 // Assert
-		                 assert(stopped)
-		             }
-		         }
-		       `,
+                         // Assert
+                         assert(stopped)
+                     }
+                 }
+               `,
 			)
 			require.NoError(t, err)
 		})
@@ -1188,58 +1722,230 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			// TODO: assert borrow, getControllers, and forEachController after retarget
+			t.Run("target, getControllers", func(t *testing.T) {
+				t.Parallel()
 
-			err, _, _ := test(
-				// language=cadence
-				`
-                  import Test from 0x1
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
 
-                  transaction {
-                      prepare(signer: AuthAccount) {
-                          let storagePath1 = /storage/r
-                          let storagePath2 = /storage/r2
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath1 = /storage/r
+                              let storagePath2 = /storage/r2
 
-                          // Arrange
-                          let issuedCap1: Capability<&Test.R> =
-                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
-                          let controller1: &StorageCapabilityController? =
-                              signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
+				    		  // Arrange
+                              let issuedCap1: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                              let controller1: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
 
-                          let issuedCap2: Capability<&Test.R> =
-                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
-                          let controller2: &StorageCapabilityController? =
-                              signer.capabilities.storage.getController(byCapabilityID: issuedCap2.id)
+                              let issuedCap2: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                              let controller2: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap2.id)
 
-                          let issuedCap3: Capability<&Test.R{}> =
-                              signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
-                          let controller3: &StorageCapabilityController? =
-                              signer.capabilities.storage.getController(byCapabilityID: issuedCap3.id)
+                              let issuedCap3: Capability<&Test.R{}> =
+                                  signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
+                              let controller3: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap3.id)
 
-                          let issuedCap4: Capability<&Test.R> =
-                              signer.capabilities.storage.issue<&Test.R>(storagePath2)
-                          let controller4: &StorageCapabilityController? =
-                              signer.capabilities.storage.getController(byCapabilityID: issuedCap4.id)
+                              let issuedCap4: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath2)
+                              let controller4: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap4.id)
 
-                          // Act
-                          controller1!.retarget(storagePath2)
+                              let controllers1Before = signer.capabilities.storage.getControllers(forPath: storagePath1)
+                              Test.quickSort(
+                                  &controllers1Before as &[AnyStruct],
+                                  isLess: fun(i: Int, j: Int): Bool {
+                                      let a = controllers1Before[i]
+                                      let b = controllers1Before[j]
+                                      return a.capabilityID < b.capabilityID
+                                  }
+                              )
+                              assert(controllers1Before.length == 3)
+                              assert(controllers1Before[0].capabilityID == 1)
+                              assert(controllers1Before[1].capabilityID == 2)
+                              assert(controllers1Before[2].capabilityID == 3)
 
-                          // Assert
-                          assert(controller1!.target() == storagePath2)
-                          let controller1After: &StorageCapabilityController? =
-                              signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
-                          assert(controller1After!.target() == storagePath2)
+                              let controllers2Before = signer.capabilities.storage.getControllers(forPath: storagePath2)
+                              Test.quickSort(
+                                  &controllers2Before as &[AnyStruct],
+                                  isLess: fun(i: Int, j: Int): Bool {
+                                      let a = controllers2Before[i]
+                                      let b = controllers2Before[j]
+                                      return a.capabilityID < b.capabilityID
+                                  }
+                              )
+                              assert(controllers2Before.length == 1)
+                              assert(controllers2Before[0].capabilityID == 4)
 
-                          assert(controller2!.target() == storagePath1)
+                              // Act
+                              controller1!.retarget(storagePath2)
 
-                          assert(controller3!.target() == storagePath1)
+                              // Assert
+                              assert(controller1!.target() == storagePath2)
+                              let controller1After: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap1.id)
+                              assert(controller1After!.target() == storagePath2)
+                              assert(controller2!.target() == storagePath1)
+                              assert(controller3!.target() == storagePath1)
+                              assert(controller4!.target() == storagePath2)
 
-                          assert(controller4!.target() == storagePath2)
+                              let controllers1After = signer.capabilities.storage.getControllers(forPath: storagePath1)
+                              Test.quickSort(
+                                  &controllers1After as &[AnyStruct],
+                                  isLess: fun(i: Int, j: Int): Bool {
+                                      let a = controllers1After[i]
+                                      let b = controllers1After[j]
+                                      return a.capabilityID < b.capabilityID
+                                  }
+                              )
+                              assert(controllers1After.length == 2)
+                              assert(controllers1After[0].capabilityID == 2)
+                              assert(controllers1After[1].capabilityID == 3)
+
+                              let controllers2After = signer.capabilities.storage.getControllers(forPath: storagePath2)
+                              Test.quickSort(
+                                  &controllers2After as &[AnyStruct],
+                                  isLess: fun(i: Int, j: Int): Bool {
+                                      let a = controllers2After[i]
+                                      let b = controllers2After[j]
+                                      return a.capabilityID < b.capabilityID
+                                  }
+                              )
+                              assert(controllers2After.length == 2)
+                              assert(controllers2After[0].capabilityID == 1)
+                              assert(controllers2After[1].capabilityID == 4)
+                          }
                       }
-                  }
-                `,
-			)
-			require.NoError(t, err)
+                    `,
+				)
+				require.NoError(t, err)
+			})
+
+			t.Run("retarget empty, borrow", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath1 = /storage/r
+                              let storagePath2 = /storage/empty
+							  let resourceID = 42
+
+							  // Arrange
+							  Test.createAndSaveR(id: resourceID, storagePath: storagePath1)
+
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                              let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              assert(issuedCap.borrow() != nil)
+                              assert(issuedCap.check())
+                              assert(issuedCap.borrow()!.id == resourceID)
+
+                              // Act
+                              controller!.retarget(storagePath2)
+
+                              // Assert
+							  assert(issuedCap.borrow() == nil)
+                              assert(!issuedCap.check())
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
+			})
+
+			t.Run("retarget to value with same type, borrow", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath1 = /storage/r
+                              let storagePath2 = /storage/r2
+							  let resourceID1 = 42
+							  let resourceID2 = 43
+
+							  // Arrange
+							  Test.createAndSaveR(id: resourceID1, storagePath: storagePath1)
+							  Test.createAndSaveR(id: resourceID2, storagePath: storagePath2)
+
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                              let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              assert(issuedCap.borrow() != nil)
+                              assert(issuedCap.check())
+                              assert(issuedCap.borrow()!.id == resourceID1)
+
+                              // Act
+                              controller!.retarget(storagePath2)
+
+                              // Assert
+                              assert(issuedCap.borrow() != nil)
+                              assert(issuedCap.check())
+                              assert(issuedCap.borrow()!.id == resourceID2)
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
+			})
+
+			t.Run("retarget to value with different type, borrow", func(t *testing.T) {
+				t.Parallel()
+
+				err, _, _ := test(
+					// language=cadence
+					`
+                      import Test from 0x1
+
+                      transaction {
+                          prepare(signer: AuthAccount) {
+                              let storagePath1 = /storage/r
+                              let storagePath2 = /storage/s
+							  let resourceID = 42
+
+							  // Arrange
+							  Test.createAndSaveR(id: resourceID, storagePath: storagePath1)
+							  Test.createAndSaveS(storagePath: storagePath2)
+
+                              let issuedCap: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                              let controller: &StorageCapabilityController? =
+                                  signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)
+
+                              assert(issuedCap.borrow() != nil)
+                              assert(issuedCap.check())
+                              assert(issuedCap.borrow()!.id == resourceID)
+
+                              // Act
+                              controller!.retarget(storagePath2)
+
+                              // Assert
+							  assert(issuedCap.borrow() == nil)
+                              assert(!issuedCap.check())
+                          }
+                      }
+                    `,
+				)
+				require.NoError(t, err)
+			})
 		})
 
 		// TODO: delete

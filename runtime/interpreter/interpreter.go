@@ -1871,7 +1871,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				return NewAccountReferenceValue(
 					interpreter,
 					ref.Address,
-					ref.Path,
+					ref.SourcePath,
 					unwrappedTargetType.Type,
 				)
 
@@ -4936,7 +4936,7 @@ func (interpreter *Interpreter) idCapabilityBorrowFunction(
 				}
 			}
 
-			return inter.SharedState.Config.IDCapabilityBorrowHandler(
+			referenceValue := inter.SharedState.Config.IDCapabilityBorrowHandler(
 				inter,
 				locationRange,
 				addressValue,
@@ -4944,6 +4944,10 @@ func (interpreter *Interpreter) idCapabilityBorrowFunction(
 				wantedBorrowType,
 				capabilityBorrowType,
 			)
+			if referenceValue == nil {
+				return Nil
+			}
+			return NewSomeValueNonCopying(inter, referenceValue)
 		},
 	)
 }

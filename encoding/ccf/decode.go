@@ -227,7 +227,8 @@ func (d *Decoder) decodeTypeAndValue(types *cadenceTypeByCCFTypeID) (cadence.Val
 //	/ dict-value
 //	/ composite-value
 //	/ path-value
-//	/ capability-value
+//	/ path-capability-value
+//	/ id-capability-value
 //	/ function-value
 //	/ type-value
 //
@@ -1162,7 +1163,20 @@ func (d *Decoder) decodePath() (cadence.Value, error) {
 
 // decodeCapability decodes encoded capability-value as
 // language=CDDL
-// capability-value = [
+//
+// capability-value =
+//
+//	id-capability-value
+//	/ path-capability-value
+//
+// id-capability-value = [
+//
+//	address: address-value,
+//	id: uint64-value
+//
+// ]
+//
+// path-capability-value = [
 //
 //	address: address-value,
 //	path: path-value
@@ -1200,6 +1214,28 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 		return nil, err
 	}
 
+	// Decode ID or path.
+	nextType, err = d.dec.NextType()
+	if err != nil {
+		return nil, err
+	}
+
+	if nextType == cbor.UintType {
+		// Decode ID.
+
+		id, err := d.decodeUInt64()
+		if err != nil {
+			return nil, err
+		}
+
+		return cadence.NewMeteredIDCapability(
+			d.gauge,
+			id.(cadence.UInt64),
+			address.(cadence.Address),
+			typ.BorrowType,
+		), nil
+	}
+
 	// Decode path.
 	path, err := d.decodePath()
 	if err != nil {
@@ -1207,11 +1243,11 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 	}
 
 	return cadence.NewMeteredPathCapability(
-			d.gauge,
-			address.(cadence.Address),
-			path.(cadence.Path),
-			typ.BorrowType),
-		nil
+		d.gauge,
+		address.(cadence.Address),
+		path.(cadence.Path),
+		typ.BorrowType,
+	), nil
 }
 
 // decodeTypeValue decodes encoded type-value as

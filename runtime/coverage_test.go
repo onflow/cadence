@@ -1293,9 +1293,9 @@ func TestRuntimeCoverage(t *testing.T) {
 			}
 		},
 	}
-	runtime := NewInterpreterRuntime(Config{
-		CoverageReport: coverageReport,
-	})
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.CoverageReport = coverageReport
 
 	value, err := runtime.ExecuteScript(
 		Script{
@@ -1450,9 +1450,9 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 			}
 		},
 	}
-	runtime := NewInterpreterRuntime(Config{
-		CoverageReport: coverageReport,
-	})
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.CoverageReport = coverageReport
 
 	value, err := runtime.ExecuteScript(
 		Script{

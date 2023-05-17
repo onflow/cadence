@@ -2441,10 +2441,8 @@ func TestRuntimeAccountLink(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime(Config{
-			AtreeValidationEnabled: true,
-			AccountLinkingEnabled:  false,
-		})
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.AccountLinkingEnabled = false
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
@@ -2504,10 +2502,8 @@ func TestRuntimeAccountLink(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime(Config{
-			AtreeValidationEnabled: true,
-			AccountLinkingEnabled:  true,
-		})
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.AccountLinkingEnabled = true
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
@@ -2569,10 +2565,8 @@ func TestRuntimeAccountLink(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime(Config{
-			AtreeValidationEnabled: true,
-			AccountLinkingEnabled:  true,
-		})
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.AccountLinkingEnabled = true
 
 		address1 := common.MustBytesToAddress([]byte{0x1})
 		address2 := common.MustBytesToAddress([]byte{0x2})
@@ -2693,10 +2687,8 @@ func TestRuntimeAccountLink(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime(Config{
-			AtreeValidationEnabled: true,
-			AccountLinkingEnabled:  true,
-		})
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.AccountLinkingEnabled = true
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
@@ -2790,10 +2782,8 @@ func TestRuntimeAccountLink(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime(Config{
-			AtreeValidationEnabled: true,
-			AccountLinkingEnabled:  true,
-		})
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.AccountLinkingEnabled = true
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
@@ -2902,10 +2892,8 @@ func TestRuntimeAccountLink(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime(Config{
-			AtreeValidationEnabled: true,
-			AccountLinkingEnabled:  true,
-		})
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.AccountLinkingEnabled = true
 
 		address := common.MustBytesToAddress([]byte{0x1})
 

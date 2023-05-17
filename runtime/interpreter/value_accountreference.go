@@ -31,7 +31,7 @@ import (
 type AccountReferenceValue struct {
 	BorrowedType sema.Type
 	_authAccount Value
-	Path         PathValue
+	SourcePath   PathValue
 	Address      common.Address
 }
 
@@ -43,12 +43,12 @@ var _ ReferenceValue = &AccountReferenceValue{}
 
 func NewUnmeteredAccountReferenceValue(
 	address common.Address,
-	path PathValue,
+	sourcePath PathValue,
 	borrowedType sema.Type,
 ) *AccountReferenceValue {
 	return &AccountReferenceValue{
 		Address:      address,
-		Path:         path,
+		SourcePath:   sourcePath,
 		BorrowedType: borrowedType,
 	}
 }
@@ -56,13 +56,13 @@ func NewUnmeteredAccountReferenceValue(
 func NewAccountReferenceValue(
 	memoryGauge common.MemoryGauge,
 	address common.Address,
-	path PathValue,
+	sourcePath PathValue,
 	borrowedType sema.Type,
 ) *AccountReferenceValue {
 	common.UseMemory(memoryGauge, common.AccountReferenceValueMemoryUsage)
 	return NewUnmeteredAccountReferenceValue(
 		address,
-		path,
+		sourcePath,
 		borrowedType,
 	)
 }
@@ -107,11 +107,14 @@ func (*AccountReferenceValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (v *AccountReferenceValue) checkLink(interpreter *Interpreter, locationRange LocationRange) {
-	// TODO: do not check for account capability controller capability, no link path
+	// Do not check source for ID capability, no link path
+	if v.SourcePath == EmptyPathValue {
+		return
+	}
 
 	address := v.Address
-	domain := v.Path.Domain.Identifier()
-	identifier := v.Path.Identifier
+	domain := v.SourcePath.Domain.Identifier()
+	identifier := v.SourcePath.Identifier
 
 	storageMapKey := StringStorageMapKey(identifier)
 
@@ -218,7 +221,7 @@ func (v *AccountReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Val
 	otherReference, ok := other.(*AccountReferenceValue)
 	if !ok ||
 		v.Address != otherReference.Address ||
-		v.Path != otherReference.Path {
+		v.SourcePath != otherReference.SourcePath {
 
 		return false
 	}
@@ -283,7 +286,7 @@ func (v *AccountReferenceValue) Transfer(
 func (v *AccountReferenceValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredAccountReferenceValue(
 		v.Address,
-		v.Path,
+		v.SourcePath,
 		v.BorrowedType,
 	)
 }

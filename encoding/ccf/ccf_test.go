@@ -9461,7 +9461,7 @@ func TestEncodeType(t *testing.T) {
 	})
 }
 
-func TestEncodeCapability(t *testing.T) {
+func TestEncodePathCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -9498,7 +9498,7 @@ func TestEncodeCapability(t *testing.T) {
 				// array, 2 elements follow
 				0x82,
 				// address
-				// bytes, 8 bytes folloow
+				// bytes, 8 bytes follow
 				0x48,
 				// {1,2,3,4,5}
 				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
@@ -9625,7 +9625,7 @@ func TestEncodeCapability(t *testing.T) {
 				// array, 2 elements follow
 				0x82,
 				// address
-				// bytes, 8 bytes folloow
+				// bytes, 8 bytes follow
 				0x48,
 				// {1,2,3,4,5}
 				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
@@ -9653,7 +9653,7 @@ func TestEncodeCapability(t *testing.T) {
 				// array, 2 elements follow
 				0x82,
 				// address
-				// bytes, 8 bytes folloow
+				// bytes, 8 bytes follow
 				0x48,
 				// {1,2,3,4,5}
 				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
@@ -9705,7 +9705,7 @@ func TestEncodeCapability(t *testing.T) {
 				// array, 2 elements follow
 				0x82,
 				// address
-				// bytes, 8 bytes folloow
+				// bytes, 8 bytes follow
 				0x48,
 				// {1,2,3,4,5}
 				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
@@ -9774,7 +9774,7 @@ func TestEncodeCapability(t *testing.T) {
 				// array, 2 elements follow
 				0x82,
 				// address
-				// bytes, 8 bytes folloow
+				// bytes, 8 bytes follow
 				0x48,
 				// {1,2,3,4,5}
 				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
@@ -9789,7 +9789,7 @@ func TestEncodeCapability(t *testing.T) {
 				// array, 2 elements follow
 				0x82,
 				// address
-				// bytes, 8 bytes folloow
+				// bytes, 8 bytes follow
 				0x48,
 				// {1,2,3,4,5}
 				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
@@ -9801,6 +9801,285 @@ func TestEncodeCapability(t *testing.T) {
 				0x63,
 				// bar
 				0x62, 0x61, 0x72,
+			},
+		)
+	})
+}
+
+func TestEncodeCapability(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("unparameterized Capability", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.IDCapability{
+				ID:      42,
+				Address: cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			},
+			[]byte{
+				// language=edn, format=ccf
+				// 130([144([null]), [h'0000000102030405', 42]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagCapabilityType,
+				// array, 1 element follows
+				0x81,
+				// null
+				0xf6,
+				// array, 2 elements follow
+				0x82,
+				// address
+				// bytes, 8 bytes follow
+				0x48,
+				// {1,2,3,4,5}
+				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+				// 42
+				0x18, 0x2a,
+			},
+		)
+	})
+
+	t.Run("array of unparameterized Capability", func(t *testing.T) {
+		t.Parallel()
+
+		simpleStructType := &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "FooStruct",
+			Fields: []cadence.Field{
+				{
+					Identifier: "bar",
+					Type:       cadence.IntType{},
+				},
+			},
+		}
+
+		capability1 := cadence.IDCapability{
+			ID:         42,
+			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			BorrowType: cadence.IntType{},
+		}
+
+		capability2 := cadence.IDCapability{
+			ID:         43,
+			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			BorrowType: simpleStructType,
+		}
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewArray([]cadence.Value{
+				capability1,
+				capability2,
+			}).WithType(cadence.NewVariableSizedArrayType(cadence.NewCapabilityType(nil))),
+			[]byte{
+				// language=edn, format=ccf
+				// 129([[160([h'', "S.test.FooStruct", [["bar", 137(4)]]])], [139(144([null])), [130([144([137(4)]), [h'0000000102030405', 42]]), 130([144([136(h'')]), [h'0000000102030405', 43]])]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeDefAndValue,
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 1 items follow
+				0x81,
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.FooStruct"
+				// fields: [["bar", IntType]]
+				// tag
+				0xd8, ccf.CBORTagStructType,
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 16 bytes follow
+				0x70,
+				// S.test.FooStruct
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+				// fields
+				// array, 1 items follow
+				0x81,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 3 bytes follow
+				0x63,
+				// bar
+				0x62, 0x61, 0x72,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayType,
+				// tag
+				0xd8, ccf.CBORTagCapabilityType,
+				// array, 1 element follows
+				0x81,
+				// null
+				0xf6,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagCapabilityType,
+				// array, 1 elements follow
+				0x81,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// array, 2 elements follow
+				0x82,
+				// address
+				// bytes, 8 bytes follow
+				0x48,
+				// {1,2,3,4,5}
+				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+				// 42
+				0x18, 0x2a,
+
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagCapabilityType,
+				// array, 1 elements follow
+				0x81,
+				// tag
+				0xd8, ccf.CBORTagTypeRef,
+				// bytes, 0 byte follows
+				0x40,
+				// array, 2 elements follow
+				0x82,
+				// address
+				// bytes, 8 bytes follow
+				0x48,
+				// {1,2,3,4,5}
+				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+				// 43
+				0x18, 0x2b,
+			},
+		)
+	})
+
+	t.Run("Capability<Int>", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.IDCapability{
+				ID:         42,
+				Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				BorrowType: cadence.IntType{},
+			},
+			[]byte{
+				// language=edn, format=ccf
+				// 130([144([137(4)]), [h'0000000102030405', 42]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagCapabilityType,
+				// array, 1 element follows
+				0x81,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// array, 2 elements follow
+				0x82,
+				// address
+				// bytes, 8 bytes follow
+				0x48,
+				// {1,2,3,4,5}
+				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+				// 42
+				0x18, 0x2a,
+			},
+		)
+	})
+
+	t.Run("array of Capability<Int>", func(t *testing.T) {
+		t.Parallel()
+
+		capability1 := cadence.IDCapability{
+			ID:         42,
+			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			BorrowType: cadence.IntType{},
+		}
+		capability2 := cadence.IDCapability{
+			ID:         43,
+			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			BorrowType: cadence.IntType{},
+		}
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewArray([]cadence.Value{
+				capability1,
+				capability2,
+			}).WithType(cadence.NewVariableSizedArrayType(cadence.NewCapabilityType(cadence.NewIntType()))),
+			[]byte{
+				// language=edn, format=ccf
+				// 130([139(144([137(4)])), [[h'0000000102030405', 42], [h'0000000102030405', 43]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayType,
+				// tag
+				0xd8, ccf.CBORTagCapabilityType,
+				// array, 1 element follows
+				0x81,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Int type ID (4)
+				0x04,
+				// array, 2 elements follow
+				0x82,
+				// array, 2 elements follow
+				0x82,
+				// address
+				// bytes, 8 bytes follow
+				0x48,
+				// {1,2,3,4,5}
+				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+				// 42
+				0x18, 0x2a,
+				// array, 2 elements follow
+				0x82,
+				// address
+				// bytes, 8 bytes follow
+				0x48,
+				// {1,2,3,4,5}
+				0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+				// 43
+				0x18, 0x2b,
 			},
 		)
 	})
@@ -11227,7 +11506,8 @@ func testEncodeAndDecodeEx(t *testing.T, val cadence.Value, expectedCBOR []byte,
 func testEncode(t *testing.T, val cadence.Value, expectedCBOR []byte) (actualCBOR []byte) {
 	actualCBOR, err := ccf.Encode(val)
 	require.NoError(t, err)
-	assert.True(t, bytes.Equal(expectedCBOR, actualCBOR), fmt.Sprintf("actual: 0x%x", actualCBOR))
+
+	utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 	return actualCBOR
 }
 
@@ -12509,7 +12789,7 @@ func TestDeployedEvents(t *testing.T) {
 			// Encode Cadence value to CCF
 			actualCBOR, err := ccf.Encode(tc.event)
 			require.NoError(t, err)
-			require.Equal(t, tc.expectedCBOR, actualCBOR)
+			utils.AssertEqualWithDiff(t, tc.expectedCBOR, actualCBOR)
 
 			// Decode CCF to Cadence value
 			decodedEvent, err := ccf.Decode(nil, actualCBOR)
