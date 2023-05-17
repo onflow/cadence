@@ -981,7 +981,12 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 			return nil, err
 		}
 
-		entitlements, _, err = parseNominalTypes(p, lexer.TokenParenClose, true, lexer.TokenComma)
+		entitlements, _, err = parseNominalTypes(p, lexer.TokenParenClose, lexer.TokenComma)
+		for _, entitlement := range entitlements {
+			rejectAccessKeywords(p, func() (*ast.NominalType, error) {
+				return entitlement, nil
+			})
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -993,7 +998,6 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 		p.skipSpaceAndComments()
 	}
 
-	// TODO: parse provided entitlements
 	return ast.NewAttachExpression(p.memoryGauge, base, attachment, entitlements, token.StartPos), nil
 }
 
