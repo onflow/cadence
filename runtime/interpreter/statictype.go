@@ -24,9 +24,9 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
-	"golang.org/x/exp/slices"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -508,17 +508,22 @@ func (Unauthorized) Equal(auth Authorization) bool {
 }
 
 type EntitlementSetAuthorization struct {
-	Entitlements []common.TypeID
+	Entitlements *orderedmap.OrderedMap[common.TypeID, struct{}]
 	SetKind      sema.EntitlementSetKind
 }
 
 var _ Authorization = EntitlementSetAuthorization{}
 
-func NewEntitlementSetAuthorization(memoryGauge common.MemoryGauge, entitlements []common.TypeID, kind sema.EntitlementSetKind) EntitlementSetAuthorization {
+func NewEntitlementSetAuthorization(memoryGauge common.MemoryGauge, entitlementList []common.TypeID, kind sema.EntitlementSetKind) EntitlementSetAuthorization {
 	common.UseMemory(memoryGauge, common.MemoryUsage{
 		Kind:   common.MemoryKindEntitlementSetStaticAccess,
-		Amount: uint64(len(entitlements)),
+		Amount: uint64(len(entitlementList)),
 	})
+
+	entitlements := orderedmap.New[orderedmap.OrderedMap[common.TypeID, struct{}]](len(entitlementList))
+	for _, entitlement := range entitlementList {
+		entitlements.Set(entitlement, struct{}{})
+	}
 
 	return EntitlementSetAuthorization{Entitlements: entitlements, SetKind: kind}
 }
@@ -529,9 +534,9 @@ func (e EntitlementSetAuthorization) string(stringer func(common.TypeID) string)
 	var builder strings.Builder
 	builder.WriteString("auth(")
 
-	for i, entitlement := range e.Entitlements {
+	e.Entitlements.ForeachWithIndex(func(i int, entitlement common.TypeID, value struct{}) {
 		builder.WriteString(stringer(entitlement))
-		if i < len(e.Entitlements)-1 {
+		if i < e.Entitlements.Len()-1 {
 			if e.SetKind == sema.Conjunction {
 				builder.WriteString(", ")
 			} else {
@@ -539,7 +544,7 @@ func (e EntitlementSetAuthorization) string(stringer func(common.TypeID) string)
 			}
 
 		}
-	}
+	})
 	builder.WriteString(") ")
 	return builder.String()
 }
@@ -564,15 +569,12 @@ func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
 		if e.SetKind != auth.SetKind {
 			return false
 		}
-		if len(auth.Entitlements) != len(e.Entitlements) {
+		if auth.Entitlements.Len() != e.Entitlements.Len() {
 			return false
 		}
-		for _, entitlement := range auth.Entitlements {
-			if !slices.Contains(e.Entitlements, entitlement) {
-				return false
-			}
-		}
-		return true
+		return auth.Entitlements.ForAllKeys(func(entitlement common.TypeID) bool {
+			return e.Entitlements.Contains(entitlement)
+		})
 	}
 	return false
 }
@@ -875,12 +877,16 @@ func ConvertStaticAuthorizationToSemaAccess(
 		return sema.NewEntitlementMapAccess(entitlement), nil
 	case EntitlementSetAuthorization:
 		var entitlements []*sema.EntitlementType
-		for _, id := range auth.Entitlements {
+		err := auth.Entitlements.ForeachWithError(func(id common.TypeID, value struct{}) error {
 			entitlement, err := getEntitlement(id)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			entitlements = append(entitlements, entitlement)
+			return nil
+		})
+		if err != nil {
+			return nil, err
 		}
 		return sema.NewEntitlementSetAccess(entitlements, auth.SetKind), nil
 	}

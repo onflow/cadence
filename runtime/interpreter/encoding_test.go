@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 
@@ -3463,10 +3464,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorization: EntitlementSetAuthorization{
-					Entitlements: []common.TypeID{"foo", "bar"},
-					SetKind:      sema.Conjunction,
-				},
+				Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"foo", "bar"}, sema.Conjunction),
 				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
@@ -3517,10 +3515,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorization: EntitlementSetAuthorization{
-					Entitlements: []common.TypeID{"foo", "bar"},
-					SetKind:      sema.Disjunction,
-				},
+				Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"foo", "bar"}, sema.Disjunction),
 				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
