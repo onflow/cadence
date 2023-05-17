@@ -409,10 +409,12 @@ func (checker *Checker) checkInterfaceConformance(
 
 	conformance.Members.Foreach(func(name string, conformanceMember *Member) {
 
+		var isDuplicate bool
+
 		// Check if the members coming from other conformances have conflicts.
 		if conflictingMember, ok := inheritedMembers[name]; ok {
 			conflictingInterface := conflictingMember.ContainerType.(*InterfaceType)
-			checker.checkDuplicateInterfaceMembers(
+			isDuplicate = checker.checkDuplicateInterfaceMember(
 				conformance,
 				conformanceMember,
 				conflictingInterface,
@@ -423,23 +425,24 @@ func (checker *Checker) checkInterfaceConformance(
 			)
 		}
 
-		inheritedMembers[name] = conformanceMember
-
 		// Check if the members coming from the current declaration have conflicts.
 		declarationMember, ok := interfaceType.Members.Get(name)
-		if !ok {
-			return
+		if ok {
+			isDuplicate = isDuplicate || checker.checkDuplicateInterfaceMember(
+				interfaceType,
+				declarationMember,
+				conformance,
+				conformanceMember,
+				func() ast.Range {
+					return ast.NewRangeFromPositioned(checker.memoryGauge, declarationMember.Identifier)
+				},
+			)
 		}
 
-		checker.checkDuplicateInterfaceMembers(
-			interfaceType,
-			declarationMember,
-			conformance,
-			conformanceMember,
-			func() ast.Range {
-				return ast.NewRangeFromPositioned(checker.memoryGauge, declarationMember.Identifier)
-			},
-		)
+		// Add to the inherited members list, only if it's not a duplicated, to avoid redundant errors.
+		if !isDuplicate {
+			inheritedMembers[name] = conformanceMember
+		}
 	})
 
 	// Check for nested type conflicts
@@ -492,13 +495,13 @@ func (checker *Checker) checkInterfaceConformance(
 	})
 }
 
-func (checker *Checker) checkDuplicateInterfaceMembers(
+func (checker *Checker) checkDuplicateInterfaceMember(
 	interfaceType *InterfaceType,
 	interfaceMember *Member,
 	conflictingInterfaceType *InterfaceType,
 	conflictingMember *Member,
 	getRange func() ast.Range,
-) {
+) (isDuplicate bool) {
 
 	reportMemberConflictError := func() {
 		checker.report(&InterfaceMemberConflictError{
@@ -509,6 +512,8 @@ func (checker *Checker) checkDuplicateInterfaceMembers(
 			ConflictingMemberKind:    conflictingMember.DeclarationKind,
 			Range:                    getRange(),
 		})
+
+		isDuplicate = true
 	}
 
 	// Check if the two members have identical signatures.
@@ -519,9 +524,10 @@ func (checker *Checker) checkDuplicateInterfaceMembers(
 		return
 	}
 
-	// If there are functions with same name, check whether any of them have default implementations.
-	// It is invalid to have more than one default impl, because it creates ambiguity.
-	if interfaceMember.HasImplementation && conflictingMember.HasImplementation {
+	if interfaceMember.HasImplementation || conflictingMember.HasImplementation {
 		reportMemberConflictError()
+		return
 	}
+
+	return
 }
