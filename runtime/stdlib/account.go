@@ -2595,7 +2595,7 @@ func newAuthAccountAccountCapabilitiesIssueFunction(
 			}
 
 			capabilityIDValue, borrowStaticType :=
-				issueAccountCapabilityController(
+				IssueAccountCapabilityController(
 					inter,
 					locationRange,
 					idGenerator,
@@ -2613,7 +2613,7 @@ func newAuthAccountAccountCapabilitiesIssueFunction(
 	)
 }
 
-func issueAccountCapabilityController(
+func IssueAccountCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	idGenerator AccountIDGenerator,
@@ -3290,7 +3290,6 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 	idGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
-	address := addressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		sema.AuthAccountCapabilitiesTypeMigrateLinkFunctionType,
@@ -3306,125 +3305,150 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			domain := pathValue.Domain.Identifier()
-			identifier := pathValue.Identifier
+			// Migrate
 
-			// Read stored link, if any
-
-			storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-			readValue := inter.ReadStored(address, domain, storageMapKey)
-			if readValue == nil {
-				return interpreter.Nil
-			}
-
-			var borrowStaticType interpreter.ReferenceStaticType
-
-			switch readValue := readValue.(type) {
-			case *interpreter.IDCapabilityValue:
-				// Already migrated
-				return interpreter.Nil
-
-			case interpreter.PathLinkValue:
-				borrowStaticType, ok = readValue.Type.(interpreter.ReferenceStaticType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-			case interpreter.AccountLinkValue:
-				borrowStaticType = interpreter.AuthAccountReferenceStaticType
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			borrowType, ok := inter.MustConvertStaticToSemaType(borrowStaticType).(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			// Get target
-
-			target, _, err :=
-				inter.GetPathCapabilityFinalTarget(
-					address,
-					pathValue,
-					// Use top-most type to follow link all the way to final target
-					&sema.ReferenceType{
-						Type: sema.AnyType,
-					},
-					false,
-					locationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			// Issue appropriate capability controller
-
-			var capabilityID interpreter.UInt64Value
-
-			switch target := target.(type) {
-			case nil:
-				return interpreter.Nil
-
-			case interpreter.PathCapabilityTarget:
-
-				targetPath := interpreter.PathValue(target)
-
-				capabilityID, _ = issueStorageCapabilityController(
-					inter,
-					locationRange,
-					idGenerator,
-					address,
-					borrowType,
-					targetPath,
-				)
-
-			case interpreter.AccountCapabilityTarget:
-
-				capabilityID, _ = issueAccountCapabilityController(
-					inter,
-					locationRange,
-					idGenerator,
-					address,
-					borrowType,
-				)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			// Publish: overwrite link value with capability
-
-			capabilityValue := interpreter.NewIDCapabilityValue(
-				inter,
-				capabilityID,
-				addressValue,
-				borrowStaticType,
-			)
-
-			capabilityValue, ok = capabilityValue.Transfer(
+			capabilityID := MigrateLinkToCapabilityController(
 				inter,
 				locationRange,
-				atree.Address(address),
-				true,
-				nil,
-			).(*interpreter.IDCapabilityValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			inter.WriteStored(
-				address,
-				domain,
-				storageMapKey,
-				capabilityValue,
+				addressValue,
+				pathValue,
+				idGenerator,
 			)
+			if capabilityID == 0 {
+				return interpreter.Nil
+			}
 
 			return interpreter.NewSomeValueNonCopying(inter, capabilityID)
 		},
 	)
+}
+
+func MigrateLinkToCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	addressValue interpreter.AddressValue,
+	pathValue interpreter.PathValue,
+	idGenerator AccountIDGenerator,
+) interpreter.UInt64Value {
+
+	address := addressValue.ToAddress()
+
+	domain := pathValue.Domain.Identifier()
+	identifier := pathValue.Identifier
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	readValue := inter.ReadStored(address, domain, storageMapKey)
+	if readValue == nil {
+		return 0
+	}
+
+	var borrowStaticType interpreter.ReferenceStaticType
+
+	switch readValue := readValue.(type) {
+	case *interpreter.IDCapabilityValue:
+		// Already migrated
+		return 0
+
+	case interpreter.PathLinkValue:
+		var ok bool
+		borrowStaticType, ok = readValue.Type.(interpreter.ReferenceStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+	case interpreter.AccountLinkValue:
+		borrowStaticType = interpreter.AuthAccountReferenceStaticType
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	borrowType, ok := inter.MustConvertStaticToSemaType(borrowStaticType).(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Get target
+
+	target, _, err :=
+		inter.GetPathCapabilityFinalTarget(
+			address,
+			pathValue,
+			// Use top-most type to follow link all the way to final target
+			&sema.ReferenceType{
+				Type: sema.AnyType,
+			},
+			false,
+			locationRange,
+		)
+	if err != nil {
+		panic(err)
+	}
+
+	// Issue appropriate capability controller
+
+	var capabilityID interpreter.UInt64Value
+
+	switch target := target.(type) {
+	case nil:
+		return 0
+
+	case interpreter.PathCapabilityTarget:
+
+		targetPath := interpreter.PathValue(target)
+
+		capabilityID, _ = issueStorageCapabilityController(
+			inter,
+			locationRange,
+			idGenerator,
+			address,
+			borrowType,
+			targetPath,
+		)
+
+	case interpreter.AccountCapabilityTarget:
+
+		capabilityID, _ = IssueAccountCapabilityController(
+			inter,
+			locationRange,
+			idGenerator,
+			address,
+			borrowType,
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	// Publish: overwrite link value with capability
+
+	capabilityValue := interpreter.NewIDCapabilityValue(
+		inter,
+		capabilityID,
+		addressValue,
+		borrowStaticType,
+	)
+
+	capabilityValue, ok = capabilityValue.Transfer(
+		inter,
+		locationRange,
+		atree.Address(address),
+		true,
+		nil,
+	).(*interpreter.IDCapabilityValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	inter.WriteStored(
+		address,
+		domain,
+		storageMapKey,
+		capabilityValue,
+	)
+
+	return capabilityID
 }
 
 func newPublicAccountCapabilitiesValue(
