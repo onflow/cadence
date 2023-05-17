@@ -1640,7 +1640,7 @@ var (
 	Word64TypeMinInt = new(big.Int)
 	Word64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
 
-	// 2 << 128
+	// 1 << 128
 	Word128TypeMaxIntPlusOneBig = func() *big.Int {
 		word128TypeMaxPlusOne := big.NewInt(1)
 		word128TypeMaxPlusOne.Lsh(word128TypeMaxPlusOne, 128)
