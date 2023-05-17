@@ -2502,8 +2502,22 @@ func padWithZeroes(b []byte, expectedLen int) []byte {
 		return b
 	}
 
-	res := make([]byte, expectedLen)
+	var res []byte
+	// use existing allocated slice if possible.
+	if cap(b) >= expectedLen {
+		res = b[:expectedLen]
+	} else {
+		res = make([]byte, expectedLen)
+	}
+
 	copy(res[expectedLen-l:], b)
+
+	// explicitly set to 0 for the first expectedLen - l bytes.
+	if cap(b) >= expectedLen {
+		for i := 0; i < expectedLen-l; i++ {
+			res[i] = 0
+		}
+	}
 	return res
 }
 
