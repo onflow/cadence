@@ -13385,7 +13385,6 @@ func (v Word128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, l
 
 }
 
-// TODO: Fix
 func (v Word128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word128Value)
 	if !ok {
@@ -13411,7 +13410,6 @@ func (v Word128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 	)
 }
 
-// TODO: Fix
 func (v Word128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word128Value)
 	if !ok {

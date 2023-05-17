@@ -1245,16 +1245,11 @@ func NewWord128(i uint) Word128 {
 	}
 }
 
-var word128NegativeError = errors.NewDefaultUserError("invalid negative value for Word128")
-var word128MaxExceededError = errors.NewDefaultUserError("value exceeds max of Word128")
-
-// TODO: fix
 func NewWord128FromBig(i *big.Int) (Word128, error) {
-	if i.Sign() < 0 {
-		return Word128{}, word128NegativeError
-	}
-	if i.Cmp(sema.Word128TypeMaxIntBig) > 0 {
-		return Word128{}, word128MaxExceededError
+	if i.Cmp(sema.Word128TypeMaxIntBig) > 0 || i.Sign() < 0 {
+		// When Sign() < 0, Mod will add sema.Word128TypeMaxIntPlusOneBig
+		// to ensure the range is [0, sema.Word128TypeMaxIntPlusOneBig)
+		i.Mod(i, sema.Word128TypeMaxIntPlusOneBig)
 	}
 	return Word128{Value: i}, nil
 }
