@@ -2548,8 +2548,10 @@ var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunct
 	declarations := []fromBigEndianBytesFunctionValue{
 		// signed int values
 		newFromBigEndianBytesFunction(sema.Int8Type, 1, func(i *Interpreter, b []byte) OptionalValue {
-			bytes := padWithZeroes(b, 1)
-			return NewSomeValueNonCopying(i, NewInt8Value(i, func() int8 { return int8(bytes[0]) }))
+			return NewSomeValueNonCopying(i, NewInt8Value(i, func() int8 {
+				bytes := padWithZeroes(b, 1)
+				return int8(bytes[0])
+			}))
 		}),
 		newFromBigEndianBytesFunction(sema.Int16Type, 2, func(i *Interpreter, b []byte) OptionalValue {
 			bytes := padWithZeroes(b, 2)
