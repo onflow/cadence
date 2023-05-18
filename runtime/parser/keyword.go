@@ -58,6 +58,8 @@ const (
 	KeywordStruct      = "struct"
 	KeywordResource    = "resource"
 	KeywordInterface   = "interface"
+	KeywordEntitlement = "entitlement"
+	KeywordMapping     = "mapping"
 	KeywordTransaction = "transaction"
 	KeywordPrepare     = "prepare"
 	KeywordExecute     = "execute"
@@ -70,6 +72,8 @@ const (
 	keywordAttach      = "attach"
 	keywordRemove      = "remove"
 	keywordTo          = "to"
+	KeywordWith        = "with"
+	KeywordRequire     = "require"
 	KeywordStatic      = "static"
 	KeywordNative      = "native"
 	// NOTE: ensure to update allKeywords when adding a new keyword
@@ -112,6 +116,7 @@ var allKeywords = []string{
 	KeywordStruct,
 	KeywordResource,
 	KeywordInterface,
+	KeywordEntitlement,
 	KeywordTransaction,
 	KeywordPrepare,
 	KeywordExecute,
@@ -120,6 +125,9 @@ var allKeywords = []string{
 	KeywordDefault,
 	KeywordEnum,
 	KeywordView,
+	KeywordWith,
+	KeywordMapping,
+	KeywordRequire,
 }
 
 // Keywords that can be used in identifier position without ambiguity.

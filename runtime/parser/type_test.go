@@ -285,7 +285,6 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorized: false,
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "Int",
@@ -307,7 +306,7 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorized: true,
+				Authorization: &ast.Authorization{},
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "Int",
@@ -317,6 +316,166 @@ func TestParseReferenceType(t *testing.T) {
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
 			result,
+		)
+	})
+
+	t.Run("authorized, one entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth(X) &Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorization: &ast.Authorization{
+					EntitlementSet: ast.ConjunctiveEntitlementSet{
+						Elements: []*ast.NominalType{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "X",
+									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+						},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("authorized, two conjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth(X, Y) &Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorization: &ast.Authorization{
+					EntitlementSet: ast.ConjunctiveEntitlementSet{
+						Elements: []*ast.NominalType{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "X",
+									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+							{
+								Identifier: ast.Identifier{
+									Identifier: "Y",
+									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+								},
+							},
+						},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("authorized, two disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth(X| Y) &Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorization: &ast.Authorization{
+					EntitlementSet: ast.DisjunctiveEntitlementSet{
+						Elements: []*ast.NominalType{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "X",
+									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+							{
+								Identifier: ast.Identifier{
+									Identifier: "Y",
+									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+								},
+							},
+						},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("authorized, empty entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth() &Int")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in type: ')'",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("authorized, mixed entitlements conjunction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth(X, Y | Z) &Int")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: got '|', expected ',' or ')'",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("authorized, mixed entitlements conjunction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth(X | Y, Z) &Int")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: got ',', expected '|' or ')'",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -335,7 +494,6 @@ func TestParseOptionalReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			&ast.OptionalType{
 				Type: &ast.ReferenceType{
-					Authorized: false,
 					Type: &ast.NominalType{
 						Identifier: ast.Identifier{
 							Identifier: "Int",
@@ -795,7 +953,7 @@ func TestParseRestrictedType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected comma",
+					Message: "unexpected separator",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
@@ -1514,6 +1672,7 @@ func TestParseDictionaryTypeInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{Identifier: "x",
 					Pos: ast.Position{Offset: 10, Line: 2, Column: 9},
@@ -1575,6 +1734,7 @@ func TestParseIntegerTypes(t *testing.T) {
 	require.Empty(t, errs)
 
 	a := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "a",
 			Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -1607,6 +1767,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 	}
 	b := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "b",
 			Pos:        ast.Position{Offset: 25, Line: 3, Column: 6},
@@ -1638,6 +1799,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 21, Line: 3, Column: 2},
 	}
 	c := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "c",
 			Pos:        ast.Position{Offset: 44, Line: 4, Column: 6},
@@ -1669,6 +1831,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 40, Line: 4, Column: 2},
 	}
 	d := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "d",
 			Pos:        ast.Position{Offset: 63, Line: 5, Column: 6},
@@ -1700,6 +1863,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 59, Line: 5, Column: 2},
 	}
 	e := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "e",
 			Pos:        ast.Position{Offset: 82, Line: 6, Column: 6},
@@ -1731,6 +1895,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 78, Line: 6, Column: 2},
 	}
 	f := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "f",
 			Pos:        ast.Position{Offset: 101, Line: 7, Column: 6},
@@ -1762,6 +1927,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 97, Line: 7, Column: 2},
 	}
 	g := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "g",
 			Pos:        ast.Position{Offset: 121, Line: 8, Column: 6},
@@ -1793,6 +1959,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 117, Line: 8, Column: 2},
 	}
 	h := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "h",
 			Pos:        ast.Position{Offset: 141, Line: 9, Column: 6},
@@ -1843,6 +2010,7 @@ func TestParseFunctionTypeInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "add",
 					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -1920,6 +2088,7 @@ func TestParseFunctionArrayType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -2003,6 +2172,7 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -2097,6 +2267,7 @@ func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -2184,6 +2355,7 @@ func TestParseViewFunctionTypeWithNewSyntax(t *testing.T) {
 
 	expected := []ast.Declaration{
 		&ast.VariableDeclaration{
+			Access:     ast.AccessNotSpecified,
 			IsConstant: true,
 			Identifier: ast.Identifier{
 				Identifier: "test",
@@ -2267,6 +2439,7 @@ func TestParseNewSyntaxFunctionType(t *testing.T) {
 
 	expected := []ast.Declaration{
 		&ast.VariableDeclaration{
+			Access:     ast.AccessNotSpecified,
 			IsConstant: true,
 			Identifier: ast.Identifier{
 				Identifier: "test",
@@ -2350,6 +2523,7 @@ func TestParseOptionalTypeDouble(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2404,6 +2578,7 @@ func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "f",
@@ -2460,6 +2635,7 @@ func TestParseReferenceTypeInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2520,6 +2696,7 @@ func TestParseOptionalReference(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2574,6 +2751,7 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2639,6 +2817,7 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2698,6 +2877,7 @@ func TestParseOptionalRestrictedType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2763,6 +2943,7 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2822,6 +3003,7 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2830,7 +3012,7 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.ReferenceType{
-						Authorized: true,
+						Authorization: &ast.Authorization{},
 						Type: &ast.NominalType{
 							Identifier: ast.Identifier{
 								Identifier: "R", Pos: ast.Position{Offset: 21, Line: 2, Column: 20}},
@@ -2875,6 +3057,7 @@ func TestParseInstantiationTypeInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -2971,6 +3154,7 @@ func TestParseParenthesizedTypes(t *testing.T) {
 	require.Empty(t, errs)
 	expected := []ast.Declaration{
 		&ast.VariableDeclaration{
+			Access:     ast.AccessNotSpecified,
 			IsConstant: true,
 			Identifier: ast.Identifier{Identifier: "x", Pos: ast.Position{Offset: 4, Line: 1, Column: 4}},
 			TypeAnnotation: &ast.TypeAnnotation{
@@ -3010,6 +3194,7 @@ func TestParseNestedParenthesizedTypes(t *testing.T) {
 	require.Empty(t, errs)
 	expected := []ast.Declaration{
 		&ast.VariableDeclaration{
+			Access:     ast.AccessNotSpecified,
 			IsConstant: true,
 			Identifier: ast.Identifier{Identifier: "x", Pos: ast.Position{Offset: 4, Line: 1, Column: 4}},
 			TypeAnnotation: &ast.TypeAnnotation{

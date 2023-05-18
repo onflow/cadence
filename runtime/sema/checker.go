@@ -1096,7 +1096,8 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 	ty := checker.ConvertType(t.Type)
 
 	return &ReferenceType{
-		Authorized: t.Authorized,
+		// TODO: support entitlements in types
+		Authorized: t.Authorization != nil,
 		Type:       ty,
 	}
 }

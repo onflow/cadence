@@ -56,6 +56,22 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 				),
 			},
 		},
+		RequiredEntitlements: []*NominalType{
+			{
+				Identifier: NewIdentifier(
+					nil,
+					"X",
+					Position{Offset: 1, Line: 2, Column: 3},
+				),
+			},
+			{
+				Identifier: NewIdentifier(
+					nil,
+					"Y",
+					Position{Offset: 1, Line: 2, Column: 3},
+				),
+			},
+		},
 		Members:   NewMembers(nil, []Declaration{}),
 		DocString: "test",
 		Range: Range{
@@ -103,6 +119,28 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
                     "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
                 }
             ], 
+			"RequiredEntitlements": [
+                {
+                    "Type": "NominalType",
+                    "Identifier": {
+                        "Identifier": "X",
+                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                        "EndPos":  {"Offset": 1, "Line": 2, "Column": 3}
+                    },
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos":  {"Offset": 1, "Line": 2, "Column": 3}
+                },
+				{
+                    "Type": "NominalType",
+                    "Identifier": {
+                        "Identifier": "Y",
+                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                        "EndPos":  {"Offset": 1, "Line": 2, "Column": 3}
+                    },
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos":  {"Offset": 1, "Line": 2, "Column": 3}
+                }
+            ], 
             "Members": {
                 "Declarations": []
             }
@@ -141,6 +179,22 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 				),
 			},
 		},
+		RequiredEntitlements: []*NominalType{
+			{
+				Identifier: NewIdentifier(
+					nil,
+					"X",
+					Position{Offset: 1, Line: 2, Column: 3},
+				),
+			},
+			{
+				Identifier: NewIdentifier(
+					nil,
+					"Y",
+					Position{Offset: 1, Line: 2, Column: 3},
+				),
+			},
+		},
 		Members:   NewMembers(nil, []Declaration{}),
 		DocString: "test",
 		Range: Range{
@@ -170,7 +224,31 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 						prettier.Dedent{
 							Doc: prettier.Concat{
 								prettier.Line{},
-								prettier.Text("{}"),
+								prettier.Concat{
+									prettier.Text("{"),
+									prettier.HardLine{},
+									prettier.Indent{
+										Doc: prettier.Concat{
+											prettier.Text("require"),
+											prettier.Text(" "),
+											prettier.Text("entitlement"),
+											prettier.Text(" "),
+											prettier.Text("X"),
+										},
+									},
+									prettier.HardLine{},
+									prettier.Indent{
+										Doc: prettier.Concat{
+											prettier.Text("require"),
+											prettier.Text(" "),
+											prettier.Text("entitlement"),
+											prettier.Text(" "),
+											prettier.Text("Y"),
+										},
+									},
+									prettier.HardLine{},
+									prettier.Text("}"),
+								},
 							},
 						},
 					},
@@ -180,7 +258,7 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 		decl.Doc(),
 	)
 
-	require.Equal(t, "pub attachment Foo for Bar: Baz {}", decl.String())
+	require.Equal(t, "pub attachment Foo for Bar: Baz {\nrequire entitlement X\nrequire entitlement Y\n}", decl.String())
 }
 
 func TestAttachExpressionMarshallJSON(t *testing.T) {
@@ -211,6 +289,24 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
 			Position{Offset: 1, Line: 2, Column: 3},
 			Position{Offset: 1, Line: 2, Column: 3},
 		),
+		Entitlements: []*NominalType{
+			NewNominalType(nil,
+				NewIdentifier(
+					nil,
+					"X",
+					Position{Offset: 1, Line: 2, Column: 3},
+				),
+				[]Identifier{},
+			),
+			NewNominalType(nil,
+				NewIdentifier(
+					nil,
+					"Y",
+					Position{Offset: 1, Line: 2, Column: 3},
+				),
+				[]Identifier{},
+			),
+		},
 		StartPos: Position{Offset: 1, Line: 2, Column: 3},
 	}
 
@@ -223,7 +319,7 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
         {
             "Type": "AttachExpression",
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-            "EndPos": {"Offset": 3, "Line": 2, "Column": 5},
+            "EndPos": {"Offset": 1, "Line": 2, "Column": 3},
             "Base":  {
                 "Type": "IdentifierExpression",
                 "Identifier": { 
@@ -251,7 +347,29 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "ArgumentsStartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 1, "Line": 2, "Column": 3}
-            }
+            },
+			"Entitlements": [
+				{
+					"Type": "NominalType",
+					"Identifier": {
+						"Identifier": "X",
+						"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+						"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+					},
+					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+					"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+				},
+				{
+					"Type": "NominalType",
+					"Identifier": {
+						"Identifier": "Y",
+						"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+						"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+					},
+					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+					"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+				}
+			]
         }
         `,
 		string(actual),
@@ -286,6 +404,24 @@ func TestAttachExpression_Doc(t *testing.T) {
 			Position{Offset: 1, Line: 2, Column: 3},
 			Position{Offset: 1, Line: 2, Column: 3},
 		),
+		Entitlements: []*NominalType{
+			NewNominalType(nil,
+				NewIdentifier(
+					nil,
+					"X",
+					Position{Offset: 1, Line: 2, Column: 3},
+				),
+				[]Identifier{},
+			),
+			NewNominalType(nil,
+				NewIdentifier(
+					nil,
+					"Y",
+					Position{Offset: 1, Line: 2, Column: 3},
+				),
+				[]Identifier{},
+			),
+		},
 		StartPos: Position{Offset: 1, Line: 2, Column: 3},
 	}
 
@@ -302,11 +438,20 @@ func TestAttachExpression_Doc(t *testing.T) {
 			prettier.Text("to"),
 			prettier.Text(" "),
 			prettier.Text("foo"),
+			prettier.Text(" "),
+			prettier.Text("with"),
+			prettier.Text(" "),
+			prettier.Text("("),
+			prettier.Text("X"),
+			prettier.Text(","),
+			prettier.Text(" "),
+			prettier.Text("Y"),
+			prettier.Text(")"),
 		},
 		decl.Doc(),
 	)
 
-	require.Equal(t, "attach bar() to foo", decl.String())
+	require.Equal(t, "attach bar() to foo with (X, Y)", decl.String())
 }
 
 func TestRemoveStatement_MarshallJSON(t *testing.T) {
