@@ -1182,7 +1182,7 @@ func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locat
 	)
 }
 
-var emptyString = NewUnmeteredStringValue("")
+var EmptyString = NewUnmeteredStringValue("")
 
 func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRange) Value {
 	fromIndex := from.ToInt(locationRange)
@@ -1209,7 +1209,7 @@ func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRa
 	}
 
 	if fromIndex == toIndex {
-		return emptyString
+		return EmptyString
 	}
 
 	v.prepareGraphemes()

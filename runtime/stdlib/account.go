@@ -2614,6 +2614,13 @@ func removeCapabilityController(
 	if !existed {
 		panic(errors.NewUnreachableError())
 	}
+
+	setCapabilityControllerTag(
+		inter,
+		address,
+		uint64(capabilityIDValue),
+		nil,
+	)
 }
 
 // getCapabilityController gets the capability controller for the given capability ID
@@ -2642,6 +2649,11 @@ func getCapabilityController(
 	// Inject functions
 	switch controller := controller.(type) {
 	case *interpreter.StorageCapabilityControllerValue:
+		controller.GetTag =
+			newCapabilityControllerGetTagFunction(inter, address, controller.CapabilityID)
+		controller.SetTag =
+			newCapabilityControllerSetTagFunction(inter, address, controller.CapabilityID)
+
 		controller.TargetFunction =
 			newStorageCapabilityControllerTargetFunction(inter, controller)
 		controller.RetargetFunction =
@@ -2650,6 +2662,11 @@ func getCapabilityController(
 			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
 
 	case *interpreter.AccountCapabilityControllerValue:
+		controller.GetTag =
+			newCapabilityControllerGetTagFunction(inter, address, controller.CapabilityID)
+		controller.SetTag =
+			newCapabilityControllerSetTagFunction(inter, address, controller.CapabilityID)
+
 		controller.DeleteFunction =
 			newAccountCapabilityControllerDeleteFunction(inter, address, controller)
 	}
@@ -2715,8 +2732,20 @@ func newStorageCapabilityControllerRetargetFunction(
 			oldTargetPathValue := controller.TargetPath
 
 			capabilityID := controller.CapabilityID
-			unrecordStorageCapabilityController(inter, locationRange, address, oldTargetPathValue, capabilityID)
-			recordStorageCapabilityController(inter, locationRange, address, newTargetPathValue, capabilityID)
+			unrecordStorageCapabilityController(
+				inter,
+				locationRange,
+				address,
+				oldTargetPathValue,
+				capabilityID,
+			)
+			recordStorageCapabilityController(
+				inter,
+				locationRange,
+				address,
+				newTargetPathValue,
+				capabilityID,
+			)
 
 			controller.TargetPath = newTargetPathValue
 
@@ -3631,4 +3660,81 @@ func newAccountCapabilityControllerDeleteFunction(
 			return interpreter.Void
 		},
 	)
+}
+
+// CapabilityControllerTagStorageDomain is the storage domain which stores
+// capability controller tags by capability ID
+const CapabilityControllerTagStorageDomain = "cap_tag"
+
+func getCapabilityControllerTag(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityID uint64,
+) *interpreter.StringValue {
+
+	value := inter.ReadStored(
+		address,
+		CapabilityControllerTagStorageDomain,
+		interpreter.Uint64StorageMapKey(capabilityID),
+	)
+	if value == nil {
+		return interpreter.EmptyString
+	}
+
+	stringValue, ok := value.(*interpreter.StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return stringValue
+}
+
+func newCapabilityControllerGetTagFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) func() *interpreter.StringValue {
+
+	return func() *interpreter.StringValue {
+		return getCapabilityControllerTag(
+			inter,
+			address,
+			uint64(capabilityIDValue),
+		)
+	}
+}
+
+func setCapabilityControllerTag(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityID uint64,
+	tagValue *interpreter.StringValue,
+) {
+	// avoid typed nil
+	var value interpreter.Value
+	if tagValue != nil {
+		value = tagValue
+	}
+
+	inter.WriteStored(
+		address,
+		CapabilityControllerTagStorageDomain,
+		interpreter.Uint64StorageMapKey(capabilityID),
+		value,
+	)
+}
+
+func newCapabilityControllerSetTagFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) func(tagValue *interpreter.StringValue) {
+	return func(tagValue *interpreter.StringValue) {
+		setCapabilityControllerTag(
+			inter,
+			address,
+			uint64(capabilityIDValue),
+			tagValue,
+		)
+	}
 }

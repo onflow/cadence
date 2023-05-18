@@ -21,6 +21,16 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
+const StorageCapabilityControllerTypeTagFieldName = "tag"
+
+var StorageCapabilityControllerTypeTagFieldType = StringType
+
+const StorageCapabilityControllerTypeTagFieldDocString = `
+An arbitrary "tag" for the controller.
+For example, it could be used to describe the purpose of the capability.
+Empty by default.
+`
+
 const StorageCapabilityControllerTypeBorrowTypeFieldName = "borrowType"
 
 var StorageCapabilityControllerTypeBorrowTypeFieldType = MetaType
@@ -109,6 +119,14 @@ var StorageCapabilityControllerType = &SimpleType{
 func init() {
 	StorageCapabilityControllerType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
+			NewUnmeteredFieldMember(
+				t,
+				ast.AccessPublicSettable,
+				ast.VariableKindVariable,
+				StorageCapabilityControllerTypeTagFieldName,
+				StorageCapabilityControllerTypeTagFieldType,
+				StorageCapabilityControllerTypeTagFieldDocString,
+			),
 			NewUnmeteredFieldMember(
 				t,
 				ast.AccessPublic,

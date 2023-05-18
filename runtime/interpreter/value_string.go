@@ -113,7 +113,7 @@ var stringFunction = func() Value {
 	functionValue := NewUnmeteredHostFunctionValue(
 		sema.StringFunctionType,
 		func(invocation Invocation) Value {
-			return emptyString
+			return EmptyString
 		},
 	)
 

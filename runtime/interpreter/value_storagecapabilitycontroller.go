@@ -45,7 +45,16 @@ type StorageCapabilityControllerValue struct {
 	CapabilityID UInt64Value
 	TargetPath   PathValue
 
-	// Injected functions
+	// tag is locally cached result of GetTag, and not stored.
+	// It is populated when the field `tag` is read.
+	tag *StringValue
+
+	// Injected functions.
+	// Tags are not stored directly inside the controller
+	// to avoid unnecessary storage reads
+	// when the controller is loaded for borrowing/checking
+	GetTag           func() *StringValue
+	SetTag           func(*StringValue)
 	TargetFunction   FunctionValue
 	RetargetFunction FunctionValue
 	DeleteFunction   FunctionValue
@@ -209,6 +218,15 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 
 	switch name {
+	case sema.StorageCapabilityControllerTypeTagFieldName:
+		if v.tag == nil {
+			v.tag = v.GetTag()
+			if v.tag == nil {
+				v.tag = EmptyString
+			}
+		}
+		return v.tag
+
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
 
@@ -233,8 +251,18 @@ func (*StorageCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 	panic(errors.NewUnreachableError())
 }
 
-func (*StorageCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
-	// Storage capability controllers have no settable members (fields / functions)
+func (v *StorageCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
+	switch identifier {
+	case sema.StorageCapabilityControllerTypeTagFieldName:
+		stringValue, ok := value.(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		v.tag = stringValue
+		v.SetTag(stringValue)
+		return true
+	}
+
 	panic(errors.NewUnreachableError())
 }
 
@@ -255,23 +283,36 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 // SetDeleted sets the controller as deleted, i.e. functions panic from now on
 func (v *StorageCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) {
 
-	panicFunction := func(Invocation) Value {
+	raiseError := func() {
 		panic(errors.NewDefaultUserError("controller is deleted"))
+	}
+
+	v.SetTag = func(s *StringValue) {
+		raiseError()
+	}
+	v.GetTag = func() *StringValue {
+		raiseError()
+		return nil
+	}
+
+	panicHostFunction := func(Invocation) Value {
+		raiseError()
+		return nil
 	}
 
 	v.TargetFunction = NewHostFunctionValue(
 		gauge,
 		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		panicFunction,
+		panicHostFunction,
 	)
 	v.RetargetFunction = NewHostFunctionValue(
 		gauge,
 		sema.StorageCapabilityControllerTypeRetargetFunctionType,
-		panicFunction,
+		panicHostFunction,
 	)
 	v.DeleteFunction = NewHostFunctionValue(
 		gauge,
 		sema.StorageCapabilityControllerTypeDeleteFunctionType,
-		panicFunction,
+		panicHostFunction,
 	)
 }
