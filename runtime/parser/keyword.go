@@ -128,8 +128,6 @@ var allKeywords = []string{
 	KeywordWith,
 	KeywordMapping,
 	KeywordRequire,
-	keywordRemove,
-	keywordAttach,
 	keywordAttachment,
 	keywordTo,
 }
@@ -142,7 +140,6 @@ var softKeywords = []string{
 	KeywordAll,
 	KeywordView,
 	keywordTo,
-	keywordRemove,
 }
 
 var softKeywordsTable = mph.Build(softKeywords)
