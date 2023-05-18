@@ -2415,7 +2415,7 @@ func newAuthAccountStorageCapabilitiesForEachControllerFunction(
 				Address: address,
 				Path:    targetPathValue,
 			}
-			iterations := inter.SharedState.StorageCapabilityControllerIterations
+			iterations := inter.SharedState.CapabilityControllerIterations
 			iterations[addressPath]++
 			defer func() {
 				iterations[addressPath]--
@@ -2894,7 +2894,7 @@ func recordStorageCapabilityController(
 		Address: address,
 		Path:    targetPathValue,
 	}
-	if inter.SharedState.StorageCapabilityControllerIterations[addressPath] > 0 {
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
 		inter.SharedState.MutationDuringCapabilityControllerIteration = true
 	}
 
@@ -2977,7 +2977,7 @@ func unrecordStorageCapabilityController(
 		Address: address,
 		Path:    targetPathValue,
 	}
-	if inter.SharedState.StorageCapabilityControllerIterations[addressPath] > 0 {
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
 		inter.SharedState.MutationDuringCapabilityControllerIteration = true
 	}
 
@@ -3057,7 +3057,10 @@ func recordAccountCapabilityController(
 	address common.Address,
 	capabilityIDValue interpreter.UInt64Value,
 ) {
-	if inter.SharedState.AccountCapabilityControllerIterations[address] > 0 {
+	addressPath := interpreter.AddressPath{
+		Address: address,
+	}
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
 		inter.SharedState.MutationDuringCapabilityControllerIteration = true
 	}
 
@@ -3081,7 +3084,10 @@ func unrecordAccountCapabilityController(
 	address common.Address,
 	capabilityIDValue interpreter.UInt64Value,
 ) {
-	if inter.SharedState.AccountCapabilityControllerIterations[address] > 0 {
+	addressPath := interpreter.AddressPath{
+		Address: address,
+	}
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
 		inter.SharedState.MutationDuringCapabilityControllerIteration = true
 	}
 
@@ -3856,12 +3862,15 @@ func newAuthAccountAccountCapabilitiesForEachControllerFunction(
 			// Prevent mutations (record/unrecord) to account capability controllers
 			// for this address during iteration
 
-			iterations := inter.SharedState.AccountCapabilityControllerIterations
-			iterations[address]++
+			addressPath := interpreter.AddressPath{
+				Address: address,
+			}
+			iterations := inter.SharedState.CapabilityControllerIterations
+			iterations[addressPath]++
 			defer func() {
-				iterations[address]--
-				if iterations[address] <= 0 {
-					delete(iterations, address)
+				iterations[addressPath]--
+				if iterations[addressPath] <= 0 {
+					delete(iterations, addressPath)
 				}
 			}()
 
