@@ -21,9 +21,10 @@ package checker
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestCheckBasicEntitlementDeclaration(t *testing.T) {
