@@ -2247,8 +2247,8 @@ func newAuthAccountCapabilitiesValue(
 	return interpreter.NewAuthAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountCapabilitiesTypeGetFunctionType, false),
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountCapabilitiesTypeBorrowFunctionType, true),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, true),
 		newAuthAccountCapabilitiesPublishFunction(gauge, addressValue),
 		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
 		func() interpreter.Value {
@@ -2989,7 +2989,7 @@ func getAccountCapabilityControllerIDsIterator(
 
 	iterator := storageMap.Iterator(inter)
 
-	count = uint64(storageMap.Count())
+	count = storageMap.Count()
 	nextCapabilityID = func() (uint64, bool) {
 		keyValue := iterator.NextKey()
 		if keyValue == nil {
@@ -3162,8 +3162,8 @@ func newPublicAccountCapabilitiesValue(
 	return interpreter.NewPublicAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountCapabilitiesTypeGetFunctionType, false),
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountCapabilitiesTypeBorrowFunctionType, true),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountType, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountType, true),
 	)
 }
 
@@ -3180,14 +3180,12 @@ func getCheckedCapabilityController(
 
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
-	} else {
-		// Ensure requested borrow type is not more permissive
+	} else if !sema.IsSubType(capabilityBorrowType, wantedBorrowType) {
+		// Ensure wanted borrow type is not more permissive
 		// than the capability's borrow type:
-		// The requested type must be a supertype
+		// The wanted type must be a supertype
 
-		if !sema.IsSubType(capabilityBorrowType, wantedBorrowType) {
-			return nil, nil
-		}
+		return nil, nil
 	}
 
 	capabilityAddress := capabilityAddressValue.ToAddress()
@@ -3198,9 +3196,9 @@ func getCheckedCapabilityController(
 		return nil, nil
 	}
 
-	// Ensure requested borrow type is not more permissive
+	// Ensure wanted borrow type is not more permissive
 	// than the controller's borrow type:
-	// The requested type must be a supertype
+	// The wanted type must be a supertype
 
 	controllerBorrowStaticType := controller.CapabilityControllerBorrowType()
 
@@ -3314,10 +3312,28 @@ func CheckCapabilityController(
 func newAccountCapabilitiesGetFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
-	funcType *sema.FunctionType,
+	accountType *sema.CompositeType,
 	borrow bool,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
+
+	var funcType *sema.FunctionType
+	switch accountType {
+	case sema.AuthAccountType:
+		if borrow {
+			funcType = sema.AuthAccountCapabilitiesTypeBorrowFunctionType
+		} else {
+			funcType = sema.AuthAccountCapabilitiesTypeGetFunctionType
+		}
+	case sema.PublicAccountType:
+		if borrow {
+			funcType = sema.PublicAccountCapabilitiesTypeBorrowFunctionType
+		} else {
+			funcType = sema.PublicAccountCapabilitiesTypeGetFunctionType
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
 
 	return interpreter.NewHostFunctionValue(
 		gauge,

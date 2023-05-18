@@ -2704,13 +2704,22 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		nestedVariables: []struct {
 			Name  string
 			Value Value
-		}{{
-			Name: sema.AddressTypeFromBytesFunctionName,
-			Value: NewUnmeteredHostFunctionValue(
-				sema.AddressConversionFunctionType,
-				AddressFromBytes,
-			),
-		}},
+		}{
+			{
+				Name: sema.AddressTypeFromBytesFunctionName,
+				Value: NewUnmeteredHostFunctionValue(
+					sema.AddressTypeFromBytesFunctionType,
+					AddressFromBytes,
+				),
+			},
+			{
+				Name: sema.AddressTypeFromStringFunctionName,
+				Value: NewUnmeteredHostFunctionValue(
+					sema.AddressTypeFromStringFunctionType,
+					AddressFromString,
+				),
+			},
+		},
 	},
 	{
 		name:         sema.PublicPathType.Name,

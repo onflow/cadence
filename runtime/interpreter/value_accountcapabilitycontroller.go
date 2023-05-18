@@ -254,7 +254,7 @@ func (v *AccountCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) 
 		return nil
 	}
 
-	panicHostFunction := func(invocation Invocation) Value {
+	panicHostFunction := func(Invocation) Value {
 		raiseError()
 		return nil
 	}
