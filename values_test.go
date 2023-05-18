@@ -455,6 +455,12 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 
 	t.Parallel()
 
+	uint128LargeValueTestCase, _ := NewUInt128FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
+	uint128MaxValue, _ := NewUInt128FromBig(sema.UInt128TypeMaxIntBig)
+
+	word128LargeValueTestCase, _ := NewWord128FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
+	word128MaxValue, _ := NewWord128FromBig(sema.Word128TypeMaxIntBig)
+
 	typeTests := map[string]map[NumberValue][]byte{
 		// Int*
 		"Int": {
@@ -556,11 +562,13 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 			NewUInt64(18446744073709551615): {255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		"UInt128": {
-			NewUInt128(0):   {0},
-			NewUInt128(42):  {42},
-			NewUInt128(127): {127},
-			NewUInt128(128): {128},
-			NewUInt128(200): {200},
+			NewUInt128(0):             {0},
+			NewUInt128(42):            {42},
+			NewUInt128(127):           {127},
+			NewUInt128(128):           {128},
+			NewUInt128(200):           {200},
+			uint128LargeValueTestCase: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			uint128MaxValue:           {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		"UInt256": {
 			NewUInt256(0):   {0},
@@ -599,11 +607,12 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 			NewWord64(18446744073709551615): {255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		"Word128": {
-			NewWord128(0):   {0},
-			NewWord128(42):  {42},
-			NewWord128(127): {127},
-			NewWord128(128): {128},
-			NewWord128(200): {200},
+			NewWord128(0):             {0},
+			NewWord128(42):            {42},
+			NewWord128(127):           {127},
+			NewWord128(128):           {128},
+			word128LargeValueTestCase: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			word128MaxValue:           {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		// Fix*
 		"Fix64": {
