@@ -833,7 +833,7 @@ func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
 func commonSuperTypeOfComposites(types []Type) Type {
 	var hasStructs, hasResources bool
 
-	commonInterfaces := map[string]bool{}
+	commonInterfaces := map[*InterfaceType]struct{}{}
 	commonInterfacesList := make([]*InterfaceType, 0)
 
 	hasCommonInterface := true
@@ -867,25 +867,33 @@ func commonSuperTypeOfComposites(types []Type) Type {
 			panic(errors.NewUnreachableError())
 		}
 
-		// NOTE: index 0 may not always be the first type, since there can be 'Never' types.
-		if firstType {
-			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
-				commonInterfaces[interfaceType.QualifiedIdentifier()] = true
-				commonInterfacesList = append(commonInterfacesList, interfaceType)
-			}
-			firstType = false
-		} else {
-			intersection := map[string]bool{}
-			commonInterfacesList = make([]*InterfaceType, 0)
+		conformances := compositeType.EffectiveInterfaceConformances()
 
-			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
-				if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
-					intersection[interfaceType.QualifiedIdentifier()] = true
-					commonInterfacesList = append(commonInterfacesList, interfaceType)
+		if len(conformances) > 0 {
+
+			// NOTE: index 0 may not always be the first type, since there can be 'Never' types.
+			if firstType {
+				for _, interfaceType := range conformances {
+					conformance := interfaceType.InterfaceType
+					commonInterfaces[conformance] = struct{}{}
+					commonInterfacesList = append(commonInterfacesList, conformance)
 				}
-			}
 
-			commonInterfaces = intersection
+				firstType = false
+			} else {
+				intersection := map[*InterfaceType]struct{}{}
+				commonInterfacesList = make([]*InterfaceType, 0)
+
+				for _, interfaceType := range conformances {
+					conformance := interfaceType.InterfaceType
+					if _, ok := commonInterfaces[conformance]; ok {
+						intersection[conformance] = struct{}{}
+						commonInterfacesList = append(commonInterfacesList, conformance)
+					}
+				}
+
+				commonInterfaces = intersection
+			}
 		}
 
 		if len(commonInterfaces) == 0 {

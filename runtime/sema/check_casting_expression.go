@@ -241,8 +241,8 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 					if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
 
 						return IsSubType(typedInnerSubType, restrictedSuperType) &&
-							typedSuperType.RestrictionSet().
-								IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
+							typedSuperType.EffectiveRestrictionSet().
+								IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
 					}
 				}
 
@@ -262,8 +262,8 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 					if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
 
 						return IsSubType(typedInnerSubType, restrictedSuperType) &&
-							typedSuperType.RestrictionSet().
-								IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
+							typedSuperType.EffectiveRestrictionSet().
+								IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
 					}
 				}
 
@@ -285,8 +285,8 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 					if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
 
 						return IsSubType(typedInnerSubType, restrictedSuperType) &&
-							typedSuperType.RestrictionSet().
-								IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
+							typedSuperType.EffectiveRestrictionSet().
+								IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
 					}
 				}
 
@@ -324,8 +324,8 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 				// and `T` conforms to `Us`.
 
 				return IsSubType(typedSubType, typedSuperType.Type) &&
-					typedSuperType.RestrictionSet().
-						IsSubsetOf(typedSubType.ExplicitInterfaceConformanceSet())
+					typedSuperType.EffectiveRestrictionSet().
+						IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 
 			default:
 
