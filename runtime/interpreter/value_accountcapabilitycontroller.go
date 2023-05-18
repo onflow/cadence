@@ -33,6 +33,10 @@ type AccountCapabilityControllerValue struct {
 	BorrowType   ReferenceStaticType
 	CapabilityID UInt64Value
 
+	// tag is locally cached result of GetTag, and not stored.
+	// It is populated when the field `tag` is read.
+	tag *StringValue
+
 	// Injected functions
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
@@ -191,7 +195,13 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	switch name {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
-		return v.GetTag()
+		if v.tag == nil {
+			v.tag = v.GetTag()
+			if v.tag == nil {
+				v.tag = EmptyString
+			}
+		}
+		return v.tag
 
 	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -218,6 +228,7 @@ func (v *AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationR
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+		v.tag = stringValue
 		v.SetTag(stringValue)
 		return true
 	}

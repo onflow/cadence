@@ -45,6 +45,10 @@ type StorageCapabilityControllerValue struct {
 	CapabilityID UInt64Value
 	TargetPath   PathValue
 
+	// tag is locally cached result of GetTag, and not stored.
+	// It is populated when the field `tag` is read.
+	tag *StringValue
+
 	// Injected functions.
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
@@ -215,7 +219,13 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	switch name {
 	case sema.StorageCapabilityControllerTypeTagFieldName:
-		return v.GetTag()
+		if v.tag == nil {
+			v.tag = v.GetTag()
+			if v.tag == nil {
+				v.tag = EmptyString
+			}
+		}
+		return v.tag
 
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -248,6 +258,7 @@ func (v *StorageCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationR
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+		v.tag = stringValue
 		v.SetTag(stringValue)
 		return true
 	}
