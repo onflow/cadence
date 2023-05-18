@@ -7066,7 +7066,9 @@ func TestRuntimeGetCapability(t *testing.T) {
           }
         `)
 
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+		}
 
 		res, err := runtime.ExecuteScript(
 			Script{

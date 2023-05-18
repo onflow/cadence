@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
+func ParseAndCheckAccountWithConfig(t *testing.T, code string, config sema.Config) (*sema.Checker, error) {
 
 	constantDeclaration := func(name string, ty sema.Type) stdlib.StandardLibraryValue {
 		return stdlib.StandardLibraryValue{
@@ -39,18 +39,27 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 			Kind: common.DeclarationKindConstant,
 		}
 	}
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+
+	baseValueActivation := config.BaseValueActivation
+	if baseValueActivation == nil {
+		baseValueActivation = sema.BaseValueActivation
+	}
+
+	baseValueActivation = sema.NewVariableActivation(baseValueActivation)
 	baseValueActivation.DeclareValue(constantDeclaration("authAccount", sema.AuthAccountType))
 	baseValueActivation.DeclareValue(constantDeclaration("publicAccount", sema.PublicAccountType))
+	config.BaseValueActivation = baseValueActivation
 
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-			},
+			Config: &config,
 		},
 	)
+}
+
+func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
+	return ParseAndCheckAccountWithConfig(t, code, sema.Config{})
 }
 
 func TestCheckAccount_save(t *testing.T) {
@@ -2269,11 +2278,37 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("AuthAccount.capabilities", func(t *testing.T) {
+	parseAndCheckAccountWithCapabilityControllers := func(t *testing.T, code string) (*sema.Checker, error) {
+		return ParseAndCheckAccountWithConfig(
+			t,
+			code,
+			sema.Config{
+				CapabilityControllersEnabled: true,
+			},
+		)
+	}
+
+	t.Run("AuthAccount.capabilities, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t, `
+          fun test() {
+		      authAccount.capabilities
+          }
+		`)
+		require.Error(t, err)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+
+	})
+
+	t.Run("AuthAccount.capabilities, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
           fun test() {
 		      let capabilities: &AuthAccount.Capabilities = authAccount.capabilities
 
@@ -2293,7 +2328,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
           fun test() {
 		      let capabilities: &AuthAccount.StorageCapabilities = authAccount.capabilities.storage
 
@@ -2318,7 +2353,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
           fun test() {
 		      let capabilities: &AuthAccount.AccountCapabilities = authAccount.capabilities.account
 
@@ -2340,7 +2375,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
           fun test() {
 		      let capabilities: &PublicAccount.Capabilities = publicAccount.capabilities
 
@@ -2356,7 +2391,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
 		  let capabilitiesRef: &PublicAccount.StorageCapabilities = publicAccount.capabilities.storage
 		`)
 		require.Error(t, err)
@@ -2369,7 +2404,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
 		  let capabilitiesRef: &PublicAccount.AccountCapabilities = publicAccount.capabilities.account
 		`)
 		require.Error(t, err)
