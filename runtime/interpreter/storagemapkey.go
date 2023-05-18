@@ -50,7 +50,6 @@ func (k StringStorageMapKey) AtreeValue() atree.Value {
 	return StringAtreeValue(k)
 }
 
-
 // Uint64StorageMapKey is a StorageMapKey backed by a simple Uint64AtreeValue
 type Uint64StorageMapKey Uint64AtreeValue
 

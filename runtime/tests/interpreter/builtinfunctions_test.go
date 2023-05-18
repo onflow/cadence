@@ -235,6 +235,98 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 	runInvalidCase(t, "[12, 34, 56, 11, 22, 33, 44, 55, 66, 77, 88, 99, 111]")
 }
 
+func TestInterpretAddressFromString(t *testing.T) {
+
+	t.Parallel()
+
+	runValidCase := func(t *testing.T, expected string, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  fun test(): Address? {
+                      return Address.fromString(%s)
+                  }
+            	`,
+				innerCode,
+			)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			addressOpt, ok := res.(*interpreter.SomeValue)
+			require.True(t, ok)
+
+			innerValue := addressOpt.InnerValue(inter, interpreter.EmptyLocationRange)
+			addressVal, ok := innerValue.(interpreter.AddressValue)
+			require.True(t, ok)
+			require.Equal(t, expected, addressVal.ToAddress().HexWithPrefix())
+		})
+	}
+
+	runValidRoundTripCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+	              fun test(): Bool {
+	                let address : Address? = %s;
+					return address == Address.fromString(address!.toString());
+	              }
+	        	`,
+				innerCode,
+			)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.True(t, bool(boolVal))
+		})
+	}
+
+	runInvalidCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+	              fun test(): Address? {
+	                  return Address.fromString(%s)
+	              }
+	        	`,
+				innerCode,
+			)
+
+			inter := parseCheckAndInterpret(t, code)
+			res, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			_, ok := res.(interpreter.NilValue)
+			require.True(t, ok)
+		})
+	}
+
+	// Note: output of HexWithPrefix() lowercases the 'E'.
+	runValidCase(t, "0x436164656e636521", "\"0x436164656E636521\"")
+	runValidCase(t, "0x0000000000000000", "\"0x0\"")
+	runValidCase(t, "0x0000000000000001", "\"0x01\"")
+
+	runValidRoundTripCase(t, "0x0")
+	runValidRoundTripCase(t, "0x01")
+	runValidRoundTripCase(t, "0x46716465AE633188")
+
+	runInvalidCase(t, "\"436164656E636521\"")
+	runInvalidCase(t, "\"ZZZ\"")
+	runInvalidCase(t, "\"0xZZZ\"")
+	runInvalidCase(t, "\"0x436164656E63652146757265766572\"")
+}
+
 func TestInterpretToBigEndianBytes(t *testing.T) {
 
 	t.Parallel()

@@ -148,8 +148,8 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnMeterComputation:            e.newOnMeterComputation(),
 		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
-		IDCapabilityBorrowHandler:     e.newIDCapabilityBorrowHandler(),
-		IDCapabilityCheckHandler:      e.newIDCapabilityCheckHandler(),
+		IDCapabilityBorrowHandler:     stdlib.BorrowCapabilityController,
+		IDCapabilityCheckHandler:      stdlib.CheckCapabilityController,
 	}
 }
 
@@ -651,48 +651,6 @@ func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAcc
 func (e *interpreterEnvironment) newAuthAccountHandler() interpreter.AuthAccountHandlerFunc {
 	return func(address interpreter.AddressValue) interpreter.Value {
 		return stdlib.NewAuthAccountValue(e, e, address)
-	}
-}
-
-func (e *interpreterEnvironment) newIDCapabilityBorrowHandler() interpreter.IDCapabilityBorrowHandlerFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		address interpreter.AddressValue,
-		capabilityID interpreter.UInt64Value,
-		wantedBorrowType *sema.ReferenceType,
-		capabilityBorrowType *sema.ReferenceType,
-	) interpreter.ReferenceValue {
-
-		return stdlib.BorrowCapabilityController(
-			inter,
-			locationRange,
-			address,
-			capabilityID,
-			wantedBorrowType,
-			capabilityBorrowType,
-		)
-	}
-}
-
-func (e *interpreterEnvironment) newIDCapabilityCheckHandler() interpreter.IDCapabilityCheckHandlerFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		address interpreter.AddressValue,
-		capabilityID interpreter.UInt64Value,
-		wantedBorrowType *sema.ReferenceType,
-		capabilityBorrowType *sema.ReferenceType,
-	) interpreter.BoolValue {
-
-		return stdlib.CheckCapabilityController(
-			inter,
-			locationRange,
-			address,
-			capabilityID,
-			wantedBorrowType,
-			capabilityBorrowType,
-		)
 	}
 }
 

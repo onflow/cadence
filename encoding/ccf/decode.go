@@ -1234,21 +1234,20 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 			address.(cadence.Address),
 			typ.BorrowType,
 		), nil
-	} else {
-
-		// Decode path.
-		path, err := d.decodePath()
-		if err != nil {
-			return nil, err
-		}
-
-		return cadence.NewMeteredPathCapability(
-			d.gauge,
-			address.(cadence.Address),
-			path.(cadence.Path),
-			typ.BorrowType,
-		), nil
 	}
+
+	// Decode path.
+	path, err := d.decodePath()
+	if err != nil {
+		return nil, err
+	}
+
+	return cadence.NewMeteredPathCapability(
+		d.gauge,
+		address.(cadence.Address),
+		path.(cadence.Path),
+		typ.BorrowType,
+	), nil
 }
 
 // decodeTypeValue decodes encoded type-value as

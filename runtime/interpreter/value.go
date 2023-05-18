@@ -297,6 +297,7 @@ func safeMul(a, b int, locationRange LocationRange) int {
 // TypeValue
 
 type TypeValue struct {
+	// Optional. nil represents "unknown"/"invalid" type
 	Type StaticType
 }
 
@@ -998,7 +999,6 @@ func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Val
 }
 
 // StringValue
-
 
 type StringValue struct {
 	// graphemes is a grapheme cluster segmentation iterator,
@@ -18111,6 +18111,21 @@ func AddressFromBytes(invocation Invocation) Value {
 	}
 
 	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
+}
+
+func AddressFromString(invocation Invocation) Value {
+	argument, ok := invocation.Arguments[0].(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	addr, err := common.HexToAddressAssertPrefix(argument.Str)
+	if err != nil {
+		return Nil
+	}
+
+	inter := invocation.Interpreter
+	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
 }
 
 // PathValue
