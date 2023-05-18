@@ -1000,7 +1000,6 @@ func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Val
 
 // StringValue
 
-
 type StringValue struct {
 	// graphemes is a grapheme cluster segmentation iterator,
 	// which is initialized lazily and reused/reset in functions
