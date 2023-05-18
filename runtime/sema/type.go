@@ -3384,6 +3384,13 @@ var AddressTypeFromBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
 }
 
+const AddressTypeFromStringFunctionName = "fromString"
+const AddressTypeFromStringFunctionDocString = `
+Attempts to parse an Address from the input string. Returns nil on invalid input.
+`
+
+var AddressTypeFromStringFunctionType = FromStringFunctionType(TheAddressType)
+
 func init() {
 	// Declare a conversion function for the address type
 
@@ -3413,6 +3420,12 @@ func init() {
 		AddressTypeFromBytesFunctionName,
 		AddressTypeFromBytesFunctionType,
 		AddressTypeFromBytesFunctionDocString,
+	))
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		AddressTypeFromStringFunctionName,
+		AddressTypeFromStringFunctionType,
+		AddressTypeFromStringFunctionDocString,
 	))
 
 	BaseValueActivation.Set(
