@@ -4123,7 +4123,9 @@ func (interpreter *Interpreter) pathCapabilityCheckFunction(
 		interpreter,
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 		func(invocation Invocation) Value {
+
 			interpreter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// NOTE: if a type argument is provided for the function,
 			// use it *instead* of the type of the value (if any)
@@ -4147,7 +4149,7 @@ func (interpreter *Interpreter) pathCapabilityCheckFunction(
 					address,
 					pathValue,
 					borrowType,
-					invocation.LocationRange,
+					locationRange,
 				)
 			if err != nil {
 				panic(err)
@@ -4251,8 +4253,48 @@ func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
 				nil
 
 		case *IDCapabilityValue:
-			// TODO: follow target?
-			return nil, false, nil
+
+			// For backwards-compatibility, follow ID capability values
+			// which are published in the public or private domain
+
+			switch path.Domain {
+			case common.PathDomainPublic,
+				common.PathDomainPrivate:
+
+				capabilityBorrowType, ok :=
+					interpreter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				reference := interpreter.SharedState.Config.IDCapabilityBorrowHandler(
+					interpreter,
+					locationRange,
+					value.Address,
+					value.ID,
+					wantedBorrowType,
+					capabilityBorrowType,
+				)
+				if reference == nil {
+					return nil, false, nil
+				}
+
+				switch reference := reference.(type) {
+				case *StorageReferenceValue:
+					address = reference.TargetStorageAddress
+					targetPath := reference.TargetPath
+					paths = append(paths, targetPath)
+					path = targetPath
+
+				case *AccountReferenceValue:
+					return AccountCapabilityTarget(reference.Address),
+						false,
+						nil
+
+				default:
+					return nil, false, nil
+				}
+			}
 
 		default:
 			return PathCapabilityTarget(path),

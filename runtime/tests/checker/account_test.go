@@ -382,7 +382,7 @@ func TestCheckAccount_typeAt(t *testing.T) {
 			checker, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
 					`
-						let t: Type? = authAccount.type(at: /%s/r)
+						let t: Type = authAccount.type(at: /%s/r)!
 					`,
 					domain.Identifier(),
 				),
@@ -394,12 +394,7 @@ func TestCheckAccount_typeAt(t *testing.T) {
 
 				typ := RequireGlobalValue(t, checker.Elaboration, "t")
 
-				require.Equal(t,
-					&sema.OptionalType{
-						Type: sema.MetaType,
-					},
-					typ,
-				)
+				require.Equal(t, sema.MetaType, typ)
 
 			} else {
 				errs := RequireCheckerErrors(t, err, 1)
@@ -927,8 +922,8 @@ func TestCheckAccount_link(t *testing.T) {
 			_, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
 					`
-                      fun test(): Capability? {
-                          return authAccount.link(/%s/r, target: /storage/r)
+                      fun test(): Capability {
+                          return authAccount.link(/%s/r, target: /storage/r)!
                       }
                     `,
 					domain.Identifier(),
@@ -978,8 +973,8 @@ func TestCheckAccount_link(t *testing.T) {
 						`
                           resource R {}
 
-                          fun test(): Capability%[1]s? {
-                              return authAccount.link%[1]s(/%[2]s/r, target: /storage/r)
+                          fun test(): Capability%[1]s {
+                              return authAccount.link%[1]s(/%[2]s/r, target: /storage/r)!
                           }
                         `,
 						typeArguments,
@@ -1009,8 +1004,8 @@ func TestCheckAccount_link(t *testing.T) {
 						`
                           struct S {}
 
-                          fun test(): Capability%[1]s? {
-                              return authAccount.link%[1]s(/%[2]s/s, target: /storage/s)
+                          fun test(): Capability%[1]s {
+                              return authAccount.link%[1]s(/%[2]s/s, target: /storage/s)!
                           }
                         `,
 						typeArguments,
@@ -1052,8 +1047,8 @@ func TestCheckAccount_link(t *testing.T) {
 						`
                           resource R {}
 
-                          fun test(): Capability? {
-                              return authAccount.link<@R>(/%s/r, target: /%s/r)
+                          fun test(): Capability {
+                              return authAccount.link<@R>(/%s/r, target: /%s/r)!
                           }
                         `,
 						domain.Identifier(),
@@ -1084,8 +1079,8 @@ func TestCheckAccount_link(t *testing.T) {
 						`
                           struct S {}
 
-                          fun test(): Capability? {
-                              return authAccount.link<S>(/%s/s, target: /%s/s)
+                          fun test(): Capability {
+                              return authAccount.link<S>(/%s/s, target: /%s/s)!
                           }
                         `,
 						domain.Identifier(),
@@ -1146,8 +1141,8 @@ func TestCheckAccount_linkAccount(t *testing.T) {
 			code := fmt.Sprintf(`
                   resource R {}
 
-                  fun test(authAccount: AuthAccount): Capability<&AuthAccount>? {
-                      return authAccount.linkAccount(/%s/r)
+                  fun test(authAccount: AuthAccount): Capability<&AuthAccount> {
+                      return authAccount.linkAccount(/%s/r)!
                   }
                 `,
 				tc.domain.Identifier(),
@@ -1247,7 +1242,7 @@ func TestCheckAccount_getLinkTarget(t *testing.T) {
 			_, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
 					`
-                      let path: Path? = %s.getLinkTarget(/%s/r)
+                      let path: Path = %s.getLinkTarget(/%s/r)!
                     `,
 					accountVariable,
 					domain.Identifier(),
@@ -1509,8 +1504,8 @@ func TestAuthAccountContracts(t *testing.T) {
 	t.Run("get contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract? {
-                return authAccount.contracts.get(name: "foo")
+            fun test(): DeployedContract {
+                return authAccount.contracts.get(name: "foo")!
             }
 	    `)
 
@@ -1522,8 +1517,8 @@ func TestAuthAccountContracts(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
-            fun test(): &C? {
-                return authAccount.contracts.borrow<&C>(name: "foo")
+            fun test(): &C {
+                return authAccount.contracts.borrow<&C>(name: "foo")!
             }
 	    `)
 
@@ -1535,8 +1530,8 @@ func TestAuthAccountContracts(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
-            fun test(): &AnyStruct? {
-                return authAccount.contracts.borrow(name: "foo")
+            fun test(): &AnyStruct {
+                return authAccount.contracts.borrow(name: "foo")!
             }
 	    `)
 
@@ -1570,8 +1565,8 @@ func TestAuthAccountContracts(t *testing.T) {
 	t.Run("remove contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract? {
-                return authAccount.contracts.remove(name: "foo")
+            fun test(): DeployedContract {
+                return authAccount.contracts.remove(name: "foo")!
             }
 	    `)
 
@@ -1619,8 +1614,8 @@ func TestPublicAccountContracts(t *testing.T) {
 	t.Run("get contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract? {
-                return publicAccount.contracts.get(name: "foo")
+            fun test(): DeployedContract {
+                return publicAccount.contracts.get(name: "foo")!
             }
 	    `)
 
@@ -1632,8 +1627,8 @@ func TestPublicAccountContracts(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
-            fun test(): &C? {
-                return publicAccount.contracts.borrow<&C>(name: "foo")
+            fun test(): &C {
+                return publicAccount.contracts.borrow<&C>(name: "foo")!
             }
 	    `)
 
@@ -1645,8 +1640,8 @@ func TestPublicAccountContracts(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
-            fun test(): &AnyStruct? {
-                return publicAccount.contracts.borrow(name: "foo")
+            fun test(): &AnyStruct {
+                return publicAccount.contracts.borrow(name: "foo")!
             }
 	    `)
 
@@ -2312,13 +2307,16 @@ func TestCheckAccountCapabilities(t *testing.T) {
           fun test() {
 		      let capabilities: &AuthAccount.Capabilities = authAccount.capabilities
 
-              let cap: Capability<&Int>? = capabilities.get<&Int>(/public/foo)
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
 
-              let ref: &Int? = capabilities.borrow<&Int>(/public/foo)
+              let ref: &Int = capabilities.borrow<&Int>(/public/foo)!
 
-              capabilities.publish(cap!, at: /public/bar)
+              capabilities.publish(cap, at: /public/bar)
 
               let cap2: Capability = capabilities.unpublish(/public/bar)!
+
+              let id1: UInt64 = capabilities.migrateLink(/public/bar)!
+              let id2: UInt64 = capabilities.migrateLink(/private/bar)!
           }
 		`)
 		require.NoError(t, err)
@@ -2332,7 +2330,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
           fun test() {
 		      let capabilities: &AuthAccount.StorageCapabilities = authAccount.capabilities.storage
 
-              let controller: &StorageCapabilityController? = capabilities.getController(byCapabilityID: 1)
+              let controller: &StorageCapabilityController = capabilities.getController(byCapabilityID: 1)!
 
               let controllers: [&StorageCapabilityController] = capabilities.getControllers(forPath: /storage/foo)
 
@@ -2357,7 +2355,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
           fun test() {
 		      let capabilities: &AuthAccount.AccountCapabilities = authAccount.capabilities.account
 
-              let controller: &AccountCapabilityController? = capabilities.getController(byCapabilityID: 1)
+              let controller: &AccountCapabilityController = capabilities.getController(byCapabilityID: 1)!
 
               let controllers: [&AccountCapabilityController] = capabilities.getControllers()
 
@@ -2379,9 +2377,9 @@ func TestCheckAccountCapabilities(t *testing.T) {
           fun test() {
 		      let capabilities: &PublicAccount.Capabilities = publicAccount.capabilities
 
-              let cap: Capability<&Int>? = capabilities.get<&Int>(/public/foo)
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
 
-              let ref: &Int? = capabilities.borrow<&Int>(/public/foo)
+              let ref: &Int = capabilities.borrow<&Int>(/public/foo)!
           }
 		`)
 		require.NoError(t, err)
