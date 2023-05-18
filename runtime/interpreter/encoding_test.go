@@ -3559,6 +3559,47 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		)
 	})
 
+	t.Run("decode old reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := PathLinkValue{
+			TargetPath: publicPathValue,
+			Type: ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeBool,
+			},
+		}
+
+		//nolint:gocritic
+		encoded := append(
+			expectedLinkEncodingPrefix[:],
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// true
+			0xf5,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+		)
+
+		decoder := CBORDecMode.NewByteStreamDecoder(encoded)
+		decoded, err := DecodeStorable(decoder, atree.StorageID{}, nil)
+		require.NoError(t, err)
+		inter, err := NewInterpreter(
+			nil,
+			TestLocation,
+			&Config{
+				Storage: nil,
+			},
+		)
+		require.NoError(t, err)
+		decodedValue := StoredValue(inter, decoded, nil)
+		AssertValuesEqual(t, inter, value, decodedValue)
+	})
+
 	t.Run("reference type, unauthorized, bool", func(t *testing.T) {
 
 		t.Parallel()
