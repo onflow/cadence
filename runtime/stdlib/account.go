@@ -3302,7 +3302,11 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			// Publish: overwrite link value with capability
+			// Publish: overwrite link value with capability,
+			// for both public and private links.
+			//
+			// Private links need to be replaced,
+			// because another link might target it.
 
 			capabilityValue := interpreter.NewIDCapabilityValue(
 				inter,
