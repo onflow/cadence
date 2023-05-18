@@ -786,6 +786,24 @@ func TestNewUInt256FromBig(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestNewWord128FromBig(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewWord128FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := big.NewInt(-1)
+	_, err = NewWord128FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.Word128TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewWord128FromBig(aboveMax)
+	require.Error(t, err)
+}
+
 func TestValue_Type(t *testing.T) {
 
 	t.Parallel()
