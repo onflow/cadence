@@ -345,6 +345,9 @@ pub struct AuthAccount {
         /// Migrates the link at the given path to a capability controller.
         ///
         /// Does not migrate intermediate links of the chain.
+        ///
+        /// Returns the ID of the issued capability controller, if any.
+        /// Returns nil if migration fails.
         pub fun migrateLink(_ newCapabilityPath: CapabilityPath): UInt64?
     }
 
