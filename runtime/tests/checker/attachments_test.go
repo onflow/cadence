@@ -297,11 +297,10 @@ func TestCheckBaseType(t *testing.T) {
 			attachment B for A {}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
-		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[2])
 	})
 
 	t.Run("invalid type", func(t *testing.T) {
@@ -313,10 +312,9 @@ func TestCheckBaseType(t *testing.T) {
 			attachment A for B {}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
 	})
 }
 
@@ -2844,11 +2842,10 @@ func TestCheckAttachInvalidType(t *testing.T) {
 		}`,
 	)
 
-	errs := RequireCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-	assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckAnyAttachmentTypes(t *testing.T) {
