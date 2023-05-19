@@ -475,10 +475,8 @@ func TestCheckNestedBaseType(t *testing.T) {
 			`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		// 2 errors, for undeclared type, one for invalid type in base type
-		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 }
