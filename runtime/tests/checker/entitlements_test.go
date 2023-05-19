@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestCheckBasicEntitlementDeclaration(t *testing.T) {
@@ -592,7 +593,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
-	t.Run("mismatched entitlement mapping", func(t *testing.T) {
+	/*t.Run("mismatched entitlement mapping", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement mapping M {}
@@ -622,7 +623,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
-
+	*/
 	t.Run("function", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `

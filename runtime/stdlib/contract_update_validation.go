@@ -347,6 +347,12 @@ func (validator *ContractUpdateValidator) checkRequiredEntitlements(
 
 	// updates cannot add new entitlement requirements, or equivalently,
 	// the new entitlements must all be present in the old entitlements list
+	// Adding new entitlement requirements has to be prohibited because it would
+	// be a security vulnerability. If your attachment previously only requires X access to the base,
+	// people who might be okay giving an attachment X access to their resource would be willing to attach it.
+	// If the author could later add a requirement to the attachment declaration asking for Y access as well,
+	// then they would be able to access Y-entitled values on existing attached bases without ever having
+	// received explicit permission from the resource owners to access that entitlement.
 
 	for _, newEntitlement := range newEntitlements {
 		found := false
