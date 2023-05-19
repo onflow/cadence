@@ -41,8 +41,7 @@ type SharedState struct {
 	resourceVariables                           map[ResourceKindedValue]*Variable
 	inStorageIteration                          bool
 	storageMutatedDuringIteration               bool
-	AccountCapabilityControllerIterations       map[common.Address]int
-	StorageCapabilityControllerIterations       map[AddressPath]int
+	CapabilityControllerIterations              map[AddressPath]int
 	MutationDuringCapabilityControllerIteration bool
 }
 
@@ -56,12 +55,11 @@ func NewSharedState(config *Config) *SharedState {
 			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		},
-		inStorageIteration:                    false,
-		storageMutatedDuringIteration:         false,
-		referencedResourceKindedValues:        map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
-		resourceVariables:                     map[ResourceKindedValue]*Variable{},
-		AccountCapabilityControllerIterations: map[common.Address]int{},
-		StorageCapabilityControllerIterations: map[AddressPath]int{},
+		inStorageIteration:             false,
+		storageMutatedDuringIteration:  false,
+		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
+		resourceVariables:              map[ResourceKindedValue]*Variable{},
+		CapabilityControllerIterations: map[AddressPath]int{},
 	}
 }
 

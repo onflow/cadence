@@ -1395,6 +1395,9 @@ Returns nil if the migration fails,
 e.g. when the path does not lead to a storage path.
 
 Does not migrate intermediate links of the chain.
+
+Returns the ID of the issued capability controller, if any.
+Returns nil if migration fails.
 `
 
 const AuthAccountCapabilitiesTypeName = "Capabilities"

@@ -1233,11 +1233,7 @@ func (t OptionalStaticType) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 
-	if t.Type == nil {
-		return e.EncodeNil()
-	} else {
-		return t.Type.Encode(e)
-	}
+	return t.Type.Encode(e)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
