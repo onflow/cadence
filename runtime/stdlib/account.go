@@ -2408,6 +2408,22 @@ func newAuthAccountStorageCapabilitiesForEachControllerFunction(
 				panic(errors.NewUnreachableError())
 			}
 
+			// Prevent mutations (record/unrecord) to storage capability controllers
+			// for this address/path during iteration
+
+			addressPath := interpreter.AddressPath{
+				Address: address,
+				Path:    targetPathValue,
+			}
+			iterations := inter.SharedState.CapabilityControllerIterations
+			iterations[addressPath]++
+			defer func() {
+				iterations[addressPath]--
+				if iterations[addressPath] <= 0 {
+					delete(iterations, addressPath)
+				}
+			}()
+
 			// Get capability controllers iterator
 
 			nextCapabilityID, _ :=
@@ -2447,6 +2463,20 @@ func newAuthAccountStorageCapabilitiesForEachControllerFunction(
 
 				if !shouldContinue {
 					break
+				}
+
+				// It is not safe to check this at the beginning of the loop
+				// (i.e. on the next invocation of the callback),
+				// because if the mutation performed in the callback reorganized storage
+				// such that the iteration pointer is now at the end,
+				// we will not invoke the callback again but will still silently skip elements of storage.
+				//
+				// In order to be safe, we perform this check here to effectively enforce
+				// that users return `false` from their callback in all cases where storage is mutated.
+				if inter.SharedState.MutationDuringCapabilityControllerIteration {
+					panic(CapabilityControllersMutatedDuringIterationError{
+						LocationRange: locationRange,
+					})
 				}
 			}
 
@@ -2554,6 +2584,7 @@ func newAuthAccountAccountCapabilitiesIssueFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// Get borrow type type argument
 
@@ -2564,7 +2595,13 @@ func newAuthAccountAccountCapabilitiesIssueFunction(
 			}
 
 			capabilityIDValue, borrowStaticType :=
-				issueAccountCapabilityController(inter, idGenerator, address, borrowType)
+				issueAccountCapabilityController(
+					inter,
+					locationRange,
+					idGenerator,
+					address,
+					borrowType,
+				)
 
 			return interpreter.NewIDCapabilityValue(
 				gauge,
@@ -2578,6 +2615,7 @@ func newAuthAccountAccountCapabilitiesIssueFunction(
 
 func issueAccountCapabilityController(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	idGenerator AccountIDGenerator,
 	address common.Address,
 	borrowType *sema.ReferenceType,
@@ -2607,7 +2645,12 @@ func issueAccountCapabilityController(
 	)
 
 	storeCapabilityController(inter, address, capabilityIDValue, controller)
-	recordAccountCapabilityController(inter, address, capabilityIDValue)
+	recordAccountCapabilityController(
+		inter,
+		locationRange,
+		address,
+		capabilityIDValue,
+	)
 
 	return capabilityIDValue, borrowStaticType
 }
@@ -2847,6 +2890,14 @@ func recordStorageCapabilityController(
 		panic(errors.NewUnreachableError())
 	}
 
+	addressPath := interpreter.AddressPath{
+		Address: address,
+		Path:    targetPathValue,
+	}
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
+		inter.SharedState.MutationDuringCapabilityControllerIteration = true
+	}
+
 	identifier := targetPathValue.Identifier
 
 	storageMapKey := interpreter.StringStorageMapKey(identifier)
@@ -2896,8 +2947,11 @@ func getPathCapabilityIDSet(
 	storageMap := inter.Storage().GetStorageMap(
 		address,
 		PathCapabilityStorageDomain,
-		true,
+		false,
 	)
+	if storageMap == nil {
+		return nil
+	}
 
 	readValue := storageMap.ReadValue(inter, storageMapKey)
 	if readValue == nil {
@@ -2919,6 +2973,14 @@ func unrecordStorageCapabilityController(
 	targetPathValue interpreter.PathValue,
 	capabilityIDValue interpreter.UInt64Value,
 ) {
+	addressPath := interpreter.AddressPath{
+		Address: address,
+		Path:    targetPathValue,
+	}
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
+		inter.SharedState.MutationDuringCapabilityControllerIteration = true
+	}
+
 	capabilityIDSet := getPathCapabilityIDSet(inter, targetPathValue, address)
 	if capabilityIDSet == nil {
 		panic(errors.NewUnreachableError())
@@ -2929,7 +2991,26 @@ func unrecordStorageCapabilityController(
 		panic(errors.NewUnreachableError())
 	}
 
-	// TODO: remove capability set if empty
+	// Remove capability set if empty
+
+	if capabilityIDSet.Count() == 0 {
+		storageMap := inter.Storage().GetStorageMap(
+			address,
+			PathCapabilityStorageDomain,
+			true,
+		)
+		if storageMap == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		identifier := targetPathValue.Identifier
+
+		storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+		if !storageMap.RemoveValue(inter, storageMapKey) {
+			panic(errors.NewUnreachableError())
+		}
+	}
 }
 
 func getStorageCapabilityControllerIDsIterator(
@@ -2972,9 +3053,17 @@ const AccountCapabilityStorageDomain = "acc_cap"
 
 func recordAccountCapabilityController(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	address common.Address,
 	capabilityIDValue interpreter.UInt64Value,
 ) {
+	addressPath := interpreter.AddressPath{
+		Address: address,
+	}
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
+		inter.SharedState.MutationDuringCapabilityControllerIteration = true
+	}
+
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
 
 	storageMap := inter.Storage().GetStorageMap(
@@ -2991,9 +3080,17 @@ func recordAccountCapabilityController(
 
 func unrecordAccountCapabilityController(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	address common.Address,
 	capabilityIDValue interpreter.UInt64Value,
 ) {
+	addressPath := interpreter.AddressPath{
+		Address: address,
+	}
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
+		inter.SharedState.MutationDuringCapabilityControllerIteration = true
+	}
+
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
 
 	storageMap := inter.Storage().GetStorageMap(
@@ -3224,7 +3321,7 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 
 			readValue := inter.ReadStored(address, domain, storageMapKey)
 			if readValue == nil {
-				return interpreter.Void
+				return interpreter.Nil
 			}
 
 			var borrowStaticType interpreter.ReferenceStaticType
@@ -3232,7 +3329,7 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 			switch readValue := readValue.(type) {
 			case *interpreter.IDCapabilityValue:
 				// Already migrated
-				return interpreter.Void
+				return interpreter.Nil
 
 			case interpreter.PathLinkValue:
 				borrowStaticType, ok = readValue.Type.(interpreter.ReferenceStaticType)
@@ -3262,6 +3359,7 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 					&sema.ReferenceType{
 						Type: sema.AnyType,
 					},
+					false,
 					locationRange,
 				)
 			if err != nil {
@@ -3293,6 +3391,7 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 
 				capabilityID, _ = issueAccountCapabilityController(
 					inter,
+					locationRange,
 					idGenerator,
 					address,
 					borrowType,
@@ -3746,6 +3845,19 @@ var authAccountAccountCapabilitiesForEachControllerCallbackTypeParams = []sema.T
 	},
 }
 
+// CapabilityControllersMutatedDuringIterationError
+type CapabilityControllersMutatedDuringIterationError struct {
+	interpreter.LocationRange
+}
+
+var _ errors.UserError = CapabilityControllersMutatedDuringIterationError{}
+
+func (CapabilityControllersMutatedDuringIterationError) IsUserError() {}
+
+func (CapabilityControllersMutatedDuringIterationError) Error() string {
+	return "capability controller iteration continued after changes to controllers"
+}
+
 func newAuthAccountAccountCapabilitiesForEachControllerFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
@@ -3766,6 +3878,21 @@ func newAuthAccountAccountCapabilitiesForEachControllerFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
+
+			// Prevent mutations (record/unrecord) to account capability controllers
+			// for this address during iteration
+
+			addressPath := interpreter.AddressPath{
+				Address: address,
+			}
+			iterations := inter.SharedState.CapabilityControllerIterations
+			iterations[addressPath]++
+			defer func() {
+				iterations[addressPath]--
+				if iterations[addressPath] <= 0 {
+					delete(iterations, addressPath)
+				}
+			}()
 
 			// Get capability controllers iterator
 
@@ -3807,6 +3934,20 @@ func newAuthAccountAccountCapabilitiesForEachControllerFunction(
 				if !shouldContinue {
 					break
 				}
+
+				// It is not safe to check this at the beginning of the loop
+				// (i.e. on the next invocation of the callback),
+				// because if the mutation performed in the callback reorganized storage
+				// such that the iteration pointer is now at the end,
+				// we will not invoke the callback again but will still silently skip elements of storage.
+				//
+				// In order to be safe, we perform this check here to effectively enforce
+				// that users return `false` from their callback in all cases where storage is mutated.
+				if inter.SharedState.MutationDuringCapabilityControllerIteration {
+					panic(CapabilityControllersMutatedDuringIterationError{
+						LocationRange: locationRange,
+					})
+				}
 			}
 
 			return interpreter.Void
@@ -3823,12 +3964,15 @@ func newAccountCapabilityControllerDeleteFunction(
 		inter,
 		sema.StorageCapabilityControllerTypeTargetFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
+
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			capabilityID := controller.CapabilityID
 
 			unrecordAccountCapabilityController(
 				inter,
+				locationRange,
 				address,
 				capabilityID,
 			)

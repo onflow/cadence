@@ -154,7 +154,7 @@ pub struct AuthAccount {
     /// Removes the capability at the given public or private path.
     pub fun unlink(_ path: CapabilityPath)
 
-    /// Iterate over all the public paths of an account.
+    /// Iterate over all the public paths of an account,
     /// passing each path and type in turn to the provided callback function.
     ///
     /// The callback function takes two arguments:
@@ -163,11 +163,16 @@ pub struct AuthAccount {
     ///
     /// Iteration is stopped early if the callback function returns `false`.
     ///
-    /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
-    /// is undefined.
+    /// The order of iteration is undefined.
+    ///
+    /// If an object is stored under a new public path,
+    /// or an existing object is removed from a public path,
+    /// then the callback must stop iteration by returning false.
+    /// Otherwise, iteration aborts.
+    ///
     pub fun forEachPublic(_ function: ((PublicPath, Type): Bool))
 
-    /// Iterate over all the private paths of an account.
+    /// Iterate over all the private paths of an account,
     /// passing each path and type in turn to the provided callback function.
     ///
     /// The callback function takes two arguments:
@@ -176,11 +181,15 @@ pub struct AuthAccount {
     ///
     /// Iteration is stopped early if the callback function returns `false`.
     ///
-    /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
-    /// is undefined.
+    /// The order of iteration is undefined.
+    ///
+    /// If an object is stored under a new private path,
+    /// or an existing object is removed from a private path,
+    /// then the callback must stop iteration by returning false.
+    /// Otherwise, iteration aborts.
     pub fun forEachPrivate(_ function: ((PrivatePath, Type): Bool))
 
-    /// Iterate over all the stored paths of an account.
+    /// Iterate over all the stored paths of an account,
     /// passing each path and type in turn to the provided callback function.
     ///
     /// The callback function takes two arguments:
@@ -189,8 +198,10 @@ pub struct AuthAccount {
     ///
     /// Iteration is stopped early if the callback function returns `false`.
     ///
-    /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
-    /// is undefined.
+    /// If an object is stored under a new storage path,
+    /// or an existing object is removed from a storage path,
+    /// then the callback must stop iteration by returning false.
+    /// Otherwise, iteration aborts.
     pub fun forEachStored(_ function: ((StoragePath, Type): Bool))
 
     pub struct Contracts {
@@ -279,6 +290,7 @@ pub struct AuthAccount {
         /// passing each key in turn to the provided function.
         ///
         /// Iteration is stopped early if the function returns `false`.
+        ///
         /// The order of iteration is undefined.
         pub fun forEach(_ function: ((AccountKey): Bool))
 
@@ -343,6 +355,9 @@ pub struct AuthAccount {
         /// This function will not be part of the final Capability Controller API.
         ///
         /// Migrates the link at the given path to a capability controller.
+        /// Returns the capability ID of the newly issued controller.
+        /// Returns nil if the migration fails,
+        /// e.g. when the path does not lead to a storage path.
         ///
         /// Does not migrate intermediate links of the chain.
         ///
@@ -361,9 +376,16 @@ pub struct AuthAccount {
         /// Get all storage capability controllers for capabilities that target this storage path
         pub fun getControllers(forPath: StoragePath): [&StorageCapabilityController]
 
-        /// Iterate through all storage capability controllers for capabilities that target this storage path.
+        /// Iterate over all storage capability controllers for capabilities that target this storage path,
+        /// passing a reference to each controller to the provided callback function.
         ///
-        /// Returning false from the function stops the iteration.
+        /// Iteration is stopped early if the callback function returns `false`.
+        ///
+        /// If a new storage capability controller is issued for the path,
+        /// an existing storage capability controller for the path is deleted,
+        /// or a storage capability controller is retargeted from or to the path,
+        /// then the callback must stop iteration by returning false.
+        /// Otherwise, iteration aborts.
         pub fun forEachController(forPath: StoragePath, _ function: ((&StorageCapabilityController): Bool))
 
         /// Issue/create a new storage capability.
@@ -379,9 +401,15 @@ pub struct AuthAccount {
         /// Get all capability controllers for all account capabilities.
         pub fun getControllers(): [&AccountCapabilityController]
 
-        /// Iterate through all account capability controllers for all account capabilities.
+        /// Iterate over all account capability controllers for all account capabilities,
+        /// passing a reference to each controller to the provided callback function.
         ///
-        /// Returning false from the function stops the iteration.
+        /// Iteration is stopped early if the callback function returns `false`.
+        ///
+        /// If a new account capability controller is issued for the account,
+        /// or an existing account capability controller for the account is deleted,
+        /// then the callback must stop iteration by returning false.
+        /// Otherwise, iteration aborts.
         pub fun forEachController(_ function: ((&AccountCapabilityController): Bool))
 
         /// Issue/create a new account capability.
