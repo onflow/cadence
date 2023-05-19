@@ -128,10 +128,6 @@ var allKeywords = []string{
 	KeywordWith,
 	KeywordMapping,
 	KeywordRequire,
-	keywordRemove,
-	keywordAttach,
-	keywordAttachment,
-	keywordTo,
 }
 
 // Keywords that can be used in identifier position without ambiguity.
@@ -141,8 +137,6 @@ var softKeywords = []string{
 	KeywordSet,
 	KeywordAll,
 	KeywordView,
-	keywordTo,
-	keywordRemove,
 }
 
 var softKeywordsTable = mph.Build(softKeywords)
