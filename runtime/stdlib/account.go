@@ -60,7 +60,7 @@ type EventEmitter interface {
 }
 
 type AccountIDGenerator interface {
-	// GenerateAccountID generates a new unique ID for the given account.
+	// GenerateAccountID generates a new, *non-zero*, unique ID for the given account.
 	GenerateAccountID(address common.Address) (uint64, error)
 }
 
@@ -2556,6 +2556,9 @@ func issueStorageCapabilityController(
 	if err != nil {
 		panic(err)
 	}
+	if capabilityID == 0 {
+		panic(errors.NewUnexpectedError("invalid zero account ID"))
+	}
 
 	capabilityIDValue := interpreter.UInt64Value(capabilityID)
 
@@ -2634,6 +2637,9 @@ func IssueAccountCapabilityController(
 	})
 	if err != nil {
 		panic(err)
+	}
+	if capabilityID == 0 {
+		panic(errors.NewUnexpectedError("invalid zero account ID"))
 	}
 
 	capabilityIDValue := interpreter.UInt64Value(capabilityID)

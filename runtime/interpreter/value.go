@@ -18497,8 +18497,7 @@ func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRang
 		return v.Address
 
 	case sema.CapabilityTypeIDFieldName:
-		// TODO:
-		return UInt64Value(TodoCapabilityID)
+		return UInt64Value(0)
 	}
 
 	return nil

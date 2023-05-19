@@ -146,7 +146,7 @@ type Interface interface {
 		oldOwner common.Address,
 		newOwner common.Address,
 	)
-	// GenerateAccountID generates a new unique ID for the given account.
+	// GenerateAccountID generates a new, *non-zero*, unique ID for the given account.
 	GenerateAccountID(address common.Address) (uint64, error)
 }
 
