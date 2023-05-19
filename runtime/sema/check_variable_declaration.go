@@ -32,13 +32,6 @@ func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclar
 
 func (checker *Checker) visitVariableDeclarationValues(declaration *ast.VariableDeclaration, isOptionalBinding bool) Type {
 
-	checker.checkDeclarationAccessModifier(
-		declaration.Access,
-		declaration.DeclarationKind(),
-		declaration.StartPos,
-		declaration.IsConstant,
-	)
-
 	// Determine the type of the initial value of the variable declaration
 	// and save it in the elaboration
 
@@ -84,6 +77,15 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 	if declarationType == nil {
 		declarationType = valueType
 	}
+
+	checker.checkDeclarationAccessModifier(
+		checker.accessFromAstAccess(declaration.Access),
+		declaration.DeclarationKind(),
+		valueType,
+		nil,
+		declaration.StartPos,
+		declaration.IsConstant,
+	)
 
 	checker.checkTransfer(declaration.Transfer, declarationType)
 
@@ -193,7 +195,7 @@ func (checker *Checker) declareVariableDeclaration(declaration *ast.VariableDecl
 		identifier:               identifier,
 		ty:                       declarationType,
 		docString:                declaration.DocString,
-		access:                   declaration.Access,
+		access:                   checker.accessFromAstAccess(declaration.Access),
 		kind:                     declaration.DeclarationKind(),
 		pos:                      declaration.Identifier.Pos,
 		isConstant:               declaration.IsConstant,

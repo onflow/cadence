@@ -3253,7 +3253,7 @@ func baseTypeVariable(name string, ty Type) *Variable {
 		Type:            ty,
 		DeclarationKind: common.DeclarationKindType,
 		IsConstant:      true,
-		Access:          ast.AccessPublic,
+		Access:          PrimitiveAccess(ast.AccessPublic),
 	}
 }
 
@@ -3473,7 +3473,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
 		Type:            ty,
-		Access:          ast.AccessPublic,
+		Access:          PrimitiveAccess(ast.AccessPublic),
 		DocString:       docString,
 	}
 }
@@ -3697,8 +3697,9 @@ type CompositeType struct {
 	// in a language with support for algebraic data types,
 	// we would implement this as an argument to the CompositeKind type constructor.
 	// Alas, this is Go, so for now these fields are only non-nil when Kind is CompositeKindAttachment
-	baseType          Type
-	baseTypeDocString string
+	baseType             Type
+	baseTypeDocString    string
+	requiredEntitlements *EntitlementOrderedSet
 
 	cachedIdentifiers *struct {
 		TypeID              TypeID
@@ -4138,7 +4139,7 @@ type Member struct {
 	DocString      string
 	ArgumentLabels []string
 	Identifier     ast.Identifier
-	Access         ast.Access
+	Access         Access
 	// TODO: replace with dedicated MemberKind enum
 	DeclarationKind common.DeclarationKind
 	VariableKind    ast.VariableKind
@@ -4174,7 +4175,7 @@ func NewPublicFunctionMember(
 
 	return &Member{
 		ContainerType: containerType,
-		Access:        ast.AccessPublic,
+		Access:        PrimitiveAccess(ast.AccessPublic),
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
@@ -4212,7 +4213,7 @@ func NewPublicConstantFieldMember(
 ) *Member {
 	return &Member{
 		ContainerType: containerType,
-		Access:        ast.AccessPublic,
+		Access:        PrimitiveAccess(ast.AccessPublic),
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
@@ -5086,7 +5087,10 @@ func (*ReferenceType) IsComparable() bool {
 	return false
 }
 
-func (*ReferenceType) TypeAnnotationState() TypeAnnotationState {
+func (r *ReferenceType) TypeAnnotationState() TypeAnnotationState {
+	if r.Type.TypeAnnotationState() == TypeAnnotationStateDirectEntitlementTypeAnnotation {
+		return TypeAnnotationStateDirectEntitlementTypeAnnotation
+	}
 	return TypeAnnotationStateValid
 }
 
@@ -7069,4 +7073,246 @@ func isNumericSuperType(typ Type) bool {
 	}
 
 	return false
+}
+
+// EntitlementType
+
+type EntitlementType struct {
+	Location      common.Location
+	containerType Type
+	Identifier    string
+}
+
+var _ Type = &EntitlementType{}
+var _ ContainedType = &EntitlementType{}
+var _ LocatedType = &EntitlementType{}
+
+func NewEntitlementType(memoryGauge common.MemoryGauge, location common.Location, identifier string) *EntitlementType {
+	common.UseMemory(memoryGauge, common.EntitlementSemaTypeMemoryUsage)
+	return &EntitlementType{
+		Location:   location,
+		Identifier: identifier,
+	}
+}
+
+func (*EntitlementType) IsType() {}
+
+func (t *EntitlementType) Tag() TypeTag {
+	return InvalidTypeTag // entitlement types may never appear as types, and thus cannot have a computed supertype
+}
+
+func (t *EntitlementType) String() string {
+	return t.Identifier
+}
+
+func (t *EntitlementType) QualifiedString() string {
+	return t.QualifiedIdentifier()
+}
+
+func (t *EntitlementType) GetContainerType() Type {
+	return t.containerType
+}
+
+func (t *EntitlementType) SetContainerType(containerType Type) {
+	t.containerType = containerType
+}
+
+func (t *EntitlementType) GetLocation() common.Location {
+	return t.Location
+}
+
+func (t *EntitlementType) QualifiedIdentifier() string {
+	return qualifiedIdentifier(t.Identifier, t.containerType)
+}
+
+func (t *EntitlementType) ID() TypeID {
+	identifier := t.QualifiedIdentifier()
+	if t.Location == nil {
+		return TypeID(identifier)
+	} else {
+		return t.Location.TypeID(nil, identifier)
+	}
+}
+
+func (t *EntitlementType) Equal(other Type) bool {
+	otherEntitlement, ok := other.(*EntitlementType)
+	if !ok {
+		return false
+	}
+
+	return otherEntitlement.ID() == t.ID()
+}
+
+func (t *EntitlementType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
+}
+
+func (t *EntitlementType) IsInvalidType() bool {
+	return false
+}
+
+func (t *EntitlementType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *EntitlementType) IsExportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *EntitlementType) IsImportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*EntitlementType) IsEquatable() bool {
+	return false
+}
+
+func (*EntitlementType) IsComparable() bool {
+	return false
+}
+
+func (*EntitlementType) IsResourceType() bool {
+	return false
+}
+
+func (*EntitlementType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateDirectEntitlementTypeAnnotation
+}
+
+func (t *EntitlementType) RewriteWithRestrictedTypes() (Type, bool) {
+	return t, false
+}
+
+func (*EntitlementType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *EntitlementType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+	return t
+}
+
+// EntitlementMapType
+
+type EntitlementRelation struct {
+	Input  *EntitlementType
+	Output *EntitlementType
+}
+
+type EntitlementMapType struct {
+	Location      common.Location
+	containerType Type
+	Identifier    string
+	Relations     []EntitlementRelation
+}
+
+var _ Type = &EntitlementMapType{}
+var _ ContainedType = &EntitlementMapType{}
+var _ LocatedType = &EntitlementMapType{}
+
+func NewEntitlementMapType(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	identifier string,
+) *EntitlementMapType {
+	common.UseMemory(memoryGauge, common.EntitlementMapSemaTypeMemoryUsage)
+	return &EntitlementMapType{
+		Location:   location,
+		Identifier: identifier,
+	}
+}
+
+func (*EntitlementMapType) IsType() {}
+
+func (t *EntitlementMapType) Tag() TypeTag {
+	return InvalidTypeTag // entitlement map types may never appear as types, and thus cannot have a computed supertype
+}
+
+func (t *EntitlementMapType) String() string {
+	return t.Identifier
+}
+
+func (t *EntitlementMapType) QualifiedString() string {
+	return t.QualifiedIdentifier()
+}
+
+func (t *EntitlementMapType) GetContainerType() Type {
+	return t.containerType
+}
+
+func (t *EntitlementMapType) SetContainerType(containerType Type) {
+	t.containerType = containerType
+}
+
+func (t *EntitlementMapType) GetLocation() common.Location {
+	return t.Location
+}
+
+func (t *EntitlementMapType) QualifiedIdentifier() string {
+	return qualifiedIdentifier(t.Identifier, t.containerType)
+}
+
+func (t *EntitlementMapType) ID() TypeID {
+	identifier := t.QualifiedIdentifier()
+	if t.Location == nil {
+		return TypeID(identifier)
+	} else {
+		return t.Location.TypeID(nil, identifier)
+	}
+}
+
+func (t *EntitlementMapType) Equal(other Type) bool {
+	otherEntitlement, ok := other.(*EntitlementMapType)
+	if !ok {
+		return false
+	}
+
+	return otherEntitlement.ID() == t.ID()
+}
+
+func (t *EntitlementMapType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
+}
+
+func (t *EntitlementMapType) IsInvalidType() bool {
+	return false
+}
+
+func (t *EntitlementMapType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *EntitlementMapType) IsExportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *EntitlementMapType) IsImportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*EntitlementMapType) IsEquatable() bool {
+	return false
+}
+
+func (*EntitlementMapType) IsComparable() bool {
+	return false
+}
+
+func (*EntitlementMapType) IsResourceType() bool {
+	return false
+}
+
+func (*EntitlementMapType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateDirectEntitlementTypeAnnotation
+}
+
+func (t *EntitlementMapType) RewriteWithRestrictedTypes() (Type, bool) {
+	return t, false
+}
+
+func (*EntitlementMapType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *EntitlementMapType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+	return t
 }

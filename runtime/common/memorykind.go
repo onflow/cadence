@@ -239,6 +239,8 @@ const (
 	MemoryKindOptionalSemaType
 	MemoryKindRestrictedSemaType
 	MemoryKindReferenceSemaType
+	MemoryKindEntitlementSemaType
+	MemoryKindEntitlementMapSemaType
 	MemoryKindCapabilitySemaType
 
 	// ordered-map

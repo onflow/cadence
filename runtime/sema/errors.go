@@ -3929,6 +3929,222 @@ func (e *InvalidatedResourceReferenceError) ErrorNotes() []errors.ErrorNote {
 	}
 }
 
+// InvalidEntitlementAccessError
+type InvalidEntitlementAccessError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidEntitlementAccessError{}
+var _ errors.UserError = &InvalidEntitlementAccessError{}
+
+func (*InvalidEntitlementAccessError) isSemanticError() {}
+
+func (*InvalidEntitlementAccessError) IsUserError() {}
+
+func (e *InvalidEntitlementAccessError) Error() string {
+	return "only struct or resource members may be declared with entitlement access"
+}
+
+func (e *InvalidEntitlementAccessError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidEntitlementAccessError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidMultipleMappedEntitlementError
+type InvalidMultipleMappedEntitlementError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidMultipleMappedEntitlementError{}
+var _ errors.UserError = &InvalidMultipleMappedEntitlementError{}
+
+func (*InvalidMultipleMappedEntitlementError) isSemanticError() {}
+
+func (*InvalidMultipleMappedEntitlementError) IsUserError() {}
+
+func (e *InvalidMultipleMappedEntitlementError) Error() string {
+	return "entitlement mappings cannot be used as part of an entitlement set"
+}
+
+func (e *InvalidMultipleMappedEntitlementError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidMultipleMappedEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidNonEntitlementTypeInMapError
+type InvalidNonEntitlementTypeInMapError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidNonEntitlementTypeInMapError{}
+var _ errors.UserError = &InvalidNonEntitlementTypeInMapError{}
+
+func (*InvalidNonEntitlementTypeInMapError) isSemanticError() {}
+
+func (*InvalidNonEntitlementTypeInMapError) IsUserError() {}
+
+func (e *InvalidNonEntitlementTypeInMapError) Error() string {
+	return "cannot use non-entitlement type in entitlement mapping"
+}
+
+func (e *InvalidNonEntitlementTypeInMapError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidNonEntitlementTypeInMapError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidMappedEntitlementMemberError
+type InvalidMappedEntitlementMemberError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidMappedEntitlementMemberError{}
+var _ errors.UserError = &InvalidMappedEntitlementMemberError{}
+
+func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
+
+func (*InvalidMappedEntitlementMemberError) IsUserError() {}
+
+func (e *InvalidMappedEntitlementMemberError) Error() string {
+	return "mapped entitlement access modifiers may only be used for fields with a reference type authorized with the same mapped entitlement"
+}
+
+func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidMappedEntitlementMemberError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidNonEntitlementAccessError
+type InvalidNonEntitlementAccessError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementAccessError{}
+var _ errors.UserError = &InvalidNonEntitlementAccessError{}
+
+func (*InvalidNonEntitlementAccessError) isSemanticError() {}
+
+func (*InvalidNonEntitlementAccessError) IsUserError() {}
+
+func (e *InvalidNonEntitlementAccessError) Error() string {
+	return "only entitlements may be used in access modifiers"
+}
+
+// DirectEntitlementAnnotationError
+type DirectEntitlementAnnotationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &DirectEntitlementAnnotationError{}
+var _ errors.UserError = &DirectEntitlementAnnotationError{}
+
+func (*DirectEntitlementAnnotationError) isSemanticError() {}
+
+func (*DirectEntitlementAnnotationError) IsUserError() {}
+
+func (e *DirectEntitlementAnnotationError) Error() string {
+	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
+}
+
+type DuplicateEntitlementRequirementError struct {
+	Entitlement *EntitlementType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementRequirementError{}
+var _ errors.UserError = &DuplicateEntitlementRequirementError{}
+
+func (*DuplicateEntitlementRequirementError) isSemanticError() {}
+
+func (*DuplicateEntitlementRequirementError) IsUserError() {}
+
+func (e *DuplicateEntitlementRequirementError) Error() string {
+	return fmt.Sprintf("entitlement %s is already required by this attachment", e.Entitlement.QualifiedString())
+}
+
+type DuplicateEntitlementProvidedError struct {
+	Entitlement *EntitlementType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementProvidedError{}
+var _ errors.UserError = &DuplicateEntitlementProvidedError{}
+
+func (*DuplicateEntitlementProvidedError) isSemanticError() {}
+
+func (*DuplicateEntitlementProvidedError) IsUserError() {}
+
+func (e *DuplicateEntitlementProvidedError) Error() string {
+	return fmt.Sprintf("entitlement %s is already provided to this attachment", e.Entitlement.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type InvalidNonEntitlementRequirement struct {
+	InvalidType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementRequirement{}
+var _ errors.UserError = &InvalidNonEntitlementRequirement{}
+
+func (*InvalidNonEntitlementRequirement) isSemanticError() {}
+
+func (*InvalidNonEntitlementRequirement) IsUserError() {}
+
+func (e *InvalidNonEntitlementRequirement) Error() string {
+	return fmt.Sprintf("cannot use %s as an entitlement requirement", e.InvalidType.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type InvalidNonEntitlementProvidedError struct {
+	InvalidType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementProvidedError{}
+var _ errors.UserError = &InvalidNonEntitlementProvidedError{}
+
+func (*InvalidNonEntitlementProvidedError) isSemanticError() {}
+
+func (*InvalidNonEntitlementProvidedError) IsUserError() {}
+
+func (e *InvalidNonEntitlementProvidedError) Error() string {
+	return fmt.Sprintf("cannot provide %s as an entitlement to this attachment", e.InvalidType.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type RequiredEntitlementNotProvidedError struct {
+	RequiredEntitlement *EntitlementType
+	AttachmentType      *CompositeType
+	ast.Range
+}
+
+var _ SemanticError = &RequiredEntitlementNotProvidedError{}
+var _ errors.UserError = &RequiredEntitlementNotProvidedError{}
+
+func (*RequiredEntitlementNotProvidedError) isSemanticError() {}
+
+func (*RequiredEntitlementNotProvidedError) IsUserError() {}
+
+func (e *RequiredEntitlementNotProvidedError) Error() string {
+	return fmt.Sprintf(
+		"attachment type %s requires entitlement %s to be provided when attaching",
+		e.AttachmentType.QualifiedString(),
+		e.RequiredEntitlement.QualifiedString(),
+	)
+}
+
 // InvalidBaseTypeError
 
 type InvalidBaseTypeError struct {

@@ -33,7 +33,6 @@ type Access interface {
 	Description() string
 	String() string
 	MarshalJSON() ([]byte, error)
-	IsLessPermissiveThan(Access) bool
 }
 
 type Separator uint8
@@ -62,36 +61,36 @@ type ConjunctiveEntitlementSet struct {
 	Elements []*NominalType `json:"ConjunctiveElements"`
 }
 
-var _ EntitlementSet = ConjunctiveEntitlementSet{}
+var _ EntitlementSet = &ConjunctiveEntitlementSet{}
 
-func (s ConjunctiveEntitlementSet) Entitlements() []*NominalType {
+func (s *ConjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
 }
 
-func (s ConjunctiveEntitlementSet) Separator() Separator {
+func (s *ConjunctiveEntitlementSet) Separator() Separator {
 	return Conjunction
 }
 
-func NewConjunctiveEntitlementSet(entitlements []*NominalType) ConjunctiveEntitlementSet {
-	return ConjunctiveEntitlementSet{Elements: entitlements}
+func NewConjunctiveEntitlementSet(entitlements []*NominalType) *ConjunctiveEntitlementSet {
+	return &ConjunctiveEntitlementSet{Elements: entitlements}
 }
 
 type DisjunctiveEntitlementSet struct {
 	Elements []*NominalType `json:"DisjunctiveElements"`
 }
 
-var _ EntitlementSet = DisjunctiveEntitlementSet{}
+var _ EntitlementSet = &DisjunctiveEntitlementSet{}
 
-func (s DisjunctiveEntitlementSet) Entitlements() []*NominalType {
+func (s *DisjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
 }
 
-func (s DisjunctiveEntitlementSet) Separator() Separator {
+func (s *DisjunctiveEntitlementSet) Separator() Separator {
 	return Disjunction
 }
 
-func NewDisjunctiveEntitlementSet(entitlements []*NominalType) DisjunctiveEntitlementSet {
-	return DisjunctiveEntitlementSet{Elements: entitlements}
+func NewDisjunctiveEntitlementSet(entitlements []*NominalType) *DisjunctiveEntitlementSet {
+	return &DisjunctiveEntitlementSet{Elements: entitlements}
 }
 
 type EntitlementAccess struct {
@@ -120,16 +119,16 @@ func (e EntitlementAccess) entitlementsString(prefix *strings.Builder) {
 }
 
 func (e EntitlementAccess) String() string {
-	str := strings.Builder{}
+	str := &strings.Builder{}
 	str.WriteString("ConjunctiveEntitlementAccess ")
-	e.entitlementsString(&str)
+	e.entitlementsString(str)
 	return str.String()
 }
 
 func (e EntitlementAccess) Keyword() string {
-	str := strings.Builder{}
+	str := &strings.Builder{}
 	str.WriteString("access(")
-	e.entitlementsString(&str)
+	e.entitlementsString(str)
 	str.WriteString(")")
 	return str.String()
 }
@@ -183,14 +182,6 @@ func PrimitiveAccessCount() int {
 }
 
 func (PrimitiveAccess) isAccess() {}
-
-func (a PrimitiveAccess) IsLessPermissiveThan(otherAccess Access) bool {
-	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
-		return a < otherPrimitive
-	}
-	// only private access is guaranteed to be less permissive than entitlement-based access
-	return a == AccessPrivate
-}
 
 // TODO: remove.
 //   only used by tests which are not updated yet

@@ -190,6 +190,46 @@ func (om *OrderedMap[K, V]) ForeachWithError(f func(key K, value V) error) error
 	return nil
 }
 
+// ForAllKeys iterates over the keys of the map, and returns whether the provided
+// predicate is true for all of them
+func (om *OrderedMap[K, V]) ForAllKeys(predicate func(key K) bool) bool {
+	if om.pairs == nil {
+		return true
+	}
+
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		if !predicate(pair.Key) {
+			return false
+		}
+	}
+	return true
+}
+
+// ForAnyKey iterates over the keys of the map, and returns whether the provided
+// predicate is true for any of them
+func (om *OrderedMap[K, V]) ForAnyKey(predicate func(key K) bool) bool {
+	if om.pairs == nil {
+		return true
+	}
+
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		if predicate(pair.Key) {
+			return true
+		}
+	}
+	return false
+}
+
+// KeySetIsDisjointFrom checks whether the key set of the receiver is disjoint from of the
+// argument map's key set
+func (om *OrderedMap[K, V]) KeySetIsDisjointFrom(other *OrderedMap[K, V]) bool {
+	isDisjoint := true
+	om.Foreach(func(key K, _ V) {
+		isDisjoint = isDisjoint && !other.Contains(key)
+	})
+	return isDisjoint
+}
+
 // Pair is an entry in an OrderedMap
 type Pair[K any, V any] struct {
 	Key   K

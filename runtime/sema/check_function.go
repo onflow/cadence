@@ -39,6 +39,7 @@ func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclar
 			declareFunction:   true,
 			checkResourceLoss: true,
 		},
+		nil,
 	)
 
 	return
@@ -65,14 +66,8 @@ type functionDeclarationOptions struct {
 func (checker *Checker) visitFunctionDeclaration(
 	declaration *ast.FunctionDeclaration,
 	options functionDeclarationOptions,
+	containerKind *common.CompositeKind,
 ) {
-
-	checker.checkDeclarationAccessModifier(
-		declaration.Access,
-		declaration.DeclarationKind(),
-		declaration.StartPos,
-		true,
-	)
 
 	checker.checkStaticModifier(
 		declaration.IsStatic(),
@@ -94,6 +89,15 @@ func (checker *Checker) visitFunctionDeclaration(
 			checker.declareFunctionDeclaration(declaration, functionType)
 		}
 	}
+
+	checker.checkDeclarationAccessModifier(
+		checker.accessFromAstAccess(declaration.Access),
+		declaration.DeclarationKind(),
+		functionType,
+		containerKind,
+		declaration.StartPos,
+		true,
+	)
 
 	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 
@@ -118,7 +122,7 @@ func (checker *Checker) declareFunctionDeclaration(
 		identifier:               declaration.Identifier.Identifier,
 		ty:                       functionType,
 		docString:                declaration.DocString,
-		access:                   declaration.Access,
+		access:                   checker.accessFromAstAccess(declaration.Access),
 		kind:                     common.DeclarationKindFunction,
 		pos:                      declaration.Identifier.Pos,
 		isConstant:               true,
@@ -302,7 +306,7 @@ func (checker *Checker) declareParameters(
 
 		variable := &Variable{
 			Identifier:      identifier.Identifier,
-			Access:          ast.AccessPublic,
+			Access:          PrimitiveAccess(ast.AccessPublic),
 			DeclarationKind: common.DeclarationKindParameter,
 			IsConstant:      true,
 			Type:            parameterType,

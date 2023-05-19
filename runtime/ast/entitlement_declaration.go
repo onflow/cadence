@@ -189,7 +189,7 @@ func NewEntitlementMappingDeclaration(
 }
 
 func (*EntitlementMappingDeclaration) ElementType() ElementType {
-	return ElementTypeEntitlementDeclaration
+	return ElementTypeEntitlementMappingDeclaration
 }
 
 func (*EntitlementMappingDeclaration) Walk(_ func(Element)) {}

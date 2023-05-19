@@ -109,11 +109,15 @@ type ExpressionTypes struct {
 type Elaboration struct {
 	fixedPointExpressionTypes        map[*ast.FixedPointExpression]Type
 	interfaceTypeDeclarations        map[*InterfaceType]*ast.InterfaceDeclaration
+	entitlementTypeDeclarations      map[*EntitlementType]*ast.EntitlementDeclaration
+	entitlementMapTypeDeclarations   map[*EntitlementMapType]*ast.EntitlementMappingDeclaration
 	swapStatementTypes               map[*ast.SwapStatement]SwapStatementTypes
 	assignmentStatementTypes         map[*ast.AssignmentStatement]AssignmentStatementTypes
 	compositeDeclarationTypes        map[ast.CompositeLikeDeclaration]*CompositeType
 	compositeTypeDeclarations        map[*CompositeType]ast.CompositeLikeDeclaration
 	interfaceDeclarationTypes        map[*ast.InterfaceDeclaration]*InterfaceType
+	entitlementDeclarationTypes      map[*ast.EntitlementDeclaration]*EntitlementType
+	entitlementMapDeclarationTypes   map[*ast.EntitlementMappingDeclaration]*EntitlementMapType
 	transactionDeclarationTypes      map[*ast.TransactionDeclaration]*TransactionType
 	constructorFunctionTypes         map[*ast.SpecialFunctionDeclaration]*FunctionType
 	functionExpressionFunctionTypes  map[*ast.FunctionExpression]*FunctionType
@@ -139,6 +143,8 @@ type Elaboration struct {
 	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
 	compositeTypes                      map[TypeID]*CompositeType
 	interfaceTypes                      map[TypeID]*InterfaceType
+	entitlementTypes                    map[TypeID]*EntitlementType
+	entitlementMapTypes                 map[TypeID]*EntitlementMapType
 	identifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	importDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
 	globalValues                        *StringVariableOrderedMap
@@ -153,6 +159,7 @@ type Elaboration struct {
 	staticCastTypes                     map[*ast.CastingExpression]CastTypes
 	expressionTypes                     map[ast.Expression]ExpressionTypes
 	TransactionTypes                    []*TransactionType
+	semanticAccesses                    map[ast.Access]Access
 	isChecking                          bool
 }
 
@@ -305,6 +312,40 @@ func (e *Elaboration) SetInterfaceDeclarationType(
 	e.interfaceDeclarationTypes[declaration] = interfaceType
 }
 
+func (e *Elaboration) EntitlementDeclarationType(declaration *ast.EntitlementDeclaration) *EntitlementType {
+	if e.entitlementDeclarationTypes == nil {
+		return nil
+	}
+	return e.entitlementDeclarationTypes[declaration]
+}
+
+func (e *Elaboration) SetEntitlementDeclarationType(
+	declaration *ast.EntitlementDeclaration,
+	entitlementType *EntitlementType,
+) {
+	if e.entitlementDeclarationTypes == nil {
+		e.entitlementDeclarationTypes = map[*ast.EntitlementDeclaration]*EntitlementType{}
+	}
+	e.entitlementDeclarationTypes[declaration] = entitlementType
+}
+
+func (e *Elaboration) EntitlementMapDeclarationType(declaration *ast.EntitlementMappingDeclaration) *EntitlementMapType {
+	if e.entitlementMapDeclarationTypes == nil {
+		return nil
+	}
+	return e.entitlementMapDeclarationTypes[declaration]
+}
+
+func (e *Elaboration) SetEntitlementMapDeclarationType(
+	declaration *ast.EntitlementMappingDeclaration,
+	entitlementMapType *EntitlementMapType,
+) {
+	if e.entitlementMapDeclarationTypes == nil {
+		e.entitlementMapDeclarationTypes = map[*ast.EntitlementMappingDeclaration]*EntitlementMapType{}
+	}
+	e.entitlementMapDeclarationTypes[declaration] = entitlementMapType
+}
+
 func (e *Elaboration) InterfaceTypeDeclaration(interfaceType *InterfaceType) *ast.InterfaceDeclaration {
 	if e.interfaceTypeDeclarations == nil {
 		return nil
@@ -320,6 +361,40 @@ func (e *Elaboration) SetInterfaceTypeDeclaration(
 		e.interfaceTypeDeclarations = map[*InterfaceType]*ast.InterfaceDeclaration{}
 	}
 	e.interfaceTypeDeclarations[interfaceType] = declaration
+}
+
+func (e *Elaboration) EntitlementTypeDeclaration(entitlementType *EntitlementType) *ast.EntitlementDeclaration {
+	if e.entitlementTypeDeclarations == nil {
+		return nil
+	}
+	return e.entitlementTypeDeclarations[entitlementType]
+}
+
+func (e *Elaboration) SetEntitlementTypeDeclaration(
+	entitlementType *EntitlementType,
+	declaration *ast.EntitlementDeclaration,
+) {
+	if e.entitlementTypeDeclarations == nil {
+		e.entitlementTypeDeclarations = map[*EntitlementType]*ast.EntitlementDeclaration{}
+	}
+	e.entitlementTypeDeclarations[entitlementType] = declaration
+}
+
+func (e *Elaboration) EntitlementMapTypeDeclaration(entitlementMapType *EntitlementMapType) *ast.EntitlementMappingDeclaration {
+	if e.entitlementMapTypeDeclarations == nil {
+		return nil
+	}
+	return e.entitlementMapTypeDeclarations[entitlementMapType]
+}
+
+func (e *Elaboration) SetEntitlementMapTypeDeclaration(
+	entitlementMapType *EntitlementMapType,
+	declaration *ast.EntitlementMappingDeclaration,
+) {
+	if e.entitlementMapTypeDeclarations == nil {
+		e.entitlementMapTypeDeclarations = map[*EntitlementMapType]*ast.EntitlementMappingDeclaration{}
+	}
+	e.entitlementMapTypeDeclarations[entitlementMapType] = declaration
 }
 
 func (e *Elaboration) ConstructorFunctionType(initializer *ast.SpecialFunctionDeclaration) *FunctionType {
@@ -716,6 +791,34 @@ func (e *Elaboration) SetCompositeType(typeID TypeID, ty *CompositeType) {
 	e.compositeTypes[typeID] = ty
 }
 
+func (e *Elaboration) EntitlementType(typeID common.TypeID) *EntitlementType {
+	if e.entitlementTypes == nil {
+		return nil
+	}
+	return e.entitlementTypes[typeID]
+}
+
+func (e *Elaboration) SetEntitlementType(typeID TypeID, ty *EntitlementType) {
+	if e.entitlementTypes == nil {
+		e.entitlementTypes = map[TypeID]*EntitlementType{}
+	}
+	e.entitlementTypes[typeID] = ty
+}
+
+func (e *Elaboration) EntitlementMapType(typeID common.TypeID) *EntitlementMapType {
+	if e.entitlementMapTypes == nil {
+		return nil
+	}
+	return e.entitlementMapTypes[typeID]
+}
+
+func (e *Elaboration) SetEntitlementMapType(typeID TypeID, ty *EntitlementMapType) {
+	if e.entitlementMapTypes == nil {
+		e.entitlementMapTypes = map[TypeID]*EntitlementMapType{}
+	}
+	e.entitlementMapTypes[typeID] = ty
+}
+
 func (e *Elaboration) InterfaceType(typeID common.TypeID) *InterfaceType {
 	if e.interfaceTypes == nil {
 		return nil
@@ -912,4 +1015,19 @@ func (e *Elaboration) ExpressionTypes(expression ast.Expression) ExpressionTypes
 
 func (e *Elaboration) AllExpressionTypes() map[ast.Expression]ExpressionTypes {
 	return e.expressionTypes
+}
+
+func (e *Elaboration) SetSemanticAccess(access ast.Access, semanticAccess Access) {
+	if e.semanticAccesses == nil {
+		e.semanticAccesses = map[ast.Access]Access{}
+	}
+	e.semanticAccesses[access] = semanticAccess
+}
+
+func (e *Elaboration) GetSemanticAccess(access ast.Access) (semaAccess Access, present bool) {
+	if e.semanticAccesses == nil {
+		return
+	}
+	semaAccess, present = e.semanticAccesses[access]
+	return
 }

@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // NOTE: only called if the member expression is *not* an assignment
@@ -270,7 +271,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			checker.report(
 				&InvalidAccessError{
 					Name:              member.Identifier.Identifier,
-					RestrictingAccess: member.Access,
+					RestrictingAccess: member.Access.Access(),
 					DeclarationKind:   member.DeclarationKind,
 					Range:             ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 				},
@@ -307,29 +308,35 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 		return true
 	}
 
-	switch member.Access {
-	case ast.AccessContract:
-		// If the member allows access from the containing contract,
-		// check if the current location is contained in the member's contract
+	switch access := member.Access.(type) {
+	case PrimitiveAccess:
+		switch ast.PrimitiveAccess(access) {
+		case ast.AccessContract:
+			// If the member allows access from the containing contract,
+			// check if the current location is contained in the member's contract
 
-		contractType := containingContractKindedType(member.ContainerType)
-		if checker.containerTypes[contractType] {
-			return true
+			contractType := containingContractKindedType(member.ContainerType)
+			if checker.containerTypes[contractType] {
+				return true
+			}
+
+		case ast.AccessAccount:
+			// If the member allows access from the containing account,
+			// check if the current location is the same as the member's container location
+
+			location := member.ContainerType.(LocatedType).GetLocation()
+			if common.LocationsInSameAccount(checker.Location, location) {
+				return true
+			}
+
+			memberAccountAccessHandler := checker.Config.MemberAccountAccessHandler
+			if memberAccountAccessHandler != nil {
+				return memberAccountAccessHandler(checker, location)
+			}
 		}
-
-	case ast.AccessAccount:
-		// If the member allows access from the containing account,
-		// check if the current location is the same as the member's container location
-
-		location := member.ContainerType.(LocatedType).GetLocation()
-		if common.LocationsInSameAccount(checker.Location, location) {
-			return true
-		}
-
-		memberAccountAccessHandler := checker.Config.MemberAccountAccessHandler
-		if memberAccountAccessHandler != nil {
-			return memberAccountAccessHandler(checker, location)
-		}
+	case EntitlementAccess:
+		// ENTITLEMENTTODO: fill this out
+		panic(errors.NewUnreachableError())
 	}
 
 	return false

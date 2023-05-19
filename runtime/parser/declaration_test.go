@@ -1796,7 +1796,7 @@ func TestParseAccess(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			ast.EntitlementAccess{
-				EntitlementSet: ast.ConjunctiveEntitlementSet{
+				EntitlementSet: &ast.ConjunctiveEntitlementSet{
 					Elements: []*ast.NominalType{
 						{
 							Identifier: ast.Identifier{
@@ -1820,7 +1820,7 @@ func TestParseAccess(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			ast.EntitlementAccess{
-				EntitlementSet: ast.ConjunctiveEntitlementSet{
+				EntitlementSet: &ast.ConjunctiveEntitlementSet{
 					Elements: []*ast.NominalType{
 						{
 							Identifier: ast.Identifier{
@@ -1850,7 +1850,7 @@ func TestParseAccess(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			ast.EntitlementAccess{
-				EntitlementSet: ast.DisjunctiveEntitlementSet{
+				EntitlementSet: &ast.DisjunctiveEntitlementSet{
 					Elements: []*ast.NominalType{
 						{
 							Identifier: ast.Identifier{
@@ -3870,7 +3870,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
 								Access: ast.EntitlementAccess{
-									EntitlementSet: ast.ConjunctiveEntitlementSet{
+									EntitlementSet: &ast.ConjunctiveEntitlementSet{
 										Elements: []*ast.NominalType{
 											{
 												Identifier: ast.Identifier{
