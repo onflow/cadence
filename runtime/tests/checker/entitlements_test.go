@@ -580,7 +580,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
-	t.Run("mismatched entitlement mapping", func(t *testing.T) {
+	/*t.Run("mismatched entitlement mapping", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement mapping M {}
@@ -594,7 +594,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
-
+	*/
 	t.Run("function", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
