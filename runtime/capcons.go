@@ -26,38 +26,50 @@ import (
 
 type AddressIterator interface {
 	NextAddress() common.Address
+	Reset()
 }
 
-type AddressIteratorFunc func() common.Address
-
-func (a AddressIteratorFunc) NextAddress() common.Address {
-	return a()
+type AddressSliceIterator struct {
+	Addresses []common.Address
+	index     int
 }
 
-var _ AddressIterator = AddressIteratorFunc(nil)
+var _ AddressIterator = &AddressSliceIterator{}
 
-func NewAddressSliceIterator(addresses []common.Address) AddressIterator {
-	var index int
-	return AddressIteratorFunc(
-		func() common.Address {
-			if index >= len(addresses) {
-				return common.ZeroAddress
-			}
-			address := addresses[index]
-			index++
-			return address
-		},
-	)
+func (a *AddressSliceIterator) NextAddress() common.Address {
+	index := a.index
+	if index >= len(a.Addresses) {
+		return common.ZeroAddress
+	}
+	address := a.Addresses[index]
+	a.index++
+	return address
+}
+
+func (a *AddressSliceIterator) Reset() {
+	a.index = 0
 }
 
 type CapConsMigrationReporter interface {
 	CapConsLinkMigrationReporter
+	CapConsPathCapabilityMigrationReporter
 }
 
 type CapConsLinkMigrationReporter interface {
 	MigratedLink(
 		addressPath interpreter.AddressPath,
 		capabilityID interpreter.UInt64Value,
+	)
+}
+
+type CapConsPathCapabilityMigrationReporter interface {
+	MigratedPathCapability(
+		address common.Address,
+		addressPath interpreter.AddressPath,
+	)
+	MissingCapabilityID(
+		address common.Address,
+		addressPath interpreter.AddressPath,
 	)
 }
 
@@ -86,7 +98,7 @@ func (m *CapConsMigration) Migrate(
 	addressIterator AddressIterator,
 	accountIDGenerator stdlib.AccountIDGenerator,
 	reporter CapConsMigrationReporter,
-) {
+) error {
 	m.capabilityIDs = make(map[interpreter.AddressPath]interpreter.UInt64Value)
 	defer func() {
 		m.capabilityIDs = nil
@@ -96,7 +108,14 @@ func (m *CapConsMigration) Migrate(
 		accountIDGenerator,
 		reporter,
 	)
-	// TODO: m.migratePathCapabilities()
+
+	addressIterator.Reset()
+	m.migratePathCapabilities(
+		addressIterator,
+		reporter,
+	)
+
+	return m.storage.Commit(m.interpreter, false)
 }
 
 // migrateLinks migrates the links to capability controllers
@@ -221,6 +240,7 @@ func (m *CapConsMigration) migrateLink(
 // It uses the source path to capability ID mapping which was constructed in migrateLinks.
 func (m *CapConsMigration) migratePathCapabilities(
 	addressIterator AddressIterator,
+	reporter CapConsPathCapabilityMigrationReporter,
 ) {
 	for {
 		address := addressIterator.NextAddress()
@@ -228,6 +248,69 @@ func (m *CapConsMigration) migratePathCapabilities(
 			break
 		}
 
-		// TODO: m.migratePathCapabilitiesInAccount(address)
+		m.migratePathCapabilitiesInAccount(address, reporter)
 	}
+}
+
+var pathDomainStorage = common.PathDomainStorage.Identifier()
+
+func (m *CapConsMigration) migratePathCapabilitiesInAccount(address common.Address, reporter CapConsPathCapabilityMigrationReporter) {
+
+	storageMap := m.storage.GetStorageMap(address, pathDomainStorage, false)
+	if storageMap == nil {
+		return
+	}
+
+	iterator := storageMap.Iterator(m.interpreter)
+
+	count := storageMap.Count()
+	if count > 0 {
+		for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
+
+			m.migratePathCapability(
+				address,
+				value,
+				func(newValue interpreter.Value) {
+					// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+					identifier := string(key.(interpreter.StringAtreeValue))
+					storageMap.SetValue(
+						m.interpreter,
+						interpreter.StringStorageMapKey(identifier),
+						newValue,
+					)
+				},
+				reporter,
+			)
+		}
+	}
+}
+
+func (m *CapConsMigration) migratePathCapability(
+	address common.Address,
+	value interpreter.Value,
+	update func(newValue interpreter.Value),
+	reporter CapConsPathCapabilityMigrationReporter,
+) {
+	switch value := value.(type) {
+	case *interpreter.PathCapabilityValue:
+		oldCapability := value
+		addressPath := oldCapability.AddressPath()
+		capabilityID, ok := m.capabilityIDs[addressPath]
+		if !ok {
+			if reporter != nil {
+				reporter.MissingCapabilityID(address, addressPath)
+			}
+			break
+		}
+		newCapability := interpreter.NewUnmeteredIDCapabilityValue(
+			capabilityID,
+			oldCapability.Address,
+			oldCapability.BorrowType,
+		)
+		update(newCapability)
+		if reporter != nil {
+			reporter.MigratedPathCapability(address, addressPath)
+		}
+	}
+	// TODO: traverse composites, optionals, arrays, dictionaries, etc.
 }

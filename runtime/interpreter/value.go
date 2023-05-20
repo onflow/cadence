@@ -18424,6 +18424,13 @@ func (*PathCapabilityValue) isValue() {}
 
 func (*PathCapabilityValue) isCapabilityValue() {}
 
+func (v *PathCapabilityValue) AddressPath() AddressPath {
+	return AddressPath{
+		Address: common.Address(v.Address),
+		Path:    v.Path,
+	}
+}
+
 func (v *PathCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPathCapabilityValue(interpreter, v)
 }

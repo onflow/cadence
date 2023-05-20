@@ -21,6 +21,7 @@ package runtime
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
@@ -46,9 +47,23 @@ type testCapConsLinkMigration struct {
 	capabilityID interpreter.UInt64Value
 }
 
-type testCapConsMigrationReporter struct {
-	linkMigrations []testCapConsLinkMigration
+type testCapConsPathCapabilityMigration struct {
+	address     common.Address
+	addressPath interpreter.AddressPath
 }
+
+type testCapConsMissingCapabilityID struct {
+	address     common.Address
+	addressPath interpreter.AddressPath
+}
+
+type testCapConsMigrationReporter struct {
+	linkMigrations           []testCapConsLinkMigration
+	pathCapabilityMigrations []testCapConsPathCapabilityMigration
+	missingCapabilityIDs     []testCapConsMissingCapabilityID
+}
+
+var _ CapConsMigrationReporter = &testCapConsMigrationReporter{}
 
 func (t *testCapConsMigrationReporter) MigratedLink(
 	addressPath interpreter.AddressPath,
@@ -63,7 +78,31 @@ func (t *testCapConsMigrationReporter) MigratedLink(
 	)
 }
 
-var _ CapConsMigrationReporter = &testCapConsMigrationReporter{}
+func (t *testCapConsMigrationReporter) MigratedPathCapability(
+	address common.Address,
+	addressPath interpreter.AddressPath,
+) {
+	t.pathCapabilityMigrations = append(
+		t.pathCapabilityMigrations,
+		testCapConsPathCapabilityMigration{
+			address:     address,
+			addressPath: addressPath,
+		},
+	)
+}
+
+func (t *testCapConsMigrationReporter) MissingCapabilityID(
+	address common.Address,
+	addressPath interpreter.AddressPath,
+) {
+	t.missingCapabilityIDs = append(
+		t.missingCapabilityIDs,
+		testCapConsMissingCapabilityID{
+			address:     address,
+			addressPath: addressPath,
+		},
+	)
+}
 
 func TestCapConsMigration(t *testing.T) {
 
@@ -74,7 +113,44 @@ func TestCapConsMigration(t *testing.T) {
 	// language=cadence
 	contract := `
       pub contract Test {
+
          pub resource R {}
+
+         pub struct CapabilityWrapper {
+
+             pub let capability: Capability
+
+             init(_ capability: Capability) {
+                 self.capability = capability
+             }
+         }
+
+         pub struct CapabilityOptionalWrapper {
+
+             pub let capability: Capability?
+
+             init(_ capability: Capability?) {
+                 self.capability = capability
+             }
+         }
+
+         pub struct CapabilityArrayWrapper {
+
+             pub let capabilities: [Capability]
+
+             init(_ capabilities: [Capability]) {
+                 self.capabilities = capabilities
+             }
+         }
+
+         pub struct CapabilityDictionaryWrapper {
+
+             pub let capabilities: {Int: Capability}
+
+             init(_ capabilities: {Int: Capability}) {
+                 self.capabilities = capabilities
+             }
+         }
       }
     `
 
@@ -131,10 +207,50 @@ func TestCapConsMigration(t *testing.T) {
 	linkTransaction := `
       import Test from 0x1
 
+      pub fun save(kind: String, capability: Capability, account: AuthAccount) {
+          account.save(
+              capability,
+              to: StoragePath(identifier: kind.concat("_capability"))!
+          )
+          // TODO:
+          // account.save(
+          //     Test.CapabilityWrapper(capability),
+          //     to: StoragePath(identifier: kind.concat("_capabilityWrapper"))!
+          // )
+          // account.save(
+          //     Test.CapabilityOptionalWrapper(capability),
+          //     to: StoragePath(identifier: kind.concat("_capabilityOptionalWrapper"))!
+          // )
+          // account.save(
+          //     Test.CapabilityArrayWrapper([capability]),
+          //     to: StoragePath(identifier: kind.concat("_capabilityArrayWrapper"))!
+          // )
+          // account.save(
+          //     Test.CapabilityDictionaryWrapper({0: capability}),
+          //     to: StoragePath(identifier: kind.concat("_capabilityDictionaryWrapper"))!
+          // )
+          // TODO: add more cases
+          // TODO: test non existing
+      }
+
       transaction {
           prepare(signer: AuthAccount) {
              signer.link<&Test.R>(/public/r, target: /private/r)
              signer.link<&Test.R>(/private/r, target: /storage/r)
+
+             let publicCap = signer.getCapability<&Test.R>(/public/r)
+             let privateCap = signer.getCapability<&Test.R>(/private/r)
+
+             save(
+                 kind: "public",
+                 capability: publicCap,
+                 account: signer
+			 )
+             save(
+                 kind: "private",
+                 capability: privateCap,
+                 account: signer
+             )
           }
       }
     `
@@ -161,11 +277,14 @@ func TestCapConsMigration(t *testing.T) {
 
 	reporter := &testCapConsMigrationReporter{}
 
-	migrator.Migrate(
-		NewAddressSliceIterator([]common.Address{address}),
+	err = migrator.Migrate(
+		&AddressSliceIterator{Addresses: []common.Address{address}},
 		&testAccountIDGenerator{},
 		reporter,
 	)
+	require.NoError(t, err)
+
+	// Check migrated links
 
 	require.Equal(t,
 		[]testCapConsLinkMigration{
@@ -192,4 +311,64 @@ func TestCapConsMigration(t *testing.T) {
 		},
 		reporter.linkMigrations,
 	)
+
+	// Check migrated capabilities
+
+	require.Equal(t,
+		[]testCapConsPathCapabilityMigration{
+			{
+				address: address,
+				addressPath: interpreter.AddressPath{
+					Address: address,
+					Path: interpreter.NewUnmeteredPathValue(
+						common.PathDomainPrivate,
+						"r",
+					),
+				},
+			},
+			{
+				address: address,
+				addressPath: interpreter.AddressPath{
+					Address: address,
+					Path: interpreter.NewUnmeteredPathValue(
+						common.PathDomainPublic,
+						"r",
+					),
+				},
+			},
+		},
+		reporter.pathCapabilityMigrations,
+	)
+
+	storage, _, err := rt.Storage(Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	storageMap := storage.GetStorageMap(address, pathDomainStorage, false)
+
+	expectedReferenceStaticType := interpreter.ReferenceStaticType{
+		BorrowedType: interpreter.CompositeStaticType{
+			Location: common.AddressLocation{
+				Name:    "Test",
+				Address: address,
+			},
+			QualifiedIdentifier: "Test.R",
+			TypeID:              "A.0000000000000001.Test.R",
+		},
+	}
+
+	expectedCapabilityID := interpreter.UInt64Value(1)
+	for _, kind := range []string{"public", "private"} {
+
+		publicCapability := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(kind+"_capability"))
+		require.IsType(t, &interpreter.IDCapabilityValue{}, publicCapability)
+		if publicCapability, ok := publicCapability.(*interpreter.IDCapabilityValue); ok {
+			assert.Equal(t, expectedCapabilityID, publicCapability.ID)
+			expectedCapabilityID++
+
+			assert.Equal(t, address, common.Address(publicCapability.Address))
+			assert.True(t, publicCapability.BorrowType.Equal(expectedReferenceStaticType))
+		}
+	}
 }
