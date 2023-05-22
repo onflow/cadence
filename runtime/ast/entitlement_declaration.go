@@ -21,8 +21,9 @@ package ast
 import (
 	"encoding/json"
 
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 // EntitlementDeclaration

@@ -291,7 +291,7 @@ func (e EntitlementMapAccess) Domain() EntitlementSetAccess {
 		return e.domain
 	}
 
-	var domain map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
+	domain := make(map[*EntitlementType]struct{})
 	for _, relation := range e.Type.Relations {
 		domain[relation.Input] = struct{}{}
 	}
@@ -304,7 +304,7 @@ func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
 		return e.codomain
 	}
 
-	var codomain map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
+	codomain := make(map[*EntitlementType]struct{})
 	for _, relation := range e.Type.Relations {
 		codomain[relation.Output] = struct{}{}
 	}
@@ -315,8 +315,9 @@ func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
 // produces the image set of a single entitlement through a map
 // the image set of one element is always a conjunction
 func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (output *EntitlementOrderedSet) {
-	if e.images[entitlement] != nil {
-		return e.images[entitlement]
+	image := e.images[entitlement]
+	if image != nil {
+		return image
 	}
 
 	output = orderedmap.New[EntitlementOrderedSet](0)
@@ -339,7 +340,7 @@ func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, 
 	case PrimitiveAccess:
 		return inputs, nil
 	case EntitlementSetAccess:
-		var output *EntitlementOrderedSet = orderedmap.New[EntitlementOrderedSet](inputs.Entitlements.Len())
+		output := orderedmap.New[EntitlementOrderedSet](inputs.Entitlements.Len())
 		var err error = nil
 		inputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 			entitlementImage := e.entitlementImage(entitlement)

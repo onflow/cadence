@@ -234,9 +234,14 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
 		Name:  "ReferenceType",
 		Value: ReferenceTypeFunctionType,
-		DocString: `Creates a run-time type representing a reference type of the given type. The first argument specifies the set of entitlements to which
-		this reference is entitled. Providing an empty array will result in an unauthorized return value. Providing invalid entitlements in the input array
-		will result in a nil return value`,
+		DocString: `
+		Creates a run-time type representing a reference type of the given type. 
+
+		The first argument specifies the set of entitlements to which this reference is entitled. 
+
+		Providing an empty array will result in an unauthorized return value. 
+
+		Providing invalid entitlements in the input array will result in a nil return value`,
 	},
 
 	{

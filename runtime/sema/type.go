@@ -656,7 +656,7 @@ func (t *OptionalType) SupportedEntitlements() *EntitlementOrderedSet {
 	if entitlementSupportingType, ok := t.Type.(EntitlementSupportingType); ok {
 		return entitlementSupportingType.SupportedEntitlements()
 	}
-	return orderedmap.New[EntitlementOrderedSet](0)
+	return nil
 }
 
 const optionalTypeMapFunctionDocString = `
@@ -3977,8 +3977,9 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 }
 
 func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
-	if t.supportedEntitlements != nil {
-		return t.supportedEntitlements
+	supportedEntitlements := t.supportedEntitlements
+	if supportedEntitlements != nil {
+		return supportedEntitlements
 	}
 
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
@@ -4185,8 +4186,9 @@ func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ ast.Range) 
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
-		if attachment.AttachmentEntitlementAccess != nil {
-			access = (*attachment.AttachmentEntitlementAccess).Codomain()
+		attachmentEntitlementAccess := attachment.AttachmentEntitlementAccess
+		if attachmentEntitlementAccess != nil {
+			access = (*attachmentEntitlementAccess).Codomain()
 		}
 	}
 
@@ -4551,8 +4553,9 @@ func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 }
 
 func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
-	if t.supportedEntitlements != nil {
-		return t.supportedEntitlements
+	supportedEntitlements := t.supportedEntitlements
+	if supportedEntitlements != nil {
+		return supportedEntitlements
 	}
 
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())

@@ -784,7 +784,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 		// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
 		if entitlementSupportingType, ok := ty.(sema.EntitlementSupportingType); ok {
 			supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-			if supportedEntitlements.Len() > 0 {
+			if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
 				access := sema.EntitlementSetAccess{
 					SetKind:      sema.Conjunction,
 					Entitlements: supportedEntitlements,
