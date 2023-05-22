@@ -366,10 +366,8 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 const AuthAccountTypeCheckFunctionName = "check"
 
 var AuthAccountTypeCheckFunctionTypeParameterT = &TypeParameter{
-	Name: "T",
-	TypeBound: &ReferenceType{
-		Type: AnyType,
-	},
+	Name:      "T",
+	TypeBound: AnyType,
 }
 
 var AuthAccountTypeCheckFunctionType = &FunctionType{

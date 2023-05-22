@@ -4034,6 +4034,18 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 				panic(errors.NewUnreachableError())
 			}
 
+			domain := path.Domain.Identifier()
+			identifier := path.Identifier
+
+			value := interpreter.ReadStored(address, domain, identifier)
+
+			if value == nil {
+				return FalseValue
+			}
+
+			// If there is value stored for the given path,
+			// check that it satisfies the type given as the type argument.
+
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
 				panic(errors.NewUnreachableError())
@@ -4041,26 +4053,9 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 
 			ty := typeParameterPair.Value
 
-			referenceType, ok := ty.(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+			valueStaticType := value.StaticType(interpreter)
 
-			reference := NewStorageReferenceValue(
-				interpreter,
-				referenceType.Authorized,
-				address,
-				path,
-				referenceType.Type,
-			)
-
-			// Attempt to dereference,
-			// which reads the stored value
-			// and performs a dynamic type check
-
-			return AsBoolValue(
-				reference.ReferencedValue(interpreter, invocation.LocationRange, false) != nil,
-			)
+			return AsBoolValue(interpreter.IsSubTypeOfSemaType(valueStaticType, ty))
 		},
 	)
 }

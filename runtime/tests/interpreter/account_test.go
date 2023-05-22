@@ -645,7 +645,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
               }
 
 			  fun checkR(): Bool {
-				  return account.check<&R>(from: /storage/r)
+				  return account.check<@R>(from: /storage/r)
 			  }
 
               fun borrowR(): &R? {
@@ -657,7 +657,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
               }
 
 			  fun checkR2(): Bool {
-				  return account.check<&R2>(from: /storage/r)
+				  return account.check<@R2>(from: /storage/r)
 			  }
 
               fun borrowR2(): &R2? {
@@ -811,7 +811,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
               }
 
 			  fun checkS(): Bool {
-				  return account.check<&S>(from: /storage/s)
+				  return account.check<S>(from: /storage/s)
 			  }
 
               fun borrowS(): &S? {
@@ -823,7 +823,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
               }
 			 
 			  fun checkS2(): Bool {
-				  return account.check<&S2>(from: /storage/s)
+				  return account.check<S2>(from: /storage/s)
 			  }
              
 			  fun borrowS2(): &S2? {
