@@ -255,6 +255,7 @@ var (
 	StorageCapabilityValueStringMemoryUsage = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
 	PathLinkValueStringMemoryUsage          = NewRawStringMemoryUsage(len("PathLink<>()"))
 	PublishedValueStringMemoryUsage         = NewRawStringMemoryUsage(len("PublishedValue<>()"))
+	AuthStringMemoryUsage                   = NewRawStringMemoryUsage(len("auth() "))
 
 	// Static types string representations
 

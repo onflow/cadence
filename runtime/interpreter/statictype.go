@@ -499,11 +499,8 @@ func (Unauthorized) MeteredString(memoryGauge common.MemoryGauge) string {
 }
 
 func (Unauthorized) Equal(auth Authorization) bool {
-	switch auth.(type) {
-	case Unauthorized:
-		return true
-	}
-	return false
+	_, ok := auth.(Unauthorized)
+	return ok
 }
 
 type EntitlementSetAuthorization struct {
@@ -550,8 +547,7 @@ func (e EntitlementSetAuthorization) String() string {
 }
 
 func (e EntitlementSetAuthorization) MeteredString(memoryGauge common.MemoryGauge) string {
-	// len of "auth() "
-	memoryGauge.MeterMemory(common.NewRawStringMemoryUsage(7))
+	memoryGauge.MeterMemory(common.AuthStringMemoryUsage)
 	return e.string(func(ti common.TypeID) string {
 		memoryGauge.MeterMemory(common.NewRawStringMemoryUsage(len(ti)))
 		return string(ti)
@@ -559,8 +555,7 @@ func (e EntitlementSetAuthorization) MeteredString(memoryGauge common.MemoryGaug
 }
 
 func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
-	switch auth := auth.(type) {
-	case EntitlementSetAuthorization:
+	if auth, ok := auth.(EntitlementSetAuthorization); ok {
 		for i, entitlement := range e.Entitlements {
 			if auth.Entitlements[i] != entitlement {
 				return false
@@ -590,8 +585,8 @@ func (e EntitlementMapAuthorization) String() string {
 }
 
 func (e EntitlementMapAuthorization) MeteredString(memoryGauge common.MemoryGauge) string {
-	// len of "auth() "
-	memoryGauge.MeterMemory(common.NewRawStringMemoryUsage(7 + len(e.TypeID)))
+	memoryGauge.MeterMemory(common.AuthStringMemoryUsage)
+	memoryGauge.MeterMemory(common.NewRawStringMemoryUsage(len(e.TypeID)))
 	return e.String()
 }
 
@@ -642,9 +637,9 @@ func (t ReferenceStaticType) String() string {
 }
 
 func (t ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-
 	typeStr := t.BorrowedType.MeteredString(memoryGauge)
 	authString := t.Authorization.MeteredString(memoryGauge)
+	memoryGauge.MeterMemory(common.NewRawStringMemoryUsage(len(typeStr) + len(authString)))
 	return fmt.Sprintf("%s&%s", authString, typeStr)
 }
 
@@ -826,13 +821,13 @@ func ConvertSemaAccesstoStaticAuthorization(
 	case sema.EntitlementSetAccess:
 		var entitlements []common.TypeID
 		access.Entitlements.Foreach(func(key *sema.EntitlementType, _ struct{}) {
-			typeId := key.Location.TypeID(memoryGauge, key.QualifiedIdentifier())
+			typeId := key.ID()
 			entitlements = append(entitlements, typeId)
 		})
 		return NewEntitlementSetAuthorization(memoryGauge, entitlements, access.SetKind)
 
 	case sema.EntitlementMapAccess:
-		typeId := access.Type.Location.TypeID(memoryGauge, access.Type.QualifiedIdentifier())
+		typeId := access.Type.ID()
 		return NewEntitlementMapAuthorization(memoryGauge, typeId)
 	}
 	panic(errors.NewUnreachableError())
