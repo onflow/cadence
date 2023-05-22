@@ -763,10 +763,12 @@ func TestCheckAccount_borrow(t *testing.T) {
 					rType := RequireGlobalType(t, checker.Elaboration, "R")
 					rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
 
-					xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
+					xType := RequireGlobalType(t, checker.Elaboration, "X")
+					require.IsType(t, &sema.EntitlementType{}, xType)
+					xEntitlement := xType.(*sema.EntitlementType)
 					var access sema.Access = sema.UnauthorizedAccess
 					if !auth.Equal(sema.UnauthorizedAccess) {
-						access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
+						access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xEntitlement}, sema.Conjunction)
 					}
 
 					require.Equal(t,
@@ -808,10 +810,12 @@ func TestCheckAccount_borrow(t *testing.T) {
 					sType := RequireGlobalType(t, checker.Elaboration, "S")
 					sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
 
-					xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
+					xType := RequireGlobalType(t, checker.Elaboration, "X")
+					require.IsType(t, &sema.EntitlementType{}, xType)
+					xEntitlement := xType.(*sema.EntitlementType)
 					var access sema.Access = sema.UnauthorizedAccess
 					if !auth.Equal(sema.UnauthorizedAccess) {
-						access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
+						access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xEntitlement}, sema.Conjunction)
 					}
 
 					require.Equal(t,
@@ -906,10 +910,14 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 		for _, auth := range []sema.Access{
 			sema.UnauthorizedAccess,
-			sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
-				Location:   utils.TestLocation,
-				Identifier: "X",
-			}}, sema.Conjunction),
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					{
+						Location:   utils.TestLocation,
+						Identifier: "X",
+					},
+				},
+				sema.Conjunction),
 		} {
 			testExplicitTypeArgumentReference(domain, auth)
 		}

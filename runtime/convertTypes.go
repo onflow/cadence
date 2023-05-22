@@ -474,7 +474,7 @@ func exportAuthorization(
 	case sema.EntitlementMapAccess:
 		common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindCadenceEntitlementMapAccess))
 		return cadence.EntitlementMapAuthorization{
-			TypeID: access.Type.Location.TypeID(gauge, access.Type.QualifiedIdentifier()),
+			TypeID: access.Type.ID(),
 		}
 	case sema.EntitlementSetAccess:
 		common.UseMemory(gauge, common.MemoryUsage{
@@ -483,7 +483,7 @@ func exportAuthorization(
 		})
 		var entitlements []common.TypeID
 		access.Entitlements.Foreach(func(key *sema.EntitlementType, _ struct{}) {
-			entitlements = append(entitlements, key.Location.TypeID(gauge, key.QualifiedIdentifier()))
+			entitlements = append(entitlements, key.ID())
 		})
 		return cadence.EntitlementSetAuthorization{
 			Entitlements: entitlements,
@@ -571,7 +571,7 @@ func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorizat
 	case cadence.EntitlementSetAuthorization:
 		return interpreter.NewEntitlementSetAuthorization(memoryGauge, auth.Entitlements, sema.EntitlementSetKind(auth.Kind))
 	}
-	panic(fmt.Sprintf("cannot import type of type %T", auth))
+	panic(fmt.Sprintf("cannot import authorization of type %T", auth))
 }
 
 func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.StaticType {
