@@ -664,6 +664,10 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   return account.borrow<&R2>(from: /storage/r)
               }
 
+			  fun checkR2WithInvalidPath(): Bool {
+				  return account.check<@R2>(from: /storage/wrongpath)
+			  }
+
               fun changeAfterBorrow(): Int {
                  let ref = account.borrow<&R>(from: /storage/r)!
 
@@ -775,6 +779,17 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
+
+		t.Run("check R2 with wrong path", func(t *testing.T) {
+			checkRes, err := inter.Invoke("checkR2WithInvalidPath")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(false),
+				checkRes,
+			)
 		})
 	})
 
