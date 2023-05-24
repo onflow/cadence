@@ -494,7 +494,7 @@ func (Unauthorized) String() string {
 }
 
 func (Unauthorized) MeteredString(memoryGauge common.MemoryGauge) string {
-	memoryGauge.MeterMemory(common.NewRawStringMemoryUsage(0))
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(0))
 	return ""
 }
 
@@ -510,7 +510,11 @@ type EntitlementSetAuthorization struct {
 
 var _ Authorization = EntitlementSetAuthorization{}
 
-func NewEntitlementSetAuthorization(memoryGauge common.MemoryGauge, entitlements []common.TypeID, kind sema.EntitlementSetKind) EntitlementSetAuthorization {
+func NewEntitlementSetAuthorization(
+	memoryGauge common.MemoryGauge,
+	entitlements []common.TypeID,
+	kind sema.EntitlementSetKind,
+) EntitlementSetAuthorization {
 	common.UseMemory(memoryGauge, common.MemoryUsage{
 		Kind:   common.MemoryKindEntitlementSetStaticAccess,
 		Amount: uint64(len(entitlements)),
@@ -547,9 +551,9 @@ func (e EntitlementSetAuthorization) String() string {
 }
 
 func (e EntitlementSetAuthorization) MeteredString(memoryGauge common.MemoryGauge) string {
-	memoryGauge.MeterMemory(common.AuthStringMemoryUsage)
+	common.UseMemory(memoryGauge, common.AuthStringMemoryUsage)
 	return e.string(func(ti common.TypeID) string {
-		memoryGauge.MeterMemory(common.NewRawStringMemoryUsage(len(ti)))
+		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(ti)))
 		return string(ti)
 	})
 }
@@ -573,7 +577,7 @@ type EntitlementMapAuthorization struct {
 var _ Authorization = EntitlementMapAuthorization{}
 
 func NewEntitlementMapAuthorization(memoryGauge common.MemoryGauge, id common.TypeID) EntitlementMapAuthorization {
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindEntitlementMapStaticAccess))
+	common.UseMemory(memoryGauge, common.EntitlementMapStaticTypeMemoryUsage)
 
 	return EntitlementMapAuthorization{TypeID: id}
 }
@@ -585,8 +589,8 @@ func (e EntitlementMapAuthorization) String() string {
 }
 
 func (e EntitlementMapAuthorization) MeteredString(memoryGauge common.MemoryGauge) string {
-	memoryGauge.MeterMemory(common.AuthStringMemoryUsage)
-	memoryGauge.MeterMemory(common.NewRawStringMemoryUsage(len(e.TypeID)))
+	common.UseMemory(memoryGauge, common.AuthStringMemoryUsage)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(e.TypeID)))
 	return e.String()
 }
 
@@ -639,7 +643,7 @@ func (t ReferenceStaticType) String() string {
 func (t ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	typeStr := t.BorrowedType.MeteredString(memoryGauge)
 	authString := t.Authorization.MeteredString(memoryGauge)
-	memoryGauge.MeterMemory(common.NewRawStringMemoryUsage(len(typeStr) + len(authString)))
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(typeStr)+len(authString)))
 	return fmt.Sprintf("%s&%s", authString, typeStr)
 }
 
