@@ -510,7 +510,11 @@ type EntitlementSetAuthorization struct {
 
 var _ Authorization = EntitlementSetAuthorization{}
 
-func NewEntitlementSetAuthorization(memoryGauge common.MemoryGauge, entitlements []common.TypeID, kind sema.EntitlementSetKind) EntitlementSetAuthorization {
+func NewEntitlementSetAuthorization(
+	memoryGauge common.MemoryGauge,
+	entitlements []common.TypeID,
+	kind sema.EntitlementSetKind,
+) EntitlementSetAuthorization {
 	common.UseMemory(memoryGauge, common.MemoryUsage{
 		Kind:   common.MemoryKindEntitlementSetStaticAccess,
 		Amount: uint64(len(entitlements)),
