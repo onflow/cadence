@@ -573,7 +573,7 @@ type EntitlementMapAuthorization struct {
 var _ Authorization = EntitlementMapAuthorization{}
 
 func NewEntitlementMapAuthorization(memoryGauge common.MemoryGauge, id common.TypeID) EntitlementMapAuthorization {
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindEntitlementMapStaticAccess))
+	common.UseMemory(memoryGauge, common.EntitlementMapStaticTypeMemoryUsage)
 
 	return EntitlementMapAuthorization{TypeID: id}
 }
