@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"encoding/binary"
 	goErrors "errors"
 	"fmt"
 	"math"
@@ -2488,6 +2489,220 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 	return values
 }()
 
+type fromBigEndianBytesFunctionValue struct {
+	receiverType sema.Type
+	hostFunction *HostFunctionValue
+}
+
+func padWithZeroes(b []byte, expectedLen int) []byte {
+	l := len(b)
+	if l > expectedLen {
+		panic(errors.NewUnreachableError())
+	} else if l == expectedLen {
+		return b
+	}
+
+	var res []byte
+	// use existing allocated slice if possible.
+	if cap(b) >= expectedLen {
+		res = b[:expectedLen]
+	} else {
+		res = make([]byte, expectedLen)
+	}
+
+	copy(res[expectedLen-l:], b)
+
+	// explicitly set to 0 for the first expectedLen - l bytes.
+	if cap(b) >= expectedLen {
+		for i := 0; i < expectedLen-l; i++ {
+			res[i] = 0
+		}
+	}
+	return res
+}
+
+// a function that attempts to create a Number from a big-endian bytes.
+type bigEndianBytesConverter func(*Interpreter, []byte) Value
+
+func newFromBigEndianBytesFunction(
+	ty sema.Type,
+	byteLength int,
+	converter bigEndianBytesConverter) fromBigEndianBytesFunctionValue {
+	functionType := sema.FromBigEndianBytesFunctionType(ty)
+
+	hostFunctionImpl := NewUnmeteredHostFunctionValue(
+		functionType,
+		func(invocation Invocation) Value {
+			argument, ok := invocation.Arguments[0].(*ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+			if err != nil {
+				return Nil
+			}
+
+			// overflow
+			if byteLength != 0 && len(bytes) > byteLength {
+				return Nil
+			}
+
+			return NewSomeValueNonCopying(inter, converter(inter, bytes))
+		},
+	)
+	return fromBigEndianBytesFunctionValue{
+		receiverType: ty,
+		hostFunction: hostFunctionImpl,
+	}
+}
+
+var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunctionValue {
+	declarations := []fromBigEndianBytesFunctionValue{
+		// signed int values
+		newFromBigEndianBytesFunction(sema.Int8Type, 1, func(i *Interpreter, b []byte) Value {
+			return NewInt8Value(i, func() int8 {
+				bytes := padWithZeroes(b, 1)
+				return int8(bytes[0])
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Int16Type, 2, func(i *Interpreter, b []byte) Value {
+			return NewInt16Value(i, func() int16 {
+				bytes := padWithZeroes(b, 2)
+				val := binary.BigEndian.Uint16(bytes)
+				return int16(val)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Int32Type, 4, func(i *Interpreter, b []byte) Value {
+			return NewInt32Value(i, func() int32 {
+				bytes := padWithZeroes(b, 4)
+				val := binary.BigEndian.Uint32(bytes)
+				return int32(val)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Int64Type, 8, func(i *Interpreter, b []byte) Value {
+			return NewInt64Value(i, func() int64 {
+				bytes := padWithZeroes(b, 8)
+				val := binary.BigEndian.Uint64(bytes)
+				return int64(val)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Int128Type, 16, func(i *Interpreter, b []byte) Value {
+			return NewInt128ValueFromBigInt(i, func() *big.Int {
+				bi := BigEndianBytesToSignedBigInt(b)
+				return bi
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Int256Type, 32, func(i *Interpreter, b []byte) Value {
+			return NewInt256ValueFromBigInt(i, func() *big.Int {
+				bi := BigEndianBytesToSignedBigInt(b)
+				return bi
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.IntType, 0, func(i *Interpreter, b []byte) Value {
+			bi := BigEndianBytesToSignedBigInt(b)
+			memoryUsage := common.NewBigIntMemoryUsage(
+				common.BigIntByteLength(bi),
+			)
+			return NewIntValueFromBigInt(i, memoryUsage, func() *big.Int { return bi })
+		}),
+
+		// unsigned int values
+		newFromBigEndianBytesFunction(sema.UInt8Type, 1, func(i *Interpreter, b []byte) Value {
+			return NewUInt8Value(i, func() uint8 { return b[0] })
+		}),
+		newFromBigEndianBytesFunction(sema.UInt16Type, 2, func(i *Interpreter, b []byte) Value {
+			return NewUInt16Value(i, func() uint16 {
+				bytes := padWithZeroes(b, 2)
+				val := binary.BigEndian.Uint16(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UInt32Type, 4, func(i *Interpreter, b []byte) Value {
+			return NewUInt32Value(i, func() uint32 {
+				bytes := padWithZeroes(b, 4)
+				val := binary.BigEndian.Uint32(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UInt64Type, 8, func(i *Interpreter, b []byte) Value {
+			return NewUInt64Value(i, func() uint64 {
+				bytes := padWithZeroes(b, 8)
+				val := binary.BigEndian.Uint64(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UInt128Type, 16, func(i *Interpreter, b []byte) Value {
+			return NewUInt128ValueFromBigInt(i, func() *big.Int {
+				return BigEndianBytesToUnsignedBigInt(b)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UInt256Type, 32, func(i *Interpreter, b []byte) Value {
+			return NewUInt256ValueFromBigInt(i, func() *big.Int {
+				return BigEndianBytesToUnsignedBigInt(b)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UIntType, 0, func(i *Interpreter, b []byte) Value {
+			bi := BigEndianBytesToUnsignedBigInt(b)
+			memoryUsage := common.NewBigIntMemoryUsage(
+				common.BigIntByteLength(bi),
+			)
+			return NewUIntValueFromBigInt(i, memoryUsage, func() *big.Int { return bi })
+		}),
+
+		// machine-sized word types
+		newFromBigEndianBytesFunction(sema.Word8Type, 1, func(i *Interpreter, b []byte) Value {
+			return NewWord8Value(i, func() uint8 { return b[0] })
+		}),
+		newFromBigEndianBytesFunction(sema.Word16Type, 2, func(i *Interpreter, b []byte) Value {
+			return NewWord16Value(i, func() uint16 {
+				bytes := padWithZeroes(b, 2)
+				val := binary.BigEndian.Uint16(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Word32Type, 4, func(i *Interpreter, b []byte) Value {
+			return NewWord32Value(i, func() uint32 {
+				bytes := padWithZeroes(b, 4)
+				val := binary.BigEndian.Uint32(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Word64Type, 8, func(i *Interpreter, b []byte) Value {
+			return NewWord64Value(i, func() uint64 {
+				bytes := padWithZeroes(b, 8)
+				val := binary.BigEndian.Uint64(bytes)
+				return val
+			})
+		}),
+
+		// fixed-points
+		newFromBigEndianBytesFunction(sema.Fix64Type, 8, func(i *Interpreter, b []byte) Value {
+			return NewFix64Value(i, func() int64 {
+				bytes := padWithZeroes(b, 8)
+				val := binary.BigEndian.Uint64(bytes)
+				return int64(val)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UFix64Type, 8, func(i *Interpreter, b []byte) Value {
+			return NewUFix64Value(i, func() uint64 {
+				bytes := padWithZeroes(b, 8)
+				val := binary.BigEndian.Uint64(bytes)
+				return val
+			})
+		}),
+	}
+
+	values := make(map[string]fromBigEndianBytesFunctionValue, len(declarations))
+	for _, decl := range declarations {
+		// index declaration by type name
+		values[decl.receiverType.String()] = decl
+	}
+
+	return values
+}()
+
 type ValueConverterDeclaration struct {
 	min             Value
 	max             Value
@@ -2788,6 +3003,10 @@ func init() {
 		if _, ok := fromStringFunctionValues[typeName]; !ok {
 			panic(fmt.Sprintf("missing fromString implementation for number type: %s", numberType))
 		}
+
+		if _, ok := fromBigEndianBytesFunctionValues[typeName]; !ok {
+			panic(fmt.Sprintf("missing fromBigEndianBytes implementation for number type: %s", numberType))
+		}
 	}
 
 	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
@@ -3079,6 +3298,10 @@ var converterFunctionValues = func() []converterFunction {
 		fromStringVal := fromStringFunctionValues[declaration.name]
 
 		addMember(sema.FromStringFunctionName, fromStringVal.hostFunction)
+
+		fromBigEndianBytesVal := fromBigEndianBytesFunctionValues[declaration.name]
+
+		addMember(sema.FromBigEndianBytesFunctionName, fromBigEndianBytesVal.hostFunction)
 
 		if declaration.nestedVariables != nil {
 			for _, variable := range declaration.nestedVariables {

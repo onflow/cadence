@@ -418,6 +418,34 @@ func FromStringFunctionType(ty Type) *FunctionType {
 	}
 }
 
+// fromBigEndianBytes
+
+const FromBigEndianBytesFunctionName = "fromBigEndianBytes"
+
+func FromBigEndianBytesFunctionDocstring(ty Type) string {
+	return fmt.Sprintf(
+		"Attempts to parse %s from a big-endian byte representation. Returns `nil` on invalid input.",
+		ty.String(),
+	)
+}
+
+func FromBigEndianBytesFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "bytes",
+				TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: ty,
+			},
+		),
+	}
+}
+
 // toBigEndianBytes
 
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
@@ -3292,6 +3320,16 @@ func init() {
 				FromStringFunctionName,
 				fromStringFnType,
 				fromStringDocstring,
+			))
+
+			// add .fromBigEndianBytes() method
+			fromBigEndianBytesFnType := FromBigEndianBytesFunctionType(numberType)
+			fromBigEndianBytesDocstring := FromBigEndianBytesFunctionDocstring(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromBigEndianBytesFunctionName,
+				fromBigEndianBytesFnType,
+				fromBigEndianBytesDocstring,
 			))
 
 			BaseValueActivation.Set(
