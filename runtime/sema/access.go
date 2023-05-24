@@ -22,10 +22,11 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
-	"golang.org/x/exp/maps"
 )
 
 type Access interface {

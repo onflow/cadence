@@ -4188,7 +4188,7 @@ func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ ast.Range) 
 	case *CompositeType:
 		attachmentEntitlementAccess := attachment.AttachmentEntitlementAccess
 		if attachmentEntitlementAccess != nil {
-			access = (*attachmentEntitlementAccess).Codomain()
+			access = attachmentEntitlementAccess.Codomain()
 		}
 	}
 
@@ -5317,7 +5317,7 @@ func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange ast.
 	case *CompositeType:
 		if attachment.AttachmentEntitlementAccess != nil {
 			var err error
-			access, err = (*attachment.AttachmentEntitlementAccess).Image(t.Authorization, astRange)
+			access, err = attachment.AttachmentEntitlementAccess.Image(t.Authorization, astRange)
 			if err != nil {
 				return nil, err
 			}
@@ -6540,7 +6540,7 @@ func (t *RestrictedType) TypeIndexingElementType(indexingType Type, _ ast.Range)
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
 		if attachment.AttachmentEntitlementAccess != nil {
-			access = (*attachment.AttachmentEntitlementAccess).Codomain()
+			access = attachment.AttachmentEntitlementAccess.Codomain()
 		}
 	}
 
