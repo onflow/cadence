@@ -505,7 +505,7 @@ func (Unauthorized) Equal(auth Authorization) bool {
 }
 
 type EntitlementSetAuthorization struct {
-	Entitlements *orderedmap.OrderedMap[common.TypeID, struct{}]
+	Entitlements *sema.TypeIDOrderedSet
 	SetKind      sema.EntitlementSetKind
 }
 
@@ -521,7 +521,7 @@ func NewEntitlementSetAuthorization(
 		Amount: uint64(len(entitlementList)),
 	})
 
-	entitlements := orderedmap.New[orderedmap.OrderedMap[common.TypeID, struct{}]](len(entitlementList))
+	entitlements := orderedmap.New[sema.TypeIDOrderedSet](len(entitlementList))
 	for _, entitlement := range entitlementList {
 		entitlements.Set(entitlement, struct{}{})
 	}

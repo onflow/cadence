@@ -21,13 +21,14 @@ package runtime
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
