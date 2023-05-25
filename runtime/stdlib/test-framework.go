@@ -28,7 +28,10 @@ import (
 // Cadence standard library talks to test providers via this interface.
 // This is used as a way to inject test provider dependencies dynamically.
 type TestFramework interface {
-	RunScript(inter *interpreter.Interpreter, code string, arguments []interpreter.Value) *ScriptResult
+	RunScript(
+		inter *interpreter.Interpreter,
+		code string, arguments []interpreter.Value,
+	) *ScriptResult
 
 	CreateAccount() (*Account, error)
 
