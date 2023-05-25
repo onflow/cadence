@@ -42,6 +42,7 @@ type testEmulatorBackendType struct {
 	commitBlockFunctionType            *sema.FunctionType
 	deployContractFunctionType         *sema.FunctionType
 	useConfigFunctionType              *sema.FunctionType
+	logsFunctionType                   *sema.FunctionType
 }
 
 func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceType) *testEmulatorBackendType {
@@ -78,6 +79,11 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 	useConfigFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeUseConfigFunctionName,
+	)
+
+	logsFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeLogsFunctionName,
 	)
 
 	compositeType := &sema.CompositeType{
@@ -132,6 +138,12 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 			useConfigFunctionType,
 			testEmulatorBackendTypeUseConfigFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeLogsFunctionName,
+			logsFunctionType,
+			testEmulatorBackendTypeLogsFunctionDocString,
+		),
 	}
 
 	compositeType.Members = sema.MembersAsMap(members)
@@ -146,6 +158,7 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 		commitBlockFunctionType:            commitBlockFunctionType,
 		deployContractFunctionType:         deployContractFunctionType,
 		useConfigFunctionType:              useConfigFunctionType,
+		logsFunctionType:                   logsFunctionType,
 	}
 }
 
@@ -494,6 +507,54 @@ func (t *testEmulatorBackendType) newUseConfigFunction(testFramework TestFramewo
 	)
 }
 
+// 'EmulatorBackend.logs' function
+
+const testEmulatorBackendTypeLogsFunctionName = "logs"
+
+const testEmulatorBackendTypeLogsFunctionDocString = `
+Returns all the logs from the blockchain, up to the calling point.
+`
+
+func (t *testEmulatorBackendType) newLogsFunction(
+	testFramework TestFramework,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.logsFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			logs := testFramework.Logs()
+			inter := invocation.Interpreter
+
+			arrayType := interpreter.NewVariableSizedStaticType(
+				inter,
+				interpreter.NewPrimitiveStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeString,
+				),
+			)
+
+			values := make([]interpreter.Value, len(logs))
+			for i, log := range logs {
+				memoryUsage := common.NewStringMemoryUsage(len(log))
+				values[i] = interpreter.NewStringValue(
+					inter,
+					memoryUsage,
+					func() string {
+						return log
+					},
+				)
+			}
+
+			return interpreter.NewArrayValue(
+				inter,
+				invocation.LocationRange,
+				arrayType,
+				common.ZeroAddress,
+				values...,
+			)
+		},
+	)
+}
+
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
@@ -526,6 +587,10 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		{
 			Name:  testEmulatorBackendTypeUseConfigFunctionName,
 			Value: t.newUseConfigFunction(testFramework),
+		},
+		{
+			Name:  testEmulatorBackendTypeLogsFunctionName,
+			Value: t.newLogsFunction(testFramework),
 		},
 	}
 

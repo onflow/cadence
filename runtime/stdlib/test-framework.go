@@ -57,6 +57,8 @@ type TestFramework interface {
 	UseConfiguration(configuration *Configuration)
 
 	StandardLibraryHandler() StandardLibraryHandler
+
+	Logs() []string
 }
 
 type ScriptResult struct {

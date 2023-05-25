@@ -95,6 +95,12 @@ pub contract Test {
         pub fun useConfiguration(_ configuration: Configuration) {
             self.backend.useConfiguration(configuration)
         }
+
+        /// Returns all the logs from the blockchain, up to the calling point.
+        ///
+        pub fun logs(): [String] {
+            return self.backend.logs()
+        }
     }
 
     pub struct Matcher {
@@ -258,6 +264,10 @@ pub contract Test {
         /// Overrides any existing configuration.
         ///
         pub fun useConfiguration(_ configuration: Configuration)
+
+        /// Returns all the logs from the blockchain, up to the calling point.
+        ///
+        pub fun logs(): [String]
     }
 
     /// Returns a new matcher that negates the test of the given matcher.
