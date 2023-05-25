@@ -44,6 +44,7 @@ type testEmulatorBackendType struct {
 	useConfigFunctionType              *sema.FunctionType
 	logsFunctionType                   *sema.FunctionType
 	serviceAccountFunctionType         *sema.FunctionType
+	eventsFunctionType                 *sema.FunctionType
 }
 
 func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceType) *testEmulatorBackendType {
@@ -90,6 +91,11 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 	serviceAccountFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeServiceAccountFunctionName,
+	)
+
+	eventsFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeEventsFunctionName,
 	)
 
 	compositeType := &sema.CompositeType{
@@ -156,6 +162,12 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 			serviceAccountFunctionType,
 			testEmulatorBackendTypeServiceAccountFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeEventsFunctionName,
+			eventsFunctionType,
+			testEmulatorBackendTypeEventsFunctionDocString,
+		),
 	}
 
 	compositeType.Members = sema.MembersAsMap(members)
@@ -172,6 +184,7 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 		useConfigFunctionType:              useConfigFunctionType,
 		logsFunctionType:                   logsFunctionType,
 		serviceAccountFunctionType:         serviceAccountFunctionType,
+		eventsFunctionType:                 eventsFunctionType,
 	}
 }
 
@@ -598,6 +611,31 @@ func (t *testEmulatorBackendType) newServiceAccountFunction(
 	)
 }
 
+// 'EmulatorBackend.events' function
+
+const testEmulatorBackendTypeEventsFunctionName = "events"
+
+const testEmulatorBackendTypeEventsFunctionDocString = `
+Returns all events emitted from the blockchain,
+optionally filtered by event type.
+`
+
+func (t *testEmulatorBackendType) newEventsFunction(
+	testFramework TestFramework,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.eventsFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			eventType, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return testFramework.Events(invocation.Interpreter, eventType.Str)
+		},
+	)
+}
+
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
@@ -638,6 +676,10 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		{
 			Name:  testEmulatorBackendTypeServiceAccountFunctionName,
 			Value: t.newServiceAccountFunction(testFramework),
+		},
+		{
+			Name:  testEmulatorBackendTypeEventsFunctionName,
+			Value: t.newEventsFunction(testFramework),
 		},
 	}
 

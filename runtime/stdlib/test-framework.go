@@ -61,6 +61,11 @@ type TestFramework interface {
 	Logs() []string
 
 	ServiceAccount() (*Account, error)
+
+	Events(
+		inter *interpreter.Interpreter,
+		typeName string,
+	) interpreter.Value
 }
 
 type ScriptResult struct {

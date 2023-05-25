@@ -108,6 +108,19 @@ pub contract Test {
         pub fun serviceAccount(): Account {
             return self.backend.serviceAccount()
         }
+
+        /// Returns all events emitted from the blockchain.
+        ///
+        pub fun events(): [AnyStruct] {
+            return self.backend.events("")
+        }
+
+        /// Returns all events emitted from the blockchain,
+        /// filtered by type.
+        ///
+        pub fun eventsOfType(_ type: Type): [AnyStruct] {
+            return self.backend.events(type.identifier)
+        }
     }
 
     pub struct Matcher {
@@ -280,6 +293,11 @@ pub contract Test {
         /// transactions with this account.
         ///
         pub fun serviceAccount(): Account
+
+        /// Returns all events emitted from the blockchain, optionally filtered
+        /// by type name.
+        ///
+        pub fun events(_ typeName: String): [AnyStruct]
     }
 
     /// Returns a new matcher that negates the test of the given matcher.
