@@ -661,13 +661,11 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 	case invalidTypeMask:
 		return InvalidType
 
-	case interfaceTypeMask:
-		return getSuperTypeOfDerivedTypes(types)
-
 	// All derived types goes here.
 	case capabilityTypeMask,
 		restrictedTypeMask,
-		transactionTypeMask:
+		transactionTypeMask,
+		interfaceTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 
 	case anyResourceAttachmentMask:
