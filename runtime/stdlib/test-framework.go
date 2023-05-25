@@ -59,6 +59,8 @@ type TestFramework interface {
 	StandardLibraryHandler() StandardLibraryHandler
 
 	Logs() []string
+
+	ServiceAccount() (*Account, error)
 }
 
 type ScriptResult struct {

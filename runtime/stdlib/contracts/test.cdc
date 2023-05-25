@@ -101,6 +101,13 @@ pub contract Test {
         pub fun logs(): [String] {
             return self.backend.logs()
         }
+
+        /// Returns the service account of the blockchain. Can be used to sign
+        /// transactions with this account.
+        ///
+        pub fun serviceAccount(): Account {
+            return self.backend.serviceAccount()
+        }
     }
 
     pub struct Matcher {
@@ -268,6 +275,11 @@ pub contract Test {
         /// Returns all the logs from the blockchain, up to the calling point.
         ///
         pub fun logs(): [String]
+
+        /// Returns the service account of the blockchain. Can be used to sign
+        /// transactions with this account.
+        ///
+        pub fun serviceAccount(): Account
     }
 
     /// Returns a new matcher that negates the test of the given matcher.

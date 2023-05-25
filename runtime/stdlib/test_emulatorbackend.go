@@ -43,6 +43,7 @@ type testEmulatorBackendType struct {
 	deployContractFunctionType         *sema.FunctionType
 	useConfigFunctionType              *sema.FunctionType
 	logsFunctionType                   *sema.FunctionType
+	serviceAccountFunctionType         *sema.FunctionType
 }
 
 func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceType) *testEmulatorBackendType {
@@ -84,6 +85,11 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 	logsFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeLogsFunctionName,
+	)
+
+	serviceAccountFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeServiceAccountFunctionName,
 	)
 
 	compositeType := &sema.CompositeType{
@@ -144,6 +150,12 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 			logsFunctionType,
 			testEmulatorBackendTypeLogsFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeServiceAccountFunctionName,
+			serviceAccountFunctionType,
+			testEmulatorBackendTypeServiceAccountFunctionDocString,
+		),
 	}
 
 	compositeType.Members = sema.MembersAsMap(members)
@@ -159,6 +171,7 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 		deployContractFunctionType:         deployContractFunctionType,
 		useConfigFunctionType:              useConfigFunctionType,
 		logsFunctionType:                   logsFunctionType,
+		serviceAccountFunctionType:         serviceAccountFunctionType,
 	}
 }
 
@@ -555,6 +568,36 @@ func (t *testEmulatorBackendType) newLogsFunction(
 	)
 }
 
+// 'EmulatorBackend.serviceAccount' function
+
+const testEmulatorBackendTypeServiceAccountFunctionName = "serviceAccount"
+
+const testEmulatorBackendTypeServiceAccountFunctionDocString = `
+Returns the service account of the blockchain. Can be used to sign
+transactions with this account.
+`
+
+func (t *testEmulatorBackendType) newServiceAccountFunction(
+	testFramework TestFramework,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.serviceAccountFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			serviceAccount, err := testFramework.ServiceAccount()
+			if err != nil {
+				panic(err)
+			}
+
+			return newTestAccountValue(
+				testFramework,
+				invocation.Interpreter,
+				invocation.LocationRange,
+				serviceAccount,
+			)
+		},
+	)
+}
+
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
@@ -591,6 +634,10 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		{
 			Name:  testEmulatorBackendTypeLogsFunctionName,
 			Value: t.newLogsFunction(testFramework),
+		},
+		{
+			Name:  testEmulatorBackendTypeServiceAccountFunctionName,
+			Value: t.newServiceAccountFunction(testFramework),
 		},
 	}
 
