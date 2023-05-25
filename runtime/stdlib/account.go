@@ -222,16 +222,10 @@ func NewAuthAccountValue(
 			)
 		},
 		func() interpreter.Value {
-			capabilities := newAuthAccountCapabilitiesValue(
+			return newAuthAccountCapabilitiesValue(
 				gauge,
 				handler,
 				addressValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				capabilities,
-				sema.AuthAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)
@@ -2137,15 +2131,9 @@ func NewPublicAccountValue(
 			)
 		},
 		func() interpreter.Value {
-			capabilities := newPublicAccountCapabilitiesValue(
+			return newPublicAccountCapabilitiesValue(
 				gauge,
 				addressValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				capabilities,
-				sema.PublicAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)
@@ -2253,29 +2241,17 @@ func newAuthAccountCapabilitiesValue(
 		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
 		newAuthAccountCapabilitiesMigrateLinkFunction(gauge, idGenerator, addressValue),
 		func() interpreter.Value {
-			storageCapabilities := newAuthAccountStorageCapabilitiesValue(
+			return newAuthAccountStorageCapabilitiesValue(
 				gauge,
 				idGenerator,
 				addressValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				storageCapabilities,
-				sema.AuthAccountCapabilitiesTypeStorageFieldType.Type,
 			)
 		},
 		func() interpreter.Value {
-			accountCapabilities := newAuthAccountAccountCapabilitiesValue(
+			return newAuthAccountAccountCapabilitiesValue(
 				gauge,
 				idGenerator,
 				addressValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				accountCapabilities,
-				sema.AuthAccountCapabilitiesTypeAccountFieldType.Type,
 			)
 		},
 	)

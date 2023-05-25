@@ -82,9 +82,7 @@ The keys assigned to the account.
 
 const PublicAccountTypeCapabilitiesFieldName = "capabilities"
 
-var PublicAccountTypeCapabilitiesFieldType = &ReferenceType{
-	Type: PublicAccountCapabilitiesType,
-}
+var PublicAccountTypeCapabilitiesFieldType = PublicAccountCapabilitiesType
 
 const PublicAccountTypeCapabilitiesFieldDocString = `
 The capabilities of the account.

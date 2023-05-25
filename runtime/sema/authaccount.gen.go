@@ -90,9 +90,7 @@ The inbox allows bootstrapping (sending and receiving) capabilities.
 
 const AuthAccountTypeCapabilitiesFieldName = "capabilities"
 
-var AuthAccountTypeCapabilitiesFieldType = &ReferenceType{
-	Type: AuthAccountCapabilitiesType,
-}
+var AuthAccountTypeCapabilitiesFieldType = AuthAccountCapabilitiesType
 
 const AuthAccountTypeCapabilitiesFieldDocString = `
 The capabilities of the account.
@@ -1226,9 +1224,7 @@ func init() {
 
 const AuthAccountCapabilitiesTypeStorageFieldName = "storage"
 
-var AuthAccountCapabilitiesTypeStorageFieldType = &ReferenceType{
-	Type: AuthAccountStorageCapabilitiesType,
-}
+var AuthAccountCapabilitiesTypeStorageFieldType = AuthAccountStorageCapabilitiesType
 
 const AuthAccountCapabilitiesTypeStorageFieldDocString = `
 The storage capabilities of the account.
@@ -1236,9 +1232,7 @@ The storage capabilities of the account.
 
 const AuthAccountCapabilitiesTypeAccountFieldName = "account"
 
-var AuthAccountCapabilitiesTypeAccountFieldType = &ReferenceType{
-	Type: AuthAccountAccountCapabilitiesType,
-}
+var AuthAccountCapabilitiesTypeAccountFieldType = AuthAccountAccountCapabilitiesType
 
 const AuthAccountCapabilitiesTypeAccountFieldDocString = `
 The account capabilities of the account.

@@ -9346,7 +9346,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 			)
 		},
 		func() interpreter.Value {
-			capabilities := interpreter.NewAuthAccountCapabilitiesValue(
+			return interpreter.NewAuthAccountCapabilitiesValue(
 				gauge,
 				addressValue,
 				panicFunctionValue,
@@ -9355,23 +9355,17 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunctionValue,
 				panicFunctionValue,
 				func() interpreter.Value {
-					storageCapabilities := interpreter.NewAuthAccountStorageCapabilitiesValue(
+					return interpreter.NewAuthAccountStorageCapabilitiesValue(
 						gauge,
 						addressValue,
 						panicFunctionValue,
 						panicFunctionValue,
 						panicFunctionValue,
 						panicFunctionValue,
-					)
-					return interpreter.NewEphemeralReferenceValue(
-						gauge,
-						false,
-						storageCapabilities,
-						sema.AuthAccountCapabilitiesTypeStorageFieldType.Type,
 					)
 				},
 				func() interpreter.Value {
-					accountCapabilities := interpreter.NewAuthAccountAccountCapabilitiesValue(
+					return interpreter.NewAuthAccountAccountCapabilitiesValue(
 						gauge,
 						addressValue,
 						panicFunctionValue,
@@ -9379,19 +9373,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 						panicFunctionValue,
 						panicFunctionValue,
 					)
-					return interpreter.NewEphemeralReferenceValue(
-						gauge,
-						false,
-						accountCapabilities,
-						sema.AuthAccountCapabilitiesTypeAccountFieldType.Type,
-					)
 				},
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				capabilities,
-				sema.AuthAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)
@@ -9441,17 +9423,11 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 			)
 		},
 		func() interpreter.Value {
-			capabilities := interpreter.NewPublicAccountCapabilitiesValue(
+			return interpreter.NewPublicAccountCapabilitiesValue(
 				gauge,
 				addressValue,
 				panicFunctionValue,
 				panicFunctionValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				capabilities,
-				sema.PublicAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)

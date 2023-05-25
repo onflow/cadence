@@ -26,7 +26,7 @@ pub struct AuthAccount {
     pub let inbox: AuthAccount.Inbox
 
     /// The capabilities of the account.
-    pub let capabilities: &AuthAccount.Capabilities
+    pub let capabilities: AuthAccount.Capabilities
 
     /// All public paths of this account.
     pub let publicPaths: [PublicPath]
@@ -323,10 +323,10 @@ pub struct AuthAccount {
     pub struct Capabilities {
 
         /// The storage capabilities of the account.
-        pub let storage: &AuthAccount.StorageCapabilities
+        pub let storage: AuthAccount.StorageCapabilities
 
         /// The account capabilities of the account.
-        pub let account: &AuthAccount.AccountCapabilities
+        pub let account: AuthAccount.AccountCapabilities
 
         /// Returns the capability at the given public path.
         /// Returns nil if the capability does not exist,
