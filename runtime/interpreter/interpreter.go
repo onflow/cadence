@@ -2703,6 +2703,11 @@ var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunct
 				return val
 			})
 		}),
+		newFromBigEndianBytesFunction(sema.Word128Type, 16, func(i *Interpreter, b []byte) Value {
+			return NewWord128ValueFromBigInt(i, func() *big.Int {
+				return BigEndianBytesToUnsignedBigInt(b)
+			})
+		}),
 
 		// fixed-points
 		newFromBigEndianBytesFunction(sema.Fix64Type, 8, func(i *Interpreter, b []byte) Value {

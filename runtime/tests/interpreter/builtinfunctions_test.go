@@ -700,6 +700,13 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 			"[128, 0, 0, 0, 0, 0, 0, 0]":               interpreter.NewUnmeteredWord64Value(9223372036854775808),
 			"[255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord64Value(18446744073709551615),
 		},
+		"Word128": {
+			"[0]":   interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(0)),
+			"[42]":  interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(42)),
+			"[127]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(127)),
+			"[128]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(128)),
+			"[200]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(200)),
+		},
 		// Fix*
 		"Fix64": {
 			"[0, 0, 0, 0, 0, 0, 0, 0]":             interpreter.NewUnmeteredFix64Value(0),
@@ -786,6 +793,10 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		"Word64": {
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
 			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Word128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
 		},
 		// Fix*
 		"Fix64": {
