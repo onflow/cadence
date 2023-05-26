@@ -2530,6 +2530,37 @@ func TestEncodeWord128(t *testing.T) {
 	}...)
 }
 
+func TestDecodeWord128Invalid(t *testing.T) {
+	t.Parallel()
+
+	_, err := ccf.Decode(nil, []byte{
+		// language=json, format=json-cdc
+		// {"type":"Word128","value":"0"}
+		//
+		// language=edn, format=ccf
+		// 130([137(52), 0])
+		//
+		// language=cbor, format=ccf
+		// tag
+		0xd8, ccf.CBORTagTypeAndValue,
+		// array, 2 items follow
+		0x82,
+		// tag
+		0xd8, ccf.CBORTagSimpleType,
+		// Word128 type ID (52)
+		0x18, 0x34,
+		// Invalid type
+		0xd7,
+		// bytes, 16 bytes follow
+		0x50,
+		// 340282366920938463463374607431768211455
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	})
+	require.Error(t, err)
+	assert.Equal(t, "ccf: failed to decode: failed to decode Word128: cbor: cannot decode CBOR tag type to big.Int", err.Error())
+}
+
 func TestEncodeFix64(t *testing.T) {
 
 	t.Parallel()
