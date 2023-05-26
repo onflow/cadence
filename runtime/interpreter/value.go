@@ -1660,14 +1660,11 @@ func NewArrayValueWithIterator(
 	return v
 }
 
-func newArrayValueFromAtreeValue(
-	array *atree.Array,
-	staticType ArrayStaticType,
-) *ArrayValue {
-	return &ArrayValue{
-		Type:  staticType,
-		array: array,
+func ArrayElementSize(staticType ArrayStaticType) uint {
+	if staticType == nil {
+		return 0
 	}
+	return staticType.ElementType().elementSize()
 }
 
 func newArrayValueFromConstructor(
@@ -1675,20 +1672,38 @@ func newArrayValueFromConstructor(
 	staticType ArrayStaticType,
 	countOverestimate uint64,
 	constructor func() *atree.Array,
-) (array *ArrayValue) {
-	var elementSize uint
-	if staticType != nil {
-		elementSize = staticType.ElementType().elementSize()
-	}
-	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(countOverestimate, elementSize)
-	common.UseMemory(gauge, baseUsage)
+) *ArrayValue {
+
+	elementSize := ArrayElementSize(staticType)
+
+	elementUsage, dataSlabs, metaDataSlabs :=
+		common.NewAtreeArrayMemoryUsages(countOverestimate, elementSize)
 	common.UseMemory(gauge, elementUsage)
 	common.UseMemory(gauge, dataSlabs)
 	common.UseMemory(gauge, metaDataSlabs)
 
-	array = newArrayValueFromAtreeValue(constructor(), staticType)
-	array.elementSize = elementSize
-	return
+	return newArrayValueFromAtreeArray(
+		gauge,
+		staticType,
+		elementSize,
+		constructor(),
+	)
+}
+
+func newArrayValueFromAtreeArray(
+	gauge common.MemoryGauge,
+	staticType ArrayStaticType,
+	elementSize uint,
+	atreeArray *atree.Array,
+) *ArrayValue {
+
+	common.UseMemory(gauge, common.ArrayValueBaseMemoryUsage)
+
+	return &ArrayValue{
+		Type:        staticType,
+		array:       atreeArray,
+		elementSize: elementSize,
+	}
 }
 
 var _ Value = &ArrayValue{}
@@ -2647,11 +2662,6 @@ func (v *ArrayValue) Transfer(
 	storable atree.Storable,
 	preventTransfer map[atree.StorageID]struct{},
 ) Value {
-	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
-	common.UseMemory(interpreter, baseUsage)
-	common.UseMemory(interpreter, elementUsage)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
 
 	config := interpreter.SharedState.Config
 
@@ -2700,6 +2710,14 @@ func (v *ArrayValue) Transfer(
 			panic(errors.NewExternalError(err))
 		}
 
+		elementUsage, dataSlabs, metaDataSlabs := common.NewAtreeArrayMemoryUsages(
+			v.array.Count(),
+			v.elementSize,
+		)
+		common.UseMemory(interpreter, elementUsage)
+		common.UseMemory(interpreter, dataSlabs)
+		common.UseMemory(interpreter, metaDataSlabs)
+
 		array, err = atree.NewArrayFromBatchData(
 			config.Storage,
 			address,
@@ -2724,9 +2742,7 @@ func (v *ArrayValue) Transfer(
 		}
 
 		if remove {
-			err = v.array.PopIterate(func(storable atree.Storable) {
-				interpreter.RemoveReferencedSlab(storable)
-			})
+			err = v.array.PopIterate(interpreter.RemoveReferencedSlab)
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
@@ -2759,8 +2775,13 @@ func (v *ArrayValue) Transfer(
 	}
 
 	if res == nil {
-		res = newArrayValueFromAtreeValue(array, v.Type)
-		res.elementSize = v.elementSize
+		res = newArrayValueFromAtreeArray(
+			interpreter,
+			v.Type,
+			v.elementSize,
+			array,
+		)
+
 		res.semaType = v.semaType
 		res.isResourceKinded = v.isResourceKinded
 		res.isDestroyed = v.isDestroyed
@@ -2772,46 +2793,48 @@ func (v *ArrayValue) Transfer(
 func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 	config := interpreter.SharedState.Config
 
-	iterator, err := v.array.Iterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-
-	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
-	common.UseMemory(interpreter, baseUsage)
-	common.UseMemory(interpreter, elementUsage)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
-
-	array, err := atree.NewArrayFromBatchData(
-		config.Storage,
-		v.StorageAddress(),
-		v.array.Type(),
-		func() (atree.Value, error) {
-			value, err := iterator.Next()
+	array := newArrayValueFromConstructor(
+		interpreter,
+		v.Type,
+		v.array.Count(),
+		func() *atree.Array {
+			iterator, err := v.array.Iterator()
 			if err != nil {
-				return nil, err
-			}
-			if value == nil {
-				return nil, nil
+				panic(errors.NewExternalError(err))
 			}
 
-			element := MustConvertStoredValue(interpreter, value).
-				Clone(interpreter)
+			array, err := atree.NewArrayFromBatchData(
+				config.Storage,
+				v.StorageID().Address,
+				v.array.Type(),
+				func() (atree.Value, error) {
+					value, err := iterator.Next()
+					if err != nil {
+						return nil, err
+					}
+					if value == nil {
+						return nil, nil
+					}
 
-			return element, nil
+					element := MustConvertStoredValue(interpreter, value).
+						Clone(interpreter)
+
+					return element, nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			return array
 		},
 	)
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	return &ArrayValue{
-		Type:             v.Type,
-		semaType:         v.semaType,
-		isResourceKinded: v.isResourceKinded,
-		array:            array,
-		isDestroyed:      v.isDestroyed,
-	}
+
+	array.semaType = v.semaType
+	array.isResourceKinded = v.isResourceKinded
+	array.isDestroyed = v.isDestroyed
+
+	return array
 }
 
 func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {

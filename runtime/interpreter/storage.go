@@ -64,7 +64,12 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return newArrayValueFromConstructor(gauge, staticType, value.Count(), func() *atree.Array { return value }), nil
+		return newArrayValueFromAtreeArray(
+			gauge,
+			staticType,
+			ArrayElementSize(staticType),
+			value,
+		), nil
 
 	case *atree.OrderedMap:
 		typeInfo := value.Type()
