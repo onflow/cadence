@@ -1219,6 +1219,8 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 		return interpreter.NewUnmeteredWord32Value(rand.Uint32())
 	case Word64:
 		return interpreter.NewUnmeteredWord64Value(rand.Uint64())
+	case Word128:
+		return interpreter.NewUnmeteredWord128ValueFromUint64(rand.Uint64())
 
 	// Fixed point
 	case Fix64:
@@ -1486,6 +1488,8 @@ func intSubtype(n int) sema.Type {
 		return sema.Word32Type
 	case Word64:
 		return sema.Word64Type
+	case Word128:
+		return sema.Word128Type
 
 	default:
 		panic(fmt.Sprintf("unsupported:  %d", n))
@@ -1517,6 +1521,7 @@ const (
 	Word16
 	Word32
 	Word64
+	Word128
 
 	Fix64
 	UFix64

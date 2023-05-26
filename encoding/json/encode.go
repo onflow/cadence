@@ -245,6 +245,7 @@ const (
 	word16TypeStr      = "Word16"
 	word32TypeStr      = "Word32"
 	word64TypeStr      = "Word64"
+	word128TypeStr     = "Word128"
 	fix64TypeStr       = "Fix64"
 	ufix64TypeStr      = "UFix64"
 	arrayTypeStr       = "Array"
@@ -314,6 +315,8 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareWord32(v)
 	case cadence.Word64:
 		return prepareWord64(v)
+	case cadence.Word128:
+		return prepareWord128(v)
 	case cadence.Fix64:
 		return prepareFix64(v)
 	case cadence.UFix64:
@@ -519,6 +522,13 @@ func prepareWord64(v cadence.Word64) jsonValue {
 	return jsonValueObject{
 		Type:  word64TypeStr,
 		Value: encodeUInt(uint64(v)),
+	}
+}
+
+func prepareWord128(v cadence.Word128) jsonValue {
+	return jsonValueObject{
+		Type:  word128TypeStr,
+		Value: encodeBig(v.Big()),
 	}
 }
 
@@ -758,6 +768,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		cadence.Word16Type,
 		cadence.Word32Type,
 		cadence.Word64Type,
+		cadence.Word128Type,
 		cadence.Fix64Type,
 		cadence.UFix64Type,
 		cadence.BlockType,

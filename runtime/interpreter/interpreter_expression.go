@@ -682,6 +682,9 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 	case sema.Word64Type:
 		common.UseMemory(memoryGauge, word64MemoryUsage)
 		return NewUnmeteredWord64Value(uint64(value.Int64()))
+	case sema.Word128Type:
+		// BigInt value is already metered at parser.
+		return NewUnmeteredWord128ValueFromBigInt(value)
 
 	default:
 		panic(errors.NewUnreachableError())

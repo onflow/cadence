@@ -1829,6 +1829,11 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			return ConvertWord64(interpreter, value, locationRange)
 		}
 
+	case sema.Word128Type:
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertWord128(interpreter, value, locationRange)
+		}
+
 	// Fix*
 
 	case sema.Fix64Type:
@@ -2474,6 +2479,12 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 		newFromStringFunction(sema.Word16Type, unsignedIntValueParser(16, NewWord16Value, u64_16)),
 		newFromStringFunction(sema.Word32Type, unsignedIntValueParser(32, NewWord32Value, u64_32)),
 		newFromStringFunction(sema.Word64Type, unsignedIntValueParser(64, NewWord64Value, u64_64)),
+		newFromStringFunction(sema.Word128Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.Word128TypeMinIntBig, sema.Word128TypeMaxIntBig); ok {
+				v = NewUnmeteredWord128ValueFromBigInt(b)
+			}
+			return
+		})),
 
 		// fixed-points
 		newFromStringFunction(sema.Fix64Type, func(inter *Interpreter, input string) OptionalValue {
@@ -2692,6 +2703,11 @@ var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunct
 				return val
 			})
 		}),
+		newFromBigEndianBytesFunction(sema.Word128Type, 16, func(i *Interpreter, b []byte) Value {
+			return NewWord128ValueFromBigInt(i, func() *big.Int {
+				return BigEndianBytesToUnsignedBigInt(b)
+			})
+		}),
 
 		// fixed-points
 		newFromBigEndianBytesFunction(sema.Fix64Type, 8, func(i *Interpreter, b []byte) Value {
@@ -2891,6 +2907,15 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		},
 		min: NewUnmeteredWord64Value(0),
 		max: NewUnmeteredWord64Value(math.MaxUint64),
+	},
+	{
+		name:         sema.Word128TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Word128Type),
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord128(interpreter, value, locationRange)
+		},
+		min: NewUnmeteredWord128ValueFromUint64(0),
+		max: NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
 	},
 	{
 		name:         sema.Fix64TypeName,

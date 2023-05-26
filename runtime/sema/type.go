@@ -1515,6 +1515,12 @@ var (
 			WithTag(Word64TypeTag).
 			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
+	// Word128Type represents the 128-bit unsigned integer type `Word128`
+	// which does NOT check for overflow and underflow
+	Word128Type = NewNumericType(Word128TypeName).
+			WithTag(Word128TypeTag).
+			WithIntRange(Word128TypeMinIntBig, Word128TypeMaxIntBig)
+
 	// FixedPointType represents the super-type of all fixed-point types
 	FixedPointType = NewNumericType(FixedPointTypeName).
 			WithTag(FixedPointTypeTag).
@@ -1633,6 +1639,19 @@ var (
 
 	Word64TypeMinInt = new(big.Int)
 	Word64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
+
+	// 1 << 128
+	Word128TypeMaxIntPlusOneBig = func() *big.Int {
+		word128TypeMaxPlusOne := big.NewInt(1)
+		word128TypeMaxPlusOne.Lsh(word128TypeMaxPlusOne, 128)
+		return word128TypeMaxPlusOne
+	}()
+	Word128TypeMinIntBig = new(big.Int)
+	Word128TypeMaxIntBig = func() *big.Int {
+		word128TypeMax := new(big.Int)
+		word128TypeMax.Sub(Word128TypeMaxIntPlusOneBig, big.NewInt(1))
+		return word128TypeMax
+	}()
 
 	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
 
@@ -3197,6 +3216,7 @@ var AllUnsignedIntegerTypes = []Type{
 	Word16Type,
 	Word32Type,
 	Word64Type,
+	Word128Type,
 }
 
 var AllIntegerTypes = append(
@@ -5407,7 +5427,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		case IntegerType, SignedIntegerType,
 			UIntType,
 			UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
-			Word8Type, Word16Type, Word32Type, Word64Type:
+			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type:
 
 			return true
 

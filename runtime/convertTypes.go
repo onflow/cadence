@@ -123,6 +123,8 @@ func ExportMeteredType(
 			return cadence.TheWord32Type
 		case sema.Word64Type:
 			return cadence.TheWord64Type
+		case sema.Word128Type:
+			return cadence.TheWord128Type
 		case sema.Fix64Type:
 			return cadence.TheFix64Type
 		case sema.UFix64Type:
@@ -602,6 +604,8 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord32)
 	case cadence.Word64Type:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord64)
+	case cadence.Word128Type:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord128)
 	case cadence.Fix64Type:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeFix64)
 	case cadence.UFix64Type:

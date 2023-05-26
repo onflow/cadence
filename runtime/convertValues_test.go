@@ -367,6 +367,11 @@ func TestExportValue(t *testing.T) {
 			expected: cadence.NewWord64(42),
 		},
 		{
+			label:    "Word128",
+			value:    interpreter.NewUnmeteredWord128ValueFromUint64(42),
+			expected: cadence.NewWord128(42),
+		},
+		{
 			label:    "Fix64",
 			value:    interpreter.NewUnmeteredFix64Value(-123000000),
 			expected: cadence.Fix64(-123000000),
@@ -801,6 +806,11 @@ func TestImportValue(t *testing.T) {
 			expected: interpreter.NewUnmeteredWord64Value(42),
 		},
 		{
+			label:    "Word128",
+			value:    cadence.NewWord128(42),
+			expected: interpreter.NewUnmeteredWord128ValueFromUint64(42),
+		},
+		{
 			label:    "Fix64",
 			value:    cadence.Fix64(-123000000),
 			expected: interpreter.NewUnmeteredFix64Value(-123000000),
@@ -1069,6 +1079,11 @@ func TestImportRuntimeType(t *testing.T) {
 			label:    "Word64",
 			actual:   cadence.Word64Type{},
 			expected: interpreter.PrimitiveStaticTypeWord64,
+		},
+		{
+			label:    "Word128",
+			actual:   cadence.Word128Type{},
+			expected: interpreter.PrimitiveStaticTypeWord128,
 		},
 		{
 			label:    "Fix64",
@@ -2763,6 +2778,11 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "Word64",
 			typeSignature: "Word64",
 			exportedValue: cadence.NewWord64(42),
+		},
+		{
+			label:         "Word128",
+			typeSignature: "Word128",
+			exportedValue: cadence.NewWord128(42),
 		},
 		{
 			label:         "Fix64",

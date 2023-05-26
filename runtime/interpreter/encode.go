@@ -158,7 +158,7 @@ const (
 	CBORTagWord16Value
 	CBORTagWord32Value
 	CBORTagWord64Value
-	_ // future: Word128
+	CBORTagWord128Value
 	_ // future: Word256
 	_
 
@@ -611,6 +611,23 @@ func (v Word64Value) Encode(e *atree.Encoder) error {
 		return err
 	}
 	return e.CBOR.EncodeUint64(uint64(v))
+}
+
+// Encode encodes Word128Value as
+//
+//	cbor.Tag{
+//			Number:  CBORTagWord128Value,
+//			Content: *big.Int(v.BigInt),
+//	}
+func (v Word128Value) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagWord128Value,
+	})
+	if err != nil {
+		return err
+	}
+	return e.CBOR.EncodeBigInt(v.BigInt)
 }
 
 // Encode encodes Fix64Value as
