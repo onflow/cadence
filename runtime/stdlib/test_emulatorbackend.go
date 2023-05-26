@@ -45,6 +45,7 @@ type testEmulatorBackendType struct {
 	logsFunctionType                   *sema.FunctionType
 	serviceAccountFunctionType         *sema.FunctionType
 	eventsFunctionType                 *sema.FunctionType
+	resetFunctionType                  *sema.FunctionType
 }
 
 func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceType) *testEmulatorBackendType {
@@ -96,6 +97,11 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 	eventsFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeEventsFunctionName,
+	)
+
+	resetFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeResetFunctionName,
 	)
 
 	compositeType := &sema.CompositeType{
@@ -168,6 +174,12 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 			eventsFunctionType,
 			testEmulatorBackendTypeEventsFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeResetFunctionName,
+			resetFunctionType,
+			testEmulatorBackendTypeResetFunctionDocString,
+		),
 	}
 
 	compositeType.Members = sema.MembersAsMap(members)
@@ -185,6 +197,7 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 		logsFunctionType:                   logsFunctionType,
 		serviceAccountFunctionType:         serviceAccountFunctionType,
 		eventsFunctionType:                 eventsFunctionType,
+		resetFunctionType:                  resetFunctionType,
 	}
 }
 
@@ -636,6 +649,26 @@ func (t *testEmulatorBackendType) newEventsFunction(
 	)
 }
 
+// 'EmulatorBackend.reset' function
+
+const testEmulatorBackendTypeResetFunctionName = "reset"
+
+const testEmulatorBackendTypeResetFunctionDocString = `
+Resets the state of the blockchain.
+`
+
+func (t *testEmulatorBackendType) newResetFunction(
+	testFramework TestFramework,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.eventsFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			testFramework.Reset()
+			return interpreter.Void
+		},
+	)
+}
+
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
@@ -680,6 +713,10 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		{
 			Name:  testEmulatorBackendTypeEventsFunctionName,
 			Value: t.newEventsFunction(testFramework),
+		},
+		{
+			Name:  testEmulatorBackendTypeResetFunctionName,
+			Value: t.newResetFunction(testFramework),
 		},
 	}
 

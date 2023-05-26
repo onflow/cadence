@@ -66,6 +66,8 @@ type TestFramework interface {
 		inter *interpreter.Interpreter,
 		typeName string,
 	) interpreter.Value
+
+	Reset()
 }
 
 type ScriptResult struct {

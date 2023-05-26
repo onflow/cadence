@@ -121,6 +121,12 @@ pub contract Test {
         pub fun eventsOfType(_ type: Type): [AnyStruct] {
             return self.backend.events(type.identifier)
         }
+
+        /// Resets the state of the blockchain.
+        ///
+        pub fun reset() {
+            self.backend.reset()
+        }
     }
 
     pub struct Matcher {
@@ -298,6 +304,10 @@ pub contract Test {
         /// by type name.
         ///
         pub fun events(_ typeName: String): [AnyStruct]
+
+        /// Resets the state of the blockchain.
+        ///
+        pub fun reset()
     }
 
     /// Returns a new matcher that negates the test of the given matcher.
