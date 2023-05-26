@@ -147,7 +147,7 @@ type Runtime interface {
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 
-	// ReadLinked dereferences the path and returns the value stored at the target
+	// Deprecated: ReadLinked dereferences the path and returns the value stored at the target.
 	//
 	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 
@@ -213,7 +213,7 @@ type interpreterRuntime struct {
 	defaultConfig Config
 }
 
-// NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
+// NewInterpreterRuntime returns an interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(defaultConfig Config) Runtime {
 	return &interpreterRuntime{
 		defaultConfig: defaultConfig,
@@ -609,7 +609,9 @@ func (r *interpreterRuntime) ReadStored(
 	domain := pathValue.Domain.Identifier()
 	identifier := pathValue.Identifier
 
-	value := inter.ReadStored(address, domain, identifier)
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	value := inter.ReadStored(address, domain, storageMapKey)
 
 	var exportedValue cadence.Value
 	if value != nil {
@@ -650,12 +652,14 @@ func (r *interpreterRuntime) ReadLinked(
 
 	pathValue := valueImporter{inter: inter}.importPathValue(path)
 
-	target, _, err := inter.GetStorageCapabilityFinalTarget(
+	target, _, err := inter.GetPathCapabilityFinalTarget(
 		address,
 		pathValue,
+		// Use top-most type to follow link all the way to final target
 		&sema.ReferenceType{
 			Type: sema.AnyType,
 		},
+		true,
 		interpreter.EmptyLocationRange,
 	)
 	if err != nil {
@@ -678,11 +682,12 @@ func (r *interpreterRuntime) ReadLinked(
 			return nil, nil
 		}
 
-		value := inter.ReadStored(
-			address,
-			targetPath.Domain.Identifier(),
-			targetPath.Identifier,
-		)
+		domain := targetPath.Domain.Identifier()
+		identifier := targetPath.Identifier
+
+		storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+		value := inter.ReadStored(address, domain, storageMapKey)
 
 		var exportedValue cadence.Value
 		if value != nil {

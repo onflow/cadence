@@ -709,7 +709,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindSimpleCompositeValue))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindSimpleCompositeValue))
 	})
 
 	t.Run("public account", func(t *testing.T) {
@@ -728,7 +728,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindSimpleCompositeValue))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValue))
 	})
 }
 
@@ -6964,7 +6964,7 @@ func TestInterpretPathValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretStorageCapabilityValueMetering(t *testing.T) {
+func TestInterpretPathCapabilityValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -6986,7 +6986,7 @@ func TestInterpretStorageCapabilityValueMetering(t *testing.T) {
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStorageCapabilityValue))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathCapabilityValue))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPathValue))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
 	})
@@ -7015,6 +7015,8 @@ func TestInterpretStorageCapabilityValueMetering(t *testing.T) {
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCapabilityStaticType))
 	})
 }
+
+// TODO: IDCapability
 
 func TestInterpretPathLinkValueMetering(t *testing.T) {
 	t.Parallel()
@@ -9025,7 +9027,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		testValueStringConversion(t, script)
 	})
 
-	t.Run("Capability", func(t *testing.T) {
+	t.Run("path Capability", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -9037,13 +9039,39 @@ func TestInterpretValueStringConversion(t *testing.T) {
             struct Bar: Foo {}
         `
 
-		testValueStringConversion(t, script,
-			interpreter.NewUnmeteredStorageCapabilityValue(
+		testValueStringConversion(t,
+			script,
+			interpreter.NewUnmeteredPathCapabilityValue(
 				interpreter.AddressValue{1},
 				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: "somepath",
 				},
+				interpreter.CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "Bar",
+					TypeID:              "S.test.Bar",
+				},
+			))
+	})
+
+	t.Run("ID Capability", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: Capability<&{Foo}>) {
+                log(a)
+            }
+
+            struct interface Foo {}
+            struct Bar: Foo {}
+        `
+
+		testValueStringConversion(t,
+			script,
+			interpreter.NewUnmeteredIDCapabilityValue(
+				4,
+				interpreter.AddressValue{1},
 				interpreter.CompositeStaticType{
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "Bar",
@@ -9128,29 +9156,21 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 	t.Run("Primitive static types", func(t *testing.T) {
 		t.Parallel()
 
-		for staticType, typeName := range interpreter.PrimitiveStaticTypes {
-			switch staticType {
-			case interpreter.PrimitiveStaticTypeUnknown,
-				interpreter.PrimitiveStaticTypeAny,
-				interpreter.PrimitiveStaticTypeAuthAccountContracts,
-				interpreter.PrimitiveStaticTypePublicAccountContracts,
-				interpreter.PrimitiveStaticTypeAuthAccountKeys,
-				interpreter.PrimitiveStaticTypePublicAccountKeys,
-				interpreter.PrimitiveStaticTypeAuthAccountInbox,
-				interpreter.PrimitiveStaticTypeAccountKey,
+		for primitiveStaticType := range interpreter.PrimitiveStaticTypes {
+
+			switch primitiveStaticType {
+			case interpreter.PrimitiveStaticTypeAny,
+				interpreter.PrimitiveStaticTypeUnknown,
 				interpreter.PrimitiveStaticType_Count:
 				continue
-			case interpreter.PrimitiveStaticTypeAnyResource:
-				typeName = "@" + typeName
-			case interpreter.PrimitiveStaticTypeMetaType:
-				typeName = "Type"
 			}
 
 			script := fmt.Sprintf(`
                 pub fun main() {
                     log(Type<%s>())
                 }`,
-				typeName,
+				sema.NewTypeAnnotation(primitiveStaticType.SemaType()).
+					QualifiedString(),
 			)
 
 			testStaticTypeStringConversion(t, script)

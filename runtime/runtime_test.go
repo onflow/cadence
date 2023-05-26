@@ -97,7 +97,7 @@ func newTestLedger(
 
 	storageIndices := map[string]uint64{}
 
-	storage := testLedger{
+	return testLedger{
 		storedValues: storedValues,
 		valueExists: func(owner, key []byte) (bool, error) {
 			value := storedValues[storageKey(string(owner), string(key))]
@@ -124,8 +124,6 @@ func newTestLedger(
 			return
 		},
 	}
-
-	return storage
 }
 
 type testInterpreterRuntime struct {
@@ -222,6 +220,15 @@ type testRuntimeInterface struct {
 	memoryUsed                 func() (uint64, error)
 	interactionUsed            func() (uint64, error)
 	updatedContractCode        bool
+	generateAccountID          func(address common.Address) (uint64, error)
+}
+
+func (i *testRuntimeInterface) GenerateAccountID(address common.Address) (uint64, error) {
+	if i.generateAccountID == nil {
+		return 0, nil
+	}
+
+	return i.generateAccountID(address)
 }
 
 // testRuntimeInterface should implement Interface
@@ -3592,7 +3599,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
 
-	t.Run("function with un-importable argument errors and error propagates", func(t *testing.T) {
+	t.Run("function with un-importable argument errors and error propagates (path capability)", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3600,9 +3607,41 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloArg",
 			[]cadence.Value{
-				cadence.StorageCapability{
-					BorrowType: cadence.AddressType{}, // this will error during `importValue`
-				},
+				cadence.NewPathCapability(
+					cadence.Address{},
+					cadence.Path{
+						Domain:     common.PathDomainPublic,
+						Identifier: "test",
+					},
+					cadence.AddressType{}, // this will error during `importValue`
+				),
+			},
+			[]sema.Type{
+				&sema.CapabilityType{},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		RequireError(t, err)
+
+		require.ErrorContains(t, err, "cannot import capability")
+	})
+
+	t.Run("function with un-importable argument errors and error propagates (ID capability)", func(t *testing.T) {
+		_, err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloArg",
+			[]cadence.Value{
+				cadence.NewIDCapability(
+					42,
+					cadence.Address{},
+					cadence.AddressType{}, // this will error during `importValue`
+				),
 			},
 			[]sema.Type{
 				&sema.CapabilityType{},
@@ -7025,7 +7064,9 @@ func TestRuntimeGetCapability(t *testing.T) {
           }
         `)
 
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+		}
 
 		res, err := runtime.ExecuteScript(
 			Script{
@@ -7039,13 +7080,14 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.StorageCapability{
-				Address: cadence.BytesToAddress([]byte{0x1}),
-				Path: cadence.Path{
+			cadence.NewPathCapability(
+				cadence.BytesToAddress([]byte{0x1}),
+				cadence.Path{
 					Domain:     common.PathDomainPublic,
 					Identifier: "xxx",
 				},
-			},
+				nil,
+			),
 			res,
 		)
 	})
@@ -7983,14 +8025,8 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 
 	t.Parallel()
 
-	rt := testInterpreterRuntime{
-		interpreterRuntime: NewInterpreterRuntime(
-			Config{
-				AccountLinkingEnabled: true,
-			},
-		).(*interpreterRuntime),
-	}
-	rt.Config()
+	rt := newTestInterpreterRuntime()
+	rt.defaultConfig.AccountLinkingEnabled = true
 
 	script := []byte(`
       #allowAccountLinking

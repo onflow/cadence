@@ -59,7 +59,13 @@ type EventEmitter interface {
 	)
 }
 
+type AccountIDGenerator interface {
+	// GenerateAccountID generates a new, *non-zero*, unique ID for the given account.
+	GenerateAccountID(address common.Address) (uint64, error)
+}
+
 type AuthAccountHandler interface {
+	AccountIDGenerator
 	BalanceProvider
 	AvailableBalanceProvider
 	StorageUsedProvider
@@ -210,6 +216,13 @@ func NewAuthAccountValue(
 		},
 		func() interpreter.Value {
 			return newAuthAccountInboxValue(
+				gauge,
+				handler,
+				addressValue,
+			)
+		},
+		func() interpreter.Value {
+			return newAuthAccountCapabilitiesValue(
 				gauge,
 				handler,
 				addressValue,
@@ -704,7 +717,8 @@ func newAccountKeysGetFunction(
 	)
 }
 
-// the AccountKey in `forEachKey(_ f: ((AccountKey): Bool)): Void`
+// accountKeysForEachCallbackTypeParams are the parameter types of the callback function of
+// `Auth/PublicAccount.Keys.forEachKey(_ f: ((AccountKey): Bool))`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
 func newAccountKeysForEachFunction(
@@ -968,7 +982,7 @@ func newPublicAccountContractsValue(
 	)
 }
 
-const inboxStorageDomain = "inbox"
+const InboxStorageDomain = "inbox"
 
 func newAuthAccountInboxPublishFunction(
 	gauge common.MemoryGauge,
@@ -980,7 +994,7 @@ func newAuthAccountInboxPublishFunction(
 		gauge,
 		sema.AuthAccountInboxTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value, ok := invocation.Arguments[0].(*interpreter.StorageCapabilityValue)
+			value, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -1018,7 +1032,14 @@ func newAuthAccountInboxPublishFunction(
 				nil,
 			)
 
-			inter.WriteStored(provider, inboxStorageDomain, nameValue.Str, publishedValue)
+			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+			inter.WriteStored(
+				provider,
+				InboxStorageDomain,
+				storageMapKey,
+				publishedValue,
+			)
 
 			return interpreter.Void
 		},
@@ -1043,7 +1064,9 @@ func newAuthAccountInboxUnpublishFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
-			readValue := inter.ReadStored(provider, inboxStorageDomain, nameValue.Str)
+			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+			readValue := inter.ReadStored(provider, InboxStorageDomain, storageMapKey)
 			if readValue == nil {
 				return interpreter.Nil
 			}
@@ -1075,7 +1098,12 @@ func newAuthAccountInboxUnpublishFunction(
 				nil,
 			)
 
-			inter.WriteStored(provider, inboxStorageDomain, nameValue.Str, nil)
+			inter.WriteStored(
+				provider,
+				InboxStorageDomain,
+				storageMapKey,
+				nil,
+			)
 
 			handler.EmitEvent(
 				inter,
@@ -1116,7 +1144,9 @@ func newAuthAccountInboxClaimFunction(
 
 			providerAddress := providerValue.ToAddress()
 
-			readValue := inter.ReadStored(providerAddress, inboxStorageDomain, nameValue.Str)
+			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+			readValue := inter.ReadStored(providerAddress, InboxStorageDomain, storageMapKey)
 			if readValue == nil {
 				return interpreter.Nil
 			}
@@ -1153,7 +1183,12 @@ func newAuthAccountInboxClaimFunction(
 				nil,
 			)
 
-			inter.WriteStored(providerAddress, inboxStorageDomain, nameValue.Str, nil)
+			inter.WriteStored(
+				providerAddress,
+				InboxStorageDomain,
+				storageMapKey,
+				nil,
+			)
 
 			handler.EmitEvent(
 				inter,
@@ -2082,10 +2117,24 @@ func NewPublicAccountValue(
 		newStorageUsedGetFunction(handler, addressValue),
 		newStorageCapacityGetFunction(handler, addressValue),
 		func() interpreter.Value {
-			return newPublicAccountKeysValue(gauge, handler, addressValue)
+			return newPublicAccountKeysValue(
+				gauge,
+				handler,
+				addressValue,
+			)
 		},
 		func() interpreter.Value {
-			return newPublicAccountContractsValue(gauge, handler, addressValue)
+			return newPublicAccountContractsValue(
+				gauge,
+				handler,
+				addressValue,
+			)
+		},
+		func() interpreter.Value {
+			return newPublicAccountCapabilitiesValue(
+				gauge,
+				addressValue,
+			)
 		},
 	)
 }
@@ -2146,4 +2195,1855 @@ func NewHashAlgorithmFromValue(
 func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {
 	codeHash := sha3.Sum256(code)
 	return interpreter.ByteSliceToByteArrayValue(inter, codeHash[:])
+}
+
+func newAuthAccountStorageCapabilitiesValue(
+	gauge common.MemoryGauge,
+	accountIDGenerator AccountIDGenerator,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewAuthAccountStorageCapabilitiesValue(
+		gauge,
+		addressValue,
+		newAuthAccountStorageCapabilitiesGetControllerFunction(gauge, addressValue),
+		newAuthAccountStorageCapabilitiesGetControllersFunction(gauge, addressValue),
+		newAuthAccountStorageCapabilitiesForEachControllerFunction(gauge, addressValue),
+		newAuthAccountStorageCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
+	)
+}
+
+func newAuthAccountAccountCapabilitiesValue(
+	gauge common.MemoryGauge,
+	accountIDGenerator AccountIDGenerator,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewAuthAccountAccountCapabilitiesValue(
+		gauge,
+		addressValue,
+		newAuthAccountAccountCapabilitiesGetControllerFunction(gauge, addressValue),
+		newAuthAccountAccountCapabilitiesGetControllersFunction(gauge, addressValue),
+		newAuthAccountAccountCapabilitiesForEachControllerFunction(gauge, addressValue),
+		newAuthAccountAccountCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
+	)
+}
+
+func newAuthAccountCapabilitiesValue(
+	gauge common.MemoryGauge,
+	idGenerator AccountIDGenerator,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewAuthAccountCapabilitiesValue(
+		gauge,
+		addressValue,
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, true),
+		newAuthAccountCapabilitiesPublishFunction(gauge, addressValue),
+		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
+		newAuthAccountCapabilitiesMigrateLinkFunction(gauge, idGenerator, addressValue),
+		func() interpreter.Value {
+			return newAuthAccountStorageCapabilitiesValue(
+				gauge,
+				idGenerator,
+				addressValue,
+			)
+		},
+		func() interpreter.Value {
+			return newAuthAccountAccountCapabilitiesValue(
+				gauge,
+				idGenerator,
+				addressValue,
+			)
+		},
+	)
+}
+
+func newAuthAccountStorageCapabilitiesGetControllerFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.FunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountStorageCapabilitiesTypeGetControllerFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			// Get capability ID argument
+
+			capabilityIDValue, ok := invocation.Arguments[0].(interpreter.UInt64Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityID := uint64(capabilityIDValue)
+
+			referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID)
+			if referenceValue == nil {
+				return interpreter.Nil
+			}
+
+			return interpreter.NewSomeValueNonCopying(inter, referenceValue)
+		},
+	)
+}
+
+var storageCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
+	Type: interpreter.ReferenceStaticType{
+		BorrowedType: interpreter.PrimitiveStaticTypeStorageCapabilityController,
+	},
+}
+
+func newAuthAccountStorageCapabilitiesGetControllersFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.FunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountStorageCapabilitiesTypeGetControllersFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			// Get path argument
+
+			targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || targetPathValue.Domain != common.PathDomainStorage {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get capability controllers iterator
+
+			nextCapabilityID, count :=
+				getStorageCapabilityControllerIDsIterator(inter, address, targetPathValue)
+
+			var capabilityControllerIndex uint64 = 0
+
+			return interpreter.NewArrayValueWithIterator(
+				inter,
+				storageCapabilityControllerReferencesArrayStaticType,
+				common.Address{},
+				count,
+				func() interpreter.Value {
+					if capabilityControllerIndex >= count {
+						return nil
+					}
+					capabilityControllerIndex++
+
+					capabilityID, ok := nextCapabilityID()
+					if !ok {
+						return nil
+					}
+
+					referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID)
+					if referenceValue == nil {
+						panic(errors.NewUnreachableError())
+					}
+
+					return referenceValue
+				},
+			)
+		},
+	)
+}
+
+// `(&StorageCapabilityController)` in
+// `forEachController(forPath: StoragePath, _ function: ((&StorageCapabilityController): Bool))`
+var authAccountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
+	&sema.ReferenceType{
+		Type: sema.StorageCapabilityControllerType,
+	},
+}
+
+func newAuthAccountStorageCapabilitiesForEachControllerFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountStorageCapabilitiesTypeForEachControllerFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || targetPathValue.Domain != common.PathDomainStorage {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get function argument
+
+			functionValue, ok := invocation.Arguments[1].(interpreter.FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Prevent mutations (record/unrecord) to storage capability controllers
+			// for this address/path during iteration
+
+			addressPath := interpreter.AddressPath{
+				Address: address,
+				Path:    targetPathValue,
+			}
+			iterations := inter.SharedState.CapabilityControllerIterations
+			iterations[addressPath]++
+			defer func() {
+				iterations[addressPath]--
+				if iterations[addressPath] <= 0 {
+					delete(iterations, addressPath)
+				}
+			}()
+
+			// Get capability controllers iterator
+
+			nextCapabilityID, _ :=
+				getStorageCapabilityControllerIDsIterator(inter, address, targetPathValue)
+
+			for {
+				capabilityID, ok := nextCapabilityID()
+				if !ok {
+					break
+				}
+
+				referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID)
+				if referenceValue == nil {
+					panic(errors.NewUnreachableError())
+				}
+
+				subInvocation := interpreter.NewInvocation(
+					inter,
+					nil,
+					nil,
+					[]interpreter.Value{referenceValue},
+					authAccountStorageCapabilitiesForEachControllerCallbackTypeParams,
+					nil,
+					locationRange,
+				)
+
+				res, err := inter.InvokeFunction(functionValue, subInvocation)
+				if err != nil {
+					// interpreter panicked while invoking the inner function value
+					panic(err)
+				}
+
+				shouldContinue, ok := res.(interpreter.BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !shouldContinue {
+					break
+				}
+
+				// It is not safe to check this at the beginning of the loop
+				// (i.e. on the next invocation of the callback),
+				// because if the mutation performed in the callback reorganized storage
+				// such that the iteration pointer is now at the end,
+				// we will not invoke the callback again but will still silently skip elements of storage.
+				//
+				// In order to be safe, we perform this check here to effectively enforce
+				// that users return `false` from their callback in all cases where storage is mutated.
+				if inter.SharedState.MutationDuringCapabilityControllerIteration {
+					panic(CapabilityControllersMutatedDuringIterationError{
+						LocationRange: locationRange,
+					})
+				}
+			}
+
+			return interpreter.Void
+		},
+	)
+}
+
+func newAuthAccountStorageCapabilitiesIssueFunction(
+	gauge common.MemoryGauge,
+	idGenerator AccountIDGenerator,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountStorageCapabilitiesTypeIssueFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || targetPathValue.Domain != common.PathDomainStorage {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get borrow type type argument
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityIDValue, borrowStaticType := issueStorageCapabilityController(
+				inter,
+				locationRange,
+				idGenerator,
+				address,
+				borrowType,
+				targetPathValue,
+			)
+
+			return interpreter.NewIDCapabilityValue(
+				gauge,
+				capabilityIDValue,
+				addressValue,
+				borrowStaticType,
+			)
+		},
+	)
+}
+
+func issueStorageCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	idGenerator AccountIDGenerator,
+	address common.Address,
+	borrowType *sema.ReferenceType,
+	targetPathValue interpreter.PathValue,
+) (
+	interpreter.UInt64Value,
+	interpreter.ReferenceStaticType,
+) {
+	// Create and write StorageCapabilityController
+
+	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, borrowType)
+
+	var capabilityID uint64
+	var err error
+	errors.WrapPanic(func() {
+		capabilityID, err = idGenerator.GenerateAccountID(address)
+	})
+	if err != nil {
+		panic(err)
+	}
+	if capabilityID == 0 {
+		panic(errors.NewUnexpectedError("invalid zero account ID"))
+	}
+
+	capabilityIDValue := interpreter.UInt64Value(capabilityID)
+
+	controller := interpreter.NewStorageCapabilityControllerValue(
+		inter,
+		borrowStaticType,
+		capabilityIDValue,
+		targetPathValue,
+	)
+
+	storeCapabilityController(inter, address, capabilityIDValue, controller)
+	recordStorageCapabilityController(inter, locationRange, address, targetPathValue, capabilityIDValue)
+
+	return capabilityIDValue, borrowStaticType
+}
+
+func newAuthAccountAccountCapabilitiesIssueFunction(
+	gauge common.MemoryGauge,
+	idGenerator AccountIDGenerator,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountAccountCapabilitiesTypeIssueFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get borrow type type argument
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityIDValue, borrowStaticType :=
+				issueAccountCapabilityController(
+					inter,
+					locationRange,
+					idGenerator,
+					address,
+					borrowType,
+				)
+
+			return interpreter.NewIDCapabilityValue(
+				gauge,
+				capabilityIDValue,
+				addressValue,
+				borrowStaticType,
+			)
+		},
+	)
+}
+
+func issueAccountCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	idGenerator AccountIDGenerator,
+	address common.Address,
+	borrowType *sema.ReferenceType,
+) (
+	interpreter.UInt64Value,
+	interpreter.ReferenceStaticType,
+) {
+	// Create and write AccountCapabilityController
+
+	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, borrowType)
+
+	var capabilityID uint64
+	var err error
+	errors.WrapPanic(func() {
+		capabilityID, err = idGenerator.GenerateAccountID(address)
+	})
+	if err != nil {
+		panic(err)
+	}
+	if capabilityID == 0 {
+		panic(errors.NewUnexpectedError("invalid zero account ID"))
+	}
+
+	capabilityIDValue := interpreter.UInt64Value(capabilityID)
+
+	controller := interpreter.NewAccountCapabilityControllerValue(
+		inter,
+		borrowStaticType,
+		capabilityIDValue,
+	)
+
+	storeCapabilityController(inter, address, capabilityIDValue, controller)
+	recordAccountCapabilityController(
+		inter,
+		locationRange,
+		address,
+		capabilityIDValue,
+	)
+
+	return capabilityIDValue, borrowStaticType
+}
+
+// CapabilityControllerStorageDomain is the storage domain which stores
+// capability controllers by capability ID
+const CapabilityControllerStorageDomain = "cap_con"
+
+// storeCapabilityController stores a capability controller in the account's capability ID to controller storage map
+func storeCapabilityController(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+	controller interpreter.CapabilityControllerValue,
+) {
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
+
+	existed := inter.WriteStored(
+		address,
+		CapabilityControllerStorageDomain,
+		storageMapKey,
+		controller,
+	)
+	if existed {
+		panic(errors.NewUnreachableError())
+	}
+}
+
+// removeCapabilityController removes a capability controller from the account's capability ID to controller storage map
+func removeCapabilityController(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) {
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
+
+	existed := inter.WriteStored(
+		address,
+		CapabilityControllerStorageDomain,
+		storageMapKey,
+		nil,
+	)
+	if !existed {
+		panic(errors.NewUnreachableError())
+	}
+
+	setCapabilityControllerTag(
+		inter,
+		address,
+		uint64(capabilityIDValue),
+		nil,
+	)
+}
+
+// getCapabilityController gets the capability controller for the given capability ID
+func getCapabilityController(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityID uint64,
+) interpreter.CapabilityControllerValue {
+
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
+
+	readValue := inter.ReadStored(
+		address,
+		CapabilityControllerStorageDomain,
+		storageMapKey,
+	)
+	if readValue == nil {
+		return nil
+	}
+
+	controller, ok := readValue.(interpreter.CapabilityControllerValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Inject functions
+	switch controller := controller.(type) {
+	case *interpreter.StorageCapabilityControllerValue:
+		controller.GetTag =
+			newCapabilityControllerGetTagFunction(inter, address, controller.CapabilityID)
+		controller.SetTag =
+			newCapabilityControllerSetTagFunction(inter, address, controller.CapabilityID)
+
+		controller.TargetFunction =
+			newStorageCapabilityControllerTargetFunction(inter, controller)
+		controller.RetargetFunction =
+			newStorageCapabilityControllerRetargetFunction(inter, address, controller)
+		controller.DeleteFunction =
+			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
+
+	case *interpreter.AccountCapabilityControllerValue:
+		controller.GetTag =
+			newCapabilityControllerGetTagFunction(inter, address, controller.CapabilityID)
+		controller.SetTag =
+			newCapabilityControllerSetTagFunction(inter, address, controller.CapabilityID)
+
+		controller.DeleteFunction =
+			newAccountCapabilityControllerDeleteFunction(inter, address, controller)
+	}
+
+	return controller
+}
+
+func getStorageCapabilityControllerReference(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityID uint64,
+) *interpreter.EphemeralReferenceValue {
+
+	capabilityController := getCapabilityController(inter, address, capabilityID)
+	if capabilityController == nil {
+		return nil
+	}
+
+	storageCapabilityController, ok := capabilityController.(*interpreter.StorageCapabilityControllerValue)
+	if !ok {
+		return nil
+	}
+
+	return interpreter.NewEphemeralReferenceValue(
+		inter,
+		false,
+		storageCapabilityController,
+		sema.StorageCapabilityControllerType,
+	)
+}
+
+func newStorageCapabilityControllerTargetFunction(
+	inter *interpreter.Interpreter,
+	controller *interpreter.StorageCapabilityControllerValue,
+) interpreter.FunctionValue {
+	return interpreter.NewHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeTargetFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			return controller.TargetPath
+		},
+	)
+}
+
+func newStorageCapabilityControllerRetargetFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	controller *interpreter.StorageCapabilityControllerValue,
+) interpreter.FunctionValue {
+	return interpreter.NewHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeTargetFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			newTargetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || newTargetPathValue.Domain != common.PathDomainStorage {
+				panic(errors.NewUnreachableError())
+			}
+
+			oldTargetPathValue := controller.TargetPath
+
+			capabilityID := controller.CapabilityID
+			unrecordStorageCapabilityController(
+				inter,
+				locationRange,
+				address,
+				oldTargetPathValue,
+				capabilityID,
+			)
+			recordStorageCapabilityController(
+				inter,
+				locationRange,
+				address,
+				newTargetPathValue,
+				capabilityID,
+			)
+
+			controller.TargetPath = newTargetPathValue
+
+			return interpreter.Void
+		},
+	)
+}
+
+func newStorageCapabilityControllerDeleteFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	controller *interpreter.StorageCapabilityControllerValue,
+) interpreter.FunctionValue {
+	return interpreter.NewHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeTargetFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			capabilityID := controller.CapabilityID
+
+			unrecordStorageCapabilityController(
+				inter,
+				locationRange,
+				address,
+				controller.TargetPath,
+				capabilityID,
+			)
+			removeCapabilityController(
+				inter,
+				address,
+				capabilityID,
+			)
+
+			controller.SetDeleted(inter)
+
+			return interpreter.Void
+		},
+	)
+}
+
+var capabilityIDSetStaticType = interpreter.DictionaryStaticType{
+	KeyType:   interpreter.PrimitiveStaticTypeUInt64,
+	ValueType: interpreter.NilStaticType,
+}
+
+// PathCapabilityStorageDomain is the storage domain which stores
+// capability ID dictionaries (sets) by storage path identifier
+const PathCapabilityStorageDomain = "path_cap"
+
+func recordStorageCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	address common.Address,
+	targetPathValue interpreter.PathValue,
+	capabilityIDValue interpreter.UInt64Value,
+) {
+	if targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewUnreachableError())
+	}
+
+	addressPath := interpreter.AddressPath{
+		Address: address,
+		Path:    targetPathValue,
+	}
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
+		inter.SharedState.MutationDuringCapabilityControllerIteration = true
+	}
+
+	identifier := targetPathValue.Identifier
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	storageMap := inter.Storage().GetStorageMap(
+		address,
+		PathCapabilityStorageDomain,
+		true,
+	)
+
+	setKey := capabilityIDValue
+	setValue := interpreter.Nil
+
+	readValue := storageMap.ReadValue(inter, storageMapKey)
+	if readValue == nil {
+		capabilityIDSet := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			locationRange,
+			capabilityIDSetStaticType,
+			address,
+			setKey,
+			setValue,
+		)
+		storageMap.SetValue(inter, storageMapKey, capabilityIDSet)
+	} else {
+		capabilityIDSet := readValue.(*interpreter.DictionaryValue)
+		existing := capabilityIDSet.Insert(inter, locationRange, setKey, setValue)
+		if existing != interpreter.Nil {
+			panic(errors.NewUnreachableError())
+		}
+	}
+}
+
+func getPathCapabilityIDSet(
+	inter *interpreter.Interpreter,
+	targetPathValue interpreter.PathValue,
+	address common.Address,
+) *interpreter.DictionaryValue {
+	if targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewUnreachableError())
+	}
+
+	identifier := targetPathValue.Identifier
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	storageMap := inter.Storage().GetStorageMap(
+		address,
+		PathCapabilityStorageDomain,
+		false,
+	)
+	if storageMap == nil {
+		return nil
+	}
+
+	readValue := storageMap.ReadValue(inter, storageMapKey)
+	if readValue == nil {
+		return nil
+	}
+
+	capabilityIDSet, ok := readValue.(*interpreter.DictionaryValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return capabilityIDSet
+}
+
+func unrecordStorageCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	address common.Address,
+	targetPathValue interpreter.PathValue,
+	capabilityIDValue interpreter.UInt64Value,
+) {
+	addressPath := interpreter.AddressPath{
+		Address: address,
+		Path:    targetPathValue,
+	}
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
+		inter.SharedState.MutationDuringCapabilityControllerIteration = true
+	}
+
+	capabilityIDSet := getPathCapabilityIDSet(inter, targetPathValue, address)
+	if capabilityIDSet == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	existing := capabilityIDSet.Remove(inter, locationRange, capabilityIDValue)
+	if existing == interpreter.Nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Remove capability set if empty
+
+	if capabilityIDSet.Count() == 0 {
+		storageMap := inter.Storage().GetStorageMap(
+			address,
+			PathCapabilityStorageDomain,
+			true,
+		)
+		if storageMap == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		identifier := targetPathValue.Identifier
+
+		storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+		if !storageMap.RemoveValue(inter, storageMapKey) {
+			panic(errors.NewUnreachableError())
+		}
+	}
+}
+
+func getStorageCapabilityControllerIDsIterator(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	targetPathValue interpreter.PathValue,
+) (
+	nextCapabilityID func() (uint64, bool),
+	count uint64,
+) {
+	capabilityIDSet := getPathCapabilityIDSet(inter, targetPathValue, address)
+	if capabilityIDSet == nil {
+		return func() (uint64, bool) {
+			return 0, false
+		}, 0
+	}
+
+	iterator := capabilityIDSet.Iterator()
+
+	count = uint64(capabilityIDSet.Count())
+	nextCapabilityID = func() (uint64, bool) {
+		keyValue := iterator.NextKey(inter)
+		if keyValue == nil {
+			return 0, false
+		}
+
+		capabilityIDValue, ok := keyValue.(interpreter.UInt64Value)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return uint64(capabilityIDValue), true
+	}
+	return
+}
+
+// AccountCapabilityStorageDomain is the storage domain which
+// records active account capability controller IDs
+const AccountCapabilityStorageDomain = "acc_cap"
+
+func recordAccountCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) {
+	addressPath := interpreter.AddressPath{
+		Address: address,
+	}
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
+		inter.SharedState.MutationDuringCapabilityControllerIteration = true
+	}
+
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
+
+	storageMap := inter.Storage().GetStorageMap(
+		address,
+		AccountCapabilityStorageDomain,
+		true,
+	)
+
+	existed := storageMap.SetValue(inter, storageMapKey, interpreter.NilValue{})
+	if existed {
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func unrecordAccountCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) {
+	addressPath := interpreter.AddressPath{
+		Address: address,
+	}
+	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
+		inter.SharedState.MutationDuringCapabilityControllerIteration = true
+	}
+
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
+
+	storageMap := inter.Storage().GetStorageMap(
+		address,
+		AccountCapabilityStorageDomain,
+		true,
+	)
+
+	existed := storageMap.RemoveValue(inter, storageMapKey)
+	if !existed {
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func getAccountCapabilityControllerIDsIterator(
+	inter *interpreter.Interpreter,
+	address common.Address,
+) (
+	nextCapabilityID func() (uint64, bool),
+	count uint64,
+) {
+	storageMap := inter.Storage().GetStorageMap(
+		address,
+		AccountCapabilityStorageDomain,
+		false,
+	)
+	if storageMap == nil {
+		return func() (uint64, bool) {
+			return 0, false
+		}, 0
+	}
+
+	iterator := storageMap.Iterator(inter)
+
+	count = storageMap.Count()
+	nextCapabilityID = func() (uint64, bool) {
+		keyValue := iterator.NextKey()
+		if keyValue == nil {
+			return 0, false
+		}
+
+		capabilityIDValue, ok := keyValue.(interpreter.Uint64AtreeValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return uint64(capabilityIDValue), true
+	}
+	return
+}
+
+func newAuthAccountCapabilitiesPublishFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountCapabilitiesTypePublishFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
+			// Get capability argument
+
+			var capabilityValue *interpreter.IDCapabilityValue
+
+			firstValue := invocation.Arguments[0]
+			switch firstValue := firstValue.(type) {
+			case *interpreter.IDCapabilityValue:
+				capabilityValue = firstValue
+
+			case *interpreter.PathCapabilityValue:
+				panic(errors.NewDefaultUserError("cannot publish linked capability"))
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get path argument
+
+			pathValue, ok := invocation.Arguments[1].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainPublic {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			// Prevent an overwrite
+
+			locationRange := invocation.LocationRange
+
+			storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+			if inter.StoredValueExists(
+				address,
+				domain,
+				storageMapKey,
+			) {
+				panic(
+					interpreter.OverwriteError{
+						Address:       addressValue,
+						Path:          pathValue,
+						LocationRange: locationRange,
+					},
+				)
+			}
+
+			capabilityValue, ok = capabilityValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(address),
+				true,
+				nil,
+			).(*interpreter.IDCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Write new value
+
+			inter.WriteStored(
+				address,
+				domain,
+				storageMapKey,
+				capabilityValue,
+			)
+
+			return interpreter.Void
+		},
+	)
+}
+
+func newAuthAccountCapabilitiesUnpublishFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountCapabilitiesTypeUnpublishFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainPublic {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			// Read/remove capability
+
+			storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+			readValue := inter.ReadStored(address, domain, storageMapKey)
+			if readValue == nil {
+				return interpreter.Nil
+			}
+
+			var capabilityValue *interpreter.IDCapabilityValue
+			switch readValue := readValue.(type) {
+			case *interpreter.IDCapabilityValue:
+				capabilityValue = readValue
+
+			case interpreter.LinkValue:
+				panic(errors.NewDefaultUserError("cannot unpublish linked capability"))
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityValue, ok = capabilityValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address{},
+				true,
+				nil,
+			).(*interpreter.IDCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter.WriteStored(
+				address,
+				domain,
+				storageMapKey,
+				nil,
+			)
+
+			return interpreter.NewSomeValueNonCopying(inter, capabilityValue)
+		},
+	)
+}
+
+func newAuthAccountCapabilitiesMigrateLinkFunction(
+	gauge common.MemoryGauge,
+	idGenerator AccountIDGenerator,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountCapabilitiesTypeMigrateLinkFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			// Read stored link, if any
+
+			storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+			readValue := inter.ReadStored(address, domain, storageMapKey)
+			if readValue == nil {
+				return interpreter.Nil
+			}
+
+			var borrowStaticType interpreter.ReferenceStaticType
+
+			switch readValue := readValue.(type) {
+			case *interpreter.IDCapabilityValue:
+				// Already migrated
+				return interpreter.Nil
+
+			case interpreter.PathLinkValue:
+				borrowStaticType, ok = readValue.Type.(interpreter.ReferenceStaticType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+			case interpreter.AccountLinkValue:
+				borrowStaticType = interpreter.AuthAccountReferenceStaticType
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			borrowType, ok := inter.MustConvertStaticToSemaType(borrowStaticType).(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get target
+
+			target, _, err :=
+				inter.GetPathCapabilityFinalTarget(
+					address,
+					pathValue,
+					// Use top-most type to follow link all the way to final target
+					&sema.ReferenceType{
+						Type: sema.AnyType,
+					},
+					false,
+					locationRange,
+				)
+			if err != nil {
+				panic(err)
+			}
+
+			// Issue appropriate capability controller
+
+			var capabilityID interpreter.UInt64Value
+
+			switch target := target.(type) {
+			case nil:
+				return interpreter.Nil
+
+			case interpreter.PathCapabilityTarget:
+
+				targetPath := interpreter.PathValue(target)
+
+				capabilityID, _ = issueStorageCapabilityController(
+					inter,
+					locationRange,
+					idGenerator,
+					address,
+					borrowType,
+					targetPath,
+				)
+
+			case interpreter.AccountCapabilityTarget:
+
+				capabilityID, _ = issueAccountCapabilityController(
+					inter,
+					locationRange,
+					idGenerator,
+					address,
+					borrowType,
+				)
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			// Publish: overwrite link value with capability,
+			// for both public and private links.
+			//
+			// Private links need to be replaced,
+			// because another link might target it.
+
+			capabilityValue := interpreter.NewIDCapabilityValue(
+				inter,
+				capabilityID,
+				addressValue,
+				borrowStaticType,
+			)
+
+			capabilityValue, ok = capabilityValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(address),
+				true,
+				nil,
+			).(*interpreter.IDCapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter.WriteStored(
+				address,
+				domain,
+				storageMapKey,
+				capabilityValue,
+			)
+
+			return interpreter.NewSomeValueNonCopying(inter, capabilityID)
+		},
+	)
+}
+
+func newPublicAccountCapabilitiesValue(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewPublicAccountCapabilitiesValue(
+		gauge,
+		addressValue,
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountType, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountType, true),
+	)
+}
+
+func getCheckedCapabilityController(
+	inter *interpreter.Interpreter,
+	capabilityAddressValue interpreter.AddressValue,
+	capabilityIDValue interpreter.UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) (
+	interpreter.CapabilityControllerValue,
+	*sema.ReferenceType,
+) {
+
+	if wantedBorrowType == nil {
+		wantedBorrowType = capabilityBorrowType
+	} else if !sema.IsSubType(capabilityBorrowType, wantedBorrowType) {
+		// Ensure wanted borrow type is not more permissive
+		// than the capability's borrow type:
+		// The wanted type must be a supertype
+
+		return nil, nil
+	}
+
+	capabilityAddress := capabilityAddressValue.ToAddress()
+	capabilityID := uint64(capabilityIDValue)
+
+	controller := getCapabilityController(inter, capabilityAddress, capabilityID)
+	if controller == nil {
+		return nil, nil
+	}
+
+	// Ensure wanted borrow type is not more permissive
+	// than the controller's borrow type:
+	// The wanted type must be a supertype
+
+	controllerBorrowStaticType := controller.CapabilityControllerBorrowType()
+
+	controllerBorrowType, ok :=
+		inter.MustConvertStaticToSemaType(controllerBorrowStaticType).(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if !sema.IsSubType(controllerBorrowType, wantedBorrowType) {
+		return nil, nil
+	}
+
+	return controller, wantedBorrowType
+}
+
+func getCheckedCapabilityControllerReference(
+	inter *interpreter.Interpreter,
+	capabilityAddressValue interpreter.AddressValue,
+	capabilityIDValue interpreter.UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) interpreter.ReferenceValue {
+	controller, resultBorrowType := getCheckedCapabilityController(
+		inter,
+		capabilityAddressValue,
+		capabilityIDValue,
+		wantedBorrowType,
+		capabilityBorrowType,
+	)
+	if controller == nil {
+		return nil
+	}
+
+	capabilityAddress := capabilityAddressValue.ToAddress()
+
+	return controller.ReferenceValue(
+		inter,
+		capabilityAddress,
+		resultBorrowType,
+	)
+}
+
+func BorrowCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	capabilityAddress interpreter.AddressValue,
+	capabilityID interpreter.UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) interpreter.ReferenceValue {
+	referenceValue := getCheckedCapabilityControllerReference(
+		inter,
+		capabilityAddress,
+		capabilityID,
+		wantedBorrowType,
+		capabilityBorrowType,
+	)
+	if referenceValue == nil {
+		return nil
+	}
+
+	// Attempt to dereference,
+	// which reads the stored value
+	// and performs a dynamic type check
+
+	referencedValue := referenceValue.ReferencedValue(
+		inter,
+		locationRange,
+		false,
+	)
+	if referencedValue == nil {
+		return nil
+	}
+
+	return referenceValue
+}
+
+func CheckCapabilityController(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	capabilityAddress interpreter.AddressValue,
+	capabilityID interpreter.UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) interpreter.BoolValue {
+	referenceValue := getCheckedCapabilityControllerReference(
+		inter,
+		capabilityAddress,
+		capabilityID,
+		wantedBorrowType,
+		capabilityBorrowType,
+	)
+	if referenceValue == nil {
+		return interpreter.FalseValue
+	}
+
+	// Attempt to dereference,
+	// which reads the stored value
+	// and performs a dynamic type check
+
+	referencedValue := referenceValue.ReferencedValue(
+		inter,
+		locationRange,
+		false,
+	)
+
+	return interpreter.AsBoolValue(referencedValue != nil)
+}
+
+func newAccountCapabilitiesGetFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+	accountType *sema.CompositeType,
+	borrow bool,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	var funcType *sema.FunctionType
+	switch accountType {
+	case sema.AuthAccountType:
+		if borrow {
+			funcType = sema.AuthAccountCapabilitiesTypeBorrowFunctionType
+		} else {
+			funcType = sema.AuthAccountCapabilitiesTypeGetFunctionType
+		}
+	case sema.PublicAccountType:
+		if borrow {
+			funcType = sema.PublicAccountCapabilitiesTypeBorrowFunctionType
+		} else {
+			funcType = sema.PublicAccountCapabilitiesTypeGetFunctionType
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		funcType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainPublic {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			// Get borrow type type argument
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			wantedBorrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Read stored capability, if any
+
+			storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+			readValue := inter.ReadStored(address, domain, storageMapKey)
+			if readValue == nil {
+				return interpreter.Nil
+			}
+
+			var readCapabilityValue *interpreter.IDCapabilityValue
+
+			switch readValue := readValue.(type) {
+			case *interpreter.IDCapabilityValue:
+				readCapabilityValue = readValue
+
+			case interpreter.LinkValue:
+				// TODO: return PathCapabilityValue?
+				return interpreter.Nil
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityBorrowType, ok :=
+				inter.MustConvertStaticToSemaType(readCapabilityValue.BorrowType).(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityID := readCapabilityValue.ID
+			capabilityAddress := readCapabilityValue.Address
+
+			var resultValue interpreter.Value
+			if borrow {
+				// When borrowing,
+				// check the controller and types,
+				// and return a checked reference
+
+				resultValue = BorrowCapabilityController(
+					inter,
+					locationRange,
+					capabilityAddress,
+					capabilityID,
+					wantedBorrowType,
+					capabilityBorrowType,
+				)
+			} else {
+				// When not borrowing,
+				// check the controller and types,
+				// and return a capability
+
+				controller, resultBorrowType := getCheckedCapabilityController(
+					inter,
+					capabilityAddress,
+					capabilityID,
+					wantedBorrowType,
+					capabilityBorrowType,
+				)
+				if controller != nil {
+					resultBorrowStaticType :=
+						interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, resultBorrowType)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					resultValue = interpreter.NewIDCapabilityValue(
+						inter,
+						capabilityID,
+						capabilityAddress,
+						resultBorrowStaticType,
+					)
+				}
+			}
+
+			if resultValue == nil {
+				return interpreter.Nil
+			}
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				resultValue,
+			)
+		},
+	)
+}
+
+func getAccountCapabilityControllerReference(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityID uint64,
+) *interpreter.EphemeralReferenceValue {
+
+	capabilityController := getCapabilityController(inter, address, capabilityID)
+	if capabilityController == nil {
+		return nil
+	}
+
+	accountCapabilityController, ok := capabilityController.(*interpreter.AccountCapabilityControllerValue)
+	if !ok {
+		return nil
+	}
+
+	return interpreter.NewEphemeralReferenceValue(
+		inter,
+		false,
+		accountCapabilityController,
+		sema.AccountCapabilityControllerType,
+	)
+}
+
+func newAuthAccountAccountCapabilitiesGetControllerFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.FunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountAccountCapabilitiesTypeGetControllerFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			// Get capability ID argument
+
+			capabilityIDValue, ok := invocation.Arguments[0].(interpreter.UInt64Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			capabilityID := uint64(capabilityIDValue)
+
+			referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID)
+			if referenceValue == nil {
+				return interpreter.Nil
+			}
+
+			return interpreter.NewSomeValueNonCopying(inter, referenceValue)
+		},
+	)
+}
+
+var accountCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
+	Type: interpreter.ReferenceStaticType{
+		BorrowedType: interpreter.PrimitiveStaticTypeAccountCapabilityController,
+	},
+}
+
+func newAuthAccountAccountCapabilitiesGetControllersFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.FunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountAccountCapabilitiesTypeGetControllersFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			// Get capability controllers iterator
+
+			nextCapabilityID, count :=
+				getAccountCapabilityControllerIDsIterator(inter, address)
+
+			var capabilityControllerIndex uint64 = 0
+
+			return interpreter.NewArrayValueWithIterator(
+				inter,
+				accountCapabilityControllerReferencesArrayStaticType,
+				common.Address{},
+				count,
+				func() interpreter.Value {
+					if capabilityControllerIndex >= count {
+						return nil
+					}
+					capabilityControllerIndex++
+
+					capabilityID, ok := nextCapabilityID()
+					if !ok {
+						return nil
+					}
+
+					referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID)
+					if referenceValue == nil {
+						panic(errors.NewUnreachableError())
+					}
+
+					return referenceValue
+				},
+			)
+		},
+	)
+}
+
+// `(&AccountCapabilityController)` in
+// `forEachController(_ function: ((&AccountCapabilityController): Bool))`
+var authAccountAccountCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
+	&sema.ReferenceType{
+		Type: sema.AccountCapabilityControllerType,
+	},
+}
+
+// CapabilityControllersMutatedDuringIterationError
+type CapabilityControllersMutatedDuringIterationError struct {
+	interpreter.LocationRange
+}
+
+var _ errors.UserError = CapabilityControllersMutatedDuringIterationError{}
+
+func (CapabilityControllersMutatedDuringIterationError) IsUserError() {}
+
+func (CapabilityControllersMutatedDuringIterationError) Error() string {
+	return "capability controller iteration continued after changes to controllers"
+}
+
+func newAuthAccountAccountCapabilitiesForEachControllerFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.AuthAccountAccountCapabilitiesTypeForEachControllerFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get function argument
+
+			functionValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Prevent mutations (record/unrecord) to account capability controllers
+			// for this address during iteration
+
+			addressPath := interpreter.AddressPath{
+				Address: address,
+			}
+			iterations := inter.SharedState.CapabilityControllerIterations
+			iterations[addressPath]++
+			defer func() {
+				iterations[addressPath]--
+				if iterations[addressPath] <= 0 {
+					delete(iterations, addressPath)
+				}
+			}()
+
+			// Get capability controllers iterator
+
+			nextCapabilityID, _ :=
+				getAccountCapabilityControllerIDsIterator(inter, address)
+
+			for {
+				capabilityID, ok := nextCapabilityID()
+				if !ok {
+					break
+				}
+
+				referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID)
+				if referenceValue == nil {
+					panic(errors.NewUnreachableError())
+				}
+
+				subInvocation := interpreter.NewInvocation(
+					inter,
+					nil,
+					nil,
+					[]interpreter.Value{referenceValue},
+					authAccountAccountCapabilitiesForEachControllerCallbackTypeParams,
+					nil,
+					locationRange,
+				)
+
+				res, err := inter.InvokeFunction(functionValue, subInvocation)
+				if err != nil {
+					// interpreter panicked while invoking the inner function value
+					panic(err)
+				}
+
+				shouldContinue, ok := res.(interpreter.BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !shouldContinue {
+					break
+				}
+
+				// It is not safe to check this at the beginning of the loop
+				// (i.e. on the next invocation of the callback),
+				// because if the mutation performed in the callback reorganized storage
+				// such that the iteration pointer is now at the end,
+				// we will not invoke the callback again but will still silently skip elements of storage.
+				//
+				// In order to be safe, we perform this check here to effectively enforce
+				// that users return `false` from their callback in all cases where storage is mutated.
+				if inter.SharedState.MutationDuringCapabilityControllerIteration {
+					panic(CapabilityControllersMutatedDuringIterationError{
+						LocationRange: locationRange,
+					})
+				}
+			}
+
+			return interpreter.Void
+		},
+	)
+}
+
+func newAccountCapabilityControllerDeleteFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	controller *interpreter.AccountCapabilityControllerValue,
+) interpreter.FunctionValue {
+	return interpreter.NewHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeTargetFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			capabilityID := controller.CapabilityID
+
+			unrecordAccountCapabilityController(
+				inter,
+				locationRange,
+				address,
+				capabilityID,
+			)
+			removeCapabilityController(
+				inter,
+				address,
+				capabilityID,
+			)
+
+			controller.SetDeleted(inter)
+
+			return interpreter.Void
+		},
+	)
+}
+
+// CapabilityControllerTagStorageDomain is the storage domain which stores
+// capability controller tags by capability ID
+const CapabilityControllerTagStorageDomain = "cap_tag"
+
+func getCapabilityControllerTag(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityID uint64,
+) *interpreter.StringValue {
+
+	value := inter.ReadStored(
+		address,
+		CapabilityControllerTagStorageDomain,
+		interpreter.Uint64StorageMapKey(capabilityID),
+	)
+	if value == nil {
+		return interpreter.EmptyString
+	}
+
+	stringValue, ok := value.(*interpreter.StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return stringValue
+}
+
+func newCapabilityControllerGetTagFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) func() *interpreter.StringValue {
+
+	return func() *interpreter.StringValue {
+		return getCapabilityControllerTag(
+			inter,
+			address,
+			uint64(capabilityIDValue),
+		)
+	}
+}
+
+func setCapabilityControllerTag(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityID uint64,
+	tagValue *interpreter.StringValue,
+) {
+	// avoid typed nil
+	var value interpreter.Value
+	if tagValue != nil {
+		value = tagValue
+	}
+
+	inter.WriteStored(
+		address,
+		CapabilityControllerTagStorageDomain,
+		interpreter.Uint64StorageMapKey(capabilityID),
+		value,
+	)
+}
+
+func newCapabilityControllerSetTagFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilityIDValue interpreter.UInt64Value,
+) func(tagValue *interpreter.StringValue) {
+	return func(tagValue *interpreter.StringValue) {
+		setCapabilityControllerTag(
+			inter,
+			address,
+			uint64(capabilityIDValue),
+			tagValue,
+		)
+	}
 }

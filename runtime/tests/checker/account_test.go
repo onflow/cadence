@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
+func ParseAndCheckAccountWithConfig(t *testing.T, code string, config sema.Config) (*sema.Checker, error) {
 
 	constantDeclaration := func(name string, ty sema.Type) stdlib.StandardLibraryValue {
 		return stdlib.StandardLibraryValue{
@@ -39,18 +39,27 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 			Kind: common.DeclarationKindConstant,
 		}
 	}
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+
+	baseValueActivation := config.BaseValueActivation
+	if baseValueActivation == nil {
+		baseValueActivation = sema.BaseValueActivation
+	}
+
+	baseValueActivation = sema.NewVariableActivation(baseValueActivation)
 	baseValueActivation.DeclareValue(constantDeclaration("authAccount", sema.AuthAccountType))
 	baseValueActivation.DeclareValue(constantDeclaration("publicAccount", sema.PublicAccountType))
+	config.BaseValueActivation = baseValueActivation
 
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-			},
+			Config: &config,
 		},
 	)
+}
+
+func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
+	return ParseAndCheckAccountWithConfig(t, code, sema.Config{})
 }
 
 func TestCheckAccount_save(t *testing.T) {
@@ -373,7 +382,7 @@ func TestCheckAccount_typeAt(t *testing.T) {
 			checker, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
 					`
-						let t: Type? = authAccount.type(at: /%s/r)
+						let t: Type = authAccount.type(at: /%s/r)!
 					`,
 					domain.Identifier(),
 				),
@@ -385,12 +394,7 @@ func TestCheckAccount_typeAt(t *testing.T) {
 
 				typ := RequireGlobalValue(t, checker.Elaboration, "t")
 
-				require.Equal(t,
-					&sema.OptionalType{
-						Type: sema.MetaType,
-					},
-					typ,
-				)
+				require.Equal(t, sema.MetaType, typ)
 
 			} else {
 				errs := RequireCheckerErrors(t, err, 1)
@@ -918,8 +922,8 @@ func TestCheckAccount_link(t *testing.T) {
 			_, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
 					`
-                      fun test(): Capability? {
-                          return authAccount.link(/%s/r, target: /storage/r)
+                      fun test(): Capability {
+                          return authAccount.link(/%s/r, target: /storage/r)!
                       }
                     `,
 					domain.Identifier(),
@@ -969,8 +973,8 @@ func TestCheckAccount_link(t *testing.T) {
 						`
                           resource R {}
 
-                          fun test(): Capability%[1]s? {
-                              return authAccount.link%[1]s(/%[2]s/r, target: /storage/r)
+                          fun test(): Capability%[1]s {
+                              return authAccount.link%[1]s(/%[2]s/r, target: /storage/r)!
                           }
                         `,
 						typeArguments,
@@ -1000,8 +1004,8 @@ func TestCheckAccount_link(t *testing.T) {
 						`
                           struct S {}
 
-                          fun test(): Capability%[1]s? {
-                              return authAccount.link%[1]s(/%[2]s/s, target: /storage/s)
+                          fun test(): Capability%[1]s {
+                              return authAccount.link%[1]s(/%[2]s/s, target: /storage/s)!
                           }
                         `,
 						typeArguments,
@@ -1043,8 +1047,8 @@ func TestCheckAccount_link(t *testing.T) {
 						`
                           resource R {}
 
-                          fun test(): Capability? {
-                              return authAccount.link<@R>(/%s/r, target: /%s/r)
+                          fun test(): Capability {
+                              return authAccount.link<@R>(/%s/r, target: /%s/r)!
                           }
                         `,
 						domain.Identifier(),
@@ -1075,8 +1079,8 @@ func TestCheckAccount_link(t *testing.T) {
 						`
                           struct S {}
 
-                          fun test(): Capability? {
-                              return authAccount.link<S>(/%s/s, target: /%s/s)
+                          fun test(): Capability {
+                              return authAccount.link<S>(/%s/s, target: /%s/s)!
                           }
                         `,
 						domain.Identifier(),
@@ -1137,8 +1141,8 @@ func TestCheckAccount_linkAccount(t *testing.T) {
 			code := fmt.Sprintf(`
                   resource R {}
 
-                  fun test(authAccount: AuthAccount): Capability<&AuthAccount>? {
-                      return authAccount.linkAccount(/%s/r)
+                  fun test(authAccount: AuthAccount): Capability<&AuthAccount> {
+                      return authAccount.linkAccount(/%s/r)!
                   }
                 `,
 				tc.domain.Identifier(),
@@ -1238,7 +1242,7 @@ func TestCheckAccount_getLinkTarget(t *testing.T) {
 			_, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
 					`
-                      let path: Path? = %s.getLinkTarget(/%s/r)
+                      let path: Path = %s.getLinkTarget(/%s/r)!
                     `,
 					accountVariable,
 					domain.Identifier(),
@@ -1500,8 +1504,8 @@ func TestAuthAccountContracts(t *testing.T) {
 	t.Run("get contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract? {
-                return authAccount.contracts.get(name: "foo")
+            fun test(): DeployedContract {
+                return authAccount.contracts.get(name: "foo")!
             }
 	    `)
 
@@ -1513,8 +1517,8 @@ func TestAuthAccountContracts(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
-            fun test(): &C? {
-                return authAccount.contracts.borrow<&C>(name: "foo")
+            fun test(): &C {
+                return authAccount.contracts.borrow<&C>(name: "foo")!
             }
 	    `)
 
@@ -1526,8 +1530,8 @@ func TestAuthAccountContracts(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
-            fun test(): &AnyStruct? {
-                return authAccount.contracts.borrow(name: "foo")
+            fun test(): &AnyStruct {
+                return authAccount.contracts.borrow(name: "foo")!
             }
 	    `)
 
@@ -1561,8 +1565,8 @@ func TestAuthAccountContracts(t *testing.T) {
 	t.Run("remove contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract? {
-                return authAccount.contracts.remove(name: "foo")
+            fun test(): DeployedContract {
+                return authAccount.contracts.remove(name: "foo")!
             }
 	    `)
 
@@ -1610,8 +1614,8 @@ func TestPublicAccountContracts(t *testing.T) {
 	t.Run("get contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract? {
-                return publicAccount.contracts.get(name: "foo")
+            fun test(): DeployedContract {
+                return publicAccount.contracts.get(name: "foo")!
             }
 	    `)
 
@@ -1623,8 +1627,8 @@ func TestPublicAccountContracts(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
-            fun test(): &C? {
-                return publicAccount.contracts.borrow<&C>(name: "foo")
+            fun test(): &C {
+                return publicAccount.contracts.borrow<&C>(name: "foo")!
             }
 	    `)
 
@@ -1636,8 +1640,8 @@ func TestPublicAccountContracts(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
             contract C {}
 
-            fun test(): &AnyStruct? {
-                return publicAccount.contracts.borrow(name: "foo")
+            fun test(): &AnyStruct {
+                return publicAccount.contracts.borrow(name: "foo")!
             }
 	    `)
 
@@ -2262,5 +2266,148 @@ func TestCheckAccountClaim(t *testing.T) {
 		require.Error(t, err)
 		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
+	})
+}
+
+func TestCheckAccountCapabilities(t *testing.T) {
+
+	t.Parallel()
+
+	parseAndCheckAccountWithCapabilityControllers := func(t *testing.T, code string) (*sema.Checker, error) {
+		return ParseAndCheckAccountWithConfig(
+			t,
+			code,
+			sema.Config{
+				CapabilityControllersEnabled: true,
+			},
+		)
+	}
+
+	t.Run("AuthAccount.capabilities, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          fun test() {
+		      authAccount.capabilities
+          }
+		`)
+		require.Error(t, err)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+
+	})
+
+	t.Run("AuthAccount.capabilities, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+          fun test() {
+		      let capabilities: AuthAccount.Capabilities = authAccount.capabilities
+
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+
+              let ref: &Int = capabilities.borrow<&Int>(/public/foo)!
+
+              capabilities.publish(cap, at: /public/bar)
+
+              let cap2: Capability = capabilities.unpublish(/public/bar)!
+
+              let id1: UInt64 = capabilities.migrateLink(/public/bar)!
+              let id2: UInt64 = capabilities.migrateLink(/private/bar)!
+          }
+		`)
+		require.NoError(t, err)
+	})
+
+	t.Run("AuthAccount.capabilities.storage", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+          fun test() {
+		      let capabilities: AuthAccount.StorageCapabilities = authAccount.capabilities.storage
+
+              let controller: &StorageCapabilityController = capabilities.getController(byCapabilityID: 1)!
+
+              let controllers: [&StorageCapabilityController] = capabilities.getControllers(forPath: /storage/foo)
+
+              capabilities.forEachController(
+                  forPath: /storage/bar,
+                  fun (controller: &StorageCapabilityController): Bool {
+                      return true
+                  }
+              )
+
+              let cap2: Capability<&String> = capabilities.issue<&String>(/storage/baz)
+          }
+		`)
+		require.NoError(t, err)
+	})
+
+	t.Run("AuthAccount.capabilities.account", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+          fun test() {
+		      let capabilities: AuthAccount.AccountCapabilities = authAccount.capabilities.account
+
+              let controller: &AccountCapabilityController = capabilities.getController(byCapabilityID: 1)!
+
+              let controllers: [&AccountCapabilityController] = capabilities.getControllers()
+
+              capabilities.forEachController(fun (controller: &AccountCapabilityController): Bool {
+                  return true
+              })
+
+              let cap: Capability<&AuthAccount> = capabilities.issue<&AuthAccount>()
+          }
+		`)
+		require.NoError(t, err)
+	})
+
+	t.Run("PublicAccount.capabilities", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+          fun test() {
+		      let capabilities: PublicAccount.Capabilities = publicAccount.capabilities
+
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+
+              let ref: &Int = capabilities.borrow<&Int>(/public/foo)!
+          }
+		`)
+		require.NoError(t, err)
+	})
+
+	t.Run("PublicAccount.capabilities.storage: invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+		  let capabilitiesRef: PublicAccount.StorageCapabilities = publicAccount.capabilities.storage
+		`)
+		require.Error(t, err)
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.NotDeclaredError{}, errors[0])
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[1])
+	})
+
+	t.Run("PublicAccount.capabilities.account: invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+		  let capabilitiesRef: PublicAccount.AccountCapabilities = publicAccount.capabilities.account
+		`)
+		require.Error(t, err)
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.NotDeclaredError{}, errors[0])
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[1])
 	})
 }

@@ -31,7 +31,7 @@ import (
 type AccountReferenceValue struct {
 	BorrowedType sema.Type
 	_authAccount Value
-	Path         PathValue
+	SourcePath   PathValue
 	Address      common.Address
 }
 
@@ -39,15 +39,16 @@ var _ Value = &AccountReferenceValue{}
 var _ EquatableValue = &AccountReferenceValue{}
 var _ ValueIndexableValue = &AccountReferenceValue{}
 var _ MemberAccessibleValue = &AccountReferenceValue{}
+var _ ReferenceValue = &AccountReferenceValue{}
 
 func NewUnmeteredAccountReferenceValue(
 	address common.Address,
-	path PathValue,
+	sourcePath PathValue,
 	borrowedType sema.Type,
 ) *AccountReferenceValue {
 	return &AccountReferenceValue{
 		Address:      address,
-		Path:         path,
+		SourcePath:   sourcePath,
 		BorrowedType: borrowedType,
 	}
 }
@@ -55,18 +56,20 @@ func NewUnmeteredAccountReferenceValue(
 func NewAccountReferenceValue(
 	memoryGauge common.MemoryGauge,
 	address common.Address,
-	path PathValue,
+	sourcePath PathValue,
 	borrowedType sema.Type,
 ) *AccountReferenceValue {
 	common.UseMemory(memoryGauge, common.AccountReferenceValueMemoryUsage)
 	return NewUnmeteredAccountReferenceValue(
 		address,
-		path,
+		sourcePath,
 		borrowedType,
 	)
 }
 
-func (*AccountReferenceValue) IsValue() {}
+func (*AccountReferenceValue) isValue() {}
+
+func (*AccountReferenceValue) isReference() {}
 
 func (v *AccountReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAccountReferenceValue(interpreter, v)
@@ -104,11 +107,18 @@ func (*AccountReferenceValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (v *AccountReferenceValue) checkLink(interpreter *Interpreter, locationRange LocationRange) {
-	address := v.Address
-	domain := v.Path.Domain.Identifier()
-	identifier := v.Path.Identifier
+	// Do not check source for ID capability, no link path
+	if v.SourcePath == EmptyPathValue {
+		return
+	}
 
-	referenced := interpreter.ReadStored(address, domain, identifier)
+	address := v.Address
+	domain := v.SourcePath.Domain.Identifier()
+	identifier := v.SourcePath.Identifier
+
+	storageMapKey := StringStorageMapKey(identifier)
+
+	referenced := interpreter.ReadStored(address, domain, storageMapKey)
 	if referenced == nil {
 		panic(DereferenceError{
 			Cause:         "no value is stored at this path",
@@ -211,7 +221,7 @@ func (v *AccountReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Val
 	otherReference, ok := other.(*AccountReferenceValue)
 	if !ok ||
 		v.Address != otherReference.Address ||
-		v.Path != otherReference.Path {
+		v.SourcePath != otherReference.SourcePath {
 
 		return false
 	}
@@ -276,7 +286,7 @@ func (v *AccountReferenceValue) Transfer(
 func (v *AccountReferenceValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredAccountReferenceValue(
 		v.Address,
-		v.Path,
+		v.SourcePath,
 		v.BorrowedType,
 	)
 }
@@ -290,4 +300,9 @@ func (v *AccountReferenceValue) authAccount(interpreter *Interpreter) Value {
 		v._authAccount = interpreter.SharedState.Config.AuthAccountHandler(AddressValue(v.Address))
 	}
 	return v._authAccount
+}
+
+func (v *AccountReferenceValue) ReferencedValue(interpreter *Interpreter, _ LocationRange, _ bool) *Value {
+	authAccount := v.authAccount(interpreter)
+	return &authAccount
 }

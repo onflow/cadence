@@ -1368,7 +1368,7 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
+func TestRuntimeStorageSavePathCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -1443,14 +1443,14 @@ func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 				value, err := runtime.ReadStored(signer, storagePath, context)
 				require.NoError(t, err)
 
-				expected := cadence.StorageCapability{
-					Path: cadence.Path{
+				expected := cadence.NewPathCapability(
+					cadence.Address(signer),
+					cadence.Path{
 						Domain:     domain,
 						Identifier: "test",
 					},
-					Address:    cadence.Address(signer),
-					BorrowType: ty,
-				}
+					ty,
+				)
 
 				actual := cadence.ValueWithCachedTypeID(value)
 				require.Equal(t, expected, actual)
@@ -1747,9 +1747,8 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime(Config{
-		ResourceOwnerChangeHandlerEnabled: true,
-	})
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.ResourceOwnerChangeHandlerEnabled = true
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -3238,7 +3237,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	// Read first
 
-	firstValue := storageMap.ReadValue(nil, "first")
+	firstValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("first"))
 	RequireValuesEqual(
 		t,
 		inter,
@@ -3248,7 +3247,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	// Read second
 
-	secondValue := storageMap.ReadValue(nil, "second")
+	secondValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("second"))
 	require.IsType(t, &interpreter.ArrayValue{}, secondValue)
 
 	arrayValue := secondValue.(*interpreter.ArrayValue)
@@ -3263,7 +3262,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	// Read r
 
-	rValue := storageMap.ReadValue(nil, "r")
+	rValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("r"))
 	require.IsType(t, &interpreter.CompositeValue{}, rValue)
 
 	_, err = ExportValue(rValue, inter, interpreter.EmptyLocationRange)

@@ -376,17 +376,38 @@ func newValueTestCases() map[string]valueTestCase {
 			expectedType: NewMetaType(),
 			string:       "Type<Int>()",
 		},
-		"Capability": {
-			value: StorageCapability{
-				Path: Path{
-					Domain:     common.PathDomainStorage,
+		"Capability (Path)": {
+			value: NewPathCapability(
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Path{
+					Domain:     common.PathDomainPublic,
 					Identifier: "foo",
 				},
-				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				BorrowType: IntType{},
-			},
+				IntType{},
+			),
 			expectedType: NewCapabilityType(IntType{}),
-			string:       "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
+			string:       "Capability<Int>(address: 0x0000000102030405, path: /public/foo)",
+		},
+		"Capability (Path, no borrow type)": {
+			value: NewPathCapability(
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Path{
+					Domain:     common.PathDomainPublic,
+					Identifier: "foo",
+				},
+				nil,
+			),
+			expectedType: NewCapabilityType(nil),
+			string:       "Capability(address: 0x0000000102030405, path: /public/foo)",
+		},
+		"Capability (ID)": {
+			value: NewIDCapability(
+				3,
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				IntType{},
+			),
+			expectedType: NewCapabilityType(IntType{}),
+			string:       "Capability<Int>(address: 0x0000000102030405, id: 3)",
 		},
 		"Function": {
 			value: NewFunction(
@@ -792,7 +813,22 @@ func TestValue_Type(t *testing.T) {
 			if !testCase.noType {
 				// Check if the type is not a duplicate of some other type
 				// i.e: two values can't return the same type.
-				require.NotContains(t, checkedTypes, returnedType)
+				//
+				// Current known exceptions:
+				// - Capability: PathCapabilityValue | IDCapabilityValue
+
+				var ignoreDuplicateType bool
+
+				if _, ok := returnedType.(*CapabilityType); ok {
+					switch value.(type) {
+					case IDCapability, PathCapability:
+						ignoreDuplicateType = true
+					}
+				}
+
+				if !ignoreDuplicateType {
+					require.NotContains(t, checkedTypes, returnedType)
+				}
 				checkedTypes[returnedType] = struct{}{}
 			}
 		})

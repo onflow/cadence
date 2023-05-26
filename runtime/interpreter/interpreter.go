@@ -122,6 +122,26 @@ type OnAccountLinkedFunc func(
 	path PathValue,
 ) error
 
+// IDCapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
+type IDCapabilityBorrowHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	capabilityID UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) ReferenceValue
+
+// IDCapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
+type IDCapabilityCheckHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	capabilityID UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) BoolValue
+
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 type InjectedCompositeFieldsHandlerFunc func(
 	inter *Interpreter,
@@ -1852,7 +1872,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				return NewAccountReferenceValue(
 					interpreter,
 					ref.Address,
-					ref.Path,
+					ref.SourcePath,
 					unwrappedTargetType.Type,
 				)
 
@@ -2259,13 +2279,12 @@ func (interpreter *Interpreter) NewSubInterpreter(
 	)
 }
 
-func (interpreter *Interpreter) storedValueExists(
+func (interpreter *Interpreter) StoredValueExists(
 	storageAddress common.Address,
 	domain string,
-	identifier string,
+	identifier StorageMapKey,
 ) bool {
-	config := interpreter.SharedState.Config
-	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
 	}
@@ -2275,10 +2294,9 @@ func (interpreter *Interpreter) storedValueExists(
 func (interpreter *Interpreter) ReadStored(
 	storageAddress common.Address,
 	domain string,
-	identifier string,
+	identifier StorageMapKey,
 ) Value {
-	config := interpreter.SharedState.Config
-	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return nil
 	}
@@ -2288,13 +2306,11 @@ func (interpreter *Interpreter) ReadStored(
 func (interpreter *Interpreter) WriteStored(
 	storageAddress common.Address,
 	domain string,
-	identifier string,
+	key StorageMapKey,
 	value Value,
-) {
-	config := interpreter.SharedState.Config
-	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, true)
-	accountStorage.WriteValue(interpreter, identifier, value)
-	interpreter.recordStorageMutation()
+) (existed bool) {
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, true)
+	return accountStorage.WriteValue(interpreter, key, value)
 }
 
 type fromStringFunctionValue struct {
@@ -3573,22 +3589,24 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	config := interpreter.SharedState.Config
-	storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
+	storageMap := interpreter.Storage().GetStorageMap(address, domain.Identifier(), false)
 	if storageMap == nil {
 		return []Value{}
 	}
 	iterator := storageMap.Iterator(interpreter)
-	var values []Value
+	var paths []Value
 
 	count := storageMap.Count()
 	if count > 0 {
-		values = make([]Value, 0, count)
-		for key := iterator.NextKey(); key != ""; key = iterator.NextKey() {
-			values = append(values, NewPathValue(interpreter, domain, key))
+		paths = make([]Value, 0, count)
+		for key := iterator.NextKey(); key != nil; key = iterator.NextKey() {
+			// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+			identifier := string(key.(StringAtreeValue))
+			path := NewPathValue(interpreter, domain, identifier)
+			paths = append(paths, path)
 		}
 	}
-	return values
+	return paths
 }
 
 func (interpreter *Interpreter) accountPaths(addressValue AddressValue, locationRange LocationRange, domain common.PathDomain, pathType StaticType) *ArrayValue {
@@ -3659,7 +3677,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 				inter.SharedState.inStorageIteration = inIteration
 			}()
 
-			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
+			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
 				staticType := value.StaticType(inter)
 
 				// Perform a forced type loading to see if the underlying type is not broken.
@@ -3669,7 +3687,9 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 					continue
 				}
 
-				pathValue := NewPathValue(inter, domain, key)
+				// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+				identifier := string(key.(StringAtreeValue))
+				pathValue := NewPathValue(inter, domain, identifier)
 				runtimeType := NewTypeValue(inter, staticType)
 
 				subInvocation := NewInvocation(
@@ -3691,11 +3711,14 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 					break
 				}
 
-				// it is not safe to check this at the beginning of the loop (i.e. on the next invocation of the callback)
-				// because if the mutation performed in the callback reorganized storage such that the iteration pointer is now
-				// at the end, we will not invoke the callback again but will still silently skip elements of storage. In order
-				// to be safe, we perform this check here to effectively enforce that users return `false` from their callback
-				// in all cases where storage is mutated
+				// It is not safe to check this at the beginning of the loop
+				// (i.e. on the next invocation of the callback),
+				// because if the mutation performed in the callback reorganized storage
+				// such that the iteration pointer is now at the end,
+				// we will not invoke the callback again but will still silently skip elements of storage.
+				//
+				// In order to be safe, we perform this check here to effectively enforce
+				// that users return `false` from their callback in all cases where storage is mutated.
 				if inter.SharedState.storageMutatedDuringIteration {
 					panic(StorageMutatedDuringIterationError{
 						LocationRange: locationRange,
@@ -3758,11 +3781,9 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			locationRange := invocation.LocationRange
 
-			if interpreter.storedValueExists(
-				address,
-				domain,
-				identifier,
-			) {
+			storageMapKey := StringStorageMapKey(identifier)
+
+			if interpreter.StoredValueExists(address, domain, storageMapKey) {
 				panic(
 					OverwriteError{
 						Address:       addressValue,
@@ -3782,7 +3803,12 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			// Write new value
 
-			interpreter.WriteStored(address, domain, identifier, value)
+			interpreter.WriteStored(
+				address,
+				domain,
+				storageMapKey,
+				value,
+			)
 
 			return Void
 		},
@@ -3808,7 +3834,9 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 			domain := path.Domain.Identifier()
 			identifier := path.Identifier
 
-			value := interpreter.ReadStored(address, domain, identifier)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
 
 			if value == nil {
 				return Nil
@@ -3853,7 +3881,9 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			domain := path.Domain.Identifier()
 			identifier := path.Identifier
 
-			value := interpreter.ReadStored(address, domain, identifier)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
 
 			if value == nil {
 				return Nil
@@ -3897,7 +3927,12 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			// Remove the value from storage,
 			// but only if the type check succeeded.
 			if clear {
-				interpreter.WriteStored(address, domain, identifier, nil)
+				interpreter.WriteStored(
+					address,
+					domain,
+					storageMapKey,
+					nil,
+				)
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, transferredValue)
@@ -3992,10 +4027,12 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
 			newCapabilityIdentifier := newCapabilityPath.Identifier
 
-			if interpreter.storedValueExists(
+			storageMapKey := StringStorageMapKey(newCapabilityIdentifier)
+
+			if interpreter.StoredValueExists(
 				address,
 				newCapabilityDomain,
-				newCapabilityIdentifier,
+				storageMapKey,
 			) {
 				return Nil
 			}
@@ -4010,13 +4047,13 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			interpreter.WriteStored(
 				address,
 				newCapabilityDomain,
-				newCapabilityIdentifier,
+				storageMapKey,
 				pathLink,
 			)
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				NewStorageCapabilityValue(
+				NewPathCapabilityValue(
 					interpreter,
 					addressValue,
 					newCapabilityPath,
@@ -4028,7 +4065,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	)
 }
 
-var authAccountReferenceStaticType = ReferenceStaticType{
+var AuthAccountReferenceStaticType = ReferenceStaticType{
 	BorrowedType:   PrimitiveStaticTypeAuthAccount,
 	ReferencedType: PrimitiveStaticTypeAuthAccount,
 }
@@ -4042,7 +4079,7 @@ var authAccountReferenceStaticType = ReferenceStaticType{
 // an interpreter.AccountLink is stored in the account.
 //
 // In both cases, when acquiring a capability, e.g. using getCapability,
-// a StorageCapabilityValue is returned.
+// a PathCapabilityValue is returned.
 // This is because in both cases, we are looking up a path in an account.
 // Depending on what is stored in the path, PathLink or AccountLink,
 // we return a respective reference value, a StorageReferenceValue for PathLink
@@ -4078,10 +4115,12 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
 			newCapabilityIdentifier := newCapabilityPath.Identifier
 
-			if interpreter.storedValueExists(
+			storageMapKey := StringStorageMapKey(newCapabilityIdentifier)
+
+			if interpreter.StoredValueExists(
 				address,
 				newCapabilityDomain,
-				newCapabilityIdentifier,
+				storageMapKey,
 			) {
 				return Nil
 			}
@@ -4091,7 +4130,7 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 			interpreter.WriteStored(
 				address,
 				newCapabilityDomain,
-				newCapabilityIdentifier,
+				storageMapKey,
 				accountLinkValue,
 			)
 
@@ -4110,11 +4149,11 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				NewStorageCapabilityValue(
+				NewPathCapabilityValue(
 					interpreter,
 					addressValue,
 					newCapabilityPath,
-					authAccountReferenceStaticType,
+					AuthAccountReferenceStaticType,
 				),
 			)
 
@@ -4144,7 +4183,9 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(
 			domain := capabilityPath.Domain.Identifier()
 			identifier := capabilityPath.Identifier
 
-			value := interpreter.ReadStored(address, domain, identifier)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
 
 			if value == nil {
 				return Nil
@@ -4184,14 +4225,21 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 			// Write new value
 
-			interpreter.WriteStored(address, domain, identifier, nil)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			interpreter.WriteStored(
+				address,
+				domain,
+				storageMapKey,
+				nil,
+			)
 
 			return Void
 		},
 	)
 }
 
-func (interpreter *Interpreter) storageCapabilityBorrowFunction(
+func (interpreter *Interpreter) pathCapabilityBorrowFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
@@ -4206,6 +4254,7 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 		func(invocation Invocation) Value {
 
 			interpreter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// NOTE: if a type argument is provided for the function,
 			// use it *instead* of the type of the value (if any)
@@ -4225,36 +4274,35 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 			}
 
 			target, authorized, err :=
-				interpreter.GetStorageCapabilityFinalTarget(
+				interpreter.GetPathCapabilityFinalTarget(
 					address,
 					pathValue,
 					borrowType,
-					invocation.LocationRange,
+					true,
+					locationRange,
 				)
 			if err != nil {
 				panic(err)
 			}
 
-			if target == nil {
-				return Nil
-			}
+			var reference ReferenceValue
 
 			switch target := target.(type) {
+			case nil:
+				reference = nil
+
 			case AccountCapabilityTarget:
-				return NewSomeValueNonCopying(
+				reference = NewAccountReferenceValue(
 					interpreter,
-					NewAccountReferenceValue(
-						interpreter,
-						address,
-						pathValue,
-						borrowType.Type,
-					),
+					address,
+					pathValue,
+					borrowType.Type,
 				)
 
 			case PathCapabilityTarget:
 				targetPath := PathValue(target)
 
-				reference := NewStorageReferenceValue(
+				storageReference := NewStorageReferenceValue(
 					interpreter,
 					authorized,
 					address,
@@ -4266,24 +4314,27 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 				// which reads the stored value
 				// and performs a dynamic type check
 
-				value, err := reference.dereference(interpreter, invocation.LocationRange)
+				value, err := storageReference.dereference(interpreter, locationRange)
 				if err != nil {
 					panic(err)
 				}
-				if value == nil {
-					return Nil
+				if value != nil {
+					reference = storageReference
 				}
-
-				return NewSomeValueNonCopying(interpreter, reference)
 
 			default:
 				panic(errors.NewUnreachableError())
 			}
+
+			if reference == nil {
+				return Nil
+			}
+			return NewSomeValueNonCopying(interpreter, reference)
 		},
 	)
 }
 
-func (interpreter *Interpreter) storageCapabilityCheckFunction(
+func (interpreter *Interpreter) pathCapabilityCheckFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
@@ -4296,7 +4347,9 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 		interpreter,
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 		func(invocation Invocation) Value {
+
 			interpreter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// NOTE: if a type argument is provided for the function,
 			// use it *instead* of the type of the value (if any)
@@ -4316,11 +4369,12 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 			}
 
 			target, authorized, err :=
-				interpreter.GetStorageCapabilityFinalTarget(
+				interpreter.GetPathCapabilityFinalTarget(
 					address,
 					pathValue,
 					borrowType,
-					invocation.LocationRange,
+					true,
+					locationRange,
 				)
 			if err != nil {
 				panic(err)
@@ -4360,10 +4414,11 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 	)
 }
 
-func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
+func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
 	address common.Address,
 	path PathValue,
 	wantedBorrowType *sema.ReferenceType,
+	checkTargetExists bool,
 	locationRange LocationRange,
 ) (
 	target CapabilityTarget,
@@ -4388,44 +4443,98 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 			seenPaths[path] = struct{}{}
 		}
 
-		value := interpreter.ReadStored(
-			address,
-			path.Domain.Identifier(),
-			path.Identifier,
-		)
+		domain := path.Domain.Identifier()
+		identifier := path.Identifier
 
-		if value == nil {
-			return nil, false, nil
-		}
+		storageMapKey := StringStorageMapKey(identifier)
 
-		switch value := value.(type) {
-		case PathLinkValue:
-			allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
+		switch path.Domain {
+		case common.PathDomainStorage:
 
-			if !sema.IsSubType(allowedType, wantedBorrowType) {
+			if checkTargetExists &&
+				!interpreter.StoredValueExists(address, domain, storageMapKey) {
+
 				return nil, false, nil
 			}
 
-			targetPath := value.TargetPath
-			paths = append(paths, targetPath)
-			path = targetPath
-
-		case AccountLinkValue:
-			if !interpreter.IsSubTypeOfSemaType(
-				authAccountReferenceStaticType,
-				wantedBorrowType,
-			) {
-				return nil, false, nil
-			}
-
-			return AccountCapabilityTarget(address),
-				false,
-				nil
-
-		default:
 			return PathCapabilityTarget(path),
 				wantedReferenceType.Authorized,
 				nil
+
+		case common.PathDomainPublic,
+			common.PathDomainPrivate:
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
+			if value == nil {
+				return nil, false, nil
+			}
+
+			switch value := value.(type) {
+			case PathLinkValue:
+				allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
+
+				if !sema.IsSubType(allowedType, wantedBorrowType) {
+					return nil, false, nil
+				}
+
+				targetPath := value.TargetPath
+				paths = append(paths, targetPath)
+				path = targetPath
+
+			case AccountLinkValue:
+				if !interpreter.IsSubTypeOfSemaType(
+					AuthAccountReferenceStaticType,
+					wantedBorrowType,
+				) {
+					return nil, false, nil
+				}
+
+				return AccountCapabilityTarget(address),
+					false,
+					nil
+
+			case *IDCapabilityValue:
+
+				// For backwards-compatibility, follow ID capability values
+				// which are published in the public or private domain
+
+				capabilityBorrowType, ok :=
+					interpreter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				reference := interpreter.SharedState.Config.IDCapabilityBorrowHandler(
+					interpreter,
+					locationRange,
+					value.Address,
+					value.ID,
+					wantedBorrowType,
+					capabilityBorrowType,
+				)
+				if reference == nil {
+					return nil, false, nil
+				}
+
+				switch reference := reference.(type) {
+				case *StorageReferenceValue:
+					address = reference.TargetStorageAddress
+					targetPath := reference.TargetPath
+					paths = append(paths, targetPath)
+					path = targetPath
+
+				case *AccountReferenceValue:
+					return AccountCapabilityTarget(reference.Address),
+						false,
+						nil
+
+				default:
+					return nil, false, nil
+				}
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
 		}
 	}
 }
@@ -4729,10 +4838,8 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 		return
 	}
 
-	config := interpreter.SharedState.Config
-
 	storageID := atree.StorageID(storageIDStorable)
-	err := config.Storage.Remove(storageID)
+	err := interpreter.Storage().Remove(storageID)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -4774,11 +4881,14 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	defaultHIP := newHashInputProvider(interpreter, EmptyLocationRange)
 
 	hip := func(value atree.Value, buffer []byte) ([]byte, error) {
-		if _, ok := value.(StringAtreeValue); ok {
-			return StringAtreeHashInput(value, buffer)
+		switch value := value.(type) {
+		case StringAtreeValue:
+			return StringAtreeValueHashInput(value, buffer)
+		case Uint64AtreeValue:
+			return Uint64AtreeValueHashInput(value, buffer)
+		default:
+			return defaultHIP(value, buffer)
 		}
-
-		return defaultHIP(value, buffer)
 	}
 
 	config := interpreter.SharedState.Config
@@ -4790,8 +4900,9 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			panic(err)
 		}
 
-		if _, ok := value.(StringAtreeValue); ok {
-			equal, err := StringAtreeComparator(
+		switch value := value.(type) {
+		case StringAtreeValue:
+			equal, err := StringAtreeValueComparator(
 				storage,
 				value,
 				otherStorable,
@@ -4801,15 +4912,27 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			}
 
 			return equal
-		}
 
-		if equatableValue, ok := value.(EquatableValue); ok {
+		case Uint64AtreeValue:
+			equal, err := Uint64AtreeValueComparator(
+				storage,
+				value,
+				otherStorable,
+			)
+			if err != nil {
+				panic(err)
+			}
+
+			return equal
+
+		case EquatableValue:
 			otherValue := StoredValue(interpreter, otherStorable, storage)
-			return equatableValue.Equal(interpreter, EmptyLocationRange, otherValue)
-		}
+			return value.Equal(interpreter, EmptyLocationRange, otherValue)
 
-		// Not all values are comparable, assume valid for now
-		return true
+		default:
+			// Not all values are comparable, assume valid for now
+			return true
+		}
 	}
 
 	switch value := value.(type) {
@@ -5063,4 +5186,85 @@ func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
 	}
 
 	config.AccountLinkingAllowed = true
+}
+
+func (interpreter *Interpreter) idCapabilityBorrowFunction(
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+) *HostFunctionValue {
+
+	return NewHostFunctionValue(
+		interpreter,
+		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
+		func(invocation Invocation) Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			var wantedBorrowType *sema.ReferenceType
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				wantedBorrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+			}
+
+			referenceValue := inter.SharedState.Config.IDCapabilityBorrowHandler(
+				inter,
+				locationRange,
+				addressValue,
+				capabilityID,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+			if referenceValue == nil {
+				return Nil
+			}
+			return NewSomeValueNonCopying(inter, referenceValue)
+		},
+	)
+}
+
+func (interpreter *Interpreter) idCapabilityCheckFunction(
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+) *HostFunctionValue {
+
+	return NewHostFunctionValue(
+		interpreter,
+		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
+		func(invocation Invocation) Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// NOTE: if a type argument is provided for the function,
+			// use it *instead* of the type of the value (if any)
+
+			var wantedBorrowType *sema.ReferenceType
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				wantedBorrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+			}
+
+			return inter.SharedState.Config.IDCapabilityCheckHandler(
+				inter,
+				locationRange,
+				addressValue,
+				capabilityID,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+		},
+	)
 }

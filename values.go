@@ -2023,48 +2023,137 @@ func (v TypeValue) String() string {
 	return format.TypeValue(v.StaticType.ID())
 }
 
-// StorageCapability
+// Capability
 
-type StorageCapability struct {
+type Capability interface {
+	Value
+	isCapability()
+}
+
+// PathCapability
+
+type PathCapability struct {
 	BorrowType Type
 	Path       Path
 	Address    Address
 }
 
-var _ Value = StorageCapability{}
+var _ Value = PathCapability{}
+var _ Capability = PathCapability{}
 
-func NewStorageCapability(path Path, address Address, borrowType Type) StorageCapability {
-	return StorageCapability{
+func NewPathCapability(
+	address Address,
+	path Path,
+	borrowType Type,
+) PathCapability {
+	return PathCapability{
 		Path:       path,
 		Address:    address,
 		BorrowType: borrowType,
 	}
 }
 
-func NewMeteredStorageCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) StorageCapability {
-	common.UseMemory(gauge, common.CadenceStorageCapabilityValueMemoryUsage)
-	return NewStorageCapability(path, address, borrowType)
+func NewMeteredPathCapability(
+	gauge common.MemoryGauge,
+	address Address,
+	path Path,
+	borrowType Type,
+) PathCapability {
+	common.UseMemory(gauge, common.CadencePathCapabilityValueMemoryUsage)
+	return NewPathCapability(
+		address,
+		path,
+		borrowType,
+	)
 }
 
-func (StorageCapability) isValue() {}
+func (PathCapability) isValue() {}
 
-func (v StorageCapability) Type() Type {
+func (PathCapability) isCapability() {}
+
+func (v PathCapability) Type() Type {
 	return NewCapabilityType(v.BorrowType)
 }
 
-func (v StorageCapability) MeteredType(gauge common.MemoryGauge) Type {
+func (v PathCapability) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredCapabilityType(gauge, v.BorrowType)
 }
 
-func (StorageCapability) ToGoValue() any {
+func (PathCapability) ToGoValue() any {
 	return nil
 }
 
-func (v StorageCapability) String() string {
-	return format.StorageCapability(
-		v.BorrowType.ID(),
+func (v PathCapability) String() string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.ID()
+	}
+
+	return format.PathCapability(
+		borrowType,
 		v.Address.String(),
 		v.Path.String(),
+	)
+}
+
+// IDCapability
+
+type IDCapability struct {
+	BorrowType Type
+	Address    Address
+	ID         UInt64
+}
+
+var _ Value = IDCapability{}
+var _ Capability = IDCapability{}
+
+func NewIDCapability(
+	id UInt64,
+	address Address,
+	borrowType Type,
+) IDCapability {
+	return IDCapability{
+		ID:         id,
+		Address:    address,
+		BorrowType: borrowType,
+	}
+}
+
+func NewMeteredIDCapability(
+	gauge common.MemoryGauge,
+	id UInt64,
+	address Address,
+	borrowType Type,
+) IDCapability {
+	common.UseMemory(gauge, common.CadenceIDCapabilityValueMemoryUsage)
+	return NewIDCapability(
+		id,
+		address,
+		borrowType,
+	)
+}
+
+func (IDCapability) isValue() {}
+
+func (IDCapability) isCapability() {}
+
+func (v IDCapability) Type() Type {
+	return NewCapabilityType(v.BorrowType)
+}
+
+func (v IDCapability) MeteredType(gauge common.MemoryGauge) Type {
+	return NewMeteredCapabilityType(gauge, v.BorrowType)
+}
+
+func (IDCapability) ToGoValue() any {
+	return nil
+}
+
+func (v IDCapability) String() string {
+	return format.IDCapability(
+		v.BorrowType.ID(),
+		v.Address.String(),
+		v.ID.String(),
 	)
 }
 

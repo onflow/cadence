@@ -106,7 +106,7 @@ type Value interface {
 	// Stringer provides `func String() string`
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
-	IsValue()
+	isValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
 	Walk(interpreter *Interpreter, walkChild func(Value))
 	StaticType(interpreter *Interpreter) StaticType
@@ -220,6 +220,28 @@ type ReferenceTrackedResourceKindedValue interface {
 	StorageID() atree.StorageID
 }
 
+// ContractValue is the value of a contract.
+// Under normal circumstances, a contract value is always a CompositeValue.
+// However, in the test framework, an imported contract is constructed via a constructor function.
+// Hence, during tests, the value is a HostFunctionValue.
+type ContractValue interface {
+	Value
+	SetNestedVariables(variables map[string]*Variable)
+}
+
+// CapabilityValue
+type CapabilityValue interface {
+	atree.Storable
+	EquatableValue
+	isCapabilityValue()
+}
+
+// LinkValue
+type LinkValue interface {
+	Value
+	isLinkValue()
+}
+
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
@@ -275,6 +297,7 @@ func safeMul(a, b int, locationRange LocationRange) int {
 // TypeValue
 
 type TypeValue struct {
+	// Optional. nil represents "unknown"/"invalid" type
 	Type StaticType
 }
 
@@ -297,7 +320,7 @@ func NewTypeValue(
 	return NewUnmeteredTypeValue(staticType)
 }
 
-func (TypeValue) IsValue() {}
+func (TypeValue) isValue() {}
 
 func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitTypeValue(interpreter, v)
@@ -507,7 +530,7 @@ var _ Value = VoidValue{}
 var _ atree.Storable = VoidValue{}
 var _ EquatableValue = VoidValue{}
 
-func (VoidValue) IsValue() {}
+func (VoidValue) isValue() {}
 
 func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitVoidValue(interpreter, v)
@@ -615,7 +638,7 @@ func AsBoolValue(v bool) BoolValue {
 	return FalseValue
 }
 
-func (BoolValue) IsValue() {}
+func (BoolValue) isValue() {}
 
 func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoolValue(interpreter, v)
@@ -797,7 +820,7 @@ var _ ComparableValue = CharacterValue("a")
 var _ HashableValue = CharacterValue("a")
 var _ MemberAccessibleValue = CharacterValue("a")
 
-func (CharacterValue) IsValue() {}
+func (CharacterValue) isValue() {}
 
 func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitCharacterValue(interpreter, v)
@@ -1023,7 +1046,7 @@ func (v *StringValue) prepareGraphemes() {
 	}
 }
 
-func (*StringValue) IsValue() {}
+func (*StringValue) isValue() {}
 
 func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
@@ -1159,7 +1182,7 @@ func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locat
 	)
 }
 
-var emptyString = NewUnmeteredStringValue("")
+var EmptyString = NewUnmeteredStringValue("")
 
 func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRange) Value {
 	fromIndex := from.ToInt(locationRange)
@@ -1186,7 +1209,7 @@ func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRa
 	}
 
 	if fromIndex == toIndex {
-		return emptyString
+		return EmptyString
 	}
 
 	v.prepareGraphemes()
@@ -1661,7 +1684,7 @@ var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
 
-func (*ArrayValue) IsValue() {}
+func (*ArrayValue) isValue() {}
 
 func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	descend := visitor.VisitArrayValue(interpreter, v)
@@ -1891,9 +1914,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, 
 		panic(errors.NewExternalError(err))
 	}
 
-	config := interpreter.SharedState.Config
-
-	return StoredValue(interpreter, storable, config.Storage)
+	return StoredValue(interpreter, storable, interpreter.Storage())
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
@@ -1940,8 +1961,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	config := interpreter.SharedState.Config
-	existingValue := StoredValue(interpreter, existingStorable, config.Storage)
+	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
 
 	existingValue.DeepRemove(interpreter)
 
@@ -2100,8 +2120,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	config := interpreter.SharedState.Config
-	value := StoredValue(interpreter, storable, config.Storage)
+	value := StoredValue(interpreter, storable, interpreter.Storage())
 
 	return value.Transfer(
 		interpreter,
@@ -3044,7 +3063,7 @@ var _ ComparableValue = IntValue{}
 var _ HashableValue = IntValue{}
 var _ MemberAccessibleValue = IntValue{}
 
-func (IntValue) IsValue() {}
+func (IntValue) isValue() {}
 
 func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitIntValue(interpreter, v)
@@ -3572,7 +3591,7 @@ var _ EquatableValue = Int8Value(0)
 var _ ComparableValue = Int8Value(0)
 var _ HashableValue = Int8Value(0)
 
-func (Int8Value) IsValue() {}
+func (Int8Value) isValue() {}
 
 func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt8Value(interpreter, v)
@@ -4160,7 +4179,7 @@ var _ ComparableValue = Int16Value(0)
 var _ HashableValue = Int16Value(0)
 var _ MemberAccessibleValue = Int16Value(0)
 
-func (Int16Value) IsValue() {}
+func (Int16Value) isValue() {}
 
 func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt16Value(interpreter, v)
@@ -4749,7 +4768,7 @@ var _ ComparableValue = Int32Value(0)
 var _ HashableValue = Int32Value(0)
 var _ MemberAccessibleValue = Int32Value(0)
 
-func (Int32Value) IsValue() {}
+func (Int32Value) isValue() {}
 
 func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt32Value(interpreter, v)
@@ -5336,7 +5355,7 @@ var _ ComparableValue = Int64Value(0)
 var _ HashableValue = Int64Value(0)
 var _ MemberAccessibleValue = Int64Value(0)
 
-func (Int64Value) IsValue() {}
+func (Int64Value) isValue() {}
 
 func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt64Value(interpreter, v)
@@ -5938,7 +5957,7 @@ var _ ComparableValue = Int128Value{}
 var _ HashableValue = Int128Value{}
 var _ MemberAccessibleValue = Int128Value{}
 
-func (Int128Value) IsValue() {}
+func (Int128Value) isValue() {}
 
 func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt128Value(interpreter, v)
@@ -6627,7 +6646,7 @@ var _ ComparableValue = Int256Value{}
 var _ HashableValue = Int256Value{}
 var _ MemberAccessibleValue = Int256Value{}
 
-func (Int256Value) IsValue() {}
+func (Int256Value) isValue() {}
 
 func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt256Value(interpreter, v)
@@ -7350,7 +7369,7 @@ var _ ComparableValue = UIntValue{}
 var _ HashableValue = UIntValue{}
 var _ MemberAccessibleValue = UIntValue{}
 
-func (UIntValue) IsValue() {}
+func (UIntValue) isValue() {}
 
 func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUIntValue(interpreter, v)
@@ -7886,7 +7905,7 @@ func NewUnmeteredUInt8Value(value uint8) UInt8Value {
 	return UInt8Value(value)
 }
 
-func (UInt8Value) IsValue() {}
+func (UInt8Value) isValue() {}
 
 func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt8Value(interpreter, v)
@@ -8435,7 +8454,7 @@ func NewUnmeteredUInt16Value(value uint16) UInt16Value {
 	return UInt16Value(value)
 }
 
-func (UInt16Value) IsValue() {}
+func (UInt16Value) isValue() {}
 
 func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt16Value(interpreter, v)
@@ -8947,7 +8966,7 @@ var _ ComparableValue = UInt32Value(0)
 var _ HashableValue = UInt32Value(0)
 var _ MemberAccessibleValue = UInt32Value(0)
 
-func (UInt32Value) IsValue() {}
+func (UInt32Value) isValue() {}
 
 func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt32Value(interpreter, v)
@@ -9466,7 +9485,7 @@ func NewUnmeteredUInt64Value(value uint64) UInt64Value {
 	return UInt64Value(value)
 }
 
-func (UInt64Value) IsValue() {}
+func (UInt64Value) isValue() {}
 
 func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt64Value(interpreter, v)
@@ -10017,7 +10036,7 @@ var _ ComparableValue = UInt128Value{}
 var _ HashableValue = UInt128Value{}
 var _ MemberAccessibleValue = UInt128Value{}
 
-func (UInt128Value) IsValue() {}
+func (UInt128Value) isValue() {}
 
 func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt128Value(interpreter, v)
@@ -10649,7 +10668,7 @@ var _ ComparableValue = UInt256Value{}
 var _ HashableValue = UInt256Value{}
 var _ MemberAccessibleValue = UInt256Value{}
 
-func (UInt256Value) IsValue() {}
+func (UInt256Value) isValue() {}
 
 func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt256Value(interpreter, v)
@@ -11265,7 +11284,7 @@ func NewUnmeteredWord8Value(value uint8) Word8Value {
 	return Word8Value(value)
 }
 
-func (Word8Value) IsValue() {}
+func (Word8Value) isValue() {}
 
 func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord8Value(interpreter, v)
@@ -11683,7 +11702,7 @@ func NewUnmeteredWord16Value(value uint16) Word16Value {
 	return Word16Value(value)
 }
 
-func (Word16Value) IsValue() {}
+func (Word16Value) isValue() {}
 
 func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord16Value(interpreter, v)
@@ -12102,7 +12121,7 @@ func NewUnmeteredWord32Value(value uint32) Word32Value {
 	return Word32Value(value)
 }
 
-func (Word32Value) IsValue() {}
+func (Word32Value) isValue() {}
 
 func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord32Value(interpreter, v)
@@ -12528,7 +12547,7 @@ func NewUnmeteredWord64Value(value uint64) Word64Value {
 // call ToBigInt instead of ToInt.
 var _ BigNumberValue = Word64Value(0)
 
-func (Word64Value) IsValue() {}
+func (Word64Value) isValue() {}
 
 func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord64Value(interpreter, v)
@@ -12991,7 +13010,7 @@ var _ ComparableValue = Fix64Value(0)
 var _ HashableValue = Fix64Value(0)
 var _ MemberAccessibleValue = Fix64Value(0)
 
-func (Fix64Value) IsValue() {}
+func (Fix64Value) isValue() {}
 
 func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitFix64Value(interpreter, v)
@@ -13527,7 +13546,7 @@ var _ ComparableValue = UFix64Value(0)
 var _ HashableValue = UFix64Value(0)
 var _ MemberAccessibleValue = UFix64Value(0)
 
-func (UFix64Value) IsValue() {}
+func (UFix64Value) isValue() {}
 
 func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUFix64Value(interpreter, v)
@@ -14151,7 +14170,7 @@ var _ MemberAccessibleValue = &CompositeValue{}
 var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 var _ ContractValue = &CompositeValue{}
 
-func (*CompositeValue) IsValue() {}
+func (*CompositeValue) isValue() {}
 
 func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	descend := visitor.VisitCompositeValue(interpreter, v)
@@ -14332,8 +14351,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	storable, err := v.dictionary.Get(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -14476,8 +14495,8 @@ func (v *CompositeValue) RemoveMember(
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -14550,8 +14569,8 @@ func (v *CompositeValue) SetMember(
 	)
 
 	existingStorable, err := v.dictionary.Set(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		NewStringAtreeValue(interpreter, name),
 		value,
 	)
@@ -14655,8 +14674,8 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 	}
 
 	storable, err := v.dictionary.Get(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -14954,8 +14973,8 @@ func (v *CompositeValue) Transfer(
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
-			StringAtreeComparator,
-			StringAtreeHashInput,
+			StringAtreeValueComparator,
+			StringAtreeValueHashInput,
 			v.dictionary.Seed(),
 			func() (atree.Value, atree.Value, error) {
 
@@ -15097,8 +15116,8 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		v.StorageID().Address,
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		v.dictionary.Seed(),
 		func() (atree.Value, atree.Value, error) {
 
@@ -15211,8 +15230,8 @@ func (v *CompositeValue) RemoveField(
 ) {
 
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -15231,8 +15250,7 @@ func (v *CompositeValue) RemoveField(
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
-	config := interpreter.SharedState.Config
-	existingValue := StoredValue(interpreter, existingValueStorable, config.Storage)
+	existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
 	existingValue.DeepRemove(interpreter)
 	interpreter.RemoveReferencedSlab(existingValueStorable)
 }
@@ -15551,7 +15569,7 @@ var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 
-func (*DictionaryValue) IsValue() {}
+func (*DictionaryValue) isValue() {}
 
 func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	descend := visitor.VisitDictionaryValue(interpreter, v)
@@ -15578,6 +15596,32 @@ func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Va
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
+	}
+}
+
+type DictionaryIterator struct {
+	mapIterator *atree.MapIterator
+}
+
+func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+	atreeValue, err := i.mapIterator.NextKey()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	if atreeValue == nil {
+		return nil
+	}
+	return MustConvertStoredValue(gauge, atreeValue)
+}
+
+func (v *DictionaryValue) Iterator() DictionaryIterator {
+	mapIterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return DictionaryIterator{
+		mapIterator: mapIterator,
 	}
 }
 
@@ -16091,8 +16135,7 @@ func (v *DictionaryValue) Remove(
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
-	config := interpreter.SharedState.Config
-	storage := config.Storage
+	storage := interpreter.Storage()
 
 	// Key
 
@@ -16175,8 +16218,7 @@ func (v *DictionaryValue) Insert(
 		return NilOptionalValue
 	}
 
-	config := interpreter.SharedState.Config
-	storage := config.Storage
+	storage := interpreter.Storage()
 
 	existingValue := StoredValue(
 		interpreter,
@@ -16630,7 +16672,7 @@ var _ EquatableValue = NilValue{}
 var _ MemberAccessibleValue = NilValue{}
 var _ OptionalValue = NilValue{}
 
-func (NilValue) IsValue() {}
+func (NilValue) isValue() {}
 
 func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitNilValue(interpreter, v)
@@ -16655,8 +16697,8 @@ func (NilValue) isOptionalValue() {}
 
 func (NilValue) forEach(_ func(Value)) {}
 
-func (n NilValue) fmap(inter *Interpreter, f func(Value) Value) OptionalValue {
-	return n
+func (v NilValue) fmap(_ *Interpreter, _ func(Value) Value) OptionalValue {
+	return v
 }
 
 func (NilValue) IsDestroyed() bool {
@@ -16800,7 +16842,7 @@ var _ EquatableValue = &SomeValue{}
 var _ MemberAccessibleValue = &SomeValue{}
 var _ OptionalValue = &SomeValue{}
 
-func (*SomeValue) IsValue() {}
+func (*SomeValue) isValue() {}
 
 func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	descend := visitor.VisitSomeValue(interpreter, v)
@@ -17130,7 +17172,9 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 }
 
 type ReferenceValue interface {
+	Value
 	isReference()
+	ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value
 }
 
 // StorageReferenceValue
@@ -17179,7 +17223,7 @@ func NewStorageReferenceValue(
 	)
 }
 
-func (*StorageReferenceValue) IsValue() {}
+func (*StorageReferenceValue) isValue() {}
 
 func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStorageReferenceValue(interpreter, v)
@@ -17228,7 +17272,9 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
-	referenced := interpreter.ReadStored(address, domain, identifier)
+	storageMapKey := StringStorageMapKey(identifier)
+
+	referenced := interpreter.ReadStored(address, domain, storageMapKey)
 	if referenced == nil {
 		return nil, nil
 	}
@@ -17251,7 +17297,7 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value {
-	referencedValue, err := v.dereference(interpreter, EmptyLocationRange)
+	referencedValue, err := v.dereference(interpreter, locationRange)
 	if err == nil {
 		return referencedValue
 	}
@@ -17488,7 +17534,8 @@ func (*StorageReferenceValue) isReference() {}
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
-	Value        Value
+	Value Value
+	// BorrowedType is the T in &T
 	BorrowedType sema.Type
 	Authorized   bool
 }
@@ -17513,16 +17560,16 @@ func NewUnmeteredEphemeralReferenceValue(
 }
 
 func NewEphemeralReferenceValue(
-	interpreter *Interpreter,
+	gauge common.MemoryGauge,
 	authorized bool,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
+	common.UseMemory(gauge, common.EphemeralReferenceValueMemoryUsage)
 	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
 }
 
-func (*EphemeralReferenceValue) IsValue() {}
+func (*EphemeralReferenceValue) isValue() {}
 
 func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
@@ -17554,7 +17601,7 @@ func (v *EphemeralReferenceValue) MeteredString(memoryGauge common.MemoryGauge, 
 }
 
 func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
-	referencedValue := v.ReferencedValue(inter, EmptyLocationRange)
+	referencedValue := v.ReferencedValue(inter, EmptyLocationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			Cause: "the value being referenced has been destroyed or moved",
@@ -17578,6 +17625,7 @@ func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
 func (v *EphemeralReferenceValue) ReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
+	_ bool,
 ) *Value {
 	// Just like for storage references, references to optionals are unwrapped,
 	// i.e. a reference to `nil` aborts when dereferenced.
@@ -17597,7 +17645,7 @@ func (v *EphemeralReferenceValue) MustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			Cause:         "the value being referenced has been destroyed or moved",
@@ -17747,7 +17795,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		return false
 	}
@@ -17881,7 +17929,7 @@ var _ EquatableValue = AddressValue{}
 var _ HashableValue = AddressValue{}
 var _ MemberAccessibleValue = AddressValue{}
 
-func (AddressValue) IsValue() {}
+func (AddressValue) isValue() {}
 
 func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAddressValue(interpreter, v)
@@ -18080,62 +18128,6 @@ func AddressFromString(invocation Invocation) Value {
 	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
 }
 
-func accountGetCapabilityFunction(
-	gauge common.MemoryGauge,
-	addressValue AddressValue,
-	pathType sema.Type,
-	funcType *sema.FunctionType,
-) *HostFunctionValue {
-
-	return NewHostFunctionValue(
-		gauge,
-		funcType,
-		func(invocation Invocation) Value {
-
-			path, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			interpreter := invocation.Interpreter
-
-			pathStaticType := path.StaticType(interpreter)
-
-			if !interpreter.IsSubTypeOfSemaType(pathStaticType, pathType) {
-				pathSemaType := interpreter.MustConvertStaticToSemaType(pathStaticType)
-
-				panic(TypeMismatchError{
-					ExpectedType:  pathType,
-					ActualType:    pathSemaType,
-					LocationRange: invocation.LocationRange,
-				})
-			}
-
-			// NOTE: the type parameter is optional, for backwards compatibility
-
-			var borrowType *sema.ReferenceType
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				// we handle the nil case for this below
-				borrowType, _ = ty.(*sema.ReferenceType)
-			}
-
-			var borrowStaticType StaticType
-			if borrowType != nil {
-				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
-			}
-
-			return NewStorageCapabilityValue(
-				gauge,
-				addressValue,
-				path,
-				borrowStaticType,
-			)
-		},
-	)
-}
-
 // PathValue
 
 type PathValue struct {
@@ -18164,7 +18156,7 @@ var _ EquatableValue = PathValue{}
 var _ HashableValue = PathValue{}
 var _ MemberAccessibleValue = PathValue{}
 
-func (PathValue) IsValue() {}
+func (PathValue) isValue() {}
 
 func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPathValue(interpreter, v)
@@ -18391,96 +18383,99 @@ func (PathValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-// StorageCapabilityValue
+// PathCapabilityValue
 
-type StorageCapabilityValue struct {
+type PathCapabilityValue struct {
 	BorrowType StaticType
 	Path       PathValue
 	Address    AddressValue
 }
 
-func NewUnmeteredStorageCapabilityValue(
+func NewUnmeteredPathCapabilityValue(
 	address AddressValue,
 	path PathValue,
 	borrowType StaticType,
-) *StorageCapabilityValue {
-	return &StorageCapabilityValue{
+) *PathCapabilityValue {
+	return &PathCapabilityValue{
 		Address:    address,
 		Path:       path,
 		BorrowType: borrowType,
 	}
 }
 
-func NewStorageCapabilityValue(
+func NewPathCapabilityValue(
 	memoryGauge common.MemoryGauge,
 	address AddressValue,
 	path PathValue,
 	borrowType StaticType,
-) *StorageCapabilityValue {
+) *PathCapabilityValue {
 	// Constant because its constituents are already metered.
-	common.UseMemory(memoryGauge, common.StorageCapabilityValueMemoryUsage)
-	return NewUnmeteredStorageCapabilityValue(address, path, borrowType)
+	common.UseMemory(memoryGauge, common.PathCapabilityValueMemoryUsage)
+	return NewUnmeteredPathCapabilityValue(address, path, borrowType)
 }
 
-var _ Value = &StorageCapabilityValue{}
-var _ atree.Storable = &StorageCapabilityValue{}
-var _ EquatableValue = &StorageCapabilityValue{}
-var _ MemberAccessibleValue = &StorageCapabilityValue{}
+var _ Value = &PathCapabilityValue{}
+var _ atree.Storable = &PathCapabilityValue{}
+var _ EquatableValue = &PathCapabilityValue{}
+var _ CapabilityValue = &PathCapabilityValue{}
+var _ MemberAccessibleValue = &PathCapabilityValue{}
 
-func (*StorageCapabilityValue) IsValue() {}
+func (*PathCapabilityValue) isValue() {}
 
-func (v *StorageCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitStorageCapabilityValue(interpreter, v)
+func (*PathCapabilityValue) isCapabilityValue() {}
+
+func (v *PathCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitPathCapabilityValue(interpreter, v)
 }
 
-func (v *StorageCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.Address)
 	walkChild(v.Path)
 }
 
-func (v *StorageCapabilityValue) StaticType(inter *Interpreter) StaticType {
+func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
 	return NewCapabilityStaticType(
 		inter,
 		v.BorrowType,
 	)
 }
 
-func (v *StorageCapabilityValue) IsImportable(_ *Interpreter) bool {
+func (v *PathCapabilityValue) IsImportable(_ *Interpreter) bool {
 	return v.Path.Domain == common.PathDomainPublic
 }
 
-func (v *StorageCapabilityValue) String() string {
+func (v *PathCapabilityValue) String() string {
 	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *StorageCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
+func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.String()
 	}
-	return format.StorageCapability(
+	return format.PathCapability(
 		borrowType,
 		v.Address.RecursiveString(seenReferences),
 		v.Path.RecursiveString(seenReferences),
 	)
 }
 
-func (v *StorageCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	common.UseMemory(memoryGauge, common.StorageCapabilityValueStringMemoryUsage)
+func (v *PathCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.PathCapabilityValueStringMemoryUsage)
 
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.MeteredString(memoryGauge)
 	}
 
-	return format.StorageCapability(
+	return format.PathCapability(
 		borrowType,
 		v.Address.MeteredString(memoryGauge, seenReferences),
 		v.Path.MeteredString(memoryGauge, seenReferences),
 	)
 }
 
-func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		var borrowType *sema.ReferenceType
@@ -18488,7 +18483,7 @@ func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationR
 			// this function will panic already if this conversion fails
 			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
-		return interpreter.storageCapabilityBorrowFunction(v.Address, v.Path, borrowType)
+		return interpreter.pathCapabilityBorrowFunction(v.Address, v.Path, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		var borrowType *sema.ReferenceType
@@ -18496,26 +18491,29 @@ func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationR
 			// this function will panic already if this conversion fails
 			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
-		return interpreter.storageCapabilityCheckFunction(v.Address, v.Path, borrowType)
+		return interpreter.pathCapabilityCheckFunction(v.Address, v.Path, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
 		return v.Address
+
+	case sema.CapabilityTypeIDFieldName:
+		return UInt64Value(0)
 	}
 
 	return nil
 }
 
-func (*StorageCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*PathCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Capabilities have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*StorageCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*PathCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StorageCapabilityValue) ConformsToStaticType(
+func (v *PathCapabilityValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ LocationRange,
 	_ TypeConformanceResults,
@@ -18523,8 +18521,8 @@ func (v *StorageCapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StorageCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
-	otherCapability, ok := other.(*StorageCapabilityValue)
+func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+	otherCapability, ok := other.(*PathCapabilityValue)
 	if !ok {
 		return false
 	}
@@ -18543,11 +18541,11 @@ func (v *StorageCapabilityValue) Equal(interpreter *Interpreter, locationRange L
 		otherCapability.Path.Equal(interpreter, locationRange, v.Path)
 }
 
-func (*StorageCapabilityValue) IsStorable() bool {
+func (*PathCapabilityValue) IsStorable() bool {
 	return true
 }
 
-func (v *StorageCapabilityValue) Storable(
+func (v *PathCapabilityValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
 	maxInlineSize uint64,
@@ -18560,15 +18558,15 @@ func (v *StorageCapabilityValue) Storable(
 	)
 }
 
-func (*StorageCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
+func (*PathCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StorageCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+func (*PathCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
 	return false
 }
 
-func (v *StorageCapabilityValue) Transfer(
+func (v *PathCapabilityValue) Transfer(
 	interpreter *Interpreter,
 	_ LocationRange,
 	_ atree.Address,
@@ -18582,31 +18580,230 @@ func (v *StorageCapabilityValue) Transfer(
 	return v
 }
 
-func (v *StorageCapabilityValue) Clone(interpreter *Interpreter) Value {
-	return &StorageCapabilityValue{
-		Address:    v.Address.Clone(interpreter).(AddressValue),
-		Path:       v.Path.Clone(interpreter).(PathValue),
-		BorrowType: v.BorrowType,
-	}
+func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
+	return NewUnmeteredPathCapabilityValue(
+		v.Address.Clone(interpreter).(AddressValue),
+		v.Path.Clone(interpreter).(PathValue),
+		v.BorrowType,
+	)
 }
 
-func (v *StorageCapabilityValue) DeepRemove(interpreter *Interpreter) {
+func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter) {
 	v.Address.DeepRemove(interpreter)
 	v.Path.DeepRemove(interpreter)
 }
 
-func (v *StorageCapabilityValue) ByteSize() uint32 {
+func (v *PathCapabilityValue) ByteSize() uint32 {
 	return mustStorableSize(v)
 }
 
-func (v *StorageCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+func (v *PathCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v *StorageCapabilityValue) ChildStorables() []atree.Storable {
+func (v *PathCapabilityValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
 		v.Address,
 		v.Path,
+	}
+}
+
+// IDCapabilityValue
+
+type IDCapabilityValue struct {
+	BorrowType StaticType
+	Address    AddressValue
+	ID         UInt64Value
+}
+
+func NewUnmeteredIDCapabilityValue(
+	id UInt64Value,
+	address AddressValue,
+	borrowType StaticType,
+) *IDCapabilityValue {
+	return &IDCapabilityValue{
+		ID:         id,
+		Address:    address,
+		BorrowType: borrowType,
+	}
+}
+
+func NewIDCapabilityValue(
+	memoryGauge common.MemoryGauge,
+	id UInt64Value,
+	address AddressValue,
+	borrowType StaticType,
+) *IDCapabilityValue {
+	// Constant because its constituents are already metered.
+	common.UseMemory(memoryGauge, common.IDCapabilityValueMemoryUsage)
+	return NewUnmeteredIDCapabilityValue(id, address, borrowType)
+}
+
+var _ Value = &IDCapabilityValue{}
+var _ atree.Storable = &IDCapabilityValue{}
+var _ CapabilityValue = &IDCapabilityValue{}
+var _ EquatableValue = &IDCapabilityValue{}
+var _ MemberAccessibleValue = &IDCapabilityValue{}
+
+func (*IDCapabilityValue) isValue() {}
+
+func (*IDCapabilityValue) isCapabilityValue() {}
+
+func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitIDCapabilityValue(interpreter, v)
+}
+
+func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+	walkChild(v.ID)
+	walkChild(v.Address)
+}
+
+func (v *IDCapabilityValue) StaticType(inter *Interpreter) StaticType {
+	return NewCapabilityStaticType(
+		inter,
+		v.BorrowType,
+	)
+}
+
+func (v *IDCapabilityValue) IsImportable(_ *Interpreter) bool {
+	return false
+}
+
+func (v *IDCapabilityValue) String() string {
+	return v.RecursiveString(SeenReferences{})
+}
+
+func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
+	return format.IDCapability(
+		v.BorrowType.String(),
+		v.Address.RecursiveString(seenReferences),
+		v.ID.RecursiveString(seenReferences),
+	)
+}
+
+func (v *IDCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.IDCapabilityValueStringMemoryUsage)
+
+	return format.IDCapability(
+		v.BorrowType.MeteredString(memoryGauge),
+		v.Address.MeteredString(memoryGauge, seenReferences),
+		v.ID.MeteredString(memoryGauge, seenReferences),
+	)
+}
+
+func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case sema.CapabilityTypeBorrowFunctionName:
+		// this function will panic already if this conversion fails
+		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		return interpreter.idCapabilityBorrowFunction(v.Address, v.ID, borrowType)
+
+	case sema.CapabilityTypeCheckFunctionName:
+		// this function will panic already if this conversion fails
+		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		return interpreter.idCapabilityCheckFunction(v.Address, v.ID, borrowType)
+
+	case sema.CapabilityTypeAddressFieldName:
+		return v.Address
+
+	case sema.CapabilityTypeIDFieldName:
+		return v.ID
+	}
+
+	return nil
+}
+
+func (*IDCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+	// Capabilities have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (*IDCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+	// Capabilities have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (v *IDCapabilityValue) ConformsToStaticType(
+	_ *Interpreter,
+	_ LocationRange,
+	_ TypeConformanceResults,
+) bool {
+	return true
+}
+
+func (v *IDCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+	otherCapability, ok := other.(*IDCapabilityValue)
+	if !ok {
+		return false
+	}
+
+	return otherCapability.ID == v.ID &&
+		otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
+		otherCapability.BorrowType.Equal(v.BorrowType)
+}
+
+func (*IDCapabilityValue) IsStorable() bool {
+	return true
+}
+
+func (v *IDCapabilityValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(
+		v,
+		storage,
+		address,
+		maxInlineSize,
+	)
+}
+
+func (*IDCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (*IDCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v *IDCapabilityValue) Transfer(
+	interpreter *Interpreter,
+	_ LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		v.DeepRemove(interpreter)
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v *IDCapabilityValue) Clone(interpreter *Interpreter) Value {
+	return NewUnmeteredIDCapabilityValue(
+		v.ID,
+		v.Address.Clone(interpreter).(AddressValue),
+		v.BorrowType,
+	)
+}
+
+func (v *IDCapabilityValue) DeepRemove(interpreter *Interpreter) {
+	v.Address.DeepRemove(interpreter)
+}
+
+func (v *IDCapabilityValue) ByteSize() uint32 {
+	return mustStorableSize(v)
+}
+
+func (v *IDCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v *IDCapabilityValue) ChildStorables() []atree.Storable {
+	return []atree.Storable{
+		v.Address,
 	}
 }
 
@@ -18635,8 +18832,11 @@ var EmptyPathLinkValue = PathLinkValue{}
 var _ Value = PathLinkValue{}
 var _ atree.Value = PathLinkValue{}
 var _ EquatableValue = PathLinkValue{}
+var _ LinkValue = PathLinkValue{}
 
-func (PathLinkValue) IsValue() {}
+func (PathLinkValue) isValue() {}
+
+func (PathLinkValue) isLinkValue() {}
 
 func (v PathLinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPathLinkValue(interpreter, v)
@@ -18758,20 +18958,23 @@ func (v PathLinkValue) ChildStorables() []atree.Storable {
 type PublishedValue struct {
 	// NB: If `publish` and `claim` are ever extended to support arbitrary values, rather than just capabilities,
 	// this will need to be changed to `Value`, and more storage-related operations must be implemented for `PublishedValue`
-	Value     *StorageCapabilityValue
+	Value     CapabilityValue
 	Recipient AddressValue
 }
 
-func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value *StorageCapabilityValue) *PublishedValue {
+func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value CapabilityValue) *PublishedValue {
 	common.UseMemory(memoryGauge, common.PublishedValueMemoryUsage)
-	return &PublishedValue{Recipient: recipient, Value: value}
+	return &PublishedValue{
+		Recipient: recipient,
+		Value:     value,
+	}
 }
 
 var _ Value = &PublishedValue{}
 var _ atree.Value = &PublishedValue{}
 var _ EquatableValue = &PublishedValue{}
 
-func (*PublishedValue) IsValue() {}
+func (*PublishedValue) isValue() {}
 
 func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPublishedValue(interpreter, v)
@@ -18860,7 +19063,7 @@ func (v *PublishedValue) Transfer(
 
 	if v.NeedsStoreTo(address) {
 
-		innerValue := v.Value.Transfer(interpreter, locationRange, address, remove, nil).(*StorageCapabilityValue)
+		innerValue := v.Value.Transfer(interpreter, locationRange, address, remove, nil).(CapabilityValue)
 		addressValue := v.Recipient.Transfer(interpreter, locationRange, address, remove, nil).(AddressValue)
 
 		if remove {
@@ -18877,7 +19080,7 @@ func (v *PublishedValue) Transfer(
 func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
 	return &PublishedValue{
 		Recipient: v.Recipient,
-		Value:     v.Value,
+		Value:     v.Value.Clone(interpreter).(CapabilityValue),
 	}
 }
 
@@ -18900,15 +19103,6 @@ func (v *PublishedValue) ChildStorables() []atree.Storable {
 	}
 }
 
-// ContractValue is the value of a contract.
-// Under normal circumstances, a contract value is always a CompositeValue.
-// However, in the test framework, an imported contract is constructed via a constructor function.
-// Hence, during tests, the value is a HostFunctionValue.
-type ContractValue interface {
-	Value
-	SetNestedVariables(variables map[string]*Variable)
-}
-
 // AccountLinkValue
 
 type AccountLinkValue struct{}
@@ -18927,8 +19121,11 @@ var EmptyAccountLinkValue = AccountLinkValue{}
 var _ Value = AccountLinkValue{}
 var _ atree.Value = AccountLinkValue{}
 var _ EquatableValue = AccountLinkValue{}
+var _ LinkValue = AccountLinkValue{}
 
-func (AccountLinkValue) IsValue() {}
+func (AccountLinkValue) isValue() {}
+
+func (AccountLinkValue) isLinkValue() {}
 
 func (v AccountLinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAccountLinkValue(interpreter, v)

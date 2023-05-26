@@ -148,6 +148,8 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnMeterComputation:            e.newOnMeterComputation(),
 		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
+		IDCapabilityBorrowHandler:     stdlib.BorrowCapabilityController,
+		IDCapabilityCheckHandler:      stdlib.CheckCapabilityController,
 	}
 }
 
@@ -161,6 +163,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		CheckHandler:                     e.newCheckHandler(),
 		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
 		AttachmentsEnabled:               e.config.AttachmentsEnabled,
+		CapabilityControllersEnabled:     e.config.CapabilityControllersEnabled,
 	}
 }
 
@@ -266,6 +269,10 @@ func (e *interpreterEnvironment) GetAccountContractCode(location common.AddressL
 
 func (e *interpreterEnvironment) CreateAccount(payer common.Address) (address common.Address, err error) {
 	return e.runtimeInterface.CreateAccount(payer)
+}
+
+func (e *interpreterEnvironment) GenerateAccountID(address common.Address) (uint64, error) {
+	return e.runtimeInterface.GenerateAccountID(address)
 }
 
 func (e *interpreterEnvironment) EmitEvent(
@@ -892,7 +899,7 @@ func (e *interpreterEnvironment) loadContract(
 				false,
 			)
 			if storageMap != nil {
-				storedValue = storageMap.ReadValue(inter, location.Name)
+				storedValue = storageMap.ReadValue(inter, interpreter.StringStorageMapKey(location.Name))
 			}
 		}
 

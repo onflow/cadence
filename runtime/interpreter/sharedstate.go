@@ -25,6 +25,11 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+type AddressPath struct {
+	Address common.Address
+	Path    PathValue
+}
+
 type SharedState struct {
 	attachmentIterationMap map[*CompositeValue]bool
 	typeCodes              TypeCodes
@@ -32,10 +37,12 @@ type SharedState struct {
 	allInterpreters        map[common.Location]*Interpreter
 	callStack              *CallStack
 	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues ReferencedResourceKindedValues
-	resourceVariables              map[ResourceKindedValue]*Variable
-	inStorageIteration             bool
-	storageMutatedDuringIteration  bool
+	referencedResourceKindedValues              ReferencedResourceKindedValues
+	resourceVariables                           map[ResourceKindedValue]*Variable
+	inStorageIteration                          bool
+	storageMutatedDuringIteration               bool
+	CapabilityControllerIterations              map[AddressPath]int
+	MutationDuringCapabilityControllerIteration bool
 }
 
 func NewSharedState(config *Config) *SharedState {
@@ -52,6 +59,7 @@ func NewSharedState(config *Config) *SharedState {
 		storageMutatedDuringIteration:  false,
 		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
+		CapabilityControllerIterations: map[AddressPath]int{},
 	}
 }
 

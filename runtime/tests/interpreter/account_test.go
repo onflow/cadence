@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/assert"
@@ -39,7 +41,7 @@ import (
 type storageKey struct {
 	address common.Address
 	domain  string
-	key     string
+	key     atree.Value
 }
 
 func testAccount(
@@ -123,7 +125,7 @@ func testAccount(
 			iterator := accountStorage.Iterator(inter)
 			for {
 				key, value := iterator.Next()
-				if key == "" {
+				if key == nil {
 					break
 				}
 				storageKey := storageKey{
@@ -966,14 +968,14 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredPathCapabilityValue(
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "rCap",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1015,14 +1017,14 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredPathCapabilityValue(
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "rCap2",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1119,14 +1121,14 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredPathCapabilityValue(
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "sCap",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1154,7 +1156,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
 					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
-					require.IsType(t, &interpreter.StorageCapabilityValue{}, capability)
+					require.IsType(t, &interpreter.PathCapabilityValue{}, capability)
 
 					s2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "S2")
 
@@ -1169,14 +1171,14 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredPathCapabilityValue(
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "sCap2",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1276,14 +1278,14 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.StorageCapabilityValue{
-						Address: address,
-						Path: interpreter.PathValue{
+					interpreter.NewUnmeteredPathCapabilityValue(
+						address,
+						interpreter.PathValue{
 							Domain:     capabilityDomain,
 							Identifier: "sCap",
 						},
-						BorrowType: expectedBorrowType,
-					},
+						expectedBorrowType,
+					),
 					capability,
 				)
 			})
@@ -1358,14 +1360,14 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.StorageCapabilityValue{
-						Address: address,
-						Path: interpreter.PathValue{
+					interpreter.NewUnmeteredPathCapabilityValue(
+						address,
+						interpreter.PathValue{
 							Domain:     capabilityDomain,
 							Identifier: "s2Cap",
 						},
-						BorrowType: expectedBorrowType,
-					},
+						expectedBorrowType,
+					),
 					capability,
 				)
 
@@ -1387,14 +1389,14 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.StorageCapabilityValue{
-						Address: address,
-						Path: interpreter.PathValue{
+					interpreter.NewUnmeteredPathCapabilityValue(
+						address,
+						interpreter.PathValue{
 							Domain:     capabilityDomain,
 							Identifier: "s1Cap",
 						},
-						BorrowType: expectedBorrowType,
-					},
+						expectedBorrowType,
+					),
 					capability,
 				)
 			})
@@ -1805,9 +1807,9 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 
 					require.NoError(t, err)
 
-					require.IsType(t, &interpreter.StorageCapabilityValue{}, value)
+					require.IsType(t, &interpreter.PathCapabilityValue{}, value)
 
-					actualBorrowType := value.(*interpreter.StorageCapabilityValue).BorrowType
+					actualBorrowType := value.(*interpreter.PathCapabilityValue).BorrowType
 
 					if typed {
 						expectedBorrowType := interpreter.ConvertSemaToStaticType(

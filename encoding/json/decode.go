@@ -1269,20 +1269,29 @@ func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 	)
 }
 
-func (d *Decoder) decodeCapability(valueJSON any) cadence.StorageCapability {
+func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
 
-	path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
-	if !ok {
-		panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
-	}
+	if id, ok := obj[idKey]; ok {
+		return cadence.NewMeteredIDCapability(
+			d.gauge,
+			d.decodeUInt64(id),
+			d.decodeAddress(obj.Get(addressKey)),
+			d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+		)
+	} else {
+		path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
+		if !ok {
+			panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
+		}
 
-	return cadence.NewMeteredStorageCapability(
-		d.gauge,
-		path,
-		d.decodeAddress(obj.Get(addressKey)),
-		d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
-	)
+		return cadence.NewMeteredPathCapability(
+			d.gauge,
+			d.decodeAddress(obj.Get(addressKey)),
+			path,
+			d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+		)
+	}
 }
 
 // JSON types

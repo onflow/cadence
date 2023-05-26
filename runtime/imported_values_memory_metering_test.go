@@ -434,53 +434,54 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		},
 
 		// Verify Capability and its composing values, Path and Type.
+		// NOTE: ID Capability is not importable, so no test necessary.
 		{
 			TypeName:   "Capability",
-			MemoryKind: common.MemoryKindStorageCapabilityValue,
+			MemoryKind: common.MemoryKindPathCapabilityValue,
 			Weight:     1,
-			TypeInstance: cadence.StorageCapability{
-				Path: cadence.Path{
+			TypeInstance: cadence.NewPathCapability(
+				cadence.Address{},
+				cadence.Path{
 					Domain:     common.PathDomainPublic,
 					Identifier: "foobarrington",
 				},
-				Address: cadence.Address{},
-				BorrowType: &cadence.ReferenceType{
+				&cadence.ReferenceType{
 					Authorized: true,
 					Type:       cadence.AnyType{},
 				},
-			},
+			),
 		},
 		{
 			TypeName:   "Capability",
 			MemoryKind: common.MemoryKindPathValue,
 			Weight:     1,
-			TypeInstance: cadence.StorageCapability{
-				Path: cadence.Path{
+			TypeInstance: cadence.NewPathCapability(
+				cadence.Address{},
+				cadence.Path{
 					Domain:     common.PathDomainPublic,
 					Identifier: "foobarrington",
 				},
-				Address: cadence.Address{},
-				BorrowType: &cadence.ReferenceType{
+				&cadence.ReferenceType{
 					Authorized: true,
 					Type:       cadence.AnyType{},
 				},
-			},
+			),
 		},
 		{
 			TypeName:   "Capability",
 			MemoryKind: common.MemoryKindRawString,
 			Weight:     (1 + 13) + (1 + 13),
-			TypeInstance: cadence.StorageCapability{
-				Path: cadence.Path{
+			TypeInstance: cadence.NewPathCapability(
+				cadence.Address{},
+				cadence.Path{
 					Domain:     common.PathDomainPublic,
 					Identifier: "foobarrington",
 				},
-				Address: cadence.Address{},
-				BorrowType: &cadence.ReferenceType{
+				&cadence.ReferenceType{
 					Authorized: true,
 					Type:       cadence.AnyType{},
 				},
-			},
+			),
 		},
 
 		// Verify Optional and its composing type
