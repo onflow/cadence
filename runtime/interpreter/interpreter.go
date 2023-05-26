@@ -4037,7 +4037,9 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 			domain := path.Domain.Identifier()
 			identifier := path.Identifier
 
-			value := interpreter.ReadStored(address, domain, identifier)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
 
 			if value == nil {
 				return FalseValue
