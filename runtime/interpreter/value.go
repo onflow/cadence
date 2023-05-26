@@ -13000,7 +13000,7 @@ var _ ComparableValue = Word128Value{}
 var _ HashableValue = Word128Value{}
 var _ MemberAccessibleValue = Word128Value{}
 
-func (Word128Value) IsValue() {}
+func (Word128Value) isValue() {}
 
 func (v Word128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord128Value(interpreter, v)
