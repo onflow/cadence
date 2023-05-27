@@ -2669,7 +2669,10 @@ func (v *ArrayValue) Transfer(
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	interpreter.ReportComputation(common.ComputationKindTransferArrayValue, uint(v.Count()))
+	interpreter.ReportComputation(
+		common.ComputationKindTransferArrayValue,
+		uint(v.Count()),
+	)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -17891,14 +17894,13 @@ func NewDictionaryValueWithAddress(
 	return v
 }
 
-func newDictionaryValueFromOrderedMap(
-	dict *atree.OrderedMap,
-	staticType *DictionaryStaticType,
-) *DictionaryValue {
-	return &DictionaryValue{
-		Type:       staticType,
-		dictionary: dict,
+func DictionaryElementSize(staticType *DictionaryStaticType) uint {
+	keySize := staticType.KeyType.elementSize()
+	valueSize := staticType.ValueType.elementSize()
+	if keySize == 0 || valueSize == 0 {
+		return 0
 	}
+	return keySize + valueSize
 }
 
 func newDictionaryValueWithIterator(
@@ -17968,23 +17970,38 @@ func newDictionaryValueFromConstructor(
 	staticType *DictionaryStaticType,
 	count uint64,
 	constructor func() *atree.OrderedMap,
-) (dict *DictionaryValue) {
+) *DictionaryValue {
 
-	keySize := staticType.KeyType.elementSize()
-	valueSize := staticType.ValueType.elementSize()
-	var elementSize uint
-	if keySize != 0 && valueSize != 0 {
-		elementSize = keySize + valueSize
-	}
-	baseUsage, overheadUsage, dataSlabs, metaDataSlabs := common.NewDictionaryMemoryUsages(count, elementSize)
-	common.UseMemory(gauge, baseUsage)
+	elementSize := DictionaryElementSize(staticType)
+
+	overheadUsage, dataSlabs, metaDataSlabs :=
+		common.NewAtreeMapMemoryUsages(count, elementSize)
 	common.UseMemory(gauge, overheadUsage)
 	common.UseMemory(gauge, dataSlabs)
 	common.UseMemory(gauge, metaDataSlabs)
 
-	dict = newDictionaryValueFromOrderedMap(constructor(), staticType)
-	dict.elementSize = elementSize
-	return
+	return newDictionaryValueFromAtreeMap(
+		gauge,
+		staticType,
+		elementSize,
+		constructor(),
+	)
+}
+
+func newDictionaryValueFromAtreeMap(
+	gauge common.MemoryGauge,
+	staticType *DictionaryStaticType,
+	elementSize uint,
+	atreeOrderedMap *atree.OrderedMap,
+) *DictionaryValue {
+
+	common.UseMemory(gauge, common.DictionaryValueBaseMemoryUsage)
+
+	return &DictionaryValue{
+		Type:        staticType,
+		dictionary:  atreeOrderedMap,
+		elementSize: elementSize,
+	}
 }
 
 var _ Value = &DictionaryValue{}
@@ -18863,22 +18880,17 @@ func (v *DictionaryValue) Transfer(
 	storable atree.Storable,
 	preventTransfer map[atree.StorageID]struct{},
 ) Value {
-	baseUse, elementOverhead, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
-		v.dictionary.Count(),
-		v.elementSize,
-	)
-	common.UseMemory(interpreter, baseUse)
-	common.UseMemory(interpreter, elementOverhead)
-	common.UseMemory(interpreter, dataUse)
-	common.UseMemory(interpreter, metaDataUse)
-
-	interpreter.ReportComputation(common.ComputationKindTransferDictionaryValue, uint(v.Count()))
 
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
+
+	interpreter.ReportComputation(
+		common.ComputationKindTransferDictionaryValue,
+		uint(v.Count()),
+	)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -18922,7 +18934,10 @@ func (v *DictionaryValue) Transfer(
 			panic(errors.NewExternalError(err))
 		}
 
-		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
+		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(
+			v.dictionary.Count(),
+			v.elementSize,
+		)
 		common.UseMemory(config.MemoryGauge, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
@@ -18993,8 +19008,13 @@ func (v *DictionaryValue) Transfer(
 	}
 
 	if res == nil {
-		res = newDictionaryValueFromOrderedMap(dictionary, v.Type)
-		res.elementSize = v.elementSize
+		res = newDictionaryValueFromAtreeMap(
+			interpreter,
+			v.Type,
+			v.elementSize,
+			dictionary,
+		)
+
 		res.semaType = v.semaType
 		res.isResourceKinded = v.isResourceKinded
 		res.isDestroyed = v.isDestroyed
@@ -19017,7 +19037,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
 	common.UseMemory(config.MemoryGauge, elementMemoryUse)
 
-	dictionary, err := atree.NewMapFromBatchData(
+	orderedMap, err := atree.NewMapFromBatchData(
 		config.Storage,
 		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
@@ -19048,13 +19068,18 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	return &DictionaryValue{
-		Type:             v.Type,
-		semaType:         v.semaType,
-		isResourceKinded: v.isResourceKinded,
-		dictionary:       dictionary,
-		isDestroyed:      v.isDestroyed,
-	}
+	dictionary := newDictionaryValueFromAtreeMap(
+		interpreter,
+		v.Type,
+		v.elementSize,
+		orderedMap,
+	)
+
+	dictionary.semaType = v.semaType
+	dictionary.isResourceKinded = v.isResourceKinded
+	dictionary.isDestroyed = v.isDestroyed
+
+	return dictionary
 }
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {

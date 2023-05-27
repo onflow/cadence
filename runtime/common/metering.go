@@ -376,12 +376,14 @@ func NewAtreeArrayMemoryUsages(count uint64, elementSize uint) (MemoryUsage, Mem
 		branches
 }
 
-func NewDictionaryMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
+func NewAtreeMapMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
 	leaves, branches := newAtreeMapMemoryUsage(count, elementSize)
-	return DictionaryValueBaseMemoryUsage, MemoryUsage{
-		Kind:   MemoryKindAtreeMapElementOverhead,
-		Amount: count,
-	}, leaves, branches
+	return MemoryUsage{
+			Kind:   MemoryKindAtreeMapElementOverhead,
+			Amount: count,
+		},
+		leaves,
+		branches
 }
 
 func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
