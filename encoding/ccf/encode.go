@@ -323,6 +323,7 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 //	/ word32-value
 //	/ word64-value
 //	/ word128-value
+//	/ word256-value
 //	/ fix64-value
 //	/ ufix64-value
 //
@@ -450,6 +451,9 @@ func (e *Encoder) encodeValue(
 
 	case cadence.Word128:
 		return e.encodeWord128(v)
+
+	case cadence.Word256:
+		return e.encodeWord256(v)
 
 	case cadence.Fix64:
 		return e.encodeFix64(v)
@@ -698,6 +702,13 @@ func (e *Encoder) encodeWord64(v cadence.Word64) error {
 // language=CDDL
 // word128-value = uint .ge 0
 func (e *Encoder) encodeWord128(v cadence.Word128) error {
+	return e.enc.EncodeBigInt(v.Big())
+}
+
+// encodeWord256 encodes cadence.Word256 as
+// language=CDDL
+// word256-value = uint .ge 0
+func (e *Encoder) encodeWord256(v cadence.Word256) error {
 	return e.enc.EncodeBigInt(v.Big())
 }
 

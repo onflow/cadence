@@ -203,6 +203,8 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeWord64(valueJSON)
 	case word128TypeStr:
 		return d.decodeWord128(valueJSON)
+	case word256TypeStr:
+		return d.decodeWord256(valueJSON)
 	case fix64TypeStr:
 		return d.decodeFix64(valueJSON)
 	case ufix64TypeStr:
@@ -581,6 +583,24 @@ func (d *Decoder) decodeWord128(valueJSON any) cadence.Word128 {
 	)
 	if err != nil {
 		panic(errors.NewDefaultUserError("invalid Word128: %w", err))
+	}
+	return value
+}
+
+func (d *Decoder) decodeWord256(valueJSON any) cadence.Word256 {
+	value, err := cadence.NewMeteredWord256FromBig(
+		d.gauge,
+		func() *big.Int {
+			bigInt := d.decodeBigInt(valueJSON)
+			if bigInt == nil {
+				// TODO: propagate toString error from decodeBigInt
+				panic(errors.NewDefaultUserError("invalid Word256: %s", valueJSON))
+			}
+			return bigInt
+		},
+	)
+	if err != nil {
+		panic(errors.NewDefaultUserError("invalid Word256: %w", err))
 	}
 	return value
 }
@@ -1235,6 +1255,8 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return cadence.TheWord64Type
 	case "Word128":
 		return cadence.TheWord128Type
+	case "Word256":
+		return cadence.TheWord256Type
 	case "Fix64":
 		return cadence.TheFix64Type
 	case "UFix64":

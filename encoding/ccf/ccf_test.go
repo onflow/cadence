@@ -2561,6 +2561,102 @@ func TestDecodeWord128Invalid(t *testing.T) {
 	assert.Equal(t, "ccf: failed to decode: failed to decode Word128: cbor: cannot decode CBOR tag type to big.Int", err.Error())
 }
 
+func TestEncodeWord256(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			name: "Zero",
+			val:  cadence.NewWord256(0),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Word256","value":"0"}
+				//
+				// language=edn, format=ccf
+				// 130([137(53), 0])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Word256 type ID (53)
+				0x18, 0x35,
+				// tag (big num)
+				0xc2,
+				// bytes, 0 bytes follow
+				0x40,
+			},
+		},
+		{
+			name: "Max",
+			val:  cadence.Word256{Value: sema.Word256TypeMaxIntBig},
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Word256","value":"115792089237316195423570985008687907853269984665640564039457584007913129639935"}
+				//
+				// language=edn, format=ccf
+				// 130([137(53), 115792089237316195423570985008687907853269984665640564039457584007913129639935])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Word256 type ID (53)
+				0x18, 0x35,
+				// tag (big num)
+				0xc2,
+				// bytes, 32 bytes follow
+				0x58, 0x20,
+				// 115792089237316195423570985008687907853269984665640564039457584007913129639935
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			},
+		},
+	}...)
+}
+
+func TestDecodeWord256Invalid(t *testing.T) {
+	t.Parallel()
+
+	_, err := ccf.Decode(nil, []byte{
+		// language=json, format=json-cdc
+		// {"type":"Word256","value":"115792089237316195423570985008687907853269984665640564039457584007913129639935"}
+		//
+		// language=edn, format=ccf
+		// 130([137(53), 0])
+		//
+		// language=cbor, format=ccf
+		// tag
+		0xd8, ccf.CBORTagTypeAndValue,
+		// array, 2 items follow
+		0x82,
+		// tag
+		0xd8, ccf.CBORTagSimpleType,
+		// Word256 type ID (53)
+		0x18, 0x35,
+		// Invalid type
+		0xd7,
+		// bytes, 32 bytes follow
+		0x58, 0x20,
+		// 115792089237316195423570985008687907853269984665640564039457584007913129639935
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	})
+	require.Error(t, err)
+	assert.Equal(t, "ccf: failed to decode: failed to decode Word256: cbor: cannot decode CBOR tag type to big.Int", err.Error())
+}
+
 func TestEncodeFix64(t *testing.T) {
 
 	t.Parallel()
@@ -7682,6 +7778,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		{cadence.Word32Type{}, ccf.TypeWord32},
 		{cadence.Word64Type{}, ccf.TypeWord64},
 		{cadence.Word128Type{}, ccf.TypeWord128},
+		{cadence.Word256Type{}, ccf.TypeWord256},
 		{cadence.Fix64Type{}, ccf.TypeFix64},
 		{cadence.UFix64Type{}, ccf.TypeUFix64},
 		{cadence.BlockType{}, ccf.TypeBlock},

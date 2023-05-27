@@ -257,6 +257,8 @@ func convertIntValue(
 		return interpreter.ConvertWord64(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Word128Type:
 		return interpreter.ConvertWord128(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
+	case sema.Word256Type:
+		return interpreter.ConvertWord256(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 
 	default:
 		return nil, UnsupportedLiteralError
