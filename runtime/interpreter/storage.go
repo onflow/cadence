@@ -83,7 +83,11 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 			), nil
 
 		case compositeTypeInfo:
-			return newCompositeValueFromConstructor(gauge, value.Count(), staticType, func() *atree.OrderedMap { return value }), nil
+			return newCompositeValueFromAtreeMap(
+				gauge,
+				staticType,
+				value,
+			), nil
 
 		default:
 			return nil, errors.NewUnexpectedError("invalid ordered map type info: %T", staticType)

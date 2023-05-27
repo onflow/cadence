@@ -386,14 +386,6 @@ func NewAtreeMapMemoryUsages(count uint64, elementSize uint) (MemoryUsage, Memor
 		branches
 }
 
-func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
-	leaves, branches := newAtreeMapMemoryUsage(count, elementSize)
-	return CompositeValueBaseMemoryUsage, MemoryUsage{
-		Kind:   MemoryKindAtreeMapElementOverhead,
-		Amount: count,
-	}, leaves, branches
-}
-
 func NewAtreeMapPreAllocatedElementsMemoryUsage(count uint64, elementSize uint) MemoryUsage {
 	leafNodesCount, _ := atreeNodes(count, elementSize)
 

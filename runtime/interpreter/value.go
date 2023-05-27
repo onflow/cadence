@@ -16358,30 +16358,40 @@ func NewCompositeValue(
 	return v
 }
 
-func newCompositeValueFromOrderedMap(
-	dict *atree.OrderedMap,
-	typeInfo compositeTypeInfo,
-) *CompositeValue {
-	return &CompositeValue{
-		dictionary:          dict,
-		Location:            typeInfo.location,
-		QualifiedIdentifier: typeInfo.qualifiedIdentifier,
-		Kind:                typeInfo.kind,
-	}
-}
-
 func newCompositeValueFromConstructor(
 	gauge common.MemoryGauge,
 	count uint64,
 	typeInfo compositeTypeInfo,
 	constructor func() *atree.OrderedMap,
 ) *CompositeValue {
-	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(count, 0)
-	common.UseMemory(gauge, baseUse)
+
+	elementOverhead, dataUse, metaDataUse :=
+		common.NewAtreeMapMemoryUsages(count, 0)
 	common.UseMemory(gauge, elementOverhead)
 	common.UseMemory(gauge, dataUse)
 	common.UseMemory(gauge, metaDataUse)
-	return newCompositeValueFromOrderedMap(constructor(), typeInfo)
+
+	return newCompositeValueFromAtreeMap(
+		gauge,
+		typeInfo,
+		constructor(),
+	)
+}
+
+func newCompositeValueFromAtreeMap(
+	gauge common.MemoryGauge,
+	typeInfo compositeTypeInfo,
+	atreeOrderedMap *atree.OrderedMap,
+) *CompositeValue {
+
+	common.UseMemory(gauge, common.CompositeValueBaseMemoryUsage)
+
+	return &CompositeValue{
+		dictionary:          atreeOrderedMap,
+		Location:            typeInfo.location,
+		QualifiedIdentifier: typeInfo.qualifiedIdentifier,
+		Kind:                typeInfo.kind,
+	}
 }
 
 var _ Value = &CompositeValue{}
@@ -17150,19 +17160,16 @@ func (v *CompositeValue) Transfer(
 	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 
-	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
-	common.UseMemory(interpreter, baseUse)
-	common.UseMemory(interpreter, elementOverhead)
-	common.UseMemory(interpreter, dataUse)
-	common.UseMemory(interpreter, metaDataUse)
-
-	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
-
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
+
+	interpreter.ReportComputation(
+		common.ComputationKindTransferCompositeValue,
+		1,
+	)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -17303,7 +17310,13 @@ func (v *CompositeValue) Transfer(
 			v.QualifiedIdentifier,
 			v.Kind,
 		)
-		res = newCompositeValueFromOrderedMap(dictionary, info)
+
+		res = newCompositeValueFromAtreeMap(
+			interpreter,
+			info,
+			dictionary,
+		)
+
 		res.InjectedFields = v.InjectedFields
 		res.ComputedFields = v.ComputedFields
 		res.NestedVariables = v.NestedVariables
