@@ -151,6 +151,11 @@ func newValueTestCases() map[string]valueTestCase {
 			string:       "128",
 			expectedType: Word128Type{},
 		},
+		"Word256": {
+			value:        NewWord256(256),
+			string:       "256",
+			expectedType: Word256Type{},
+		},
 		"UFix64": {
 			value:        ufix64,
 			string:       "64.01000000",
@@ -458,8 +463,14 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 	uint128LargeValueTestCase, _ := NewUInt128FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
 	uint128MaxValue, _ := NewUInt128FromBig(sema.UInt128TypeMaxIntBig)
 
+	uint256LargeValueTestCase, _ := NewUInt256FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
+	uint256MaxValue, _ := NewUInt256FromBig(sema.UInt256TypeMaxIntBig)
+
 	word128LargeValueTestCase, _ := NewWord128FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
 	word128MaxValue, _ := NewWord128FromBig(sema.Word128TypeMaxIntBig)
+
+	word256LargeValueTestCase, _ := NewWord256FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
+	word256MaxValue, _ := NewWord256FromBig(sema.Word256TypeMaxIntBig)
 
 	typeTests := map[string]map[NumberValue][]byte{
 		// Int*
@@ -571,11 +582,13 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 			uint128MaxValue:           {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		"UInt256": {
-			NewUInt256(0):   {0},
-			NewUInt256(42):  {42},
-			NewUInt256(127): {127},
-			NewUInt256(128): {128},
-			NewUInt256(200): {200},
+			NewUInt256(0):             {0},
+			NewUInt256(42):            {42},
+			NewUInt256(127):           {127},
+			NewUInt256(128):           {128},
+			NewUInt256(200):           {200},
+			uint256LargeValueTestCase: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			uint256MaxValue:           {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		// Word*
 		"Word8": {
@@ -613,6 +626,14 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 			NewWord128(128):           {128},
 			word128LargeValueTestCase: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 			word128MaxValue:           {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		"Word256": {
+			NewWord256(0):             {0},
+			NewWord256(42):            {42},
+			NewWord256(127):           {127},
+			NewWord256(200):           {200},
+			word256LargeValueTestCase: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			word256MaxValue:           {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		// Fix*
 		"Fix64": {
@@ -810,6 +831,24 @@ func TestNewWord128FromBig(t *testing.T) {
 		big.NewInt(1),
 	)
 	_, err = NewWord128FromBig(aboveMax)
+	require.Error(t, err)
+}
+
+func TestNewWord256FromBig(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewWord256FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := big.NewInt(-1)
+	_, err = NewWord256FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.Word256TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewWord256FromBig(aboveMax)
 	require.Error(t, err)
 }
 

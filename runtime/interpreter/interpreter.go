@@ -1834,6 +1834,11 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			return ConvertWord128(interpreter, value, locationRange)
 		}
 
+	case sema.Word256Type:
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertWord256(interpreter, value, locationRange)
+		}
+
 	// Fix*
 
 	case sema.Fix64Type:
@@ -2485,6 +2490,12 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 			}
 			return
 		})),
+		newFromStringFunction(sema.Word256Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.Word256TypeMinIntBig, sema.Word256TypeMaxIntBig); ok {
+				v = NewUnmeteredWord256ValueFromBigInt(b)
+			}
+			return
+		})),
 
 		// fixed-points
 		newFromStringFunction(sema.Fix64Type, func(inter *Interpreter, input string) OptionalValue {
@@ -2708,6 +2719,11 @@ var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunct
 				return BigEndianBytesToUnsignedBigInt(b)
 			})
 		}),
+		newFromBigEndianBytesFunction(sema.Word256Type, 32, func(i *Interpreter, b []byte) Value {
+			return NewWord256ValueFromBigInt(i, func() *big.Int {
+				return BigEndianBytesToUnsignedBigInt(b)
+			})
+		}),
 
 		// fixed-points
 		newFromBigEndianBytesFunction(sema.Fix64Type, 8, func(i *Interpreter, b []byte) Value {
@@ -2916,6 +2932,15 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		},
 		min: NewUnmeteredWord128ValueFromUint64(0),
 		max: NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
+	},
+	{
+		name:         sema.Word256TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Word256Type),
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord256(interpreter, value, locationRange)
+		},
+		min: NewUnmeteredWord256ValueFromUint64(0),
+		max: NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
 	},
 	{
 		name:         sema.Fix64TypeName,

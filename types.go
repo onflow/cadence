@@ -844,6 +844,26 @@ func (t Word128Type) Equal(other Type) bool {
 	return t == other
 }
 
+// Word256Type
+
+type Word256Type struct{}
+
+var TheWord256Type = Word256Type{}
+
+func NewWord256Type() Word256Type {
+	return TheWord256Type
+}
+
+func (Word256Type) isType() {}
+
+func (Word256Type) ID() string {
+	return "Word256"
+}
+
+func (t Word256Type) Equal(other Type) bool {
+	return t == other
+}
+
 // Fix64Type
 
 type Fix64Type struct{}
