@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
 const DocstringsTypeOwoFieldName = "owo"
 
 var DocstringsTypeOwoFieldType = IntType
@@ -117,38 +119,47 @@ var DocstringsType = &SimpleType{
 func init() {
 	DocstringsType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				DocstringsTypeOwoFieldName,
 				DocstringsTypeOwoFieldType,
 				DocstringsTypeOwoFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				DocstringsTypeUwuFieldName,
 				DocstringsTypeUwuFieldType,
 				DocstringsTypeUwuFieldDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				DocstringsTypeNwnFunctionName,
 				DocstringsTypeNwnFunctionType,
 				DocstringsTypeNwnFunctionDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				DocstringsTypeWithBlanksFieldName,
 				DocstringsTypeWithBlanksFieldType,
 				DocstringsTypeWithBlanksFieldDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				DocstringsTypeIsSmolBeanFunctionName,
 				DocstringsTypeIsSmolBeanFunctionType,
 				DocstringsTypeIsSmolBeanFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessPublic,
 				DocstringsTypeRunningOutOfIdeasFunctionName,
 				DocstringsTypeRunningOutOfIdeasFunctionType,
 				DocstringsTypeRunningOutOfIdeasFunctionDocString,

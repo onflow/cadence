@@ -5054,8 +5054,10 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			nil,
 		)
 
-		storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
-		storageMap.WriteValue(inter, storagePath.Identifier, r)
+		domain := storagePath.Domain.Identifier()
+		storageMap := storage.GetStorageMap(storageAddress, domain, true)
+		storageMapKey := interpreter.StringStorageMapKey(storagePath.Identifier)
+		storageMap.WriteValue(inter, storageMapKey, r)
 
 		result, err := inter.Invoke("testInvalidUnauthorized")
 		require.NoError(t, err)
@@ -7244,6 +7246,10 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			value: interpreter.NewUnmeteredWord64Value(42),
 			ty:    sema.Word64Type,
 		},
+		"Word128": {
+			value: interpreter.NewUnmeteredWord128ValueFromUint64(42),
+			ty:    sema.Word128Type,
+		},
 		// Fix*
 		"Fix64": {
 			value: interpreter.NewUnmeteredFix64Value(123000000),
@@ -8917,6 +8923,37 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunctionValue,
 			)
 		},
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountCapabilitiesValue(
+				gauge,
+				addressValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				func() interpreter.Value {
+					return interpreter.NewAuthAccountStorageCapabilitiesValue(
+						gauge,
+						addressValue,
+						panicFunctionValue,
+						panicFunctionValue,
+						panicFunctionValue,
+						panicFunctionValue,
+					)
+				},
+				func() interpreter.Value {
+					return interpreter.NewAuthAccountAccountCapabilitiesValue(
+						gauge,
+						addressValue,
+						panicFunctionValue,
+						panicFunctionValue,
+						panicFunctionValue,
+						panicFunctionValue,
+					)
+				},
+			)
+		},
 	)
 }
 
@@ -8961,6 +8998,14 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 						common.ZeroAddress,
 					)
 				},
+			)
+		},
+		func() interpreter.Value {
+			return interpreter.NewPublicAccountCapabilitiesValue(
+				gauge,
+				addressValue,
+				panicFunctionValue,
+				panicFunctionValue,
 			)
 		},
 	)

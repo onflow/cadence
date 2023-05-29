@@ -617,6 +617,26 @@ func TestEncodeWord64(t *testing.T) {
 	}...)
 }
 
+func TestEncodeWord128(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.NewWord128(0),
+			// language=json
+			`{"type":"Word128","value":"0"}`,
+		},
+		{
+			"Max",
+			cadence.Word128{Value: sema.Word128TypeMaxIntBig},
+			// language=json
+			`{"type":"Word128","value":"340282366920938463463374607431768211455"}`,
+		},
+	}...)
+}
+
 func TestEncodeFix64(t *testing.T) {
 
 	t.Parallel()
@@ -1736,6 +1756,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		cadence.Word16Type{},
 		cadence.Word32Type{},
 		cadence.Word64Type{},
+		cadence.Word128Type{},
 		cadence.Fix64Type{},
 		cadence.UFix64Type{},
 		cadence.BlockType{},
@@ -2585,36 +2606,66 @@ func TestEncodeCapability(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(
-		t,
-		cadence.StorageCapability{
-			Path: cadence.Path{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			BorrowType: cadence.IntType{},
-		},
-		// language=json
-		`
-          {
-            "type": "Capability",
-            "value": {
-              "path": {
-                "type": "Path",
+	t.Run("path", func(t *testing.T) {
+
+		path, err := cadence.NewPath(common.PathDomainPublic, "foo")
+		require.NoError(t, err)
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewPathCapability(
+				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				path,
+				cadence.IntType{},
+			),
+			// language=json
+			`
+              {
+                "type": "Capability",
                 "value": {
-                  "domain": "storage",
-                  "identifier": "foo"
+                  "path": {
+                    "type": "Path",
+                    "value": {
+                      "domain": "public",
+                      "identifier": "foo"
+                    }
+                  },
+                  "borrowType": {
+                    "kind": "Int"
+                  },
+                  "address": "0x0000000102030405"
                 }
-              },
-              "borrowType": {
-                "kind": "Int"
-              },
-              "address": "0x0000000102030405"
-            }
-          }
-        `,
-	)
+              }
+            `,
+		)
+	})
+
+	t.Run("ID", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewIDCapability(
+				6,
+				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				cadence.IntType{},
+			),
+			// language=json
+			`
+              {
+                "type": "Capability",
+                "value": {
+                  "borrowType": {
+                    "kind": "Int"
+                  },
+                  "address": "0x0000000102030405",
+                  "id": "6"
+                }
+              }
+            `,
+		)
+	})
 }
 
 func TestDecodeFixedPoints(t *testing.T) {

@@ -1126,7 +1126,7 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 	if currentDepth < containerMaxDepth {
 		n = randomInt(Composite)
 	} else {
-		n = randomInt(Capability)
+		n = randomInt(IDCapability)
 	}
 
 	switch n {
@@ -1142,15 +1142,24 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 		return randomArrayValue(inter, currentDepth)
 	case Composite:
 		return randomCompositeValue(inter, common.CompositeKindStructure, currentDepth)
-	case Capability:
-		return &interpreter.StorageCapabilityValue{
-			Address: randomAddressValue(),
-			Path:    randomPathValue(),
-			BorrowType: interpreter.ReferenceStaticType{
+	case PathCapability:
+		return interpreter.NewUnmeteredPathCapabilityValue(
+			randomAddressValue(),
+			randomPathValue(),
+			interpreter.ReferenceStaticType{
 				Authorized:   false,
 				BorrowedType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-		}
+		)
+	case IDCapability:
+		return interpreter.NewUnmeteredIDCapabilityValue(
+			interpreter.UInt64Value(randomInt(math.MaxInt-1)),
+			randomAddressValue(),
+			interpreter.ReferenceStaticType{
+				Authorized:   false,
+				BorrowedType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+		)
 	case Some:
 		return interpreter.NewUnmeteredSomeValueNonCopying(
 			randomStorableValue(inter, currentDepth+1),
@@ -1210,6 +1219,8 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 		return interpreter.NewUnmeteredWord32Value(rand.Uint32())
 	case Word64:
 		return interpreter.NewUnmeteredWord64Value(rand.Uint64())
+	case Word128:
+		return interpreter.NewUnmeteredWord128ValueFromUint64(rand.Uint64())
 
 	// Fixed point
 	case Fix64:
@@ -1477,6 +1488,8 @@ func intSubtype(n int) sema.Type {
 		return sema.Word32Type
 	case Word64:
 		return sema.Word64Type
+	case Word128:
+		return sema.Word128Type
 
 	default:
 		panic(fmt.Sprintf("unsupported:  %d", n))
@@ -1508,6 +1521,7 @@ const (
 	Word16
 	Word32
 	Word64
+	Word128
 
 	Fix64
 	UFix64
@@ -1528,7 +1542,8 @@ const (
 
 	Void
 	Nil // `Never?`
-	Capability
+	PathCapability
+	IDCapability
 
 	// Containers
 	Some

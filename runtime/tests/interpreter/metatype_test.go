@@ -776,10 +776,12 @@ func TestInterpretGetType(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
+			domain := storagePath.Domain.Identifier()
+			storageMap := storage.GetStorageMap(storageAddress, domain, true)
+			storageMapKey := interpreter.StringStorageMapKey(storagePath.Identifier)
 			storageMap.WriteValue(
 				inter,
-				storagePath.Identifier,
+				storageMapKey,
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 			)
 

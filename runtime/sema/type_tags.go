@@ -164,6 +164,7 @@ const (
 	word16TypeMask
 	word32TypeMask
 	word64TypeMask
+	word128TypeMask
 
 	_ // future: Fix8
 	_ // future: Fix16
@@ -206,7 +207,6 @@ const (
 	referenceTypeMask
 	genericTypeMask
 	functionTypeMask
-	interfaceTypeMask
 
 	// ~~ NOTE: End of limit for lower mask type. Any new type should go to upper mask. ~~
 )
@@ -218,6 +218,10 @@ const (
 	transactionTypeMask
 	anyResourceAttachmentMask
 	anyStructAttachmentMask
+	storageCapabilityControllerTypeMask
+	accountCapabilityControllerTypeMask
+
+	interfaceTypeMask
 
 	invalidTypeMask
 )
@@ -246,7 +250,8 @@ var (
 				Or(Word8TypeTag).
 				Or(Word16TypeTag).
 				Or(Word32TypeTag).
-				Or(Word64TypeTag)
+				Or(Word64TypeTag).
+				Or(Word128TypeTag)
 
 	IntegerTypeTag = newTypeTagFromLowerMask(integerTypeMask).
 			Or(SignedIntegerTypeTag).
@@ -287,10 +292,11 @@ var (
 	Int128TypeTag = newTypeTagFromLowerMask(int128TypeMask)
 	Int256TypeTag = newTypeTagFromLowerMask(int256TypeMask)
 
-	Word8TypeTag  = newTypeTagFromLowerMask(word8TypeMask)
-	Word16TypeTag = newTypeTagFromLowerMask(word16TypeMask)
-	Word32TypeTag = newTypeTagFromLowerMask(word32TypeMask)
-	Word64TypeTag = newTypeTagFromLowerMask(word64TypeMask)
+	Word8TypeTag   = newTypeTagFromLowerMask(word8TypeMask)
+	Word16TypeTag  = newTypeTagFromLowerMask(word16TypeMask)
+	Word32TypeTag  = newTypeTagFromLowerMask(word32TypeMask)
+	Word64TypeTag  = newTypeTagFromLowerMask(word64TypeMask)
+	Word128TypeTag = newTypeTagFromLowerMask(word128TypeMask)
 
 	Fix64TypeTag  = newTypeTagFromLowerMask(fix64TypeMask)
 	UFix64TypeTag = newTypeTagFromLowerMask(ufix64TypeMask)
@@ -325,14 +331,16 @@ var (
 	ReferenceTypeTag     = newTypeTagFromLowerMask(referenceTypeMask)
 	GenericTypeTag       = newTypeTagFromLowerMask(genericTypeMask)
 	FunctionTypeTag      = newTypeTagFromLowerMask(functionTypeMask)
-	InterfaceTypeTag     = newTypeTagFromLowerMask(interfaceTypeMask)
+	InterfaceTypeTag     = newTypeTagFromUpperMask(interfaceTypeMask)
 
-	RestrictedTypeTag            = newTypeTagFromUpperMask(restrictedTypeMask)
-	CapabilityTypeTag            = newTypeTagFromUpperMask(capabilityTypeMask)
-	InvalidTypeTag               = newTypeTagFromUpperMask(invalidTypeMask)
-	TransactionTypeTag           = newTypeTagFromUpperMask(transactionTypeMask)
-	AnyResourceAttachmentTypeTag = newTypeTagFromUpperMask(anyResourceAttachmentMask)
-	AnyStructAttachmentTypeTag   = newTypeTagFromUpperMask(anyStructAttachmentMask)
+	RestrictedTypeTag                  = newTypeTagFromUpperMask(restrictedTypeMask)
+	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
+	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
+	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
+	AnyResourceAttachmentTypeTag       = newTypeTagFromUpperMask(anyResourceAttachmentMask)
+	AnyStructAttachmentTypeTag         = newTypeTagFromUpperMask(anyStructAttachmentMask)
+	StorageCapabilityControllerTypeTag = newTypeTagFromUpperMask(storageCapabilityControllerTypeMask)
+	AccountCapabilityControllerTypeTag = newTypeTagFromUpperMask(accountCapabilityControllerTypeMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -355,7 +363,9 @@ var (
 				Or(BlockTypeTag).
 				Or(DeployedContractTypeTag).
 				Or(CapabilityTypeTag).
-				Or(FunctionTypeTag)
+				Or(FunctionTypeTag).
+				Or(StorageCapabilityControllerTypeTag).
+				Or(AccountCapabilityControllerTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)
@@ -555,6 +565,8 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return Word32Type
 	case word64TypeMask:
 		return Word64Type
+	case word128TypeMask:
+		return Word128Type
 
 	case fix64TypeMask:
 		return Fix64Type
@@ -634,8 +646,7 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return commonSuperTypeOfDictionaries(types)
 	case referenceTypeMask,
 		genericTypeMask,
-		functionTypeMask,
-		interfaceTypeMask:
+		functionTypeMask:
 
 		return getSuperTypeOfDerivedTypes(types)
 	default:
@@ -653,12 +664,22 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 	// All derived types goes here.
 	case capabilityTypeMask,
 		restrictedTypeMask,
-		transactionTypeMask:
+		transactionTypeMask,
+		interfaceTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
+
 	case anyResourceAttachmentMask:
 		return AnyResourceAttachmentType
+
 	case anyStructAttachmentMask:
 		return AnyStructAttachmentType
+
+	case storageCapabilityControllerTypeMask:
+		return StorageCapabilityControllerType
+
+	case accountCapabilityControllerTypeMask:
+		return AccountCapabilityControllerType
+
 	default:
 		return nil
 	}
