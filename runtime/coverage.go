@@ -64,6 +64,7 @@ func (c *LocationCoverage) Percentage() string {
 		// location.
 		coveredLines = c.Statements
 	}
+
 	percentage := 100 * float64(coveredLines) / float64(c.Statements)
 	return fmt.Sprintf("%0.1f%%", percentage)
 }
@@ -245,6 +246,10 @@ func (r *CoverageReport) Percentage() string {
 // String returns a human-friendly message for the covered
 // statements percentage.
 func (r *CoverageReport) String() string {
+	percentage := r.Percentage()
+	if percentage == "NaN%" {
+		return fmt.Sprintf("There are no statements to cover")
+	}
 	return fmt.Sprintf("Coverage: %v of statements", r.Percentage())
 }
 
