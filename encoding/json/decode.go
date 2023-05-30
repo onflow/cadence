@@ -202,6 +202,8 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeWord32(valueJSON)
 	case word64TypeStr:
 		return d.decodeWord64(valueJSON)
+	case word128TypeStr:
+		return d.decodeWord128(valueJSON)
 	case fix64TypeStr:
 		return d.decodeFix64(valueJSON)
 	case ufix64TypeStr:
@@ -564,6 +566,24 @@ func (d *Decoder) decodeWord64(valueJSON any) cadence.Word64 {
 	}
 
 	return cadence.NewMeteredWord64(d.gauge, i)
+}
+
+func (d *Decoder) decodeWord128(valueJSON any) cadence.Word128 {
+	value, err := cadence.NewMeteredWord128FromBig(
+		d.gauge,
+		func() *big.Int {
+			bigInt := d.decodeBigInt(valueJSON)
+			if bigInt == nil {
+				// TODO: propagate toString error from decodeBigInt
+				panic(errors.NewDefaultUserError("invalid Word128: %s", valueJSON))
+			}
+			return bigInt
+		},
+	)
+	if err != nil {
+		panic(errors.NewDefaultUserError("invalid Word128: %w", err))
+	}
+	return value
 }
 
 func (d *Decoder) decodeFix64(valueJSON any) cadence.Fix64 {
@@ -1228,6 +1248,8 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return cadence.TheWord32Type
 	case "Word64":
 		return cadence.TheWord64Type
+	case "Word128":
+		return cadence.TheWord128Type
 	case "Fix64":
 		return cadence.TheFix64Type
 	case "UFix64":
@@ -1284,20 +1306,29 @@ func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 	)
 }
 
-func (d *Decoder) decodeCapability(valueJSON any) cadence.StorageCapability {
+func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
 
-	path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
-	if !ok {
-		panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
-	}
+	if id, ok := obj[idKey]; ok {
+		return cadence.NewMeteredIDCapability(
+			d.gauge,
+			d.decodeUInt64(id),
+			d.decodeAddress(obj.Get(addressKey)),
+			d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+		)
+	} else {
+		path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
+		if !ok {
+			panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
+		}
 
-	return cadence.NewMeteredStorageCapability(
-		d.gauge,
-		path,
-		d.decodeAddress(obj.Get(addressKey)),
-		d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
-	)
+		return cadence.NewMeteredPathCapability(
+			d.gauge,
+			d.decodeAddress(obj.Get(addressKey)),
+			path,
+			d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+		)
+	}
 }
 
 // JSON types

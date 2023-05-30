@@ -39,7 +39,8 @@ const (
 	MemoryKindOptionalValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
-	MemoryKindStorageCapabilityValue
+	MemoryKindIDCapabilityValue
+	MemoryKindPathCapabilityValue
 	MemoryKindPathLinkValue
 	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue
@@ -51,6 +52,8 @@ const (
 	MemoryKindBigInt
 	MemoryKindSimpleCompositeValue
 	MemoryKindPublishedValue
+	MemoryKindStorageCapabilityControllerValue
+	MemoryKindAccountCapabilityControllerValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
@@ -104,7 +107,8 @@ const (
 	MemoryKindCadenceAccountLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
-	MemoryKindCadenceStorageCapabilityValue
+	MemoryKindCadenceIDCapabilityValue
+	MemoryKindCadencePathCapabilityValue
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types

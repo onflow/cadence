@@ -1,0 +1,24 @@
+{
+  "networks": {
+    "emulator": "127.0.0.1:3569",
+    "mainnet": "access.mainnet.nodes.onflow.org:9000",
+    "sandboxnet": "access.sandboxnet.nodes.onflow.org:9000",
+    "testnet": "access.devnet.nodes.onflow.org:9000"
+  },
+  "contracts": {
+    "Crypto": "crypto.cdc"
+  },
+  "deployments": {
+    "emulator": {
+      "emulator-account": [
+        "Crypto"
+      ]
+    }
+  },
+  "accounts": {
+    "emulator-account": {
+      "address": "f8d6e0586b0a20c7",
+      "key": "b775d6da04a0b4819903d89a25395bfd90eb8559182255690c7c141edaeae923"
+    }
+  }
+}

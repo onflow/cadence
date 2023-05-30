@@ -91,8 +91,9 @@ func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionD
 
 	// Check parameter types
 
-	for _, parameter := range parameters {
+	for parameterIndex, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
+		astParameter := declaration.ParameterList.Parameters[parameterIndex]
 
 		// Ignore invalid parameter types
 
@@ -105,7 +106,8 @@ func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionD
 		if !parameterType.IsImportable(map[*Member]bool{}) {
 			checker.report(
 				&InvalidNonImportableTransactionParameterTypeError{
-					Type: parameterType,
+					Type:  parameterType,
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, astParameter),
 				},
 			)
 		}

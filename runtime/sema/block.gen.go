@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
 const BlockTypeHeightFieldName = "height"
 
 var BlockTypeHeightFieldType = UInt64Type
@@ -79,26 +81,34 @@ var BlockType = &SimpleType{
 func init() {
 	BlockType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				BlockTypeHeightFieldName,
 				BlockTypeHeightFieldType,
 				BlockTypeHeightFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				BlockTypeViewFieldName,
 				BlockTypeViewFieldType,
 				BlockTypeViewFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				BlockTypeTimestampFieldName,
 				BlockTypeTimestampFieldType,
 				BlockTypeTimestampFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
 				BlockTypeIdFieldName,
 				BlockTypeIdFieldType,
 				BlockTypeIdFieldDocString,

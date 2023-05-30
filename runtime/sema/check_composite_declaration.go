@@ -30,7 +30,8 @@ func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDecl
 	return
 }
 
-func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
+func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType, astBaseType *ast.NominalType) {
+
 	baseType := attachmentType.baseType
 
 	if baseType == nil {
@@ -42,6 +43,7 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 		if ty.CompositeKind.SupportsAttachments() {
 			return
 		}
+
 	case *CompositeType:
 		if ty.Location == nil {
 			break
@@ -49,8 +51,10 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 		if ty.Kind.SupportsAttachments() {
 			return
 		}
+
 	case *SimpleType:
-		if ty == AnyResourceType || ty == AnyStructType {
+		switch ty {
+		case AnyResourceType, AnyStructType, InvalidType:
 			return
 		}
 	}
@@ -58,6 +62,7 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 	checker.report(&InvalidBaseTypeError{
 		BaseType:   baseType,
 		Attachment: attachmentType,
+		Range:      ast.NewRangeFromPositioned(checker.memoryGauge, astBaseType),
 	})
 }
 
@@ -75,7 +80,10 @@ func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDe
 
 	checker.visitCompositeLikeDeclaration(declaration, kind)
 	attachmentType := checker.Elaboration.CompositeDeclarationType(declaration)
-	checker.checkAttachmentBaseType(attachmentType)
+	checker.checkAttachmentBaseType(
+		attachmentType,
+		declaration.BaseType,
+	)
 	return
 }
 

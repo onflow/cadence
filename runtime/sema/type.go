@@ -422,6 +422,34 @@ func FromStringFunctionType(ty Type) *FunctionType {
 	)
 }
 
+// fromBigEndianBytes
+
+const FromBigEndianBytesFunctionName = "fromBigEndianBytes"
+
+func FromBigEndianBytesFunctionDocstring(ty Type) string {
+	return fmt.Sprintf(
+		"Attempts to parse %s from a big-endian byte representation. Returns `nil` on invalid input.",
+		ty.String(),
+	)
+}
+
+func FromBigEndianBytesFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "bytes",
+				TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: ty,
+			},
+		),
+	}
+}
+
 // toBigEndianBytes
 
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
@@ -1544,6 +1572,14 @@ var (
 
 	Word64TypeAnnotation = NewTypeAnnotation(Word64Type)
 
+	// Word128Type represents the 128-bit unsigned integer type `Word128`
+	// which does NOT check for overflow and underflow
+	Word128Type = NewNumericType(Word128TypeName).
+			WithTag(Word128TypeTag).
+			WithIntRange(Word128TypeMinIntBig, Word128TypeMaxIntBig)
+
+	Word128TypeAnnotation = NewTypeAnnotation(Word128Type)
+
 	// FixedPointType represents the super-type of all fixed-point types
 	FixedPointType = NewNumericType(FixedPointTypeName).
 			WithTag(FixedPointTypeTag).
@@ -1670,6 +1706,19 @@ var (
 
 	Word64TypeMinInt = new(big.Int)
 	Word64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
+
+	// 1 << 128
+	Word128TypeMaxIntPlusOneBig = func() *big.Int {
+		word128TypeMaxPlusOne := big.NewInt(1)
+		word128TypeMaxPlusOne.Lsh(word128TypeMaxPlusOne, 128)
+		return word128TypeMaxPlusOne
+	}()
+	Word128TypeMinIntBig = new(big.Int)
+	Word128TypeMaxIntBig = func() *big.Int {
+		word128TypeMax := new(big.Int)
+		word128TypeMax.Sub(Word128TypeMaxIntPlusOneBig, big.NewInt(1))
+		return word128TypeMax
+	}()
 
 	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
 
@@ -2276,8 +2325,8 @@ func (t *VariableSizedType) IsImportable(results map[*Member]bool) bool {
 	return t.Type.IsImportable(results)
 }
 
-func (v *VariableSizedType) IsEquatable() bool {
-	return v.Type.IsEquatable()
+func (t *VariableSizedType) IsEquatable() bool {
+	return t.Type.IsEquatable()
 }
 
 func (t *VariableSizedType) IsComparable() bool {
@@ -3222,6 +3271,8 @@ func init() {
 		PublicKeyType,
 		SignatureAlgorithmType,
 		HashAlgorithmType,
+		StorageCapabilityControllerType,
+		AccountCapabilityControllerType,
 	)
 
 	for _, ty := range types {
@@ -3302,6 +3353,7 @@ var AllUnsignedIntegerTypes = []Type{
 	Word16Type,
 	Word32Type,
 	Word64Type,
+	Word128Type,
 }
 
 var AllIntegerTypes = append(
@@ -3429,6 +3481,16 @@ func init() {
 				fromStringDocstring,
 			))
 
+			// add .fromBigEndianBytes() method
+			fromBigEndianBytesFnType := FromBigEndianBytesFunctionType(numberType)
+			fromBigEndianBytesDocstring := FromBigEndianBytesFunctionDocstring(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromBigEndianBytesFunctionName,
+				fromBigEndianBytesFnType,
+				fromBigEndianBytesDocstring,
+			))
+
 			BaseValueActivation.Set(
 				typeName,
 				baseFunctionVariable(
@@ -3519,6 +3581,13 @@ var AddressTypeFromBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
 }
 
+const AddressTypeFromStringFunctionName = "fromString"
+const AddressTypeFromStringFunctionDocString = `
+Attempts to parse an Address from the input string. Returns nil on invalid input.
+`
+
+var AddressTypeFromStringFunctionType = FromStringFunctionType(TheAddressType)
+
 func init() {
 	// Declare a conversion function for the address type
 
@@ -3548,6 +3617,12 @@ func init() {
 		AddressTypeFromBytesFunctionName,
 		AddressTypeFromBytesFunctionType,
 		AddressTypeFromBytesFunctionDocString,
+	))
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		AddressTypeFromStringFunctionName,
+		AddressTypeFromStringFunctionType,
+		AddressTypeFromStringFunctionDocString,
 	))
 
 	BaseValueActivation.Set(
@@ -4188,10 +4263,45 @@ func NewPublicFunctionMember(
 	functionType *FunctionType,
 	docString string,
 ) *Member {
+	return NewFunctionMember(
+		memoryGauge,
+		containerType,
+		ast.AccessPublic,
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewUnmeteredFunctionMember(
+	containerType Type,
+	access ast.Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+	return NewFunctionMember(
+		nil,
+		containerType,
+		access,
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewFunctionMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access ast.Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
 
 	return &Member{
 		ContainerType: containerType,
-		Access:        ast.AccessPublic,
+		Access:        access,
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
@@ -4227,16 +4337,55 @@ func NewPublicConstantFieldMember(
 	fieldType Type,
 	docString string,
 ) *Member {
+	return NewFieldMember(
+		memoryGauge,
+		containerType,
+		ast.AccessPublic,
+		ast.VariableKindConstant,
+		identifier,
+		fieldType,
+		docString,
+	)
+}
+
+func NewUnmeteredFieldMember(
+	containerType Type,
+	access ast.Access,
+	variableKind ast.VariableKind,
+	identifier string,
+	fieldType Type,
+	docString string,
+) *Member {
+	return NewFieldMember(
+		nil,
+		containerType,
+		access,
+		variableKind,
+		identifier,
+		fieldType,
+		docString,
+	)
+}
+
+func NewFieldMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access ast.Access,
+	variableKind ast.VariableKind,
+	identifier string,
+	fieldType Type,
+	docString string,
+) *Member {
 	return &Member{
 		ContainerType: containerType,
-		Access:        ast.AccessPublic,
+		Access:        access,
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
 			ast.EmptyPosition,
 		),
 		DeclarationKind: common.DeclarationKindField,
-		VariableKind:    ast.VariableKindConstant,
+		VariableKind:    variableKind,
 		TypeAnnotation:  NewTypeAnnotation(fieldType),
 		DocString:       docString,
 	}
@@ -5534,7 +5683,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		case IntegerType, SignedIntegerType,
 			UIntType,
 			UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
-			Word8Type, Word16Type, Word32Type, Word64Type:
+			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type:
 
 			return true
 
@@ -6853,6 +7002,8 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 	}
 }
 
+const CapabilityTypeBorrowFunctionName = "borrow"
+
 const capabilityTypeBorrowFunctionDocString = `
 Returns a reference to the object targeted by the capability.
 
@@ -6862,22 +7013,32 @@ If there is an object stored, a reference is returned as an optional, provided i
 If the stored object cannot be borrowed using the given type, the function panics.
 `
 
+const CapabilityTypeCheckFunctionName = "check"
+
 const capabilityTypeCheckFunctionDocString = `
 Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
 `
 
+var CapabilityTypeAddressFieldType = TheAddressType
+
+const CapabilityTypeAddressFieldName = "address"
+
 const capabilityTypeAddressFieldDocString = `
 The address of the capability
+`
+
+var CapabilityTypeIDFieldType = UInt64Type
+
+const CapabilityTypeIDFieldName = "id"
+
+const capabilityTypeIDFieldDocString = `
+The ID of the capability
 `
 
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
 }
-
-const CapabilityTypeBorrowFunctionName = "borrow"
-const CapabilityTypeCheckFunctionName = "check"
-const CapabilityTypeAddressFieldName = "address"
 
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
@@ -6897,33 +7058,18 @@ func (t *CapabilityType) initializeMemberResolvers() {
 			NewUnmeteredPublicConstantFieldMember(
 				t,
 				CapabilityTypeAddressFieldName,
-				TheAddressType,
+				CapabilityTypeAddressFieldType,
 				capabilityTypeAddressFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				CapabilityTypeIDFieldName,
+				CapabilityTypeIDFieldType,
+				capabilityTypeIDFieldDocString,
 			),
 		})
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
-}
-
-var NativeCompositeTypes = map[string]*CompositeType{}
-
-func init() {
-	types := []*CompositeType{
-		AccountKeyType,
-		PublicKeyType,
-		HashAlgorithmType,
-		SignatureAlgorithmType,
-		AuthAccountType,
-		AuthAccountKeysType,
-		AuthAccountContractsType,
-		PublicAccountType,
-		PublicAccountKeysType,
-		PublicAccountContractsType,
-	}
-
-	for _, semaType := range types {
-		NativeCompositeTypes[semaType.QualifiedIdentifier()] = semaType
-	}
 }
 
 const AccountKeyTypeName = "AccountKey"
@@ -7166,4 +7312,40 @@ func isNumericSuperType(typ Type) bool {
 	}
 
 	return false
+}
+
+var NativeCompositeTypes = map[string]*CompositeType{}
+
+func init() {
+	compositeTypes := []*CompositeType{
+		AccountKeyType,
+		PublicKeyType,
+		HashAlgorithmType,
+		SignatureAlgorithmType,
+		AuthAccountType,
+		PublicAccountType,
+	}
+
+	for len(compositeTypes) > 0 {
+		lastIndex := len(compositeTypes) - 1
+		compositeType := compositeTypes[lastIndex]
+		compositeTypes[lastIndex] = nil
+		compositeTypes = compositeTypes[:lastIndex]
+
+		NativeCompositeTypes[compositeType.QualifiedIdentifier()] = compositeType
+
+		nestedTypes := compositeType.NestedTypes
+		if nestedTypes == nil {
+			continue
+		}
+
+		nestedTypes.Foreach(func(_ string, nestedType Type) {
+			nestedCompositeType, ok := nestedType.(*CompositeType)
+			if !ok {
+				return
+			}
+
+			compositeTypes = append(compositeTypes, nestedCompositeType)
+		})
+	}
 }
