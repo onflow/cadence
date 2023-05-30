@@ -269,6 +269,12 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 	case TypeVoid:
 		return cadence.TheVoidType, nil
 
+	case TypeAnyStructAttachmentType:
+		return cadence.TheAnyStructAttachmentType, nil
+
+	case TypeAnyResourceAttachmentType:
+		return cadence.TheAnyResourceAttachmentType, nil
+
 	default:
 		return nil, fmt.Errorf("unsupported encoded simple type ID %d", simpleTypeID)
 	}
