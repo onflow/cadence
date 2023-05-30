@@ -639,15 +639,21 @@ func (t *testEmulatorBackendType) newEventsFunction(
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.eventsFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value, ok := invocation.Arguments[0].(interpreter.OptionalValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
 			var eventType interpreter.StaticType = nil
-			_, isNilValue := value.(interpreter.NilValue)
-			if !isNilValue {
-				eventType = value.StaticType(invocation.Interpreter)
+
+			switch value := invocation.Arguments[0].(type) {
+			case interpreter.NilValue:
+				// Do nothing
+			case *interpreter.SomeValue:
+				innerValue := value.InnerValue(invocation.Interpreter, invocation.LocationRange)
+				typeValue, ok := innerValue.(interpreter.TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				eventType = typeValue.Type
+			default:
+				panic(errors.NewUnreachableError())
 			}
 
 			return testFramework.Events(invocation.Interpreter, eventType)
