@@ -67,7 +67,7 @@ type TestFramework interface {
 
 	Events(
 		inter *interpreter.Interpreter,
-		typeName string,
+		eventType interpreter.StaticType,
 	) interpreter.Value
 
 	Reset()

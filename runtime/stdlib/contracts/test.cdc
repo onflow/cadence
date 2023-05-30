@@ -112,14 +112,14 @@ pub contract Test {
         /// Returns all events emitted from the blockchain.
         ///
         pub fun events(): [AnyStruct] {
-            return self.backend.events("")
+            return self.backend.events(nil)
         }
 
         /// Returns all events emitted from the blockchain,
         /// filtered by type.
         ///
         pub fun eventsOfType(_ type: Type): [AnyStruct] {
-            return self.backend.events(type.identifier)
+            return self.backend.events(type)
         }
 
         /// Resets the state of the blockchain.
@@ -301,9 +301,9 @@ pub contract Test {
         pub fun serviceAccount(): Account
 
         /// Returns all events emitted from the blockchain, optionally filtered
-        /// by type name.
+        /// by type.
         ///
-        pub fun events(_ typeName: String): [AnyStruct]
+        pub fun events(_ type: Type?): [AnyStruct]
 
         /// Resets the state of the blockchain.
         ///

@@ -639,12 +639,18 @@ func (t *testEmulatorBackendType) newEventsFunction(
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.eventsFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			eventType, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			value, ok := invocation.Arguments[0].(interpreter.OptionalValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			return testFramework.Events(invocation.Interpreter, eventType.Str)
+			var eventType interpreter.StaticType = nil
+			_, isNilValue := value.(interpreter.NilValue)
+			if !isNilValue {
+				eventType = value.StaticType(invocation.Interpreter)
+			}
+
+			return testFramework.Events(invocation.Interpreter, eventType)
 		},
 	)
 }
