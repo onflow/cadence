@@ -42,6 +42,10 @@ type testEmulatorBackendType struct {
 	commitBlockFunctionType            *sema.FunctionType
 	deployContractFunctionType         *sema.FunctionType
 	useConfigFunctionType              *sema.FunctionType
+	logsFunctionType                   *sema.FunctionType
+	serviceAccountFunctionType         *sema.FunctionType
+	eventsFunctionType                 *sema.FunctionType
+	resetFunctionType                  *sema.FunctionType
 }
 
 func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceType) *testEmulatorBackendType {
@@ -78,6 +82,26 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 	useConfigFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeUseConfigFunctionName,
+	)
+
+	logsFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeLogsFunctionName,
+	)
+
+	serviceAccountFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeServiceAccountFunctionName,
+	)
+
+	eventsFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeEventsFunctionName,
+	)
+
+	resetFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeResetFunctionName,
 	)
 
 	compositeType := &sema.CompositeType{
@@ -132,6 +156,30 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 			useConfigFunctionType,
 			testEmulatorBackendTypeUseConfigFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeLogsFunctionName,
+			logsFunctionType,
+			testEmulatorBackendTypeLogsFunctionDocString,
+		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeServiceAccountFunctionName,
+			serviceAccountFunctionType,
+			testEmulatorBackendTypeServiceAccountFunctionDocString,
+		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeEventsFunctionName,
+			eventsFunctionType,
+			testEmulatorBackendTypeEventsFunctionDocString,
+		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeResetFunctionName,
+			resetFunctionType,
+			testEmulatorBackendTypeResetFunctionDocString,
+		),
 	}
 
 	compositeType.Members = sema.MembersAsMap(members)
@@ -146,6 +194,10 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 		commitBlockFunctionType:            commitBlockFunctionType,
 		deployContractFunctionType:         deployContractFunctionType,
 		useConfigFunctionType:              useConfigFunctionType,
+		logsFunctionType:                   logsFunctionType,
+		serviceAccountFunctionType:         serviceAccountFunctionType,
+		eventsFunctionType:                 eventsFunctionType,
+		resetFunctionType:                  resetFunctionType,
 	}
 }
 
@@ -494,6 +546,135 @@ func (t *testEmulatorBackendType) newUseConfigFunction(testFramework TestFramewo
 	)
 }
 
+// 'EmulatorBackend.logs' function
+
+const testEmulatorBackendTypeLogsFunctionName = "logs"
+
+const testEmulatorBackendTypeLogsFunctionDocString = `
+Returns all the logs from the blockchain, up to the calling point.
+`
+
+func (t *testEmulatorBackendType) newLogsFunction(
+	testFramework TestFramework,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.logsFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			logs := testFramework.Logs()
+			inter := invocation.Interpreter
+
+			arrayType := interpreter.NewVariableSizedStaticType(
+				inter,
+				interpreter.NewPrimitiveStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeString,
+				),
+			)
+
+			values := make([]interpreter.Value, len(logs))
+			for i, log := range logs {
+				memoryUsage := common.NewStringMemoryUsage(len(log))
+				values[i] = interpreter.NewStringValue(
+					inter,
+					memoryUsage,
+					func() string {
+						return log
+					},
+				)
+			}
+
+			return interpreter.NewArrayValue(
+				inter,
+				invocation.LocationRange,
+				arrayType,
+				common.ZeroAddress,
+				values...,
+			)
+		},
+	)
+}
+
+// 'EmulatorBackend.serviceAccount' function
+
+const testEmulatorBackendTypeServiceAccountFunctionName = "serviceAccount"
+
+const testEmulatorBackendTypeServiceAccountFunctionDocString = `
+Returns the service account of the blockchain. Can be used to sign
+transactions with this account.
+`
+
+func (t *testEmulatorBackendType) newServiceAccountFunction(
+	testFramework TestFramework,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.serviceAccountFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			serviceAccount, err := testFramework.ServiceAccount()
+			if err != nil {
+				panic(err)
+			}
+
+			return newTestAccountValue(
+				testFramework,
+				invocation.Interpreter,
+				invocation.LocationRange,
+				serviceAccount,
+			)
+		},
+	)
+}
+
+// 'EmulatorBackend.events' function
+
+const testEmulatorBackendTypeEventsFunctionName = "events"
+
+const testEmulatorBackendTypeEventsFunctionDocString = `
+Returns all events emitted from the blockchain,
+optionally filtered by event type.
+`
+
+func (t *testEmulatorBackendType) newEventsFunction(
+	testFramework TestFramework,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.eventsFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			value, ok := invocation.Arguments[0].(interpreter.OptionalValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			var eventType interpreter.StaticType = nil
+			_, isNilValue := value.(interpreter.NilValue)
+			if !isNilValue {
+				eventType = value.StaticType(invocation.Interpreter)
+			}
+
+			return testFramework.Events(invocation.Interpreter, eventType)
+		},
+	)
+}
+
+// 'EmulatorBackend.reset' function
+
+const testEmulatorBackendTypeResetFunctionName = "reset"
+
+const testEmulatorBackendTypeResetFunctionDocString = `
+Resets the state of the blockchain.
+`
+
+func (t *testEmulatorBackendType) newResetFunction(
+	testFramework TestFramework,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.eventsFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			testFramework.Reset()
+			return interpreter.Void
+		},
+	)
+}
+
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
@@ -526,6 +707,22 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		{
 			Name:  testEmulatorBackendTypeUseConfigFunctionName,
 			Value: t.newUseConfigFunction(testFramework),
+		},
+		{
+			Name:  testEmulatorBackendTypeLogsFunctionName,
+			Value: t.newLogsFunction(testFramework),
+		},
+		{
+			Name:  testEmulatorBackendTypeServiceAccountFunctionName,
+			Value: t.newServiceAccountFunction(testFramework),
+		},
+		{
+			Name:  testEmulatorBackendTypeEventsFunctionName,
+			Value: t.newEventsFunction(testFramework),
+		},
+		{
+			Name:  testEmulatorBackendTypeResetFunctionName,
+			Value: t.newResetFunction(testFramework),
 		},
 	}
 
