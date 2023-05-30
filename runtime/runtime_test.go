@@ -149,7 +149,13 @@ func (r testInterpreterRuntime) ExecuteTransaction(script Script, context Contex
 func (r testInterpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
 	i := context.Interface.(*testRuntimeInterface)
 	i.onScriptExecutionStart()
-	return r.interpreterRuntime.ExecuteScript(script, context)
+	value, err := r.interpreterRuntime.ExecuteScript(script, context)
+	// If there was a return value, let's also ensure it can be encoded
+	// TODO: also test CCF
+	if value != nil && err == nil {
+		_ = jsoncdc.MustEncode(value)
+	}
+	return value, err
 }
 
 type testRuntimeInterface struct {

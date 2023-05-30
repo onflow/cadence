@@ -1466,8 +1466,11 @@ func TestExportStructValue(t *testing.T) {
 	}
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{cadence.NewInt(42)}).
-		WithType(fooStructType)
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewStruct([]cadence.Value{
+			cadence.NewInt(42),
+		}).WithType(fooStructType),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1491,11 +1494,12 @@ func TestExportResourceValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected :=
+	expected := cadence.ValueWithCachedTypeID(
 		cadence.NewResource([]cadence.Value{
 			cadence.NewUInt64(0),
 			cadence.NewInt(42),
-		}).WithType(newFooResourceType())
+		}).WithType(newFooResourceType()),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1520,32 +1524,37 @@ func TestExportResourceArrayValue(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewArray([]cadence.Value{
-		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(1),
-		}).WithType(fooResourceType),
-		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(2),
-		}).WithType(fooResourceType),
-	}).WithType(&cadence.VariableSizedArrayType{
-		ElementType: &cadence.ResourceType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "uuid",
-					Type:       cadence.UInt64Type{},
-				},
-				{
-					Identifier: "bar",
-					Type:       cadence.IntType{},
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewArray([]cadence.Value{
+			cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(0),
+				cadence.NewInt(1),
+			}).WithType(fooResourceType),
+			cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(0),
+				cadence.NewInt(2),
+			}).WithType(fooResourceType),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: &cadence.ResourceType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "uuid",
+						Type:       cadence.UInt64Type{},
+					},
+					{
+						Identifier: "bar",
+						Type:       cadence.IntType{},
+					},
 				},
 			},
-		},
-	})
+		}),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1573,39 +1582,44 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewDictionary([]cadence.KeyValuePair{
-		{
-			Key: cadence.String("b"),
-			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(2),
-			}).WithType(fooResourceType),
-		},
-		{
-			Key: cadence.String("a"),
-			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(1),
-			}).WithType(fooResourceType),
-		},
-	}).WithType(&cadence.DictionaryType{
-		KeyType: cadence.StringType{},
-		ElementType: &cadence.ResourceType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "uuid",
-					Type:       cadence.UInt64Type{},
-				},
-				{
-					Identifier: "bar",
-					Type:       cadence.IntType{},
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key: cadence.String("b"),
+				Value: cadence.NewResource([]cadence.Value{
+					cadence.NewUInt64(0),
+					cadence.NewInt(2),
+				}).WithType(fooResourceType),
+			},
+			{
+				Key: cadence.String("a"),
+				Value: cadence.NewResource([]cadence.Value{
+					cadence.NewUInt64(0),
+					cadence.NewInt(1),
+				}).WithType(fooResourceType),
+			},
+		}).WithType(&cadence.DictionaryType{
+			KeyType: cadence.StringType{},
+			ElementType: &cadence.ResourceType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "uuid",
+						Type:       cadence.UInt64Type{},
+					},
+					{
+						Identifier: "bar",
+						Type:       cadence.IntType{},
+					},
 				},
 			},
-		},
-	})
+		}),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1670,14 +1684,18 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
         }
     `
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewResource([]cadence.Value{
-		cadence.NewUInt64(0),
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+	expected := cadence.ValueWithCachedTypeID(
 		cadence.NewResource([]cadence.Value{
 			cadence.NewUInt64(0),
-			cadence.NewInt(42),
-		}).WithType(barResourceType),
-	}).WithType(fooResourceType)
+			cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(0),
+				cadence.NewInt(42),
+			}).WithType(barResourceType),
+		}).WithType(fooResourceType),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -2444,15 +2462,20 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 		},
 	}
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{
-		cadence.NewInt(42),
-		cadence.Function{
-			FunctionType: &cadence.FunctionType{
-				ReturnType: cadence.VoidType{},
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewStruct([]cadence.Value{
+			cadence.NewInt(42),
+			cadence.Function{
+				FunctionType: &cadence.FunctionType{
+					ReturnType: cadence.VoidType{},
+				},
 			},
-		},
-	}).WithType(fooStructType)
+		}).WithType(fooStructType),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -2539,24 +2562,28 @@ func TestRuntimeEnumValue(t *testing.T) {
 
 	t.Parallel()
 
-	enumValue := cadence.Enum{
-		EnumType: &cadence.EnumType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Direction",
-			Fields: []cadence.Field{
-				{
-					Identifier: sema.EnumRawValueFieldName,
-					Type:       cadence.IntType{},
+	newEnumValue := func() cadence.Enum {
+		return cadence.Enum{
+			EnumType: &cadence.EnumType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Direction",
+				Fields: []cadence.Field{
+					{
+						Identifier: sema.EnumRawValueFieldName,
+						Type:       cadence.IntType{},
+					},
 				},
+				RawType: cadence.IntType{},
 			},
-			RawType: cadence.IntType{},
-		},
-		Fields: []cadence.Value{
-			cadence.NewInt(3),
-		},
+			Fields: []cadence.Value{
+				cadence.NewInt(3),
+			},
+		}
 	}
 
 	t.Run("test export", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): Direction {
                 return Direction.RIGHT
@@ -2570,11 +2597,18 @@ func TestRuntimeEnumValue(t *testing.T) {
             }
         `
 
+		expected := newEnumValue()
 		actual := exportValueFromScript(t, script)
-		assert.Equal(t, enumValue, actual)
+
+		assert.Equal(t,
+			cadence.ValueWithCachedTypeID(expected),
+			cadence.ValueWithCachedTypeID(actual),
+		)
 	})
 
 	t.Run("test import", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(dir: Direction): Direction {
                 if !dir.isInstance(Type<Direction>()) {
@@ -2592,9 +2626,11 @@ func TestRuntimeEnumValue(t *testing.T) {
             }
         `
 
-		actual, err := executeTestScript(t, script, enumValue)
+		expected := newEnumValue()
+		actual, err := executeTestScript(t, script, expected)
 		require.NoError(t, err)
-		assert.Equal(t, enumValue, actual)
+
+		assert.Equal(t, expected, actual)
 	})
 }
 
