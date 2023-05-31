@@ -419,13 +419,26 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 		return d.decodeValue(t.Type, types)
 
 	default:
-		err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
+		nt, err := d.dec.NextType()
 		if err != nil {
-			return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %s", t.ID(), t, err.Error())
+			return nil, err
 		}
 
-		// Decode ccf-type-and-value-message.
-		return d.decodeTypeAndValue(types)
+		switch nt {
+		case cbor.NilType:
+			// Decode nil value (such as cyclic reference value).
+			err := d.dec.DecodeNil()
+			return nil, err
+
+		default:
+			err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
+			if err != nil {
+				return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %s", t.ID(), t, err.Error())
+			}
+
+			// Decode ccf-type-and-value-message.
+			return d.decodeTypeAndValue(types)
+		}
 	}
 }
 
