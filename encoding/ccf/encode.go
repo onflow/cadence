@@ -343,6 +343,10 @@ func (e *Encoder) encodeValue(
 	tids ccfTypeIDByCadenceType,
 ) error {
 
+	if v == nil {
+		return e.enc.EncodeNil()
+	}
+
 	runtimeType := v.Type()
 
 	// CCF requires value to have non-nil type.

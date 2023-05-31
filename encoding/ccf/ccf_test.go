@@ -14443,3 +14443,93 @@ func TestEncodeValueOfRestrictedInterface(t *testing.T) {
 		},
 	)
 }
+
+func TestCyclicReferenceValue(t *testing.T) {
+
+	// Test data is from TestRuntimeScriptReturnSpecial in runtime_test.go
+	t.Run("recursive reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+			pub fun main(): AnyStruct {
+				let refs: [&AnyStruct] = []
+				refs.append(&refs as &AnyStruct)
+				return refs
+			}
+        `
+
+		actual := exportFromScript(t, script)
+
+		expected := cadence.NewArray([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				nil,
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: &cadence.ReferenceType{
+					Type: cadence.AnyStructType{},
+				},
+			}),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: &cadence.ReferenceType{
+				Type: cadence.AnyStructType{},
+			},
+		})
+
+		assert.Equal(t, expected, actual)
+
+		testEncodeAndDecode(
+			t,
+			expected,
+			[]byte{
+				// language=json, format=json-cdc
+				// {"value":[{"value":[null],"type":"Array"}],"type":"Array"}
+				//
+				// language=edn, format=ccf
+				// 130([139(142([false, 137(39)])), [130([139(142([false, 137(39)])), [null]])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// static type
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayType,
+				// tag
+				0xd8, ccf.CBORTagReferenceType,
+				// array, 2 items follow
+				0x82,
+				// false
+				0xf4,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+
+				// data
+				// array, 1 items follow
+				0x81,
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayType,
+				// tag
+				0xd8, ccf.CBORTagReferenceType,
+				// array, 2 items follow
+				0x82,
+				// false
+				0xf4,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+				// array, 1 items follow
+				0x81,
+				// nil
+				0xf6,
+			},
+		)
+	})
+}
