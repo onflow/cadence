@@ -17,6 +17,9 @@ linters:
     - goimports
     - unconvert
     - nilerr
+    - forbidigo
+    - bidichk
+    - asciicheck
 
 issues:
   exclude-rules:
@@ -38,6 +41,10 @@ linters-settings:
       - exitAfterDefer
   goimports:
     local-prefixes: github.com/onflow/cadence
+  forbidigo:
+    forbid:
+      - '^maps.Keys.*(# has indeterminate order\.)?$'
+      - '^maps.Values.*(# has indeterminate order\.)?$'
   custom:
     maprange:
       path: tools/maprange/maprange.so
