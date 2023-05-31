@@ -615,6 +615,8 @@ func prepareAttachment(v cadence.Attachment) jsonValue {
 }
 
 func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {
+	// Ensure there are _at least _ as many field values as field types.
+	// There might be more field values in the case of attachments.
 	if len(fields) < len(fieldTypes) {
 		panic(fmt.Errorf(
 			"%s field count (%d) does not match declared type (%d)",
@@ -628,6 +630,9 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 
 	for i, value := range fields {
 		var name string
+		// Provide the field name, if the field type is available.
+		// In the case of attachments, they are provided as field values,
+		// but there is no corresponding field type.
 		if i < len(fieldTypes) {
 			fieldType := fieldTypes[i]
 			name = fieldType.Identifier
