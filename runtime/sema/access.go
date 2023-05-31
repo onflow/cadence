@@ -22,9 +22,8 @@ import (
 	"fmt"
 	"strings"
 
-	"golang.org/x/exp/maps"
-
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -292,11 +291,13 @@ func (e EntitlementMapAccess) Domain() EntitlementSetAccess {
 		return e.domain
 	}
 
-	domain := make(map[*EntitlementType]struct{})
-	for _, relation := range e.Type.Relations {
-		domain[relation.Input] = struct{}{}
-	}
-	e.domain = NewEntitlementSetAccess(maps.Keys(domain), Disjunction)
+	domain := common.MappedSliceWithNoDuplicates(
+		e.Type.Relations,
+		func(r EntitlementRelation) *EntitlementType {
+			return r.Input
+		},
+	)
+	e.domain = NewEntitlementSetAccess(domain, Disjunction)
 	return e.domain
 }
 
@@ -305,11 +306,13 @@ func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
 		return e.codomain
 	}
 
-	codomain := make(map[*EntitlementType]struct{})
-	for _, relation := range e.Type.Relations {
-		codomain[relation.Output] = struct{}{}
-	}
-	e.codomain = NewEntitlementSetAccess(maps.Keys(codomain), Conjunction)
+	codomain := common.MappedSliceWithNoDuplicates(
+		e.Type.Relations,
+		func(r EntitlementRelation) *EntitlementType {
+			return r.Output
+		},
+	)
+	e.codomain = NewEntitlementSetAccess(codomain, Conjunction)
 	return e.codomain
 }
 
