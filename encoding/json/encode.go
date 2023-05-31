@@ -253,6 +253,7 @@ const (
 	dictionaryTypeStr  = "Dictionary"
 	structTypeStr      = "Struct"
 	resourceTypeStr    = "Resource"
+	attachmentTypeStr  = "Attachment"
 	eventTypeStr       = "Event"
 	contractTypeStr    = "Contract"
 	linkTypeStr        = "Link"
@@ -350,8 +351,12 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareIDCapability(v)
 	case cadence.Enum:
 		return prepareEnum(v)
+	case cadence.Attachment:
+		return prepareAttachment(v)
 	case cadence.Function:
 		return prepareFunction(v)
+	case nil:
+		return nil
 	default:
 		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
@@ -605,8 +610,14 @@ func prepareEnum(v cadence.Enum) jsonValue {
 	return prepareComposite(enumTypeStr, v.EnumType.ID(), v.EnumType.Fields, v.Fields)
 }
 
+func prepareAttachment(v cadence.Attachment) jsonValue {
+	return prepareComposite(attachmentTypeStr, v.AttachmentType.ID(), v.AttachmentType.Fields, v.Fields)
+}
+
 func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {
-	if len(fieldTypes) != len(fields) {
+	// Ensure there are _at least _ as many field values as field types.
+	// There might be more field values in the case of attachments.
+	if len(fields) < len(fieldTypes) {
 		panic(fmt.Errorf(
 			"%s field count (%d) does not match declared type (%d)",
 			kind,
@@ -618,10 +629,17 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	compositeFields := make([]jsonCompositeField, len(fields))
 
 	for i, value := range fields {
-		fieldType := fieldTypes[i]
+		var name string
+		// Provide the field name, if the field type is available.
+		// In the case of attachments, they are provided as field values,
+		// but there is no corresponding field type.
+		if i < len(fieldTypes) {
+			fieldType := fieldTypes[i]
+			name = fieldType.Identifier
+		}
 
 		compositeFields[i] = jsonCompositeField{
-			Name:  fieldType.Identifier,
+			Name:  name,
 			Value: Prepare(value),
 		}
 	}
