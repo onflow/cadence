@@ -93,9 +93,9 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 		attachmentAccess = *attachmentType.attachmentEntitlementAccess
 	}
 
-	attachmentType.Members.Foreach(func(_ string, member *Member) {
-		if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
-			codomain := attachmentAccess.Codomain()
+	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
+		codomain := attachmentAccess.Codomain()
+		attachmentType.Members.Foreach(func(_ string, member *Member) {
 			if memberAccess, ok := member.Access.(EntitlementSetAccess); ok {
 				memberAccess.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 					if !codomain.Entitlements.Contains(entitlement) {
@@ -108,8 +108,12 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 					}
 				})
 			}
-			return
-		}
+		})
+		return
+	}
+
+	// if the attachment's access is public, its members may not have entitlement access
+	attachmentType.Members.Foreach(func(_ string, member *Member) {
 		if _, ok := member.Access.(PrimitiveAccess); ok {
 			return
 		}
@@ -120,6 +124,7 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 		})
 
 	})
+
 }
 
 func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {

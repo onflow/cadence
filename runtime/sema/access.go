@@ -338,7 +338,7 @@ func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (ou
 // Image applies all the entitlements in the `argumentAccess` to the function
 // defined by the map in `e`, producing a new entitlement set of the image of the
 // arguments.
-func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, error) {
+func (e EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map
 	case PrimitiveAccess:
@@ -357,7 +357,7 @@ func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, 
 				err = &UnrepresentableEntitlementMapOutputError{
 					Input: inputs,
 					Map:   e.Type,
-					Range: astRange,
+					Range: astRange(),
 				}
 			}
 			output.SetAll(entitlementImage)
