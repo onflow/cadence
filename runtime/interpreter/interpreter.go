@@ -4534,7 +4534,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 		switch selfValue := self.(type) {
 		case AuthorizedValue:
 			selfAccess := interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization())
-			imageAccess, err := mappedAccess.Image(selfAccess, ast.EmptyRange)
+			imageAccess, err := mappedAccess.Image(selfAccess, func() ast.Range { return ast.EmptyRange })
 			if err != nil {
 				panic(err)
 			}

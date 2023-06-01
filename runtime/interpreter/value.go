@@ -15314,7 +15314,7 @@ func attachmentReferenceAuthorization(
 	if attachmentType.AttachmentEntitlementAccess == nil {
 		return attachmentReferenceAuth, nil
 	}
-	attachmentReferenceAccess, err := attachmentType.AttachmentEntitlementAccess.Image(baseAccess, ast.EmptyRange)
+	attachmentReferenceAccess, err := attachmentType.AttachmentEntitlementAccess.Image(baseAccess, func() ast.Range { return ast.EmptyRange })
 	if err != nil {
 		return nil, err
 	}

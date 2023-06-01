@@ -385,7 +385,7 @@ func (checker *Checker) checkTypeIndexingExpression(
 
 	// at this point, the base is known to be a struct/resource,
 	// and the attachment is known to be a valid attachment for that base
-	indexedType, err := base.TypeIndexingElementType(nominalType, ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression))
+	indexedType, err := base.TypeIndexingElementType(nominalType, func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression) })
 	if err != nil {
 		checker.report(err)
 		return InvalidType
