@@ -265,7 +265,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 
 		// Check access and report if inaccessible
-		accessRange := ast.NewRangeFromPositioned(checker.memoryGauge, expression)
+		accessRange := func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, expression) }
 		isReadable, resultingAuthorization := checker.isReadableMember(accessedType, member, accessRange)
 		if !isReadable {
 			checker.report(
@@ -273,7 +273,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 					Name:              member.Identifier.Identifier,
 					RestrictingAccess: member.Access,
 					DeclarationKind:   member.DeclarationKind,
-					Range:             accessRange,
+					Range:             accessRange(),
 				},
 			)
 		}
@@ -331,7 +331,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 // isReadableMember returns true if the given member can be read from
 // in the current location of the checker, along with the authorzation with which the result can be used
-func (checker *Checker) isReadableMember(accessedType Type, member *Member, accessRange ast.Range) (bool, Access) {
+func (checker *Checker) isReadableMember(accessedType Type, member *Member, accessRange func() ast.Range) (bool, Access) {
 	var mapAccess func(EntitlementMapAccess, Type) (bool, Access)
 	mapAccess = func(mappedAccess EntitlementMapAccess, accessedType Type) (bool, Access) {
 		switch ty := accessedType.(type) {

@@ -339,7 +339,8 @@ func (e *Encoder) encodeReferenceTypeWithRawTag(
 	}
 
 	// element 0: authorized as bool
-	err = e.enc.EncodeBool(typ.Authorized)
+	// TODO: implement in later PR
+	// err = e.enc.EncodeBool(typ.Authorized)
 	if err != nil {
 		return err
 	}
