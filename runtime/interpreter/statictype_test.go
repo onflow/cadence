@@ -1346,12 +1346,10 @@ func TestStaticTypeConversion(t *testing.T) {
 		{
 			name: "Reference",
 			semaType: &sema.ReferenceType{
-				Type:       sema.IntType,
-				Authorized: true,
+				Type: sema.IntType,
 			},
 			staticType: ReferenceStaticType{
 				BorrowedType: PrimitiveStaticTypeInt,
-				Authorized:   true,
 			},
 		},
 		{
@@ -1448,6 +1446,9 @@ func TestStaticTypeConversion(t *testing.T) {
 				test.staticType,
 				getInterface,
 				getComposite,
+				// dummy values, will replace in later PR
+				nil,
+				nil,
 			)
 			require.NoError(t, err)
 			require.Equal(t,
