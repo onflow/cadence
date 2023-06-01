@@ -3533,7 +3533,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 			0xd8, CBORTagEntitlementSetStaticAuthorization,
 			// array, length 2
 			0x82,
-			// conjunction
+			// Disjunction
 			0x01,
 			// array, length 2
 			0x82,
