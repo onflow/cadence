@@ -953,25 +953,23 @@ func defineIdentifierTypes() {
 
 				var authorization ast.Authorization
 
-				current := p.current
-				if current.Is(lexer.TokenParenOpen) {
-					_, err := p.mustOne(lexer.TokenParenOpen)
-					if err != nil {
-						return nil, err
-					}
-					entitlements, err := parseEntitlementList(p)
-					if err != nil {
-						return nil, err
-					}
-					authorization.EntitlementSet = entitlements
-					_, err = p.mustOne(lexer.TokenParenClose)
-					if err != nil {
-						return nil, err
-					}
-					p.skipSpaceAndComments()
+				_, err := p.mustOne(lexer.TokenParenOpen)
+				if err != nil {
+					return nil, err
 				}
 
-				_, err := p.mustOne(lexer.TokenAmpersand)
+				entitlements, err := parseEntitlementList(p)
+				if err != nil {
+					return nil, err
+				}
+				authorization.EntitlementSet = entitlements
+				_, err = p.mustOne(lexer.TokenParenClose)
+				if err != nil {
+					return nil, err
+				}
+				p.skipSpaceAndComments()
+
+				_, err = p.mustOne(lexer.TokenAmpersand)
 				if err != nil {
 					return nil, err
 				}

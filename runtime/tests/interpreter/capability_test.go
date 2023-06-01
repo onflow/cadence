@@ -1148,7 +1148,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedReference := interpreter.NewUnmeteredStorageReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			address.ToAddress(),
 			interpreter.NewUnmeteredPathValue(
 				common.PathDomainStorage,

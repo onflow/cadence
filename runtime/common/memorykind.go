@@ -71,6 +71,9 @@ const (
 	MemoryKindDictionaryStaticType
 	MemoryKindOptionalStaticType
 	MemoryKindRestrictedStaticType
+	MemoryKindUnauthorizedStaticAccess
+	MemoryKindEntitlementSetStaticAccess
+	MemoryKindEntitlementMapStaticAccess
 	MemoryKindReferenceStaticType
 	MemoryKindCapabilityStaticType
 	MemoryKindFunctionStaticType
@@ -124,6 +127,8 @@ const (
 	MemoryKindCadenceResourceInterfaceType
 	MemoryKindCadenceContractInterfaceType
 	MemoryKindCadenceFunctionType
+	MemoryKindCadenceEntitlementSetAccess
+	MemoryKindCadenceEntitlementMapAccess
 	MemoryKindCadenceReferenceType
 	MemoryKindCadenceRestrictedType
 	MemoryKindCadenceCapabilityType

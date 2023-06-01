@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -188,7 +189,7 @@ type TypeIndexableType interface {
 	Type
 	isTypeIndexableType() bool
 	IsValidIndexingType(indexingType Type) bool
-	TypeIndexingElementType(indexingType Type) Type
+	TypeIndexingElementType(indexingType Type, astRange func() ast.Range) (Type, error)
 }
 
 type MemberResolver struct {
@@ -206,6 +207,12 @@ type MemberResolver struct {
 type NominalType interface {
 	Type
 	MemberMap() *StringMemberOrderedMap
+}
+
+// entitlement supporting types
+type EntitlementSupportingType interface {
+	Type
+	SupportedEntitlements() *EntitlementOrderedSet
 }
 
 // ContainedType is a type which might have a container type
@@ -634,6 +641,13 @@ func (t *OptionalType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 	return &OptionalType{
 		Type: newInnerType,
 	}
+}
+
+func (t *OptionalType) SupportedEntitlements() *EntitlementOrderedSet {
+	if entitlementSupportingType, ok := t.Type.(EntitlementSupportingType); ok {
+		return entitlementSupportingType.SupportedEntitlements()
+	}
+	return nil
 }
 
 const optionalTypeMapFunctionDocString = `
@@ -3694,12 +3708,14 @@ type CompositeType struct {
 	EnumRawType   Type
 	containerType Type
 	NestedTypes   *StringTypeOrderedMap
+
 	// in a language with support for algebraic data types,
 	// we would implement this as an argument to the CompositeKind type constructor.
 	// Alas, this is Go, so for now these fields are only non-nil when Kind is CompositeKindAttachment
-	baseType             Type
-	baseTypeDocString    string
-	requiredEntitlements *EntitlementOrderedSet
+	baseType                    Type
+	baseTypeDocString           string
+	requiredEntitlements        *EntitlementOrderedSet
+	attachmentEntitlementAccess *EntitlementMapAccess
 
 	cachedIdentifiers *struct {
 		TypeID              TypeID
@@ -3721,7 +3737,8 @@ type CompositeType struct {
 	ConstructorPurity                   FunctionPurity
 	hasComputedMembers                  bool
 	// Only applicable for native composite types
-	importable bool
+	importable            bool
+	supportedEntitlements *EntitlementOrderedSet
 }
 
 var _ Type = &CompositeType{}
@@ -3880,6 +3897,29 @@ func (t *CompositeType) Equal(other Type) bool {
 
 func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
+}
+
+func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	supportedEntitlements := t.supportedEntitlements
+	if supportedEntitlements != nil {
+		return supportedEntitlements
+	}
+
+	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
+	t.Members.Foreach(func(_ string, member *Member) {
+		switch access := member.Access.(type) {
+		case EntitlementMapAccess:
+			set.SetAll(access.Domain().Entitlements)
+		case EntitlementSetAccess:
+			set.SetAll(access.Entitlements)
+		}
+	})
+	t.ExplicitInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
+		set.SetAll(it.SupportedEntitlements())
+	})
+
+	t.supportedEntitlements = set
+	return set
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -4065,12 +4105,22 @@ func (t *CompositeType) isTypeIndexableType() bool {
 	return t.Kind.SupportsAttachments()
 }
 
-func (t *CompositeType) TypeIndexingElementType(indexingType Type) Type {
+func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
+	var access Access = UnauthorizedAccess
+	switch attachment := indexingType.(type) {
+	case *CompositeType:
+		attachmentEntitlementAccess := attachment.attachmentEntitlementAccess
+		if attachmentEntitlementAccess != nil {
+			access = attachmentEntitlementAccess.Codomain()
+		}
+	}
+
 	return &OptionalType{
 		Type: &ReferenceType{
-			Type: indexingType,
+			Type:          indexingType,
+			Authorization: access,
 		},
-	}
+	}, nil
 }
 
 func (t *CompositeType) IsValidIndexingType(ty Type) bool {
@@ -4318,6 +4368,7 @@ type InterfaceType struct {
 	cachedIdentifiersLock sync.RWMutex
 	memberResolversOnce   sync.Once
 	InitializerPurity     FunctionPurity
+	supportedEntitlements *EntitlementOrderedSet
 }
 
 var _ Type = &InterfaceType{}
@@ -4418,6 +4469,31 @@ func (t *InterfaceType) Equal(other Type) bool {
 
 func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
+}
+
+func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	supportedEntitlements := t.supportedEntitlements
+	if supportedEntitlements != nil {
+		return supportedEntitlements
+	}
+
+	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
+	t.Members.Foreach(func(_ string, member *Member) {
+		switch access := member.Access.(type) {
+		case EntitlementMapAccess:
+			access.Domain().Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+				set.Set(entitlement, struct{}{})
+			})
+		case EntitlementSetAccess:
+			access.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+				set.Set(entitlement, struct{}{})
+			})
+		}
+	})
+	// TODO: include inherited entitlements
+
+	t.supportedEntitlements = set
+	return set
 }
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
@@ -4977,8 +5053,8 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 
 // ReferenceType represents the reference to a value
 type ReferenceType struct {
-	Type       Type
-	Authorized bool
+	Type          Type
+	Authorization Access
 }
 
 var _ Type = &ReferenceType{}
@@ -4987,11 +5063,13 @@ var _ Type = &ReferenceType{}
 var _ ValueIndexableType = &ReferenceType{}
 var _ TypeIndexableType = &ReferenceType{}
 
-func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorized bool) *ReferenceType {
+var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessPublic)
+
+func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorization Access) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
 	return &ReferenceType{
-		Type:       typ,
-		Authorized: authorized,
+		Type:          typ,
+		Authorization: authorization,
 	}
 }
 
@@ -5003,12 +5081,14 @@ func (t *ReferenceType) Tag() TypeTag {
 
 func formatReferenceType(
 	separator string,
-	authorized bool,
+	authorization string,
 	typeString string,
 ) string {
 	var builder strings.Builder
-	if authorized {
-		builder.WriteString("auth")
+	if authorization != "" {
+		builder.WriteString("auth(")
+		builder.WriteString(authorization)
+		builder.WriteString(")")
 		builder.WriteString(separator)
 	}
 	builder.WriteByte('&')
@@ -5016,15 +5096,18 @@ func formatReferenceType(
 	return builder.String()
 }
 
-func FormatReferenceTypeID(authorized bool, typeString string) string {
-	return formatReferenceType("", authorized, typeString)
+func FormatReferenceTypeID(authorization string, typeString string) string {
+	return formatReferenceType("", authorization, typeString)
 }
 
 func (t *ReferenceType) string(typeFormatter func(Type) string) string {
 	if t.Type == nil {
 		return "reference"
 	}
-	return formatReferenceType(" ", t.Authorized, typeFormatter(t.Type))
+	if t.Authorization != UnauthorizedAccess {
+		return formatReferenceType(" ", t.Authorization.string(typeFormatter), typeFormatter(t.Type))
+	}
+	return formatReferenceType(" ", "", typeFormatter(t.Type))
 }
 
 func (t *ReferenceType) String() string {
@@ -5043,7 +5126,10 @@ func (t *ReferenceType) ID() TypeID {
 	if t.Type == nil {
 		return "reference"
 	}
-	return TypeID(FormatReferenceTypeID(t.Authorized, string(t.Type.ID())))
+	if t.Authorization != UnauthorizedAccess {
+		return TypeID(FormatReferenceTypeID(t.Authorization.AccessKeyword(), string(t.Type.ID())))
+	}
+	return TypeID(FormatReferenceTypeID("", string(t.Type.ID())))
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
@@ -5052,7 +5138,7 @@ func (t *ReferenceType) Equal(other Type) bool {
 		return false
 	}
 
-	if t.Authorized != otherReference.Authorized {
+	if !t.Authorization.Equal(otherReference.Authorization) {
 		return false
 	}
 
@@ -5098,8 +5184,8 @@ func (t *ReferenceType) RewriteWithRestrictedTypes() (Type, bool) {
 	rewrittenType, rewritten := t.Type.RewriteWithRestrictedTypes()
 	if rewritten {
 		return &ReferenceType{
-			Authorized: t.Authorized,
-			Type:       rewrittenType,
+			Authorization: t.Authorization,
+			Type:          rewrittenType,
 		}, true
 	} else {
 		return t, false
@@ -5123,12 +5209,30 @@ func (t *ReferenceType) isTypeIndexableType() bool {
 	return ok && referencedType.isTypeIndexableType()
 }
 
-func (t *ReferenceType) TypeIndexingElementType(indexingType Type) Type {
-	referencedType, ok := t.Type.(TypeIndexableType)
+func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange func() ast.Range) (Type, error) {
+	_, ok := t.Type.(TypeIndexableType)
 	if !ok {
-		return nil
+		return nil, nil
 	}
-	return referencedType.TypeIndexingElementType(indexingType)
+
+	var access Access = UnauthorizedAccess
+	switch attachment := indexingType.(type) {
+	case *CompositeType:
+		if attachment.attachmentEntitlementAccess != nil {
+			var err error
+			access, err = attachment.attachmentEntitlementAccess.Image(t.Authorization, astRange)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return &OptionalType{
+		Type: &ReferenceType{
+			Type:          indexingType,
+			Authorization: access,
+		},
+	}, nil
 }
 
 func (t *ReferenceType) IsValidIndexingType(ty Type) bool {
@@ -5138,7 +5242,8 @@ func (t *ReferenceType) IsValidIndexingType(ty Type) bool {
 		// is a valid base for the attachement;
 		// i.e. (&v)[A] is valid only if `v` is a valid base for `A`
 		IsSubType(t, &ReferenceType{
-			Type: attachmentType.baseType,
+			Type:          attachmentType.baseType,
+			Authorization: UnauthorizedAccess,
 		}) &&
 		attachmentType.IsResourceType() == t.Type.IsResourceType()
 }
@@ -5188,8 +5293,8 @@ func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type
 	}
 
 	return &ReferenceType{
-		Authorized: t.Authorized,
-		Type:       newInnerType,
+		Authorization: t.Authorization,
+		Type:          newInnerType,
 	}
 }
 
@@ -5526,226 +5631,18 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		)
 
 	case *ReferenceType:
-		// References types are only subtypes of reference types
-
 		typedSubType, ok := subType.(*ReferenceType)
 		if !ok {
 			return false
 		}
 
-		// An authorized reference type `auth &T`
-		// is a subtype of a reference type `&U` (authorized or non-authorized),
-		// if `T` is a subtype of `U`
-
-		if typedSubType.Authorized {
-			return IsSubType(typedSubType.Type, typedSuperType.Type)
-		}
-
-		// An unauthorized reference type is not a subtype of an authorized reference type.
-		// Not even dynamically.
-		//
-		// The holder of the reference may not gain more permissions.
-
-		if typedSuperType.Authorized {
+		// the authorization of the subtype reference must be usable in all situations where the supertype reference is usable
+		if !typedSuperType.Authorization.PermitsAccess(typedSubType.Authorization) {
 			return false
 		}
 
-		switch typedInnerSuperType := typedSuperType.Type.(type) {
-		case *RestrictedType:
-
-			restrictedSuperType := typedInnerSuperType.Type
-			switch restrictedSuperType {
-			case AnyResourceType, AnyStructType, AnyType:
-
-				switch typedInnerSubType := typedSubType.Type.(type) {
-				case *RestrictedType:
-					// An unauthorized reference to a restricted type `&T{Us}`
-					// is a subtype of a reference to a restricted type
-					// `&AnyResource{Vs}` / `&AnyStruct{Vs}` / `&Any{Vs}`:
-					// if the `T` is a subset of the supertype's restricted type,
-					// and `Vs` is a subset of `Us`.
-					//
-					// The holder of the reference may only further restrict the reference.
-					//
-					// The requirement for `T` to conform to `Vs` is implied by the subset requirement.
-
-					return IsSubType(typedInnerSubType.Type, restrictedSuperType) &&
-						typedInnerSuperType.RestrictionSet().
-							IsSubsetOf(typedInnerSubType.RestrictionSet())
-
-				case *CompositeType:
-					// An unauthorized reference to an unrestricted type `&T`
-					// is a subtype of a reference to a restricted type
-					// `&AnyResource{Us}` / `&AnyStruct{Us}` / `&Any{Us}`:
-					// When `T != AnyResource && T != AnyStruct && T != Any`:
-					// if `T` conforms to `Us`.
-					//
-					// The holder of the reference may only restrict the reference.
-
-					// TODO: once interfaces can conform to interfaces, include
-					return IsSubType(typedInnerSubType, restrictedSuperType) &&
-						typedInnerSuperType.RestrictionSet().
-							IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
-				}
-
-				switch typedSubType.Type {
-				case AnyResourceType, AnyStructType, AnyType:
-					// An unauthorized reference to an unrestricted type `&T`
-					// is a subtype of a reference to a restricted type
-					// `&AnyResource{Us}` / `&AnyStruct{Us}` / `&Any{Us}`:
-					// When `T == AnyResource || T == AnyStruct || T == Any`: never.
-					//
-					// The holder of the reference may not gain more permissions or knowledge.
-
-					return false
-				}
-
-			default:
-
-				switch typedInnerSubType := typedSubType.Type.(type) {
-				case *RestrictedType:
-
-					// An unauthorized reference to a restricted type `&T{Us}`
-					// is a subtype of a reference to a restricted type `&V{Ws}:`
-
-					if _, ok := typedInnerSubType.Type.(*CompositeType); ok {
-						// When `T != AnyResource && T != AnyStruct && T != Any`:
-						// if `T == V` and `Ws` is a subset of `Us`.
-						//
-						// The holder of the reference may not gain more permissions or knowledge
-						// and may only further restrict the reference to the composite.
-
-						return typedInnerSubType.Type == typedInnerSuperType.Type &&
-							typedInnerSuperType.RestrictionSet().
-								IsSubsetOf(typedInnerSubType.RestrictionSet())
-					}
-
-					switch typedInnerSubType.Type {
-					case AnyResourceType, AnyStructType, AnyType:
-						// When `T == AnyResource || T == AnyStruct || T == Any`: never.
-
-						return false
-					}
-
-				case *CompositeType:
-					// An unauthorized reference to an unrestricted type `&T`
-					// is a subtype of a reference to a restricted type `&U{Vs}`:
-					// When `T != AnyResource && T != AnyStruct && T != Any`: if `T == U`.
-					//
-					// The holder of the reference may only further restrict the reference.
-
-					return typedInnerSubType == typedInnerSuperType.Type
-
-				}
-
-				switch typedSubType.Type {
-				case AnyResourceType, AnyStructType, AnyType:
-					// An unauthorized reference to an unrestricted type `&T`
-					// is a subtype of a reference to a restricted type `&U{Vs}`:
-					// When `T == AnyResource || T == AnyStruct || T == Any`: never.
-					//
-					// The holder of the reference may not gain more permissions or knowledge.
-
-					return false
-				}
-			}
-
-		case *CompositeType:
-
-			// The supertype composite type might be a type requirement.
-			// Check if the subtype composite type implicitly conforms to it.
-
-			if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
-
-				for _, conformance := range typedInnerSubType.ImplicitTypeRequirementConformances {
-					if conformance == typedInnerSuperType {
-						return true
-					}
-				}
-			}
-
-			// An unauthorized reference is not a subtype of a reference to a composite type `&V`
-			// (e.g. reference to a restricted type `&T{Us}`, or reference to an interface type `&T`)
-			//
-			// The holder of the reference may not gain more permissions or knowledge.
-
-			return false
-
-		case *InterfaceType:
-			switch typedInnerSubType := typedSubType.Type.(type) {
-
-			// An unauthorized reference to an interface type `&U`
-			// is a supertype of a reference to a composite type `&T`:
-			// if that composite type's conformance set includes that interface.
-			//
-			// This is equivalent in principle to the check we would perform to check
-			// if `&T <: &{U}`, the singleton restricted set containing only `U`.
-			case *CompositeType:
-				return typedInnerSubType.ExplicitInterfaceConformanceSet().Contains(typedInnerSuperType)
-
-			// An unauthorized reference to an interface type `&T`
-			// is a supertype of a reference to a restricted type `&{U}`:
-			// if the restriction set contains that explicit interface type.
-
-			// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
-			// resource interface I { /* ... */ }
-			// attachment A for I { /* ... */ }
-
-			// let i : &{I} = ... // some operation constructing `i`
-			// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that &{I} <: &I
-
-			// Note that this does not check whether the restricted type's restricted type conforms to the interface;
-			// i.e. whether in `&R{X} <: &I`, `R <: I`. This is intentional;
-			// when checking whether an attachment declared for `I` is accessible on a value of type `&R{X}`,
-			// even if `R <: I`, we only want to allow access if `X <: I`
-
-			// Once interfaces can conform to interfaces,
-			// this should instead check that at least one value in the restriction set
-			// is a subtype of the interface supertype
-			case *RestrictedType:
-				return typedInnerSubType.RestrictionSet().Contains(typedInnerSuperType)
-			}
-
-			return false
-		}
-
-		switch typedSuperType.Type {
-
-		case AnyType:
-
-			// An unauthorized reference to a restricted type `&T{Us}`
-			// or to a unrestricted type `&T`
-			// is a subtype of the type `&Any`: always.
-
-			return true
-
-		case AnyResourceType:
-
-			// An unauthorized reference to a restricted type `&T{Us}`
-			// or to a unrestricted type `&T`
-			// is a subtype of the type `&AnyResource`:
-			// if `T == AnyResource` or `T` is a resource-kinded composite.
-
-			switch typedInnerSubType := typedSubType.Type.(type) {
-			case *RestrictedType:
-				if typedInnerInnerSubType, ok := typedInnerSubType.Type.(*CompositeType); ok {
-					return typedInnerInnerSubType.IsResourceType()
-				}
-
-				return typedInnerSubType.Type == AnyResourceType
-
-			case *CompositeType:
-				return typedInnerSubType.IsResourceType()
-			}
-
-		case AnyStructType:
-			// `&T <: &AnyStruct` iff `T <: AnyStruct`
-			return IsSubType(typedSubType.Type, typedSuperType.Type)
-		case AnyResourceAttachmentType, AnyStructAttachmentType:
-			// `&T <: &AnyResourceAttachmentType` iff `T <: AnyResourceAttachmentType` and
-			// `&T <: &AnyStructAttachmentType` iff `T <: AnyStructAttachmentType`
-			return IsSubType(typedSubType.Type, typedSuperType.Type)
-		}
+		// references are covariant in their referenced type
+		return IsSubType(typedSubType.Type, typedSuperType.Type)
 
 	case *FunctionType:
 		typedSubType, ok := subType.(*FunctionType)
@@ -6220,11 +6117,12 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 type RestrictedType struct {
 	Type Type
 	// an internal set of field `Restrictions`
-	restrictionSet      *InterfaceSet
-	Restrictions        []*InterfaceType
-	restrictionSetOnce  sync.Once
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	restrictionSet        *InterfaceSet
+	Restrictions          []*InterfaceType
+	restrictionSetOnce    sync.Once
+	memberResolvers       map[string]MemberResolver
+	memberResolversOnce   sync.Once
+	supportedEntitlements *EntitlementOrderedSet
 }
 
 var _ Type = &RestrictedType{}
@@ -6482,6 +6380,24 @@ func (t *RestrictedType) initializeMemberResolvers() {
 	})
 }
 
+func (t *RestrictedType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+	if t.supportedEntitlements != nil {
+		return t.supportedEntitlements
+	}
+
+	// a restricted type supports all the entitlements of its interfaces and its restricted type
+	set = orderedmap.New[EntitlementOrderedSet](t.RestrictionSet().Len())
+	t.RestrictionSet().ForEach(func(it *InterfaceType) {
+		set.SetAll(it.SupportedEntitlements())
+	})
+	if supportingType, ok := t.Type.(EntitlementSupportingType); ok {
+		set.SetAll(supportingType.SupportedEntitlements())
+	}
+
+	t.supportedEntitlements = set
+	return set
+}
+
 func (*RestrictedType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	// TODO: how do we unify the restriction sets?
 	return false
@@ -6503,12 +6419,21 @@ func (t *RestrictedType) isTypeIndexableType() bool {
 	return true
 }
 
-func (t *RestrictedType) TypeIndexingElementType(indexingType Type) Type {
+func (t *RestrictedType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
+	var access Access = UnauthorizedAccess
+	switch attachment := indexingType.(type) {
+	case *CompositeType:
+		if attachment.attachmentEntitlementAccess != nil {
+			access = attachment.attachmentEntitlementAccess.Codomain()
+		}
+	}
+
 	return &OptionalType{
 		Type: &ReferenceType{
-			Type: indexingType,
+			Type:          indexingType,
+			Authorization: access,
 		},
-	}
+	}, nil
 }
 
 func (t *RestrictedType) IsValidIndexingType(ty Type) bool {
@@ -6680,7 +6605,8 @@ func (t *CapabilityType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 var capabilityTypeParameter = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -6708,7 +6634,8 @@ func (t *CapabilityType) TypeArguments() []Type {
 	borrowType := t.BorrowType
 	if borrowType == nil {
 		borrowType = &ReferenceType{
-			Type: AnyType,
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
 		}
 	}
 	return []Type{

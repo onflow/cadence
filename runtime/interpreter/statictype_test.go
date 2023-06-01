@@ -109,12 +109,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: PrimitiveStaticTypeString,
+				Authorization: UnauthorizedAccess,
+				BorrowedType:  PrimitiveStaticTypeString,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized:   false,
-					BorrowedType: PrimitiveStaticTypeString,
+					Authorization: UnauthorizedAccess,
+					BorrowedType:  PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -126,12 +126,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: PrimitiveStaticTypeInt,
+				Authorization: UnauthorizedAccess,
+				BorrowedType:  PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized:   false,
-					BorrowedType: PrimitiveStaticTypeString,
+					Authorization: UnauthorizedAccess,
+					BorrowedType:  PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -143,12 +143,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: PrimitiveStaticTypeInt,
+				Authorization: UnauthorizedAccess,
+				BorrowedType:  PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized:   true,
-					BorrowedType: PrimitiveStaticTypeInt,
+					Authorization: EntitlementMapAuthorization{TypeID: "Foo"},
+					BorrowedType:  PrimitiveStaticTypeInt,
 				},
 			),
 		)
@@ -1346,12 +1346,10 @@ func TestStaticTypeConversion(t *testing.T) {
 		{
 			name: "Reference",
 			semaType: &sema.ReferenceType{
-				Type:       sema.IntType,
-				Authorized: true,
+				Type: sema.IntType,
 			},
 			staticType: ReferenceStaticType{
 				BorrowedType: PrimitiveStaticTypeInt,
-				Authorized:   true,
 			},
 		},
 		{
@@ -1448,6 +1446,9 @@ func TestStaticTypeConversion(t *testing.T) {
 				test.staticType,
 				getInterface,
 				getComposite,
+				// dummy values, will replace in later PR
+				nil,
+				nil,
 			)
 			require.NoError(t, err)
 			require.Equal(t,

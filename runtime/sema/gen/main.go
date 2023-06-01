@@ -658,6 +658,8 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 				Type: dst.NewIdent("ReferenceType"),
 				Elts: []dst.Expr{
 					goKeyValue("Type", typeExpr(t.Type, typeParams)),
+					// TODO: add support for parsing entitlements
+					goKeyValue("Authorization", dst.NewIdent("UnauthorizedAccess")),
 				},
 			},
 		}

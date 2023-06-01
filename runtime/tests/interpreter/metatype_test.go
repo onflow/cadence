@@ -639,8 +639,8 @@ func TestInterpretGetType(t *testing.T) {
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						// Reference was converted from authorized to unauthorized
-						Authorized:   false,
-						BorrowedType: interpreter.PrimitiveStaticTypeInt,
+						Authorization: interpreter.UnauthorizedAccess,
+						BorrowedType:  interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -651,17 +651,21 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. EphemeralReferenceValue.StaticType is tested
 			name: "optional ephemeral reference, auth to auth",
 			code: `
+			  entitlement X
               fun test(): Type {
                   let value = 1
-                  let ref = &value as auth &Int
-                  let optRef: auth &Int? = ref
+                  let ref = &value as auth(X) &Int
+                  let optRef: auth(X) &Int? = ref
                   return optRef.getType()
               }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorized:   true,
+						Authorization: interpreter.EntitlementSetAuthorization{
+							Kind:         sema.Conjunction,
+							Entitlements: []common.TypeID{"X"},
+						},
 						BorrowedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
@@ -683,8 +687,8 @@ func TestInterpretGetType(t *testing.T) {
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						// Reference was converted from authorized to unauthorized
-						Authorized:   false,
-						BorrowedType: interpreter.PrimitiveStaticTypeInt,
+						Authorization: interpreter.UnauthorizedAccess,
+						BorrowedType:  interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -695,16 +699,20 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. StorageReferenceValue.StaticType is tested
 			name: "optional storage reference, auth to auth",
 			code: `
+			  entitlement X
               fun test(): Type {
                   let ref = getStorageReference()
-                  let optRef: auth &Int? = ref
+                  let optRef: auth(X) &Int? = ref
                   return optRef.getType()
               }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorized:   true,
+						Authorization: interpreter.EntitlementSetAuthorization{
+							Kind:         sema.Conjunction,
+							Entitlements: []common.TypeID{"X"},
+						},
 						BorrowedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
@@ -734,8 +742,15 @@ func TestInterpretGetType(t *testing.T) {
 			getStorageReferenceFunctionType := &sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					&sema.ReferenceType{
-						Authorized: true,
-						Type:       sema.IntType,
+						Authorization: sema.NewEntitlementSetAccess(
+							[]*sema.EntitlementType{
+								{
+									Location:   TestLocation,
+									Identifier: "X",
+								},
+							},
+							sema.Conjunction),
+						Type: sema.IntType,
 					},
 				),
 			}
@@ -746,7 +761,10 @@ func TestInterpretGetType(t *testing.T) {
 				"",
 				func(invocation interpreter.Invocation) interpreter.Value {
 					return &interpreter.StorageReferenceValue{
-						Authorized:           true,
+						Authorization: interpreter.EntitlementSetAuthorization{
+							Kind:         sema.Conjunction,
+							Entitlements: []common.TypeID{"X"},
+						},
 						TargetStorageAddress: storageAddress,
 						TargetPath:           storagePath,
 						BorrowedType:         sema.IntType,

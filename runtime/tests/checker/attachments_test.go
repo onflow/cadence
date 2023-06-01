@@ -1451,9 +1451,7 @@ func TestCheckBaseTyping(t *testing.T) {
 			}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		// base is not auth
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("resource cast", func(t *testing.T) {
@@ -1471,9 +1469,7 @@ func TestCheckBaseTyping(t *testing.T) {
 			}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		// base is not auth
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("struct return", func(t *testing.T) {
@@ -3991,8 +3987,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		}
 		`,
 		)
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("restricted concrete base reference to interface", func(t *testing.T) {

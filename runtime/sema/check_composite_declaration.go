@@ -61,6 +61,72 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 	})
 }
 
+func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeType) {
+
+	// all the access modifiers for attachment members must be elements of the
+	// codomain of the attachment's entitlement map. This is because the codomain
+	// of the attachment's declared map specifies all the entitlements one can possibly
+	// have to that attachment, since the only way to obtain an attachment reference
+	// is to access it off of a base (and hence through the map).
+	// ---------------------------------------------------
+	// entitlement map M {
+	//     E -> F
+	//     X -> Y
+	//     U -> V
+	// }
+	//
+	// access(M) attachment A for R {
+	//	  access(F) fun foo() {}
+	//	  access(Y | F) fun bar() {}
+	//	  access(V & Y) fun baz() {}
+	//
+	//    access(V | Q) fun qux() {}
+	// }
+	// ---------------------------------------------------
+	//
+	// in this example, the only entitlements one can ever obtain to an &A reference are
+	// `F`, `Y` and `V`, and as such these are the only entitlements that may be used
+	// in `A`'s definition.  Thus the definitions of `foo`, `bar`, and `baz` are valid,
+	// while the definition of `qux` is not.
+	var attachmentAccess Access = UnauthorizedAccess
+	if attachmentType.attachmentEntitlementAccess != nil {
+		attachmentAccess = *attachmentType.attachmentEntitlementAccess
+	}
+
+	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
+		codomain := attachmentAccess.Codomain()
+		attachmentType.Members.Foreach(func(_ string, member *Member) {
+			if memberAccess, ok := member.Access.(EntitlementSetAccess); ok {
+				memberAccess.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+					if !codomain.Entitlements.Contains(entitlement) {
+						checker.report(&InvalidAttachmentEntitlementError{
+							Attachment:               attachmentType,
+							AttachmentAccessModifier: attachmentAccess,
+							InvalidEntitlement:       entitlement,
+							Pos:                      member.Identifier.Pos,
+						})
+					}
+				})
+			}
+		})
+		return
+	}
+
+	// if the attachment's access is public, its members may not have entitlement access
+	attachmentType.Members.Foreach(func(_ string, member *Member) {
+		if _, ok := member.Access.(PrimitiveAccess); ok {
+			return
+		}
+		checker.report(&InvalidAttachmentEntitlementError{
+			Attachment:               attachmentType,
+			AttachmentAccessModifier: attachmentAccess,
+			Pos:                      member.Identifier.Pos,
+		})
+
+	})
+
+}
+
 func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
 	return checker.visitAttachmentDeclaration(declaration, ContainerKindComposite)
 }
@@ -76,6 +142,7 @@ func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDe
 	checker.visitCompositeLikeDeclaration(declaration, kind)
 	attachmentType := checker.Elaboration.CompositeDeclarationType(declaration)
 	checker.checkAttachmentBaseType(attachmentType)
+	checker.checkAttachmentMembersAccess(attachmentType)
 	return
 }
 
@@ -559,6 +626,11 @@ func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclara
 	composite := checker.declareCompositeType(declaration)
 
 	composite.baseType = checker.convertNominalType(declaration.BaseType)
+
+	attachmentAccess := checker.accessFromAstAccess(declaration.Access)
+	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
+		composite.attachmentEntitlementAccess = &attachmentAccess
+	}
 
 	// add all the required entitlements to a set for this attachment
 	requiredEntitlements := orderedmap.New[EntitlementOrderedSet](len(declaration.RequiredEntitlements))
@@ -1814,21 +1886,26 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		fieldNames = append(fieldNames, identifier)
 
+		fieldAccess := checker.accessFromAstAccess(field.Access)
+
+		if entitlementMapAccess, ok := fieldAccess.(EntitlementMapAccess); ok {
+			checker.entitlementMappingInScope = entitlementMapAccess.Type
+		}
 		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
+		checker.entitlementMappingInScope = nil
 		checker.checkTypeAnnotation(fieldTypeAnnotation, field.TypeAnnotation)
 
 		const declarationKind = common.DeclarationKindField
 
-		fieldAccess := checker.accessFromAstAccess(field.Access)
 		effectiveAccess := checker.effectiveMemberAccess(fieldAccess, containerKind)
 
 		if requireNonPrivateMemberAccess &&
-			effectiveAccess.Access() == ast.AccessPrivate {
+			effectiveAccess.Equal(PrimitiveAccess(ast.AccessPrivate)) {
 
 			checker.report(
 				&InvalidAccessModifierError{
 					DeclarationKind: declarationKind,
-					Access:          field.Access,
+					Access:          fieldAccess,
 					Explanation:     "private fields can never be used",
 					Pos:             field.StartPos,
 				},
@@ -1879,7 +1956,16 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		identifier := function.Identifier.Identifier
 
-		functionType := checker.functionType(function.Purity, function.ParameterList, function.ReturnTypeAnnotation)
+		functionAccess := checker.accessFromAstAccess(function.Access)
+
+		functionType := checker.functionType(
+			function.Purity,
+			functionAccess,
+			function.ParameterList,
+			function.ReturnTypeAnnotation,
+		)
+
+		checker.Elaboration.SetFunctionDeclarationFunctionType(function, functionType)
 
 		argumentLabels := function.ParameterList.EffectiveArgumentLabels()
 
@@ -1887,16 +1973,15 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		const declarationKind = common.DeclarationKindFunction
 
-		functionAccess := checker.accessFromAstAccess(function.Access)
 		effectiveAccess := checker.effectiveMemberAccess(functionAccess, containerKind)
 
 		if requireNonPrivateMemberAccess &&
-			effectiveAccess.Access() == ast.AccessPrivate {
+			effectiveAccess.Equal(PrimitiveAccess(ast.AccessPrivate)) {
 
 			checker.report(
 				&InvalidAccessModifierError{
 					DeclarationKind: declarationKind,
-					Access:          function.Access,
+					Access:          functionAccess,
 					Explanation:     "private functions can never be used",
 					Pos:             function.StartPos,
 				},
@@ -2004,12 +2089,13 @@ func (checker *Checker) enumMembersAndOrigins(
 		}
 
 		// Enum cases must be effectively public
+		enumAccess := checker.accessFromAstAccess(enumCase.Access)
 
-		if checker.effectiveCompositeMemberAccess(checker.accessFromAstAccess(enumCase.Access)).Access() != ast.AccessPublic {
+		if !checker.effectiveCompositeMemberAccess(enumAccess).Equal(PrimitiveAccess(ast.AccessPublic)) {
 			checker.report(
 				&InvalidAccessModifierError{
 					DeclarationKind: enumCase.DeclarationKind(),
-					Access:          enumCase.Access,
+					Access:          enumAccess,
 					Explanation:     "enum cases must be public",
 					Pos:             enumCase.StartPos,
 				},
@@ -2144,6 +2230,8 @@ func (checker *Checker) checkSpecialFunction(
 	checker.enterValueScope()
 	defer checker.leaveValueScope(specialFunction.EndPosition, checkResourceLoss)
 
+	fnAccess := checker.accessFromAstAccess(specialFunction.FunctionDeclaration.Access)
+
 	checker.declareSelfValue(containerType, containerDocString)
 	if containerType.GetCompositeKind() == common.CompositeKindAttachment {
 		// attachments cannot be interfaces, so this cast must succeed
@@ -2151,7 +2239,10 @@ func (checker *Checker) checkSpecialFunction(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		checker.declareBaseValue(attachmentType.baseType, attachmentType.baseTypeDocString)
+		checker.declareBaseValue(
+			attachmentType.baseType,
+			attachmentType,
+			attachmentType.baseTypeDocString)
 	}
 
 	functionType := NewSimpleFunctionType(
@@ -2163,6 +2254,7 @@ func (checker *Checker) checkSpecialFunction(
 	checker.checkFunction(
 		specialFunction.FunctionDeclaration.ParameterList,
 		nil,
+		fnAccess,
 		functionType,
 		specialFunction.FunctionDeclaration.FunctionBlock,
 		true,
@@ -2206,7 +2298,11 @@ func (checker *Checker) checkCompositeFunctions(
 
 			checker.declareSelfValue(selfType, selfDocString)
 			if selfType.GetCompositeKind() == common.CompositeKindAttachment {
-				checker.declareBaseValue(selfType.baseType, selfType.baseTypeDocString)
+				checker.declareBaseValue(
+					selfType.baseType,
+					selfType,
+					selfType.baseTypeDocString,
+				)
 			}
 
 			checker.visitFunctionDeclaration(
@@ -2263,14 +2359,19 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 	// inside of an attachment, self is a reference to the attachment's type, because
 	// attachments are never first class values, they must always exist inside references
 	if typedSelfType, ok := selfType.(*CompositeType); ok && typedSelfType.Kind == common.CompositeKindAttachment {
-		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, false)
+		// the `self` value in an attachment is considered fully-entitled to that attachment, or
+		// equivalently the entire codomain of the attachment's map
+		var selfAccess Access = UnauthorizedAccess
+		if typedSelfType.attachmentEntitlementAccess != nil {
+			selfAccess = typedSelfType.attachmentEntitlementAccess.Codomain()
+		}
+		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, selfAccess)
 	}
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }
 
-func (checker *Checker) declareBaseValue(baseType Type, superDocString string) {
-	switch typedBaseType := baseType.(type) {
-	case *InterfaceType:
+func (checker *Checker) declareBaseValue(baseType Type, attachmentType *CompositeType, superDocString string) {
+	if typedBaseType, ok := baseType.(*InterfaceType); ok {
 		restrictedType := AnyStructType
 		if baseType.IsResourceType() {
 			restrictedType = AnyResourceType
@@ -2279,9 +2380,24 @@ func (checker *Checker) declareBaseValue(baseType Type, superDocString string) {
 		// to be referenced by `base`
 		baseType = NewRestrictedType(checker.memoryGauge, restrictedType, []*InterfaceType{typedBaseType})
 	}
-	// References to `base` should be non-auth, as the actual base type in practice may be any number of subtypes of the annotated base type,
-	// not all of which should be available to the writer of the attachment.
-	base := NewReferenceType(checker.memoryGauge, baseType, false)
+	// the `base` value in an attachment function has the set of entitlements defined by the required entitlements specified in the attachment's declaration
+	// -------------------------------
+	// entitlement E
+	// entitlement F
+	// pub attachment A for R {
+	//     require entitlement E
+	//     pub fun foo() { ... }
+	// }
+	// -------------------------------
+	// within the body of `foo`, the `base` value will be entitled to `E` but not `F`, because only `E` was required in the attachment's declaration
+	var baseAccess Access = UnauthorizedAccess
+	if attachmentType.requiredEntitlements != nil && attachmentType.requiredEntitlements.Len() > 0 {
+		baseAccess = EntitlementSetAccess{
+			Entitlements: attachmentType.requiredEntitlements,
+			SetKind:      Conjunction,
+		}
+	}
+	base := NewReferenceType(checker.memoryGauge, baseType, baseAccess)
 	checker.declareLowerScopedValue(base, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }
 

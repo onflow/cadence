@@ -67,7 +67,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,
-		Access:          sema.PrimitiveAccess(ast.AccessPublic),
+		Access:          sema.UnauthorizedAccess,
 		Type:            fooType,
 	})
 

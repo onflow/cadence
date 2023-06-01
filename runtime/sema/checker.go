@@ -115,6 +115,7 @@ type Checker struct {
 	errors                             []error
 	functionActivations                *FunctionActivations
 	purityCheckScopes                  []PurityCheckScope
+	entitlementMappingInScope          *EntitlementMapType
 	inCondition                        bool
 	allowSelfResourceFieldInvalidation bool
 	inAssignment                       bool
@@ -507,6 +508,7 @@ func (checker *Checker) checkTopLevelDeclarationValidity(
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
 	functionType := checker.functionType(
 		declaration.Purity,
+		UnauthorizedAccess,
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
 	)
@@ -1119,12 +1121,30 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 }
 
 func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
-	ty := checker.ConvertType(t.Type)
+
+	var access Access = UnauthorizedAccess
+	var ty Type
+
+	if t.Authorization != nil {
+		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet})
+		switch mapAccess := access.(type) {
+		case EntitlementMapAccess:
+			// mapped auth types are only allowed in the annotations of composite fields and accessor functions
+			if checker.entitlementMappingInScope == nil || !checker.entitlementMappingInScope.Equal(mapAccess.Type) {
+				checker.report(&InvalidMappedAuthorizationOutsideOfFieldError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
+					Map:   mapAccess.Type,
+				})
+				access = UnauthorizedAccess
+			}
+		}
+	}
+
+	ty = checker.ConvertType(t.Type)
 
 	return &ReferenceType{
-		// TODO: support entitlements in types
-		Authorized: t.Authorization != nil,
-		Type:       ty,
+		Authorization: access,
+		Type:          ty,
 	}
 }
 
@@ -1148,6 +1168,8 @@ func (checker *Checker) convertDictionaryType(t *ast.DictionaryType) Type {
 }
 
 func (checker *Checker) convertOptionalType(t *ast.OptionalType) Type {
+	// optional types annotations are special cased to not be considered nested so that
+	// we can have mapped-entitlement optional reference fields
 	ty := checker.ConvertType(t.Type)
 	return &OptionalType{
 		Type: ty,
@@ -1330,6 +1352,7 @@ func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation
 
 func (checker *Checker) functionType(
 	purity ast.FunctionPurity,
+	access Access,
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
@@ -1337,8 +1360,15 @@ func (checker *Checker) functionType(
 
 	convertedReturnTypeAnnotation := VoidTypeAnnotation
 	if returnTypeAnnotation != nil {
+		// to allow entitlement mapping types to be used in the return annotation only of
+		// a mapped accessor function, we introduce a "variable" into the typing scope while
+		// checking the return
+		if mapAccess, isMapAccess := access.(EntitlementMapAccess); isMapAccess {
+			checker.entitlementMappingInScope = mapAccess.Type
+		}
 		convertedReturnTypeAnnotation =
 			checker.ConvertTypeAnnotation(returnTypeAnnotation)
+		checker.entitlementMappingInScope = nil
 	}
 
 	return &FunctionType{
@@ -1763,10 +1793,10 @@ func (checker *Checker) checkDeclarationAccessModifier(
 ) {
 	if checker.functionActivations.IsLocal() {
 
-		if access.Access() != ast.AccessNotSpecified {
+		if !access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 			checker.report(
 				&InvalidAccessModifierError{
-					Access:          access.Access(),
+					Access:          access,
 					Explanation:     "local declarations may not have an access modifier",
 					DeclarationKind: declarationKind,
 					Pos:             startPos,
@@ -1777,20 +1807,9 @@ func (checker *Checker) checkDeclarationAccessModifier(
 
 		isTypeDeclaration := declarationKind.IsTypeDeclaration()
 
-		requireIsResourceMember := func() {
-			if containerKind == nil ||
-				(*containerKind != common.CompositeKindResource && *containerKind != common.CompositeKindStructure) {
-				checker.report(
-					&InvalidEntitlementAccessError{
-						Pos: startPos,
-					},
-				)
-			}
-		}
-
 		switch access := access.(type) {
 		case PrimitiveAccess:
-			switch access.Access() {
+			switch ast.PrimitiveAccess(access) {
 			case ast.AccessPublicSettable:
 				// Public settable access for a constant is not sensible
 				// and type declarations must be public for now
@@ -1806,7 +1825,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 
 					checker.report(
 						&InvalidAccessModifierError{
-							Access:          access.Access(),
+							Access:          access,
 							Explanation:     explanation,
 							DeclarationKind: declarationKind,
 							Pos:             startPos,
@@ -1821,7 +1840,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 
 					checker.report(
 						&InvalidAccessModifierError{
-							Access:          access.Access(),
+							Access:          access,
 							Explanation:     invalidTypeDeclarationAccessModifierExplanation,
 							DeclarationKind: declarationKind,
 							Pos:             startPos,
@@ -1837,7 +1856,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				if isTypeDeclaration {
 					checker.report(
 						&InvalidAccessModifierError{
-							Access:          access.Access(),
+							Access:          access,
 							Explanation:     invalidTypeDeclarationAccessModifierExplanation,
 							DeclarationKind: declarationKind,
 							Pos:             startPos,
@@ -1872,13 +1891,17 @@ func (checker *Checker) checkDeclarationAccessModifier(
 					)
 				}
 			}
+
 		case EntitlementMapAccess:
 			// attachments may be declared with an entitlement map access
 			if declarationKind == common.DeclarationKindAttachment {
 				return
 			}
-			// otherwise, mapped entitlements may only be used on composite fields
-			if declarationKind != common.DeclarationKindField {
+
+			// otherwise, mapped entitlements may only be used in structs and resources
+			if containerKind == nil ||
+				(*containerKind != common.CompositeKindResource &&
+					*containerKind != common.CompositeKindStructure) {
 				checker.report(
 					&InvalidMappedEntitlementMemberError{
 						Pos: startPos,
@@ -1886,27 +1909,76 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				)
 				return
 			}
-			// mapped entitlement fields must be references that are authorized to the same mapped entitlement
-			switch referenceType := declarationType.(type) {
+
+			// mapped entitlement fields must be (optional) references that are authorized to the same mapped entitlement,
+			// or functions that return an (optional) reference authorized to the same mapped entitlement
+			requireIsPotentiallyOptionalReference := func(typ Type) {
+				switch ty := typ.(type) {
+				case *ReferenceType:
+					if ty.Authorization.Equal(access) {
+						return
+					}
+				case *OptionalType:
+					switch optionalType := ty.Type.(type) {
+					case *ReferenceType:
+						if optionalType.Authorization.Equal(access) {
+							return
+						}
+					}
+				}
+				checker.report(
+					&InvalidMappedEntitlementMemberError{
+						Pos: startPos,
+					},
+				)
+			}
+
+			switch ty := declarationType.(type) {
+			case *FunctionType:
+				if declarationKind == common.DeclarationKindFunction {
+					requireIsPotentiallyOptionalReference(ty.ReturnTypeAnnotation.Type)
+				} else {
+					requireIsPotentiallyOptionalReference(ty)
+				}
+			default:
+				requireIsPotentiallyOptionalReference(ty)
+			}
+
+		case EntitlementSetAccess:
+			if containerKind == nil ||
+				(*containerKind != common.CompositeKindResource &&
+					*containerKind != common.CompositeKindStructure &&
+					*containerKind != common.CompositeKindAttachment) {
+				checker.report(
+					&InvalidEntitlementAccessError{
+						Pos: startPos,
+					},
+				)
+				return
+			}
+
+			// when using entitlement set access, it is not permitted for the value to be declared with a mapped entitlement
+			switch ty := declarationType.(type) {
 			case *ReferenceType:
-				if !referenceType.Authorized {
+				if _, isMap := ty.Authorization.(EntitlementMapAccess); isMap {
 					checker.report(
 						&InvalidMappedEntitlementMemberError{
 							Pos: startPos,
 						},
 					)
 				}
-			default:
-				checker.report(
-					&InvalidMappedEntitlementMemberError{
-						Pos: startPos,
-					},
-				)
-				return
+			case *OptionalType:
+				switch optionalType := ty.Type.(type) {
+				case *ReferenceType:
+					if _, isMap := optionalType.Authorization.(EntitlementMapAccess); isMap {
+						checker.report(
+							&InvalidMappedEntitlementMemberError{
+								Pos: startPos,
+							},
+						)
+					}
+				}
 			}
-			requireIsResourceMember()
-		case EntitlementAccess:
-			requireIsResourceMember()
 		}
 	}
 }
@@ -1988,10 +2060,10 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 				semanticEntitlements = append(semanticEntitlements, entitlementType)
 			}
 			if access.EntitlementSet.Separator() == ast.Conjunction {
-				result = NewEntitlementAccess(access, semanticEntitlements, Conjunction)
+				result = NewEntitlementSetAccess(semanticEntitlements, Conjunction)
 				return
 			}
-			result = NewEntitlementAccess(access, semanticEntitlements, Disjunction)
+			result = NewEntitlementSetAccess(semanticEntitlements, Disjunction)
 			return
 		case *EntitlementMapType:
 			// 0-length entitlement lists are rejected by the parser
@@ -2004,7 +2076,7 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 				result = PrimitiveAccess(ast.AccessNotSpecified)
 				return
 			}
-			result = NewEntitlementMapAccess(access, nominalType)
+			result = NewEntitlementMapAccess(nominalType)
 			return
 		default:
 			// don't duplicate errors when the type here is invalid, as this will have triggered an error before
@@ -2320,7 +2392,7 @@ func (checker *Checker) effectiveMemberAccess(access Access, containerKind Conta
 }
 
 func (checker *Checker) effectiveInterfaceMemberAccess(access Access) Access {
-	if access.Access() == ast.AccessNotSpecified {
+	if access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return PrimitiveAccess(ast.AccessPublic)
 	} else {
 		return access
@@ -2328,7 +2400,7 @@ func (checker *Checker) effectiveInterfaceMemberAccess(access Access) Access {
 }
 
 func (checker *Checker) effectiveCompositeMemberAccess(access Access) Access {
-	if access.Access() != ast.AccessNotSpecified {
+	if !access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return access
 	}
 

@@ -15283,7 +15283,8 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 	}
 
 	// the base reference can only be borrowed with the declared type of the attachment's base
-	v.base = NewEphemeralReferenceValue(interpreter, false, base, baseType)
+	// ENTITLEMENTS TODO: map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
+	v.base = NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, base, baseType)
 
 	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 }
@@ -15318,7 +15319,8 @@ func attachmentBaseAndSelfValues(
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
 	base = v.getBaseValue(interpreter, locationRange)
 	// in attachment functions, self is a reference value
-	self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
+	// ENTITLEMENTS TODO: map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
+	self = NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, v, interpreter.MustSemaTypeOfValue(v))
 	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
 	return
 }
@@ -15369,7 +15371,8 @@ func (v *CompositeValue) GetTypeKey(
 	// dynamically set the attachment's base to this composite
 	attachment.setBaseValue(interpreter, v)
 
-	attachmentRef := NewEphemeralReferenceValue(interpreter, false, attachment, ty)
+	// ENTITLEMENTS TODO: map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
+	attachmentRef := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, attachment, ty)
 	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
 
 	return NewSomeValueNonCopying(interpreter, attachmentRef)
@@ -17138,7 +17141,7 @@ type StorageReferenceValue struct {
 	BorrowedType         sema.Type
 	TargetPath           PathValue
 	TargetStorageAddress common.Address
-	Authorized           bool
+	Authorization        Authorization
 }
 
 var _ Value = &StorageReferenceValue{}
@@ -17149,13 +17152,13 @@ var _ MemberAccessibleValue = &StorageReferenceValue{}
 var _ ReferenceValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
-	authorized bool,
+	authorization Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,
 	borrowedType sema.Type,
 ) *StorageReferenceValue {
 	return &StorageReferenceValue{
-		Authorized:           authorized,
+		Authorization:        authorization,
 		TargetStorageAddress: targetStorageAddress,
 		TargetPath:           targetPath,
 		BorrowedType:         borrowedType,
@@ -17164,14 +17167,14 @@ func NewUnmeteredStorageReferenceValue(
 
 func NewStorageReferenceValue(
 	memoryGauge common.MemoryGauge,
-	authorized bool,
+	authorization Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,
 	borrowedType sema.Type,
 ) *StorageReferenceValue {
 	common.UseMemory(memoryGauge, common.StorageReferenceValueMemoryUsage)
 	return NewUnmeteredStorageReferenceValue(
-		authorized,
+		authorization,
 		targetStorageAddress,
 		targetPath,
 		borrowedType,
@@ -17212,7 +17215,7 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 
 	return NewReferenceStaticType(
 		inter,
-		v.Authorized,
+		v.Authorization,
 		ConvertSemaToStaticType(inter, v.BorrowedType),
 		self.StaticType(inter),
 	)
@@ -17403,7 +17406,7 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Val
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
 		v.TargetPath != otherReference.TargetPath ||
-		v.Authorized != otherReference.Authorized {
+		!v.Authorization.Equal(otherReference.Authorization) {
 
 		return false
 	}
@@ -17471,7 +17474,7 @@ func (v *StorageReferenceValue) Transfer(
 
 func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredStorageReferenceValue(
-		v.Authorized,
+		v.Authorization,
 		v.TargetStorageAddress,
 		v.TargetPath,
 		v.BorrowedType,
@@ -17487,9 +17490,9 @@ func (*StorageReferenceValue) isReference() {}
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
-	Value        Value
-	BorrowedType sema.Type
-	Authorized   bool
+	Value         Value
+	BorrowedType  sema.Type
+	Authorization Authorization
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -17500,25 +17503,25 @@ var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 var _ ReferenceValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
-	authorized bool,
+	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
 	return &EphemeralReferenceValue{
-		Authorized:   authorized,
-		Value:        value,
-		BorrowedType: borrowedType,
+		Authorization: authorization,
+		Value:         value,
+		BorrowedType:  borrowedType,
 	}
 }
 
 func NewEphemeralReferenceValue(
 	interpreter *Interpreter,
-	authorized bool,
+	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
 	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
-	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
+	return NewUnmeteredEphemeralReferenceValue(authorization, value, borrowedType)
 }
 
 func (*EphemeralReferenceValue) IsValue() {}
@@ -17564,7 +17567,7 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 
 	return NewReferenceStaticType(
 		inter,
-		v.Authorized,
+		v.Authorization,
 		ConvertSemaToStaticType(inter, v.BorrowedType),
 		self.StaticType(inter),
 	)
@@ -17729,7 +17732,7 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ LocationRange, other V
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok ||
 		v.Value != otherReference.Value ||
-		v.Authorized != otherReference.Authorized {
+		!v.Authorization.Equal(otherReference.Authorization) {
 
 		return false
 	}
@@ -17815,7 +17818,7 @@ func (v *EphemeralReferenceValue) Transfer(
 }
 
 func (v *EphemeralReferenceValue) Clone(*Interpreter) Value {
-	return NewUnmeteredEphemeralReferenceValue(v.Authorized, v.Value, v.BorrowedType)
+	return NewUnmeteredEphemeralReferenceValue(v.Authorization, v.Value, v.BorrowedType)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {

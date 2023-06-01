@@ -19,7 +19,11 @@
 package sema
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -30,7 +34,13 @@ type Access interface {
 	IsLessPermissiveThan(Access) bool
 	// PermitsAccess returns whether receiver access permits argument access
 	PermitsAccess(Access) bool
-	Access() ast.Access
+	Equal(other Access) bool
+	string(func(ty Type) string) string
+	Description() string
+	// string representation of this access when it is used as an access modifier
+	AccessKeyword() string
+	// string representation of this access when it is used as an auth modifier
+	AuthKeyword() string
 }
 
 type EntitlementSetKind uint8
@@ -40,41 +50,75 @@ const (
 	Disjunction
 )
 
-type EntitlementAccess struct {
-	astAccess    ast.EntitlementAccess
+type EntitlementSetAccess struct {
 	Entitlements *EntitlementOrderedSet
 	SetKind      EntitlementSetKind
 }
 
-var _ Access = EntitlementAccess{}
+var _ Access = EntitlementSetAccess{}
 
-func NewEntitlementAccess(
-	astAccess ast.EntitlementAccess,
+func NewEntitlementSetAccess(
 	entitlements []*EntitlementType,
 	setKind EntitlementSetKind,
-) EntitlementAccess {
+) EntitlementSetAccess {
 	set := orderedmap.New[EntitlementOrderedSet](len(entitlements))
 	for _, entitlement := range entitlements {
 		set.Set(entitlement, struct{}{})
 	}
-	return EntitlementAccess{
+	return EntitlementSetAccess{
 		Entitlements: set,
 		SetKind:      setKind,
-		astAccess:    astAccess,
 	}
 }
 
-func (EntitlementAccess) isAccess() {}
+func (EntitlementSetAccess) isAccess() {}
 
-func (a EntitlementAccess) Access() ast.Access {
-	return a.astAccess
+func (a EntitlementSetAccess) Description() string {
+	return a.AccessKeyword()
 }
 
-func (e EntitlementAccess) PermitsAccess(other Access) bool {
+func (a EntitlementSetAccess) AccessKeyword() string {
+	return a.string(func(ty Type) string { return ty.String() })
+}
+
+func (a EntitlementSetAccess) AuthKeyword() string {
+	return fmt.Sprintf("auth(%s)", a.AccessKeyword())
+}
+
+func (e EntitlementSetAccess) string(typeFormatter func(ty Type) string) string {
+	var builder strings.Builder
+	var separator string
+
+	if e.SetKind == Conjunction {
+		separator = ", "
+	} else if e.SetKind == Disjunction {
+		separator = " | "
+	}
+
+	e.Entitlements.ForeachWithIndex(func(i int, entitlement *EntitlementType, _ struct{}) {
+		builder.WriteString(typeFormatter(entitlement))
+		if i < e.Entitlements.Len()-1 {
+			builder.WriteString(separator)
+		}
+	})
+	return builder.String()
+}
+
+func (e EntitlementSetAccess) Equal(other Access) bool {
+	switch otherAccess := other.(type) {
+	case EntitlementSetAccess:
+		return e.SetKind == otherAccess.SetKind &&
+			e.PermitsAccess(otherAccess) &&
+			otherAccess.PermitsAccess(e)
+	}
+	return false
+}
+
+func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
 		return otherAccess == PrimitiveAccess(ast.AccessPrivate)
-	case EntitlementAccess:
+	case EntitlementSetAccess:
 		switch otherAccess.SetKind {
 		case Disjunction:
 			var innerPredicate func(eKey *EntitlementType) bool
@@ -139,11 +183,11 @@ func (e EntitlementAccess) PermitsAccess(other Access) bool {
 	}
 }
 
-func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
+func (e EntitlementSetAccess) IsLessPermissiveThan(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
 		return ast.PrimitiveAccess(otherAccess) != ast.AccessPrivate
-	case EntitlementAccess:
+	case EntitlementSetAccess:
 		// subset check returns true on equality, and we want this function to be false on equality, so invert the >= check
 		return !e.PermitsAccess(otherAccess)
 	default:
@@ -152,20 +196,45 @@ func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
 }
 
 type EntitlementMapAccess struct {
-	astAccess ast.EntitlementAccess
-	Type      *EntitlementMapType
+	Type     *EntitlementMapType
+	domain   EntitlementSetAccess
+	codomain EntitlementSetAccess
+	images   map[*EntitlementType]*EntitlementOrderedSet
 }
 
 var _ Access = EntitlementMapAccess{}
 
-func NewEntitlementMapAccess(astAccess ast.EntitlementAccess, mapType *EntitlementMapType) EntitlementMapAccess {
-	return EntitlementMapAccess{astAccess: astAccess, Type: mapType}
+func NewEntitlementMapAccess(mapType *EntitlementMapType) EntitlementMapAccess {
+	return EntitlementMapAccess{
+		Type:   mapType,
+		images: make(map[*EntitlementType]*EntitlementOrderedSet),
+	}
 }
 
 func (EntitlementMapAccess) isAccess() {}
 
-func (a EntitlementMapAccess) Access() ast.Access {
-	return a.astAccess
+func (e EntitlementMapAccess) string(typeFormatter func(ty Type) string) string {
+	return typeFormatter(e.Type)
+}
+
+func (a EntitlementMapAccess) Description() string {
+	return a.AccessKeyword()
+}
+
+func (a EntitlementMapAccess) AccessKeyword() string {
+	return a.string(func(ty Type) string { return ty.String() })
+}
+
+func (a EntitlementMapAccess) AuthKeyword() string {
+	return fmt.Sprintf("auth(%s)", a.AccessKeyword())
+}
+
+func (e EntitlementMapAccess) Equal(other Access) bool {
+	switch otherAccess := other.(type) {
+	case EntitlementMapAccess:
+		return e.Type.Equal(otherAccess.Type)
+	}
+	return false
 }
 
 func (e EntitlementMapAccess) PermitsAccess(other Access) bool {
@@ -174,6 +243,32 @@ func (e EntitlementMapAccess) PermitsAccess(other Access) bool {
 		return otherAccess == PrimitiveAccess(ast.AccessPrivate)
 	case EntitlementMapAccess:
 		return e.Type.Equal(otherAccess.Type)
+	// if we are initializing a field that was declared with an entitlement-mapped reference type,
+	// the type we are using to initialize that member must be fully authorized for the entire codomain
+	// of the map. That is, for some field declared `access(M) let x: auth(M) &T`, when `x` is intialized
+	// by `self.x = y`, `y` must be a reference of type `auth(X, Y, Z, ...) &T` where `{X, Y, Z, ...}` is
+	// a superset of all the possible output types of `M` (all the possible entitlements `x` may have)
+	//
+	// as an example:
+	//
+	// entitlement mapping M {
+	//    X -> Y
+	//    E -> F
+	// }
+	// resource R {
+	//    access(M) let x: auth(M) &T
+	//    init(tref: auth(Y, F) &T) {
+	//        self.x = tref
+	//    }
+	// }
+	//
+	// the tref value used to initialize `x` must be entitled to the full output of `M` (in this case)
+	// `(Y, F)`, because the mapped access of `x` may provide either (or both) `Y` and `F` depending on
+	// the input entitlement. It is only safe for `R` to give out these entitlements if it actually
+	// possesses them, so we require the initializing value to have every possible entitlement that may
+	// be produced by the map
+	case EntitlementSetAccess:
+		return e.Codomain().PermitsAccess(otherAccess)
 	default:
 		return false
 	}
@@ -191,12 +286,123 @@ func (e EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
 	}
 }
 
+func (e EntitlementMapAccess) Domain() EntitlementSetAccess {
+	if e.domain.Entitlements != nil {
+		return e.domain
+	}
+
+	domain := common.MappedSliceWithNoDuplicates(
+		e.Type.Relations,
+		func(r EntitlementRelation) *EntitlementType {
+			return r.Input
+		},
+	)
+	e.domain = NewEntitlementSetAccess(domain, Disjunction)
+	return e.domain
+}
+
+func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
+	if e.codomain.Entitlements != nil {
+		return e.codomain
+	}
+
+	codomain := common.MappedSliceWithNoDuplicates(
+		e.Type.Relations,
+		func(r EntitlementRelation) *EntitlementType {
+			return r.Output
+		},
+	)
+	e.codomain = NewEntitlementSetAccess(codomain, Conjunction)
+	return e.codomain
+}
+
+// produces the image set of a single entitlement through a map
+// the image set of one element is always a conjunction
+func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (output *EntitlementOrderedSet) {
+	image := e.images[entitlement]
+	if image != nil {
+		return image
+	}
+
+	output = orderedmap.New[EntitlementOrderedSet](0)
+	for _, relation := range e.Type.Relations {
+		if relation.Input.Equal(entitlement) {
+			output.Set(relation.Output, struct{}{})
+		}
+	}
+
+	e.images[entitlement] = output
+	return
+}
+
+// Image applies all the entitlements in the `argumentAccess` to the function
+// defined by the map in `e`, producing a new entitlement set of the image of the
+// arguments.
+func (e EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
+	switch inputs := inputs.(type) {
+	// primitive access always passes trivially through the map
+	case PrimitiveAccess:
+		return inputs, nil
+	case EntitlementSetAccess:
+		output := orderedmap.New[EntitlementOrderedSet](inputs.Entitlements.Len())
+		var err error = nil
+		inputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+			entitlementImage := e.entitlementImage(entitlement)
+			// the image of a single element is always a conjunctive set; consider a mapping
+			// M defined as X -> Y, X -> Z, A -> B, A -> C. M(X) = Y & Z and M(A) = B & C.
+			// Thus M(X | A) would be ((Y & Z) | (B & C)), which is a disjunction of two conjunctions,
+			// which is too complex to be represented in Cadence as a type. Thus whenever such a type
+			// would arise, we raise an error instead
+			if inputs.SetKind == Disjunction && entitlementImage.Len() > 1 {
+				err = &UnrepresentableEntitlementMapOutputError{
+					Input: inputs,
+					Map:   e.Type,
+					Range: astRange(),
+				}
+			}
+			output.SetAll(entitlementImage)
+		})
+		if err != nil {
+			return nil, err
+		}
+		// the image of a set through a map is the conjunction of all the output sets
+		if output.Len() == 0 {
+			return UnauthorizedAccess, nil
+		}
+		return EntitlementSetAccess{
+			Entitlements: output,
+			SetKind:      inputs.SetKind,
+		}, nil
+	}
+	return UnauthorizedAccess, nil
+}
+
 type PrimitiveAccess ast.PrimitiveAccess
 
 func (PrimitiveAccess) isAccess() {}
 
-func (a PrimitiveAccess) Access() ast.Access {
-	return ast.PrimitiveAccess(a)
+func (a PrimitiveAccess) string(_ func(_ Type) string) string {
+	return ast.PrimitiveAccess(a).String()
+}
+
+func (a PrimitiveAccess) Description() string {
+	return ast.PrimitiveAccess(a).Description()
+}
+
+func (a PrimitiveAccess) AccessKeyword() string {
+	return ast.PrimitiveAccess(a).Keyword()
+}
+
+func (a PrimitiveAccess) AuthKeyword() string {
+	return ""
+}
+
+func (a PrimitiveAccess) Equal(other Access) bool {
+	switch otherAccess := other.(type) {
+	case PrimitiveAccess:
+		return ast.PrimitiveAccess(a) == ast.PrimitiveAccess(otherAccess)
+	}
+	return false
 }
 
 func (a PrimitiveAccess) IsLessPermissiveThan(otherAccess Access) bool {

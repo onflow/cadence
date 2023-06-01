@@ -271,7 +271,8 @@ const AuthAccountTypeBorrowFunctionName = "borrow"
 var AuthAccountTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -312,7 +313,8 @@ const AuthAccountTypeLinkFunctionName = "link"
 var AuthAccountTypeLinkFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -379,7 +381,8 @@ var AuthAccountTypeLinkAccountFunctionType = &FunctionType{
 			Type: MustInstantiate(
 				&CapabilityType{},
 				&ReferenceType{
-					Type: AuthAccountType,
+					Type:          AuthAccountType,
+					Authorization: UnauthorizedAccess,
 				},
 			),
 		},
@@ -397,7 +400,8 @@ const AuthAccountTypeGetCapabilityFunctionName = "getCapability"
 var AuthAccountTypeGetCapabilityFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -727,7 +731,8 @@ const AuthAccountContractsTypeBorrowFunctionName = "borrow"
 var AuthAccountContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -1010,7 +1015,8 @@ const AuthAccountInboxTypeUnpublishFunctionName = "unpublish"
 var AuthAccountInboxTypeUnpublishFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -1050,7 +1056,8 @@ const AuthAccountInboxTypeClaimFunctionName = "claim"
 var AuthAccountInboxTypeClaimFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 

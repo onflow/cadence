@@ -1254,7 +1254,7 @@ func newAccountContractsBorrowFunction(
 			// A contract value would never be moved or destroyed, within the execution of a program.
 			reference := interpreter.NewEphemeralReferenceValue(
 				inter,
-				false,
+				interpreter.UnauthorizedAccess,
 				contractValue,
 				referenceType.Type,
 			)

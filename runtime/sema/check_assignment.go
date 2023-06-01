@@ -163,7 +163,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 			accessChain = append(accessChain, elementType)
 		case *ast.MemberExpression:
 			target = targetExp.Expression
-			memberType, _, _ := checker.visitMember(targetExp)
+			memberType, _, _, _ := checker.visitMember(targetExp)
 			accessChain = append(accessChain, memberType)
 		default:
 			inAccessChain = false
@@ -322,7 +322,7 @@ func (checker *Checker) visitIndexExpressionAssignment(
 		// visitMember caches its result, so visiting the target expression again,
 		// after it had been previously visited by visiting the outer index expression,
 		// performs no computation
-		_, member, _ := checker.visitMember(targetExpression)
+		_, _, member, _ := checker.visitMember(targetExpression)
 		if member != nil && !checker.isMutatableMember(member) {
 			checker.report(
 				&ExternalMutationError{
@@ -346,7 +346,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 	target *ast.MemberExpression,
 ) (memberType Type) {
 
-	_, member, isOptional := checker.visitMember(target)
+	_, memberType, member, isOptional := checker.visitMember(target)
 
 	if member == nil {
 		return InvalidType
@@ -364,7 +364,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		checker.report(
 			&InvalidAssignmentAccessError{
 				Name:              member.Identifier.Identifier,
-				RestrictingAccess: member.Access.Access(),
+				RestrictingAccess: member.Access,
 				DeclarationKind:   member.DeclarationKind,
 				Range:             ast.NewRangeFromPositioned(checker.memoryGauge, target.Identifier),
 			},
@@ -412,7 +412,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 
 				initializedFieldMembers := functionActivation.InitializationInfo.InitializedFieldMembers
 
-				if (targetIsConstant || member.TypeAnnotation.Type.IsResourceType()) &&
+				if (targetIsConstant || memberType.IsResourceType()) &&
 					initializedFieldMembers.Contains(accessedSelfMember) {
 
 					checker.report(
@@ -450,7 +450,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		reportAssignmentToConstant()
 	}
 
-	return member.TypeAnnotation.Type
+	return memberType
 }
 
 func IsValidAssignmentTargetExpression(expression ast.Expression) bool {

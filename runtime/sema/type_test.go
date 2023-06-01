@@ -1315,27 +1315,33 @@ func TestCommonSuperType(t *testing.T) {
 				name: "homogenous references",
 				types: []Type{
 					&ReferenceType{
-						Type: Int8Type,
+						Type:          Int8Type,
+						Authorization: UnauthorizedAccess,
 					},
 					&ReferenceType{
-						Type: Int8Type,
+						Type:          Int8Type,
+						Authorization: UnauthorizedAccess,
 					},
 					&ReferenceType{
-						Type: Int8Type,
+						Type:          Int8Type,
+						Authorization: UnauthorizedAccess,
 					},
 				},
 				expectedSuperType: &ReferenceType{
-					Type: Int8Type,
+					Type:          Int8Type,
+					Authorization: UnauthorizedAccess,
 				},
 			},
 			{
 				name: "heterogeneous references",
 				types: []Type{
 					&ReferenceType{
-						Type: Int8Type,
+						Type:          Int8Type,
+						Authorization: UnauthorizedAccess,
 					},
 					&ReferenceType{
-						Type: StringType,
+						Type:          StringType,
+						Authorization: UnauthorizedAccess,
 					},
 				},
 				expectedSuperType: AnyStructType,
@@ -1345,7 +1351,8 @@ func TestCommonSuperType(t *testing.T) {
 				types: []Type{
 					Int8Type,
 					&ReferenceType{
-						Type: Int8Type,
+						Type:          Int8Type,
+						Authorization: UnauthorizedAccess,
 					},
 				},
 				expectedSuperType: AnyStructType,
@@ -1354,12 +1361,29 @@ func TestCommonSuperType(t *testing.T) {
 				name: "struct references & resource reference",
 				types: []Type{
 					&ReferenceType{
-						Type: Int8Type,
+						Type:          Int8Type,
+						Authorization: UnauthorizedAccess,
 					},
 					&ReferenceType{
-						Type: resourceType,
+						Type:          resourceType,
+						Authorization: UnauthorizedAccess,
 					},
 				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "auth and non-auth references",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: UnauthorizedAccess,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: EntitlementSetAccess{},
+					},
+				},
+				// maybe have this be unauthorized instead of anystruct?
 				expectedSuperType: AnyStructType,
 			},
 		}

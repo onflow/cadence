@@ -297,25 +297,19 @@ func TestParseReferenceType(t *testing.T) {
 		)
 	})
 
-	t.Run("authorized, nominal", func(t *testing.T) {
+	t.Run("authorized, no entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("auth &Int")
-		require.Empty(t, errs)
-
+		_, errs := testParseType("auth &Int")
 		utils.AssertEqualWithDiff(t,
-			&ast.ReferenceType{
-				Authorization: &ast.Authorization{},
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "Int",
-						Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
-					},
+			[]error{
+				&SyntaxError{
+					Message: "expected token '('",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
-				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
-			result,
+			errs,
 		)
 	})
 
@@ -2990,57 +2984,23 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 	)
 }
 
-func TestParseAuthorizedReferenceType(t *testing.T) {
+func TestParseAuthorizedReferenceTypeWithNoEntitlements(t *testing.T) {
 
 	t.Parallel()
 
 	const code = `
        let x: auth &R = 1
 	`
-	result, errs := testParseProgram(code)
-	require.Empty(t, errs)
+	_, errs := testParseProgram(code)
 
 	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.VariableDeclaration{
-				Access:     ast.AccessNotSpecified,
-				IsConstant: true,
-				Identifier: ast.Identifier{
-					Identifier: "x",
-					Pos:        ast.Position{Offset: 12, Line: 2, Column: 11},
-				},
-				TypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.ReferenceType{
-						Authorization: &ast.Authorization{},
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "R", Pos: ast.Position{Offset: 21, Line: 2, Column: 20}},
-						},
-						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
-				Value: &ast.IntegerExpression{
-					PositiveLiteral: []byte("1"),
-					Value:           big.NewInt(1),
-					Base:            10,
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
-						EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
-					},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 23, Line: 2, Column: 22},
-				},
-				StartPos:          ast.Position{Offset: 8, Line: 2, Column: 7},
-				SecondTransfer:    nil,
-				SecondValue:       nil,
-				ParentIfStatement: nil,
+		[]error{
+			&SyntaxError{
+				Message: "expected token '('",
+				Pos:     ast.Position{Offset: 20, Line: 2, Column: 19},
 			},
 		},
-		result.Declarations(),
+		errs.(Error).Errors,
 	)
 }
 

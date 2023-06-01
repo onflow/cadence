@@ -159,18 +159,18 @@ var (
 
 	// Static Types
 
-	PrimitiveStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
-	CompositeStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
-	InterfaceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
-	VariableSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
-	ConstantSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
-	DictionaryStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
-	OptionalStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
-	RestrictedStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
-	ReferenceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
-	CapabilityStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
-	FunctionStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
-
+	PrimitiveStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
+	CompositeStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
+	InterfaceStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
+	VariableSizedStaticTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
+	ConstantSizedStaticTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
+	DictionaryStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
+	OptionalStaticTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
+	RestrictedStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
+	ReferenceStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
+	CapabilityStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
+	FunctionStaticTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
+	EntitlementMapStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMapStaticAccess)
 	// Sema types
 
 	VariableSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
@@ -255,6 +255,7 @@ var (
 	StorageCapabilityValueStringMemoryUsage = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
 	PathLinkValueStringMemoryUsage          = NewRawStringMemoryUsage(len("PathLink<>()"))
 	PublishedValueStringMemoryUsage         = NewRawStringMemoryUsage(len("PublishedValue<>()"))
+	AuthStringMemoryUsage                   = NewRawStringMemoryUsage(len("auth() "))
 
 	// Static types string representations
 

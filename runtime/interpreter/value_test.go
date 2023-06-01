@@ -1134,7 +1134,7 @@ func TestStringer(t *testing.T) {
 					common.ZeroAddress,
 				)
 				arrayRef := NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					array,
 					&sema.VariableSizedType{
 						Type: sema.AnyStructType,
@@ -4001,7 +4001,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(*Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					TrueValue,
 					sema.BoolType,
 				)
@@ -4012,7 +4012,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(*Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					TrueValue,
 					sema.StringType,
 				)
@@ -4028,7 +4028,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(_ *Interpreter) Value {
 				return NewUnmeteredStorageReferenceValue(
-					false,
+					UnauthorizedAccess,
 					testAddress,
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					sema.BoolType,
@@ -4040,7 +4040,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(_ *Interpreter) Value {
 				return NewUnmeteredStorageReferenceValue(
-					false,
+					UnauthorizedAccess,
 					testAddress,
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					sema.StringType,
@@ -4060,7 +4060,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					ReferenceStaticType{
-						Authorized:     false,
+						Authorization:  UnauthorizedAccess,
 						BorrowedType:   PrimitiveStaticTypeBool,
 						ReferencedType: PrimitiveStaticTypeBool,
 					},

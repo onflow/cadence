@@ -188,31 +188,16 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 
 	switch typedSuperType := superType.(type) {
 	case *ReferenceType:
-		// References types are only subtypes of reference types
-
+		// if both are references, the failability of this cast depends entirely on the referenced types;
+		// entitlements do not factor in here. To see why, consider a case where you have a reference to `R`
+		// value that dynamically possesses entitlements `X` and `Z`. Statically, this would be typed as
+		// `auth(X, Z) &R`. This is statically upcastable to `auth(Z) &R`, since this decreases permissions,
+		// and any use case that requires a `Z` will also permit an `X & Z`. Then, we wish to cast this `auth(Z) &R`-typed
+		// value to `auth(X | Y) &R`. Statically, it would appear that these two types are unrelated since the two entitlement
+		// sets are disjoint, but this cast would succeed dynamically because the value does indeed posses an `X` entitlement
+		// at runtime, which does indeed satisfy the requirement to have either an `X` or a `Y`.
 		if typedSubType, ok := subType.(*ReferenceType); ok {
-			// An authorized reference type `auth &T`
-			// is a subtype of a reference type `&U` (authorized or non-authorized),
-			// if `T` is a subtype of `U`
-
-			if typedSubType.Authorized {
-				return FailableCastCanSucceed(typedSubType.Type, typedSuperType.Type)
-			}
-
-			// An unauthorized reference type is not a subtype of an authorized reference type.
-			// Not even dynamically.
-			//
-			// The holder of the reference may not gain more permissions.
-
-			if typedSuperType.Authorized {
-				return false
-			}
-
-			// A failable cast from an unauthorized reference type
-			// to an unauthorized reference type
-			// has the same semantics as a static/non-failable cast
-
-			return IsSubType(subType, superType)
+			return FailableCastCanSucceed(typedSubType.Type, typedSuperType.Type)
 		}
 
 	case *RestrictedType:

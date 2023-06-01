@@ -1396,7 +1396,10 @@ func TestRuntimeStorageSaveStorageCapability(t *testing.T) {
 
 		for typeDescription, ty := range map[string]cadence.Type{
 			"Untyped": nil,
-			"Typed":   &cadence.ReferenceType{Authorized: false, Type: cadence.IntType{}},
+			"Typed": &cadence.ReferenceType{
+				Authorization: cadence.UnauthorizedAccess,
+				Type:          cadence.IntType{},
+			},
 		} {
 
 			t.Run(fmt.Sprintf("%s %s", domain.Identifier(), typeDescription), func(t *testing.T) {

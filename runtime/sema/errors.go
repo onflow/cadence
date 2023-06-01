@@ -655,7 +655,7 @@ type InvalidAccessModifierError struct {
 	Explanation     string
 	Pos             ast.Position
 	DeclarationKind common.DeclarationKind
-	Access          ast.Access
+	Access          Access
 }
 
 var _ SemanticError = &InvalidAccessModifierError{}
@@ -671,7 +671,7 @@ func (e *InvalidAccessModifierError) Error() string {
 		explanation = fmt.Sprintf(". %s", e.Explanation)
 	}
 
-	if e.Access == ast.AccessNotSpecified {
+	if e.Access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return fmt.Sprintf(
 			"invalid effective access modifier for %s%s",
 			e.DeclarationKind.Name(),
@@ -681,7 +681,7 @@ func (e *InvalidAccessModifierError) Error() string {
 		return fmt.Sprintf(
 			"invalid access modifier for %s: `%s`%s",
 			e.DeclarationKind.Name(),
-			e.Access.Keyword(),
+			e.Access.AccessKeyword(),
 			explanation,
 		)
 	}
@@ -692,11 +692,11 @@ func (e *InvalidAccessModifierError) StartPosition() ast.Position {
 }
 
 func (e *InvalidAccessModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	if e.Access == ast.AccessNotSpecified {
+	if e.Access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return e.Pos
 	}
 
-	length := len(e.Access.Keyword())
+	length := len(e.Access.AccessKeyword())
 	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
@@ -2803,7 +2803,7 @@ func (e *InvalidOptionalChainingError) Error() string {
 
 type InvalidAccessError struct {
 	Name              string
-	RestrictingAccess ast.Access
+	RestrictingAccess Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }
@@ -2828,7 +2828,7 @@ func (e *InvalidAccessError) Error() string {
 
 type InvalidAssignmentAccessError struct {
 	Name              string
-	RestrictingAccess ast.Access
+	RestrictingAccess Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }
@@ -4014,7 +4014,7 @@ func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
 func (*InvalidMappedEntitlementMemberError) IsUserError() {}
 
 func (e *InvalidMappedEntitlementMemberError) Error() string {
-	return "mapped entitlement access modifiers may only be used for fields with a reference type authorized with the same mapped entitlement"
+	return "mapped entitlement access modifiers may only be used for fields or accessors with a reference type authorized with the same mapped entitlement"
 }
 
 func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
@@ -4055,6 +4055,60 @@ func (*DirectEntitlementAnnotationError) IsUserError() {}
 
 func (e *DirectEntitlementAnnotationError) Error() string {
 	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
+}
+
+// UnrepresentableEntitlementMapOutputError
+type UnrepresentableEntitlementMapOutputError struct {
+	Input EntitlementSetAccess
+	Map   *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &UnrepresentableEntitlementMapOutputError{}
+var _ errors.UserError = &UnrepresentableEntitlementMapOutputError{}
+
+func (*UnrepresentableEntitlementMapOutputError) isSemanticError() {}
+
+func (*UnrepresentableEntitlementMapOutputError) IsUserError() {}
+
+func (e *UnrepresentableEntitlementMapOutputError) Error() string {
+	return fmt.Sprintf("cannot map %s through %s because the output is unrepresentable", e.Input.AccessKeyword(), e.Map.QualifiedString())
+}
+
+func (e *UnrepresentableEntitlementMapOutputError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *UnrepresentableEntitlementMapOutputError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.EndPos
+}
+
+// InvalidMappedAuthorizationOutsideOfFieldError
+type InvalidMappedAuthorizationOutsideOfFieldError struct {
+	Map *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &InvalidMappedAuthorizationOutsideOfFieldError{}
+var _ errors.UserError = &InvalidMappedAuthorizationOutsideOfFieldError{}
+
+func (*InvalidMappedAuthorizationOutsideOfFieldError) isSemanticError() {}
+
+func (*InvalidMappedAuthorizationOutsideOfFieldError) IsUserError() {}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) Error() string {
+	return fmt.Sprintf(
+		"cannot use mapped entitlement authorization for %s outside of a field or accessor function using the same entitlement access",
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.EndPos
 }
 
 type DuplicateEntitlementRequirementError struct {
@@ -4307,4 +4361,50 @@ func (*AttachmentsNotEnabledError) IsUserError() {}
 
 func (e *AttachmentsNotEnabledError) Error() string {
 	return "attachments are not enabled and cannot be used in this environment"
+}
+
+// InvalidAttachmentEntitlementError
+type InvalidAttachmentEntitlementError struct {
+	Attachment               *CompositeType
+	AttachmentAccessModifier Access
+	InvalidEntitlement       *EntitlementType
+	Pos                      ast.Position
+}
+
+var _ SemanticError = &InvalidAttachmentEntitlementError{}
+var _ errors.UserError = &InvalidAttachmentEntitlementError{}
+
+func (*InvalidAttachmentEntitlementError) isSemanticError() {}
+
+func (*InvalidAttachmentEntitlementError) IsUserError() {}
+
+func (e *InvalidAttachmentEntitlementError) Error() string {
+	entitlementDescription := "entitlements"
+	if e.InvalidEntitlement != nil {
+		entitlementDescription = fmt.Sprintf("`%s`", e.InvalidEntitlement.QualifiedIdentifier())
+	}
+
+	return fmt.Sprintf("cannot use %s in the access modifier for a member in `%s`",
+		entitlementDescription,
+		e.Attachment.QualifiedIdentifier())
+}
+
+func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
+	switch access := e.AttachmentAccessModifier.(type) {
+	case PrimitiveAccess:
+		return "attachments declared with `pub` access do not support entitlements on their members"
+	case EntitlementMapAccess:
+		return fmt.Sprintf("`%s` must appear in the output of the entitlement mapping `%s`",
+			e.InvalidEntitlement.QualifiedIdentifier(),
+			access.Type.QualifiedIdentifier())
+	}
+	return ""
+}
+
+func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidAttachmentEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
 }

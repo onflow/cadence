@@ -126,7 +126,8 @@ const (
 	staticTypeKey     = "staticType"
 	addressKey        = "address"
 	pathKey           = "path"
-	authorizedKey     = "authorized"
+	authorizationKey  = "authorization"
+	entitlementsKey   = "entitlements"
 	sizeKey           = "size"
 	typeIDKey         = "typeID"
 	restrictionsKey   = "restrictions"
@@ -943,6 +944,38 @@ func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, retur
 	)
 }
 
+func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorization {
+	obj := toObject(authorizationJSON)
+	kind := obj.Get(kindKey)
+
+	switch kind {
+	case "Unauthorized":
+		return cadence.UnauthorizedAccess
+	case "EntitlementMapAuthorization":
+		entitlements := toSlice(obj.Get(entitlementsKey))
+		m := toString(toObject(entitlements[0]).Get("typeID"))
+		return cadence.NewEntitlementMapAuthorization(d.gauge, common.TypeID(m))
+	case "EntitlementConjunctionSet":
+		var typeIDs []common.TypeID
+		entitlements := toSlice(obj.Get(entitlementsKey))
+		for _, entitlement := range entitlements {
+			id := toString(toObject(entitlement).Get("typeID"))
+			typeIDs = append(typeIDs, common.TypeID(id))
+		}
+		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Conjunction)
+	case "EntitlementDisjunctionSet":
+		var typeIDs []common.TypeID
+		entitlements := toSlice(obj.Get(entitlementsKey))
+		for _, entitlement := range entitlements {
+			id := toString(toObject(entitlement).Get("typeID"))
+			typeIDs = append(typeIDs, common.TypeID(id))
+		}
+		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Disjunction)
+	}
+
+	panic(errors.NewDefaultUserError("invalid kind in authorization: %s", kind))
+}
+
 func (d *Decoder) decodeNominalType(
 	obj jsonObject,
 	kind, typeID string,
@@ -1148,10 +1181,9 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Reference":
-		auth := toBool(obj.Get(authorizedKey))
 		return cadence.NewMeteredReferenceType(
 			d.gauge,
-			auth,
+			d.decodeAuthorization(obj.Get(authorizationKey)),
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Any":

@@ -55,12 +55,12 @@ func (mode AccessCheckMode) IsReadableAccess(access Access) bool {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
-		return access.PermitsAccess(PrimitiveAccess(ast.AccessPublic))
+		return access.PermitsAccess(UnauthorizedAccess)
 
 	case AccessCheckModeNotSpecifiedUnrestricted:
 
 		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
-			access.PermitsAccess(PrimitiveAccess(ast.AccessPublic))
+			access.PermitsAccess(UnauthorizedAccess)
 
 	case AccessCheckModeNone:
 		return true

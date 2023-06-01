@@ -3525,12 +3525,14 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 	types := []sema.Type{
 		&sema.CapabilityType{
 			BorrowType: &sema.ReferenceType{
-				Type: structType,
+				Type:          structType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 		},
 		&sema.CapabilityType{
 			BorrowType: &sema.ReferenceType{
-				Type: sema.AnyStructType,
+				Type:          sema.AnyStructType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 		},
 		&sema.CapabilityType{},
@@ -3543,7 +3545,8 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		BorrowType: interpreter.ConvertSemaToStaticType(
 			nil,
 			&sema.ReferenceType{
-				Type: structType,
+				Type:          structType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 		),
 	}
@@ -3552,7 +3555,8 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		Name: "cap",
 		Type: &sema.CapabilityType{
 			BorrowType: &sema.ReferenceType{
-				Type: structType,
+				Type:          structType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 		},
 		Value: capabilityValue,

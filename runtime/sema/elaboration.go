@@ -26,9 +26,10 @@ import (
 )
 
 type MemberInfo struct {
-	AccessedType Type
-	Member       *Member
-	IsOptional   bool
+	AccessedType  Type
+	ResultingType Type
+	Member        *Member
+	IsOptional    bool
 }
 
 type CastTypes struct {
