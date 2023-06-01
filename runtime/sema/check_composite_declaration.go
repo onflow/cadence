@@ -93,12 +93,10 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 		attachmentAccess = *attachmentType.attachmentEntitlementAccess
 	}
 
-	attachmentType.Members.Foreach(func(_ string, member *Member) {
-		switch attachmentAccess := attachmentAccess.(type) {
-		case EntitlementMapAccess:
-			codomain := attachmentAccess.Codomain()
-			switch memberAccess := member.Access.(type) {
-			case EntitlementSetAccess:
+	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
+		codomain := attachmentAccess.Codomain()
+		attachmentType.Members.Foreach(func(_ string, member *Member) {
+			if memberAccess, ok := member.Access.(EntitlementSetAccess); ok {
 				memberAccess.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 					if !codomain.Entitlements.Contains(entitlement) {
 						checker.report(&InvalidAttachmentEntitlementError{
@@ -110,19 +108,23 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 					}
 				})
 			}
-		default:
-			switch member.Access.(type) {
-			case PrimitiveAccess:
-				return
-			default:
-				checker.report(&InvalidAttachmentEntitlementError{
-					Attachment:               attachmentType,
-					AttachmentAccessModifier: attachmentAccess,
-					Pos:                      member.Identifier.Pos,
-				})
-			}
+		})
+		return
+	}
+
+	// if the attachment's access is public, its members may not have entitlement access
+	attachmentType.Members.Foreach(func(_ string, member *Member) {
+		if _, ok := member.Access.(PrimitiveAccess); ok {
+			return
 		}
+		checker.report(&InvalidAttachmentEntitlementError{
+			Attachment:               attachmentType,
+			AttachmentAccessModifier: attachmentAccess,
+			Pos:                      member.Identifier.Pos,
+		})
+
 	})
+
 }
 
 func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
@@ -626,8 +628,7 @@ func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclara
 	composite.baseType = checker.convertNominalType(declaration.BaseType)
 
 	attachmentAccess := checker.accessFromAstAccess(declaration.Access)
-	switch attachmentAccess := attachmentAccess.(type) {
-	case EntitlementMapAccess:
+	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
 		composite.attachmentEntitlementAccess = &attachmentAccess
 	}
 
@@ -1957,7 +1958,12 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		functionAccess := checker.accessFromAstAccess(function.Access)
 
-		functionType := checker.functionType(function.Purity, functionAccess, function.ParameterList, function.ReturnTypeAnnotation)
+		functionType := checker.functionType(
+			function.Purity,
+			functionAccess,
+			function.ParameterList,
+			function.ReturnTypeAnnotation,
+		)
 
 		checker.Elaboration.SetFunctionDeclarationFunctionType(function, functionType)
 
@@ -2236,7 +2242,6 @@ func (checker *Checker) checkSpecialFunction(
 		checker.declareBaseValue(
 			attachmentType.baseType,
 			attachmentType,
-			ast.NewRangeFromPositioned(checker.memoryGauge, specialFunction),
 			attachmentType.baseTypeDocString)
 	}
 
@@ -2296,7 +2301,6 @@ func (checker *Checker) checkCompositeFunctions(
 				checker.declareBaseValue(
 					selfType.baseType,
 					selfType,
-					ast.NewRangeFromPositioned(checker.memoryGauge, function),
 					selfType.baseTypeDocString,
 				)
 			}
@@ -2366,9 +2370,8 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }
 
-func (checker *Checker) declareBaseValue(baseType Type, attachmentType *CompositeType, fnRange ast.Range, superDocString string) {
-	switch typedBaseType := baseType.(type) {
-	case *InterfaceType:
+func (checker *Checker) declareBaseValue(baseType Type, attachmentType *CompositeType, superDocString string) {
+	if typedBaseType, ok := baseType.(*InterfaceType); ok {
 		restrictedType := AnyStructType
 		if baseType.IsResourceType() {
 			restrictedType = AnyResourceType

@@ -194,7 +194,7 @@ type TypeIndexableType interface {
 	Type
 	isTypeIndexableType() bool
 	IsValidIndexingType(indexingType Type) bool
-	TypeIndexingElementType(indexingType Type, astRange ast.Range) (Type, error)
+	TypeIndexingElementType(indexingType Type, astRange func() ast.Range) (Type, error)
 }
 
 type MemberResolver struct {
@@ -4182,7 +4182,7 @@ func (t *CompositeType) isTypeIndexableType() bool {
 	return t.Kind.SupportsAttachments()
 }
 
-func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ ast.Range) (Type, error) {
+func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
@@ -5306,7 +5306,7 @@ func (t *ReferenceType) isTypeIndexableType() bool {
 	return ok && referencedType.isTypeIndexableType()
 }
 
-func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange ast.Range) (Type, error) {
+func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange func() ast.Range) (Type, error) {
 	_, ok := t.Type.(TypeIndexableType)
 	if !ok {
 		return nil, nil
@@ -6535,7 +6535,7 @@ func (t *RestrictedType) isTypeIndexableType() bool {
 	return true
 }
 
-func (t *RestrictedType) TypeIndexingElementType(indexingType Type, _ ast.Range) (Type, error) {
+func (t *RestrictedType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
