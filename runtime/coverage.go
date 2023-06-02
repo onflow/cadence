@@ -251,7 +251,7 @@ func (r *CoverageReport) Percentage() string {
 // statements percentage.
 func (r *CoverageReport) String() string {
 	if r.Statements() == 0 {
-		return fmt.Sprintf("There are no statements to cover")
+		return "There are no statements to cover"
 	}
 	return fmt.Sprintf("Coverage: %v of statements", r.Percentage())
 }
