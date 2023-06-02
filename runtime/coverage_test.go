@@ -1708,4 +1708,20 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 		"There are no statements to cover",
 		coverageReport.String(),
 	)
+
+	summary := coverageReport.Summary()
+
+	actual, err := json.Marshal(summary)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": "100.0%",
+	    "hits": 0,
+	    "locations": 0,
+	    "misses": 0,
+	    "statements": 0
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
 }

@@ -237,17 +237,20 @@ func (r *CoverageReport) IsLocationInspected(location Location) bool {
 func (r *CoverageReport) Percentage() string {
 	totalStatements := r.Statements()
 	totalCoveredLines := r.Hits()
+	var percentage float64 = 100
+	if totalStatements != 0 {
+		percentage = 100 * float64(totalCoveredLines) / float64(totalStatements)
+	}
 	return fmt.Sprintf(
 		"%0.1f%%",
-		100*float64(totalCoveredLines)/float64(totalStatements),
+		percentage,
 	)
 }
 
 // String returns a human-friendly message for the covered
 // statements percentage.
 func (r *CoverageReport) String() string {
-	percentage := r.Percentage()
-	if percentage == "NaN%" {
+	if r.Statements() == 0 {
 		return fmt.Sprintf("There are no statements to cover")
 	}
 	return fmt.Sprintf("Coverage: %v of statements", r.Percentage())
