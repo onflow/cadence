@@ -611,7 +611,7 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 		)
 	})
 
-	t.Run("upcast runtime type", func(t *testing.T) {
+	t.Run("upcast runtime entitlements", func(t *testing.T) {
 		t.Parallel()
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
@@ -643,6 +643,41 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
+			value,
+		)
+	})
+
+	t.Run("upcast runtime type", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			struct S {}
+			fun test(): Bool {
+				let s = S()
+				account.save(s, to: /storage/foo)
+				account.link<&S>(/public/foo, target: /storage/foo)
+				let cap: Capability<&S> = account.getCapability<&S>(/public/foo)
+				let runtimeType = cap.getType() 
+				let upcastCap = cap as Capability<&AnyStruct> 
+				let upcastRuntimeType = upcastCap.getType() 
+				return runtimeType == upcastRuntimeType 
+			}
+			`,
+			sema.Config{},
+		)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
 			value,
 		)
 	})
