@@ -1878,6 +1878,25 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			return ConvertAddress(interpreter, value, locationRange)
 		}
 
+	case *sema.CapabilityType:
+		if !valueType.Equal(unwrappedTargetType) {
+			if capability, ok := value.(*StorageCapabilityValue); ok && unwrappedTargetType.BorrowType != nil {
+				targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
+				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
+				borrowType := NewReferenceStaticType(
+					interpreter,
+					ConvertSemaAccesstoStaticAuthorization(interpreter, targetBorrowType.Authorization),
+					valueBorrowType.ReferencedType,
+				)
+				return NewStorageCapabilityValue(
+					interpreter,
+					capability.Address,
+					capability.Path,
+					borrowType,
+				)
+			}
+		}
+
 	case *sema.ReferenceType:
 		if !valueType.Equal(unwrappedTargetType) {
 			// transferring a reference at runtime does not change its entitlements; this is so that an upcast reference
@@ -4222,7 +4241,6 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 	authorization Authorization,
 	err error,
 ) {
-	wantedReferenceType := wantedBorrowType
 
 	seenPaths := map[PathValue]struct{}{}
 	paths := []PathValue{path}
@@ -4258,8 +4276,6 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 				return nil, UnauthorizedAccess, nil
 			}
 
-			wantedReferenceType = allowedType.(*sema.ReferenceType)
-
 			targetPath := value.TargetPath
 			paths = append(paths, targetPath)
 			path = targetPath
@@ -4278,7 +4294,7 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 
 		default:
 			return PathCapabilityTarget(path),
-				ConvertSemaAccesstoStaticAuthorization(interpreter, wantedReferenceType.Authorization),
+				ConvertSemaAccesstoStaticAuthorization(interpreter, wantedBorrowType.Authorization),
 				nil
 		}
 	}
