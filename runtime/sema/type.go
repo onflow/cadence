@@ -3184,22 +3184,26 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 
 	// parameters
 
-	var newParameters []Parameter = make([]Parameter, 0, len(t.Parameters))
+	var newParameters []Parameter
 
-	for _, parameter := range t.Parameters {
-		newParameterType := parameter.TypeAnnotation.Type.Resolve(typeArguments)
-		if newParameterType == nil {
-			return nil
+	if len(t.Parameters) > 0 {
+		newParameters = make([]Parameter, 0, len(t.Parameters))
+
+		for _, parameter := range t.Parameters {
+			newParameterType := parameter.TypeAnnotation.Type.Resolve(typeArguments)
+			if newParameterType == nil {
+				return nil
+			}
+
+			newParameters = append(
+				newParameters,
+				Parameter{
+					Label:          parameter.Label,
+					Identifier:     parameter.Identifier,
+					TypeAnnotation: NewTypeAnnotation(newParameterType),
+				},
+			)
 		}
-
-		newParameters = append(
-			newParameters,
-			Parameter{
-				Label:          parameter.Label,
-				Identifier:     parameter.Identifier,
-				TypeAnnotation: NewTypeAnnotation(newParameterType),
-			},
-		)
 	}
 
 	// return type
@@ -3220,40 +3224,48 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 
 func (t *FunctionType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 
-	var newTypeParameters []*TypeParameter = make([]*TypeParameter, 0, len(t.TypeParameters))
-	for _, parameter := range t.TypeParameters {
+	var newTypeParameters []*TypeParameter
 
-		if param, ok := typeParamMap[parameter]; ok {
-			newTypeParameters = append(newTypeParameters, param)
-			continue
+	if len(t.TypeParameters) > 0 {
+		newTypeParameters = make([]*TypeParameter, 0, len(t.TypeParameters))
+		for _, parameter := range t.TypeParameters {
+
+			if param, ok := typeParamMap[parameter]; ok {
+				newTypeParameters = append(newTypeParameters, param)
+				continue
+			}
+
+			newTypeParameterTypeBound := parameter.TypeBound.Map(gauge, typeParamMap, f)
+			newParam := &TypeParameter{
+				Name:      parameter.Name,
+				Optional:  parameter.Optional,
+				TypeBound: newTypeParameterTypeBound,
+			}
+			typeParamMap[parameter] = newParam
+
+			newTypeParameters = append(
+				newTypeParameters,
+				newParam,
+			)
 		}
-
-		newTypeParameterTypeBound := parameter.TypeBound.Map(gauge, typeParamMap, f)
-		newParam := &TypeParameter{
-			Name:      parameter.Name,
-			Optional:  parameter.Optional,
-			TypeBound: newTypeParameterTypeBound,
-		}
-		typeParamMap[parameter] = newParam
-
-		newTypeParameters = append(
-			newTypeParameters,
-			newParam,
-		)
 	}
 
-	newParameters := make([]Parameter, 0, len(t.Parameters))
-	for _, parameter := range t.Parameters {
-		newParameterTypeAnnot := parameter.TypeAnnotation.Map(gauge, typeParamMap, f)
+	var newParameters []Parameter
 
-		newParameters = append(
-			newParameters,
-			Parameter{
-				Label:          parameter.Label,
-				Identifier:     parameter.Identifier,
-				TypeAnnotation: newParameterTypeAnnot,
-			},
-		)
+	if len(t.Parameters) > 0 {
+		newParameters = make([]Parameter, 0, len(t.Parameters))
+		for _, parameter := range t.Parameters {
+			newParameterTypeAnnot := parameter.TypeAnnotation.Map(gauge, typeParamMap, f)
+
+			newParameters = append(
+				newParameters,
+				Parameter{
+					Label:          parameter.Label,
+					Identifier:     parameter.Identifier,
+					TypeAnnotation: newParameterTypeAnnot,
+				},
+			)
+		}
 	}
 
 	returnType := t.ReturnTypeAnnotation.Map(gauge, typeParamMap, f)
@@ -6434,13 +6446,16 @@ func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
 }
 
 func (t *RestrictedType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
-	restrictions := make([]*InterfaceType, 0, len(t.Restrictions))
-	for _, restriction := range t.Restrictions {
-		mapped := restriction.Map(gauge, typeParamMap, f)
-		if mappedRestriction, isRestriction := mapped.(*InterfaceType); isRestriction {
-			restrictions = append(restrictions, mappedRestriction)
-		} else {
-			panic(errors.NewUnexpectedError(fmt.Sprintf("restriction mapped to non-interface type %T", mapped)))
+	var restrictions []*InterfaceType
+	if len(t.Restrictions) > 0 {
+		restrictions = make([]*InterfaceType, 0, len(t.Restrictions))
+		for _, restriction := range t.Restrictions {
+			mapped := restriction.Map(gauge, typeParamMap, f)
+			if mappedRestriction, isRestriction := mapped.(*InterfaceType); isRestriction {
+				restrictions = append(restrictions, mappedRestriction)
+			} else {
+				panic(errors.NewUnexpectedError(fmt.Sprintf("restriction mapped to non-interface type %T", mapped)))
+			}
 		}
 	}
 
