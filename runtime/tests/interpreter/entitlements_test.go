@@ -611,6 +611,42 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 		)
 	})
 
+	t.Run("upcast runtime type", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			struct S {}
+			fun test(): Bool {
+				let s = S()
+				account.save(s, to: /storage/foo)
+				account.link<auth(X) &S>(/public/foo, target: /storage/foo)
+				let cap: Capability<auth(X) &S> = account.getCapability<auth(X) &S>(/public/foo)
+				let runtimeType = cap.getType() 
+				let upcastCap = cap as Capability<&S> 
+				let upcastRuntimeType = upcastCap.getType() 
+				return runtimeType == upcastRuntimeType 
+			}
+			`,
+			sema.Config{},
+		)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			value,
+		)
+	})
+
 	t.Run("can check with supertype", func(t *testing.T) {
 		t.Parallel()
 
