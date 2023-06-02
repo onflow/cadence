@@ -6436,8 +6436,11 @@ func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
 func (t *RestrictedType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	restrictions := make([]*InterfaceType, 0, len(t.Restrictions))
 	for _, restriction := range t.Restrictions {
-		if mappedRestriction, isRestriction := restriction.Map(gauge, typeParamMap, f).(*InterfaceType); isRestriction {
+		mapped := restriction.Map(gauge, typeParamMap, f)
+		if mappedRestriction, isRestriction := mapped.(*InterfaceType); isRestriction {
 			restrictions = append(restrictions, mappedRestriction)
+		} else {
+			panic(errors.NewUnexpectedError(fmt.Sprintf("restriction mapped to non-interface type %T", mapped)))
 		}
 	}
 
