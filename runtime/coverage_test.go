@@ -1648,3 +1648,80 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 		coverageReport.String(),
 	)
 }
+
+func TestRuntimeCoverageWithNoStatements(t *testing.T) {
+
+	t.Parallel()
+
+	importedScript := []byte(`
+	  pub contract FooContract {
+	    pub resource interface Receiver {
+	    }
+	  }
+	`)
+
+	script := []byte(`
+	  import "FooContract"
+	  pub fun main(): Int {
+		Type<@{FooContract.Receiver}>().identifier
+		return 42
+	  }
+	`)
+
+	coverageReport := NewCoverageReport()
+
+	scriptlocation := common.ScriptLocation{0x1b, 0x2c}
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("FooContract"):
+				return importedScript, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+	runtime := NewInterpreterRuntime(Config{
+		CoverageReport: coverageReport,
+	})
+	coverageReport.ExcludeLocation(scriptlocation)
+	value, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface:      runtimeInterface,
+			Location:       scriptlocation,
+			CoverageReport: coverageReport,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, cadence.NewInt(42), value)
+
+	_, err = json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	assert.Equal(
+		t,
+		"There are no statements to cover",
+		coverageReport.String(),
+	)
+
+	summary := coverageReport.Summary()
+
+	actual, err := json.Marshal(summary)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": "100.0%",
+	    "hits": 0,
+	    "locations": 0,
+	    "misses": 0,
+	    "statements": 0
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+}
