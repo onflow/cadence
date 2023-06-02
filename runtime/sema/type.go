@@ -878,18 +878,7 @@ func (t *GenericType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParame
 			TypeParameter: param,
 		})
 	}
-
-	typeParameter := &TypeParameter{
-		Name:      t.TypeParameter.Name,
-		Optional:  t.TypeParameter.Optional,
-		TypeBound: t.TypeParameter.TypeBound.Map(gauge, typeParamMap, f),
-	}
-
-	typeParamMap[t.TypeParameter] = typeParameter
-
-	return f(&GenericType{
-		TypeParameter: typeParameter,
-	})
+	panic(errors.NewUnreachableError())
 }
 
 func (t *GenericType) GetMembers() map[string]MemberResolver {
@@ -3195,7 +3184,7 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 
 	// parameters
 
-	var newParameters []Parameter
+	var newParameters []Parameter = make([]Parameter, 0, len(t.Parameters))
 
 	for _, parameter := range t.Parameters {
 		newParameterType := parameter.TypeAnnotation.Type.Resolve(typeArguments)
@@ -3253,7 +3242,7 @@ func (t *FunctionType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParam
 		)
 	}
 
-	var newParameters []Parameter = make([]Parameter, 0, len(t.Parameters))
+	newParameters := make([]Parameter, 0, len(t.Parameters))
 	for _, parameter := range t.Parameters {
 		newParameterTypeAnnot := parameter.TypeAnnotation.Map(gauge, typeParamMap, f)
 
@@ -5303,7 +5292,12 @@ func (t *ReferenceType) RewriteWithRestrictedTypes() (Type, bool) {
 }
 
 func (t *ReferenceType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
-	return f(NewReferenceType(gauge, t.Type.Map(gauge, typeParamMap, f), t.Authorization))
+	mappedType := t.Type.Map(gauge, typeParamMap, f)
+	return f(NewReferenceType(
+		gauge,
+		mappedType,
+		t.Authorization,
+	))
 }
 
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {
@@ -6447,7 +6441,13 @@ func (t *RestrictedType) Map(gauge common.MemoryGauge, typeParamMap map[*TypePar
 		}
 	}
 
-	return f(NewRestrictedType(gauge, t.Type.Map(gauge, typeParamMap, f), restrictions))
+	mappedType := t.Type.Map(gauge, typeParamMap, f)
+
+	return f(NewRestrictedType(
+		gauge,
+		mappedType,
+		restrictions,
+	))
 }
 
 func (t *RestrictedType) GetMembers() map[string]MemberResolver {
