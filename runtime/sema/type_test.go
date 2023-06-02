@@ -1936,3 +1936,165 @@ func BenchmarkSuperTypeInference(b *testing.B) {
 		}
 	})
 }
+
+func TestMapType(t *testing.T) {
+
+	t.Parallel()
+
+	mapFn := func(ty Type) Type {
+		switch typ := ty.(type) {
+		case *SimpleType:
+			return BoolType
+		case *NumericType:
+			return StringType
+		case *CompositeType:
+			return &InterfaceType{Identifier: typ.Identifier}
+		case *RestrictedType:
+			var interfaces []*InterfaceType
+			for _, i := range typ.Restrictions {
+				interfaces = append(interfaces, &InterfaceType{Identifier: i.Identifier + "f"})
+			}
+			return NewRestrictedType(nil, typ.Type, interfaces)
+		}
+		return ty
+	}
+
+	t.Run("map optional", func(t *testing.T) {
+		t.Parallel()
+		original := NewOptionalType(nil, StringType)
+		mapped := NewOptionalType(nil, BoolType)
+
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
+	})
+
+	t.Run("map variable array", func(t *testing.T) {
+		t.Parallel()
+		original := NewVariableSizedType(nil, StringType)
+		mapped := NewVariableSizedType(nil, BoolType)
+
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
+	})
+
+	t.Run("map constant sized array", func(t *testing.T) {
+		t.Parallel()
+		original := NewConstantSizedType(nil, StringType, 7)
+		mapped := NewConstantSizedType(nil, BoolType, 7)
+
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
+	})
+
+	t.Run("map reference type", func(t *testing.T) {
+		t.Parallel()
+		mapType := NewEntitlementMapAccess(&EntitlementMapType{Identifier: "X"})
+		original := NewReferenceType(nil, StringType, mapType)
+		mapped := NewReferenceType(nil, BoolType, mapType)
+
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
+	})
+
+	t.Run("map dictionary type", func(t *testing.T) {
+		t.Parallel()
+		original := NewDictionaryType(nil, StringType, Int128Type)
+		mapped := NewDictionaryType(nil, BoolType, StringType)
+
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
+	})
+
+	t.Run("map capability type", func(t *testing.T) {
+		t.Parallel()
+		original := NewCapabilityType(nil, StringType)
+		mapped := NewCapabilityType(nil, BoolType)
+
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
+	})
+
+	t.Run("map restricted type", func(t *testing.T) {
+		t.Parallel()
+
+		original := NewRestrictedType(
+			nil,
+			StringType,
+			[]*InterfaceType{
+				{Identifier: "foo"},
+				{Identifier: "bar"},
+			},
+		)
+		mapped := NewRestrictedType(
+			nil,
+			BoolType,
+			[]*InterfaceType{
+				{Identifier: "foof"},
+				{Identifier: "barf"},
+			},
+		)
+
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
+	})
+
+	t.Run("map function type", func(t *testing.T) {
+		t.Parallel()
+		originalTypeParam := &TypeParameter{
+			TypeBound: Int64Type,
+			Name:      "X",
+			Optional:  true,
+		}
+		original := NewSimpleFunctionType(
+			FunctionPurityView,
+			[]Parameter{
+				{
+					TypeAnnotation: NewTypeAnnotation(
+						&GenericType{
+							TypeParameter: originalTypeParam,
+						},
+					),
+					Label:      "X",
+					Identifier: "Y",
+				},
+				{
+					TypeAnnotation: NewTypeAnnotation(&CompositeType{Identifier: "foo"}),
+					Label:          "A",
+					Identifier:     "B",
+				},
+			},
+			NewTypeAnnotation(Int128Type),
+		)
+		original.TypeParameters = []*TypeParameter{originalTypeParam}
+
+		mappedTypeParam := &TypeParameter{
+			TypeBound: StringType,
+			Name:      "X",
+			Optional:  true,
+		}
+		mapped := NewSimpleFunctionType(
+			FunctionPurityView,
+			[]Parameter{
+				{
+					TypeAnnotation: NewTypeAnnotation(
+						&GenericType{
+							TypeParameter: mappedTypeParam,
+						},
+					),
+					Label:      "X",
+					Identifier: "Y",
+				},
+				{
+					TypeAnnotation: NewTypeAnnotation(&InterfaceType{Identifier: "foo"}),
+					Label:          "A",
+					Identifier:     "B",
+				},
+			},
+			NewTypeAnnotation(StringType),
+		)
+		mapped.TypeParameters = []*TypeParameter{mappedTypeParam}
+
+		output := original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn)
+
+		require.IsType(t, &FunctionType{}, output)
+
+		outputFunction := output.(*FunctionType)
+
+		require.Equal(t, mapped, outputFunction)
+		require.IsType(t, &GenericType{}, outputFunction.Parameters[0].TypeAnnotation.Type)
+		require.True(t, outputFunction.Parameters[0].TypeAnnotation.Type.(*GenericType).TypeParameter == outputFunction.TypeParameters[0])
+	})
+}
