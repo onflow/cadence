@@ -37,8 +37,10 @@ func TestFlowEventTypeIDs(t *testing.T) {
 
 	for _, ty := range []sema.Type{
 		AccountCreatedEventType,
-		AccountKeyAddedEventType,
-		AccountKeyRemovedEventType,
+		AccountKeyAddedEventTypeV1,
+		AccountKeyAddedEventTypeV2,
+		AccountKeyRemovedEventTypeV1,
+		AccountKeyRemovedEventTypeV2,
 		AccountContractAddedEventType,
 		AccountContractUpdatedEventType,
 		AccountContractRemovedEventType,
