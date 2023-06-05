@@ -849,17 +849,17 @@ func (StorageMutatedDuringIterationError) Error() string {
 	return "storage iteration continued after modifying storage"
 }
 
-// DictionaryMutatedDuringDestructionError
-type DictionaryMutatedDuringDestructionError struct {
+// ContainerMutatedDuringDestructionError
+type ContainerMutatedDuringDestructionError struct {
 	LocationRange
 }
 
-var _ errors.UserError = DictionaryMutatedDuringDestructionError{}
+var _ errors.UserError = ContainerMutatedDuringDestructionError{}
 
-func (DictionaryMutatedDuringDestructionError) IsUserError() {}
+func (ContainerMutatedDuringDestructionError) IsUserError() {}
 
-func (DictionaryMutatedDuringDestructionError) Error() string {
-	return "dictionary modified during destruction"
+func (ContainerMutatedDuringDestructionError) Error() string {
+	return "container modified during destruction"
 }
 
 // InvalidHexByteError

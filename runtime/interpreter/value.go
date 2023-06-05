@@ -1583,6 +1583,12 @@ func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, locat
 	}
 }
 
+func (v *ArrayValue) recordMutation(interpreter *Interpreter) {
+	if _, present := interpreter.SharedState.containerValueDestruction[v]; present {
+		interpreter.SharedState.containerValueMutatedDuringDestruction = true
+	}
+}
+
 func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
@@ -1610,8 +1616,23 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		}()
 	}
 
+	oldArrayIteration, present := interpreter.SharedState.containerValueDestruction[v]
+	interpreter.SharedState.containerValueDestruction[v] = struct{}{}
+	defer func() {
+		if !present {
+			delete(interpreter.SharedState.containerValueDestruction, v)
+		}
+		interpreter.SharedState.containerValueDestruction[v] = oldArrayIteration
+	}()
+
 	v.Walk(interpreter, func(element Value) {
 		maybeDestroy(interpreter, locationRange, element)
+
+		if interpreter.SharedState.containerValueMutatedDuringDestruction {
+			panic(ContainerMutatedDuringDestructionError{
+				LocationRange: locationRange,
+			})
+		}
 	})
 
 	v.isDestroyed = true
@@ -1755,6 +1776,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, 
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
+	v.recordMutation(interpreter)
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -1766,6 +1788,8 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+
+	v.recordMutation(interpreter)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -1840,6 +1864,8 @@ func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReference
 
 func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRange, element Value) {
 
+	v.recordMutation(interpreter)
+
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
 		v.array.Count(),
@@ -1885,6 +1911,8 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+
+	v.recordMutation(interpreter)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -1938,6 +1966,8 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+
+	v.recordMutation(interpreter)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -15262,8 +15292,8 @@ func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, 
 }
 
 func (v *DictionaryValue) recordMutation(interpreter *Interpreter) {
-	if _, present := interpreter.SharedState.DictionaryDestruction[v]; present {
-		interpreter.SharedState.dictionaryMutatedDuringDestruction = true
+	if _, present := interpreter.SharedState.containerValueDestruction[v]; present {
+		interpreter.SharedState.containerValueMutatedDuringDestruction = true
 	}
 }
 
@@ -15294,13 +15324,13 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
-	oldDictionaryIteration, present := interpreter.SharedState.DictionaryDestruction[v]
-	interpreter.SharedState.DictionaryDestruction[v] = struct{}{}
+	oldDictionaryIteration, present := interpreter.SharedState.containerValueDestruction[v]
+	interpreter.SharedState.containerValueDestruction[v] = struct{}{}
 	defer func() {
 		if !present {
-			delete(interpreter.SharedState.DictionaryDestruction, v)
+			delete(interpreter.SharedState.containerValueDestruction, v)
 		}
-		interpreter.SharedState.DictionaryDestruction[v] = oldDictionaryIteration
+		interpreter.SharedState.containerValueDestruction[v] = oldDictionaryIteration
 	}()
 
 	v.Iterate(interpreter, func(key, value Value) (resume bool) {
@@ -15308,8 +15338,8 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		maybeDestroy(interpreter, locationRange, key)
 		maybeDestroy(interpreter, locationRange, value)
 
-		if interpreter.SharedState.dictionaryMutatedDuringDestruction {
-			panic(DictionaryMutatedDuringDestructionError{
+		if interpreter.SharedState.containerValueMutatedDuringDestruction {
+			panic(ContainerMutatedDuringDestructionError{
 				LocationRange: locationRange,
 			})
 		}

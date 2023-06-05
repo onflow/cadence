@@ -163,7 +163,7 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.DictionaryMutatedDuringDestructionError{})
+		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringDestructionError{})
 	})
 
 	t.Run("simplified", func(t *testing.T) {
@@ -258,7 +258,102 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.DictionaryMutatedDuringDestructionError{})
+		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringDestructionError{})
+	})
+
+	t.Run("array", func(t *testing.T) {
+
+		script := `
+		pub resource Vault {
+            pub var balance: UFix64
+            pub var arrRef: &[Vault]
+
+            init(balance: UFix64, _ arrRef: &[Vault]) {
+                self.balance = balance
+                self.arrRef = arrRef;
+            }
+
+            pub fun withdraw(amount: UFix64): @Vault {
+                self.balance = self.balance - amount
+                return <-create Vault(balance: amount, self.arrRef)
+            }
+
+            pub fun deposit(from: @Vault) {
+                self.balance = self.balance + from.balance
+                destroy from
+            }
+
+            destroy() {
+                self.arrRef.append(<-create Vault(balance: 0.0, self.arrRef))
+            }
+        }
+
+        pub fun main(): UFix64 {
+
+            let arr: @[Vault] <- []
+            let arrRef = &arr as &[Vault];
+
+            var v1 <- create Vault(balance: 1000.0, arrRef); // This will be duplicated
+            var v2 <- create Vault(balance: 1.0, arrRef); // This will be lost
+
+            var v1Ref = &v1 as &Vault
+
+			arr.append(<- v1)
+		    arr.append(<- v2)
+
+            destroy arr
+
+            // v1 is not destroyed!
+            return v1Ref.balance
+        }`
+
+		runtime := newTestInterpreterRuntime()
+
+		accountCodes := map[common.Location][]byte{}
+
+		var events []cadence.Event
+
+		signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: storage,
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringDestructionError{})
 	})
 }
 
