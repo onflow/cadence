@@ -1591,6 +1591,19 @@ func (v *ArrayValue) validateMutation(interpreter *Interpreter, locationRange Lo
 	}
 }
 
+func withMutationPrevention(interpreter *Interpreter, storageID atree.StorageID, f func()) {
+	oldIteration, present := interpreter.SharedState.containerValueIteration[storageID]
+	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
+	defer func() {
+		if !present {
+			delete(interpreter.SharedState.containerValueIteration, storageID)
+		}
+		interpreter.SharedState.containerValueIteration[storageID] = oldIteration
+	}()
+
+	f()
+}
+
 func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
@@ -1618,17 +1631,10 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		}()
 	}
 
-	oldArrayIteration, present := interpreter.SharedState.containerValueIteration[storageID]
-	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
-	defer func() {
-		if !present {
-			delete(interpreter.SharedState.containerValueIteration, storageID)
-		}
-		interpreter.SharedState.containerValueIteration[storageID] = oldArrayIteration
-	}()
-
-	v.Walk(interpreter, func(element Value) {
-		maybeDestroy(interpreter, locationRange, element)
+	withMutationPrevention(interpreter, storageID, func() {
+		v.Walk(interpreter, func(element Value) {
+			maybeDestroy(interpreter, locationRange, element)
+		})
 	})
 
 	v.isDestroyed = true
@@ -15321,21 +15327,14 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
-	oldDictionaryIteration, present := interpreter.SharedState.containerValueIteration[storageID]
-	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
-	defer func() {
-		if !present {
-			delete(interpreter.SharedState.containerValueIteration, storageID)
-		}
-		interpreter.SharedState.containerValueIteration[storageID] = oldDictionaryIteration
-	}()
+	withMutationPrevention(interpreter, storageID, func() {
+		v.Iterate(interpreter, func(key, value Value) (resume bool) {
+			// Resources cannot be keys at the moment, so should theoretically not be needed
+			maybeDestroy(interpreter, locationRange, key)
+			maybeDestroy(interpreter, locationRange, value)
 
-	v.Iterate(interpreter, func(key, value Value) (resume bool) {
-		// Resources cannot be keys at the moment, so should theoretically not be needed
-		maybeDestroy(interpreter, locationRange, key)
-		maybeDestroy(interpreter, locationRange, value)
-
-		return true
+			return true
+		})
 	})
 
 	v.isDestroyed = true
@@ -15381,34 +15380,29 @@ func (v *DictionaryValue) ForEachKey(
 		)
 	}
 
-	if v.IsResourceKinded(interpreter) {
-		storageID := v.StorageID()
+	iterate := func() {
+		err := v.dictionary.IterateKeys(
+			func(item atree.Value) (bool, error) {
+				key := MustConvertStoredValue(interpreter, item)
 
-		oldDictionaryIteration, present := interpreter.SharedState.containerValueIteration[storageID]
-		interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
-		defer func() {
-			if !present {
-				delete(interpreter.SharedState.containerValueIteration, storageID)
-			}
-			interpreter.SharedState.containerValueIteration[storageID] = oldDictionaryIteration
-		}()
+				shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return bool(shouldContinue), nil
+			},
+		)
+
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
 	}
 
-	err := v.dictionary.IterateKeys(
-		func(item atree.Value) (bool, error) {
-			key := MustConvertStoredValue(interpreter, item)
-
-			shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return bool(shouldContinue), nil
-		},
-	)
-
-	if err != nil {
-		panic(errors.NewExternalError(err))
+	if v.IsResourceKinded(interpreter) {
+		withMutationPrevention(interpreter, v.StorageID(), iterate)
+	} else {
+		iterate()
 	}
 }
 
