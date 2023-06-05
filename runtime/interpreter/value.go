@@ -15203,14 +15203,14 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Value) (resume bool)) {
+func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
 	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
 		resume = f(
-			MustConvertStoredValue(gauge, key),
-			MustConvertStoredValue(gauge, value),
+			MustConvertStoredValue(interpreter, key),
+			MustConvertStoredValue(interpreter, value),
 		)
 
 		return resume, nil
@@ -15261,6 +15261,12 @@ func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, 
 	}
 }
 
+func (v *DictionaryValue) recordMutation(interpreter *Interpreter) {
+	if _, present := interpreter.SharedState.DictionaryDestruction[v]; present {
+		interpreter.SharedState.dictionaryMutatedDuringDestruction = true
+	}
+}
+
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
@@ -15288,10 +15294,26 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
+	oldDictionaryIteration, present := interpreter.SharedState.DictionaryDestruction[v]
+	interpreter.SharedState.DictionaryDestruction[v] = struct{}{}
+	defer func() {
+		if !present {
+			delete(interpreter.SharedState.DictionaryDestruction, v)
+		}
+		interpreter.SharedState.DictionaryDestruction[v] = oldDictionaryIteration
+	}()
+
 	v.Iterate(interpreter, func(key, value Value) (resume bool) {
 		// Resources cannot be keys at the moment, so should theoretically not be needed
 		maybeDestroy(interpreter, locationRange, key)
 		maybeDestroy(interpreter, locationRange, value)
+
+		if interpreter.SharedState.dictionaryMutatedDuringDestruction {
+			panic(DictionaryMutatedDuringDestructionError{
+				LocationRange: locationRange,
+			})
+		}
+
 		return true
 	})
 
@@ -15427,6 +15449,7 @@ func (v *DictionaryValue) SetKey(
 	keyValue Value,
 	value Value,
 ) {
+	v.recordMutation(interpreter)
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -15709,6 +15732,8 @@ func (v *DictionaryValue) Remove(
 	keyValue Value,
 ) OptionalValue {
 
+	v.recordMutation(interpreter)
+
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
@@ -15763,6 +15788,8 @@ func (v *DictionaryValue) Insert(
 	locationRange LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
+
+	v.recordMutation(interpreter)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
@@ -16178,6 +16205,9 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 }
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
+
+	v.recordMutation(interpreter)
+
 	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
