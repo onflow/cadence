@@ -112,3 +112,32 @@ func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue
 		values...,
 	)
 }
+
+func ByteSliceToConstantSizedByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
+
+	common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(buf)))
+
+	var values []Value
+
+	count := len(buf)
+	if count > 0 {
+		values = make([]Value, count)
+		for i, b := range buf {
+			values[i] = UInt8Value(b)
+		}
+	}
+
+	constantSizedByteArrayStaticType := NewConstantSizedStaticType(
+		interpreter,
+		PrimitiveStaticTypeUInt8,
+		int64(len(buf)),
+	)
+
+	return NewArrayValue(
+		interpreter,
+		EmptyLocationRange,
+		constantSizedByteArrayStaticType,
+		common.ZeroAddress,
+		values...,
+	)
+}
