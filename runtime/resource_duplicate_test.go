@@ -38,6 +38,8 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 
 	t.Run("Reported error", func(t *testing.T) {
 
+		t.Parallel()
+
 		script := `
 	// This Vault class is from Flow docs, used as our "victim" in this example
 	pub resource Vault {
@@ -67,14 +69,14 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		pub var arrRef: &[Vault];
 		pub var victim: @Vault;
 		init(dictRef: &{Bool: AnyResource}, arrRef: &[Vault], victim: @Vault) {
-		self.dictRef = dictRef;
-		self.arrRef = arrRef;
-		self.victim <- victim;
+			self.dictRef = dictRef;
+			self.arrRef = arrRef;
+			self.victim <- victim;
 		}
 	
 		destroy() {
-		self.arrRef.append(<- self.victim)
-		self.dictRef[false] <-> self.dictRef[true]; // This screws up the destruction order
+			self.arrRef.append(<- self.victim)
+			self.dictRef[false] <-> self.dictRef[true]; // This screws up the destruction order
 		}
 	}
 	
@@ -164,10 +166,12 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringDestructionError{})
+		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
 	})
 
 	t.Run("simplified", func(t *testing.T) {
+
+		t.Parallel()
 
 		script := `
 		pub resource Vault {
@@ -259,10 +263,96 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringDestructionError{})
+		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
+
+	t.Run("forEachKey", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+	pub resource R{}
+
+	pub fun main() {
+		var dict: @{Int: R} <- {}
+
+		var r1: @R? <- create R()
+		var r2: @R? <- create R()
+		var r3: @R? <- create R()
+
+		dict[0] <-> r1
+		dict[1] <-> r2
+		dict[2] <-> r3
+
+		destroy r1 
+		destroy r2 
+		destroy r3
+
+		let acc = getAuthAccount(0x1)
+		acc.save(<-dict, to: /storage/foo)
+
+		let ref = acc.borrow<&{Int: R}>(from: /storage/foo)!
+
+		ref.forEachKey(fun(i: Int): Bool {
+			var r4: @R? <- create R()
+			ref[i+1] <-> r4
+			destroy r4
+			return true
+		})
+	}`
+
+		runtime := newTestInterpreterRuntime()
+
+		accountCodes := map[common.Location][]byte{}
+
+		var events []cadence.Event
+
+		signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: storage,
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
 	})
 
 	t.Run("array", func(t *testing.T) {
+
+		t.Parallel()
 
 		script := `
 		pub resource Vault {
@@ -354,7 +444,7 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringDestructionError{})
+		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
 	})
 }
 

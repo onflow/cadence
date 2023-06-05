@@ -1748,8 +1748,8 @@ func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, locat
 }
 
 func (v *ArrayValue) validateMutation(interpreter *Interpreter, locationRange LocationRange) {
-	if _, present := interpreter.SharedState.containerValueDestruction[v]; present {
-		panic(ContainerMutatedDuringDestructionError{
+	if _, present := interpreter.SharedState.containerValueIteration[v.StorageID()]; present {
+		panic(ContainerMutatedDuringIterationError{
 			LocationRange: locationRange,
 		})
 	}
@@ -1782,13 +1782,13 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		}()
 	}
 
-	oldArrayIteration, present := interpreter.SharedState.containerValueDestruction[v]
-	interpreter.SharedState.containerValueDestruction[v] = struct{}{}
+	oldArrayIteration, present := interpreter.SharedState.containerValueIteration[storageID]
+	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
 	defer func() {
 		if !present {
-			delete(interpreter.SharedState.containerValueDestruction, v)
+			delete(interpreter.SharedState.containerValueIteration, storageID)
 		}
-		interpreter.SharedState.containerValueDestruction[v] = oldArrayIteration
+		interpreter.SharedState.containerValueIteration[storageID] = oldArrayIteration
 	}()
 
 	v.Walk(interpreter, func(element Value) {
@@ -16796,8 +16796,8 @@ func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, 
 }
 
 func (v *DictionaryValue) validateMutation(interpreter *Interpreter, locationRange LocationRange) {
-	if _, present := interpreter.SharedState.containerValueDestruction[v]; present {
-		panic(ContainerMutatedDuringDestructionError{
+	if _, present := interpreter.SharedState.containerValueIteration[v.StorageID()]; present {
+		panic(ContainerMutatedDuringIterationError{
 			LocationRange: locationRange,
 		})
 	}
@@ -16830,13 +16830,13 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
-	oldDictionaryIteration, present := interpreter.SharedState.containerValueDestruction[v]
-	interpreter.SharedState.containerValueDestruction[v] = struct{}{}
+	oldDictionaryIteration, present := interpreter.SharedState.containerValueIteration[storageID]
+	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
 	defer func() {
 		if !present {
-			delete(interpreter.SharedState.containerValueDestruction, v)
+			delete(interpreter.SharedState.containerValueIteration, storageID)
 		}
-		interpreter.SharedState.containerValueDestruction[v] = oldDictionaryIteration
+		interpreter.SharedState.containerValueIteration[storageID] = oldDictionaryIteration
 	}()
 
 	v.Iterate(interpreter, func(key, value Value) (resume bool) {
@@ -16888,6 +16888,19 @@ func (v *DictionaryValue) ForEachKey(
 			nil,
 			locationRange,
 		)
+	}
+
+	if v.IsResourceKinded(interpreter) {
+		storageID := v.StorageID()
+
+		oldDictionaryIteration, present := interpreter.SharedState.containerValueIteration[storageID]
+		interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
+		defer func() {
+			if !present {
+				delete(interpreter.SharedState.containerValueIteration, storageID)
+			}
+			interpreter.SharedState.containerValueIteration[storageID] = oldDictionaryIteration
+		}()
 	}
 
 	err := v.dictionary.IterateKeys(
