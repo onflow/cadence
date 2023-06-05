@@ -487,7 +487,9 @@ func newAddPublicKeyFunction(
 
 			locationRange := invocation.LocationRange
 
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue, locationRange)
+			inter := invocation.Interpreter
+
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(inter, publicKeyValue, locationRange)
 			if err != nil {
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
@@ -499,7 +501,6 @@ func newAddPublicKeyFunction(
 				panic(err)
 			}
 
-			inter := invocation.Interpreter
 			handler.EmitEvent(
 				inter,
 				AccountKeyAddedFromByteArrayEventType,
@@ -1472,7 +1473,7 @@ func newAuthAccountContractsChangeFunction(
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue, locationRange)
+			code, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, newCodeValue, locationRange)
 			if err != nil {
 				panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 			}

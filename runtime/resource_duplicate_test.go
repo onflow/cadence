@@ -444,7 +444,7 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
 	})
 }
 
