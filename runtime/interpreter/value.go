@@ -1711,7 +1711,7 @@ func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (re
 			panic(errors.NewExternalError(err))
 		}
 	}
-	withMutationPrevention(interpreter, v.StorageID(), iterate)
+	interpreter.withMutationPrevention(v.StorageID(), iterate)
 }
 
 func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
@@ -1747,19 +1747,6 @@ func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, locat
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
-	}
-}
-
-func withMutationPrevention(interpreter *Interpreter, storageID atree.StorageID, f func()) {
-	oldIteration, present := interpreter.SharedState.containerValueIteration[storageID]
-	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
-
-	f()
-
-	if !present {
-		delete(interpreter.SharedState.containerValueIteration, storageID)
-	} else {
-		interpreter.SharedState.containerValueIteration[storageID] = oldIteration
 	}
 }
 
@@ -16711,7 +16698,7 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
-	withMutationPrevention(interpreter, v.StorageID(), func() {
+	iterate := func() {
 		err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
@@ -16726,7 +16713,8 @@ func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Va
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
-	})
+	}
+	interpreter.withMutationPrevention(v.StorageID(), iterate)
 }
 
 type DictionaryIterator struct {
@@ -16894,7 +16882,7 @@ func (v *DictionaryValue) ForEachKey(
 	}
 
 	if v.IsResourceKinded(interpreter) {
-		withMutationPrevention(interpreter, v.StorageID(), iterate)
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
 	} else {
 		iterate()
 	}
