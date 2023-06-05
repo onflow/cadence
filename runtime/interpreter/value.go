@@ -1747,9 +1747,11 @@ func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, locat
 	}
 }
 
-func (v *ArrayValue) recordMutation(interpreter *Interpreter) {
+func (v *ArrayValue) validateMutation(interpreter *Interpreter, locationRange LocationRange) {
 	if _, present := interpreter.SharedState.containerValueDestruction[v]; present {
-		interpreter.SharedState.containerValueMutatedDuringDestruction = true
+		panic(ContainerMutatedDuringDestructionError{
+			LocationRange: locationRange,
+		})
 	}
 }
 
@@ -1791,12 +1793,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	v.Walk(interpreter, func(element Value) {
 		maybeDestroy(interpreter, locationRange, element)
-
-		if interpreter.SharedState.containerValueMutatedDuringDestruction {
-			panic(ContainerMutatedDuringDestructionError{
-				LocationRange: locationRange,
-			})
-		}
 	})
 
 	v.isDestroyed = true
@@ -1939,7 +1935,6 @@ func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, 
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	v.recordMutation(interpreter)
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -1952,7 +1947,7 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRang
 
 func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
 
-	v.recordMutation(interpreter)
+	v.validateMutation(interpreter, locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -2026,7 +2021,7 @@ func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReference
 
 func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRange, element Value) {
 
-	v.recordMutation(interpreter)
+	v.validateMutation(interpreter, locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
@@ -2074,7 +2069,7 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationR
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
 
-	v.recordMutation(interpreter)
+	v.validateMutation(interpreter, locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -2129,7 +2124,7 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationR
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
 
-	v.recordMutation(interpreter)
+	v.validateMutation(interpreter, locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -16800,9 +16795,11 @@ func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, 
 	}
 }
 
-func (v *DictionaryValue) recordMutation(interpreter *Interpreter) {
+func (v *DictionaryValue) validateMutation(interpreter *Interpreter, locationRange LocationRange) {
 	if _, present := interpreter.SharedState.containerValueDestruction[v]; present {
-		interpreter.SharedState.containerValueMutatedDuringDestruction = true
+		panic(ContainerMutatedDuringDestructionError{
+			LocationRange: locationRange,
+		})
 	}
 }
 
@@ -16846,12 +16843,6 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		// Resources cannot be keys at the moment, so should theoretically not be needed
 		maybeDestroy(interpreter, locationRange, key)
 		maybeDestroy(interpreter, locationRange, value)
-
-		if interpreter.SharedState.containerValueMutatedDuringDestruction {
-			panic(ContainerMutatedDuringDestructionError{
-				LocationRange: locationRange,
-			})
-		}
 
 		return true
 	})
@@ -16990,7 +16981,7 @@ func (v *DictionaryValue) SetKey(
 	keyValue Value,
 	value Value,
 ) {
-	v.recordMutation(interpreter)
+	v.validateMutation(interpreter, locationRange)
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -17273,7 +17264,7 @@ func (v *DictionaryValue) Remove(
 	keyValue Value,
 ) OptionalValue {
 
-	v.recordMutation(interpreter)
+	v.validateMutation(interpreter, locationRange)
 
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
@@ -17330,7 +17321,7 @@ func (v *DictionaryValue) Insert(
 	keyValue, value Value,
 ) OptionalValue {
 
-	v.recordMutation(interpreter)
+	v.validateMutation(interpreter, locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
@@ -17745,8 +17736,6 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 }
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
-
-	v.recordMutation(interpreter)
 
 	config := interpreter.SharedState.Config
 
