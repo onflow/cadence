@@ -1750,14 +1750,6 @@ func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, locat
 	}
 }
 
-func (v *ArrayValue) validateMutation(interpreter *Interpreter, locationRange LocationRange) {
-	if _, present := interpreter.SharedState.containerValueIteration[v.StorageID()]; present {
-		panic(ContainerMutatedDuringIterationError{
-			LocationRange: locationRange,
-		})
-	}
-}
-
 func withMutationPrevention(interpreter *Interpreter, storageID atree.StorageID, f func()) {
 	oldIteration, present := interpreter.SharedState.containerValueIteration[storageID]
 	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
@@ -1954,7 +1946,7 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRang
 
 func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
 
-	v.validateMutation(interpreter, locationRange)
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -2028,7 +2020,7 @@ func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReference
 
 func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRange, element Value) {
 
-	v.validateMutation(interpreter, locationRange)
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
@@ -2076,7 +2068,7 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationR
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
 
-	v.validateMutation(interpreter, locationRange)
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -2131,7 +2123,7 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationR
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
 
-	v.validateMutation(interpreter, locationRange)
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -16804,14 +16796,6 @@ func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, 
 	}
 }
 
-func (v *DictionaryValue) validateMutation(interpreter *Interpreter, locationRange LocationRange) {
-	if _, present := interpreter.SharedState.containerValueIteration[v.StorageID()]; present {
-		panic(ContainerMutatedDuringIterationError{
-			LocationRange: locationRange,
-		})
-	}
-}
-
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
@@ -16989,7 +16973,8 @@ func (v *DictionaryValue) SetKey(
 	keyValue Value,
 	value Value,
 ) {
-	v.validateMutation(interpreter, locationRange)
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -17272,7 +17257,7 @@ func (v *DictionaryValue) Remove(
 	keyValue Value,
 ) OptionalValue {
 
-	v.validateMutation(interpreter, locationRange)
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
@@ -17329,7 +17314,7 @@ func (v *DictionaryValue) Insert(
 	keyValue, value Value,
 ) OptionalValue {
 
-	v.validateMutation(interpreter, locationRange)
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
