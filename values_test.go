@@ -35,6 +35,7 @@ import (
 type valueTestCase struct {
 	value        Value
 	string       string
+	goValue      any
 	exampleType  Type
 	expectedType Type
 	withType     func(value Value, ty Type) Value
@@ -59,154 +60,196 @@ func newValueTestCases() map[string]valueTestCase {
 		"UInt": {
 			value:        NewUInt(10),
 			string:       "10",
+			goValue:      10,
 			expectedType: UIntType{},
 		},
 		"UInt8": {
 			value:        NewUInt8(8),
 			string:       "8",
+			goValue:      uint8(8),
 			expectedType: UInt8Type{},
 		},
 		"UInt16": {
 			value:        NewUInt16(16),
 			string:       "16",
+			goValue:      uint16(16),
 			expectedType: UInt16Type{},
 		},
 		"UInt32": {
 			value:        NewUInt32(32),
+			goValue:      uint32(32),
 			string:       "32",
 			expectedType: UInt32Type{},
 		},
 		"UInt64": {
 			value:        NewUInt64(64),
+			goValue:      uint64(64),
 			string:       "64",
 			expectedType: UInt64Type{},
 		},
 		"UInt128": {
 			value:        NewUInt128(128),
+			goValue:      big.NewInt(128),
 			string:       "128",
 			expectedType: UInt128Type{},
 		},
 		"UInt256": {
 			value:        NewUInt256(256),
+			goValue:      big.NewInt(256),
 			string:       "256",
 			expectedType: UInt256Type{},
 		},
 		"Int": {
 			value:        NewInt(1000000),
 			string:       "1000000",
+			goValue:      1000000,
 			expectedType: IntType{},
 		},
 		"Int8": {
 			value:        NewInt8(-8),
 			string:       "-8",
+			goValue:      int8(-8),
 			expectedType: Int8Type{},
 		},
 		"Int16": {
 			value:        NewInt16(-16),
 			string:       "-16",
+			goValue:      int16(-16),
 			expectedType: Int16Type{},
 		},
 		"Int32": {
 			value:        NewInt32(-32),
 			string:       "-32",
+			goValue:      int32(-32),
 			expectedType: Int32Type{},
 		},
 		"Int64": {
 			value:        NewInt64(-64),
 			string:       "-64",
+			goValue:      int64(-64),
 			expectedType: Int64Type{},
 		},
 		"Int128": {
 			value:        NewInt128(-128),
 			string:       "-128",
+			goValue:      big.NewInt(-128),
 			expectedType: Int128Type{},
 		},
 		"Int256": {
 			value:        NewInt256(-256),
 			string:       "-256",
+			goValue:      big.NewInt(-256),
 			expectedType: Int256Type{},
 		},
 		"Word8": {
 			value:        NewWord8(8),
 			string:       "8",
+			goValue:      uint8(8),
 			expectedType: Word8Type{},
 		},
 		"Word16": {
 			value:        NewWord16(16),
 			string:       "16",
+			goValue:      uint16(16),
 			expectedType: Word16Type{},
 		},
 		"Word32": {
 			value:        NewWord32(32),
 			string:       "32",
+			goValue:      uint32(32),
 			expectedType: Word32Type{},
 		},
 		"Word64": {
 			value:        NewWord64(64),
 			string:       "64",
+			goValue:      uint64(64),
 			expectedType: Word64Type{},
 		},
 		"Word128": {
 			value:        NewWord128(128),
 			string:       "128",
+			goValue:      big.NewInt(128),
 			expectedType: Word128Type{},
 		},
 		"Word256": {
 			value:        NewWord256(256),
 			string:       "256",
+			goValue:      big.NewInt(256),
 			expectedType: Word256Type{},
 		},
 		"UFix64": {
 			value:        ufix64,
 			string:       "64.01000000",
+			goValue:      64.01000000,
 			expectedType: UFix64Type{},
 		},
 		"Fix64": {
 			value:        fix64,
 			string:       "-32.11000000",
+			goValue:      -32.11000000,
 			expectedType: Fix64Type{},
 		},
 		"Void": {
 			value:        NewVoid(),
 			string:       "()",
+			goValue:      nil,
 			expectedType: VoidType{},
 		},
 		"Bool": {
 			value:        NewBool(true),
 			string:       "true",
+			goValue:      true,
 			expectedType: BoolType{},
 		},
 		"some": {
 			value:        NewOptional(ufix64),
 			string:       "64.01000000",
+			goValue:      64.01000000,
 			expectedType: NewOptionalType(UFix64Type{}),
 		},
 		"nil": {
 			value:        NewOptional(nil),
 			string:       "nil",
+			goValue:      nil,
 			expectedType: NewOptionalType(NeverType{}),
 		},
 		"String": {
 			value:        String("Flow ridah!"),
 			string:       "\"Flow ridah!\"",
+			goValue:      "Flow ridah!",
 			expectedType: StringType{},
 		},
 		"Character": {
 			value:        Character("✌️"),
 			string:       "\"\\u{270c}\\u{fe0f}\"",
+			goValue:      "✌️",
 			expectedType: CharacterType{},
 		},
-		"Array": {
+		"StringArray": {
 			value: NewArray([]Value{
-				NewInt(10),
+				String(""),
 				String("TEST"),
 			}),
 			exampleType: NewConstantSizedArrayType(2, AnyType{}),
 			withType: func(value Value, ty Type) Value {
 				return value.(Array).WithType(ty.(ArrayType))
 			},
-			string: "[10, \"TEST\"]",
+			string:  "[\"\", \"TEST\"]",
+			goValue: []interface{}{"TEST"},
 		},
+		"IntArray": {
+			value: NewArray([]Value{
+				NewInt(10),
+				NewInt(5),
+			}),
+			exampleType: NewConstantSizedArrayType(2, AnyType{}),
+			withType: func(value Value, ty Type) Value {
+				return value.(Array).WithType(ty.(ArrayType))
+			},
+			string:  "[10, 5]",
+			goValue: []interface{}{10, 5},
+		},
+
 		"Dictionary": {
 			value: NewDictionary([]KeyValuePair{
 				{
@@ -218,16 +261,38 @@ func newValueTestCases() map[string]valueTestCase {
 			withType: func(value Value, ty Type) Value {
 				return value.(Dictionary).WithType(ty.(*DictionaryType))
 			},
-			string: "{\"key\": \"value\"}",
+			string:  "{\"key\": \"value\"}",
+			goValue: map[string]interface{}{"key": "value"},
+		},
+
+		"DictionaryEmptyKey": {
+			value: NewDictionary([]KeyValuePair{
+				{
+					Key:   String("key"),
+					Value: String("value"),
+				},
+				{
+					Key:   String("key2"),
+					Value: String(""),
+				},
+			}),
+			exampleType: NewDictionaryType(StringType{}, StringType{}),
+			withType: func(value Value, ty Type) Value {
+				return value.(Dictionary).WithType(ty.(*DictionaryType))
+			},
+			string:  "{\"key\": \"value\", \"key2\" : \"\"}",
+			goValue: map[string]interface{}{"key": "value"},
 		},
 		"Bytes": {
 			value:        NewBytes([]byte{0x1, 0x2}),
 			string:       "[0x1, 0x2]",
 			expectedType: BytesType{},
+			goValue:      []byte{0x1, 0x2},
 		},
 		"Address": {
 			value:        NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 			string:       "0x0000000000000001",
+			goValue:      "0x0000000000000001",
 			expectedType: AddressType{},
 		},
 		"struct": {
@@ -245,7 +310,8 @@ func newValueTestCases() map[string]valueTestCase {
 			withType: func(value Value, ty Type) Value {
 				return value.(Struct).WithType(ty.(*StructType))
 			},
-			string: "S.test.FooStruct(y: \"bar\")",
+			string:  "S.test.FooStruct(y: \"bar\")",
+			goValue: map[string]interface{}{"y": "bar"},
 		},
 		"resource": {
 			value: NewResource([]Value{NewInt(1)}),
@@ -262,7 +328,8 @@ func newValueTestCases() map[string]valueTestCase {
 			withType: func(value Value, ty Type) Value {
 				return value.(Resource).WithType(ty.(*ResourceType))
 			},
-			string: "S.test.FooResource(bar: 1)",
+			string:  "S.test.FooResource(bar: 1)",
+			goValue: map[string]interface{}{"bar": 1},
 		},
 		"event": {
 			value: NewEvent(
@@ -288,7 +355,8 @@ func newValueTestCases() map[string]valueTestCase {
 			withType: func(value Value, ty Type) Value {
 				return value.(Event).WithType(ty.(*EventType))
 			},
-			string: "S.test.FooEvent(a: 1, b: \"foo\")",
+			string:  "S.test.FooEvent(a: 1, b: \"foo\")",
+			goValue: map[string]interface{}{"a": 1, "b": "foo"},
 		},
 		"contract": {
 			value: NewContract([]Value{String("bar")}),
@@ -305,7 +373,8 @@ func newValueTestCases() map[string]valueTestCase {
 			withType: func(value Value, ty Type) Value {
 				return value.(Contract).WithType(ty.(*ContractType))
 			},
-			string: "S.test.FooContract(y: \"bar\")",
+			string:  "S.test.FooContract(y: \"bar\")",
+			goValue: map[string]interface{}{"y": "bar"},
 		},
 		"enum": {
 			value: NewEnum([]Value{UInt8(1)}),
@@ -322,7 +391,8 @@ func newValueTestCases() map[string]valueTestCase {
 			withType: func(value Value, ty Type) Value {
 				return value.(Enum).WithType(ty.(*EnumType))
 			},
-			string: "S.test.FooEnum(rawValue: 1)",
+			string:  "S.test.FooEnum(rawValue: 1)",
+			goValue: map[string]interface{}{"rawValue": uint8(1)},
 		},
 		"attachment": {
 			value: NewAttachment([]Value{NewInt(1)}),
@@ -339,7 +409,8 @@ func newValueTestCases() map[string]valueTestCase {
 			withType: func(value Value, ty Type) Value {
 				return value.(Attachment).WithType(ty.(*AttachmentType))
 			},
-			string: "S.test.FooAttachment(bar: 1)",
+			string:  "S.test.FooAttachment(bar: 1)",
+			goValue: map[string]interface{}{"bar": 1},
 		},
 		"PathLink": {
 			value: NewPathLink(
@@ -362,6 +433,7 @@ func newValueTestCases() map[string]valueTestCase {
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
+			goValue:      "/storage/foo",
 			expectedType: TheStoragePathType,
 			string:       "/storage/foo",
 		},
@@ -371,6 +443,7 @@ func newValueTestCases() map[string]valueTestCase {
 				Identifier: "foo",
 			},
 			expectedType: ThePrivatePathType,
+			goValue:      "/private/foo",
 			string:       "/private/foo",
 		},
 		"PublicPath": {
@@ -380,11 +453,13 @@ func newValueTestCases() map[string]valueTestCase {
 			},
 			expectedType: ThePublicPathType,
 			string:       "/public/foo",
+			goValue:      "/public/foo",
 		},
 		"Type": {
 			value:        TypeValue{StaticType: IntType{}},
 			expectedType: NewMetaType(),
 			string:       "Type<Int>()",
+			goValue:      "Int",
 		},
 		"Capability (Path)": {
 			value: NewPathCapability(
@@ -448,6 +523,35 @@ func TestValue_String(t *testing.T) {
 				testCase.string,
 				testCase.value.String(),
 			)
+
+		})
+	}
+
+	for name, testCase := range newValueTestCases() {
+		test(name, testCase)
+	}
+}
+
+func TestValue_ToGo(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(name string, testCase valueTestCase) {
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			withType := testCase.withType
+			if withType != nil {
+				testCase.value = withType(testCase.value, testCase.exampleType)
+			}
+
+			assert.Equal(t,
+				testCase.goValue,
+				testCase.value.ToGoValue(),
+			)
+
 		})
 	}
 

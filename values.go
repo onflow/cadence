@@ -1565,12 +1565,12 @@ func (v Array) WithType(arrayType ArrayType) Array {
 }
 
 func (v Array) ToGoValue() any {
-	ret := make([]any, len(v.Values))
+	ret := []any{}
 
-	for i, e := range v.Values {
+	for _, e := range v.Values {
 		value := e.ToGoValue()
 		if value != nil {
-			ret[i] = value
+			ret = append(ret, value)
 		}
 	}
 
@@ -1735,10 +1735,11 @@ func (v Struct) WithType(typ *StructType) Struct {
 }
 
 func (v Struct) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
+	ret := map[string]any{}
 
 	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
+		key := v.StructType.Fields[i].Identifier
+		ret[key] = field.ToGoValue()
 	}
 
 	return ret
@@ -1818,10 +1819,11 @@ func (v Resource) WithType(typ *ResourceType) Resource {
 }
 
 func (v Resource) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
+	ret := map[string]any{}
 
 	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
+		key := v.ResourceType.Fields[i].Identifier
+		ret[key] = field.ToGoValue()
 	}
 
 	return ret
@@ -1880,10 +1882,11 @@ func (v Attachment) WithType(typ *AttachmentType) Attachment {
 }
 
 func (v Attachment) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
+	ret := map[string]any{}
 
 	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
+		key := v.AttachmentType.Fields[i].Identifier
+		ret[key] = field.ToGoValue()
 	}
 
 	return ret
@@ -1942,14 +1945,16 @@ func (v Event) WithType(typ *EventType) Event {
 }
 
 func (v Event) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
+	ret := map[string]any{}
 
 	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
+		key := v.EventType.Fields[i].Identifier
+		ret[key] = field.ToGoValue()
 	}
 
 	return ret
 }
+
 func (v Event) String() string {
 	return formatComposite(v.EventType.ID(), v.EventType.Fields, v.Fields)
 }
@@ -2003,10 +2008,11 @@ func (v Contract) WithType(typ *ContractType) Contract {
 }
 
 func (v Contract) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
+	ret := map[string]any{}
 
 	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
+		key := v.ContractType.Fields[i].Identifier
+		ret[key] = field.ToGoValue()
 	}
 
 	return ret
@@ -2366,10 +2372,11 @@ func (v Enum) WithType(typ *EnumType) Enum {
 }
 
 func (v Enum) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
+	ret := map[string]any{}
 
 	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
+		key := v.EnumType.Fields[i].Identifier
+		ret[key] = field.ToGoValue()
 	}
 
 	return ret
