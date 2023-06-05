@@ -7701,8 +7701,116 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
+	RequireError(t, err)
 
 	require.ErrorContains(t, err, "expected type `A.0000000000000002.Foo.Bar`, got `A.0000000000000001.Foo.Bar`")
 
+}
+
+func TestRuntimeDestructorReentrancyPrevention(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	script := []byte(`
+      pub resource Vault {
+          // Balance of a user's Vault
+          // we use unsigned fixed point numbers for balances
+          // because they can represent decimals and do not allow negative values
+          pub var balance: UFix64
+
+          init(balance: UFix64) {
+              self.balance = balance
+          }
+
+          pub fun withdraw(amount: UFix64): @Vault {
+              self.balance = self.balance - amount
+              return <-create Vault(balance: amount)
+          }
+
+          pub fun deposit(from: @Vault) {
+              self.balance = self.balance + from.balance
+              destroy from
+          }
+      }
+
+      // --- this code actually makes use of the vuln ---
+      pub resource InnerResource {
+          pub var victim: @Vault;
+          pub var here: Bool;
+          pub var parent: &OuterResource;
+          init(victim: @Vault, parent: &OuterResource) {
+              self.victim <- victim;
+              self.here = false;
+              self.parent = parent;
+          }
+
+          destroy() {
+             if self.here == false {
+                self.here = true;
+                self.parent.reenter(); // will cause us to re-enter this destructor
+             }
+             self.parent.collect(from: <- self.victim);
+          }
+      }
+
+      pub resource OuterResource {
+          pub var inner: @InnerResource?;
+          pub var collector: &Vault;
+          init(victim: @Vault, collector: &Vault) {
+              self.collector = collector;
+              self.inner <- create InnerResource(victim: <- victim, parent: &self as &OuterResource);
+          }
+          pub fun reenter() {
+              let inner <- self.inner <- nil;
+              destroy inner;
+          }
+          pub fun collect(from: @Vault) {
+              self.collector.deposit(from: <- from);
+          }
+
+          destroy() {
+             destroy self.inner;
+          }
+      }
+
+      pub fun doubleBalanceOfVault(vault: @Vault): @Vault {
+          var collector <- vault.withdraw(amount: 0.0);
+          var r <- create OuterResource(victim: <- vault, collector: &collector as &Vault);
+          destroy r;
+          return <- collector;
+      }
+
+      // --- end of vuln code ---
+
+      pub fun main() {
+              var v1 <- create Vault(balance: 1000.0);
+              var v2 <- doubleBalanceOfVault(vault: <- v1);
+              var v3 <- doubleBalanceOfVault(vault: <- v2);
+              log(v3.balance);
+              destroy v3;
+      }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+		log: func(s string) {
+			// NO-OP
+		},
+	}
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+	RequireError(t, err)
+
+	var destructionError interpreter.ReentrantResourceDestructionError
+	require.ErrorAs(t, err, &destructionError)
 }

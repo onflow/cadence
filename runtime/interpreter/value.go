@@ -1601,8 +1601,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -1618,9 +1616,17 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		}()
 	}
 
-	v.Walk(interpreter, func(element Value) {
-		maybeDestroy(interpreter, locationRange, element)
-	})
+	storageID := v.StorageID()
+
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			v.Walk(interpreter, func(element Value) {
+				maybeDestroy(interpreter, locationRange, element)
+			})
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -14051,8 +14057,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		v.checkInvalidatedResourceUse(locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -14071,28 +14075,36 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		}()
 	}
 
-	interpreter = v.getInterpreter(interpreter)
+	storageID := v.StorageID()
 
-	// if composite was deserialized, dynamically link in the destructor
-	if v.Destructor == nil {
-		v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
-	}
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			interpreter = v.getInterpreter(interpreter)
 
-	destructor := v.Destructor
+			// if composite was deserialized, dynamically link in the destructor
+			if v.Destructor == nil {
+				v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+			}
 
-	if destructor != nil {
-		var self MemberAccessibleValue = v
-		invocation := NewInvocation(
-			interpreter,
-			&self,
-			nil,
-			nil,
-			nil,
-			locationRange,
-		)
+			destructor := v.Destructor
 
-		destructor.invoke(invocation)
-	}
+			if destructor != nil {
+				var self MemberAccessibleValue = v
+				invocation := NewInvocation(
+					interpreter,
+					&self,
+					nil,
+					nil,
+					nil,
+					locationRange,
+				)
+
+				destructor.invoke(invocation)
+			}
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -15294,8 +15306,6 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -15311,13 +15321,21 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
-	v.Iterate(interpreter, func(key, value Value) (resume bool) {
-		// Resources cannot be keys at the moment, so should theoretically not be needed
-		maybeDestroy(interpreter, locationRange, key)
-		maybeDestroy(interpreter, locationRange, value)
+	storageID := v.StorageID()
 
-		return true
-	})
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			v.Iterate(interpreter, func(key, value Value) (resume bool) {
+				// Resources cannot be keys at the moment, so should theoretically not be needed
+				maybeDestroy(interpreter, locationRange, key)
+				maybeDestroy(interpreter, locationRange, value)
+
+				return true
+			})
+		},
+	)
 
 	v.isDestroyed = true
 

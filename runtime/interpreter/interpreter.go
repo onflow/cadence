@@ -4727,3 +4727,21 @@ func (interpreter *Interpreter) withMutationPrevention(storageID atree.StorageID
 		interpreter.SharedState.containerValueIteration[storageID] = oldIteration
 	}
 }
+
+func (interpreter *Interpreter) withResourceDestruction(
+	storageID atree.StorageID,
+	locationRange LocationRange,
+	f func(),
+) {
+	_, exists := interpreter.SharedState.resourceDestruction[storageID]
+	if exists {
+		panic(ReentrantResourceDestructionError{
+			LocationRange: locationRange,
+		})
+	}
+	interpreter.SharedState.resourceDestruction[storageID] = struct{}{}
+
+	f()
+
+	delete(interpreter.SharedState.resourceDestruction, storageID)
+}

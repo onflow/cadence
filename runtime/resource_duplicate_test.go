@@ -136,10 +136,18 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 				return []Address{signerAccount}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
 				accountCodes[location] = code
 				return nil
 			},
@@ -236,10 +244,18 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 				return []Address{signerAccount}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
 				accountCodes[location] = code
 				return nil
 			},
@@ -320,10 +336,18 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 				return []Address{signerAccount}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
 				accountCodes[location] = code
 				return nil
 			},
@@ -417,10 +441,18 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 				return []Address{signerAccount}, nil
 			},
 			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
 				return accountCodes[location], nil
 			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
 				accountCodes[location] = code
 				return nil
 			},

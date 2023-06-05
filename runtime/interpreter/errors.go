@@ -862,6 +862,19 @@ func (ContainerMutatedDuringIterationError) Error() string {
 	return "resource container modified during iteration"
 }
 
+// ReentrantResourceDestructionError
+type ReentrantResourceDestructionError struct {
+	LocationRange
+}
+
+var _ errors.UserError = ReentrantResourceDestructionError{}
+
+func (ReentrantResourceDestructionError) IsUserError() {}
+
+func (ReentrantResourceDestructionError) Error() string {
+	return "re-entrant destruction of resource"
+}
+
 // InvalidHexByteError
 type InvalidHexByteError struct {
 	LocationRange
