@@ -145,7 +145,7 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 				return nil
 			},
 			log: func(s string) {
-				panic("we should not reach this point")
+				assert.Fail(t, "we should not reach this point")
 			},
 		}
 		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
