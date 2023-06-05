@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func ByteArrayValueToByteSlice(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) ([]byte, error) {
@@ -108,6 +109,36 @@ func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue
 		interpreter,
 		EmptyLocationRange,
 		ByteArrayStaticType,
+		common.ZeroAddress,
+		values...,
+	)
+}
+
+func ByteSliceToConstantSizedByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
+
+	common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(buf)))
+
+	var values []Value
+
+	count := len(buf)
+	if count > 0 {
+		values = make([]Value, count)
+		for i, b := range buf {
+			values[i] = UInt8Value(b)
+		}
+	}
+
+	constantSizedByteArrayStaticType := ConvertSemaArrayTypeToStaticArrayType(
+		interpreter,
+		&sema.ConstantSizedType{
+			Type: sema.UInt8Type,
+			Size: int64(len(buf)),
+		})
+
+	return NewArrayValue(
+		interpreter,
+		EmptyLocationRange,
+		constantSizedByteArrayStaticType,
 		common.ZeroAddress,
 		values...,
 	)

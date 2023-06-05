@@ -2194,7 +2194,7 @@ func NewHashAlgorithmFromValue(
 
 func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {
 	codeHash := sha3.Sum256(code)
-	return interpreter.ByteSliceToByteArrayValue(inter, codeHash[:])
+	return interpreter.ByteSliceToConstantSizedByteArrayValue(inter, codeHash[:])
 }
 
 func newAuthAccountStorageCapabilitiesValue(
