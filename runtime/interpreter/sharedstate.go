@@ -43,6 +43,8 @@ type SharedState struct {
 	storageMutatedDuringIteration               bool
 	CapabilityControllerIterations              map[AddressPath]int
 	MutationDuringCapabilityControllerIteration bool
+	DictionaryDestruction                       map[*DictionaryValue]struct{}
+	dictionaryMutatedDuringDestruction          bool
 }
 
 func NewSharedState(config *Config) *SharedState {
@@ -60,6 +62,7 @@ func NewSharedState(config *Config) *SharedState {
 		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
 		CapabilityControllerIterations: map[AddressPath]int{},
+		DictionaryDestruction:          map[*DictionaryValue]struct{}{},
 	}
 }
 
