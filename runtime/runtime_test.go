@@ -7784,20 +7784,18 @@ func TestRuntimeDestructorReentrancyPrevention(t *testing.T) {
 
       // --- end of vuln code ---
 
-      pub fun main() {
+      pub fun main(): UFix64 {
               var v1 <- create Vault(balance: 1000.0);
               var v2 <- doubleBalanceOfVault(vault: <- v1);
               var v3 <- doubleBalanceOfVault(vault: <- v2);
-              log(v3.balance);
-              destroy v3;
+              let balance = v3.balance
+              destroy v3
+              return balance
       }
     `)
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestLedger(nil, nil),
-		log: func(s string) {
-			// NO-OP
-		},
 	}
 
 	_, err := rt.ExecuteScript(
