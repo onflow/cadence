@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"strconv"
 	"unicode/utf8"
 	"unsafe"
 
@@ -214,7 +215,11 @@ func (v String) MeteredType(common.MemoryGauge) Type {
 }
 
 func (v String) ToGoValue() any {
-	return string(v)
+	value := string(v)
+	if value == "" {
+		return nil
+	}
+	return value
 }
 
 func (v String) String() string {
@@ -333,7 +338,7 @@ func (Address) MeteredType(common.MemoryGauge) Type {
 }
 
 func (v Address) ToGoValue() any {
-	return [AddressLength]byte(v)
+	return v.String()
 }
 
 func (v Address) Bytes() []byte {
@@ -389,7 +394,7 @@ func (v Int) MeteredType(common.MemoryGauge) Type {
 }
 
 func (v Int) ToGoValue() any {
-	return v.Big()
+	return v.Int()
 }
 
 func (v Int) Int() int {
@@ -750,7 +755,7 @@ func (v UInt) MeteredType(common.MemoryGauge) Type {
 }
 
 func (v UInt) ToGoValue() any {
-	return v.Big()
+	return v.Int()
 }
 
 func (v UInt) Int() int {
@@ -1419,7 +1424,11 @@ func (v Fix64) MeteredType(common.MemoryGauge) Type {
 }
 
 func (v Fix64) ToGoValue() any {
-	return int64(v)
+	value, err := strconv.ParseFloat(v.String(), 64)
+	if err != nil {
+		panic(err)
+	}
+	return value
 }
 
 func (v Fix64) ToBigEndianBytes() []byte {
@@ -1493,7 +1502,11 @@ func (v UFix64) MeteredType(common.MemoryGauge) Type {
 }
 
 func (v UFix64) ToGoValue() any {
-	return uint64(v)
+	value, err := strconv.ParseFloat(v.String(), 64)
+	if err != nil {
+		panic(err)
+	}
+	return value
 }
 
 func (v UFix64) ToBigEndianBytes() []byte {
@@ -1555,9 +1568,15 @@ func (v Array) ToGoValue() any {
 	ret := make([]any, len(v.Values))
 
 	for i, e := range v.Values {
-		ret[i] = e.ToGoValue()
+		value := e.ToGoValue()
+		if value != nil {
+			ret[i] = value
+		}
 	}
 
+	if len(ret) == 0 {
+		return nil
+	}
 	return ret
 }
 
@@ -1617,12 +1636,18 @@ func (v Dictionary) WithType(dictionaryType *DictionaryType) Dictionary {
 }
 
 func (v Dictionary) ToGoValue() any {
-	ret := map[any]any{}
+	ret := map[string]any{}
 
 	for _, p := range v.Pairs {
-		ret[p.Key.ToGoValue()] = p.Value.ToGoValue()
+		value := p.Value.ToGoValue()
+		if value != nil {
+			ret[fmt.Sprint(p.Key.ToGoValue())] = p.Value.ToGoValue()
+		}
 	}
 
+	if len(ret) == 0 {
+		return nil
+	}
 	return ret
 }
 
@@ -2111,8 +2136,8 @@ func (v Path) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (Path) ToGoValue() any {
-	return nil
+func (v Path) ToGoValue() any {
+	return v.String()
 }
 
 func (v Path) String() string {
@@ -2151,8 +2176,8 @@ func (v TypeValue) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (TypeValue) ToGoValue() any {
-	return nil
+func (v TypeValue) ToGoValue() any {
+	return v.StaticType.ID()
 }
 
 func (v TypeValue) String() string {
