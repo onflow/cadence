@@ -35,7 +35,7 @@ type SharedState struct {
 	resourceVariables              map[ResourceKindedValue]*Variable
 	inStorageIteration             bool
 	storageMutatedDuringIteration  bool
-	containerValueDestruction      map[Value]struct{}
+	containerValueIteration        map[atree.StorageID]struct{}
 }
 
 func NewSharedState(config *Config) *SharedState {
@@ -52,6 +52,6 @@ func NewSharedState(config *Config) *SharedState {
 		storageMutatedDuringIteration:  false,
 		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
-		containerValueDestruction:      map[Value]struct{}{},
+		containerValueIteration:        map[atree.StorageID]struct{}{},
 	}
 }

@@ -4704,3 +4704,13 @@ func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
 
 	config.AccountLinkingAllowed = true
 }
+
+func (interpreter *Interpreter) validateMutation(storageID atree.StorageID, locationRange LocationRange) {
+	_, present := interpreter.SharedState.containerValueIteration[storageID]
+	if !present {
+		return
+	}
+	panic(ContainerMutatedDuringIterationError{
+		LocationRange: locationRange,
+	})
+}
