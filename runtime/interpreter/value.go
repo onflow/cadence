@@ -1795,10 +1795,8 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		}()
 	}
 
-	withMutationPrevention(interpreter, storageID, func() {
-		v.Walk(interpreter, func(element Value) {
-			maybeDestroy(interpreter, locationRange, element)
-		})
+	v.Walk(interpreter, func(element Value) {
+		maybeDestroy(interpreter, locationRange, element)
 	})
 
 	v.isDestroyed = true
@@ -16717,21 +16715,23 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Value) (resume bool)) {
-	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
-		// atree.OrderedMap iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
+func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+	withMutationPrevention(interpreter, v.StorageID(), func() {
+		err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+			// atree.OrderedMap iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
 
-		resume = f(
-			MustConvertStoredValue(gauge, key),
-			MustConvertStoredValue(gauge, value),
-		)
+			resume = f(
+				MustConvertStoredValue(interpreter, key),
+				MustConvertStoredValue(interpreter, value),
+			)
 
-		return resume, nil
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
 	})
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
 }
 
 type DictionaryIterator struct {
@@ -16836,14 +16836,12 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
-	withMutationPrevention(interpreter, storageID, func() {
-		v.Iterate(interpreter, func(key, value Value) (resume bool) {
-			// Resources cannot be keys at the moment, so should theoretically not be needed
-			maybeDestroy(interpreter, locationRange, key)
-			maybeDestroy(interpreter, locationRange, value)
+	v.Iterate(interpreter, func(key, value Value) (resume bool) {
+		// Resources cannot be keys at the moment, so should theoretically not be needed
+		maybeDestroy(interpreter, locationRange, key)
+		maybeDestroy(interpreter, locationRange, value)
 
-			return true
-		})
+		return true
 	})
 
 	v.isDestroyed = true
