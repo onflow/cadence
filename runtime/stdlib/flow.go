@@ -184,10 +184,24 @@ var AccountEventCodeHashParameter = sema.Parameter{
 	TypeAnnotation: sema.NewTypeAnnotation(HashType),
 }
 
-var AccountEventPublicKeyParameter = sema.Parameter{
+var AccountEventPublicKeyParameterAsByteArrayType = sema.Parameter{
 	Identifier: "publicKey",
 	TypeAnnotation: sema.NewTypeAnnotation(
 		sema.ByteArrayType,
+	),
+}
+
+var AccountEventPublicKeyParameterAsCompositeType = sema.Parameter{
+	Identifier: "publicKey",
+	TypeAnnotation: sema.NewTypeAnnotation(
+		sema.PublicKeyType,
+	),
+}
+
+var AccountEventPublicKeyIndexParameter = sema.Parameter{
+	Identifier: "publicKey",
+	TypeAnnotation: sema.NewTypeAnnotation(
+		sema.IntType,
 	),
 }
 
@@ -201,16 +215,28 @@ var AccountCreatedEventType = newFlowEventType(
 	AccountEventAddressParameter,
 )
 
-var AccountKeyAddedEventType = newFlowEventType(
+var AccountKeyAddedFromByteArrayEventType = newFlowEventType(
 	"AccountKeyAdded",
 	AccountEventAddressParameter,
-	AccountEventPublicKeyParameter,
+	AccountEventPublicKeyParameterAsByteArrayType,
 )
 
-var AccountKeyRemovedEventType = newFlowEventType(
+var AccountKeyAddedFromPublicKeyEventType = newFlowEventType(
+	"AccountKeyAdded",
+	AccountEventAddressParameter,
+	AccountEventPublicKeyParameterAsCompositeType,
+)
+
+var AccountKeyRemovedFromByteArrayEventType = newFlowEventType(
 	"AccountKeyRemoved",
 	AccountEventAddressParameter,
-	AccountEventPublicKeyParameter,
+	AccountEventPublicKeyParameterAsByteArrayType,
+)
+
+var AccountKeyRemovedFromPublicKeyIndexEventType = newFlowEventType(
+	"AccountKeyRemoved",
+	AccountEventAddressParameter,
+	AccountEventPublicKeyIndexParameter,
 )
 
 var AccountContractAddedEventType = newFlowEventType(

@@ -502,7 +502,7 @@ func newAddPublicKeyFunction(
 			inter := invocation.Interpreter
 			handler.EmitEvent(
 				inter,
-				AccountKeyAddedEventType,
+				AccountKeyAddedFromByteArrayEventType,
 				[]interpreter.Value{
 					addressValue,
 					publicKeyValue,
@@ -558,7 +558,7 @@ func newRemovePublicKeyFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountKeyRemovedEventType,
+				AccountKeyRemovedFromByteArrayEventType,
 				[]interpreter.Value{
 					addressValue,
 					publicKeyValue,
@@ -624,7 +624,7 @@ func newAccountKeysAddFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountKeyAddedEventType,
+				AccountKeyAddedFromPublicKeyEventType,
 				[]interpreter.Value{
 					addressValue,
 					publicKeyValue,
@@ -895,7 +895,7 @@ func newAccountKeysRevokeFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountKeyRemovedEventType,
+				AccountKeyRemovedFromPublicKeyIndexEventType,
 				[]interpreter.Value{
 					addressValue,
 					indexValue,
