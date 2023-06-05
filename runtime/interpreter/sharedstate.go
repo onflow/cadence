@@ -31,12 +31,11 @@ type SharedState struct {
 	allInterpreters map[common.Location]*Interpreter
 	callStack       *CallStack
 	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues     ReferencedResourceKindedValues
-	resourceVariables                  map[ResourceKindedValue]*Variable
-	inStorageIteration                 bool
-	storageMutatedDuringIteration      bool
-	DictionaryDestruction              map[*DictionaryValue]struct{}
-	dictionaryMutatedDuringDestruction bool
+	referencedResourceKindedValues ReferencedResourceKindedValues
+	resourceVariables              map[ResourceKindedValue]*Variable
+	inStorageIteration             bool
+	storageMutatedDuringIteration  bool
+	containerValueDestruction      map[Value]struct{}
 }
 
 func NewSharedState(config *Config) *SharedState {
@@ -53,6 +52,6 @@ func NewSharedState(config *Config) *SharedState {
 		storageMutatedDuringIteration:  false,
 		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
-		DictionaryDestruction:          map[*DictionaryValue]struct{}{},
+		containerValueDestruction:      map[Value]struct{}{},
 	}
 }
