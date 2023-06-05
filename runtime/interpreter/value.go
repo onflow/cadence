@@ -1533,18 +1533,21 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *ArrayValue) Iterate(gauge common.MemoryGauge, f func(element Value) (resume bool)) {
-	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
-		// atree.Array iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
+func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
+	iterate := func() {
+		err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+			// atree.Array iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
 
-		resume = f(MustConvertStoredValue(gauge, element))
+			resume = f(MustConvertStoredValue(interpreter, element))
 
-		return resume, nil
-	})
-	if err != nil {
-		panic(errors.NewExternalError(err))
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
 	}
+	withMutationPrevention(interpreter, v.StorageID(), iterate)
 }
 
 func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
@@ -1594,14 +1597,14 @@ func (v *ArrayValue) validateMutation(interpreter *Interpreter, locationRange Lo
 func withMutationPrevention(interpreter *Interpreter, storageID atree.StorageID, f func()) {
 	oldIteration, present := interpreter.SharedState.containerValueIteration[storageID]
 	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
-	defer func() {
-		if !present {
-			delete(interpreter.SharedState.containerValueIteration, storageID)
-		}
-		interpreter.SharedState.containerValueIteration[storageID] = oldIteration
-	}()
 
 	f()
+
+	if !present {
+		delete(interpreter.SharedState.containerValueIteration, storageID)
+	} else {
+		interpreter.SharedState.containerValueIteration[storageID] = oldIteration
+	}
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {

@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func ByteArrayValueToByteSlice(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) ([]byte, error) {
+func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRange LocationRange) ([]byte, error) {
 	array, ok := value.(*ArrayValue)
 	if !ok {
 		return nil, errors.NewDefaultUserError("value is not an array")
@@ -38,9 +38,9 @@ func ByteArrayValueToByteSlice(memoryGauge common.MemoryGauge, value Value, loca
 		result = make([]byte, 0, count)
 
 		var err error
-		array.Iterate(memoryGauge, func(element Value) (resume bool) {
+		array.Iterate(interpreter, func(element Value) (resume bool) {
 			var b byte
-			b, err = ByteValueToByte(memoryGauge, element, locationRange)
+			b, err = ByteValueToByte(interpreter, element, locationRange)
 			if err != nil {
 				return false
 			}
