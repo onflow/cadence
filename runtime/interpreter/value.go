@@ -1547,7 +1547,12 @@ func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (re
 			panic(errors.NewExternalError(err))
 		}
 	}
-	interpreter.withMutationPrevention(v.StorageID(), iterate)
+
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
+	}
 }
 
 func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
