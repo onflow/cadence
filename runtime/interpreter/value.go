@@ -16711,14 +16711,14 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Value) (resume bool)) {
 	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
 		resume = f(
-			MustConvertStoredValue(interpreter, key),
-			MustConvertStoredValue(interpreter, value),
+			MustConvertStoredValue(gauge, key),
+			MustConvertStoredValue(gauge, value),
 		)
 
 		return resume, nil
