@@ -215,25 +215,25 @@ var AccountCreatedEventType = newFlowEventType(
 	AccountEventAddressParameter,
 )
 
-var AccountKeyAddedEventTypeV1 = newFlowEventType(
+var AccountKeyAddedFromByteArrayEventType = newFlowEventType(
 	"AccountKeyAdded",
 	AccountEventAddressParameter,
 	AccountEventPublicKeyParameterAsByteArrayType,
 )
 
-var AccountKeyAddedEventTypeV2 = newFlowEventType(
+var AccountKeyAddedFromPublicKeyEventType = newFlowEventType(
 	"AccountKeyAdded",
 	AccountEventAddressParameter,
 	AccountEventPublicKeyParameterAsCompositeType,
 )
 
-var AccountKeyRemovedEventTypeV1 = newFlowEventType(
+var AccountKeyRemovedFromByteArrayEventType = newFlowEventType(
 	"AccountKeyRemoved",
 	AccountEventAddressParameter,
 	AccountEventPublicKeyParameterAsByteArrayType,
 )
 
-var AccountKeyRemovedEventTypeV2 = newFlowEventType(
+var AccountKeyRemovedFromPublicKeyIndexEventType = newFlowEventType(
 	"AccountKeyRemoved",
 	AccountEventAddressParameter,
 	AccountEventPublicKeyIndexParameter,

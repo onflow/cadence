@@ -157,7 +157,7 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
 
 			for _, event := range events[1:] {
-				assert.EqualValues(t, stdlib.AccountKeyAddedEventTypeV1.ID(), event.Type().ID())
+				assert.EqualValues(t, stdlib.AccountKeyAddedFromByteArrayEventType.ID(), event.Type().ID())
 			}
 		})
 	}
@@ -641,7 +641,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 	)
 
 	assert.EqualValues(t,
-		stdlib.AccountKeyAddedEventTypeV2.ID(),
+		stdlib.AccountKeyAddedFromPublicKeyEventType.ID(),
 		storage.events[1].Type().ID(),
 	)
 }
