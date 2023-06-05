@@ -393,7 +393,7 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 			// here the `result` value in the `post` block will have type `auth(E, X, Y) &R`
 			if entitlementSupportingType, ok := innerType.(EntitlementSupportingType); ok {
 				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-				if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
+				if supportedEntitlements.Len() > 0 {
 					auth = EntitlementSetAccess{
 						SetKind:      Conjunction,
 						Entitlements: supportedEntitlements,
