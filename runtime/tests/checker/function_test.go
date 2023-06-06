@@ -144,7 +144,7 @@ func TestCheckInvalidFunctionAccess(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-       pub(set) fun test() {}
+       access(all) fun test() {}
     `)
 
 	expectInvalidAccessModifierError(t, err)

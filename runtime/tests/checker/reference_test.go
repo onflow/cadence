@@ -1732,7 +1732,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             }
 
             pub resource R {
-                pub(set) var a: Int
+                access(all) var a: Int
 
                 init() {
                     self.a = 5
@@ -2374,7 +2374,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             }
 
             pub struct S {
-                pub(set) var b: &R?
+                access(all) var b: &R?
 
                 init() {
                     self.b = nil
@@ -2411,7 +2411,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             }
 
             pub struct S {
-                pub(set) var b: &R?
+                access(all) var b: &R?
 
                 init() {
                     self.b = nil

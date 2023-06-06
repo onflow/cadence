@@ -170,7 +170,7 @@ func TestCheckInvalidMissingReturnStatementStructFunction(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
         struct Test {
-            pub(set) var foo: Int
+            access(all) var foo: Int
 
             init(foo: Int) {
                 self.foo = foo

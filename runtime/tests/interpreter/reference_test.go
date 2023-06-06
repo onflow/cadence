@@ -564,7 +564,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			true,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -602,7 +602,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			true,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -634,7 +634,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -691,7 +691,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			t,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -728,7 +728,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -800,7 +800,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -868,7 +868,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			true,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -900,7 +900,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 5
@@ -1024,7 +1024,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
             }
 
             pub struct S {
-                pub(set) var b: &R?
+                access(all) var b: &R?
 
                 init() {
                     self.b = nil
@@ -1065,7 +1065,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
             }
 
             pub struct S {
-                pub(set) var b: &R?
+                access(all) var b: &R?
 
                 init() {
                     self.b = nil
@@ -1086,7 +1086,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			t,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -1121,7 +1121,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			t,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -1173,7 +1173,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 			true,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -1224,7 +1224,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
             }
 
             pub struct S {
-                pub(set) var b: &R?
+                access(all) var b: &R?
 
                 init() {
                     self.b = nil

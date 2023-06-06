@@ -107,7 +107,7 @@ func TestCheckComposite(t *testing.T) {
 				fmt.Sprintf(
 					`
                       %s Test %s {
-                          pub(set) var foo: Int
+                          access(all) var foo: Int
 
                           init(foo: Int) {
                               self.foo = foo

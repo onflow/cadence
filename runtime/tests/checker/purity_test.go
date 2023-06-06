@@ -561,7 +561,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         pub struct R {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(x: Int) {
                 self.x = x
             }
@@ -586,7 +586,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         pub struct R {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(x: Int) {
                 self.x = x
             }
@@ -605,7 +605,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         pub struct R {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(x: Int) {
                 self.x = x
             }
@@ -712,7 +712,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct S {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(x: Int) {
                 self.x = x
             }
@@ -736,7 +736,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct S {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(_ x: Int) {
                 self.x = x
             }
@@ -762,7 +762,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct S {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(x: Int) {
                 self.x = x
             }
@@ -789,7 +789,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
             pub resource R {
-                pub(set) var x: Int
+                access(all) var x: Int
                 init(x: Int) {
                     self.x = x
                 }
@@ -833,7 +833,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
             pub resource R {
-                pub(set) var x: Int
+                access(all) var x: Int
                 init(x: Int) {
                     self.x = x
                 }
@@ -862,7 +862,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
             pub resource R {
-                pub(set) var x: Int
+                access(all) var x: Int
                 view init(x: Int) {
                     self.x = x
                 }
@@ -888,7 +888,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
             pub resource R {
-                pub(set) var x: Int
+                access(all) var x: Int
                 init(x: Int) {
                     self.x = x
                 }
@@ -914,7 +914,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         resource R {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(_ x: Int) {
                 self.x = x
             }
@@ -939,7 +939,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         resource R {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(_ x: Int) {
                 self.x = x
             }
@@ -964,7 +964,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
             pub resource R {
-                pub(set) var x: Int
+                access(all) var x: Int
                 init(x: Int) {
                     self.x = x
                 }

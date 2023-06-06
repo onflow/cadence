@@ -664,7 +664,7 @@ func TestCheckPubSetAccessModifier(t *testing.T) {
 			`
             pub contract C {
                 pub struct Foo {
-                    pub(set) var x: {Int: Int}
+                    access(all) var x: {Int: Int}
             
                     init() {
                         self.x = {3: 3}
@@ -701,7 +701,7 @@ func TestCheckPubSetNestedAccessModifier(t *testing.T) {
                 }
                 
                 pub struct Foo {
-                    pub(set) var x: [Int]
+                    access(all) var x: [Int]
                 
                     init() {
                        self.x = [3]

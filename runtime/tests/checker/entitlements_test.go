@@ -2038,12 +2038,12 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
-	t.Run("pub(set) subtyping invalid", func(t *testing.T) {
+	t.Run("access(all) subtyping invalid", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E
 			struct interface I {
-				pub(set) var x: String
+				access(all) var x: String
 			}
 			struct S: I {
 				access(E) var x: String
@@ -2075,7 +2075,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
-	t.Run("pub(set) supertyping invalid", func(t *testing.T) {
+	t.Run("access(all) supertyping invalid", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E
@@ -2083,7 +2083,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 				access(E) var x: String
 			}
 			struct S: I {
-				pub(set) var x: String
+				access(all) var x: String
 				init() {
 					self.x = ""
 				}

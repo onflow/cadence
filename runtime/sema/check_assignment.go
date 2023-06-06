@@ -123,7 +123,7 @@ func (checker *Checker) checkAssignment(
 // track the origin of a write target when it is a resource. Consider:
 //
 //	pub resource R {
-//	  pub(set) var x: Int
+//	  access(all) var x: Int
 //	  init(x: Int) {
 //	    self.x = x
 //	  }

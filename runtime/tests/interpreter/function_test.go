@@ -177,7 +177,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             pub resource R {
-                pub(set) var id: UInt8
+                access(all) var id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -235,7 +235,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             pub resource R {
-                pub(set) var id: UInt8
+                access(all) var id: UInt8
                 init() {
                     self.id = 1
                 }

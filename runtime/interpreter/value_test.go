@@ -1669,7 +1669,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 
         pub struct Foo {
 
-            pub(set) var bar: &Foo?
+            access(all) var bar: &Foo?
 
             init() {
                 self.bar = nil

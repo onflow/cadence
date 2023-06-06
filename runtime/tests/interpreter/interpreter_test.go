@@ -7590,7 +7590,7 @@ func TestInterpretReferenceUse(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
       pub resource R {
-          pub(set) var x: Int
+          access(all) var x: Int
 
           init() {
               self.x = 0
@@ -7646,7 +7646,7 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
       pub resource R {
-          pub(set) var x: Int
+          access(all) var x: Int
 
           init() {
               self.x = 0

@@ -1570,7 +1570,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		inter, _ := testAccount(t, address, true, `
             resource R {}
             attachment A for R {
-                pub(set) var id: UInt8
+                access(all) var id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -1645,7 +1645,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 }
             }
             attachment A for R {
-                pub(set) var id: UInt8
+                access(all) var id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -1681,7 +1681,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		inter, _ := testAccount(t, address, true, `
             pub resource R {
-                pub(set) var id: UInt8
+                access(all) var id: UInt8
                 init() {
                     self.id = 1
                 }
@@ -1763,7 +1763,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             var ref: &A? = nil
 
             attachment A for R {
-                pub(set) var id: UInt8
+                access(all) var id: UInt8
                 init() {
                     self.id = 1
                 }

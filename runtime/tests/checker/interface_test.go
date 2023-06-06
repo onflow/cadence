@@ -1019,7 +1019,7 @@ func TestCheckInvalidInterfaceConformanceFieldMismatchAccessModifierMoreRestrict
 				fmt.Sprintf(
 					`
                       %[1]s interface Test {
-                          pub(set) x: Int
+                          access(all) x: Int
                       }
 
                       %[1]s TestImpl: Test {
@@ -1085,7 +1085,7 @@ func TestCheckInterfaceConformanceFieldMorePermissiveAccessModifier(t *testing.T
                       }
 
                       %[1]s TestImpl: Test {
-                          pub(set) var x: Int
+                          access(all) var x: Int
 
                           init(x: Int) {
                              self.x = x
