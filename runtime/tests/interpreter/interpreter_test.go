@@ -10724,3 +10724,40 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 		testVariableDeclaration(tc)
 	}
 }
+
+func TestInterpretCompositeTypeHandler(t *testing.T) {
+
+	t.Parallel()
+
+	testType := &sema.CompositeType{}
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          fun test(): Type? {
+              return CompositeType("TEST")
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				CompositeTypeHandler: func(location common.Location, typeID common.TypeID) *sema.CompositeType {
+					if typeID == "TEST" {
+						return testType
+					}
+
+					return nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	testStaticType := interpreter.ConvertSemaToStaticType(nil, testType)
+
+	require.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredTypeValue(testStaticType)),
+		value,
+	)
+}
