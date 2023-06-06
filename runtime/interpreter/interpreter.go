@@ -179,6 +179,9 @@ type PublicAccountHandlerFunc func(
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
 
+// CompositeTypeHandlerFunc is a function that loads composite types.
+type CompositeTypeHandlerFunc func(location common.Location, typeID common.TypeID) *sema.CompositeType
+
 // CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
@@ -4701,40 +4704,40 @@ func (interpreter *Interpreter) GetCompositeType(
 	qualifiedIdentifier string,
 	typeID common.TypeID,
 ) (*sema.CompositeType, error) {
+	var compositeType *sema.CompositeType
 	if location == nil {
-		return interpreter.getNativeCompositeType(qualifiedIdentifier)
+		compositeType = sema.NativeCompositeTypes[qualifiedIdentifier]
+		if compositeType != nil {
+			return compositeType, nil
+		}
+	} else {
+		compositeType = interpreter.getUserCompositeType(location, typeID)
+		if compositeType != nil {
+			return compositeType, nil
+		}
 	}
 
-	return interpreter.getUserCompositeType(location, typeID)
+	config := interpreter.SharedState.Config
+	compositeTypeHandler := config.CompositeTypeHandler
+	if compositeTypeHandler != nil {
+		compositeType = compositeTypeHandler(location, typeID)
+		if compositeType != nil {
+			return compositeType, nil
+		}
+	}
+
+	return nil, TypeLoadingError{
+		TypeID: typeID,
+	}
 }
 
-func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID common.TypeID) (*sema.CompositeType, error) {
+func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID common.TypeID) *sema.CompositeType {
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
-		return nil, TypeLoadingError{
-			TypeID: typeID,
-		}
+		return nil
 	}
 
-	ty := elaboration.CompositeType(typeID)
-	if ty == nil {
-		return nil, TypeLoadingError{
-			TypeID: typeID,
-		}
-	}
-
-	return ty, nil
-}
-
-func (interpreter *Interpreter) getNativeCompositeType(qualifiedIdentifier string) (*sema.CompositeType, error) {
-	ty := sema.NativeCompositeTypes[qualifiedIdentifier]
-	if ty == nil {
-		return nil, TypeLoadingError{
-			TypeID: common.TypeID(qualifiedIdentifier),
-		}
-	}
-
-	return ty, nil
+	return elaboration.CompositeType(typeID)
 }
 
 func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
