@@ -2227,7 +2227,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			struct S {}
 			struct T {}
 			access(M) attachment A for S {
-				priv let t: T
+				access(self) let t: T
 				init(t: T) {
 					self.t = t
 				}

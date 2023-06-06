@@ -402,6 +402,15 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
             resource R1 {
                 access(all) var r2s: @{Int: R2}
 
+				access(all) fun setR2(_ i: Int, _ r: @R2) {
+					self.r2s[i] <-! r
+                }
+
+				access(all) fun move(_ i: Int, _ r: @R2?): @R2? {
+					let optR2 <- self.r2s[i] <- r
+					return <- optR2
+                }
+
                 init() {
                     self.r2s <- {}
                 }
@@ -416,11 +425,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
             }
 
             fun test(r1: &R1): String? {
-                r1.r2s[0] <-! create R2()
+				r1.setR2(0, <- create R2())
                 // The second assignment should not lead to the resource being cleared,
                 // it must be fully moved out of this container before,
                 // not just assigned to the new variable
-                let optR2 <- r1.r2s[0] <- nil
+				let optR2 <- r1.move(0, nil)
                 let value = optR2?.value
                 destroy optR2
                 return value
@@ -2135,7 +2144,7 @@ func TestInterpreterResourcePreCondition(t *testing.T) {
       resource S {}
 
       struct interface Receiver {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               post {
                   from != nil: ""
               }
@@ -2143,7 +2152,7 @@ func TestInterpreterResourcePreCondition(t *testing.T) {
       }
 
       struct Vault: Receiver {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               destroy from
           }
       }
@@ -2165,7 +2174,7 @@ func TestInterpreterResourcePostCondition(t *testing.T) {
       resource S {}
 
       struct interface Receiver {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               post {
                   from != nil: ""
               }
@@ -2173,7 +2182,7 @@ func TestInterpreterResourcePostCondition(t *testing.T) {
       }
 
       struct Vault: Receiver {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               destroy from
           }
       }
@@ -2195,7 +2204,7 @@ func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
       resource S {}
 
       struct interface Receiver {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               pre {
                   from != nil: ""
               }
@@ -2206,7 +2215,7 @@ func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
       }
 
       struct Vault: Receiver {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               pre {
                   from != nil: ""
               }
@@ -2234,7 +2243,7 @@ func TestInterpreterResourceConditionAdditionalParam(t *testing.T) {
       resource S {}
 
       struct interface Receiver {
-          pub fun deposit(from: @S, other: UInt64) {
+          access(all) fun deposit(from: @S, other: UInt64) {
               pre {
                   from != nil: ""
               }
@@ -2245,7 +2254,7 @@ func TestInterpreterResourceConditionAdditionalParam(t *testing.T) {
       }
 
       struct Vault: Receiver {
-          pub fun deposit(from: @S, other: UInt64) {
+          access(all) fun deposit(from: @S, other: UInt64) {
               pre {
                   from != nil: ""
               }
@@ -2273,7 +2282,7 @@ func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
       resource S {}
 
       struct interface A {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               pre {
                   from != nil: ""
               }
@@ -2284,7 +2293,7 @@ func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
       }
 
       struct interface B {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               pre {
                   from != nil: ""
               }
@@ -2295,7 +2304,7 @@ func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
       }
 
       struct Vault: A, B {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               pre {
                   from != nil: ""
               }
@@ -2327,7 +2336,7 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 		true,
 		`
           resource R {
-              pub let id: Int
+              access(all) let id: Int
 
               init() {
                   self.id = 1
@@ -2365,7 +2374,7 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 		true,
 		`
           resource R {
-              pub let id: Int
+              access(all) let id: Int
 
               init() {
                   self.id = 1
@@ -2398,7 +2407,7 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
 	_, err := parseCheckAndInterpretWithOptions(t,
 		`
           resource interface I {
-               pub fun receiveResource(_ r: @Bar) {
+               access(all) fun receiveResource(_ r: @Bar) {
                   pre {
                       destroyResource(<-r)
                   }
@@ -2411,7 +2420,7 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
           }
 
           resource Foo: I {
-               pub fun receiveResource(_ r: @Bar) {
+               access(all) fun receiveResource(_ r: @Bar) {
                   destroy r
               }
           }

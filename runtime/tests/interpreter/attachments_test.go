@@ -1571,6 +1571,11 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             resource R {}
             attachment A for R {
                 access(all) var id: UInt8
+
+                access(all) fun setID(_ id: UInt8) {
+					self.id = id
+				}
+
                 init() {
                     self.id = 1
                 }
@@ -1585,7 +1590,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 // Then update the field of the attachment.
                 var r3 <- r2
                 let a2 = r3[A]!
-                a2.id = 5
+                a2.setID(5)
                 authAccount.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
@@ -1646,6 +1651,11 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             }
             attachment A for R {
                 access(all) var id: UInt8
+
+                access(all) fun setID(_ id: UInt8) {
+					self.id = id
+				}
+
                 init() {
                     self.id = 1
                 }
@@ -1658,7 +1668,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 // Then update the field of the attachment.
                 var r3 <- r2
                 let a2 = r3.r[A]!
-                a2.id = 5
+                a2.setID(5)
                 authAccount.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
@@ -1680,8 +1690,13 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(t, address, true, `
-            pub resource R {
+            access(all) resource R {
                 access(all) var id: UInt8
+
+                access(all) fun setID(_ id: UInt8) {
+					self.id = id
+				}
+
                 init() {
                     self.id = 1
                 }
@@ -1702,7 +1717,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 a.saveBaseRef()
 
                 var r2 <- r
-                r2.id = 5
+                r2.setID(5)
                 authAccount.save(<-r2, to: /storage/foo)
                 return ref!.id
             }`,
@@ -1758,12 +1773,17 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(t, address, true, `
-            pub resource R {}
+            access(all) resource R {}
 
             var ref: &A? = nil
 
             attachment A for R {
                 access(all) var id: UInt8
+
+                access(all) fun setID(_ id: UInt8) {
+					self.id = id
+				}
+
                 init() {
                     self.id = 1
                 }
@@ -1779,7 +1799,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
                 var r2 <- r
                 let a = r2[A]!
-                a.id = 5
+                a.setID(5)
                 authAccount.save(<-r2, to: /storage/foo)
                 return ref!.id
             }`,

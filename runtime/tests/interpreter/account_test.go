@@ -3014,7 +3014,7 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 
 			importedChecker, err := checker.ParseAndCheckWithOptions(t,
 				`
-                  pub fun foo() {
+                  access(all) fun foo() {
                       account.save("bar", to: /storage/foo5)
                   }
                 `,
