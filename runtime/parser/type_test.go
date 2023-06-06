@@ -1517,7 +1517,7 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
-				Access: ast.AccessPublic,
+				Access: ast.AccessAll,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 11, Line: 2, Column: 10},

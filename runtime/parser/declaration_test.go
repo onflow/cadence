@@ -82,7 +82,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
-					Access:     ast.AccessPublic,
+					Access:     ast.AccessAll,
 					IsConstant: false,
 					Identifier: ast.Identifier{
 						Identifier: "x",
@@ -608,7 +608,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
@@ -1290,7 +1290,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Flags:  ast.FunctionDeclarationFlagsIsStatic | ast.FunctionDeclarationFlagsIsNative,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
@@ -1591,108 +1591,6 @@ func TestParseAccess(t *testing.T) {
 		)
 	}
 
-	t.Run("pub", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := parse("pub")
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			ast.AccessPublic,
-			result,
-		)
-	})
-
-	t.Run("pub(set)", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := parse("pub ( set )")
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			ast.AccessPublicSettable,
-			result,
-		)
-	})
-
-	t.Run("pub, missing set keyword", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := parse("pub ( ")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected keyword \"set\", got EOF",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
-				},
-			},
-			errs,
-		)
-
-		utils.AssertEqualWithDiff(t,
-			ast.AccessNotSpecified,
-			result,
-		)
-	})
-
-	t.Run("pub, missing closing paren", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := parse("pub ( set ")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
-				},
-			},
-			errs,
-		)
-
-		utils.AssertEqualWithDiff(t,
-			ast.AccessNotSpecified,
-			result,
-		)
-	})
-
-	t.Run("pub, invalid inner keyword", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := parse("pub ( foo )")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected keyword \"set\", got \"foo\"",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
-				},
-			},
-			errs,
-		)
-
-		utils.AssertEqualWithDiff(t,
-			ast.AccessNotSpecified,
-			result,
-		)
-	})
-
-	t.Run("priv", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := parse("priv")
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			ast.AccessPrivate,
-			result,
-		)
-	})
-
 	t.Run("access(all)", func(t *testing.T) {
 
 		t.Parallel()
@@ -1701,7 +1599,7 @@ func TestParseAccess(t *testing.T) {
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			ast.AccessPublic,
+			ast.AccessAll,
 			result,
 		)
 	})
@@ -1740,7 +1638,7 @@ func TestParseAccess(t *testing.T) {
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			ast.AccessPrivate,
+			ast.AccessSelf,
 			result,
 		)
 	})
@@ -2463,7 +2361,7 @@ func TestParseEvent(t *testing.T) {
 			[]ast.Declaration{
 
 				&ast.CompositeDeclaration{
-					Access:        ast.AccessPrivate,
+					Access:        ast.AccessSelf,
 					CompositeKind: common.CompositeKindEvent,
 					Identifier: ast.Identifier{
 						Identifier: "E2",
@@ -2865,7 +2763,7 @@ func TestParseField(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
-				Access:       ast.AccessPublic,
+				Access:       ast.AccessAll,
 				Flags:        ast.FieldDeclarationFlagsIsStatic | ast.FieldDeclarationFlagsIsNative,
 				VariableKind: ast.VariableKindConstant,
 				Identifier: ast.Identifier{
@@ -2923,7 +2821,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
-					Access:        ast.AccessPublic,
+					Access:        ast.AccessAll,
 					CompositeKind: common.CompositeKindStructure,
 					Identifier: ast.Identifier{
 						Identifier: "S",
@@ -2950,7 +2848,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
-					Access:        ast.AccessPublic,
+					Access:        ast.AccessAll,
 					CompositeKind: common.CompositeKindResource,
 					Identifier: ast.Identifier{
 						Identifier: "R",
@@ -2981,7 +2879,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 
 		result, errs := testParseDeclarations(`
           struct Test {
-              pub(set) var foo: Int
+              pub var foo: Int
 
               init(foo: Int) {
                   self.foo = foo
@@ -3007,7 +2905,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
-								Access:       ast.AccessPublicSettable,
+								Access:       ast.AccessAll,
 								VariableKind: ast.VariableKindVariable,
 								Identifier: ast.Identifier{
 									Identifier: "foo",
@@ -3101,7 +2999,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 								},
 							},
 							&ast.FunctionDeclaration{
-								Access: ast.AccessPublic,
+								Access: ast.AccessAll,
 								Identifier: ast.Identifier{
 									Identifier: "getFoo",
 									Pos:        ast.Position{Offset: 165, Line: 9, Column: 22},
@@ -3388,7 +3286,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "E",
 						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
@@ -3436,7 +3334,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.AttachmentDeclaration{
-								Access: ast.AccessPublic,
+								Access: ast.AccessAll,
 								Identifier: ast.Identifier{
 									Identifier: "E",
 									Pos:        ast.Position{Line: 3, Column: 18, Offset: 37},
@@ -3487,7 +3385,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "E",
 						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
@@ -3529,7 +3427,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "E",
 						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
@@ -3574,7 +3472,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseDeclarations(`pub attachment E for S {
-			pub(set) var foo: Int
+			pub var foo: Int
 			init() {}
 			destroy() {}
 			pub fun getFoo(): Int {}
@@ -3584,7 +3482,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "E",
 						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
@@ -3598,7 +3496,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
-								Access:       ast.AccessPublicSettable,
+								Access:       ast.AccessAll,
 								VariableKind: ast.VariableKindVariable,
 								Identifier: ast.Identifier{
 									Identifier: "foo",
@@ -3670,7 +3568,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 								},
 							},
 							&ast.FunctionDeclaration{
-								Access: ast.AccessPublic,
+								Access: ast.AccessAll,
 								Identifier: ast.Identifier{
 									Identifier: "getFoo",
 									Pos:        ast.Position{Offset: 90, Line: 5, Column: 11},
@@ -3727,7 +3625,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "E",
 						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
@@ -3855,7 +3753,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "E",
 						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
@@ -3928,7 +3826,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.InterfaceDeclaration{
-					Access:        ast.AccessPublic,
+					Access:        ast.AccessAll,
 					CompositeKind: common.CompositeKindStructure,
 					Identifier: ast.Identifier{
 						Identifier: "S",
@@ -3974,7 +3872,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 
 		result, errs := testParseDeclarations(`
           struct interface Test {
-              pub(set) var foo: Int
+              pub var foo: Int
 
               init(foo: Int)
 
@@ -4000,7 +3898,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
-								Access:       ast.AccessPublicSettable,
+								Access:       ast.AccessAll,
 								VariableKind: ast.VariableKindVariable,
 								Identifier: ast.Identifier{
 									Identifier: "foo",
@@ -4059,7 +3957,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 								},
 							},
 							&ast.FunctionDeclaration{
-								Access: ast.AccessPublic,
+								Access: ast.AccessAll,
 								Identifier: ast.Identifier{
 									Identifier: "getFoo",
 									Pos:        ast.Position{Offset: 124, Line: 7, Column: 22},
@@ -4083,7 +3981,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 								StartPos: ast.Position{Offset: 116, Line: 7, Column: 14},
 							},
 							&ast.FunctionDeclaration{
-								Access: ast.AccessPublic,
+								Access: ast.AccessAll,
 								Identifier: ast.Identifier{
 									Identifier: "getBar",
 									Pos:        ast.Position{Offset: 161, Line: 9, Column: 22},
@@ -4230,7 +4128,7 @@ func TestParseEnumDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
-					Access:        ast.AccessPublic,
+					Access:        ast.AccessAll,
 					CompositeKind: common.CompositeKindEnum,
 					Identifier: ast.Identifier{
 						Identifier: "E",
@@ -4247,7 +4145,7 @@ func TestParseEnumDeclaration(t *testing.T) {
 								StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
 							},
 							&ast.EnumCaseDeclaration{
-								Access: ast.AccessPublic,
+								Access: ast.AccessAll,
 								Identifier: ast.Identifier{
 									Identifier: "d",
 									Pos:        ast.Position{Line: 1, Column: 32, Offset: 32},
@@ -5283,7 +5181,7 @@ func TestParseStructure(t *testing.T) {
 
 	const code = `
         struct Test {
-            pub(set) var foo: Int
+            pub    var foo: Int
 
             init(foo: Int) {
                 self.foo = foo
@@ -5309,7 +5207,7 @@ func TestParseStructure(t *testing.T) {
 				Members: ast.NewUnmeteredMembers(
 					[]ast.Declaration{
 						&ast.FieldDeclaration{
-							Access:       ast.AccessPublicSettable,
+							Access:       ast.AccessAll,
 							VariableKind: ast.VariableKindVariable,
 							Identifier: ast.Identifier{
 								Identifier: "foo",
@@ -5403,7 +5301,7 @@ func TestParseStructure(t *testing.T) {
 							},
 						},
 						&ast.FunctionDeclaration{
-							Access: ast.AccessPublic,
+							Access: ast.AccessAll,
 							Identifier: ast.Identifier{
 								Identifier: "getFoo",
 								Pos:        ast.Position{Offset: 153, Line: 9, Column: 20},
@@ -7914,7 +7812,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "E",
 						Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
@@ -7945,7 +7843,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
-					Access:        ast.AccessPublic,
+					Access:        ast.AccessAll,
 					CompositeKind: common.CompositeKindContract,
 					Identifier: ast.Identifier{
 						Identifier: "C",
@@ -7958,7 +7856,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.EntitlementDeclaration{
-								Access: ast.AccessPublic,
+								Access: ast.AccessAll,
 								Identifier: ast.Identifier{
 									Identifier: "E",
 									Pos:        ast.Position{Line: 3, Column: 32, Offset: 63},
@@ -8250,7 +8148,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "M",
 						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
@@ -8278,7 +8176,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "M",
 						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
@@ -8335,7 +8233,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
-					Access: ast.AccessPublic,
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "M",
 						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},

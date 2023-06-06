@@ -214,7 +214,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				purity = parsePurityAnnotation(p)
 				continue
 
-			case KeywordPriv, KeywordPub, KeywordAccess:
+			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid second access modifier")
 				}
@@ -333,48 +333,6 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 func parseAccess(p *parser) (ast.Access, error) {
 
 	switch string(p.currentTokenSource()) {
-	case KeywordPriv:
-		// Skip the `priv` keyword
-		p.next()
-		return ast.AccessPrivate, nil
-
-	case KeywordPub:
-		// Skip the `pub` keyword
-		p.nextSemanticToken()
-		if !p.current.Is(lexer.TokenParenOpen) {
-			return ast.AccessPublic, nil
-		}
-
-		// Skip the opening paren
-		p.nextSemanticToken()
-
-		if !p.current.Is(lexer.TokenIdentifier) {
-			return ast.AccessNotSpecified, p.syntaxError(
-				"expected keyword %q, got %s",
-				KeywordSet,
-				p.current.Type,
-			)
-		}
-
-		keyword := p.currentTokenSource()
-		if string(keyword) != KeywordSet {
-			return ast.AccessNotSpecified, p.syntaxError(
-				"expected keyword %q, got %q",
-				KeywordSet,
-				keyword,
-			)
-		}
-
-		// Skip the `set` keyword
-		p.nextSemanticToken()
-
-		_, err := p.mustOne(lexer.TokenParenClose)
-		if err != nil {
-			return ast.AccessNotSpecified, err
-		}
-
-		return ast.AccessPublicSettable, nil
-
 	case KeywordAccess:
 		// Skip the `access` keyword
 		p.nextSemanticToken()
@@ -399,7 +357,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 		keyword := p.currentTokenSource()
 		switch string(keyword) {
 		case KeywordAll:
-			access = ast.AccessPublic
+			access = ast.AccessAll
 			// Skip the keyword
 			p.nextSemanticToken()
 
@@ -414,7 +372,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			p.nextSemanticToken()
 
 		case KeywordSelf:
-			access = ast.AccessPrivate
+			access = ast.AccessSelf
 			// Skip the keyword
 			p.nextSemanticToken()
 
@@ -1667,7 +1625,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				purity = parsePurityAnnotation(p)
 				continue
 
-			case KeywordPriv, KeywordPub, KeywordAccess:
+			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid second access modifier")
 				}

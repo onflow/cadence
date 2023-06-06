@@ -34,7 +34,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &FunctionDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
 			Identifier: "xyz",
@@ -289,7 +289,7 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 	t.Parallel()
 
 	decl := &FunctionDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Purity: FunctionPurityView,
 		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
@@ -383,7 +383,7 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FunctionDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -430,7 +430,7 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FunctionDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},

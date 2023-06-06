@@ -32,7 +32,7 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &AttachmentDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: NewIdentifier(
 			nil,
 			"Foo",
@@ -155,7 +155,7 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 	t.Parallel()
 
 	decl := &AttachmentDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: NewIdentifier(
 			nil,
 			"Foo",

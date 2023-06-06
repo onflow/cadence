@@ -34,7 +34,7 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &FieldDeclaration{
-		Access:       AccessPublic,
+		Access:       AccessAll,
 		Flags:        FieldDeclarationFlagsIsStatic | FieldDeclarationFlagsIsNative,
 		VariableKind: VariableKindConstant,
 		Identifier: Identifier{
@@ -108,7 +108,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
-			Access:       AccessPublic,
+			Access:       AccessAll,
 			VariableKind: VariableKindConstant,
 			Flags:        FieldDeclarationFlagsIsNative | FieldDeclarationFlagsIsStatic,
 			Identifier: Identifier{
@@ -199,7 +199,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -281,7 +281,7 @@ func TestFieldDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
-			Access:       AccessPublic,
+			Access:       AccessAll,
 			VariableKind: VariableKindConstant,
 			Identifier: Identifier{
 				Identifier: "xyz",
@@ -335,7 +335,7 @@ func TestFieldDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -390,7 +390,7 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &CompositeDeclaration{
-		Access:        AccessPublic,
+		Access:        AccessAll,
 		CompositeKind: common.CompositeKindResource,
 		Identifier: Identifier{
 			Identifier: "AB",
@@ -460,7 +460,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -518,7 +518,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -606,7 +606,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindEvent,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -668,7 +668,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindEnum,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -741,7 +741,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -773,7 +773,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -821,7 +821,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindEvent,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -860,7 +860,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindEnum,
 			Identifier: Identifier{
 				Identifier: "AB",

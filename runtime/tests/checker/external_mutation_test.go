@@ -34,7 +34,7 @@ func TestCheckArrayUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -103,7 +103,7 @@ func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -172,7 +172,7 @@ func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -233,7 +233,7 @@ func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -294,7 +294,7 @@ func TestCheckMutateContractIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -354,7 +354,7 @@ func TestCheckContractNestedStructIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -421,7 +421,7 @@ func TestCheckContractStructInitIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -476,7 +476,7 @@ func TestCheckArrayUpdateMethodCall(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -569,7 +569,7 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}

@@ -3344,7 +3344,7 @@ func baseTypeVariable(name string, ty Type) *Variable {
 		Type:            ty,
 		DeclarationKind: common.DeclarationKindType,
 		IsConstant:      true,
-		Access:          PrimitiveAccess(ast.AccessPublic),
+		Access:          PrimitiveAccess(ast.AccessAll),
 	}
 }
 
@@ -3564,7 +3564,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
 		Type:            ty,
-		Access:          PrimitiveAccess(ast.AccessPublic),
+		Access:          PrimitiveAccess(ast.AccessAll),
 		DocString:       docString,
 	}
 }
@@ -4359,7 +4359,7 @@ func NewPublicFunctionMember(
 
 	return &Member{
 		ContainerType: containerType,
-		Access:        PrimitiveAccess(ast.AccessPublic),
+		Access:        PrimitiveAccess(ast.AccessAll),
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
@@ -4397,7 +4397,7 @@ func NewPublicConstantFieldMember(
 ) *Member {
 	return &Member{
 		ContainerType: containerType,
-		Access:        PrimitiveAccess(ast.AccessPublic),
+		Access:        PrimitiveAccess(ast.AccessAll),
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
@@ -5208,7 +5208,7 @@ var _ Type = &ReferenceType{}
 var _ ValueIndexableType = &ReferenceType{}
 var _ TypeIndexableType = &ReferenceType{}
 
-var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessPublic)
+var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessAll)
 
 func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorization Access) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)

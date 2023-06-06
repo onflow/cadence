@@ -2828,6 +2828,7 @@ func (e *InvalidAccessError) Error() string {
 
 type InvalidAssignmentAccessError struct {
 	Name              string
+	ContainerType     Type
 	RestrictingAccess Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
@@ -2852,8 +2853,8 @@ func (e *InvalidAssignmentAccessError) Error() string {
 
 func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	return fmt.Sprintf(
-		"consider making it publicly settable with `%s`",
-		ast.AccessPublicSettable.Keyword(),
+		"consider adding a setter function to %s",
+		e.ContainerType.QualifiedString(),
 	)
 }
 

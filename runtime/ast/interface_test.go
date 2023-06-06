@@ -34,7 +34,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &InterfaceDeclaration{
-		Access:        AccessPublic,
+		Access:        AccessAll,
 		CompositeKind: common.CompositeKindResource,
 		Identifier: Identifier{
 			Identifier: "AB",
@@ -84,7 +84,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &InterfaceDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -114,7 +114,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &InterfaceDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -179,7 +179,7 @@ func TestInterfaceDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &InterfaceDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -200,7 +200,7 @@ func TestInterfaceDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &InterfaceDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",

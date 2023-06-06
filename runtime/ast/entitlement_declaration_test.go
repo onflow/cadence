@@ -32,7 +32,7 @@ func TestEntitlementDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &EntitlementDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: Identifier{
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
@@ -76,7 +76,7 @@ func TestEntitlementDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &EntitlementDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "AB",
 			},
@@ -105,7 +105,7 @@ func TestEntitlementDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &EntitlementDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "AB",
 			},
@@ -125,7 +125,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &EntitlementMappingDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: Identifier{
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
@@ -205,7 +205,7 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 	t.Parallel()
 
 	decl := &EntitlementMappingDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: Identifier{
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
@@ -266,7 +266,7 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 	t.Parallel()
 
 	decl := &EntitlementMappingDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: Identifier{
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},

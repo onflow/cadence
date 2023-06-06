@@ -32,7 +32,7 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &VariableDeclaration{
-		Access:     AccessPublic,
+		Access:     AccessAll,
 		IsConstant: true,
 		Identifier: Identifier{
 			Identifier: "foo",
@@ -146,7 +146,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &VariableDeclaration{
-			Access:     AccessPublic,
+			Access:     AccessAll,
 			IsConstant: true,
 			Identifier: Identifier{
 				Identifier: "foo",
@@ -209,7 +209,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &VariableDeclaration{
-			Access:     AccessPublic,
+			Access:     AccessAll,
 			IsConstant: true,
 			Identifier: Identifier{
 				Identifier: "foo",
@@ -287,7 +287,7 @@ func TestVariableDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &VariableDeclaration{
-			Access:     AccessPublic,
+			Access:     AccessAll,
 			IsConstant: true,
 			Identifier: Identifier{
 				Identifier: "foo",
@@ -319,7 +319,7 @@ func TestVariableDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &VariableDeclaration{
-			Access:     AccessPublic,
+			Access:     AccessAll,
 			IsConstant: true,
 			Identifier: Identifier{
 				Identifier: "foo",

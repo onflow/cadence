@@ -364,6 +364,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		checker.report(
 			&InvalidAssignmentAccessError{
 				Name:              member.Identifier.Identifier,
+				ContainerType:     member.ContainerType,
 				RestrictingAccess: member.Access,
 				DeclarationKind:   member.DeclarationKind,
 				Range:             ast.NewRangeFromPositioned(checker.memoryGauge, target.Identifier),

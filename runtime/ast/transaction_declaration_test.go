@@ -103,7 +103,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 		},
 		Fields: []*FieldDeclaration{
 			{
-				Access:       AccessPublic,
+				Access:       AccessAll,
 				VariableKind: VariableKindConstant,
 				Identifier: Identifier{
 					Identifier: "f",
@@ -367,7 +367,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 		},
 		Fields: []*FieldDeclaration{
 			{
-				Access:       AccessPublic,
+				Access:       AccessAll,
 				VariableKind: VariableKindConstant,
 				Identifier: Identifier{
 					Identifier: "f",
