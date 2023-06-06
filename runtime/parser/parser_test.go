@@ -552,9 +552,9 @@ func TestParseBuffering(t *testing.T) {
 		t.Parallel()
 
 		src := `
-            pub struct interface Y {}
-            pub struct X : Y {}
-            pub fun main():String {
+            access(all) struct interface Y {}
+            access(all) struct X : Y {}
+            access(all) fun main():String {
                 fun f(a:Bool, _:String):String { return _; }
                 let S = 1
                 if false {
@@ -576,7 +576,7 @@ func TestParseBuffering(t *testing.T) {
 
 		src := `
             transaction { }
-            pub fun main():String {
+            access(all) fun main():String {
                 let A = 1
                 let B = 2
                 let C = 3

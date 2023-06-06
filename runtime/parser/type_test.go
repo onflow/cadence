@@ -1509,7 +1509,7 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-		pub fun test(a: Int32, b: [Int32; 2], c: [[Int32; 3]]): [[Int64]] {}
+		access(all) fun test(a: Int32, b: [Int32; 2], c: [[Int32; 3]]): [[Int64]] {}
 	`
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
@@ -1517,136 +1517,279 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
-				Access: ast.AccessAll,
-				Identifier: ast.Identifier{
-					Identifier: "test",
-					Pos:        ast.Position{Offset: 11, Line: 2, Column: 10},
-				},
 				ParameterList: &ast.ParameterList{
 					Parameters: []*ast.Parameter{
 						{
-							Identifier: ast.Identifier{
-								Identifier: "a",
-								Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-							},
 							TypeAnnotation: &ast.TypeAnnotation{
-								IsResource: false,
 								Type: &ast.NominalType{
 									Identifier: ast.Identifier{
 										Identifier: "Int32",
-										Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
+										Pos: ast.Position{
+											Offset: 27,
+											Line:   2,
+											Column: 26,
+										},
 									},
 								},
-								StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
+								StartPos: ast.Position{
+									Offset: 27,
+									Line:   2,
+									Column: 26,
+								},
+								IsResource: false,
 							},
-							StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
+							Label: "",
+							Identifier: ast.Identifier{
+								Identifier: "a",
+								Pos: ast.Position{
+									Offset: 24,
+									Line:   2,
+									Column: 23,
+								},
+							},
+							StartPos: ast.Position{
+								Offset: 24,
+								Line:   2,
+								Column: 23,
+							},
 						},
 						{
-							Identifier: ast.Identifier{
-								Identifier: "b",
-								Pos:        ast.Position{Offset: 26, Line: 2, Column: 25},
-							},
 							TypeAnnotation: &ast.TypeAnnotation{
-								IsResource: false,
 								Type: &ast.ConstantSizedType{
 									Type: &ast.NominalType{
 										Identifier: ast.Identifier{
 											Identifier: "Int32",
-											Pos:        ast.Position{Offset: 30, Line: 2, Column: 29},
+											Pos: ast.Position{
+												Offset: 38,
+												Line:   2,
+												Column: 37,
+											},
 										},
 									},
 									Size: &ast.IntegerExpression{
-										PositiveLiteral: []byte("2"),
-										Value:           big.NewInt(2),
-										Base:            10,
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
-											EndPos:   ast.Position{Offset: 37, Line: 2, Column: 36},
+										Value: big.NewInt(2),
+										PositiveLiteral: []uint8{
+											0x32,
 										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 45,
+												Line:   2,
+												Column: 44,
+											},
+											EndPos: ast.Position{
+												Offset: 45,
+												Line:   2,
+												Column: 44,
+											},
+										},
+										Base: 10,
 									},
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 29, Line: 2, Column: 28},
-										EndPos:   ast.Position{Offset: 38, Line: 2, Column: 37},
+										StartPos: ast.Position{
+											Offset: 37,
+											Line:   2,
+											Column: 36,
+										},
+										EndPos: ast.Position{
+											Offset: 46,
+											Line:   2,
+											Column: 45,
+										},
 									},
 								},
-								StartPos: ast.Position{Offset: 29, Line: 2, Column: 28},
+								StartPos: ast.Position{
+									Offset: 37,
+									Line:   2,
+									Column: 36,
+								},
+								IsResource: false,
 							},
-							StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
+							Identifier: ast.Identifier{
+								Identifier: "b",
+								Pos: ast.Position{
+									Offset: 34,
+									Line:   2,
+									Column: 33,
+								},
+							},
+							StartPos: ast.Position{
+								Offset: 34,
+								Line:   2,
+								Column: 33,
+							},
 						},
 						{
-							Identifier: ast.Identifier{
-								Identifier: "c",
-								Pos:        ast.Position{Offset: 41, Line: 2, Column: 40},
-							},
 							TypeAnnotation: &ast.TypeAnnotation{
-								IsResource: false,
 								Type: &ast.VariableSizedType{
 									Type: &ast.ConstantSizedType{
 										Type: &ast.NominalType{
 											Identifier: ast.Identifier{
 												Identifier: "Int32",
-												Pos:        ast.Position{Offset: 46, Line: 2, Column: 45},
+												Pos: ast.Position{
+													Offset: 54,
+													Line:   2,
+													Column: 53,
+												},
 											},
 										},
 										Size: &ast.IntegerExpression{
-											PositiveLiteral: []byte("3"),
-											Value:           big.NewInt(3),
-											Base:            10,
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 53, Line: 2, Column: 52},
-												EndPos:   ast.Position{Offset: 53, Line: 2, Column: 52},
+											Value: big.NewInt(3),
+											PositiveLiteral: []uint8{
+												0x33,
 											},
+											Range: ast.Range{
+												StartPos: ast.Position{
+													Offset: 61,
+													Line:   2,
+													Column: 60,
+												},
+												EndPos: ast.Position{
+													Offset: 61,
+													Line:   2,
+													Column: 60,
+												},
+											},
+											Base: 10,
 										},
 										Range: ast.Range{
-											StartPos: ast.Position{Offset: 45, Line: 2, Column: 44},
-											EndPos:   ast.Position{Offset: 54, Line: 2, Column: 53},
+											StartPos: ast.Position{
+												Offset: 53,
+												Line:   2,
+												Column: 52,
+											},
+											EndPos: ast.Position{
+												Offset: 62,
+												Line:   2,
+												Column: 61,
+											},
 										},
 									},
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 44, Line: 2, Column: 43},
-										EndPos:   ast.Position{Offset: 55, Line: 2, Column: 54},
+										StartPos: ast.Position{
+											Offset: 52,
+											Line:   2,
+											Column: 51,
+										},
+										EndPos: ast.Position{
+											Offset: 63,
+											Line:   2,
+											Column: 62,
+										},
 									},
 								},
-								StartPos: ast.Position{Offset: 44, Line: 2, Column: 43},
+								StartPos: ast.Position{
+									Offset: 52,
+									Line:   2,
+									Column: 51,
+								},
+								IsResource: false,
 							},
-							StartPos: ast.Position{Offset: 41, Line: 2, Column: 40},
+							Identifier: ast.Identifier{
+								Identifier: "c",
+								Pos: ast.Position{
+									Offset: 49,
+									Line:   2,
+									Column: 48,
+								},
+							},
+							StartPos: ast.Position{
+								Offset: 49,
+								Line:   2,
+								Column: 48,
+							},
 						},
 					},
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						EndPos:   ast.Position{Offset: 56, Line: 2, Column: 55},
+						StartPos: ast.Position{
+							Offset: 23,
+							Line:   2,
+							Column: 22,
+						},
+						EndPos: ast.Position{
+							Offset: 64,
+							Line:   2,
+							Column: 63,
+						},
 					},
 				},
 				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
 					Type: &ast.VariableSizedType{
 						Type: &ast.VariableSizedType{
 							Type: &ast.NominalType{
-								Identifier: ast.Identifier{Identifier: "Int64",
-									Pos: ast.Position{Offset: 61, Line: 2, Column: 60},
+								Identifier: ast.Identifier{
+									Identifier: "Int64",
+									Pos: ast.Position{
+										Offset: 69,
+										Line:   2,
+										Column: 68,
+									},
 								},
 							},
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 60, Line: 2, Column: 59},
-								EndPos:   ast.Position{Offset: 66, Line: 2, Column: 65},
+								StartPos: ast.Position{
+									Offset: 68,
+									Line:   2,
+									Column: 67,
+								},
+								EndPos: ast.Position{
+									Offset: 74,
+									Line:   2,
+									Column: 73,
+								},
 							},
 						},
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 59, Line: 2, Column: 58},
-							EndPos:   ast.Position{Offset: 67, Line: 2, Column: 66},
+							StartPos: ast.Position{
+								Offset: 67,
+								Line:   2,
+								Column: 66,
+							},
+							EndPos: ast.Position{
+								Offset: 75,
+								Line:   2,
+								Column: 74,
+							},
 						},
 					},
-					StartPos: ast.Position{Offset: 59, Line: 2, Column: 58},
+					StartPos: ast.Position{
+						Offset: 67,
+						Line:   2,
+						Column: 66,
+					},
+					IsResource: false,
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 69, Line: 2, Column: 68},
-							EndPos:   ast.Position{Offset: 70, Line: 2, Column: 69},
+							StartPos: ast.Position{
+								Offset: 77,
+								Line:   2,
+								Column: 76,
+							},
+							EndPos: ast.Position{
+								Offset: 78,
+								Line:   2,
+								Column: 77,
+							},
 						},
 					},
 				},
-				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos: ast.Position{
+						Offset: 19,
+						Line:   2,
+						Column: 18,
+					},
+				},
+				StartPos: ast.Position{
+					Offset: 3,
+					Line:   2,
+					Column: 2,
+				},
+				Access: ast.AccessAll,
+				Flags:  0x00,
 			},
 		},
 		result.Declarations(),
