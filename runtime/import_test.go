@@ -50,7 +50,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	script := []byte(`
       import p1
 
-      pub fun main() {}
+      access(all) fun main() {}
     `)
 
 	var checkCount int
@@ -174,17 +174,17 @@ func TestCheckCyclicImports(t *testing.T) {
 	}
 
 	const fooContract = `
-        pub contract Foo {}
+        access(all) contract Foo {}
     `
 
 	const barContract = `
         import Foo from 0x0000000000000001
-        pub contract Bar {}
+        access(all) contract Bar {}
     `
 
 	const updatedFooContract = `
         import Bar from 0x0000000000000001
-        pub contract Foo {}
+        access(all) contract Foo {}
     `
 
 	err := deploy("Foo", fooContract, false)

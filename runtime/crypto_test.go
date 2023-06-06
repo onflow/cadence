@@ -44,7 +44,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 	script := []byte(`
       import Crypto
 
-      pub fun main(): Bool {
+      access(all) fun main(): Bool {
           let publicKey = PublicKey(
               publicKey: "0102".decodeHex(),
               signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -137,7 +137,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 log(HashAlgorithm.SHA3_256.hash("01020304".decodeHex()))
             }
         `
@@ -182,7 +182,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 HashAlgorithm.SHA3_256.hash("01020304".decodeHex())
             }
         `
@@ -212,7 +212,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 HashAlgorithm.SHA3_256.hashWithTag(
                     "01020304".decodeHex(),
                     tag: "some-tag"
@@ -252,7 +252,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 
 	testHashAlgorithm := func(algo sema.CryptoAlgorithm) {
 		script := fmt.Sprintf(`
-              pub fun main(): HashAlgorithm {
+              access(all) fun main(): HashAlgorithm {
                   return HashAlgorithm.%s
               }
             `,
@@ -293,7 +293,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
 		script := fmt.Sprintf(`
-              pub fun main(): SignatureAlgorithm {
+              access(all) fun main(): SignatureAlgorithm {
                   return SignatureAlgorithm.%s
               }
             `,
@@ -339,7 +339,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 	}
 
 	const script = `
-      pub fun main(algo: SignatureAlgorithm): UInt8 {
+      access(all) fun main(algo: SignatureAlgorithm): UInt8 {
           return algo.rawValue
       }
     `
@@ -390,7 +390,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 	t.Parallel()
 
 	const script = `
-      pub fun main(algo: HashAlgorithm): UInt8 {
+      access(all) fun main(algo: HashAlgorithm): UInt8 {
           let data: [UInt8] = [1, 2, 3]
           log(algo.hash(data))
           log(algo.hashWithTag(data, tag: "some-tag"))
@@ -483,7 +483,7 @@ func TestBLSVerifyPoP(t *testing.T) {
 
 	script := []byte(`
 
-      pub fun main(): Bool {
+      access(all) fun main(): Bool {
           let publicKey = PublicKey(
               publicKey: "0102".decodeHex(),
               signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
@@ -542,7 +542,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 
 	script := []byte(`
 
-      pub fun main(): [UInt8] {
+      access(all) fun main(): [UInt8] {
         return BLS.aggregateSignatures([
               [1, 1, 1, 1, 1],
               [2, 2, 2, 2, 2],
@@ -607,7 +607,7 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
 
 	script := []byte(`
 
-      pub fun main(): PublicKey? {
+      access(all) fun main(): PublicKey? {
         let k1 = PublicKey(
             publicKey: "0102".decodeHex(),
             signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
@@ -700,7 +700,7 @@ func TestTraversingMerkleProof(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-        pub fun main(rootHash: [UInt8], address: [UInt8], accountProof: [[UInt8]]){
+        access(all) fun main(rootHash: [UInt8], address: [UInt8], accountProof: [[UInt8]]){
 
         let path = HashAlgorithm.KECCAK_256.hash(address)
      

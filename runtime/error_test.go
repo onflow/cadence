@@ -107,7 +107,7 @@ func TestRuntimeError(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main() {
+            access(all) fun main() {
                 let a: UInt8 = 255
                 let b: UInt8 = 1
                 // overflow
@@ -147,7 +147,7 @@ func TestRuntimeError(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
-			pub fun main() {
+			access(all) fun main() {
 				let x: AnyStruct? = nil
 				let y = x!
 			}
@@ -272,7 +272,7 @@ func TestRuntimeError(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		importedScript := []byte(`
-            pub fun add() {
+            access(all) fun add() {
                 let a: UInt8 = 255
                 let b: UInt8 = 1
                 // overflow
@@ -283,7 +283,7 @@ func TestRuntimeError(t *testing.T) {
 		script := []byte(`
             import add from "imported"
 
-            pub fun main() {
+            access(all) fun main() {
                 add()
             }
         `)
@@ -356,7 +356,7 @@ func TestRuntimeError(t *testing.T) {
               // program itself has more errors:
 
               // invalid top-level declaration
-              pub fun foo() {
+              access(all) fun foo() {
                   // invalid reference to undeclared variable
                   Y
               }
@@ -366,7 +366,7 @@ func TestRuntimeError(t *testing.T) {
 				Name:    "B",
 			}: `
               // invalid top-level declaration
-              pub fun bar() {
+              access(all) fun bar() {
                   // invalid reference to undeclared variable
                   X
               }
@@ -407,10 +407,10 @@ func TestRuntimeError(t *testing.T) {
 		require.EqualError(t, err,
 			"Execution failed:\n"+
 				"error: function declarations are not valid at the top-level\n"+
-				" --> 0000000000000002.B:3:22\n"+
+				" --> 0000000000000002.B:3:30\n"+
 				"  |\n"+
-				"3 |               pub fun bar() {\n"+
-				"  |                       ^^^\n"+
+				"3 |               access(all) fun bar() {\n"+
+				"  |                               ^^^\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `X`\n"+
 				" --> 0000000000000002.B:5:18\n"+
@@ -419,10 +419,10 @@ func TestRuntimeError(t *testing.T) {
 				"  |                   ^ not found in this scope\n"+
 				"\n"+
 				"error: function declarations are not valid at the top-level\n"+
-				" --> 0000000000000001.A:8:22\n"+
+				" --> 0000000000000001.A:8:30\n"+
 				"  |\n"+
-				"8 |               pub fun foo() {\n"+
-				"  |                       ^^^\n"+
+				"8 |               access(all) fun foo() {\n"+
+				"  |                               ^^^\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `Y`\n"+
 				"  --> 0000000000000001.A:10:18\n"+

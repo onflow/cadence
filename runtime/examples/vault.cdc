@@ -1,6 +1,6 @@
 
-pub struct interface Vault {
-    pub balance: Int
+access(all) struct interface Vault {
+    access(all) balance: Int
 
     init(balance: Int) {
         post {
@@ -9,7 +9,7 @@ pub struct interface Vault {
         }
     }
 
-    pub fun withdraw(amount: Int): Vault {
+    access(all) fun withdraw(amount: Int): Vault {
         pre {
             amount > 0:
                 "withdrawal amount must be positive"
@@ -23,7 +23,7 @@ pub struct interface Vault {
         }
     }
 
-    pub fun deposit(vault: Vault) {
+    access(all) fun deposit(vault: Vault) {
         post {
             self.balance == before(self.balance) + vault.balance:
                 "the amount must be added to the balance"
@@ -31,24 +31,24 @@ pub struct interface Vault {
     }
 }
 
-pub struct ExampleVault: Vault {
-    pub var balance: Int
+access(all) struct ExampleVault: Vault {
+    access(all) var balance: Int
 
     init(balance: Int) {
         self.balance = balance
     }
 
-    pub fun withdraw(amount: Int): Vault {
+    access(all) fun withdraw(amount: Int): Vault {
         self.balance = self.balance - amount
         return ExampleVault(balance: amount)
     }
 
-    pub fun deposit(vault: Vault) {
+    access(all) fun deposit(vault: Vault) {
         self.balance = self.balance + vault.balance
     }
 }
 
-pub fun main() {
+access(all) fun main() {
     let vaultA = ExampleVault(balance: 10)
     let vaultB = ExampleVault(balance: 0)
 

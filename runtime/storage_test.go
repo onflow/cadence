@@ -285,31 +285,31 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 	const ducContract = `
       import FungibleToken from 0xaad3e26e406987c2
 
-      pub contract DapperUtilityCoin: FungibleToken {
+      access(all) contract DapperUtilityCoin: FungibleToken {
 
     // Total supply of DapperUtilityCoins in existence
-    pub var totalSupply: UFix64
+    access(all) var totalSupply: UFix64
 
     // Event that is emitted when the contract is created
-    pub event TokensInitialized(initialSupply: UFix64)
+    access(all) event TokensInitialized(initialSupply: UFix64)
 
     // Event that is emitted when tokens are withdrawn from a Vault
-    pub event TokensWithdrawn(amount: UFix64, from: Address?)
+    access(all) event TokensWithdrawn(amount: UFix64, from: Address?)
 
     // Event that is emitted when tokens are deposited to a Vault
-    pub event TokensDeposited(amount: UFix64, to: Address?)
+    access(all) event TokensDeposited(amount: UFix64, to: Address?)
 
     // Event that is emitted when new tokens are minted
-    pub event TokensMinted(amount: UFix64)
+    access(all) event TokensMinted(amount: UFix64)
 
     // Event that is emitted when tokens are destroyed
-    pub event TokensBurned(amount: UFix64)
+    access(all) event TokensBurned(amount: UFix64)
 
     // Event that is emitted when a new minter resource is created
-    pub event MinterCreated(allowedAmount: UFix64)
+    access(all) event MinterCreated(allowedAmount: UFix64)
 
     // Event that is emitted when a new burner resource is created
-    pub event BurnerCreated()
+    access(all) event BurnerCreated()
 
     // Vault
     //
@@ -323,10 +323,10 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
     // out of thin air. A special Minter resource needs to be defined to mint
     // new tokens.
     //
-    pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
+    access(all) resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
 
         // holds the balance of a users tokens
-        pub var balance: UFix64
+        access(all) var balance: UFix64
 
         // initialize the balance at resource creation time
         init(balance: UFix64) {
@@ -342,7 +342,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
         // created Vault to the context that called so it can be deposited
         // elsewhere.
         //
-        pub fun withdraw(amount: UFix64): @FungibleToken.Vault {
+        access(all) fun withdraw(amount: UFix64): @FungibleToken.Vault {
             self.balance = self.balance - amount
             emit TokensWithdrawn(amount: amount, from: self.owner?.address)
             return <-create Vault(balance: amount)
@@ -355,7 +355,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
         // It is allowed to destroy the sent Vault because the Vault
         // was a temporary holder of the tokens. The Vault's balance has
         // been consumed and therefore can be destroyed.
-        pub fun deposit(from: @FungibleToken.Vault) {
+        access(all) fun deposit(from: @FungibleToken.Vault) {
             let vault <- from as! @DapperUtilityCoin.Vault
             self.balance = self.balance + vault.balance
             emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
@@ -375,16 +375,16 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
     // and store the returned Vault in their storage in order to allow their
     // account to be able to receive deposits of this token type.
     //
-    pub fun createEmptyVault(): @FungibleToken.Vault {
+    access(all) fun createEmptyVault(): @FungibleToken.Vault {
         return <-create Vault(balance: 0.0)
     }
 
-    pub resource Administrator {
+    access(all) resource Administrator {
         // createNewMinter
         //
         // Function that creates and returns a new minter resource
         //
-        pub fun createNewMinter(allowedAmount: UFix64): @Minter {
+        access(all) fun createNewMinter(allowedAmount: UFix64): @Minter {
             emit MinterCreated(allowedAmount: allowedAmount)
             return <-create Minter(allowedAmount: allowedAmount)
         }
@@ -393,7 +393,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
         //
         // Function that creates and returns a new burner resource
         //
-        pub fun createNewBurner(): @Burner {
+        access(all) fun createNewBurner(): @Burner {
             emit BurnerCreated()
             return <-create Burner()
         }
@@ -403,17 +403,17 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
     //
     // Resource object that token admin accounts can hold to mint new tokens.
     //
-    pub resource Minter {
+    access(all) resource Minter {
 
         // the amount of tokens that the minter is allowed to mint
-        pub var allowedAmount: UFix64
+        access(all) var allowedAmount: UFix64
 
         // mintTokens
         //
         // Function that mints new tokens, adds them to the total supply,
         // and returns them to the calling context.
         //
-        pub fun mintTokens(amount: UFix64): @DapperUtilityCoin.Vault {
+        access(all) fun mintTokens(amount: UFix64): @DapperUtilityCoin.Vault {
             pre {
                 amount > UFix64(0): "Amount minted must be greater than zero"
                 amount <= self.allowedAmount: "Amount minted must be less than the allowed amount"
@@ -433,7 +433,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
     //
     // Resource object that token admin accounts can hold to burn tokens.
     //
-    pub resource Burner {
+    access(all) resource Burner {
 
         // burnTokens
         //
@@ -442,7 +442,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
         // Note: the burned tokens are automatically subtracted from the
         // total supply in the Vault destructor.
         //
-        pub fun burnTokens(from: @FungibleToken.Vault) {
+        access(all) fun burnTokens(from: @FungibleToken.Vault) {
             let vault <- from as! @DapperUtilityCoin.Vault
             let amount = vault.balance
             destroy vault
@@ -489,21 +489,25 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
 	const testContract = `
       access(all) contract TestContract{
-        pub struct fake{
-          pub(set) var balance: UFix64
+        access(all) struct fake{
+          access(all) var balance: UFix64
 
           init(){
             self.balance = 0.0
           }
+
+		  access(all) fun setBalance(_ balance: UFix64) {
+			self.balance = balance
+		  }
         }
-        pub resource resourceConverter{
-          pub fun convert(b: fake): AnyStruct {
-            b.balance = 100.0
+        access(all) resource resourceConverter{
+          access(all) fun convert(b: fake): AnyStruct {
+            b.setBalance(100.0)
             return b
           }
         }
-        pub resource resourceConverter2{
-          pub fun convert(b: @AnyResource): AnyStruct {
+        access(all) resource resourceConverter2{
+          access(all) fun convert(b: @AnyResource): AnyStruct {
             destroy b
             return ""
           }
@@ -1022,33 +1026,33 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	const contract = `
-      pub contract Test {
+      access(all) contract Test {
 
-          pub resource interface INFT {}
+          access(all) resource interface INFT {}
 
-          pub resource NFT: INFT {}
+          access(all) resource NFT: INFT {}
 
-          pub resource Collection {
+          access(all) resource Collection {
 
-              pub var ownedNFTs: @{UInt64: NFT}
+              access(all) var ownedNFTs: @{UInt64: NFT}
 
               init() {
                   self.ownedNFTs <- {}
               }
 
-              pub fun withdraw(id: UInt64): @NFT {
+              access(all) fun withdraw(id: UInt64): @NFT {
                   let token <- self.ownedNFTs.remove(key: id)
                       ?? panic("Cannot withdraw: NFT does not exist in the collection")
 
                   return <-token
               }
 
-              pub fun deposit(token: @NFT) {
+              access(all) fun deposit(token: @NFT) {
                   let oldToken <- self.ownedNFTs[token.uuid] <- token
                   destroy oldToken
               }
 
-              pub fun batchDeposit(collection: @Collection) {
+              access(all) fun batchDeposit(collection: @Collection) {
                   let ids = collection.getIDs()
 
                   for id in ids {
@@ -1058,7 +1062,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
                   destroy collection
               }
 
-              pub fun batchWithdraw(ids: [UInt64]): @Collection {
+              access(all) fun batchWithdraw(ids: [UInt64]): @Collection {
                   let collection <- create Collection()
 
                   for id in ids {
@@ -1068,7 +1072,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
                   return <-collection
               }
 
-              pub fun getIDs(): [UInt64] {
+              access(all) fun getIDs(): [UInt64] {
                   return self.ownedNFTs.keys
               }
 
@@ -1088,15 +1092,15 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
               )
           }
 
-          pub fun mint(): @NFT {
+          access(all) fun mint(): @NFT {
               return <- create NFT()
           }
 
-          pub fun createEmptyCollection(): @Collection {
+          access(all) fun createEmptyCollection(): @Collection {
               return <- create Collection()
           }
 
-          pub fun batchMint(count: UInt64): @Collection {
+          access(all) fun batchMint(count: UInt64): @Collection {
               let collection <- create Collection()
 
               var i: UInt64 = 0
@@ -1468,13 +1472,13 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-      pub contract Test {
+      access(all) contract Test {
 
-          pub resource interface RI {}
+          access(all) resource interface RI {}
 
-          pub resource R: RI {}
+          access(all) resource R: RI {}
 
-          pub fun createR(): @R {
+          access(all) fun createR(): @R {
               return <-create R()
           }
       }
@@ -1757,11 +1761,11 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 	var signers []Address
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-      pub contract Test {
+      access(all) contract Test {
 
-          pub resource R {}
+          access(all) resource R {}
 
-          pub fun createR(): @R {
+          access(all) fun createR(): @R {
               return <-create R()
           }
       }
@@ -1978,7 +1982,7 @@ func TestRuntimeStorageUsed(t *testing.T) {
 	// that this should not clear temporary slabs
 
 	script := []byte(`
-       pub fun main() {
+       access(all) fun main() {
             var addresses: [Address]= [
                 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
                 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
@@ -2091,40 +2095,40 @@ func TestRuntimeMissingSlab1173(t *testing.T) {
 	t.Parallel()
 
 	const contract = `
-pub contract Test {
-    pub enum Role: UInt8 {
-        pub case aaa
-        pub case bbb
+access(all) contract Test {
+    access(all) enum Role: UInt8 {
+        access(all) case aaa
+        access(all) case bbb
     }
 
-    pub resource AAA {
-        pub fun callA(): String {
+    access(all) resource AAA {
+        access(all) fun callA(): String {
             return "AAA"
         }
     }
 
-    pub resource BBB {
-        pub fun callB(): String {
+    access(all) resource BBB {
+        access(all) fun callB(): String {
             return "BBB"
         }
     }
 
-    pub resource interface Receiver {
-        pub fun receive(asRole: Role, capability: Capability)
+    access(all) resource interface Receiver {
+        access(all) fun receive(asRole: Role, capability: Capability)
     }
 
-    pub resource Holder: Receiver {
+    access(all) resource Holder: Receiver {
         access(self) let roles: { Role: Capability }
-        pub fun receive(asRole: Role, capability: Capability) {
+        access(all) fun receive(asRole: Role, capability: Capability) {
             self.roles[asRole] = capability
         }
 
-        pub fun borrowA(): &AAA {
+        access(all) fun borrowA(): &AAA {
             let role = self.roles[Role.aaa]!
             return role.borrow<&AAA>()!
         }
 
-        pub fun borrowB(): &BBB {
+        access(all) fun borrowB(): &BBB {
             let role = self.roles[Role.bbb]!
             return role.borrow<&BBB>()!
         }
@@ -2136,11 +2140,11 @@ pub contract Test {
 
     access(self) let capabilities: { Role: Capability }
 
-    pub fun createHolder(): @Holder {
+    access(all) fun createHolder(): @Holder {
         return <- create Holder()
     }
 
-    pub fun attach(asRole: Role, receiver: &AnyResource{Receiver}) {
+    access(all) fun attach(asRole: Role, receiver: &AnyResource{Receiver}) {
         // TODO: Now verify that the owner is valid.
 
         let capability = self.capabilities[asRole]!
@@ -2251,10 +2255,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 		t.Parallel()
 
 		const contract = `
-          pub contract TestContract {
-              pub resource TestResource {}
+          access(all) contract TestContract {
+              access(all) resource TestResource {}
 
-              pub fun makeTestResource(): @TestResource {
+              access(all) fun makeTestResource(): @TestResource {
                   return <- create TestResource()
               }
           }
@@ -2394,10 +2398,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 		t.Parallel()
 
 		const contract = `
-          pub contract TestContract {
-              pub resource TestResource {}
+          access(all) contract TestContract {
+              access(all) resource TestResource {}
 
-              pub fun makeTestResource(): @TestResource {
+              access(all) fun makeTestResource(): @TestResource {
                   return <- create TestResource()
               }
           }
@@ -2516,11 +2520,11 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 		t.Parallel()
 
 		const contract = `
-          pub contract TestContract {
-              pub resource TestNestedResource {}
+          access(all) contract TestContract {
+              access(all) resource TestNestedResource {}
 
-              pub resource TestNestingResource {
-                  pub let nestedResources: @[TestNestedResource]
+              access(all) resource TestNestingResource {
+                  access(all) let nestedResources: @[TestNestedResource]
 
                   init () {
                       self.nestedResources <- [<- create TestNestedResource()]
@@ -2531,7 +2535,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   }
               }
 
-              pub fun makeTestNestingResource(): @TestNestingResource {
+              access(all) fun makeTestNestingResource(): @TestNestingResource {
                   return <- create TestNestingResource()
               }
           }
@@ -2656,10 +2660,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 		t.Parallel()
 
 		const contract = `
-          pub contract TestContract {
-              pub resource TestResource {}
+          access(all) contract TestContract {
+              access(all) resource TestResource {}
 
-              pub fun makeTestResource(): @TestResource {
+              access(all) fun makeTestResource(): @TestResource {
                   return <- create TestResource()
               }
           }
@@ -2778,10 +2782,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 		t.Parallel()
 
 		const contract = `
-          pub contract TestContract {
-              pub resource TestResource {}
+          access(all) contract TestContract {
+              access(all) resource TestResource {}
 
-              pub fun makeTestResource(): @TestResource {
+              access(all) fun makeTestResource(): @TestResource {
                   return <- create TestResource()
               }
           }
@@ -2989,16 +2993,16 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 			Source: DeploymentTransaction(
 				"C",
 				[]byte(`
-                  pub contract C {
+                  access(all) contract C {
 
-                    pub enum E: UInt8 {
-                        pub case A
-                        pub case B
+                    access(all) enum E: UInt8 {
+                        access(all) case A
+                        access(all) case B
                     }
 
-                    pub resource R {
-                        pub let id: UInt64
-                        pub let e: E
+                    access(all) resource R {
+                        access(all) let id: UInt64
+                        access(all) let e: E
 
                         init(id: UInt64, e: E) {
                             self.id = id
@@ -3006,22 +3010,22 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
                         }
                     }
 
-                    pub fun createR(id: UInt64, e: E): @R {
+                    access(all) fun createR(id: UInt64, e: E): @R {
                         return <- create R(id: id, e: e)
                     }
 
-                    pub resource Collection {
-                        pub var rs: @{UInt64: R}
+                    access(all) resource Collection {
+                        access(all) var rs: @{UInt64: R}
 
                         init () {
                             self.rs <- {}
                         }
 
-                        pub fun withdraw(id: UInt64): @R {
+                        access(all) fun withdraw(id: UInt64): @R {
                             return <- self.rs.remove(key: id)!
                         }
 
-                        pub fun deposit(_ r: @R) {
+                        access(all) fun deposit(_ r: @R) {
 
                             let counts: {E: UInt64} = {}
                             log(r.e)
@@ -3037,7 +3041,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
                         }
                     }
 
-                    pub fun createEmptyCollection(): @Collection {
+                    access(all) fun createEmptyCollection(): @Collection {
                       return <- create Collection()
                     }
                   }
@@ -3156,13 +3160,13 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-     pub contract Test {
+     access(all) contract Test {
 
-         pub resource interface RI {}
+         access(all) resource interface RI {}
 
-         pub resource R: RI {}
+         access(all) resource R: RI {}
 
-         pub fun createR(): @R {
+         access(all) fun createR(): @R {
              return <-create R()
          }
      }
@@ -3303,8 +3307,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		contractIsBroken := false
 
 		deployTx := DeploymentTransaction("Test", []byte(`
-            pub contract Test {
-                pub struct Foo {}
+            access(all) contract Test {
+                access(all) struct Foo {}
             }
         `))
 
@@ -3325,7 +3329,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 					if contractIsBroken {
 						// Contract no longer has the type
-						return []byte(`pub contract Test {}`), nil
+						return []byte(`access(all) contract Test {}`), nil
 					}
 
 					code = accountCodes[location]
@@ -3431,8 +3435,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		contractIsBroken := false
 
 		deployTx := DeploymentTransaction("Test", []byte(`
-            pub contract Test {
-                pub struct Foo {}
+            access(all) contract Test {
+                access(all) struct Foo {}
             }
         `))
 
@@ -3558,8 +3562,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		contractIsBroken := false
 
 		deployTx := DeploymentTransaction("Test", []byte(`
-            pub contract Test {
-                pub struct Foo {}
+            access(all) contract Test {
+                access(all) struct Foo {}
             }
         `))
 
@@ -3577,8 +3581,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 					if contractIsBroken {
 						// Contract has a semantic error. i.e: cannot find `Bar`
-						return []byte(`pub contract Test {
-                            pub struct Foo: Bar {}
+						return []byte(`access(all) contract Test {
+                            access(all) struct Foo: Bar {}
                         }`), nil
 					}
 

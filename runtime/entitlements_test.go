@@ -38,9 +38,9 @@ func TestAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub entitlement X
-			pub entitlement Y
+		access(all) contract Test {
+			access(all) entitlement X
+			access(all) entitlement Y
 		}
 	`))
 
@@ -130,9 +130,9 @@ func TestAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub entitlement X
-			pub entitlement Y
+		access(all) contract Test {
+			access(all) entitlement X
+			access(all) entitlement Y
 		}
 	`))
 
@@ -222,21 +222,21 @@ func TestAccountEntitlementAttachmentMap(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub entitlement X
-			pub entitlement Y
+		access(all) contract Test {
+			access(all) entitlement X
+			access(all) entitlement Y
 
-			pub entitlement mapping M {
+			access(all) entitlement mapping M {
 				X -> Y
 			}
 
-			pub resource R {}
+			access(all) resource R {}
 			
 			access(M) attachment A for R {
 				access(Y) fun foo() {}
 			}
 
-			pub fun createRWithA(): @R {
+			access(all) fun createRWithA(): @R {
 				return <-attach A() to <-create R()
 			}
 		}
@@ -329,12 +329,12 @@ func TestAccountExportEntitledRef(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub entitlement X
+		access(all) contract Test {
+			access(all) entitlement X
 
-			pub resource R {}
+			access(all) resource R {}
 
-			pub fun createR(): @R {
+			access(all) fun createR(): @R {
 				return <-create R()
 			}
 		}
@@ -342,7 +342,7 @@ func TestAccountExportEntitledRef(t *testing.T) {
 
 	script := []byte(`
 		import Test from 0x1
-		pub fun main(): &Test.R { 
+		access(all) fun main(): &Test.R { 
 			let r <- Test.createR()
 			let authAccount = getAuthAccount(0x1)
 			authAccount.save(<-r, to: /storage/foo)
@@ -406,22 +406,22 @@ func TestAccountEntitlementNamingConflict(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub entitlement X
+		access(all) contract Test {
+			access(all) entitlement X
 
-			pub resource R {
+			access(all) resource R {
 				access(X) fun foo() {}
 			}
 
-			pub fun createR(): @R {
+			access(all) fun createR(): @R {
 				return <-create R()
 			}
 		}
 	`))
 
 	otherDeployTx := DeploymentTransaction("OtherTest", []byte(`
-		pub contract OtherTest {
-			pub entitlement X
+		access(all) contract OtherTest {
+			access(all) entitlement X
 		}
 	`))
 
@@ -429,7 +429,7 @@ func TestAccountEntitlementNamingConflict(t *testing.T) {
 		import Test from 0x1
 		import OtherTest from 0x1
 
-		pub fun main(){ 
+		access(all) fun main(){ 
 			let r <- Test.createR()
 			let ref = &r as auth(OtherTest.X) &Test.R
 			ref.foo()

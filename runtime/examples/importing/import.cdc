@@ -1,5 +1,5 @@
 import x, crash from  "imported.bpl"
 
-pub fun main() {
+access(all) fun main() {
    crash() 
 }
