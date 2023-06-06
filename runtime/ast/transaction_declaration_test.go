@@ -210,7 +210,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 						prettier.HardLine{},
 						prettier.Group{
 							Doc: prettier.Concat{
-								prettier.Text("pub"),
+								prettier.Text("access(all)"),
 								prettier.Text(" "),
 								prettier.Text("let"),
 								prettier.Text(" "),
@@ -448,7 +448,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 	require.Equal(
 		t,
 		"transaction(x: X) {\n"+
-			"    pub let f: @F\n"+
+			"    access(all) let f: @F\n"+
 			"    \n"+
 			"    prepare(signer: AuthAccount) {}\n"+
 			"    \n"+

@@ -82,7 +82,7 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "VariableDeclaration",
-            "Access": "AccessPublic",
+            "Access": "AccessAll",
             "IsConstant": true,
             "Identifier": {
                 "Identifier": "foo",
@@ -170,7 +170,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 		require.Equal(t,
 			prettier.Group{
 				Doc: prettier.Concat{
-					prettier.Text("pub"),
+					prettier.Text("access(all)"),
 					prettier.Text(" "),
 					prettier.Text("let"),
 					prettier.Text(" "),
@@ -239,7 +239,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 		require.Equal(t,
 			prettier.Group{
 				Doc: prettier.Concat{
-					prettier.Text("pub"),
+					prettier.Text("access(all)"),
 					prettier.Text(" "),
 					prettier.Text("let"),
 					prettier.Text(" "),
@@ -309,7 +309,7 @@ func TestVariableDeclaration_String(t *testing.T) {
 		}
 
 		require.Equal(t,
-			"pub let foo: @AB <- true",
+			"access(all) let foo: @AB <- true",
 			decl.String(),
 		)
 	})
@@ -347,7 +347,7 @@ func TestVariableDeclaration_String(t *testing.T) {
 		}
 
 		require.Equal(t,
-			"pub let foo: @AB <- true <- false",
+			"access(all) let foo: @AB <- true <- false",
 			decl.String(),
 		)
 	})
