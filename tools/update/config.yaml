@@ -45,13 +45,12 @@ repos:
 - repo: onflow/flow-cli
   needsRelease: false
   mods:
-    - path: pkg/flowkit
+    - path: flowkit
       deps:
         - onflow/cadence
         - onflow/flow-go-sdk
         - onflow/flow-go
         - onflow/flow-emulator
-        - onflow/cadence-tools/test
 
 - repo: onflow/cadence-tools
   needsRelease: true
@@ -61,7 +60,7 @@ repos:
         - onflow/cadence
         - onflow/flow-go-sdk
         - onflow/flow-go
-        - onflow/flow-cli/pkg/flowkit
+        - onflow/flow-cli/flowkit
 
 - repo: onflow/cadence-tools
   needsRelease: true
