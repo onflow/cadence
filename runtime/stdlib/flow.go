@@ -131,6 +131,8 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 
 // built-in event types
 
+var FlowEventTypes = map[common.TypeID]*sema.CompositeType{}
+
 func newFlowEventType(identifier string, parameters ...sema.Parameter) *sema.CompositeType {
 
 	eventType := &sema.CompositeType{
@@ -163,6 +165,8 @@ func newFlowEventType(identifier string, parameters ...sema.Parameter) *sema.Com
 			parameter,
 		)
 	}
+
+	FlowEventTypes[eventType.ID()] = eventType
 
 	return eventType
 }
