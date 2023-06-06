@@ -188,7 +188,7 @@ func TestCheckAccessModifierInterfaceFunctionDeclaration(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s interface Test {
+                              access(all) %[1]s interface Test {
                                   %[2]s fun test()
                               }
 	                        `,
@@ -687,15 +687,15 @@ func TestCheckAccessCompositeFunction(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s Test {
+                              access(all) %[1]s Test {
                                   %[2]s fun test() {}
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                       self.test()
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
                                   %[4]s.test()
                                   %[5]s
@@ -794,19 +794,19 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s interface Test {
+                              access(all) %[1]s interface Test {
                                   %[2]s fun test()
                               }
 
-                              pub %[1]s TestImpl: Test {
+                              access(all) %[1]s TestImpl: Test {
                                   %[2]s fun test() {}
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                       self.test()
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
                                   %[4]s.test()
                                   %[5]s
@@ -901,19 +901,19 @@ func TestCheckAccessCompositeFieldRead(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s Test {
+                              access(all) %[1]s Test {
                                   %[2]s var test: Int
 
                                   init() {
                                       self.test = 0
                                   }
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                       self.test
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
                                   %[4]s.test
                                   %[5]s
@@ -1012,23 +1012,23 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s interface Test {
+                              access(all) %[1]s interface Test {
                                   %[2]s var test: Int
                               }
 
-                              pub %[1]s TestImpl: Test {
+                              access(all) %[1]s TestImpl: Test {
                                   %[2]s var test: Int
 
                                   init() {
                                       self.test = 0
                                   }
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                       self.test
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
                                   %[4]s.test
                                   %[5]s
@@ -1122,21 +1122,21 @@ func TestCheckAccessCompositeFieldAssignmentAndSwap(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s Test {
+                              access(all) %[1]s Test {
                                   %[2]s var test: Int
 
                                   init() {
                                       self.test = 0
                                   }
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                       self.test = 1
                                       var temp = 2
                                       self.test <-> temp
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
 
                                   %[4]s.test = 3
@@ -1259,25 +1259,25 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s interface Test {
+                              access(all) %[1]s interface Test {
                                   %[2]s var test: Int
                               }
 
-                              pub %[1]s TestImpl: Test {
+                              access(all) %[1]s TestImpl: Test {
                                   %[2]s var test: Int
 
                                   init() {
                                       self.test = 0
                                   }
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                        self.test = 1
                                        var temp = 2
                                        self.test <-> temp
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
                                   %[4]s.test = 3
                                   var temp = 4
@@ -1354,9 +1354,9 @@ func TestCheckAccessCompositeFieldVariableDeclarationWithSecondValue(t *testing.
 				_, err := ParseAndCheckWithOptions(t,
 					fmt.Sprintf(
 						`
-                          pub resource A {}
+                          access(all) resource A {}
 
-                          pub resource B {
+                          access(all) resource B {
                               %[1]s var a: @A
 
                               init() {
@@ -1367,13 +1367,13 @@ func TestCheckAccessCompositeFieldVariableDeclarationWithSecondValue(t *testing.
                                   destroy self.a
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   let oldA <- self.a <- create A()
                                   destroy oldA
                               }
                           }
 
-                          pub fun test() {
+                          access(all) fun test() {
                               let b <- create B()
                               let oldA <- b.a <- create A()
                               destroy oldA
@@ -1458,13 +1458,13 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 				_, err := ParseAndCheckWithOptions(t,
 					fmt.Sprintf(
 						`
-                          pub resource A {}
+                          access(all) resource A {}
 
-                          pub resource interface B {
+                          access(all) resource interface B {
                               %[1]s var a: @A
                           }
 
-                          pub resource BImpl: B {
+                          access(all) resource BImpl: B {
                               %[1]s var a: @A
 
                               init() {
@@ -1475,13 +1475,13 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
                                   destroy self.a
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   let oldA <- self.a <- create A()
                                   destroy oldA
                               }
                           }
 
-                          pub fun test() {
+                          access(all) fun test() {
                               let b: @AnyResource{B} <- create BImpl()
                               let oldA <- b.a <- create A()
                               destroy oldA
@@ -1558,14 +1558,14 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 
 			lastAccessModifier := ""
 			if checkMode == sema.AccessCheckModeStrict {
-				lastAccessModifier = "priv"
+				lastAccessModifier = "access(self)"
 			}
 
 			tests := []string{
 				fmt.Sprintf(
 					`
-                      priv fun a() {}
-                      pub fun b() {}
+                      access(self) fun a() {}
+                      access(all) fun b() {}
                       %s fun c() {}
                     `,
 					lastAccessModifier,
@@ -1577,8 +1577,8 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 				tests = append(tests,
 					fmt.Sprintf(
 						`
-                           priv %[1]s a = 1
-                           pub %[1]s b = 2
+                           access(self) %[1]s a = 1
+                           access(all) %[1]s b = 2
                            %[2]s %[1]s c = 3
                         `,
 						variableKind.Keyword(),
@@ -1768,14 +1768,14 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 
 			lastAccessModifier := ""
 			if checkMode == sema.AccessCheckModeStrict {
-				lastAccessModifier = "priv"
+				lastAccessModifier = "access(self)"
 			}
 
 			imported, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                       priv var a = 1
-                       pub var b = 2
+                       access(self) var a = 1
+                       access(all) var b = 2
                        %s var c = 3
                     `,
 					lastAccessModifier,
@@ -1787,7 +1787,7 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 				`
                   import a, b, c from "imported"
 
-                  pub fun test() {
+                  access(all) fun test() {
                       a = 4
                       b = 5
                       c = 6
@@ -1824,14 +1824,14 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 	t.Parallel()
 
 	imported, err := ParseAndCheck(t, `
-       pub resource R {}
+       access(all) resource R {}
 
-       pub fun createR(): @R {
+       access(all) fun createR(): @R {
            return <-create R()
        }
 
-       priv var x <- createR()
-       pub var y <- createR()
+       access(self) var x <- createR()
+       access(all) var y <- createR()
     `)
 	require.NoError(t, err)
 
@@ -1839,7 +1839,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		`
            import x, y, createR from "imported"
 
-           pub fun test() {
+           access(all) fun test() {
                let oldX <- x <- createR()
                destroy oldX
 
@@ -1889,7 +1889,7 @@ func TestCheckContractNestedDeclarationPrivateAccess(t *testing.T) {
 
 	const contract = `
 	  contract Outer {
-		  priv let num: Int
+		  access(self) let num: Int
 
 		  init(num: Int) {
 			  self.num = num
@@ -2139,17 +2139,17 @@ func TestCheckRestrictiveAccessModifier(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          pub contract interface CI {
+                          access(all) contract interface CI {
 
-                              pub resource R {
+                              access(all) resource R {
 
                                   %[1]s var x: Int
                               }
                           }
 
-                          pub contract C: CI {
+                          access(all) contract C: CI {
 
-                              pub resource R {
+                              access(all) resource R {
 
                                   %[1]s var x: Int
 
@@ -2171,12 +2171,12 @@ func TestCheckRestrictiveAccessModifier(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          pub resource interface RI {
+                          access(all) resource interface RI {
 
                               %[1]s var x: Int
                           }
 
-                          pub resource R: RI {
+                          access(all) resource R: RI {
 
                               %[1]s var x: Int
 
@@ -2215,9 +2215,9 @@ func TestCheckInvalidRestrictiveAccessModifier(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          pub contract interface CI {
+                          access(all) contract interface CI {
 
-                              pub resource R {
+                              access(all) resource R {
 
                                   %[1]s var x: Int
                               }
@@ -2235,7 +2235,7 @@ func TestCheckInvalidRestrictiveAccessModifier(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          pub resource interface RI {
+                          access(all) resource interface RI {
 
                               %[1]s var x: Int
                           }
@@ -2274,8 +2274,8 @@ func TestCheckAccountAccess(t *testing.T) {
 	const importingCode = `
       import A from 0x1
 
-      pub contract B {
-          pub fun use() {
+      access(all) contract B {
+          access(all) fun use() {
               let b = A.a
           }
       }
@@ -2314,7 +2314,7 @@ func TestCheckAccountAccess(t *testing.T) {
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(
 					`
-                      pub contract A {
+                      access(all) contract A {
                           access(account) %s a: Int
 
                           init() {

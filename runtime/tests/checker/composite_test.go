@@ -113,7 +113,7 @@ func TestCheckComposite(t *testing.T) {
                               self.foo = foo
                           }
 
-                          pub fun getFoo(): Int {
+                          access(all) fun getFoo(): Int {
                               return self.foo
                           }
                       }
@@ -2208,7 +2208,7 @@ func TestCheckInvalidStructureFunctionWithMissingBody(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
         struct Test {
-            pub fun getFoo(): Int
+            access(all) fun getFoo(): Int
         }
 	`)
 

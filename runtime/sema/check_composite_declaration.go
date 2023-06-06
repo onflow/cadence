@@ -2381,9 +2381,9 @@ func (checker *Checker) declareBaseValue(baseType Type, attachmentType *Composit
 	// -------------------------------
 	// entitlement E
 	// entitlement F
-	// pub attachment A for R {
+	// access(all) attachment A for R {
 	//     require entitlement E
-	//     pub fun foo() { ... }
+	//     access(all) fun foo() { ... }
 	// }
 	// -------------------------------
 	// within the body of `foo`, the `base` value will be entitled to `E` but not `F`, because only `E` was required in the attachment's declaration

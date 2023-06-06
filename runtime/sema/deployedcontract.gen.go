@@ -62,8 +62,8 @@ Returns an array of ` + "`Type`" + ` objects representing all the public type de
 For example, given a contract
 ` + `
 contract Foo {
-pub struct Bar {...}
-pub resource Qux {...}
+access(all) struct Bar {...}
+access(all) resource Qux {...}
 }
 ` + `
 then ` + "`.publicTypes()`" + ` will return an array equivalent to the expression ` + "`[Type<Bar>(), Type<Qux>()]`" + `

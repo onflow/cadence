@@ -122,7 +122,7 @@ func (checker *Checker) checkAssignment(
 // to a resource; because resources are moved instead of copied, we cannot currently
 // track the origin of a write target when it is a resource. Consider:
 //
-//	pub resource R {
+//	access(all) resource R {
 //	  access(all) var x: Int
 //	  init(x: Int) {
 //	    self.x = x

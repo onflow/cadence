@@ -176,7 +176,7 @@ func TestCheckInvalidMissingReturnStatementStructFunction(t *testing.T) {
                 self.foo = foo
             }
 
-            pub fun getFoo(): Int {
+            access(all) fun getFoo(): Int {
                 if 2 > 1 {
                     return 0
                 }

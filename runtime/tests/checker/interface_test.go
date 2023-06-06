@@ -288,9 +288,9 @@ func TestCheckInterfaceUse(t *testing.T) {
 			_, err := ParseAndCheckWithPanic(t,
 				fmt.Sprintf(
 					`
-                      pub %[1]s interface Test %[2]s
+                      access(all) %[1]s interface Test %[2]s
 
-                      pub let test: %[3]s%[4]s %[5]s panic("")
+                      access(all) let test: %[3]s%[4]s %[5]s panic("")
                     `,
 					kind.Keyword(),
 					body,
@@ -880,7 +880,7 @@ func TestCheckInvalidInterfaceConformanceFunctionPrivateAccessModifier(t *testin
                       }
 
                       %[1]s TestImpl: Test {
-                          priv fun test(): Int {
+                          access(self) fun test(): Int {
                               return 1
                           }
                       }
@@ -990,7 +990,7 @@ func TestCheckInvalidInterfaceConformanceFieldPrivateAccessModifier(t *testing.T
                       }
 
                       %[1]s TestImpl: Test {
-                          priv var x: Int
+                          access(self) var x: Int
 
                           init(x: Int) {
                              self.x = x
@@ -1023,7 +1023,7 @@ func TestCheckInvalidInterfaceConformanceFieldMismatchAccessModifierMoreRestrict
                       }
 
                       %[1]s TestImpl: Test {
-                          pub var x: Int
+                          access(account) var x: Int
 
                           init(x: Int) {
                              self.x = x
@@ -1052,7 +1052,7 @@ func TestCheckInvalidInterfaceConformanceFunctionMismatchAccessModifierMoreRestr
 				fmt.Sprintf(
 					`
                       %[1]s interface Test {
-                          pub fun x()
+                          access(all) fun x()
                       }
 
                       %[1]s TestImpl: Test {
@@ -1081,7 +1081,7 @@ func TestCheckInterfaceConformanceFieldMorePermissiveAccessModifier(t *testing.T
 				fmt.Sprintf(
 					`
                       %[1]s interface Test {
-                          pub x: Int
+                          access(all) x: Int
                       }
 
                       %[1]s TestImpl: Test {

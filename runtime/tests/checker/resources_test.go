@@ -1627,7 +1627,7 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub resource R {}
+          access(all) resource R {}
         `,
 		ParseAndCheckOptions{
 			Location: ImportedLocation,
@@ -1640,7 +1640,7 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 		`
           import R from "imported"
 
-          pub fun test() {
+          access(all) fun test() {
               destroy create R()
           }
         `,
@@ -1674,7 +1674,7 @@ func TestCheckResourceCreationInContracts(t *testing.T) {
 
               contract B {
 
-                  pub fun test() {
+                  access(all) fun test() {
                       destroy create A.R()
                   }
               }
@@ -1693,7 +1693,7 @@ func TestCheckResourceCreationInContracts(t *testing.T) {
               contract A {
                   resource R {}
 
-                  pub fun test() {
+                  access(all) fun test() {
                       destroy create R()
                   }
               }
@@ -1811,11 +1811,11 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             resource Foo {}
 
-            pub fun foo(): @Foo? {
+            access(all) fun foo(): @Foo? {
                 return <- create Foo()
             }
 
-            pub let isNil = foo() == nil
+            access(all) let isNil = foo() == nil
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -5325,7 +5325,7 @@ func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
 
-      pub contract C {
+      access(all) contract C {
 
           resource R {
 
@@ -5336,7 +5336,7 @@ func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
               }
           }
 
-          pub fun bar() {
+          access(all) fun bar() {
               return
           }
       }

@@ -450,7 +450,7 @@ func TestCheckNestedBaseType(t *testing.T) {
 					fun foo() {}
 				}
 			}
-			pub attachment A for C.S {
+			access(all) attachment A for C.S {
 				fun bar() {
 					base.foo()
 				}
@@ -472,7 +472,7 @@ func TestCheckNestedBaseType(t *testing.T) {
 					fun foo() {}
 				}
 			}
-			pub attachment A for S {
+			access(all) attachment A for S {
 			}
 			`,
 		)
@@ -1347,16 +1347,16 @@ func TestCheckBaseScoping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pub member", func(t *testing.T) {
+	t.Run("access(all) member", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-			pub struct S {
-				pub fun foo() {}
+			access(all) struct S {
+				access(all) fun foo() {}
 			}
-			pub attachment Test for S {
+			access(all) attachment Test for S {
 				fun foo() {
 					base.foo()
 				}
@@ -1366,16 +1366,16 @@ func TestCheckBaseScoping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("priv member", func(t *testing.T) {
+	t.Run("access(self) member", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-			pub struct S {
-				priv fun foo() {}
+			access(all) struct S {
+				access(self) fun foo() {}
 			}
-			pub attachment Test for S {
+			access(all) attachment Test for S {
 				fun foo() {
 					base.foo()
 				}
@@ -1393,12 +1393,12 @@ func TestCheckBaseScoping(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub contract C {
-				pub struct S {
+			access(all) contract C {
+				access(all) struct S {
 					access(contract) fun foo() {}
 				}
 			}
-			pub attachment Test for C.S {
+			access(all) attachment Test for C.S {
 				fun foo() {
 					base.foo()
 				}
@@ -1416,11 +1416,11 @@ func TestCheckBaseScoping(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub contract C {
-				pub struct S {
+			access(all) contract C {
+				access(all) struct S {
 					access(contract) fun foo() {}
 				}
-				pub attachment Test for S {
+				access(all) attachment Test for S {
 					fun foo() {
 						base.foo()
 					}
@@ -1759,7 +1759,7 @@ func TestCheckIllegalInit(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`attachment Test for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let t <- Test()
 				destroy t
 			}
@@ -1782,8 +1782,8 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub fun A() {}
-			pub fun foo() {
+			access(all) fun A() {}
+			access(all) fun foo() {
 				attach A() to 4
 			}
 		`,
@@ -1800,8 +1800,8 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub struct S {}
-			pub fun foo() {
+			access(all) struct S {}
+			access(all) fun foo() {
 				attach S() to 4
 			}
 		`,
@@ -1818,8 +1818,8 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub resource R {}
-			pub fun foo() {
+			access(all) resource R {}
+			access(all) fun foo() {
 				attach R() to 4
 			}
 		`,
@@ -1839,7 +1839,7 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			event E()
-			pub fun foo() {
+			access(all) fun foo() {
 				attach E() to 4
 			}
 		`,
@@ -1857,7 +1857,7 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			enum E: Int {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach E(rawValue: 0) to 4
 			}
 		`,
@@ -1875,7 +1875,7 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			contract C {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach C() to 4
 			}
 		`,
@@ -1898,7 +1898,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to 4
 			}
 		`,
@@ -1917,7 +1917,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			struct S{}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s = S()
 				attach A() to (&s as &S)
 			}
@@ -1936,7 +1936,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to 4
 			}
 		`,
@@ -1955,7 +1955,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to [4]
 			}
 		`,
@@ -1974,7 +1974,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			attachment A for AnyStruct {}
 			event E()
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to E()
 			}
 		`,
@@ -1993,7 +1993,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			attachment A for AnyStruct {}
 			contract C {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to C()
 			}
 		`,
@@ -2012,7 +2012,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			attachment A for AnyStruct {}
 			attachment B for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to B()
 			}
 		`,
@@ -2031,7 +2031,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			attachment A for AnyStruct {}
 			enum E: Int { }
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to E(rawValue: 0)
 			}
 		`,
@@ -2050,7 +2050,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			resource R {}
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to <-[<-create R()]
 				destroy r
 			}
@@ -2075,7 +2075,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			struct S {}
 			attachment A for S {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to S()
 			}
 		`,
@@ -2092,7 +2092,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to <-create R()
 			}
 		`,
@@ -2111,7 +2111,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to <-create R()
 				destroy r
 			}
@@ -2129,7 +2129,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- create R()
 				let r2: @R <- attach A() to <-r
 				destroy r2
@@ -2148,7 +2148,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to create R()
 				destroy r
 			}
@@ -2168,7 +2168,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			struct S {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to S()
 			}
 		`,
@@ -2185,7 +2185,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			struct S {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to (S() as AnyStruct)
 			}
 		`,
@@ -2204,7 +2204,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource S {}
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				destroy attach A() to <-(create S() as @AnyResource)
 			}
 		`,
@@ -2223,7 +2223,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to <-create R()
 				destroy r
 			}
@@ -2242,7 +2242,7 @@ func TestCheckAttach(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to S()
 			}
 		`,
@@ -2260,7 +2260,7 @@ func TestCheckAttach(t *testing.T) {
 			struct S {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to S()
 			}
 		`,
@@ -2280,7 +2280,7 @@ func TestCheckAttach(t *testing.T) {
 			resource R: I {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to <-create R()
 				destroy r
 			}
@@ -2299,7 +2299,7 @@ func TestCheckAttach(t *testing.T) {
 			resource R {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to <-create R()
 				destroy r
 			}
@@ -2320,7 +2320,7 @@ func TestCheckAttach(t *testing.T) {
 			struct S {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to S()
 				destroy r
 			}
@@ -2342,7 +2342,7 @@ func TestCheckAttach(t *testing.T) {
 			resource R {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to <-create R()
 			}
 		`,
@@ -2361,7 +2361,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to <-create R()
 			}
 		`,
@@ -2380,7 +2380,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			struct S {}
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to S()
 				destroy r
 			}
@@ -2402,7 +2402,7 @@ func TestCheckAttach(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: S{I} = S()
 				attach A() to s
 			}
@@ -2426,7 +2426,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: S{I} = S()
 				attach A() to s
 			}
@@ -2445,7 +2445,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: {I} = S()
 				attach A() to s
 			}
@@ -2464,7 +2464,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I {}
 			resource R: I {}
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @R{I} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2483,7 +2483,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I {}
 			resource R: I {}
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @{I} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2502,7 +2502,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: S{I} = S()
 				attach A() to s
 			}
@@ -2521,7 +2521,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for S {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: S{I} = S()
 				attach A() to s
 			}
@@ -2543,7 +2543,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for S {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: {I} = S()
 				attach A() to s
 			}
@@ -2564,7 +2564,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I {}
 			resource R: I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @R{I} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2583,7 +2583,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I {}
 			resource R: I {}
 			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @R{I} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2605,7 +2605,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I {}
 			resource R: I {}
 			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @{I} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2626,7 +2626,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: {I} = S()
 				attach A() to s
 			}
@@ -2646,7 +2646,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I2 {}
 			struct S: I, I2 {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: {I, I2} = S()
 				attach A() to s
 			}
@@ -2665,7 +2665,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I {}
 			resource R: I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @{I} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2685,7 +2685,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I2 {}
 			resource R: I, I2 {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @{I, I2} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2715,7 +2715,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 					self.x = x
 				}
 			}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A(x: 3) to S()
 			}
 		`,
@@ -2737,7 +2737,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 					self.x = x
 				}
 			}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A(x: base) to S()
 			}
 		`,
@@ -2763,7 +2763,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 					self.y = y
 				}
 			}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A(x: 3, y: "") to S()
 			}
 		`,
@@ -2787,7 +2787,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 					self.y = y
 				}
 			}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A(3, "") to S()
 			}
 		`,
@@ -2814,7 +2814,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 					self.y = y
 				}
 			}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A(z: 3, a: "") to S()
 			}
 		`,
@@ -2835,7 +2835,7 @@ func TestCheckAttachInvalidType(t *testing.T) {
 		`
 		resource C {}
 		attachment A for B {}
-		pub fun foo() {
+		access(all) fun foo() {
 			destroy attach A() to <- create C()
 		}`,
 	)
@@ -2925,7 +2925,7 @@ func TestCheckAnyAttachmentTypes(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(`
 					%s
-					pub fun foo(x: &%s): &AnyStructAttachment {
+					access(all) fun foo(x: &%s): &AnyStructAttachment {
 						return x
 					}
 				`, testCase.setupCode, testCase.subType),
@@ -2948,7 +2948,7 @@ func TestCheckAnyAttachmentTypes(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(`
 					%s
-					pub fun foo(x: &%s): &AnyResourceAttachment {
+					access(all) fun foo(x: &%s): &AnyResourceAttachment {
 						return x
 					}
 				`, testCase.setupCode, testCase.subType),
@@ -2977,7 +2977,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			attachment A for S {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove A from s
 			}
 		`,
@@ -2994,7 +2994,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo(r: @R) {
+			access(all) fun foo(r: @R) {
 				remove A from r
 				destroy r
 			}
@@ -3012,7 +3012,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo(r: @R) {
+			access(all) fun foo(r: @R) {
 				remove A from r
 			}
 		`,
@@ -3030,7 +3030,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			attachment A for AnyStruct {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove A from s
 			}
 		`,
@@ -3048,7 +3048,7 @@ func TestCheckRemove(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove A from s
 			}
 		`,
@@ -3066,7 +3066,7 @@ func TestCheckRemove(t *testing.T) {
 			struct S {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove A from s
 			}
 		`,
@@ -3084,7 +3084,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			resource R {}
 			attachment A for AnyResource {}
-			pub fun foo(r: @R) {
+			access(all) fun foo(r: @R) {
 				remove A from r
 				destroy r
 			}
@@ -3103,7 +3103,7 @@ func TestCheckRemove(t *testing.T) {
 			resource R: I {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo(r: @R) {
+			access(all) fun foo(r: @R) {
 				remove A from r
 				destroy r
 			}
@@ -3122,7 +3122,7 @@ func TestCheckRemove(t *testing.T) {
 			resource R {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo(r: @R) {
+			access(all) fun foo(r: @R) {
 				remove A from r
 				destroy r
 			}
@@ -3143,7 +3143,7 @@ func TestCheckRemove(t *testing.T) {
 				struct S {}
 				attachment A for S {}
 			}
-			pub fun foo(s: C.S) {
+			access(all) fun foo(s: C.S) {
 				remove C.A from s
 			}
 		`,
@@ -3160,7 +3160,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			attachment A for S {}
-			pub fun foo(s: Int) {
+			access(all) fun foo(s: Int) {
 				remove A from s
 			}
 		`,
@@ -3177,7 +3177,7 @@ func TestCheckRemove(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyStruct {}
-			pub fun foo(s: AnyStruct) {
+			access(all) fun foo(s: AnyStruct) {
 				remove A from s
 			}
 		`,
@@ -3194,7 +3194,7 @@ func TestCheckRemove(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyResource {}
-			pub fun foo(s: @AnyResource) {
+			access(all) fun foo(s: @AnyResource) {
 				remove A from s
 				destroy s
 			}
@@ -3212,7 +3212,7 @@ func TestCheckRemove(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyStruct {}
-			pub fun foo(s: Int) {
+			access(all) fun foo(s: Int) {
 				remove A from s
 			}
 		`,
@@ -3230,7 +3230,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			attachment A for S {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove S from s
 			}
 		`,
@@ -3248,7 +3248,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			resource S {}
 			attachment A for S {}
-			pub fun foo(s: @S) {
+			access(all) fun foo(s: @S) {
 				remove S from s
 				destroy s
 			}
@@ -3267,7 +3267,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			attachment A for S {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove X from s
 			}
 		`,
@@ -3285,7 +3285,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			event E()
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove E from s
 			}
 		`,
@@ -3303,7 +3303,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			contract C {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove C from s
 			}
 		`,
@@ -3321,7 +3321,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			resource interface C {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove C from s
 			}
 		`,
@@ -3339,7 +3339,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			resource interface C {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove C from s
 			}
 		`,
@@ -3356,7 +3356,7 @@ func TestCheckRemove(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			struct S {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove AnyStruct from s
 			}
 		`,
@@ -3373,7 +3373,7 @@ func TestCheckRemove(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			resource S {}
-			pub fun foo(s: @S) {
+			access(all) fun foo(s: @S) {
 				remove AnyResource from s
 				destroy s
 			}
@@ -3391,7 +3391,7 @@ func TestCheckRemove(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			struct S {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove AnyStructAttachment from s
 			}
 		`,
@@ -3408,7 +3408,7 @@ func TestCheckRemove(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			resource S {}
-			pub fun foo(s: @S) {
+			access(all) fun foo(s: @S) {
 				remove AnyResourceAttachment from s
 				destroy s
 			}
@@ -3434,7 +3434,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for S {}
-			pub fun foo(s: S{I}) {
+			access(all) fun foo(s: S{I}) {
 				remove A from s
 			}
 		`,
@@ -3452,7 +3452,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo(s: S{I}) {
+			access(all) fun foo(s: S{I}) {
 				remove A from s
 			}
 		`,
@@ -3470,7 +3470,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			resource S: I {}
 			resource interface I {}
 			attachment A for S {}
-			pub fun foo(s: @S{I}) {
+			access(all) fun foo(s: @S{I}) {
 				remove A from s
 				destroy s
 			}
@@ -3491,7 +3491,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			resource S: I {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo(s: @S{I}) {
+			access(all) fun foo(s: @S{I}) {
 				remove A from s
 				destroy s
 			}
@@ -3510,7 +3510,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for S {}
-			pub fun foo(s: {I}) {
+			access(all) fun foo(s: {I}) {
 				remove A from s
 			}
 		`,
@@ -3529,7 +3529,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			resource S: I {}
 			resource interface I {}
 			attachment A for S {}
-			pub fun foo(s: @{I}) {
+			access(all) fun foo(s: @{I}) {
 				remove A from s
 				destroy s
 			}
@@ -3548,7 +3548,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			`
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo(s: {I}) {
+			access(all) fun foo(s: {I}) {
 				remove A from s
 			}
 		`,
@@ -3565,7 +3565,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			`
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo(s: @{I}) {
+			access(all) fun foo(s: @{I}) {
 				remove A from s
 				destroy s
 			}
@@ -3585,7 +3585,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			struct interface I {}
 			struct interface J {}
 			attachment A for I {}
-			pub fun foo(s: S{I, J}) {
+			access(all) fun foo(s: S{I, J}) {
 				remove A from s
 			}
 		`,
@@ -3603,7 +3603,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			struct interface I {}
 			struct interface J {}
 			attachment A for I {}
-			pub fun foo(s: {I, J}) {
+			access(all) fun foo(s: {I, J}) {
 				remove A from s
 			}
 		`,
@@ -3625,7 +3625,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					attachment A for R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						let a: &A? = r[A]
 						%s
 					}`, sigil, destructor),
@@ -3640,7 +3640,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					attachment A for R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						let a: &A? = r[Int]
 						%s
 					}`, sigil, destructor),
@@ -3656,7 +3656,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					struct D {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[D]
 						%s
 					}`, sigil, destructor),
@@ -3672,7 +3672,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					resource X {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[X]
 						%s
 					}
@@ -3689,7 +3689,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					contract X {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[X]
 						%s
 					}
@@ -3706,7 +3706,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					event X()
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[X]
 						%s
 					}
@@ -3723,7 +3723,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					enum X: Int {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[X]
 						%s
 					}
@@ -3739,7 +3739,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
 					resource R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[AnyStructAttachment]
 						%s
 					}
@@ -3755,7 +3755,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
 					resource R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[AnyResourceAttachment]
 						%s
 					}
@@ -3771,7 +3771,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
 					resource R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[AnyStruct]
 						%s
 					}
@@ -3787,7 +3787,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
 					resource R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[AnyResource]
 						%s
 					}
@@ -3803,7 +3803,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
 					attachment A for AnyResource {}
-					pub fun foo(r: %sAnyResource) {
+					access(all) fun foo(r: %sAnyResource) {
 						r[A]
 						%s
 					}
@@ -3821,7 +3821,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 					resource interface I {}
 					resource R: I {}
 					attachment A for I {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						let a: &A? = r[A]
 						%s
 					}
@@ -3838,7 +3838,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 					resource R {}
 					resource interface I {}
 					attachment A for AnyResource: I {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[I]
 						%s
 					}
@@ -3856,7 +3856,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 					resource interface I {}
 					resource R {}
 					attachment A for I {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						let a: &A? = r[A]
 						%s
 					}
@@ -3873,7 +3873,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					attachment A for R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[A] = 3
 						%s
 					}
@@ -3892,7 +3892,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 					contract C {
 						attachment A for R {}
 					}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						let a: &C.A? = r[C.A]
 						%s
 					}
@@ -3911,7 +3911,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyStruct {}
-			pub fun foo(r: AnyStruct) {
+			access(all) fun foo(r: AnyStruct) {
 				r[A]
 			}
 		`,
@@ -3927,7 +3927,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			`
 			attachment A for S {}
 			struct S {}
-			pub fun foo(r: S) {
+			access(all) fun foo(r: S) {
 				r[[A]]
 			}
 		`,
@@ -3949,7 +3949,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct R: I {}
 		struct interface I {}
 		attachment A for I {}
-		pub fun foo(r: R{I}) {
+		access(all) fun foo(r: R{I}) {
 			r[A]
 		}
 		`,
@@ -3965,7 +3965,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct R: I {}
 		struct interface I {}
 		attachment A for R {}
-		pub fun foo(r: {I}) {
+		access(all) fun foo(r: {I}) {
 			r[A]
 		}
 		`,
@@ -3982,7 +3982,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct R: I {}
 		struct interface I {}
 		attachment A for R {}
-		pub fun foo(r: &R{I}) {
+		access(all) fun foo(r: &R{I}) {
 			r[A]
 		}
 		`,
@@ -3998,7 +3998,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct R: I {}
 		struct interface I {}
 		attachment A for R {}
-		pub fun foo(r: &{I}) {
+		access(all) fun foo(r: &{I}) {
 			r[A]
 		}
 		`,
@@ -4014,7 +4014,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 			`
 		struct interface I {}
 		attachment A for I {}
-		pub fun foo(r: {I}) {
+		access(all) fun foo(r: {I}) {
 			r[A]
 		}
 		`,
@@ -4029,7 +4029,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 			`
 		struct interface I {}
 		attachment A for I {}
-		pub fun foo(r: &{I}) {
+		access(all) fun foo(r: &{I}) {
 			r[A]
 		}
 		`,
@@ -4045,7 +4045,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		pub fun foo(r: {J}) {
+		access(all) fun foo(r: {J}) {
 			r[A]
 		}
 		`,
@@ -4064,7 +4064,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		pub fun foo(r: R{J}) {
+		access(all) fun foo(r: R{J}) {
 			r[A]
 		}
 		`,
@@ -4083,7 +4083,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		pub fun foo(r: &R{J}) {
+		access(all) fun foo(r: &R{J}) {
 			r[A]
 		}
 		`,
@@ -4101,7 +4101,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		pub fun foo(r: {I, J}) {
+		access(all) fun foo(r: {I, J}) {
 			r[A]
 		}
 		`,
@@ -4118,7 +4118,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		pub fun foo(r: &{I, J}) {
+		access(all) fun foo(r: &{I, J}) {
 			r[A]
 		}
 		`,
@@ -4137,9 +4137,9 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-				pub resource R {}
-				pub attachment A for R {
-					pub let x: [String] 
+				access(all) resource R {}
+				access(all) attachment A for R {
+					access(all) let x: [String] 
 					init() {
 						self.x = ["x"]
 					}
@@ -4162,13 +4162,13 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-				pub resource R {
-					pub fun foo() {
+				access(all) resource R {
+					access(all) fun foo() {
 						self[A]!.x.append("y")
 					}
 				}
-				pub attachment A for R {
-					pub let x: [String] 
+				access(all) attachment A for R {
+					access(all) let x: [String] 
 					init() {
 						self.x = ["x"]
 					}
@@ -4187,13 +4187,13 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-				pub resource R {}
-				pub attachment A for R {
-					pub let x: [String] 
+				access(all) resource R {}
+				access(all) attachment A for R {
+					access(all) let x: [String] 
 					init() {
 						self.x = ["x"]
 					}
-					pub fun foo() {
+					access(all) fun foo() {
 						base[A]!.x.append("y")
 					}
 				}
@@ -4214,9 +4214,9 @@ func TestInterpretAttachmentBaseNonMember(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-		pub resource R {}
-		pub attachment A for R {
-			pub let base: &R
+		access(all) resource R {}
+		access(all) attachment A for R {
+			access(all) let base: &R
 			init() {
 				self.base = base
 			}
@@ -4232,9 +4232,9 @@ func TestInterpretAttachmentBaseNonMember(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub resource R {}
-			pub attachment A for R {
-				pub let bases: [&R]
+			access(all) resource R {}
+			access(all) attachment A for R {
+				access(all) let bases: [&R]
 				init() {
 					self.bases = [base]
 				}
@@ -4250,9 +4250,9 @@ func TestInterpretAttachmentBaseNonMember(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub resource R {}
-			pub attachment A for R {
-				pub let bases: [&R]
+			access(all) resource R {}
+			access(all) attachment A for R {
+				access(all) let bases: [&R]
 				init() {
 					self.bases = []
 					self.bases.append(base)
@@ -4269,9 +4269,9 @@ func TestInterpretAttachmentBaseNonMember(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub resource R {}
-			pub attachment A for R {
-				pub let bases: [&R]
+			access(all) resource R {}
+			access(all) attachment A for R {
+				access(all) let bases: [&R]
 				init() {
 					self.bases = []
 					self.bases[0] = base
@@ -4412,7 +4412,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyStructAttachment) {}
 			struct A {}
-			pub fun foo(s: A) {
+			access(all) fun foo(s: A) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4429,7 +4429,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyStructAttachment): Bool { return false }
 			struct A {}
-			pub fun foo(s: A) {
+			access(all) fun foo(s: A) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4447,7 +4447,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: AnyStructAttachment) { }
 			struct A {}
-			pub fun foo(s: A) {
+			access(all) fun foo(s: A) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4465,7 +4465,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyResource) { }
 			struct A {}
-			pub fun foo(s: A) {
+			access(all) fun foo(s: A) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4483,7 +4483,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyStruct) { }
 			struct A {}
-			pub fun foo(s: A) {
+			access(all) fun foo(s: A) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4500,7 +4500,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyResourceAttachment) {}
 			resource A {}
-			pub fun foo(s: @A) {
+			access(all) fun foo(s: @A) {
 				s.forEachAttachment(bar)
 				destroy s
 			}
@@ -4518,7 +4518,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyStructAttachment) {}
 			resource A {}
-			pub fun foo(s: @A) {
+			access(all) fun foo(s: @A) {
 				s.forEachAttachment(bar)
 				destroy s
 			}
@@ -4536,7 +4536,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			fun bar (_: &AnyResourceAttachment) {}
-			pub fun foo(s: AnyStruct) {
+			access(all) fun foo(s: AnyStruct) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4552,7 +4552,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			fun bar (_: &AnyResourceAttachment) {}
-			pub fun foo(s: @AnyResource) {
+			access(all) fun foo(s: @AnyResource) {
 				s.forEachAttachment(bar)
 				destroy s
 			}
@@ -4569,7 +4569,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			fun bar (_: &AnyResourceAttachment) {}
-			pub fun foo(s: &AnyResourceAttachment) {
+			access(all) fun foo(s: &AnyResourceAttachment) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4585,7 +4585,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			fun bar (_: &AnyStructAttachment) {}
-			pub fun foo(s: &AnyStructAttachment) {
+			access(all) fun foo(s: &AnyStructAttachment) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4602,7 +4602,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyStructAttachment) {}
 			event E()
-			pub fun foo(s: E) {
+			access(all) fun foo(s: E) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4619,7 +4619,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyStructAttachment) {}
 			contract C {}
-			pub fun foo(s: C) {
+			access(all) fun foo(s: C) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4636,7 +4636,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyStructAttachment) {}
 			enum S:Int {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4653,7 +4653,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyStructAttachment) {}
 			attachment S for AnyStruct {}
-			pub fun foo(s: &S) {
+			access(all) fun foo(s: &S) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4670,7 +4670,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			`
 			fun bar (_: &AnyStructAttachment) {}
 			attachment R for AnyResource {}
-			pub fun foo(s: &R) {
+			access(all) fun foo(s: &R) {
 				s.forEachAttachment(bar)
 			}
 		`,
@@ -4685,8 +4685,8 @@ func TestCheckForEachAttachment(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub struct S {
-				pub fun forEachAttachment() {}
+			access(all) struct S {
+				access(all) fun forEachAttachment() {}
 			}
 		`,
 		)
@@ -4715,7 +4715,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 			access(M) attachment A for R {
 				access(F) fun foo() {}
 			}
-			pub fun foo(s: @R) {
+			access(all) fun foo(s: @R) {
 				s.forEachAttachment(bar)
 				destroy s
 			}

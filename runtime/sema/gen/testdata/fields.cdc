@@ -1,4 +1,4 @@
-pub struct Test {
+access(all) struct Test {
     /// This is a test integer.
     let testInt: UInt64
 

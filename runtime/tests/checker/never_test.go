@@ -36,7 +36,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheckWithPanic(t,
 			`
-            pub fun test(): Int {
+            access(all) fun test(): Int {
                 return panic("XXX")
             }
         `,
@@ -50,7 +50,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                pub fun test() {
+                access(all) fun test() {
                     var x: Never = 5
                 }
             `,
@@ -70,7 +70,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                pub fun test() {
+                access(all) fun test() {
                     var x: Never = "c"
                 }
             `,
@@ -90,7 +90,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                pub fun test() {
+                access(all) fun test() {
                     var x: Never = "hello"
                 }
             `,
@@ -110,7 +110,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                pub fun test(a: Never, b: Never) {
+                access(all) fun test(a: Never, b: Never) {
                     var x: Int = a + b
                 }
             `,
@@ -129,7 +129,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                pub fun test(a: Never) {
+                access(all) fun test(a: Never) {
                     var x: Bool = !a
                 }
             `,
@@ -148,7 +148,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                pub fun test(a: Never?) {
+                access(all) fun test(a: Never?) {
                     var x: Int = a ?? 4
                 }
             `,

@@ -2161,7 +2161,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			// All resources have two predeclared fields:
 
-			// `pub let owner: PublicAccount?`,
+			// `access(all) let owner: PublicAccount?`,
 			// ignored in serialization
 
 			addPredeclaredMember(
@@ -2175,7 +2175,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 				resourceOwnerFieldDocString,
 			)
 
-			// `pub let uuid: UInt64`,
+			// `access(all) let uuid: UInt64`,
 			// included in serialization
 
 			addPredeclaredMember(

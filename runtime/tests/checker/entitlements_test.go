@@ -42,10 +42,10 @@ func TestCheckBasicEntitlementDeclaration(t *testing.T) {
 		assert.Equal(t, "E", entitlement.String())
 	})
 
-	t.Run("priv access", func(t *testing.T) {
+	t.Run("access(self) access", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-			priv entitlement E 
+			access(self) entitlement E 
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -87,10 +87,10 @@ func TestCheckBasicEntitlementMappingDeclaration(t *testing.T) {
 		assert.Equal(t, 2, len(entitlement.Relations))
 	})
 
-	t.Run("priv access", func(t *testing.T) {
+	t.Run("access(self) access", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-			priv entitlement mapping M {}
+			access(self) entitlement mapping M {}
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -815,7 +815,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 			struct S {
 				access(M) fun foo(): auth(M) &Int {
 					let x = &1 as auth(M) &Int
-					// cannot cast, because M may be pub
+					// cannot cast, because M may be access(all)
 					let y: auth(F) &Int = x
 					return y
 				}
@@ -2021,12 +2021,12 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
-	t.Run("pub subtyping invalid", func(t *testing.T) {
+	t.Run("access(all) subtyping invalid", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E
 			struct interface I {
-				pub fun foo() 
+				access(all) fun foo() 
 			}
 			struct S: I {
 				access(E) fun foo() {}
@@ -2058,7 +2058,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
-	t.Run("pub supertying invalid", func(t *testing.T) {
+	t.Run("access(all) supertying invalid", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E
@@ -2066,7 +2066,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 				access(E) fun foo() 
 			}
 			struct S: I {
-				pub fun foo() {}
+				access(all) fun foo() {}
 			}
 		`)
 
@@ -2163,7 +2163,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
-	t.Run("priv supertying invalid", func(t *testing.T) {
+	t.Run("access(self) supertying invalid", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E
@@ -2171,7 +2171,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 				access(E) fun foo() 
 			}
 			struct S: I {
-				priv fun foo() {}
+				access(self) fun foo() {}
 			}
 		`)
 
@@ -2572,7 +2572,7 @@ func TestCheckEntitlementTypeAnnotation(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E
-			pub fun foo(e: E) {}
+			access(all) fun foo(e: E) {}
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -2585,7 +2585,7 @@ func TestCheckEntitlementTypeAnnotation(t *testing.T) {
 		_, err := ParseAndCheck(t, `
 			entitlement E
 			resource interface I {
-				pub fun foo(): E 
+				access(all) fun foo(): E 
 			}
 		`)
 
@@ -2797,7 +2797,7 @@ func TestCheckEntitlementMappingTypeAnnotation(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement mapping E {}
-			pub fun foo(e: E) {}
+			access(all) fun foo(e: E) {}
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -2810,7 +2810,7 @@ func TestCheckEntitlementMappingTypeAnnotation(t *testing.T) {
 		_, err := ParseAndCheck(t, `
 			entitlement mapping E {}
 			resource interface I {
-				pub fun foo(): E 
+				access(all) fun foo(): E 
 			}
 		`)
 
@@ -3060,7 +3060,7 @@ func TestCheckEntitlementSetAccess(t *testing.T) {
 				entitlement Z
 
 				struct R {
-					pub fun p() {}
+					access(all) fun p() {}
 
 					access(X) fun x() {}
 					access(Y) fun y() {}
@@ -3078,7 +3078,7 @@ func TestCheckEntitlementSetAccess(t *testing.T) {
 
 					access(X | Y | Z) fun xyzOr() {}
 
-					priv fun private() {}
+					access(self) fun private() {}
 					access(contract) fun c() {}
 					access(account) fun a() {}
 				}
@@ -3597,7 +3597,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		// access results in pub access because D is not mapped
+		// access results in access(all) access because D is not mapped
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(D) &Int")
 		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&Int")
@@ -3946,7 +3946,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 				let a: auth(Y) &A = self 
 				let b: &S = base 
 			} 
-			pub fun unentitled() {
+			access(all) fun unentitled() {
 				let a: auth(X, Y) &A = self // err
 				let b: auth(X) &S = base // err
 			}
@@ -3974,10 +3974,10 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		struct S {}
 		access(M) attachment A for S {
 			require entitlement X
-			pub fun unentitled() {
+			access(all) fun unentitled() {
 				let b: &S = base 
 			} 
-			pub fun entitled() {
+			access(all) fun entitled() {
 				let b: auth(X, Y) &S = base
 			}
 		}
@@ -4000,10 +4000,10 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		}
 		struct S {}
 		access(M) attachment A for S {
-			pub fun unentitled() {
+			access(all) fun unentitled() {
 				let b: &S = base 
 			} 
-			pub fun entitled() {
+			access(all) fun entitled() {
 				let b: auth(X) &S = base
 			}
 		}
@@ -4028,10 +4028,10 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		access(M) attachment A for S {
 			require entitlement X
 			require entitlement Y
-			pub fun unentitled() {
+			access(all) fun unentitled() {
 				let b: &S = base 
 			} 
-			pub fun entitled() {
+			access(all) fun entitled() {
 				let b: auth(X, Y) &S = base
 			}
 		}
@@ -4058,7 +4058,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 			access(F, Y) fun entitled() {
 				let a: auth(F, Y) &A = self 
 			} 
-			pub fun unentitled() {
+			access(all) fun unentitled() {
 				let a: auth(F, Y, E) &A = self // err
 			}
 		}
@@ -4163,7 +4163,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
-	t.Run("pub decl", func(t *testing.T) {
+	t.Run("access(all) decl", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		entitlement X
@@ -4172,7 +4172,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		attachment A for S {
 			access(Y) fun entitled() {} 
 			access(Y) let entitledField: Int
-			pub fun unentitled() {
+			access(all) fun unentitled() {
 				let a: auth(Y) &A = self // err
 				let b: auth(X) &S = base // err
 			}
@@ -4296,7 +4296,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(F) &A?")
 	})
 
-	t.Run("pub access entitled attachment", func(t *testing.T) {
+	t.Run("access(all) access entitled attachment", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		entitlement X
@@ -4320,7 +4320,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
 	})
 
-	t.Run("entitled access pub attachment", func(t *testing.T) {
+	t.Run("entitled access access(all) attachment", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		entitlement X
@@ -4331,8 +4331,8 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		struct S {
 			access(X) fun foo() {}
 		}
-		pub attachment A for S {
-			pub fun foo() {}
+		access(all) attachment A for S {
+			access(all) fun foo() {}
 		}
 		let s = attach A() to S()
 		let ref = &s as auth(X) &S
@@ -4346,7 +4346,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
 	})
 
-	t.Run("pub access pub attachment", func(t *testing.T) {
+	t.Run("access(all) access access(all) attachment", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		entitlement X
@@ -4355,7 +4355,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 			X -> Y
 		}
 		struct S {}
-		pub attachment A for S {}
+		access(all) attachment A for S {}
 		let s = attach A() to S()
 		let ref = &s as &S
 		let a1: auth(Y) &A = ref[A]!
