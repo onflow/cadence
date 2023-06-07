@@ -868,6 +868,19 @@ func (StorageMutatedDuringIterationError) Error() string {
 	return "storage iteration continued after modifying storage"
 }
 
+// ContainerMutatedDuringIterationError
+type ContainerMutatedDuringIterationError struct {
+	LocationRange
+}
+
+var _ errors.UserError = ContainerMutatedDuringIterationError{}
+
+func (ContainerMutatedDuringIterationError) IsUserError() {}
+
+func (ContainerMutatedDuringIterationError) Error() string {
+	return "resource container modified during iteration"
+}
+
 // InvalidHexByteError
 type InvalidHexByteError struct {
 	LocationRange
