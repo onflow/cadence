@@ -59,8 +59,6 @@ repos:
       deps:
         - onflow/cadence
         - onflow/flow-go-sdk
-        - onflow/flow-go
-        - onflow/flow-cli/flowkit
 
 - repo: onflow/cadence-tools
   needsRelease: true
