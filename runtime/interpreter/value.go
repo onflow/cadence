@@ -1765,8 +1765,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -1782,9 +1780,17 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		}()
 	}
 
-	v.Walk(interpreter, func(element Value) {
-		maybeDestroy(interpreter, locationRange, element)
-	})
+	storageID := v.StorageID()
+
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			v.Walk(interpreter, func(element Value) {
+				maybeDestroy(interpreter, locationRange, element)
+			})
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -15345,8 +15351,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		v.checkInvalidatedResourceUse(locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -15365,45 +15369,53 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		}()
 	}
 
-	// if this type has attachments, destroy all of them before invoking the destructor
-	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
-		// an attachment's destructor may make reference to `base`, so we must set the base value
-		// for the attachment before invoking its destructor. For other functions, this happens
-		// automatically when the attachment is accessed with the access expression `v[A]`, which
-		// is a necessary pre-requisite for calling any members of the attachment. However, in
-		// the case of a destructor, this is called implicitly, and thus must have its `base`
-		// set manually
-		attachment.setBaseValue(interpreter, v)
-		attachment.Destroy(interpreter, locationRange)
-	})
+	storageID := v.StorageID()
 
-	interpreter = v.getInterpreter(interpreter)
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			// if this type has attachments, destroy all of them before invoking the destructor
+			v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
+				// an attachment's destructor may make reference to `base`, so we must set the base value
+				// for the attachment before invoking its destructor. For other functions, this happens
+				// automatically when the attachment is accessed with the access expression `v[A]`, which
+				// is a necessary pre-requisite for calling any members of the attachment. However, in
+				// the case of a destructor, this is called implicitly, and thus must have its `base`
+				// set manually
+				attachment.setBaseValue(interpreter, v)
+				attachment.Destroy(interpreter, locationRange)
+			})
 
-	// if composite was deserialized, dynamically link in the destructor
-	if v.Destructor == nil {
-		v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
-	}
+			interpreter = v.getInterpreter(interpreter)
 
-	destructor := v.Destructor
+			// if composite was deserialized, dynamically link in the destructor
+			if v.Destructor == nil {
+				v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+			}
 
-	if destructor != nil {
-		var base *EphemeralReferenceValue
-		var self MemberAccessibleValue = v
-		if v.Kind == common.CompositeKindAttachment {
-			base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
-		}
-		invocation := NewInvocation(
-			interpreter,
-			&self,
-			base,
-			nil,
-			nil,
-			nil,
-			locationRange,
-		)
+			destructor := v.Destructor
 
-		destructor.invoke(invocation)
-	}
+			if destructor != nil {
+				var base *EphemeralReferenceValue
+				var self MemberAccessibleValue = v
+				if v.Kind == common.CompositeKindAttachment {
+					base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
+				}
+				invocation := NewInvocation(
+					interpreter,
+					&self,
+					base,
+					nil,
+					nil,
+					nil,
+					locationRange,
+				)
+
+				destructor.invoke(invocation)
+			}
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -15427,6 +15439,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			}
 		},
 	)
+
 }
 
 func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -16803,8 +16816,6 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -16820,13 +16831,21 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
-	v.Iterate(interpreter, func(key, value Value) (resume bool) {
-		// Resources cannot be keys at the moment, so should theoretically not be needed
-		maybeDestroy(interpreter, locationRange, key)
-		maybeDestroy(interpreter, locationRange, value)
+	storageID := v.StorageID()
 
-		return true
-	})
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			v.Iterate(interpreter, func(key, value Value) (resume bool) {
+				// Resources cannot be keys at the moment, so should theoretically not be needed
+				maybeDestroy(interpreter, locationRange, key)
+				maybeDestroy(interpreter, locationRange, value)
+
+				return true
+			})
+		},
+	)
 
 	v.isDestroyed = true
 
