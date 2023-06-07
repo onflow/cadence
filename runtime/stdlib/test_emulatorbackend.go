@@ -214,17 +214,17 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(testFramework TestFra
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.executeScriptFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
 			script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			args, err := arrayValueToSlice(invocation.Arguments[1])
+			args, err := arrayValueToSlice(inter, invocation.Arguments[1])
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
-
-			inter := invocation.Interpreter
 
 			result := testFramework.RunScript(inter, script.Str, args)
 
@@ -346,7 +346,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(testFramework TestFr
 				testTransactionTypeAuthorizersFieldName,
 			)
 
-			authorizers := addressArrayValueToSlice(authorizerValue)
+			authorizers := addressArrayValueToSlice(inter, authorizerValue)
 
 			// Get signers
 			signersValue := transactionValue.GetMember(
@@ -367,13 +367,13 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(testFramework TestFr
 				locationRange,
 				testTransactionTypeArgumentsFieldName,
 			)
-			args, err := arrayValueToSlice(argsValue)
+			args, err := arrayValueToSlice(inter, argsValue)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 
 			err = testFramework.AddTransaction(
-				invocation.Interpreter,
+				inter,
 				code.Str,
 				authorizers,
 				signerAccounts,
@@ -471,7 +471,7 @@ func (t *testEmulatorBackendType) newDeployContractFunction(testFramework TestFr
 			account := accountFromValue(inter, accountValue, invocation.LocationRange)
 
 			// Contract init arguments
-			args, err := arrayValueToSlice(invocation.Arguments[3])
+			args, err := arrayValueToSlice(inter, invocation.Arguments[3])
 			if err != nil {
 				panic(err)
 			}
@@ -521,7 +521,7 @@ func (t *testEmulatorBackendType) newUseConfigFunction(testFramework TestFramewo
 
 			mapping := make(map[string]common.Address, addresses.Count())
 
-			addresses.Iterate(nil, func(locationValue, addressValue interpreter.Value) bool {
+			addresses.Iterate(inter, func(locationValue, addressValue interpreter.Value) bool {
 				location, ok := locationValue.(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
