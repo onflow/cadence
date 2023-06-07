@@ -16719,7 +16719,11 @@ func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Va
 			panic(errors.NewExternalError(err))
 		}
 	}
-	interpreter.withMutationPrevention(v.StorageID(), iterate)
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
+	}
 }
 
 type DictionaryIterator struct {
