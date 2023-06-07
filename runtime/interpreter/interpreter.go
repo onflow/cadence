@@ -1612,7 +1612,7 @@ func (interpreter *Interpreter) functionWrappers(
 		name := functionDeclaration.Identifier.Identifier
 		functionWrapper := interpreter.functionConditionsWrapper(
 			functionDeclaration,
-			functionType.ReturnTypeAnnotation.Type,
+			functionType,
 			lexicalScope,
 		)
 		if functionWrapper == nil {
@@ -1975,7 +1975,11 @@ func (interpreter *Interpreter) declareInterface(
 	interfaceType := interpreter.Program.Elaboration.InterfaceDeclarationType(declaration)
 	typeID := interfaceType.ID()
 
-	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
+	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(
+		declaration.Members,
+		interfaceType.InitializerParameters,
+		lexicalScope,
+	)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
@@ -2011,7 +2015,11 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 	typeID := compositeType.ID()
 
-	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
+	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(
+		declaration.Members,
+		compositeType.ConstructorParameters,
+		lexicalScope,
+	)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
@@ -2026,6 +2034,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 
 func (interpreter *Interpreter) initializerFunctionWrapper(
 	members *ast.Members,
+	parameters []sema.Parameter,
 	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
@@ -2043,9 +2052,16 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 
 	return interpreter.functionConditionsWrapper(
 		firstInitializer.FunctionDeclaration,
-		sema.VoidType,
+		&sema.FunctionType{
+			Parameters:           parameters,
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+		},
 		lexicalScope,
 	)
+}
+
+var voidFunctionType = &sema.FunctionType{
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 }
 
 func (interpreter *Interpreter) destructorFunctionWrapper(
@@ -2060,14 +2076,14 @@ func (interpreter *Interpreter) destructorFunctionWrapper(
 
 	return interpreter.functionConditionsWrapper(
 		destructor.FunctionDeclaration,
-		sema.VoidType,
+		voidFunctionType,
 		lexicalScope,
 	)
 }
 
 func (interpreter *Interpreter) functionConditionsWrapper(
 	declaration *ast.FunctionDeclaration,
-	returnType sema.Type,
+	functionType *sema.FunctionType,
 	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
@@ -2093,15 +2109,10 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 
 	return func(inner FunctionValue) FunctionValue {
-		// Construct a raw HostFunctionValue without a type,
-		// instead of using NewHostFunctionValue, which requires a type.
-		//
-		// This host function value is an internally created and used function,
-		// and can never be passed around as a value.
-		// Hence, the type is not required.
-
-		return &HostFunctionValue{
-			Function: func(invocation Invocation) Value {
+		return NewHostFunctionValue(
+			interpreter,
+			functionType,
+			func(invocation Invocation) Value {
 				// Start a new activation record.
 				// Lexical scope: use the function declaration's activation record,
 				// not the current one (which would be dynamic scope)
@@ -2195,10 +2206,10 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 					preConditions,
 					body,
 					rewrittenPostConditions,
-					returnType,
+					functionType.ReturnTypeAnnotation.Type,
 				)
 			},
-		}
+		)
 	}
 }
 

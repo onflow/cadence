@@ -8075,7 +8075,9 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 	require.Equal(t, cadence.Bool(true), result)
 }
 
-func TestUserPanicToError(t *testing.T) {
+func TestRuntimeUserPanicToError(t *testing.T) {
+	t.Parallel()
+
 	err := fmt.Errorf(
 		"wrapped: %w",
 		runtimeErrors.NewDefaultUserError("user error"),
