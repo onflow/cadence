@@ -2766,9 +2766,11 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                   }
                 `,
 				expected: cadence.Function{
-					FunctionType: &cadence.FunctionType{
-						ReturnType: cadence.IntType{},
-					},
+					FunctionType: cadence.TypeWithCachedTypeID(
+						&cadence.FunctionType{
+							ReturnType: cadence.IntType{},
+						},
+					).(*cadence.FunctionType),
 				},
 			},
 		)
@@ -2786,16 +2788,18 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                   }
                 `,
 				expected: cadence.Function{
-					FunctionType: &cadence.FunctionType{
-						Parameters: []cadence.Parameter{
-							{
-								Label:      sema.ArgumentLabelNotRequired,
-								Identifier: "message",
-								Type:       cadence.StringType{},
+					FunctionType: cadence.TypeWithCachedTypeID(
+						&cadence.FunctionType{
+							Parameters: []cadence.Parameter{
+								{
+									Label:      sema.ArgumentLabelNotRequired,
+									Identifier: "message",
+									Type:       cadence.StringType{},
+								},
 							},
+							ReturnType: cadence.NeverType{},
 						},
-						ReturnType: cadence.NeverType{},
-					},
+					).(*cadence.FunctionType),
 				},
 			},
 		)
@@ -2818,9 +2822,11 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                   }
                 `,
 				expected: cadence.Function{
-					FunctionType: &cadence.FunctionType{
-						ReturnType: cadence.VoidType{},
-					},
+					FunctionType: cadence.TypeWithCachedTypeID(
+						&cadence.FunctionType{
+							ReturnType: cadence.VoidType{},
+						},
+					).(*cadence.FunctionType),
 				},
 			},
 		)
