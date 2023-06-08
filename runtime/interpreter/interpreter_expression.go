@@ -846,6 +846,16 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		panic(errors.NewUnreachableError())
 	}
 
+	// Bound functions
+	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
+		self := *boundFunction.Self
+		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
+			storageID := resource.StorageID()
+			interpreter.trackReferencedResourceKindedValue(storageID, resource)
+			defer interpreter.untrackReferencedResourceKindedValue(storageID, resource)
+		}
+	}
+
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
 
 	var argumentExpressions []ast.Expression

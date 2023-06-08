@@ -14215,9 +14215,6 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	function, ok := v.Functions[name]
 	if ok {
 		var self MemberAccessibleValue = v
-		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
-			interpreter.trackReferencedResourceKindedValue(resource.StorageID(), resource)
-		}
 		return NewBoundFunctionValue(interpreter, function, &self)
 	}
 
