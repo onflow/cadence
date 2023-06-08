@@ -2714,3 +2714,44 @@ func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
 	})
 }
+
+func TestInterpretResourceFunctionInvocationAfterDestruction(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        pub resource Vault {
+            pub fun foo(_ ignored: Bool) {}
+        }
+
+        pub resource Attacker {
+			pub var vault: @Vault
+
+			init() {
+				self.vault <- create Vault()
+			}
+
+			pub fun shenanigans(): Bool {
+				var temp <- create Vault()
+				self.vault <-> temp
+                destroy temp
+                return true
+			}
+
+			destroy() {
+				destroy self.vault
+			}
+		}
+
+        pub fun main() {
+            let a <- create Attacker()
+            a.vault.foo(a.shenanigans())
+            destroy a
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+}
