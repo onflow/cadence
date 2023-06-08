@@ -223,7 +223,6 @@ func TestEntryPointParameters(t *testing.T) {
 		)
 	})
 
-
 	t.Run("contract init empty", func(t *testing.T) {
 
 		t.Parallel()
