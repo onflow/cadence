@@ -1074,6 +1074,42 @@ func NewField(identifier string, typ Type) Field {
 	}
 }
 
+type HasFields interface {
+	GetFields() []Field
+	GetFieldValues() []Value
+}
+
+func GetFieldByName(v HasFields, fieldName string) Value {
+	fieldValues := v.GetFieldValues()
+	fields := v.GetFields()
+
+	if fieldValues == nil || fields == nil {
+		return nil
+	}
+
+	for i, field := range v.GetFields() {
+		if field.Identifier == fieldName {
+			return v.GetFieldValues()[i]
+		}
+	}
+	return nil
+}
+
+func GetFieldsMappedByName(v HasFields) map[string]Value {
+	fieldValues := v.GetFieldValues()
+	fields := v.GetFields()
+
+	if fieldValues == nil || fields == nil {
+		return nil
+	}
+
+	fieldsMap := make(map[string]Value, len(fields))
+	for i, field := range fields {
+		fieldsMap[field.Identifier] = fieldValues[i]
+	}
+	return fieldsMap
+}
+
 // Parameter
 
 type Parameter struct {
