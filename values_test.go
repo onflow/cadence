@@ -916,3 +916,36 @@ func TestValue_Type(t *testing.T) {
 		test(name, testCase)
 	}
 }
+
+func TestEvent_GetFieldByName(t *testing.T) {
+	t.Parallel()
+
+	simpleEvent := NewEvent(
+		[]Value{
+			NewInt(1),
+			String("foo"),
+		},
+	).WithType(&EventType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "SimpleEvent",
+		Fields: []Field{
+			{
+				Identifier: "a",
+				Type:       IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       StringType{},
+			},
+		},
+	})
+
+	assert.Equal(t, NewInt(1), simpleEvent.GetFieldByName("a").(Int))
+	assert.Equal(t, String("foo"), simpleEvent.GetFieldByName("b").(String))
+	assert.Nil(t, simpleEvent.GetFieldByName("c"))
+
+	assert.Equal(t, map[string]Value{
+		"a": NewInt(1),
+		"b": String("foo"),
+	}, simpleEvent.GetFieldsMappedByName())
+}

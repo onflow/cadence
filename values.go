@@ -1929,6 +1929,23 @@ func (v Event) String() string {
 	return formatComposite(v.EventType.ID(), v.EventType.Fields, v.Fields)
 }
 
+func (v Event) GetFieldByName(fieldName string) Value {
+	for i, field := range v.EventType.Fields {
+		if field.Identifier == fieldName {
+			return v.Fields[i]
+		}
+	}
+	return nil
+}
+
+func (v Event) GetFieldsMappedByName() map[string]Value {
+	fields := make(map[string]Value, len(v.EventType.Fields))
+	for i, field := range v.EventType.Fields {
+		fields[field.Identifier] = v.Fields[i]
+	}
+	return fields
+}
+
 // Contract
 
 type Contract struct {
