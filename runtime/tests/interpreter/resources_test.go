@@ -2810,3 +2810,46 @@ func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {
 	_, err := inter.Invoke("main")
 	require.NoError(t, err)
 }
+
+func TestInterpretResourceFunctionResourceFunctionValidity(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        pub resource Vault {
+            pub fun foo(_ dummy: Bool): Bool {
+                return dummy
+            }
+        }
+
+        pub resource Attacker {
+            pub var vault: @Vault
+
+            init() {
+                self.vault <- create Vault()
+            }
+
+            pub fun shenanigans(_ n: Int): Bool {
+                if n > 0 {
+                    return self.vault.foo(self.shenanigans(n - 1))
+                }
+                return true
+            }
+
+            destroy() {
+                destroy self.vault
+            }
+        }
+
+        pub fun main() {
+            let a <- create Attacker()
+
+            a.vault.foo(a.shenanigans(10))
+
+            destroy a
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
+}
