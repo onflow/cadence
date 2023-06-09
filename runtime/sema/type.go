@@ -4255,12 +4255,12 @@ func CompositeForEachAttachmentFunctionType(t common.CompositeKind) *FunctionTyp
 								),
 							},
 						},
-						ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+						ReturnTypeAnnotation: VoidTypeAnnotation,
 					},
 				),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+		ReturnTypeAnnotation: VoidTypeAnnotation,
 	}
 }
 
