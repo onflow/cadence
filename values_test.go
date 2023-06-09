@@ -916,3 +916,68 @@ func TestValue_Type(t *testing.T) {
 		test(name, testCase)
 	}
 }
+
+func TestValue_HasFields(t *testing.T) {
+	t.Parallel()
+
+	test := func(name string, testCase valueTestCase) {
+
+		t.Run(name, func(t *testing.T) {
+			value := testCase.value
+			switch value.(type) {
+			case Event, Struct, Contract, Enum, Resource, Attachment:
+				valueWithType := testCase.withType(value, testCase.exampleType)
+				assert.Implements(t, (*HasFields)(nil), valueWithType)
+				fieldedValueWithType := valueWithType.(HasFields)
+				assert.NotNil(t, fieldedValueWithType.GetFieldValues())
+				assert.NotNil(t, fieldedValueWithType.GetFields())
+
+				fieldedValue := value.(HasFields)
+
+				assert.Nil(t, fieldedValue.GetFields())
+			}
+		})
+
+	}
+
+	for name, testCase := range newValueTestCases() {
+		test(name, testCase)
+	}
+}
+
+func TestEvent_GetFieldByName(t *testing.T) {
+	t.Parallel()
+
+	simpleEvent := NewEvent(
+		[]Value{
+			NewInt(1),
+			String("foo"),
+		},
+	)
+	assert.Nil(t, GetFieldsMappedByName(simpleEvent))
+	assert.Nil(t, GetFieldByName(simpleEvent, "a"))
+
+	simpleEventWithType := simpleEvent.WithType(&EventType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "SimpleEvent",
+		Fields: []Field{
+			{
+				Identifier: "a",
+				Type:       IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       StringType{},
+			},
+		},
+	})
+
+	assert.Equal(t, NewInt(1), GetFieldByName(simpleEventWithType, "a").(Int))
+	assert.Equal(t, String("foo"), GetFieldByName(simpleEventWithType, "b").(String))
+	assert.Nil(t, GetFieldByName(simpleEventWithType, "c"))
+
+	assert.Equal(t, map[string]Value{
+		"a": NewInt(1),
+		"b": String("foo"),
+	}, GetFieldsMappedByName(simpleEventWithType))
+}

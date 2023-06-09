@@ -1723,6 +1723,18 @@ func (v Struct) String() string {
 	return formatComposite(v.StructType.ID(), v.StructType.Fields, v.Fields)
 }
 
+func (v Struct) GetFields() []Field {
+	if v.StructType == nil {
+		return nil
+	}
+
+	return v.StructType.Fields
+}
+
+func (v Struct) GetFieldValues() []Value {
+	return v.Fields
+}
+
 func formatComposite(typeID string, fields []Field, values []Value) string {
 	preparedFields := make([]struct {
 		Name  string
@@ -1806,6 +1818,18 @@ func (v Resource) String() string {
 	return formatComposite(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 }
 
+func (v Resource) GetFields() []Field {
+	if v.ResourceType == nil {
+		return nil
+	}
+
+	return v.ResourceType.Fields
+}
+
+func (v Resource) GetFieldValues() []Value {
+	return v.Fields
+}
+
 // Attachment
 
 type Attachment struct {
@@ -1866,6 +1890,18 @@ func (v Attachment) ToGoValue() any {
 
 func (v Attachment) String() string {
 	return formatComposite(v.AttachmentType.ID(), v.AttachmentType.Fields, v.Fields)
+}
+
+func (v Attachment) GetFields() []Field {
+	if v.AttachmentType == nil {
+		return nil
+	}
+
+	return v.AttachmentType.Fields
+}
+
+func (v Attachment) GetFieldValues() []Value {
+	return v.Fields
 }
 
 // Event
@@ -1929,6 +1965,18 @@ func (v Event) String() string {
 	return formatComposite(v.EventType.ID(), v.EventType.Fields, v.Fields)
 }
 
+func (v Event) GetFields() []Field {
+	if v.EventType == nil {
+		return nil
+	}
+
+	return v.EventType.Fields
+}
+
+func (v Event) GetFieldValues() []Value {
+	return v.Fields
+}
+
 // Contract
 
 type Contract struct {
@@ -1989,6 +2037,18 @@ func (v Contract) ToGoValue() any {
 
 func (v Contract) String() string {
 	return formatComposite(v.ContractType.ID(), v.ContractType.Fields, v.Fields)
+}
+
+func (v Contract) GetFields() []Field {
+	if v.ContractType == nil {
+		return nil
+	}
+
+	return v.ContractType.Fields
+}
+
+func (v Contract) GetFieldValues() []Value {
+	return v.Fields
 }
 
 // PathLink
@@ -2352,6 +2412,18 @@ func (v Enum) ToGoValue() any {
 
 func (v Enum) String() string {
 	return formatComposite(v.EnumType.ID(), v.EnumType.Fields, v.Fields)
+}
+
+func (v Enum) GetFields() []Field {
+	if v.EnumType == nil {
+		return nil
+	}
+
+	return v.EnumType.Fields
+}
+
+func (v Enum) GetFieldValues() []Value {
+	return v.Fields
 }
 
 // Function
