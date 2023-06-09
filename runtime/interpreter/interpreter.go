@@ -214,7 +214,7 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]uint32
+type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
 	Location     common.Location
@@ -4519,10 +4519,22 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[id]
 	if values == nil {
-		values = map[ReferenceTrackedResourceKindedValue]uint32{}
+		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
 		interpreter.SharedState.referencedResourceKindedValues[id] = values
 	}
-	values[value]++
+	values[value] = struct{}{}
+}
+
+func (interpreter *Interpreter) referencedResourceKindedValueIsTracked(
+	id atree.StorageID,
+	value ReferenceTrackedResourceKindedValue,
+) bool {
+	values := interpreter.SharedState.referencedResourceKindedValues[id]
+	if values == nil {
+		return false
+	}
+	_, ok := values[value]
+	return ok
 }
 
 func (interpreter *Interpreter) untrackReferencedResourceKindedValue(
@@ -4533,11 +4545,7 @@ func (interpreter *Interpreter) untrackReferencedResourceKindedValue(
 	if values == nil {
 		return
 	}
-	if values[value] > 1 {
-		values[value]--
-	} else {
-		delete(values, value)
-	}
+	delete(values, value)
 }
 
 func (interpreter *Interpreter) updateReferencedResource(
