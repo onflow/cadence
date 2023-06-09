@@ -85,14 +85,52 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 
 	// If the member access is optional chaining, only wrap the result value
 	// in an optional, if it is not already an optional value
-
 	if isOptional {
 		if _, ok := memberType.(*OptionalType); !ok {
-			return &OptionalType{Type: memberType}
+			memberType = &OptionalType{Type: memberType}
 		}
 	}
 
+	// If the member,
+	//   1) is accessed via a reference, and
+	//   2) is container-typed,
+	// then the member type should also be a reference.
+	if _, accessedViaReference := accessedType.(*ReferenceType); accessedViaReference &&
+		member.DeclarationKind == common.DeclarationKindField &&
+		checker.isContainerType(memberType) {
+		// Get a reference to the type
+		memberType = checker.getReferenceType(memberType)
+	}
+
 	return memberType
+}
+
+// getReferenceType Returns a reference type to a given type.
+// Reference to an optional should return an optional reference.
+// This has to be done recursively for nested optionals.
+// e.g.1: Given type T, this method returns &T.
+// e.g.2: Given T?, this returns (&T)?
+func (checker *Checker) getReferenceType(typ Type) Type {
+	if optionalType, ok := typ.(*OptionalType); ok {
+		return &OptionalType{
+			Type: checker.getReferenceType(optionalType.Type),
+		}
+	}
+
+	return NewReferenceType(checker.memoryGauge, typ, false)
+}
+
+func (checker *Checker) isContainerType(typ Type) bool {
+	switch typ := typ.(type) {
+	case *CompositeType,
+		*DictionaryType,
+		ArrayType:
+		return true
+	case *OptionalType:
+		return checker.isContainerType(typ.Type)
+	default:
+		return false
+	}
 }
 
 func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, member *Member, isOptional bool) {

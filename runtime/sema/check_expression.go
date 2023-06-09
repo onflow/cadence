@@ -258,7 +258,24 @@ func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) 
 }
 
 func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) Type {
-	return checker.visitIndexExpression(expression, false)
+	elementType := checker.visitIndexExpression(expression, false)
+	if elementType == InvalidType {
+		return elementType
+	}
+
+	indexExprTypes := checker.Elaboration.IndexExpressionTypes(expression)
+	parentType := indexExprTypes.IndexedType
+
+	// If the element,
+	//   1) is accessed via a reference, and
+	//   2) is container-typed,
+	// then the element type should also be a reference.
+	if _, accessedViaReference := parentType.(*ReferenceType); accessedViaReference &&
+		checker.isContainerType(elementType) {
+		elementType = checker.getReferenceType(elementType)
+	}
+
+	return elementType
 }
 
 // visitIndexExpression checks if the indexed expression is indexable,

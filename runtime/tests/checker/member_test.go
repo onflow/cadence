@@ -418,3 +418,246 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 		assert.Equal(t, "unknown member", memberErr.SecondaryError())
 	})
 }
+
+func TestCheckMemberAccess(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("composite, field", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var x: [Int]
+                init() {
+                    self.x = []
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                var x: [Int] = test.x
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, function", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                pub fun foo(): Int {
+                    return 1
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                var foo: (fun(): Int) = test.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, field", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var x: [Int]
+                init() {
+                    self.x = []
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: &[Int] = testRef.x
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, optional field", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var x: [Int]?
+                init() {
+                    self.x = []
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: &[Int]? = testRef.x
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, primitive field", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var x: Int
+                init() {
+                    self.x = 1
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: Int = testRef.x
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, function", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                pub fun foo(): Int {
+                    return 1
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var foo: (fun(): Int) = testRef.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, element", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                var x: [Int] = array[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, element", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                let arrayRef = &array as &[[Int]]
+                var x: &[Int] = arrayRef[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, optional typed element", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [[Int]?] = [[1, 2]]
+                let arrayRef = &array as &[[Int]?]
+                var x: &[Int]? = arrayRef[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, primitive typed element", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [Int] = [1, 2]
+                let arrayRef = &array as &[Int]
+                var x: Int = arrayRef[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, value", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: {String: Int}} = {"one": {"two": 2}}
+                var x: {String: Int}? = dict["one"]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, value", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: {String: Int} } = {"one": {"two": 2}}
+                let dictRef = &dict as &{String: {String: Int}}
+                var x: &{String: Int}? = dictRef["one"]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, optional typed value", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: {String: Int}?} = {"one": {"two": 2}}
+                let dictRef = &dict as &{String: {String: Int}?}
+                var x: (&{String: Int})?? = dictRef["one"]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, optional typed value, mismatch types", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: {String: Int}?} = {"one": {"two": 2}}
+                let dictRef = &dict as &{String: {String: Int}?}
+
+                // Must return an optional reference, not a reference to an optional
+                var x: &({String: Int}??) = dictRef["one"]
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: Int} = {"one": 1}
+                let dictRef = &dict as &{String: Int}
+                var x: Int? = dictRef["one"]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource reference, attachment", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            attachment A for R {}
+
+            fun test() {
+                let r <- create R()
+                let rRef = &r as &R
+
+                var a: &A? = rRef[A]
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
