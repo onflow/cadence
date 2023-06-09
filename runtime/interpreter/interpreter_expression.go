@@ -851,10 +851,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		self := *boundFunction.Self
 		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
 			storageID := resource.StorageID()
-			if !interpreter.referencedResourceKindedValueIsTracked(storageID, resource) {
-				interpreter.trackReferencedResourceKindedValue(storageID, resource)
-				defer interpreter.untrackReferencedResourceKindedValue(storageID, resource)
-			}
+			interpreter.trackReferencedResourceKindedValue(storageID, resource)
+			defer interpreter.untrackReferencedResourceKindedValue(storageID, resource)
 		}
 	}
 
