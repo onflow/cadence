@@ -2020,8 +2020,8 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 	switch access := access.(type) {
 	case ast.PrimitiveAccess:
 		return PrimitiveAccess(access)
-	case ast.EntitlementAccess:
 
+	case ast.EntitlementAccess:
 		semaAccess, hasAccess := checker.Elaboration.GetSemanticAccess(access)
 		if hasAccess {
 			return semaAccess
@@ -2055,13 +2055,14 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 				}
 				semanticEntitlements = append(semanticEntitlements, entitlementType)
 			}
-			if access.EntitlementSet.Separator() == "," {
+			if access.EntitlementSet.Separator() == ast.Conjunction {
 				result = NewEntitlementSetAccess(semanticEntitlements, Conjunction)
 				return
 			}
 			result = NewEntitlementSetAccess(semanticEntitlements, Disjunction)
 			return
 		case *EntitlementMapType:
+			// 0-length entitlement lists are rejected by the parser
 			if len(astEntitlements) != 1 {
 				checker.report(
 					&InvalidMultipleMappedEntitlementError{

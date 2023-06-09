@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/assert"

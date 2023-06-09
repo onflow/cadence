@@ -126,6 +126,8 @@ var allKeywords = []string{
 	KeywordEnum,
 	KeywordView,
 	KeywordWith,
+	KeywordMapping,
+	KeywordRequire,
 }
 
 // Keywords that can be used in identifier position without ambiguity.

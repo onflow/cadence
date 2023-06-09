@@ -520,9 +520,7 @@ func TestInterpretReferenceType(t *testing.T) {
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.R",
 				},
-				Authorization: interpreter.EntitlementSetAuthorization{
-					Entitlements: []common.TypeID{"S.test.X"},
-				},
+				Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
 			},
 		},
 		inter.Globals.Get("a").GetValue(),
@@ -546,9 +544,7 @@ func TestInterpretReferenceType(t *testing.T) {
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.S",
 				},
-				Authorization: interpreter.EntitlementSetAuthorization{
-					Entitlements: []common.TypeID{"S.test.X"},
-				},
+				Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
 			},
 		},
 		inter.Globals.Get("c").GetValue(),

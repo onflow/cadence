@@ -121,7 +121,7 @@ func TestCheckReference(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        entitlement X
+          entitlement X
           let x = &1 as &Int as auth(X) &Int
         `)
 

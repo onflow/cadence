@@ -1281,18 +1281,14 @@ func (t EntitlementSetAuthorization) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 
-	err = e.EncodeArrayHead(uint64(len(t.Entitlements)))
+	err = e.EncodeArrayHead(uint64(t.Entitlements.Len()))
 	if err != nil {
 		return err
 	}
-	for _, entitlement := range t.Entitlements {
+	return t.Entitlements.ForeachWithError(func(entitlement common.TypeID, value struct{}) error {
 		// Encode entitlement as array entitlements element
-		err = e.EncodeString(string(entitlement))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+		return e.EncodeString(string(entitlement))
+	})
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

@@ -784,7 +784,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 		// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
 		if entitlementSupportingType, ok := ty.(sema.EntitlementSupportingType); ok {
 			supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-			if supportedEntitlements.Len() > 0 {
+			if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
 				access := sema.EntitlementSetAccess{
 					SetKind:      sema.Conjunction,
 					Entitlements: supportedEntitlements,
@@ -1684,7 +1684,7 @@ func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.
 		return ty
 	}
 
-	return ty.Map(interpreter, func(t sema.Type) sema.Type {
+	return ty.Map(interpreter, make(map[*sema.TypeParameter]*sema.TypeParameter), func(t sema.Type) sema.Type {
 		switch refType := t.(type) {
 		case *sema.ReferenceType:
 			if _, isMappedAuth := refType.Authorization.(sema.EntitlementMapAccess); isMappedAuth {
@@ -4534,7 +4534,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 		switch selfValue := self.(type) {
 		case AuthorizedValue:
 			selfAccess := interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization())
-			imageAccess, err := mappedAccess.Image(selfAccess, ast.EmptyRange)
+			imageAccess, err := mappedAccess.Image(selfAccess, func() ast.Range { return ast.EmptyRange })
 			if err != nil {
 				panic(err)
 			}

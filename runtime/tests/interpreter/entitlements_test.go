@@ -21,10 +21,11 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/stretchr/testify/require"
 
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -263,6 +264,38 @@ func TestInterpretEntitledReferences(t *testing.T) {
 				[]common.TypeID{"S.test.X"},
 				sema.Conjunction,
 			).Equal(value.(*interpreter.StorageReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("upcasting and downcasting", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			pub fun test(): Bool {
+				let ref = &1 as auth(X) &Int
+				let anyStruct = ref as AnyStruct
+				let downRef = (anyStruct as? &Int)!
+				let downDownRef = downRef as? auth(X) &Int
+				return downDownRef == nil
+			}
+			`,
+			sema.Config{},
+		)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Equal(
+			t,
+			interpreter.TrueValue,
+			value,
 		)
 	})
 }
@@ -1040,6 +1073,63 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			return i!
 		}
 		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		var refType *interpreter.EphemeralReferenceValue
+		require.IsType(t, value, refType)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"S.test.Y"},
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+
+		require.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value.(*interpreter.EphemeralReferenceValue).Value,
+		)
+	})
+
+	t.Run("storage reference value", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+		entitlement X
+		entitlement Y
+		entitlement E
+		entitlement F
+		entitlement mapping M {
+			X -> Y
+			E -> F
+		}
+		struct S {
+			priv let myFoo: Int
+			access(M) fun foo(): auth(M) &Int {
+				return &self.myFoo as auth(M) &Int
+			}
+			init() {
+				self.myFoo = 3
+			}
+		}
+		fun test(): auth(Y) &Int {
+			let s = S()
+			account.save(s, to: /storage/foo)
+			let ref = account.borrow<auth(X) &S>(from: /storage/foo)
+			let i = ref?.foo()
+			return i!
+		}
+		`, sema.Config{
+			AttachmentsEnabled: false,
+		})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -2314,5 +2404,49 @@ func TestInterpretEntitledReferenceCollections(t *testing.T) {
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
+	})
+}
+
+func TestInterpretEntitlementSetEquality(t *testing.T) {
+	t.Parallel()
+
+	t.Run("different sigils", func(t *testing.T) {
+
+		t.Parallel()
+
+		conjunction := interpreter.NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{"S.test.X"},
+			sema.Conjunction,
+		)
+
+		disjunction := interpreter.NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{"S.test.X"},
+			sema.Disjunction,
+		)
+
+		require.False(t, conjunction.Equal(disjunction))
+		require.False(t, disjunction.Equal(conjunction))
+	})
+
+	t.Run("different lengths", func(t *testing.T) {
+
+		t.Parallel()
+
+		one := interpreter.NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{"S.test.X"},
+			sema.Conjunction,
+		)
+
+		two := interpreter.NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{"S.test.X", "S.test.Y"},
+			sema.Conjunction,
+		)
+
+		require.False(t, one.Equal(two))
+		require.False(t, two.Equal(one))
 	})
 }

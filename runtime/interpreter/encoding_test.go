@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 
@@ -3463,10 +3464,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorization: EntitlementSetAuthorization{
-					Entitlements: []common.TypeID{"foo", "bar"},
-					SetKind:      sema.Conjunction,
-				},
+				Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"foo", "bar"}, sema.Conjunction),
 				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
@@ -3517,10 +3515,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorization: EntitlementSetAuthorization{
-					Entitlements: []common.TypeID{"foo", "bar"},
-					SetKind:      sema.Disjunction,
-				},
+				Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"foo", "bar"}, sema.Disjunction),
 				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
@@ -3538,7 +3533,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 			0xd8, CBORTagEntitlementSetStaticAuthorization,
 			// array, length 2
 			0x82,
-			// conjunction
+			// Disjunction
 			0x01,
 			// array, length 2
 			0x82,
@@ -3562,6 +3557,47 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 				encoded: encoded,
 			},
 		)
+	})
+
+	t.Run("decode old reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := PathLinkValue{
+			TargetPath: publicPathValue,
+			Type: ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeBool,
+			},
+		}
+
+		//nolint:gocritic
+		encoded := append(
+			expectedLinkEncodingPrefix[:],
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// true
+			0xf5,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+		)
+
+		decoder := CBORDecMode.NewByteStreamDecoder(encoded)
+		decoded, err := DecodeStorable(decoder, atree.StorageID{}, nil)
+		require.NoError(t, err)
+		inter, err := NewInterpreter(
+			nil,
+			TestLocation,
+			&Config{
+				Storage: nil,
+			},
+		)
+		require.NoError(t, err)
+		decodedValue := StoredValue(inter, decoded, nil)
+		AssertValuesEqual(t, inter, value, decodedValue)
 	})
 
 	t.Run("reference type, unauthorized, bool", func(t *testing.T) {

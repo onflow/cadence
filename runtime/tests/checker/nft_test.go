@@ -69,7 +69,8 @@ pub contract interface NonFungibleToken {
         pub let id: UInt64
     }
 
-    // entitles references to withdraw
+    // entitles references to withdraw:
+    // TODO: https://github.com/onflow/cadence/issues/2503
     entitlement Withdrawable
 
     // Interface to mediate withdraws from the Collection
