@@ -1822,6 +1822,7 @@ func (v Resource) GetFields() []Field {
 	if v.ResourceType == nil {
 		return nil
 	}
+
 	return v.ResourceType.Fields
 }
 
