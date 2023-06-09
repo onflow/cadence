@@ -14285,6 +14285,10 @@ func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRang
 		if v.Kind == common.CompositeKindResource {
 			return v.OwnerValue(interpreter, locationRange)
 		}
+	case sema.CompositeForEachAttachmentFunctionName:
+		if v.Kind.SupportsAttachments() {
+			return v.forEachAttachmentFunction(interpreter, locationRange)
+		}
 	}
 
 	return nil
@@ -15302,6 +15306,51 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 		attachments = append(attachments, attachment)
 	})
 	return attachments
+}
+
+func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
+	return NewHostFunctionValue(
+		interpreter,
+		sema.CompositeForEachAttachmentFunctionType(interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType).GetCompositeKind()),
+		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
+			functionValue, ok := invocation.Arguments[0].(FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			fn := func(attachment *CompositeValue) {
+
+				attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
+
+				// attachments are unauthorized during iteration
+				attachmentReferenceAuth := UnauthorizedAccess
+
+				attachmentReference := NewEphemeralReferenceValue(
+					interpreter,
+					attachmentReferenceAuth,
+					attachment,
+					attachmentType,
+				)
+
+				invocation := NewInvocation(
+					interpreter,
+					nil,
+					nil,
+					nil,
+					[]Value{attachmentReference},
+					[]sema.Type{sema.NewReferenceType(interpreter, attachmentType, sema.UnauthorizedAccess)},
+					nil,
+					locationRange,
+				)
+				functionValue.invoke(invocation)
+			}
+
+			v.forEachAttachment(interpreter, locationRange, fn)
+			return Void
+		},
+	)
 }
 
 func attachmentReferenceAuthorization(
