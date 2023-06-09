@@ -3199,107 +3199,119 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 
 	// Struct with wrong field type
 
-	malformedStructType1 := &cadence.StructType{
-		Location:            common.ScriptLocation{},
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "a",
-				Type:       cadence.IntType{},
-			},
-		},
-	}
-
-	malformedStruct1 := cadence.Struct{
-		StructType: malformedStructType1,
-		Fields: []cadence.Value{
-			cadence.NewInt(3),
-		},
-	}
-
-	// Struct with wrong field name
-
-	malformedStruct2 := cadence.Struct{
-		StructType: &cadence.StructType{
+	newMalformedStructType1 := func() *cadence.StructType {
+		return &cadence.StructType{
 			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
-					Identifier: "nonExisting",
-					Type:       cadence.StringType{},
+					Identifier: "a",
+					Type:       cadence.IntType{},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.String("John"),
-		},
+		}
+	}
+
+	newMalformedStruct1 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: newMalformedStructType1(),
+			Fields: []cadence.Value{
+				cadence.NewInt(3),
+			},
+		}
+	}
+
+	// Struct with wrong field name
+
+	newMalformedStruct2 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "nonExisting",
+						Type:       cadence.StringType{},
+					},
+				},
+			},
+			Fields: []cadence.Value{
+				cadence.String("John"),
+			},
+		}
 	}
 
 	// Struct with nested malformed array value
-	malformedStruct3 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.VariableSizedArrayType{
-						ElementType: malformedStructType1,
+	newMalformedStruct3 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Bar",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type: &cadence.VariableSizedArrayType{
+							ElementType: newMalformedStructType1(),
+						},
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewArray([]cadence.Value{
-				malformedStruct1,
-			}),
-		},
+			Fields: []cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					newMalformedStruct1(),
+				}),
+			},
+		}
 	}
 
 	// Struct with nested malformed dictionary value
-	malformedStruct4 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Baz",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.DictionaryType{
-						KeyType:     cadence.StringType{},
-						ElementType: malformedStructType1,
+	newMalformedStruct4 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Baz",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type: &cadence.DictionaryType{
+							KeyType:     cadence.StringType{},
+							ElementType: newMalformedStructType1(),
+						},
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewDictionary([]cadence.KeyValuePair{
-				{
-					Key:   cadence.String("foo"),
-					Value: malformedStruct1,
-				},
-			}),
-		},
+			Fields: []cadence.Value{
+				cadence.NewDictionary([]cadence.KeyValuePair{
+					{
+						Key:   cadence.String("foo"),
+						Value: newMalformedStruct1(),
+					},
+				}),
+			},
+		}
 	}
 
 	// Struct with nested array with mismatching element type
-	malformedStruct5 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.VariableSizedArrayType{
-						ElementType: malformedStructType1,
+	newMalformedStruct5 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Bar",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type: &cadence.VariableSizedArrayType{
+							ElementType: newMalformedStructType1(),
+						},
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewArray([]cadence.Value{
-				cadence.String("mismatching value"),
-			}),
-		},
+			Fields: []cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.String("mismatching value"),
+				}),
+			},
+		}
 	}
 
 	type argumentPassingTest struct {
@@ -3314,38 +3326,38 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:                                    "Malformed Struct field type",
 			typeSignature:                            "Foo",
-			exportedValue:                            malformedStruct1,
+			exportedValue:                            newMalformedStruct1(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed Struct field name",
 			typeSignature:                            "Foo",
-			exportedValue:                            malformedStruct2,
+			exportedValue:                            newMalformedStruct2(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed AnyStruct",
 			typeSignature:                            "AnyStruct",
-			exportedValue:                            malformedStruct1,
+			exportedValue:                            newMalformedStruct1(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed nested struct array",
 			typeSignature:                            "Bar",
-			exportedValue:                            malformedStruct3,
+			exportedValue:                            newMalformedStruct3(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed nested struct dictionary",
 			typeSignature:                            "Baz",
-			exportedValue:                            malformedStruct4,
+			exportedValue:                            newMalformedStruct4(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Variable-size array with malformed element",
 			typeSignature: "[Foo]",
 			exportedValue: cadence.NewArray([]cadence.Value{
-				malformedStruct1,
+				newMalformedStruct1(),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
@@ -3353,7 +3365,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			label:         "Constant-size array with malformed element",
 			typeSignature: "[Foo; 1]",
 			exportedValue: cadence.NewArray([]cadence.Value{
-				malformedStruct1,
+				newMalformedStruct1(),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
@@ -3388,13 +3400,13 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:                                    "Inner array with mismatching element",
 			typeSignature:                            "Bar",
-			exportedValue:                            malformedStruct5,
+			exportedValue:                            newMalformedStruct5(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed Optional",
 			typeSignature:                            "Foo?",
-			exportedValue:                            cadence.NewOptional(malformedStruct1),
+			exportedValue:                            cadence.NewOptional(newMalformedStruct1()),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
@@ -3403,7 +3415,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("foo"),
-					Value: malformedStruct1,
+					Value: newMalformedStruct1(),
 				},
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
