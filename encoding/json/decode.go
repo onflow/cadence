@@ -960,7 +960,10 @@ func (d *Decoder) decodeFieldType(valueJSON any, results typeDecodingResults) ca
 }
 
 func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, returnValue any, results typeDecodingResults) cadence.Type {
-	typeParameters := d.decodeTypeParameters(toSlice(typeParametersValue), results)
+	var typeParameters []cadence.TypeParameter
+	if typeParametersValue != nil {
+		typeParameters = d.decodeTypeParameters(toSlice(typeParametersValue), results)
+	}
 	parameters := d.decodeParameters(toSlice(parametersValue), results)
 	returnType := d.decodeType(returnValue, results)
 
@@ -1132,7 +1135,7 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 
 	switch kindValue {
 	case "Function":
-		typeParametersValue := obj.Get(typeParametersKey)
+		typeParametersValue := obj[typeParametersKey]
 		parametersValue := obj.Get(parametersKey)
 		returnValue := obj.Get(returnKey)
 		return d.decodeFunctionType(typeParametersValue, parametersValue, returnValue, results)

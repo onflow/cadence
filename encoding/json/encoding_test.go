@@ -2440,7 +2440,7 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
-	t.Run("with static function", func(t *testing.T) {
+	t.Run("with static function, with type parameters", func(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
@@ -2487,6 +2487,46 @@ func TestEncodeType(t *testing.T) {
                 }
               }
             `,
+		)
+
+	})
+
+	t.Run("with static function, without type parameters (decode only)", func(t *testing.T) {
+
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Function",
+                    "typeID": "((String):Int)",
+                    "return": {
+                      "kind": "Int"
+                    },
+                    "parameters": [
+                      {
+                        "label": "qux",
+                        "id": "baz",
+                        "type": {
+                          "kind": "String"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            `,
+			cadence.TypeValue{
+				StaticType: &cadence.FunctionType{
+					Parameters: []cadence.Parameter{
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+					},
+					ReturnType: cadence.IntType{},
+				},
+			},
 		)
 
 	})
