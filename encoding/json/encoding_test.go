@@ -3456,3 +3456,77 @@ func TestExportFunctionValue(t *testing.T) {
         `,
 	)
 }
+
+func TestImportFunctionValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without type parameters", func(t *testing.T) {
+
+		t.Parallel()
+
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Function",
+                "value": {
+                  "functionType": {
+                    "kind": "Function",
+                    "typeID": "(():Void)",
+                    "parameters": [],
+                    "return": {
+                      "kind": "Void"
+                    }
+                  }
+                }
+              }
+            `,
+			cadence.Function{
+				FunctionType: &cadence.FunctionType{
+					Parameters: []cadence.Parameter{},
+					ReturnType: cadence.VoidType{},
+				},
+			},
+		)
+	})
+
+	t.Run("with type parameters", func(t *testing.T) {
+
+		t.Parallel()
+
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Function",
+                "value": {
+                  "functionType": {
+                    "kind": "Function",
+                    "typeID": "(<T>():Void)",
+                    "typeParameters": [
+                      {"name": "T"}
+                    ],
+                    "parameters": [],
+                    "return": {
+                      "kind": "Void"
+                    }
+                  }
+                }
+              }
+            `,
+			cadence.Function{
+				FunctionType: &cadence.FunctionType{
+					TypeParameters: []cadence.TypeParameter{
+						{Name: "T"},
+					},
+					Parameters: []cadence.Parameter{},
+					ReturnType: cadence.VoidType{},
+				},
+			},
+		)
+	})
+
+}

@@ -135,6 +135,7 @@ const (
 	typeParametersKey = "typeParameters"
 	returnKey         = "return"
 	typeBoundKey      = "typeBound"
+	functionTypeKey   = "functionType"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -229,6 +230,8 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeCapability(valueJSON)
 	case enumTypeStr:
 		return d.decodeEnum(valueJSON)
+	case functionTypeStr:
+		return d.decodeFunction(valueJSON)
 	}
 
 	panic(errors.NewDefaultUserError("invalid type: %s", typeStr))
@@ -880,6 +883,20 @@ func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 		panic(errors.NewDefaultUserError("failed to decode path: %w", err))
 	}
 	return path
+}
+
+func (d *Decoder) decodeFunction(valueJSON any) cadence.Function {
+	obj := toObject(valueJSON)
+
+	functionType, ok := d.decodeType(obj.Get(functionTypeKey), typeDecodingResults{}).(*cadence.FunctionType)
+	if !ok {
+		panic(errors.NewDefaultUserError("invalid function: invalid function type"))
+	}
+
+	return cadence.NewMeteredFunction(
+		d.gauge,
+		functionType,
+	)
 }
 
 func (d *Decoder) decodeTypeParameter(valueJSON any, results typeDecodingResults) cadence.TypeParameter {
