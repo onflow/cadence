@@ -135,6 +135,7 @@ const (
 	typeParametersKey = "typeParameters"
 	returnKey         = "return"
 	typeBoundKey      = "typeBound"
+	functionTypeKey   = "functionType"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -229,6 +230,8 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeCapability(valueJSON)
 	case enumTypeStr:
 		return d.decodeEnum(valueJSON)
+	case functionTypeStr:
+		return d.decodeFunction(valueJSON)
 	}
 
 	panic(errors.NewDefaultUserError("invalid type: %s", typeStr))
@@ -882,6 +885,20 @@ func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 	return path
 }
 
+func (d *Decoder) decodeFunction(valueJSON any) cadence.Function {
+	obj := toObject(valueJSON)
+
+	functionType, ok := d.decodeType(obj.Get(functionTypeKey), typeDecodingResults{}).(*cadence.FunctionType)
+	if !ok {
+		panic(errors.NewDefaultUserError("invalid function: invalid function type"))
+	}
+
+	return cadence.NewMeteredFunction(
+		d.gauge,
+		functionType,
+	)
+}
+
 func (d *Decoder) decodeTypeParameter(valueJSON any, results typeDecodingResults) cadence.TypeParameter {
 	obj := toObject(valueJSON)
 	// Unmetered because decodeTypeParameter is metered in decodeTypeParameters and called nowhere else
@@ -960,7 +977,10 @@ func (d *Decoder) decodeFieldType(valueJSON any, results typeDecodingResults) ca
 }
 
 func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, returnValue any, results typeDecodingResults) cadence.Type {
-	typeParameters := d.decodeTypeParameters(toSlice(typeParametersValue), results)
+	var typeParameters []cadence.TypeParameter
+	if typeParametersValue != nil {
+		typeParameters = d.decodeTypeParameters(toSlice(typeParametersValue), results)
+	}
 	parameters := d.decodeParameters(toSlice(parametersValue), results)
 	returnType := d.decodeType(returnValue, results)
 
@@ -1132,7 +1152,7 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 
 	switch kindValue {
 	case "Function":
-		typeParametersValue := obj.Get(typeParametersKey)
+		typeParametersValue := obj[typeParametersKey]
 		parametersValue := obj.Get(parametersKey)
 		returnValue := obj.Get(returnKey)
 		return d.decodeFunctionType(typeParametersValue, parametersValue, returnValue, results)
