@@ -318,6 +318,13 @@ func (e *Encoder) encodeReferenceType(
 	)
 }
 
+func (e *Encoder) encodeAuthorization(
+	auth cadence.Authorization,
+) error {
+	// TODO: implement this
+	return e.enc.EncodeNil()
+}
+
 // encodeReferenceTypeWithRawTag encodes cadence.ReferenceType
 // with given tag number and encode type function.
 func (e *Encoder) encodeReferenceTypeWithRawTag(
@@ -338,9 +345,8 @@ func (e *Encoder) encodeReferenceTypeWithRawTag(
 		return err
 	}
 
-	// element 0: authorized as bool
-	// TODO: implement in later PR
-	// err = e.enc.EncodeBool(typ.Authorized)
+	// element 0: authorization
+	err = e.encodeAuthorization(typ.Authorization)
 	if err != nil {
 		return err
 	}

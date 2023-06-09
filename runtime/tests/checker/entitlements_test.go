@@ -114,9 +114,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -129,9 +130,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("attachment", func(t *testing.T) {
@@ -144,9 +146,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("interface", func(t *testing.T) {
@@ -159,9 +162,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("contract", func(t *testing.T) {
@@ -174,9 +178,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("event", func(t *testing.T) {
@@ -189,9 +194,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("enum", func(t *testing.T) {
@@ -204,9 +210,10 @@ func TestCheckBasicEntitlementMappingNonEntitlements(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 	})
 
 	t.Run("simple type", func(t *testing.T) {
@@ -3011,8 +3018,14 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		contract C {
-			entitlement mapping E {}
-			access(E) attachment A for AnyStruct {}
+			entitlement X 
+			entitlement Y
+			entitlement mapping E {
+				X -> Y
+			}	
+			access(E) attachment A for AnyStruct {
+				access(Y) fun foo() {}
+			}
 		}
 		`)
 
@@ -4541,6 +4554,31 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			post {
 				result.foo(): ""
 				result.bar(): ""
+			}
+			return <-r
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("optional result value usage resource", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		resource R {
+			view access(X) fun foo(): Bool {
+				return true
+			}
+			view access(X, Y) fun bar(): Bool {
+				return true
+			}
+		}
+		fun bar(r: @R): @R? {
+			post {
+				result?.foo()!: ""
+				result?.bar()!: ""
 			}
 			return <-r
 		}

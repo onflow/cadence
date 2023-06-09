@@ -78,7 +78,7 @@ func (a EntitlementSetAccess) Description() string {
 }
 
 func (a EntitlementSetAccess) AccessKeyword() string {
-	return a.string(func(ty Type) string { return ty.String() })
+	return a.string(func(ty Type) string { return ty.QualifiedString() })
 }
 
 func (a EntitlementSetAccess) AuthKeyword() string {
@@ -297,7 +297,7 @@ func (e EntitlementMapAccess) Domain() EntitlementSetAccess {
 			return r.Input
 		},
 	)
-	e.domain = NewEntitlementSetAccess(domain, Disjunction)
+	e.domain = NewEntitlementSetAccess(domain, Conjunction)
 	return e.domain
 }
 

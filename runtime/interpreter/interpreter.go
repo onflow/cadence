@@ -426,9 +426,11 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	var self *MemberAccessibleValue
 	var base *EphemeralReferenceValue
+	var boundAuth *EntitlementSetAuthorization
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.Self
 		base = boundFunc.Base
+		boundAuth = boundFunc.BoundAuthorization
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
@@ -436,6 +438,7 @@ func (interpreter *Interpreter) InvokeExternally(
 		interpreter,
 		self,
 		base,
+		boundAuth,
 		preparedArguments,
 		nil,
 		nil,
@@ -776,14 +779,30 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 		return returnValue
 	}
 
+	resultAuth := func(ty sema.Type) Authorization {
+		var auth Authorization = UnauthorizedAccess
+		// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
+		if entitlementSupportingType, ok := ty.(sema.EntitlementSupportingType); ok {
+			supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+			if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
+				access := sema.EntitlementSetAccess{
+					SetKind:      sema.Conjunction,
+					Entitlements: supportedEntitlements,
+				}
+				auth = ConvertSemaAccesstoStaticAuthorization(interpreter, access)
+			}
+		}
+		return auth
+	}
+
 	if optionalType, ok := returnType.(*sema.OptionalType); ok {
 		switch returnValue := returnValue.(type) {
 		// If this value is an optional value (T?), then transform it into an optional reference (&T)?.
 		case *SomeValue:
-			// ENTITLEMENTS TODO: the result value should be fully qualified to the return type, since it is created from an existing resource in scope
+
 			innerValue := NewEphemeralReferenceValue(
 				interpreter,
-				UnauthorizedAccess,
+				resultAuth(returnType),
 				returnValue.value,
 				optionalType.Type,
 			)
@@ -796,8 +815,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 	}
 
 	interpreter.maybeTrackReferencedResourceKindedValue(returnValue)
-	// ENTITLEMENTS TODO: the result value should be fully qualified to the return type, since it is created from an existing resource in scope
-	return NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, returnValue, returnType)
+	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType)
 }
 
 func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
@@ -1242,9 +1260,17 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				var self MemberAccessibleValue = value
 				if declaration.Kind() == common.CompositeKindAttachment {
-					// ENTITLEMENTS TODO: self's type in the constructor should be the image of the attachment's entitlement map, since
+
+					var auth Authorization = UnauthorizedAccess
+					attachmentType := interpreter.MustSemaTypeOfValue(value).(*sema.CompositeType)
+					// Self's type in the constructor is codomain of the attachment's entitlement map, since
 					// the constructor can only be called when in possession of the base resource
-					self = NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, interpreter.MustSemaTypeOfValue(value))
+					// if the attachment is declared with pub access, then self is unauthorized
+					if attachmentType.AttachmentEntitlementAccess != nil {
+						auth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
+					}
+					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType)
+
 					// set the base to the implicitly provided value, and remove this implicit argument from the list
 					implicitArgumentPos := len(invocation.Arguments) - 1
 					invocation.Base = invocation.Arguments[implicitArgumentPos].(*EphemeralReferenceValue)
@@ -1653,6 +1679,26 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
+func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.Type {
+	if interpreter.SharedState.currentEntitlementMappedValue == nil {
+		return ty
+	}
+
+	return ty.Map(interpreter, make(map[*sema.TypeParameter]*sema.TypeParameter), func(t sema.Type) sema.Type {
+		switch refType := t.(type) {
+		case *sema.ReferenceType:
+			if _, isMappedAuth := refType.Authorization.(sema.EntitlementMapAccess); isMappedAuth {
+				return sema.NewReferenceType(
+					interpreter,
+					refType.Type,
+					interpreter.MustConvertStaticAuthorizationToSemaAccess(*interpreter.SharedState.currentEntitlementMappedValue),
+				)
+			}
+		}
+		return t
+	})
+}
+
 func (interpreter *Interpreter) ValueIsSubtypeOfSemaType(value Value, targetType sema.Type) bool {
 	return interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), targetType)
 }
@@ -1670,6 +1716,8 @@ func (interpreter *Interpreter) transferAndConvert(
 		false,
 		nil,
 	)
+
+	targetType = interpreter.substituteMappedEntitlements(targetType)
 
 	result := interpreter.ConvertAndBox(
 		locationRange,
@@ -1832,6 +1880,8 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	case *sema.ReferenceType:
 		if !valueType.Equal(unwrappedTargetType) {
+			// transferring a reference at runtime does not change its entitlements; this is so that an upcast reference
+			// can later be downcast back to its original entitlement set
 			switch ref := value.(type) {
 			case *EphemeralReferenceValue:
 				return NewEphemeralReferenceValue(
@@ -2752,6 +2802,21 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 	return typ, nil
 }
 
+func lookupEntitlement(interpreter *Interpreter, typeID string) (*sema.EntitlementType, error) {
+	_, _, err := common.DecodeTypeID(interpreter, typeID)
+	// if the typeID is invalid, return nil
+	if err != nil {
+		return nil, err
+	}
+
+	typ, err := interpreter.getEntitlement(common.TypeID(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	return typ, nil
+}
+
 func init() {
 
 	converterNames := make(map[string]struct{}, len(ConverterDeclarations))
@@ -2799,6 +2864,15 @@ func init() {
 		NewUnmeteredHostFunctionValue(
 			sema.CompositeTypeFunctionType,
 			compositeTypeFunction,
+		),
+	)
+
+	defineBaseValue(
+		BaseActivation,
+		"ReferenceType",
+		NewUnmeteredHostFunctionValue(
+			sema.ReferenceTypeFunctionType,
+			referenceTypeFunction,
 		),
 	)
 
@@ -2858,6 +2932,59 @@ func dictionaryTypeFunction(invocation Invocation) Value {
 				invocation.Interpreter,
 				keyType,
 				valueType,
+			),
+		),
+	)
+}
+
+func referenceTypeFunction(invocation Invocation) Value {
+	entitlementValues, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	typeValue, ok := invocation.Arguments[1].(TypeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	var authorization Authorization = UnauthorizedAccess
+	var entitlements []common.TypeID = make([]common.TypeID, 0, entitlementValues.Count())
+	errInIteration := false
+
+	entitlementValues.Iterate(invocation.Interpreter, func(element Value) (resume bool) {
+		entitlementString, isString := element.(*StringValue)
+		if !isString {
+			errInIteration = true
+			return false
+		}
+
+		_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
+		if err != nil {
+			errInIteration = true
+			return false
+		}
+		entitlements = append(entitlements, common.TypeID(entitlementString.Str))
+
+		return true
+	})
+
+	if errInIteration {
+		return Nil
+	}
+
+	if len(entitlements) > 0 {
+		authorization = NewEntitlementSetAuthorization(invocation.Interpreter, entitlements, sema.Conjunction)
+	}
+
+	return NewSomeValueNonCopying(
+		invocation.Interpreter,
+		NewTypeValue(
+			invocation.Interpreter,
+			NewReferenceStaticType(
+				invocation.Interpreter,
+				authorization,
+				typeValue.Type,
 			),
 		),
 	)
@@ -3181,34 +3308,6 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		),
 	},
 	{
-		name: "ReferenceType",
-		converter: NewUnmeteredHostFunctionValue(
-			sema.ReferenceTypeFunctionType,
-			func(invocation Invocation) Value {
-				_, ok := invocation.Arguments[0].(BoolValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				typeValue, ok := invocation.Arguments[1].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return NewTypeValue(
-					invocation.Interpreter,
-					NewReferenceStaticType(
-						invocation.Interpreter,
-						// ENTITLEMENTS TODO: this should take a set of entitlements and produce a reference based on those
-						UnauthorizedAccess,
-						typeValue.Type,
-						nil,
-					),
-				)
-			},
-		),
-	},
-	{
 		name: "CapabilityType",
 		converter: NewUnmeteredHostFunctionValue(
 			sema.CapabilityTypeFunctionType,
@@ -3317,33 +3416,9 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 			// First, check that the static type of the referenced value
 			// is a subtype of the super type
 
-			if subType.ReferencedType == nil ||
-				!interpreter.IsSubTypeOfSemaType(subType.ReferencedType, superType.Type) {
-
-				return false
-			}
-
-			// If the reference value is authorized it may be downcasted
-
-			// ENTITLEMENTS TODO: Don't restrict downcasting based on authorization
-			authorized := subType.Authorization != UnauthorizedAccess
-
-			if authorized {
-				return true
-			}
-
-			// If the reference value is not authorized,
-			// it may not be down-casted
-
-			borrowType := interpreter.MustConvertStaticToSemaType(subType.BorrowedType)
-
-			return sema.IsSubType(
-				&sema.ReferenceType{
-					Authorization: interpreter.MustConvertStaticAuthorizationToSemaAccess(subType.Authorization),
-					Type:          borrowType,
-				},
-				superType,
-			)
+			return subType.ReferencedType != nil &&
+				interpreter.IsSubTypeOfSemaType(subType.ReferencedType, superType.Type) &&
+				superType.Authorization.PermitsAccess(interpreter.MustConvertStaticAuthorizationToSemaAccess(subType.Authorization))
 		}
 
 		return superType == sema.AnyStructType
@@ -3456,6 +3531,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 
 				subInvocation := NewInvocation(
 					inter,
+					nil,
 					nil,
 					nil,
 					[]Value{pathValue, runtimeType},
@@ -3805,8 +3881,8 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 }
 
 var authAccountReferenceStaticType = ReferenceStaticType{
-	BorrowedType:   PrimitiveStaticTypeAuthAccount,
 	ReferencedType: PrimitiveStaticTypeAuthAccount,
+	Authorization:  UnauthorizedAccess,
 }
 
 // Linking
@@ -4182,6 +4258,8 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 				return nil, UnauthorizedAccess, nil
 			}
 
+			wantedReferenceType = allowedType.(*sema.ReferenceType)
+
 			targetPath := value.TargetPath
 			paths = append(paths, targetPath)
 			path = targetPath
@@ -4429,6 +4507,63 @@ func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKin
 	if onMeterComputation != nil {
 		onMeterComputation(compKind, intensity)
 	}
+}
+
+func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string) *sema.Access {
+	typ, err := interpreter.ConvertStaticToSemaType(self.StaticType(interpreter))
+	// some values (like transactions) do not have types that can be looked up this way. These types
+	// do not support entitled members, so their access is always unauthorized
+	if err != nil {
+		return &sema.UnauthorizedAccess
+	}
+	member, hasMember := typ.GetMembers()[identifier]
+	// certain values (like functions) have builtin members that are not present on the type
+	// in such cases the access is always unauthorized
+	if !hasMember {
+		return &sema.UnauthorizedAccess
+	}
+	return &member.Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {}).Access
+}
+
+func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAccess *sema.Access, resultValue Value) Value {
+	if memberAccess == nil {
+		return resultValue
+	}
+	if mappedAccess, isMappedAccess := (*memberAccess).(sema.EntitlementMapAccess); isMappedAccess {
+		var auth EntitlementSetAuthorization
+		switch selfValue := self.(type) {
+		case AuthorizedValue:
+			selfAccess := interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization())
+			imageAccess, err := mappedAccess.Image(selfAccess, func() ast.Range { return ast.EmptyRange })
+			if err != nil {
+				panic(err)
+			}
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, imageAccess).(EntitlementSetAuthorization)
+		default:
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess.Codomain()).(EntitlementSetAuthorization)
+		}
+
+		switch refValue := resultValue.(type) {
+		case *EphemeralReferenceValue:
+			return NewEphemeralReferenceValue(interpreter, auth, refValue.Value, refValue.BorrowedType)
+		case *StorageReferenceValue:
+			return NewStorageReferenceValue(interpreter, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
+		case BoundFunctionValue:
+			return NewBoundFunctionValue(interpreter, refValue.Function, refValue.Self, refValue.Base, &auth)
+		}
+	}
+	return resultValue
+}
+
+func (interpreter *Interpreter) getMemberWithAuthMapping(self Value, locationRange LocationRange, identifier string) Value {
+	result := interpreter.getMember(self, locationRange, identifier)
+	if result == nil {
+		return nil
+	}
+	// once we have obtained the member, if it was declared with entitlement-mapped access, we must compute the output of the map based
+	// on the runtime authorizations of the acccessing reference or composite
+	memberAccess := interpreter.getAccessOfMember(self, identifier)
+	return interpreter.mapMemberValueAuthorization(self, memberAccess, result)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.

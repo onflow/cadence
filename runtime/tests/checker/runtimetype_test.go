@@ -598,50 +598,35 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 			name: "auth(X, Y) &R",
 			code: `
 			  resource R {}
-              let result = ReferenceType(entitlements: ["S.test.X", "S.test.Y"], setKind: "&", type: Type<@R>())
-            `,
-			expectedError: nil,
-		},
-		{
-			name: "auth(X | Y) &R",
-			code: `
-			  resource R {}
-              let result = ReferenceType(entitlements: ["S.test.X", "S.test.Y"], setKind: "|", type: Type<@R>())
+              let result = ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())
             `,
 			expectedError: nil,
 		},
 		{
 			name: "&String",
 			code: `
-              let result = ReferenceType(entitlements: nil, setKind: "", type: Type<String>())
+              let result = ReferenceType(entitlements: [], type: Type<String>())
             `,
 			expectedError: nil,
 		},
 		{
 			name: "type mismatch first arg",
 			code: `
-              let result = ReferenceType(entitlements: "", setKind: "", type: Type<Int>())
+              let result = ReferenceType(entitlements: "", type: Type<Int>())
             `,
 			expectedError: &sema.TypeMismatchError{},
 		},
 		{
 			name: "type mismatch second arg",
 			code: `
-              let result = ReferenceType(entitlements: [], setKind: 0, type: Type<Int>())
-            `,
-			expectedError: &sema.TypeMismatchError{},
-		},
-		{
-			name: "type mismatch third arg",
-			code: `
-              let result = ReferenceType(entitlements: [], setKind:"", type: "")
+              let result = ReferenceType(entitlements: [], type: "")
             `,
 			expectedError: &sema.TypeMismatchError{},
 		},
 		{
 			name: "too many args",
 			code: `
-              let result = ReferenceType(entitlements: [], setKind:"", type: Type<String>(), Type<Int>())
+              let result = ReferenceType(entitlements: [], type: Type<String>(), Type<Int>())
             `,
 			expectedError: &sema.ArgumentCountError{},
 		},
@@ -663,7 +648,7 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 			name: "first label missing",
 			code: `
 			  resource R {}
-              let result = ReferenceType([], setKind: "", type: Type<@R>())
+              let result = ReferenceType([], type: Type<@R>())
             `,
 			expectedError: &sema.MissingArgumentLabelError{},
 		},
@@ -671,15 +656,7 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 			name: "second label missing",
 			code: `
 			  resource R {}
-              let result = ReferenceType(entitlements: [], "", type: Type<@R>())
-            `,
-			expectedError: &sema.MissingArgumentLabelError{},
-		},
-		{
-			name: "third label missing",
-			code: `
-			  resource R {}
-              let result = ReferenceType(entitlements: [], setKind: "", Type<@R>())
+              let result = ReferenceType(entitlements: [], Type<@R>())
             `,
 			expectedError: &sema.MissingArgumentLabelError{},
 		},
@@ -692,7 +669,7 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 			if testCase.expectedError == nil {
 				require.NoError(t, err)
 				assert.Equal(t,
-					sema.MetaType,
+					sema.NewOptionalType(nil, sema.MetaType),
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {

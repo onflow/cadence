@@ -156,6 +156,7 @@ type Elaboration struct {
 	indexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
 	attachmentAccessTypes               map[*ast.IndexExpression]Type
 	attachmentRemoveTypes               map[*ast.RemoveStatement]Type
+	attachTypes                         map[*ast.AttachExpression]*CompositeType
 	forceExpressionTypes                map[*ast.ForceExpression]Type
 	staticCastTypes                     map[*ast.CastingExpression]CastTypes
 	expressionTypes                     map[ast.Expression]ExpressionTypes
@@ -1001,6 +1002,27 @@ func (e *Elaboration) SetAttachmentRemoveTypes(
 		e.attachmentRemoveTypes = map[*ast.RemoveStatement]Type{}
 	}
 	e.attachmentRemoveTypes[stmt] = ty
+}
+
+func (e *Elaboration) AttachTypes(
+	expr *ast.AttachExpression,
+) (
+	ty *CompositeType,
+) {
+	if e.attachTypes == nil {
+		return
+	}
+	return e.attachTypes[expr]
+}
+
+func (e *Elaboration) SetAttachTypes(
+	expr *ast.AttachExpression,
+	ty *CompositeType,
+) {
+	if e.attachTypes == nil {
+		e.attachTypes = map[*ast.AttachExpression]*CompositeType{}
+	}
+	e.attachTypes[expr] = ty
 }
 
 func (e *Elaboration) SetExpressionTypes(expression ast.Expression, types ExpressionTypes) {

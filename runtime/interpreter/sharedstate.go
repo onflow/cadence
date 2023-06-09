@@ -34,6 +34,7 @@ type SharedState struct {
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues ReferencedResourceKindedValues
 	resourceVariables              map[ResourceKindedValue]*Variable
+	currentEntitlementMappedValue  *EntitlementSetAuthorization
 	inStorageIteration             bool
 	storageMutatedDuringIteration  bool
 }

@@ -477,8 +477,11 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 				},
 				Address: cadence.Address{},
 				BorrowType: &cadence.ReferenceType{
-					Authorization: cadence.EntitlementMapAuthorization{TypeID: "X"},
-					Type:          cadence.AnyType{},
+					Authorization: cadence.EntitlementSetAuthorization{
+						Entitlements: []common.TypeID{common.NewTypeIDFromQualifiedName(nil, common.ScriptLocation{}, "X")},
+						Kind:         cadence.Conjunction,
+					},
+					Type: cadence.AnyType{},
 				},
 			},
 		},
@@ -525,6 +528,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 
 			script := []byte(fmt.Sprintf(
 				`
+				  pub entitlement X
                   pub fun main(x: %s) {}
                 `,
 				test.TypeName,

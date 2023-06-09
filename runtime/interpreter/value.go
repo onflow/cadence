@@ -14221,7 +14221,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		// is a necessary pre-requisite for calling any members of the attachment. However, in
 		// the case of a destructor, this is called implicitly, and thus must have its `base`
 		// set manually
-		attachment.setBaseValue(interpreter, v)
+		attachment.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, attachment))
 		attachment.Destroy(interpreter, locationRange)
 	})
 
@@ -14244,6 +14244,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			interpreter,
 			&self,
 			base,
+			nil,
 			nil,
 			nil,
 			nil,
@@ -14377,7 +14378,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		if v.Kind == common.CompositeKindAttachment {
 			base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
 		}
-		return NewBoundFunctionValue(interpreter, function, &self, base)
+		return NewBoundFunctionValue(interpreter, function, &self, base, nil)
 	}
 
 	return nil
@@ -14962,12 +14963,6 @@ func (v *CompositeValue) Transfer(
 				// and does not need to be converted or copied
 
 				value := MustConvertStoredValue(interpreter, atreeValue)
-				// the base of an attachment is not stored in the atree, so in order to make the
-				// transfer happen properly, we set the base value here if this field is an attachment
-				if compositeValue, ok := value.(*CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
-					compositeValue.setBaseValue(interpreter, v)
-				}
-
 				value = value.Transfer(interpreter, locationRange, address, remove, nil)
 
 				return atreeKey, value, nil
@@ -15268,7 +15263,7 @@ func (v *CompositeValue) getBaseValue(interpreter *Interpreter, locationRange Lo
 	return v.base
 }
 
-func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue, authorization Authorization) {
 	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -15282,10 +15277,7 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 		baseType = ty
 	}
 
-	// the base reference can only be borrowed with the declared type of the attachment's base
-	// ENTITLEMENTS TODO: map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
-	v.base = NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, base, baseType)
-
+	v.base = NewEphemeralReferenceValue(interpreter, authorization, base, baseType)
 	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 }
 
@@ -15312,16 +15304,57 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 	return attachments
 }
 
+func attachmentReferenceAuthorization(
+	interpreter *Interpreter,
+	attachmentType *sema.CompositeType,
+	baseAccess sema.Access,
+) (Authorization, error) {
+	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
+	var attachmentReferenceAuth Authorization = UnauthorizedAccess
+	if attachmentType.AttachmentEntitlementAccess == nil {
+		return attachmentReferenceAuth, nil
+	}
+	attachmentReferenceAccess, err := attachmentType.AttachmentEntitlementAccess.Image(baseAccess, func() ast.Range { return ast.EmptyRange })
+	if err != nil {
+		return nil, err
+	}
+	return ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentReferenceAccess), nil
+}
+
+func attachmentBaseAuthorization(
+	interpreter *Interpreter,
+	attachment *CompositeValue,
+) Authorization {
+	var auth Authorization = UnauthorizedAccess
+	attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
+	if attachmentType.RequiredEntitlements.Len() > 0 {
+		baseAccess := sema.EntitlementSetAccess{
+			SetKind:      sema.Conjunction,
+			Entitlements: attachmentType.RequiredEntitlements,
+		}
+		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
+	}
+	return auth
+}
+
 func attachmentBaseAndSelfValues(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	v *CompositeValue,
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
 	base = v.getBaseValue(interpreter, locationRange)
+
+	attachmentType := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
+
+	var attachmentReferenceAuth Authorization = UnauthorizedAccess
+	if attachmentType.AttachmentEntitlementAccess != nil {
+		attachmentReferenceAuth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
+	}
+
 	// in attachment functions, self is a reference value
-	// ENTITLEMENTS TODO: map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
-	self = NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, v, interpreter.MustSemaTypeOfValue(v))
+	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v))
 	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
+
 	return
 }
 
@@ -15359,23 +15392,42 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationR
 	}
 }
 
+func (v *CompositeValue) getTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	keyType sema.Type,
+	baseAccess sema.Access,
+) Value {
+	attachment := v.getAttachmentValue(interpreter, locationRange, keyType)
+	if attachment == nil {
+		return Nil
+	}
+	attachmentType := keyType.(*sema.CompositeType)
+	// dynamically set the attachment's base to this composite, but with authorization based on the requested access on that attachment
+	attachment.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, attachment))
+
+	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
+	attachmentReferenceAuth, err := attachmentReferenceAuthorization(interpreter, attachmentType, baseAccess)
+	if err != nil {
+		return Nil
+	}
+	attachmentRef := NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, attachment, attachmentType)
+	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
+
+	return NewSomeValueNonCopying(interpreter, attachmentRef)
+}
+
 func (v *CompositeValue) GetTypeKey(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	ty sema.Type,
 ) Value {
-	attachment := v.getAttachmentValue(interpreter, locationRange, ty)
-	if attachment == nil {
-		return NilValue{}
+	var access sema.Access = sema.UnauthorizedAccess
+	attachmentTyp, isAttachmentType := ty.(*sema.CompositeType)
+	if isAttachmentType && attachmentTyp.AttachmentEntitlementAccess != nil {
+		access = attachmentTyp.AttachmentEntitlementAccess.Domain()
 	}
-	// dynamically set the attachment's base to this composite
-	attachment.setBaseValue(interpreter, v)
-
-	// ENTITLEMENTS TODO: map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
-	attachmentRef := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, attachment, ty)
-	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
-
-	return NewSomeValueNonCopying(interpreter, attachmentRef)
+	return v.getTypeKey(interpreter, locationRange, ty, access)
 }
 
 func (v *CompositeValue) SetTypeKey(
@@ -15694,6 +15746,7 @@ func (v *DictionaryValue) ForEachKey(
 	iterationInvocation := func(key Value) Invocation {
 		return NewInvocation(
 			interpreter,
+			nil,
 			nil,
 			nil,
 			[]Value{key},
@@ -16909,6 +16962,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRa
 						invocation.Interpreter,
 						nil,
 						nil,
+						nil,
 						[]Value{v},
 						[]sema.Type{valueType},
 						nil,
@@ -17131,12 +17185,15 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
+type AuthorizedValue interface {
+	GetAuthorization() Authorization
+}
+
 type ReferenceValue interface {
 	isReference()
 }
 
 // StorageReferenceValue
-
 type StorageReferenceValue struct {
 	BorrowedType         sema.Type
 	TargetPath           PathValue
@@ -17149,6 +17206,7 @@ var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
 var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
+var _ AuthorizedValue = &StorageReferenceValue{}
 var _ ReferenceValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
@@ -17216,9 +17274,12 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 	return NewReferenceStaticType(
 		inter,
 		v.Authorization,
-		ConvertSemaToStaticType(inter, v.BorrowedType),
 		self.StaticType(inter),
 	)
+}
+
+func (v *StorageReferenceValue) GetAuthorization() Authorization {
+	return v.Authorization
 }
 
 func (*StorageReferenceValue) IsImportable(_ *Interpreter) bool {
@@ -17374,6 +17435,15 @@ func (v *StorageReferenceValue) GetTypeKey(
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
 
+	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+		return selfComposite.getTypeKey(
+			interpreter,
+			locationRange,
+			key,
+			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+		)
+	}
+
 	return self.(TypeIndexableValue).
 		GetTypeKey(interpreter, locationRange, key)
 }
@@ -17500,6 +17570,7 @@ var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
+var _ AuthorizedValue = &EphemeralReferenceValue{}
 var _ ReferenceValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
@@ -17568,9 +17639,12 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 	return NewReferenceStaticType(
 		inter,
 		v.Authorization,
-		ConvertSemaToStaticType(inter, v.BorrowedType),
 		self.StaticType(inter),
 	)
+}
+
+func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
+	return v.Authorization
 }
 
 func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
@@ -17700,6 +17774,15 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 	key sema.Type,
 ) Value {
 	self := v.MustReferencedValue(interpreter, locationRange)
+
+	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+		return selfComposite.getTypeKey(
+			interpreter,
+			locationRange,
+			key,
+			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+		)
+	}
 
 	return self.(TypeIndexableValue).
 		GetTypeKey(interpreter, locationRange, key)
@@ -18938,8 +19021,9 @@ func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewCapabilityStaticType(
 		interpreter,
 		ReferenceStaticType{
-			BorrowedType:   authAccountStaticType,
 			ReferencedType: authAccountStaticType,
+			// ENTITLEMENTS TODO: eventually account types should support entitlements
+			Authorization: UnauthorizedAccess,
 		},
 	)
 }

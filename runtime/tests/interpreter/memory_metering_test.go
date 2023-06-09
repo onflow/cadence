@@ -8024,7 +8024,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(18), meter.getMemory(common.MemoryKindIdentifier))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
@@ -8143,7 +8143,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFunctionStaticType))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionStaticType))
 	})
 }
 
@@ -8462,7 +8462,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryEntry))
-		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("types", func(t *testing.T) {
@@ -9188,7 +9188,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 			},
 			{
 				name:        "Auth Reference",
-				constructor: "auth &AnyStruct",
+				constructor: "auth(X) &AnyStruct",
 			},
 			{
 				name:        "Capability",
@@ -9202,6 +9202,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				t.Parallel()
 
 				script := fmt.Sprintf(`
+				    entitlement X
                     pub fun main() {
                         log(Type<%s>())
                     }

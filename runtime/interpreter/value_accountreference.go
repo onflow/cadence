@@ -94,7 +94,6 @@ func (v *AccountReferenceValue) StaticType(inter *Interpreter) StaticType {
 	return NewReferenceStaticType(
 		inter,
 		UnauthorizedAccess,
-		ConvertSemaToStaticType(inter, v.BorrowedType),
 		PrimitiveStaticTypeAuthAccount,
 	)
 }

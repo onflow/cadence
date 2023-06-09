@@ -92,7 +92,7 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 				BorrowType: PrimitiveStaticTypeString,
 			}.Equal(
 				ReferenceStaticType{
-					BorrowedType: PrimitiveStaticTypeString,
+					ReferencedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -109,12 +109,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			ReferenceStaticType{
-				Authorization: UnauthorizedAccess,
-				BorrowedType:  PrimitiveStaticTypeString,
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeString,
 			}.Equal(
 				ReferenceStaticType{
-					Authorization: UnauthorizedAccess,
-					BorrowedType:  PrimitiveStaticTypeString,
+					Authorization:  UnauthorizedAccess,
+					ReferencedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -126,12 +126,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorization: UnauthorizedAccess,
-				BorrowedType:  PrimitiveStaticTypeInt,
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorization: UnauthorizedAccess,
-					BorrowedType:  PrimitiveStaticTypeString,
+					Authorization:  UnauthorizedAccess,
+					ReferencedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -143,12 +143,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorization: UnauthorizedAccess,
-				BorrowedType:  PrimitiveStaticTypeInt,
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorization: EntitlementMapAuthorization{TypeID: "Foo"},
-					BorrowedType:  PrimitiveStaticTypeInt,
+					Authorization:  EntitlementMapAuthorization{TypeID: "Foo"},
+					ReferencedType: PrimitiveStaticTypeInt,
 				},
 			),
 		)
@@ -160,7 +160,7 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				BorrowedType: PrimitiveStaticTypeString,
+				ReferencedType: PrimitiveStaticTypeString,
 			}.Equal(
 				CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
@@ -954,7 +954,7 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 				},
 			}).Equal(
 				ReferenceStaticType{
-					BorrowedType: PrimitiveStaticTypeInt,
+					ReferencedType: PrimitiveStaticTypeInt,
 				},
 			),
 		)
@@ -1346,10 +1346,12 @@ func TestStaticTypeConversion(t *testing.T) {
 		{
 			name: "Reference",
 			semaType: &sema.ReferenceType{
-				Type: sema.IntType,
+				Type:          sema.IntType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 			staticType: ReferenceStaticType{
-				BorrowedType: PrimitiveStaticTypeInt,
+				ReferencedType: PrimitiveStaticTypeInt,
+				Authorization:  UnauthorizedAccess,
 			},
 		},
 		{
@@ -1441,14 +1443,23 @@ func TestStaticTypeConversion(t *testing.T) {
 				}
 			}
 
+			getEntitlement := func(_ common.TypeID) (*sema.EntitlementType, error) {
+				require.FailNow(t, "getComposite should not be called")
+				return nil, nil
+			}
+
+			getEntitlementMap := func(_ common.TypeID) (*sema.EntitlementMapType, error) {
+				require.FailNow(t, "getComposite should not be called")
+				return nil, nil
+			}
+
 			convertedSemaType, err := ConvertStaticToSemaType(
 				nil,
 				test.staticType,
 				getInterface,
 				getComposite,
-				// dummy values, will replace in later PR
-				nil,
-				nil,
+				getEntitlement,
+				getEntitlementMap,
 			)
 			require.NoError(t, err)
 			require.Equal(t,

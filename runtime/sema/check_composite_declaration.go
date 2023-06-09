@@ -89,8 +89,8 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 	// in `A`'s definition.  Thus the definitions of `foo`, `bar`, and `baz` are valid,
 	// while the definition of `qux` is not.
 	var attachmentAccess Access = UnauthorizedAccess
-	if attachmentType.attachmentEntitlementAccess != nil {
-		attachmentAccess = *attachmentType.attachmentEntitlementAccess
+	if attachmentType.AttachmentEntitlementAccess != nil {
+		attachmentAccess = *attachmentType.AttachmentEntitlementAccess
 	}
 
 	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
@@ -629,7 +629,7 @@ func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclara
 
 	attachmentAccess := checker.accessFromAstAccess(declaration.Access)
 	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
-		composite.attachmentEntitlementAccess = &attachmentAccess
+		composite.AttachmentEntitlementAccess = &attachmentAccess
 	}
 
 	// add all the required entitlements to a set for this attachment
@@ -651,7 +651,7 @@ func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclara
 			InvalidType: nominalType,
 		})
 	}
-	composite.requiredEntitlements = requiredEntitlements
+	composite.RequiredEntitlements = requiredEntitlements
 
 	return composite
 }
@@ -2230,7 +2230,7 @@ func (checker *Checker) checkSpecialFunction(
 	checker.enterValueScope()
 	defer checker.leaveValueScope(specialFunction.EndPosition, checkResourceLoss)
 
-	fnAccess := checker.accessFromAstAccess(specialFunction.FunctionDeclaration.Access)
+	fnAccess := checker.effectiveMemberAccess(checker.accessFromAstAccess(specialFunction.FunctionDeclaration.Access), containerKind)
 
 	checker.declareSelfValue(containerType, containerDocString)
 	if containerType.GetCompositeKind() == common.CompositeKindAttachment {
@@ -2362,8 +2362,8 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 		// the `self` value in an attachment is considered fully-entitled to that attachment, or
 		// equivalently the entire codomain of the attachment's map
 		var selfAccess Access = UnauthorizedAccess
-		if typedSelfType.attachmentEntitlementAccess != nil {
-			selfAccess = typedSelfType.attachmentEntitlementAccess.Codomain()
+		if typedSelfType.AttachmentEntitlementAccess != nil {
+			selfAccess = typedSelfType.AttachmentEntitlementAccess.Codomain()
 		}
 		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, selfAccess)
 	}
@@ -2391,9 +2391,9 @@ func (checker *Checker) declareBaseValue(baseType Type, attachmentType *Composit
 	// -------------------------------
 	// within the body of `foo`, the `base` value will be entitled to `E` but not `F`, because only `E` was required in the attachment's declaration
 	var baseAccess Access = UnauthorizedAccess
-	if attachmentType.requiredEntitlements != nil && attachmentType.requiredEntitlements.Len() > 0 {
+	if attachmentType.RequiredEntitlements.Len() > 0 {
 		baseAccess = EntitlementSetAccess{
-			Entitlements: attachmentType.requiredEntitlements,
+			Entitlements: attachmentType.RequiredEntitlements,
 			SetKind:      Conjunction,
 		}
 	}

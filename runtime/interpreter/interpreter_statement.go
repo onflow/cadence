@@ -472,7 +472,7 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 
 	if attachment.IsResourceKinded(interpreter) {
 		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
-		attachment.setBaseValue(interpreter, base)
+		attachment.setBaseValue(interpreter, base, attachmentBaseAuthorization(interpreter, attachment))
 		attachment.Destroy(interpreter, locationRange)
 	}
 

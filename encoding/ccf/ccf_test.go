@@ -6902,8 +6902,8 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0xd8, ccf.CBORTagReferenceType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// nil
+			0xf6,
 			// tag
 			0xd8, ccf.CBORTagSimpleType,
 			// String type ID (1)
@@ -6950,8 +6950,8 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0xd8, ccf.CBORTagReferenceType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// nil
+			0xf6,
 			// tag
 			0xd8, ccf.CBORTagOptionalType,
 			// tag
@@ -6978,7 +6978,8 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 				KeyType: cadence.TheStringType,
 				ElementType: &cadence.OptionalType{
 					Type: &cadence.ReferenceType{
-						Type: cadence.TheInt128Type,
+						Type:          cadence.TheInt128Type,
+						Authorization: cadence.UnauthorizedAccess,
 					},
 				},
 			}
@@ -7025,8 +7026,8 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0xd8, ccf.CBORTagReferenceType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// nil
+			0xf6,
 			// tag
 			0xd8, ccf.CBORTagSimpleType,
 			// Int128 type ID (9)
@@ -7075,8 +7076,8 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0xd8, ccf.CBORTagReferenceType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// nil
+			0xf6,
 			// tag
 			0xd8, ccf.CBORTagSimpleType,
 			// AnyStruct type ID (39)
@@ -7180,8 +7181,8 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0xd8, ccf.CBORTagReferenceType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// nil
+			0xf6,
 			// tag
 			0xd8, ccf.CBORTagTypeRef,
 			// bytes, 0 byte follows
@@ -7273,8 +7274,8 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0xd8, ccf.CBORTagReferenceType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// nil
+			0xf6,
 			// tag
 			0xd8, ccf.CBORTagSimpleType,
 			// AnyStruct type ID (39)
@@ -7341,8 +7342,8 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0xd8, ccf.CBORTagReferenceType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// nil
+			0xf6,
 			// tag
 			0xd8, ccf.CBORTagOptionalType,
 			// tag
@@ -7415,8 +7416,8 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0xd8, ccf.CBORTagReferenceType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// nil
+			0xf6,
 			// tag
 			0xd8, ccf.CBORTagSimpleType,
 			// AnyStruct type ID (39)
@@ -7488,8 +7489,8 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0xd8, ccf.CBORTagReferenceType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// nil
+			0xf6,
 			// tag
 			0xd8, ccf.CBORTagOptionalType,
 			// tag
@@ -8852,8 +8853,8 @@ func TestEncodeType(t *testing.T) {
 				// array, 2 elements follow
 				0x82,
 				// authorized
-				// bool
-				0xf4,
+				// nil
+				0xf6,
 				// tag
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type ID (4)

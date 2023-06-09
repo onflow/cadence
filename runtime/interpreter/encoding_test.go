@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 
@@ -3425,7 +3426,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 				Authorization: EntitlementMapAuthorization{
 					TypeID: "foo",
 				},
-				BorrowedType: PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
 
@@ -3463,11 +3464,8 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorization: EntitlementSetAuthorization{
-					Kind:         sema.Conjunction,
-					Entitlements: []common.TypeID{"foo", "bar"},
-				},
-				BorrowedType: PrimitiveStaticTypeBool,
+				Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"foo", "bar"}, sema.Conjunction),
+				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
 
@@ -3482,10 +3480,10 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 			// authorization
 			// tag
 			0xd8, CBORTagEntitlementSetStaticAuthorization,
-			// array, 2 items follow
+			// array, length 2
 			0x82,
-			// Conjunction
-			0x0,
+			// conjunction
+			0x00,
 			// array, length 2
 			0x82,
 			// UTF-8 string, 3 bytes follow
@@ -3517,11 +3515,8 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorization: EntitlementSetAuthorization{
-					Kind:         sema.Disjunction,
-					Entitlements: []common.TypeID{"foo", "bar"},
-				},
-				BorrowedType: PrimitiveStaticTypeBool,
+				Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"foo", "bar"}, sema.Disjunction),
+				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
 
@@ -3536,7 +3531,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 			// authorization
 			// tag
 			0xd8, CBORTagEntitlementSetStaticAuthorization,
-			// array, 2 items follow
+			// array, length 2
 			0x82,
 			// Disjunction
 			0x01,
@@ -3564,6 +3559,47 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		)
 	})
 
+	t.Run("decode old reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := PathLinkValue{
+			TargetPath: publicPathValue,
+			Type: ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeBool,
+			},
+		}
+
+		//nolint:gocritic
+		encoded := append(
+			expectedLinkEncodingPrefix[:],
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// true
+			0xf5,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+		)
+
+		decoder := CBORDecMode.NewByteStreamDecoder(encoded)
+		decoded, err := DecodeStorable(decoder, atree.StorageID{}, nil)
+		require.NoError(t, err)
+		inter, err := NewInterpreter(
+			nil,
+			TestLocation,
+			&Config{
+				Storage: nil,
+			},
+		)
+		require.NoError(t, err)
+		decodedValue := StoredValue(inter, decoded, nil)
+		AssertValuesEqual(t, inter, value, decodedValue)
+	})
+
 	t.Run("reference type, unauthorized, bool", func(t *testing.T) {
 
 		t.Parallel()
@@ -3571,8 +3607,8 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorization: UnauthorizedAccess,
-				BorrowedType:  PrimitiveStaticTypeBool,
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeBool,
 			},
 		}
 
