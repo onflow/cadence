@@ -2755,3 +2755,58 @@ func TestInterpretResourceFunctionInvocationAfterDestruction(t *testing.T) {
 
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
+
+func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        pub resource Vault {
+            pub fun foo(_ ref: &Vault): &Vault {
+                return ref
+            }
+        }
+
+        pub resource Attacker {
+            pub var vault: @Vault
+
+            init() {
+                self.vault <- create Vault()
+            }
+
+            pub fun shenanigans1(): &Vault {
+                // Create a reference in a nested call
+                return &self.vault as &Vault
+            }
+
+            pub fun shenanigans2(_ ref: &Vault): &Vault {
+                return ref
+            }
+
+            destroy() {
+                destroy self.vault
+            }
+        }
+
+        pub fun main() {
+            let a <- create Attacker()
+
+            // A reference to receiver get created inside the nested call 'shenanigans1()'.
+            // Same reference is returned eventually.
+            var vaultRef1 = a.vault.foo(a.shenanigans1())
+            // Reference must be still valid, even after the invalidation of the bound function receiver.
+            vaultRef1.foo(vaultRef1)
+
+            // A reference to receiver is explicitly created as a parameter.
+            // Same reference is returned eventually.
+            var vaultRef2 = a.vault.foo(a.shenanigans2(&a.vault as &Vault))
+            // Reference must be still valid, even after the invalidation of the bound function receiver.
+            vaultRef2.foo(vaultRef2)
+
+            destroy a
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
+}
