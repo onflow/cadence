@@ -270,8 +270,7 @@ func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) Ty
 	//   1) is accessed via a reference, and
 	//   2) is container-typed,
 	// then the element type should also be a reference.
-	if _, accessedViaReference := parentType.(*ReferenceType); accessedViaReference &&
-		checker.isContainerType(elementType) {
+	if shouldReturnReference(parentType, elementType) {
 		elementType = checker.getReferenceType(elementType)
 	}
 

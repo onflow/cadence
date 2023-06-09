@@ -95,9 +95,16 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	//   1) is accessed via a reference, and
 	//   2) is container-typed,
 	// then the member type should also be a reference.
-	if _, accessedViaReference := accessedType.(*ReferenceType); accessedViaReference &&
-		member.DeclarationKind == common.DeclarationKindField &&
-		checker.isContainerType(memberType) {
+
+	// Note: For attachments, `self` is always a reference.
+	// But we do not want to return a reference for `self.something`.
+	// Otherwise, things like `destroy self.something` would become invalid.
+	// Hence, special case `self`, and return a reference only if the member is not accessed via self.
+	// i.e: `accessedSelfMember == nil`
+
+	if accessedSelfMember == nil &&
+		shouldReturnReference(accessedType, memberType) &&
+		member.DeclarationKind == common.DeclarationKindField {
 		// Get a reference to the type
 		memberType = checker.getReferenceType(memberType)
 	}
@@ -120,14 +127,22 @@ func (checker *Checker) getReferenceType(typ Type) Type {
 	return NewReferenceType(checker.memoryGauge, typ, false)
 }
 
-func (checker *Checker) isContainerType(typ Type) bool {
+func shouldReturnReference(parentType, memberType Type) bool {
+	if _, parentIsReference := parentType.(*ReferenceType); !parentIsReference {
+		return false
+	}
+
+	return isContainerType(memberType)
+}
+
+func isContainerType(typ Type) bool {
 	switch typ := typ.(type) {
 	case *CompositeType,
 		*DictionaryType,
 		ArrayType:
 		return true
 	case *OptionalType:
-		return checker.isContainerType(typ.Type)
+		return isContainerType(typ.Type)
 	default:
 		return false
 	}
