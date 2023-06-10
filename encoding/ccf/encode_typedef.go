@@ -136,6 +136,17 @@ func (e *Encoder) encodeCompositeTypeFields(typ cadence.CompositeType, tids ccfT
 		return err
 	}
 
+	if e.em.sortCompositeFields == SortNone {
+		for _, fieldType := range fieldTypes {
+			// Encode field
+			err = e.encodeCompositeTypeField(fieldType, tids)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	switch len(fieldTypes) {
 	case 0:
 		// Short-circuit if there is no field type.

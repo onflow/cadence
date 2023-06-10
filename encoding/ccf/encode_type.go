@@ -404,6 +404,17 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 		return err
 	}
 
+	if e.em.sortRestrictedTypes == SortNone {
+		for _, res := range restrictions {
+			// Encode restriction type with given encodeTypeFn.
+			err = encodeRestrictionTypeFn(res, tids)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	switch len(restrictions) {
 	case 0:
 		// Short-circuit if there is no restriction.
