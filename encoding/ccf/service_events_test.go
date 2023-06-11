@@ -34,6 +34,10 @@ func TestEpochSetupEvent(t *testing.T) {
 	b, err := ccf.Encode(event)
 	require.NoError(t, err)
 
+	// Test that encoded value isn't sorted.
+	_, err = deterministicDecMode.Decode(nil, b)
+	require.Error(t, err)
+
 	decodedValue, err := ccf.Decode(nil, b)
 	require.NoError(t, err)
 
@@ -327,6 +331,10 @@ func TestEpochCommitEvent(t *testing.T) {
 	b, err := ccf.Encode(event)
 	require.NoError(t, err)
 
+	// Test that encoded value isn't sorted.
+	_, err = deterministicDecMode.Decode(nil, b)
+	require.Error(t, err)
+
 	decodedValue, err := ccf.Decode(nil, b)
 	require.NoError(t, err)
 
@@ -433,6 +441,10 @@ func TestVersionBeaconEvent(t *testing.T) {
 
 	b, err := ccf.Encode(event)
 	require.NoError(t, err)
+
+	// Test that encoded value isn't sorted.
+	_, err = deterministicDecMode.Decode(nil, b)
+	require.Error(t, err)
 
 	decodedValue, err := ccf.Decode(nil, b)
 	require.NoError(t, err)
