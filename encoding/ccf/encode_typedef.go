@@ -19,8 +19,6 @@
 package ccf
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence"
 	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
@@ -177,7 +175,7 @@ func (e *Encoder) encodeCompositeTypeFields(typ cadence.CompositeType, tids ccfT
 		}
 
 	default:
-		panic(fmt.Errorf("unsupported sort option for composite field types: %d", e.em.sortCompositeFields))
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for composite field types: %d", e.em.sortCompositeFields))
 	}
 }
 

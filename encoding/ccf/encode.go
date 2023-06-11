@@ -1077,7 +1077,7 @@ func (e *Encoder) encodeComposite(
 		}
 
 	default:
-		panic(fmt.Errorf("unsupported sort option for composite fields: %d", e.em.sortCompositeFields))
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for composite fields: %d", e.em.sortCompositeFields))
 	}
 }
 
@@ -1755,7 +1755,7 @@ func (e *Encoder) encodeFieldTypeValues(fieldTypes []cadence.Field, visited ccfT
 		}
 
 	default:
-		panic(fmt.Errorf("unsupported sort option for composite field type values: %d", e.em.sortCompositeFields))
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for composite field type values: %d", e.em.sortCompositeFields))
 	}
 }
 

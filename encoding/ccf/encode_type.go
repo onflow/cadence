@@ -19,7 +19,6 @@
 package ccf
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/onflow/cadence"
@@ -448,7 +447,7 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 		}
 
 	default:
-		panic(fmt.Errorf("unsupported sort option for restricted types: %d", e.em.sortRestrictedTypes))
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for restricted types: %d", e.em.sortRestrictedTypes))
 	}
 }
 
