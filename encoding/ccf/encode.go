@@ -1037,43 +1037,47 @@ func (e *Encoder) encodeComposite(
 		return err
 	}
 
-	if e.em.sortCompositeFields == SortNone {
+	switch e.em.sortCompositeFields {
+	case SortNone:
+		// Encode fields without sorting.
 		for i, field := range fields {
-			// Encode field as value.
 			err = e.encodeValue(field, staticFieldTypes[i].Type, tids)
 			if err != nil {
 				return err
 			}
 		}
-
-		return nil
-	}
-
-	switch len(fields) {
-	case 0:
-		// Short-circuit if there is no field.
 		return nil
 
-	case 1:
-		// Avoid overhead of sorting if there is only one field.
-		return e.encodeValue(fields[0], staticFieldTypes[0].Type, tids)
+	case SortBytewiseLexical:
+		switch len(fields) {
+		case 0:
+			// Short-circuit if there is no field.
+			return nil
+
+		case 1:
+			// Avoid overhead of sorting if there is only one field.
+			return e.encodeValue(fields[0], staticFieldTypes[0].Type, tids)
+
+		default:
+			sortedIndexes := e.getSortedFieldIndex(typ)
+
+			if len(sortedIndexes) != len(staticFieldTypes) {
+				panic(cadenceErrors.NewUnexpectedError("number of sorted indexes doesn't match number of field types"))
+			}
+
+			for _, index := range sortedIndexes {
+				// Encode sorted field as value.
+				err = e.encodeValue(fields[index], staticFieldTypes[index].Type, tids)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		}
 
 	default:
-		sortedIndexes := e.getSortedFieldIndex(typ)
-
-		if len(sortedIndexes) != len(staticFieldTypes) {
-			panic(cadenceErrors.NewUnexpectedError("number of sorted indexes doesn't match number of field types"))
-		}
-
-		for _, index := range sortedIndexes {
-			// Encode sorted field as value.
-			err = e.encodeValue(fields[index], staticFieldTypes[index].Type, tids)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+		panic(fmt.Errorf("unsupported sort option for composite fields: %d", e.em.sortCompositeFields))
 	}
 }
 
@@ -1706,7 +1710,9 @@ func (e *Encoder) encodeFieldTypeValues(fieldTypes []cadence.Field, visited ccfT
 		return err
 	}
 
-	if e.em.sortCompositeFields == SortNone {
+	switch e.em.sortCompositeFields {
+	case SortNone:
+		// Encode fields without sorting.
 		for _, fieldType := range fieldTypes {
 			err = e.encodeFieldTypeValue(fieldType, visited)
 			if err != nil {
@@ -1714,38 +1720,42 @@ func (e *Encoder) encodeFieldTypeValues(fieldTypes []cadence.Field, visited ccfT
 			}
 		}
 		return nil
-	}
 
-	switch len(fieldTypes) {
-	case 0:
-		// Short-circuit if there is no field type.
-		return nil
+	case SortBytewiseLexical:
+		switch len(fieldTypes) {
+		case 0:
+			// Short-circuit if there is no field type.
+			return nil
 
-	case 1:
-		// Avoid overhead of sorting if there is only one field type.
-		return e.encodeFieldTypeValue(fieldTypes[0], visited)
+		case 1:
+			// Avoid overhead of sorting if there is only one field type.
+			return e.encodeFieldTypeValue(fieldTypes[0], visited)
 
-	default:
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "composite-type-value.fields MUST be sorted by name."
+		default:
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "composite-type-value.fields MUST be sorted by name."
 
-		// NOTE: bytewiseFieldIdentifierSorter doesn't sort fieldTypes in place.
-		// bytewiseFieldIdentifierSorter.indexes is used as sorted fieldTypes
-		// index.
-		sorter := newBytewiseFieldSorter(fieldTypes)
+			// NOTE: bytewiseFieldIdentifierSorter doesn't sort fieldTypes in place.
+			// bytewiseFieldIdentifierSorter.indexes is used as sorted fieldTypes
+			// index.
+			sorter := newBytewiseFieldSorter(fieldTypes)
 
-		sort.Sort(sorter)
+			sort.Sort(sorter)
 
-		// Encode sorted field types.
-		for _, index := range sorter.indexes {
-			err = e.encodeFieldTypeValue(fieldTypes[index], visited)
-			if err != nil {
-				return err
+			// Encode sorted field types.
+			for _, index := range sorter.indexes {
+				err = e.encodeFieldTypeValue(fieldTypes[index], visited)
+				if err != nil {
+					return err
+				}
 			}
+
+			return nil
 		}
 
-		return nil
+	default:
+		panic(fmt.Errorf("unsupported sort option for composite field type values: %d", e.em.sortCompositeFields))
 	}
 }
 

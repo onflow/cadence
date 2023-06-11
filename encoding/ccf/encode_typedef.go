@@ -19,6 +19,8 @@
 package ccf
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence"
 	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
@@ -136,41 +138,46 @@ func (e *Encoder) encodeCompositeTypeFields(typ cadence.CompositeType, tids ccfT
 		return err
 	}
 
-	if e.em.sortCompositeFields == SortNone {
+	switch e.em.sortCompositeFields {
+	case SortNone:
+		// Encode fields without sorting.
 		for _, fieldType := range fieldTypes {
-			// Encode field
 			err = e.encodeCompositeTypeField(fieldType, tids)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
-	}
 
-	switch len(fieldTypes) {
-	case 0:
-		// Short-circuit if there is no field type.
-		return nil
+	case SortBytewiseLexical:
+		switch len(fieldTypes) {
+		case 0:
+			// Short-circuit if there is no field type.
+			return nil
 
-	case 1:
-		// Avoid overhead of sorting if there is only one field.
-		return e.encodeCompositeTypeField(fieldTypes[0], tids)
+		case 1:
+			// Avoid overhead of sorting if there is only one field.
+			return e.encodeCompositeTypeField(fieldTypes[0], tids)
 
-	default:
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "composite-type.fields MUST be sorted by name"
-		sortedIndexes := e.getSortedFieldIndex(typ)
+		default:
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "composite-type.fields MUST be sorted by name"
+			sortedIndexes := e.getSortedFieldIndex(typ)
 
-		for _, index := range sortedIndexes {
-			// Encode field
-			err = e.encodeCompositeTypeField(fieldTypes[index], tids)
-			if err != nil {
-				return err
+			for _, index := range sortedIndexes {
+				// Encode field
+				err = e.encodeCompositeTypeField(fieldTypes[index], tids)
+				if err != nil {
+					return err
+				}
 			}
+
+			return nil
 		}
 
-		return nil
+	default:
+		panic(fmt.Errorf("unsupported sort option for composite field types: %d", e.em.sortCompositeFields))
 	}
 }
 
