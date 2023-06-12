@@ -1776,6 +1776,79 @@ func (interpreter *Interpreter) ConvertAndBox(
 	return interpreter.BoxOptional(locationRange, value, targetType)
 }
 
+func (interpreter *Interpreter) convertStaticType(
+	valueStaticType StaticType,
+	targetSemaType sema.Type,
+) StaticType {
+	switch valueStaticType := valueStaticType.(type) {
+	case ReferenceStaticType:
+		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
+			return NewReferenceStaticType(
+				interpreter,
+				ConvertSemaAccesstoStaticAuthorization(interpreter, targetReferenceType.Authorization),
+				valueStaticType.ReferencedType,
+			)
+		}
+	case OptionalStaticType:
+		if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
+			return NewOptionalStaticType(
+				interpreter,
+				interpreter.convertStaticType(
+					valueStaticType.Type,
+					targetOptionalType.Type,
+				),
+			)
+		}
+	case DictionaryStaticType:
+		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
+			return NewDictionaryStaticType(
+				interpreter,
+				interpreter.convertStaticType(
+					valueStaticType.KeyType,
+					targetDictionaryType.KeyType,
+				),
+				interpreter.convertStaticType(
+					valueStaticType.ValueType,
+					targetDictionaryType.ValueType,
+				),
+			)
+		}
+	case VariableSizedStaticType:
+		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
+			return NewVariableSizedStaticType(
+				interpreter,
+				interpreter.convertStaticType(
+					valueStaticType.Type,
+					targetArrayType.Type,
+				),
+			)
+		}
+	case ConstantSizedStaticType:
+		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
+			return NewConstantSizedStaticType(
+				interpreter,
+				interpreter.convertStaticType(
+					valueStaticType.Type,
+					targetArrayType.Type,
+				),
+				valueStaticType.Size,
+			)
+		}
+
+	case CapabilityStaticType:
+		if targetCapabilityType, isCapabilityType := targetSemaType.(*sema.CapabilityType); isCapabilityType {
+			return NewCapabilityStaticType(
+				interpreter,
+				interpreter.convertStaticType(
+					valueStaticType.BorrowType,
+					targetCapabilityType.BorrowType,
+				),
+			)
+		}
+	}
+	return valueStaticType
+}
+
 func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.Type, locationRange LocationRange) Value {
 	if valueType == nil {
 		return value
@@ -1783,13 +1856,17 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
 
+	// if the value is optional, convert the inner value to the unwrapped target type
 	if optionalValueType, valueIsOptional := valueType.(*sema.OptionalType); valueIsOptional {
 		switch value := value.(type) {
 		case NilValue:
 			return value
 		case *SomeValue:
-			innerValue := interpreter.convert(value.value, optionalValueType.Type, unwrappedTargetType, locationRange)
-			return NewSomeValueNonCopying(interpreter, innerValue)
+			if !optionalValueType.Type.Equal(unwrappedTargetType) {
+				innerValue := interpreter.convert(value.value, optionalValueType.Type, unwrappedTargetType, locationRange)
+				return NewSomeValueNonCopying(interpreter, innerValue)
+			}
+			return value
 		}
 	}
 
@@ -1911,6 +1988,57 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			return ConvertAddress(interpreter, value, locationRange)
 		}
 
+	case *sema.ConstantSizedType, *sema.VariableSizedType:
+		if arrayValue, isArray := value.(*ArrayValue); isArray && !valueType.Equal(unwrappedTargetType) {
+
+			arrayStaticType := interpreter.convertStaticType(arrayValue.StaticType(interpreter), unwrappedTargetType).(ArrayStaticType)
+			targetElementType := interpreter.MustConvertStaticToSemaType(arrayStaticType.ElementType())
+
+			values := make([]Value, 0, arrayValue.Count())
+
+			arrayValue.Iterate(interpreter, func(v Value) bool {
+				valueType := interpreter.MustConvertStaticToSemaType(v.StaticType(interpreter))
+				values = append(values, interpreter.convert(v, valueType, targetElementType, locationRange))
+				return true
+			})
+
+			return NewArrayValue(
+				interpreter,
+				locationRange,
+				arrayStaticType,
+				arrayValue.GetOwner(),
+				values...,
+			)
+		}
+
+	case *sema.DictionaryType:
+		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
+
+			dictStaticType := interpreter.convertStaticType(dictValue.StaticType(interpreter), unwrappedTargetType).(DictionaryStaticType)
+			targetKeyType := interpreter.MustConvertStaticToSemaType(dictStaticType.KeyType)
+			targetValueType := interpreter.MustConvertStaticToSemaType(dictStaticType.ValueType)
+
+			values := make([]Value, 0, dictValue.Count()*2)
+
+			dictValue.Iterate(interpreter, func(key, value Value) bool {
+				keyType := interpreter.MustConvertStaticToSemaType(key.StaticType(interpreter))
+				valueType := interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+
+				convertedKey := interpreter.convert(key, keyType, targetKeyType, locationRange)
+				convertedValue := interpreter.convert(value, valueType, targetValueType, locationRange)
+
+				values = append(values, convertedKey, convertedValue)
+				return true
+			})
+
+			return NewDictionaryValue(
+				interpreter,
+				locationRange,
+				dictStaticType,
+				values...,
+			)
+		}
+
 	case *sema.CapabilityType:
 		if !valueType.Equal(unwrappedTargetType) && unwrappedTargetType.BorrowType != nil {
 			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
@@ -1918,11 +2046,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			switch capability := value.(type) {
 			case *PathCapabilityValue:
 				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
-				borrowType := NewReferenceStaticType(
-					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, targetBorrowType.Authorization),
-					valueBorrowType.ReferencedType,
-				)
+				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
 				return NewPathCapabilityValue(
 					interpreter,
 					capability.Address,
@@ -1931,11 +2055,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				)
 			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
-				borrowType := NewReferenceStaticType(
-					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, targetBorrowType.Authorization),
-					valueBorrowType.ReferencedType,
-				)
+				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
 				return NewIDCapabilityValue(
 					interpreter,
 					capability.ID,
@@ -1949,6 +2069,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		if !valueType.Equal(unwrappedTargetType) {
 			// transferring a reference at runtime does not change its entitlements; this is so that an upcast reference
 			// can later be downcast back to its original entitlement set
+
 			switch ref := value.(type) {
 			case *EphemeralReferenceValue:
 				return NewEphemeralReferenceValue(

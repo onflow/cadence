@@ -736,6 +736,37 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		)
 	})
 
+	t.Run("ref constant array downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let arr: [auth(X) &Int; 2] = [&1, &2]
+				let upArr = arr as [&Int; 2]
+				return upArr as? [auth(X) &Int; 2] == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
 	t.Run("ref array element downcast", func(t *testing.T) {
 
 		t.Parallel()
@@ -751,6 +782,37 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			fun test(): Bool {
 				let arr: [auth(X) &Int] = [&1, &2]
 				let upArr = arr as [&Int]
+				return upArr[0] as? auth(X) &Int == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("ref constant array element downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let arr: [auth(X) &Int; 2] = [&1, &2]
+				let upArr = arr as [&Int; 2]
 				return upArr[0] as? auth(X) &Int == nil
 			}
 			`,
