@@ -1296,8 +1296,8 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// 2 for `z`
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalValue))
+		// 3 for `z`
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindOptionalValue))
 
 		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryStaticType))

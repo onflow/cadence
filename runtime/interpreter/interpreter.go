@@ -1781,11 +1781,17 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		return value
 	}
 
-	if _, valueIsOptional := valueType.(*sema.OptionalType); valueIsOptional {
-		return value
-	}
-
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
+
+	if optionalValueType, valueIsOptional := valueType.(*sema.OptionalType); valueIsOptional {
+		switch value := value.(type) {
+		case NilValue:
+			return value
+		case *SomeValue:
+			innerValue := interpreter.convert(value.value, optionalValueType.Type, unwrappedTargetType, locationRange)
+			return NewSomeValueNonCopying(interpreter, innerValue)
+		}
+	}
 
 	switch unwrappedTargetType {
 	case sema.IntType:
@@ -1906,9 +1912,11 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		}
 
 	case *sema.CapabilityType:
-		if !valueType.Equal(unwrappedTargetType) {
-			if capability, ok := value.(*PathCapabilityValue); ok && unwrappedTargetType.BorrowType != nil {
-				targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
+		if !valueType.Equal(unwrappedTargetType) && unwrappedTargetType.BorrowType != nil {
+			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
+
+			switch capability := value.(type) {
+			case *PathCapabilityValue:
 				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
 				borrowType := NewReferenceStaticType(
 					interpreter,
@@ -1919,6 +1927,19 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 					interpreter,
 					capability.Address,
 					capability.Path,
+					borrowType,
+				)
+			case *IDCapabilityValue:
+				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
+				borrowType := NewReferenceStaticType(
+					interpreter,
+					ConvertSemaAccesstoStaticAuthorization(interpreter, targetBorrowType.Authorization),
+					valueBorrowType.ReferencedType,
+				)
+				return NewIDCapabilityValue(
+					interpreter,
+					capability.ID,
+					capability.Address,
 					borrowType,
 				)
 			}
