@@ -5116,6 +5116,17 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	values[value] = struct{}{}
 }
 
+func (interpreter *Interpreter) untrackReferencedResourceKindedValue(
+	id atree.StorageID,
+	value ReferenceTrackedResourceKindedValue,
+) {
+	values := interpreter.SharedState.referencedResourceKindedValues[id]
+	if values == nil {
+		return
+	}
+	delete(values, value)
+}
+
 func (interpreter *Interpreter) updateReferencedResource(
 	currentStorageID atree.StorageID,
 	newStorageID atree.StorageID,
