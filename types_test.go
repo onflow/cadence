@@ -1989,7 +1989,7 @@ func TestDecodeFields(t *testing.T) {
 	assert.Errorf(t, err, "should err when mapping to invalid type")
 
 	type eventStructPrivateField struct {
-		a Int `cadence:"a"`
+		a Int `cadence:"a"` // nolint: unused
 	}
 	err = DecodeFields(simpleEvent, &eventStructPrivateField{})
 	assert.Errorf(t, err, "should err when mapping to private field")
