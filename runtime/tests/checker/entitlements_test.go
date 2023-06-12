@@ -1975,6 +1975,21 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("valid interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct interface S: I {
+				access(E) fun foo() 
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("valid mapped", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -1991,6 +2006,25 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 				init() {
 					self.x = &"foo" as auth(Y) &String
 				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("valid mapped interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		 	entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Y
+			}
+			struct interface I {
+				access(M) let x: auth(M) &String
+			}
+			struct interface S: I {
+				access(M) let x: auth(M) &String
 			}
 		`)
 
@@ -2020,6 +2054,28 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("mismatched mapped interfaces", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {}
+			entitlement mapping N {
+				X -> Y
+			}
+			struct interface I {
+				access(M) let x: auth(M) &String
+			}
+			struct interface S: I {
+				access(N) let x: auth(N) &String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InterfaceMemberConflictError{}, errs[0])
 	})
 
 	t.Run("pub subtyping invalid", func(t *testing.T) {
@@ -4554,6 +4610,31 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			post {
 				result.foo(): ""
 				result.bar(): ""
+			}
+			return <-r
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("optional result value usage resource", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		resource R {
+			view access(X) fun foo(): Bool {
+				return true
+			}
+			view access(X, Y) fun bar(): Bool {
+				return true
+			}
+		}
+		fun bar(r: @R): @R? {
+			post {
+				result?.foo()!: ""
+				result?.bar()!: ""
 			}
 			return <-r
 		}

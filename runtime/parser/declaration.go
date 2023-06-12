@@ -1322,17 +1322,12 @@ func parseCompositeOrInterfaceDeclaration(
 	)
 
 	if isInterface {
-		// TODO: remove once interface conformances are supported
-		if len(conformances) > 0 {
-			// TODO: improve
-			return nil, p.syntaxError("unexpected conformances")
-		}
-
 		return ast.NewInterfaceDeclaration(
 			p.memoryGauge,
 			access,
 			compositeKind,
 			identifier,
+			conformances,
 			members,
 			docString,
 			declarationRange,

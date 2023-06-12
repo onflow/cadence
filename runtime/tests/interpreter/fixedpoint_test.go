@@ -387,6 +387,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 		bigIntegerTypes := []sema.Type{
 			sema.Word64Type,
+			sema.Word128Type,
 			sema.UInt64Type,
 			sema.UInt128Type,
 			sema.UInt256Type,

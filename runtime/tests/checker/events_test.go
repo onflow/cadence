@@ -292,3 +292,33 @@ func TestCheckEmitEvent(t *testing.T) {
 		assert.IsType(t, &sema.EmitImportedEventError{}, errs[0])
 	})
 }
+
+func TestCheckAccountEventParameter(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("AuthAccount", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract Test {
+              event Account(account: AuthAccount)
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("PublicAccount", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract Test {
+              event Account(account: PublicAccount)
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+}

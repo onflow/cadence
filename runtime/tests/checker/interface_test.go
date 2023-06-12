@@ -2689,3 +2689,1743 @@ func TestCheckBadStructInterface(t *testing.T) {
 	assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[10])
 	assert.IsType(t, &sema.RedeclarationError{}, errs[11])
 }
+
+func TestCheckInterfaceInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            struct interface Bar: Foo {}
+
+            struct Baz: Bar {
+                let x: Int
+
+                init() {
+                    self.x = 3
+                }
+
+                fun test(): Int {
+                    return self.x
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("interface declaration order", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Baz: Bar {
+                let x: Int
+
+                init() {
+                    self.x = 3
+                }
+
+                fun test(): Int {
+                    return self.x
+                }
+            }
+
+            // 'Foo' is defined after later in the program.
+            struct interface Bar: Foo {}
+
+            struct interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            resource interface Bar: Foo {}
+
+            resource Baz: Bar {
+                let x: Int
+
+                init() {
+                    self.x = 3
+                }
+
+                fun test(): Int {
+                    return self.x
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("contract interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            contract interface Bar: Foo {}
+
+            contract Baz: Bar {
+                let x: Int
+
+                init() {
+                    self.x = 3
+                }
+
+                fun test(): Int {
+                    return self.x
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct interface non-conforming", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            struct interface B: A {}
+
+            struct interface C: B {}
+
+            struct Foo: C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+
+		assert.Equal(t, "C", conformanceError.InterfaceType.Identifier)
+		assert.Equal(t, "A", conformanceError.NestedInterfaceType.Identifier)
+	})
+
+	t.Run("resource interface non-conforming", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            resource interface Bar: Foo {}
+
+            resource Baz: Bar {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+
+		assert.Equal(t, "Bar", conformanceError.InterfaceType.Identifier)
+		assert.Equal(t, "Foo", conformanceError.NestedInterfaceType.Identifier)
+	})
+
+	t.Run("mismatching conformance kind on composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface Foo {}
+
+            struct Bar: Foo {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		conformanceError := &sema.CompositeKindMismatchError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+
+		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
+	})
+
+	t.Run("mismatching conformance kind on interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface Foo {}
+
+            struct interface Bar: Foo {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		conformanceError := &sema.CompositeKindMismatchError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+
+		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
+
+		// forEachAttachment params conflict between foo and bar
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[1], &interfaceMemberConflictError)
+	})
+
+	t.Run("mismatching inner conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface Foo {}
+
+            struct interface Bar: Foo {}
+
+            struct Baz: Bar {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		conformanceError := &sema.CompositeKindMismatchError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+
+		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
+
+		// forEachAttachment params conflict between foo and bar
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[1], &interfaceMemberConflictError)
+	})
+
+	t.Run("nested mismatching conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {}
+
+            resource interface Bar: Foo {}
+
+            struct Baz: Bar {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 3)
+
+		conformanceError := &sema.CompositeKindMismatchError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Equal(t, common.CompositeKindResource, conformanceError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindStructure, conformanceError.ActualKind)
+
+		// forEachAttachment params conflict between foo and bar
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[1], &interfaceMemberConflictError)
+
+		require.ErrorAs(t, errs[2], &conformanceError)
+		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
+	})
+
+	t.Run("duplicate methods matching", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub fun hello()
+            }
+
+            struct interface Bar: Foo {
+                pub fun hello()
+            }
+        `)
+
+		// If none of them have default methods then that's ok
+		require.NoError(t, err)
+	})
+
+	t.Run("duplicate methods mismatching", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub fun hello()
+            }
+
+            struct interface Bar: Foo {
+                pub fun hello(): String
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate methods mismatching entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+
+            struct interface Foo {
+                access(X) fun hello()
+            }
+
+            struct interface Bar: Foo {
+                pub fun hello(): String
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate fields matching", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub var x: String
+            }
+
+            struct interface Bar: Foo {
+                pub var x: String
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("duplicate fields, mismatching type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub var x: String
+            }
+
+            struct interface Bar: Foo {
+                pub var x: Int
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "x", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate fields, mismatching entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+
+            struct interface Foo {
+                pub var x: String
+            }
+
+            struct interface Bar: Foo {
+                access(X) var x: String
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "x", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate fields, mismatching kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub var x: String
+            }
+
+            struct interface Bar: Foo {
+                pub let x: String
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "x", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate fields, mismatching access modifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub(set) var x: String
+            }
+
+            struct interface Bar: Foo {
+                pub var x: String
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "x", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate members mixed type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub fun hello()
+            }
+
+            struct interface Bar: Foo {
+                pub var hello: Void
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate methods with conditions in super", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface Bar: Foo {
+                pub fun hello()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("duplicate methods with conditions in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                pub fun hello()
+            }
+
+            struct interface Bar: Foo {
+                pub fun hello() {
+                    pre { true }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("duplicate methods indirect", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello(): Int
+            }
+
+            struct interface B: A {}
+
+            struct interface P {
+                pub fun hello(): String
+            }
+
+            struct interface Q: P {}
+
+            struct interface X: B, Q {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "P", memberConflictError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate methods indirect for struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello(): Int
+            }
+
+            struct interface B: A {}
+
+            struct interface P {
+                pub fun hello(): String
+            }
+
+            struct interface Q: P {}
+
+            struct X: B, Q {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Equal(t, "B", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "A", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Equal(t, "Q", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "P", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate methods same type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello(): Int
+            }
+
+            struct interface B: A {}
+
+            struct interface P {
+                pub fun hello(): Int
+            }
+
+            struct interface Q: P {}
+
+            struct X: B, Q {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Equal(t, "B", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "A", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Equal(t, "Q", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "P", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate methods same type different entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+            struct interface A {
+                access(E) fun hello(): Int
+            }
+
+            struct interface B: A {}
+
+            struct interface P {
+                pub fun hello(): Int
+            }
+
+            struct interface Q: P {}
+
+            struct X: B, Q {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Equal(t, "B", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "A", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Equal(t, "Q", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "P", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("same conformance via different paths", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface P: A {}
+
+            struct interface Q: A {}
+
+            struct interface X: P, Q {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("same conformance via different paths for struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface P: A {}
+
+            struct interface Q: A {}
+
+            struct X: P, Q {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("cyclic conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo: Baz {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            struct interface Bar: Foo {}
+
+            struct interface Baz: Bar {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 3)
+
+		conformanceError := sema.CyclicConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Equal(t, "Foo", conformanceError.InterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Equal(t, "Bar", conformanceError.InterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[2], &conformanceError)
+		assert.Equal(t, "Baz", conformanceError.InterfaceType.QualifiedIdentifier())
+	})
+}
+
+func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("default impl in super", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {}
+
+            struct C: B {}
+
+            pub fun main() {
+                var c = C()
+                c.hello()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("default impl in super, condition in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                pub fun hello() {
+                    pre { true }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("default impl in super, declaration in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                pub fun hello()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("default impl in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+            }
+
+            struct interface B: A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct C: B {}
+
+            pub fun main() {
+                var c = C()
+                c.hello()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("default impl in child, condition in parent", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface B: A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("default impl in child, declaration in parent", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello()
+            }
+
+            struct interface B: A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("default impl in both", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                pub fun hello() {
+                    var a = 2
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("default impl in ancestor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                pub fun hello()
+            }
+
+            struct interface C: B {
+                pub fun hello() {
+                    var a = 2
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 3)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "B", memberConflictError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &memberConflictError)
+		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "B", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[2], &memberConflictError)
+		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("default impl from two paths", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B {
+                pub fun hello() {
+                    var a = 2
+                }
+            }
+
+            struct interface C: A, B {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("overridden default impl in one path", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                pub fun hello() {
+                    var a = 2
+                }
+            }
+
+            struct interface C: A, B {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("default impl in one path and condition in another", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B {
+                pub fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C: A, B {}
+        `)
+
+		// TODO: Should be no error once https://github.com/onflow/flips/pull/83 is added.
+		errs := RequireCheckerErrors(t, err, 1)
+
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &interfaceMemberConflictError)
+	})
+
+	t.Run("default impl in one path and condition in another, in concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B {
+                pub fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C: A, B {}
+
+            struct D: C {}
+        `)
+
+		// TODO: Should be no error once https://github.com/onflow/flips/pull/83 is added.
+		errs := RequireCheckerErrors(t, err, 2)
+
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &interfaceMemberConflictError)
+
+		defaultFunctionConflictError := &sema.DefaultFunctionConflictError{}
+		require.ErrorAs(t, errs[1], &defaultFunctionConflictError)
+	})
+}
+
+func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B: A {}
+
+            contract interface C: B {}
+
+            contract X: C {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("type requirement negative", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B: A {}
+
+            contract interface C: B {}
+
+            contract X: C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("type requirement wrong entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+            contract interface A {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B: A {}
+
+            contract interface C: B {}
+
+            contract X: C {
+				struct Nested {
+                    access(E) fun test(): Int {
+                        return 3
+                    }
+                }
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("type requirement multiple", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct ANested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B {
+                struct BNested {
+                    pub fun test(): Int {
+                        return 4
+                    }
+                }
+            }
+
+            contract interface C: A, B {}
+
+            contract X: C {
+                struct ANested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+
+                struct BNested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("type requirement multiple not conforming", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct ANested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B {
+                struct BNested {
+                    pub fun test(): Int {
+                        return 4
+                    }
+                }
+            }
+
+            contract interface C: A, B {}
+
+            contract X: C {
+                struct ANested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+           contract Y: C {
+                struct BNested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Empty(t, conformanceError.MissingMembers)
+		assert.Len(t, conformanceError.MissingNestedCompositeTypes, 1)
+		assert.Equal(t, conformanceError.MissingNestedCompositeTypes[0].Identifier, "BNested")
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Empty(t, conformanceError.MissingMembers)
+		assert.Len(t, conformanceError.MissingNestedCompositeTypes, 1)
+		assert.Equal(t, conformanceError.MissingNestedCompositeTypes[0].Identifier, "ANested")
+	})
+
+	t.Run("nested struct conflicting", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B: A {
+                struct Nested {
+                    pub fun test(): String {
+                        return "three"
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.MemberKind)
+		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.ConflictingMemberKind)
+	})
+
+	t.Run("nested identical struct conflict", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B: A {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.MemberKind)
+		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.ConflictingMemberKind)
+	})
+
+	t.Run("nested resource interface conflicting", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                resource interface Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B: A {
+                resource interface Nested {
+                    pub fun test(): String {
+                        return "three"
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, common.DeclarationKindResourceInterface, memberConflictError.MemberKind)
+		assert.Equal(t, common.DeclarationKindResourceInterface, memberConflictError.ConflictingMemberKind)
+	})
+
+	t.Run("nested mixed types conflicting", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct interface Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B: A {
+                resource Nested {
+                    pub fun test(): String {
+                        return "three"
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, common.DeclarationKindStructureInterface, memberConflictError.MemberKind)
+		assert.Equal(t, common.DeclarationKindResource, memberConflictError.ConflictingMemberKind)
+	})
+
+	t.Run("nested struct conflicting indirect", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B {
+                struct Nested {
+                    pub fun test(): String {
+                        return "three"
+                    }
+                }
+            }
+
+            contract interface C: A, B {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.MemberKind)
+		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.ConflictingMemberKind)
+	})
+
+	t.Run("nested type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct NestedA {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B {
+                struct NestedB {
+                    pub fun test(): String {
+                        return "three"
+                    }
+                }
+            }
+
+            contract interface C: A, B {}
+
+            contract D: C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		require.ErrorAs(t, errs[1], &conformanceError)
+	})
+
+	t.Run("nested interface inheritance", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                resource interface X: B.Y {}
+            }
+
+            contract interface B: A {
+                resource interface Y {}
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+}
+
+func TestCheckInterfaceEventsInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non inherited interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                event FooEvent(_ x: String)
+            }
+
+            contract X: A {
+                pub fun test() {
+                   emit FooEvent("hello")
+                }
+            }
+        `)
+
+		require.Error(t, err)
+		errs := RequireCheckerErrors(t, err, 2)
+
+		notDeclaredError := &sema.NotDeclaredError{}
+		require.ErrorAs(t, errs[0], &notDeclaredError)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[1], &conformanceError)
+	})
+
+	t.Run("inherited interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                event FooEvent(_ x: String)
+            }
+
+            contract interface B: A {}
+
+            contract interface C: B {}
+
+            contract X: C {
+                pub fun test() {
+                   emit FooEvent("hello")
+                }
+            }
+        `)
+
+		require.Error(t, err)
+		errs := RequireCheckerErrors(t, err, 2)
+
+		notDeclaredError := &sema.NotDeclaredError{}
+		require.ErrorAs(t, errs[0], &notDeclaredError)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[1], &conformanceError)
+	})
+}
+
+func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("restricted composite type subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct S: B {}
+
+
+            fun foo(): {A} {
+                var s: S{B} = S()
+                return s
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted anystruct type subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct S: B {}
+
+
+            fun foo(): {A} {
+                var s: {B} = S()
+                return s
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite type subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct S: B {}
+
+            fun foo(): {A} {
+                var s = S()
+                return s
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("reference type subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct S: B {}
+
+            fun foo(): &{A} {
+                var s = S()
+                return &s as &S
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment on restricted type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface A {}
+
+            resource interface B: A  {}
+
+            resource R: B {}
+
+            attachment X for A {}
+
+            fun foo() {
+                var r: @{B} <- create R()
+                let x = r[X]
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment on reference type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface A {}
+
+            resource interface B: A  {}
+
+            resource R: B {}
+
+            attachment X for A {}
+
+            fun foo() {
+                var r <- create R()
+                let b = &r as &{B}
+                let x = b[X]
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("concrete type subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {}
+
+            contract interface B: A  {}
+
+            contract S: B {}
+
+            fun foo(a: [S]): [A] {
+                return a   // must be covariant
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inheriting interface subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {}
+
+            contract interface B: A  {}
+
+            contract S: B {}
+
+            fun foo(a: [B]): [A] {
+                return a  // must be covariant
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted anystruct reference subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct interface C {}
+
+            struct S: B, C {}
+
+            // Case I: &{B, C} is a subtype of &{B}
+            fun foo(): &{B} {
+                var s: S{B, C} = S()
+                return &s as &{B, C}
+            }
+
+            // Case II: &{B} is a subtype of &{A}
+            fun bar(): &{A} {
+               var s: S{B} = S()
+               return &s as &{B}
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted composite type reference subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct interface C {}
+
+            struct S: B, C {}
+
+            // Case I: &S{B, C} is a subtype of &S{B}
+            fun foo(): &S{B} {
+                var s: S{B, C} = S()
+                return &s as &S{B, C}
+            }
+
+            // Case II: &S{B} is a subtype of &S{A}
+            fun bar(): &S{A} {
+               var s: S{B} = S()
+               return &s as &S{B}
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("multi-restricted composite type reference subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {}
+
+            struct interface B: A  {}
+
+            struct interface C {}
+
+            struct S: B, C {}
+
+            // Case I: &S{B, C} is a subtype of &S{B}
+            fun foo(): &S{B} {
+                var s: S{B, C} = S()
+                return &s as &S{B, C}
+            }
+
+            // Case II: &S{B, C} is also a subtype of &S{A}
+            fun bar(): &S{A} {
+               var s: S{B, C} = S()
+               return &s as &S{B, C}
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}

@@ -142,7 +142,7 @@ func TestAccountEntitlementSaveAndLoadFail(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save(3, to: /storage/foo)
-				signer.link<auth(Test.X) &Int>(/public/foo, target: /storage/foo)
+				signer.link<auth(Test.X, Test.Y) &Int>(/public/foo, target: /storage/foo)
 			}
 		}
 	 `)

@@ -364,11 +364,22 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 		VisitThisAndNested(entitlementType, registerInElaboration)
 	}
 
-	for _, declaration := range program.InterfaceDeclarations() {
-		interfaceType := checker.declareInterfaceType(declaration)
+	// NOTE: Resolving interface conformances and registering types in elaboration
+	// must be done *after* the full container chain is fully set up for *all* interfaces types.
+	// This is because initializing the explicit interface conformances (`explicitInterfaceConformances()`)
+	// requires the other interfaces to be already defined.
+	// Therefore, this is done in two steps.
 
-		// NOTE: register types in elaboration
-		// *after* the full container chain is fully set up
+	for _, declaration := range program.InterfaceDeclarations() {
+		checker.declareInterfaceType(declaration)
+	}
+
+	for _, declaration := range program.InterfaceDeclarations() {
+		interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
+
+		// Resolve conformances
+		interfaceType.ExplicitInterfaceConformances =
+			checker.explicitInterfaceConformances(declaration, interfaceType)
 
 		VisitThisAndNested(interfaceType, registerInElaboration)
 	}
@@ -1041,7 +1052,7 @@ func CheckRestrictedType(
 
 		// Prepare a set of all the conformances
 
-		conformances := compositeType.ExplicitInterfaceConformanceSet()
+		conformances := compositeType.EffectiveInterfaceConformanceSet()
 
 		for _, restriction := range restrictions {
 			// The restriction must be an explicit or implicit conformance
@@ -2211,6 +2222,17 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 				resourceUUIDFieldDocString,
 			)
 		}
+
+		if compositeKindedType.GetCompositeKind().SupportsAttachments() {
+			addPredeclaredMember(
+				CompositeForEachAttachmentFunctionName,
+				CompositeForEachAttachmentFunctionType(compositeKindedType.GetCompositeKind()),
+				common.DeclarationKindFunction,
+				ast.AccessPublic,
+				true,
+				compositeForEachAttachmentFunctionDocString,
+			)
+		}
 	}
 
 	return predeclaredMembers
@@ -2712,10 +2734,21 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 }
 
 func (checker *Checker) isAvailableMember(expressionType Type, identifier string) bool {
-	if expressionType == AuthAccountType &&
-		identifier == AuthAccountTypeLinkAccountFunctionName {
+	switch expressionType {
+	case AuthAccountType:
+		switch identifier {
+		case AuthAccountTypeLinkAccountFunctionName:
+			return checker.Config.AccountLinkingEnabled
 
-		return checker.Config.AccountLinkingEnabled
+		case AuthAccountTypeCapabilitiesFieldName:
+			return checker.Config.CapabilityControllersEnabled
+		}
+
+	case PublicAccountType:
+		switch identifier {
+		case PublicAccountTypeCapabilitiesFieldName:
+			return checker.Config.CapabilityControllersEnabled
+		}
 	}
 
 	return true
