@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -1938,5 +1939,43 @@ func TestTypeEquality(t *testing.T) {
 			assert.False(t, source.Equal(target))
 		})
 	})
+
+}
+
+func TestDecodeFields(t *testing.T) {
+	simpleEvent := NewEvent(
+		[]Value{
+			NewInt(1),
+			String("foo"),
+		},
+	).WithType(&EventType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "SimpleEvent",
+		Fields: []Field{
+			{
+				Identifier: "a",
+				Type:       IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       StringType{},
+			},
+		},
+	})
+
+	type eventStruct struct {
+		A               Int    `cadenceFieldName:"a"`
+		B               String `cadenceFieldName:"b"`
+		NonCadenceField Int
+	}
+
+	evt := &eventStruct{}
+	err := DecodeFields(simpleEvent, evt)
+	require.NoError(t, err)
+	assert.EqualValues(t, eventStruct{
+		A:               NewInt(1),
+		B:               "foo",
+		NonCadenceField: Int{},
+	}, *evt)
 
 }

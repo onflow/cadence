@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -1108,6 +1109,55 @@ func GetFieldsMappedByName(v HasFields) map[string]Value {
 		fieldsMap[field.Identifier] = fieldValues[i]
 	}
 	return fieldsMap
+}
+
+// DecodeFields decodes a HasFields into a struct
+func DecodeFields(hasFields HasFields, s interface{}) error {
+	v := reflect.ValueOf(s)
+	if v.Kind() != reflect.Ptr {
+		return fmt.Errorf("s must be a pointer to a struct")
+	}
+
+	v = v.Elem()
+	t := v.Type()
+
+	fieldsMap := GetFieldsMappedByName(hasFields)
+
+	for i := 0; i < v.NumField(); i++ {
+		structField := t.Field(i)
+		tag := structField.Tag
+		fieldValue := v.Field(i)
+
+		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+			continue
+		}
+
+		cadenceFieldNameTag := tag.Get("cadenceFieldName")
+		if cadenceFieldNameTag == "" {
+			continue
+		}
+
+		cadenceField := fieldsMap[cadenceFieldNameTag]
+		if cadenceField == nil {
+			return fmt.Errorf("%s field not found", cadenceFieldNameTag)
+		}
+
+		cadenceFieldValue := reflect.ValueOf(cadenceField)
+
+		if !cadenceFieldValue.CanConvert(fieldValue.Type()) {
+			return fmt.Errorf(
+				"cannot convert cadence field %s of type %s to struct field %s of type %s",
+				cadenceFieldNameTag,
+				cadenceField.Type().ID(),
+				structField.Name,
+				structField.Type.Name(),
+			)
+		}
+
+		fieldValue.Set(cadenceFieldValue.Convert(fieldValue.Type()))
+	}
+
+	return nil
 }
 
 // Parameter
