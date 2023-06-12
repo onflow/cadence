@@ -590,12 +590,14 @@ func (d *Decoder) decodeRestrictedType(
 			return nil, fmt.Errorf("found duplicate restricted type %s", restrictedTypeID)
 		}
 
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
-		//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
-		if !stringsAreSortedBytewise(previousRestrictedTypeID, restrictedTypeID) {
-			return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousRestrictedTypeID, restrictedTypeID)
+		if d.dm.enforceSortRestrictedTypes == EnforceSortBytewiseLexical {
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
+			//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
+			if !stringsAreSortedBytewise(previousRestrictedTypeID, restrictedTypeID) {
+				return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousRestrictedTypeID, restrictedTypeID)
+			}
 		}
 
 		restrictionTypeIDs[restrictedTypeID] = struct{}{}
