@@ -144,7 +144,10 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 			if isNestedResourceMove {
 				return target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
 			} else {
-				return target.GetKey(interpreter, locationRange, transferredIndexingValue)
+				value := target.GetKey(interpreter, locationRange, transferredIndexingValue)
+
+				// If the indexing value is a reference, then return a reference for the resulting value.
+				return interpreter.maybeGetReference(indexExpression, target, value)
 			}
 		},
 		set: func(value Value) {
@@ -168,6 +171,12 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	}
 
 	isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression(memberExpression)
+
+	memberInfo, ok := interpreter.Program.Elaboration.MemberExpressionMemberInfo(memberExpression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	memberType := memberInfo.Member.TypeAnnotation.Type
 
 	return getterSetter{
 		target: target,
@@ -212,6 +221,16 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 				}
 			}
 
+			accessingSelf := false
+			if identifierExpression, ok := memberExpression.Expression.(*ast.IdentifierExpression); ok {
+				accessingSelf = identifierExpression.Identifier.Identifier == sema.SelfIdentifier
+			}
+
+			if !accessingSelf && shouldReturnReference(target, resultValue) {
+				// Get a reference to the value
+				resultValue = interpreter.getReferenceValue(resultValue, memberType)
+			}
+
 			return resultValue
 		},
 		set: func(value Value) {
@@ -220,6 +239,51 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 			interpreter.setMember(target, locationRange, identifier, value)
 		},
 	}
+}
+
+func shouldReturnReference(parent, member Value) bool {
+	if _, parentIsReference := parent.(ReferenceValue); !parentIsReference {
+		return false
+	}
+
+	return isContainerValue(member)
+}
+
+func isContainerValue(value Value) bool {
+	switch value := value.(type) {
+	case *CompositeValue,
+		*SimpleCompositeValue,
+		*DictionaryValue,
+		*ArrayValue:
+		return true
+	case *SomeValue:
+		return isContainerValue(value.value)
+	default:
+		return false
+	}
+}
+
+// getReferenceType Returns a reference type to a given type.
+// Reference to an optional should return an optional reference.
+// This has to be done recursively for nested optionals.
+// e.g.1: Given type T, this method returns &T.
+// e.g.2: Given T?, this returns (&T)?
+func (interpreter *Interpreter) getReferenceValue(value Value, semaType sema.Type) Value {
+	if optionalValue, ok := value.(*SomeValue); ok {
+		optionalType, ok := semaType.(*sema.OptionalType)
+		if !ok {
+			// If the value is optional, type must also be optional
+			// TODO: Is this always true?
+			panic(errors.NewUnreachableError())
+		}
+		semaType = optionalType.Type
+
+		innerValue := interpreter.getReferenceValue(optionalValue.value, semaType)
+		return NewSomeValueNonCopying(interpreter, innerValue)
+	}
+
+	interpreter.maybeTrackReferencedResourceKindedValue(value)
+	return NewEphemeralReferenceValue(interpreter, false, value, semaType)
 }
 
 func (interpreter *Interpreter) checkMemberAccess(
@@ -857,8 +921,27 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 			Location:    interpreter.Location,
 			HasPosition: expression,
 		}
-		return typedResult.GetKey(interpreter, locationRange, indexingValue)
+		value := typedResult.GetKey(interpreter, locationRange, indexingValue)
+
+		// If the indexing value is a reference, then return a reference for the resulting value.
+		return interpreter.maybeGetReference(expression, typedResult, value)
 	}
+}
+
+func (interpreter *Interpreter) maybeGetReference(
+	expression *ast.IndexExpression,
+	parentValue ValueIndexableValue,
+	memberValue Value,
+) Value {
+	if shouldReturnReference(parentValue, memberValue) {
+		indexExpressionTypes := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
+		elementType := indexExpressionTypes.IndexedType.ElementType(false)
+
+		// Get a reference to the value
+		memberValue = interpreter.getReferenceValue(memberValue, elementType)
+	}
+
+	return memberValue
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) Value {

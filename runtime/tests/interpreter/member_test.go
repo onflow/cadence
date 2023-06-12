@@ -557,3 +557,273 @@ func TestInterpretMemberAccessType(t *testing.T) {
 		})
 	})
 }
+
+func TestInterpretMemberAccess(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("composite, field", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                var x: [Int]
+                init() {
+                    self.x = []
+                }
+            }
+
+            fun test(): [Int] {
+                let test = Test()
+                return test.x
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, function", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                pub fun foo(): Int {
+                    return 1
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                var foo: (fun(): Int) = test.foo
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, field", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                var x: [Int]
+                init() {
+                    self.x = []
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: &[Int] = testRef.x
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, optional field", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                var x: [Int]?
+                init() {
+                    self.x = []
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: &[Int]? = testRef.x
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, primitive field", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                var x: Int
+                init() {
+                    self.x = 1
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: Int = testRef.x
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, function", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                pub fun foo(): Int {
+                    return 1
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var foo: (fun(): Int) = testRef.foo
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("array, element", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                var x: [Int] = array[0]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, element", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                let arrayRef = &array as &[[Int]]
+                var x: &[Int] = arrayRef[0]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, element, in assignment", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                let arrayRef = &array as &[[Int]]
+                var x: &[Int] = &[] as &[Int]
+                x = arrayRef[0]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, optional typed element", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let array: [[Int]?] = [[1, 2]]
+                let arrayRef = &array as &[[Int]?]
+                var x: &[Int]? = arrayRef[0]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, primitive typed element", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let array: [Int] = [1, 2]
+                let arrayRef = &array as &[Int]
+                var x: Int = arrayRef[0]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, value", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let dict: {String: {String: Int}} = {"one": {"two": 2}}
+                var x: {String: Int}? = dict["one"]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, value", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let dict: {String: {String: Int} } = {"one": {"two": 2}}
+                let dictRef = &dict as &{String: {String: Int}}
+                var x: &{String: Int}? = dictRef["one"]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, value, in assignment", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let dict: {String: {String: Int} } = {"one": {"two": 2}}
+                let dictRef = &dict as &{String: {String: Int}}
+                var x: &{String: Int}? = &{} as &{String: Int}
+                x = dictRef["one"]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, optional typed value", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let dict: {String: {String: Int}?} = {"one": {"two": 2}}
+                let dictRef = &dict as &{String: {String: Int}?}
+                var x: (&{String: Int})?? = dictRef["one"]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let dict: {String: Int} = {"one": 1}
+                let dictRef = &dict as &{String: Int}
+                var x: Int? = dictRef["one"]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("resource reference, attachment", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            attachment A for R {}
+
+            fun test() {
+                let r <- create R()
+                let rRef = &r as &R
+
+                var a: &A? = rRef[A]
+                destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}
