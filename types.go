@@ -1128,13 +1128,13 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 		tag := structField.Tag
 		fieldValue := v.Field(i)
 
-		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+		cadenceFieldNameTag := tag.Get("cadence")
+		if cadenceFieldNameTag == "" {
 			continue
 		}
 
-		cadenceFieldNameTag := tag.Get("cadenceFieldName")
-		if cadenceFieldNameTag == "" {
-			continue
+		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+			return fmt.Errorf("cannot set field %s", structField.Name)
 		}
 
 		cadenceField := fieldsMap[cadenceFieldNameTag]
