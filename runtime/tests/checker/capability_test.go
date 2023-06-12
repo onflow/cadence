@@ -474,16 +474,21 @@ func TestCheckCapability_check(t *testing.T) {
 func TestCheckCapability_address(t *testing.T) {
 
 	t.Parallel()
-	t.Run("check address", func(t *testing.T) {
-		checker, err := ParseAndCheckWithPanic(t,
-			`		  			
-				let capability: Capability = panic("")
-				let addr = capability.address
-			`,
-		)
-		require.NoError(t, err)
 
-		addrType := RequireGlobalValue(t, checker.Elaboration, "addr")
-		require.Equal(t, sema.TheAddressType, addrType)
-	})
+	_, err := ParseAndCheckWithPanic(t, `
+      let capability: Capability = panic("")
+      let addr: Address = capability.address
+	`)
+	require.NoError(t, err)
+}
+
+func TestCheckCapability_id(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithPanic(t, `
+      let capability: Capability = panic("")
+      let addr: UInt64 = capability.id
+	`)
+	require.NoError(t, err)
 }

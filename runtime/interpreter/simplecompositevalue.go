@@ -70,7 +70,7 @@ func NewSimpleCompositeValue(
 	}
 }
 
-func (*SimpleCompositeValue) IsValue() {}
+func (*SimpleCompositeValue) isValue() {}
 
 func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitSimpleCompositeValue(interpreter, v)

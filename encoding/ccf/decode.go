@@ -227,7 +227,8 @@ func (d *Decoder) decodeTypeAndValue(types *cadenceTypeByCCFTypeID) (cadence.Val
 //	/ dict-value
 //	/ composite-value
 //	/ path-value
-//	/ capability-value
+//	/ path-capability-value
+//	/ id-capability-value
 //	/ function-value
 //	/ type-value
 //
@@ -264,6 +265,7 @@ func (d *Decoder) decodeTypeAndValue(types *cadenceTypeByCCFTypeID) (cadence.Val
 //	/ word16-value
 //	/ word32-value
 //	/ word64-value
+//	/ word128-value
 //	/ fix64-value
 //	/ ufix64-value
 func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
@@ -350,6 +352,9 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 
 	case cadence.Word64Type:
 		return d.decodeWord64()
+
+	case cadence.Word128Type:
+		return d.decodeWord128()
 
 	case cadence.Fix64Type:
 		return d.decodeFix64()
@@ -797,6 +802,23 @@ func (d *Decoder) decodeWord64() (cadence.Value, error) {
 	return cadence.NewMeteredWord64(d.gauge, i), nil
 }
 
+// decodeWord128 decodes word128-value as
+// language=CDDL
+// word128-value = bigint .ge 0
+func (d *Decoder) decodeWord128() (cadence.Value, error) {
+	// NewMeteredWord128FromBig checks if decoded big.Int is positive.
+	return cadence.NewMeteredWord128FromBig(
+		d.gauge,
+		func() *big.Int {
+			bigInt, err := d.dec.DecodeBigInt()
+			if err != nil {
+				panic(fmt.Errorf("failed to decode Word128: %s", err))
+			}
+			return bigInt
+		},
+	)
+}
+
 // decodeFix64 decodes fix64-value as
 // language=CDDL
 // fix64-value = (int .ge -9223372036854775808) .le 9223372036854775807
@@ -1162,7 +1184,20 @@ func (d *Decoder) decodePath() (cadence.Value, error) {
 
 // decodeCapability decodes encoded capability-value as
 // language=CDDL
-// capability-value = [
+//
+// capability-value =
+//
+//	id-capability-value
+//	/ path-capability-value
+//
+// id-capability-value = [
+//
+//	address: address-value,
+//	id: uint64-value
+//
+// ]
+//
+// path-capability-value = [
 //
 //	address: address-value,
 //	path: path-value
@@ -1200,18 +1235,40 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 		return nil, err
 	}
 
+	// Decode ID or path.
+	nextType, err = d.dec.NextType()
+	if err != nil {
+		return nil, err
+	}
+
+	if nextType == cbor.UintType {
+		// Decode ID.
+
+		id, err := d.decodeUInt64()
+		if err != nil {
+			return nil, err
+		}
+
+		return cadence.NewMeteredIDCapability(
+			d.gauge,
+			id.(cadence.UInt64),
+			address.(cadence.Address),
+			typ.BorrowType,
+		), nil
+	}
+
 	// Decode path.
 	path, err := d.decodePath()
 	if err != nil {
 		return nil, err
 	}
 
-	return cadence.NewMeteredStorageCapability(
-			d.gauge,
-			path.(cadence.Path),
-			address.(cadence.Address),
-			typ.BorrowType),
-		nil
+	return cadence.NewMeteredPathCapability(
+		d.gauge,
+		address.(cadence.Address),
+		path.(cadence.Path),
+		typ.BorrowType,
+	), nil
 }
 
 // decodeTypeValue decodes encoded type-value as

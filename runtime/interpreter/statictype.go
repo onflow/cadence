@@ -388,6 +388,10 @@ func (t OptionalStaticType) Equal(other StaticType) bool {
 	return t.Type.Equal(otherOptionalType.Type)
 }
 
+var NilStaticType = OptionalStaticType{
+	Type: PrimitiveStaticTypeNever,
+}
+
 // RestrictedStaticType
 
 type RestrictedStaticType struct {

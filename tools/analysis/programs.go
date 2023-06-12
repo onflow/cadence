@@ -132,6 +132,7 @@ func (programs Programs) check(
 					if seenImports[importedLocation] {
 						return nil, &sema.CyclicImportsError{
 							Location: importedLocation,
+							Range:    importRange,
 						}
 					}
 					seenImports[importedLocation] = true

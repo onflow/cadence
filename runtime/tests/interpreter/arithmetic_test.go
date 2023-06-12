@@ -49,10 +49,11 @@ var integerTestValues = map[string]interpreter.NumberValue{
 	"UInt128": interpreter.NewUnmeteredUInt128ValueFromUint64(60),
 	"UInt256": interpreter.NewUnmeteredUInt256ValueFromUint64(60),
 	// Word*
-	"Word8":  interpreter.NewUnmeteredWord8Value(60),
-	"Word16": interpreter.NewUnmeteredWord16Value(60),
-	"Word32": interpreter.NewUnmeteredWord32Value(60),
-	"Word64": interpreter.NewUnmeteredWord64Value(60),
+	"Word8":   interpreter.NewUnmeteredWord8Value(60),
+	"Word16":  interpreter.NewUnmeteredWord16Value(60),
+	"Word32":  interpreter.NewUnmeteredWord32Value(60),
+	"Word64":  interpreter.NewUnmeteredWord64Value(60),
+	"Word128": interpreter.NewUnmeteredWord128ValueFromUint64(60),
 }
 
 func init() {
