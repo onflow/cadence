@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -1939,4 +1940,63 @@ func TestTypeEquality(t *testing.T) {
 		})
 	})
 
+}
+
+func TestDecodeFields(t *testing.T) {
+	simpleEvent := NewEvent(
+		[]Value{
+			NewInt(1),
+			String("foo"),
+		},
+	).WithType(&EventType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "SimpleEvent",
+		Fields: []Field{
+			{
+				Identifier: "a",
+				Type:       IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       StringType{},
+			},
+		},
+	})
+
+	type eventStruct struct {
+		A               Int    `cadence:"a"`
+		B               String `cadence:"b"`
+		NonCadenceField Int
+	}
+
+	evt := eventStruct{}
+	err := DecodeFields(simpleEvent, &evt)
+	require.NoError(t, err)
+	assert.EqualValues(t, eventStruct{
+		A:               NewInt(1),
+		B:               "foo",
+		NonCadenceField: Int{},
+	}, evt)
+
+	err = DecodeFields(simpleEvent, evt)
+	assert.Errorf(t, err, "should err when passing non-pointer")
+
+	type eventStructInvalidMapping struct {
+		A String `cadence:"a"`
+	}
+
+	err = DecodeFields(simpleEvent, &eventStructInvalidMapping{})
+	assert.Errorf(t, err, "should err when mapping to invalid type")
+
+	type eventStructPrivateField struct {
+		a Int `cadence:"a"` // nolint: unused
+	}
+	err = DecodeFields(simpleEvent, &eventStructPrivateField{})
+	assert.Errorf(t, err, "should err when mapping to private field")
+
+	type eventStructNotFoundField struct {
+		A Int `cadence:"c"`
+	}
+	err = DecodeFields(simpleEvent, &eventStructNotFoundField{})
+	assert.Errorf(t, err, "should err when mapping to non-existing field")
 }
