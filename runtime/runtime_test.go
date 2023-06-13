@@ -5324,26 +5324,26 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
                   "a": <-Test.createR(),
                   "b": <-Test.createR()
               }
-              //log(rs["a"]?.owner?.address)
-              //log(rs["b"]?.owner?.address)
-              //rs["a"]?.logOwnerAddress()
-              //rs["b"]?.logOwnerAddress()
+              log(rs["a"]?.owner?.address)
+              log(rs["b"]?.owner?.address)
+              rs["a"]?.logOwnerAddress()
+              rs["b"]?.logOwnerAddress()
 
               signer.save(<-rs, to: /storage/rs)
               signer.link<&{String: Test.R}>(/public/rs, target: /storage/rs)
 
               let ref1 = signer.borrow<&{String: Test.R}>(from: /storage/rs)!
               log(ref1["a"]?.owner?.address)
-              //log(ref1["b"]?.owner?.address)
-              //ref1["a"]?.logOwnerAddress()
-              //ref1["b"]?.logOwnerAddress()
-			  //
-              //let publicAccount = getAccount(0x01)
-              //let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
-              //log(ref2["a"]?.owner?.address)
-              //log(ref2["b"]?.owner?.address)
-              //ref2["a"]?.logOwnerAddress()
-              //ref2["b"]?.logOwnerAddress()
+              log(ref1["b"]?.owner?.address)
+              ref1["a"]?.logOwnerAddress()
+              ref1["b"]?.logOwnerAddress()
+
+              let publicAccount = getAccount(0x01)
+              let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
+              log(ref2["a"]?.owner?.address)
+              log(ref2["b"]?.owner?.address)
+              ref2["a"]?.logOwnerAddress()
+              ref2["b"]?.logOwnerAddress()
           }
       }
     `)

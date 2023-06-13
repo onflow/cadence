@@ -2065,7 +2065,7 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
               account.save(<-{0 : <-create R()}, to: /storage/x)
               let collection = account.borrow<&{Int: R}>(from: /storage/x)!
 
-              let resourceRef = (&collection[0] as &R?)!
+              let resourceRef = collection[0]!
               let token <- collection.remove(key: 0)
 
               let x = resourceRef.id

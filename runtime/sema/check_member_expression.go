@@ -128,7 +128,8 @@ func (checker *Checker) getReferenceType(typ Type) Type {
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {
-	if _, parentIsReference := parentType.(*ReferenceType); !parentIsReference {
+	unwrappedParentType := UnwrapOptionalType(parentType)
+	if _, parentIsReference := unwrappedParentType.(*ReferenceType); !parentIsReference {
 		return false
 	}
 
