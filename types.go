@@ -1144,6 +1144,33 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 
 		cadenceFieldValue := reflect.ValueOf(cadenceField)
 
+		// ptr value is expected to be unwrapped from optional
+		if fieldValue.Kind() == reflect.Ptr {
+			optional, ok := cadenceField.(Optional)
+			if !ok {
+				return fmt.Errorf("field %s is not an optional", cadenceFieldNameTag)
+			}
+
+			// if optional is nil, skip and default the field to nil
+			if optional.ToGoValue() == nil {
+				continue
+			}
+
+			optionalValue := reflect.ValueOf(optional.Value)
+
+			// Check the type
+			if fieldValue.Type().Elem() != optionalValue.Type() {
+				return fmt.Errorf("cannot set field %s: expected %v, got %v",
+					structField.Name, fieldValue.Type().Elem(), optionalValue.Type())
+			}
+
+			// Create a new pointer for optionalValue
+			newPtr := reflect.New(optionalValue.Type())
+			newPtr.Elem().Set(optionalValue)
+
+			cadenceFieldValue = newPtr
+		}
+
 		if !cadenceFieldValue.CanConvert(fieldValue.Type()) {
 			return fmt.Errorf(
 				"cannot convert cadence field %s of type %s to struct field %s of type %s",

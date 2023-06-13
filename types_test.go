@@ -1947,6 +1947,8 @@ func TestDecodeFields(t *testing.T) {
 		[]Value{
 			NewInt(1),
 			String("foo"),
+			NewOptional(nil),
+			NewOptional(NewInt(2)),
 		},
 	).WithType(&EventType{
 		Location:            utils.TestLocation,
@@ -1960,21 +1962,34 @@ func TestDecodeFields(t *testing.T) {
 				Identifier: "b",
 				Type:       StringType{},
 			},
+			{
+				Identifier: "nilO",
+				Type:       &OptionalType{Type: IntType{}},
+			},
+			{
+				Identifier: "o",
+				Type:       &OptionalType{Type: IntType{}},
+			},
 		},
 	})
 
 	type eventStruct struct {
 		A               Int    `cadence:"a"`
 		B               String `cadence:"b"`
+		NilO            *Int   `cadence:"nilO"`
+		O               *Int   `cadence:"o"`
 		NonCadenceField Int
 	}
 
 	evt := eventStruct{}
 	err := DecodeFields(simpleEvent, &evt)
 	require.NoError(t, err)
+	int2 := NewInt(2)
 	assert.EqualValues(t, eventStruct{
 		A:               NewInt(1),
 		B:               "foo",
+		NilO:            nil,
+		O:               &int2,
 		NonCadenceField: Int{},
 	}, evt)
 
@@ -1999,4 +2014,10 @@ func TestDecodeFields(t *testing.T) {
 	}
 	err = DecodeFields(simpleEvent, &eventStructNotFoundField{})
 	assert.Errorf(t, err, "should err when mapping to non-existing field")
+
+	type eventStructBadOptional struct {
+		O *String `cadence:"o"`
+	}
+	err = DecodeFields(simpleEvent, &eventStructBadOptional{})
+	assert.Errorf(t, err, "should err when mapping to optional field with wrong type")
 }
