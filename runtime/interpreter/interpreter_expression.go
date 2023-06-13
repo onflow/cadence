@@ -269,16 +269,21 @@ func isContainerValue(value Value) bool {
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
 func (interpreter *Interpreter) getReferenceValue(value Value, semaType sema.Type) Value {
-	if optionalValue, ok := value.(*SomeValue); ok {
-		optionalType, ok := semaType.(*sema.OptionalType)
-		if !ok {
-			// If the value is optional, type must also be optional
-			// TODO: Is this always true?
-			panic(errors.NewUnreachableError())
-		}
+	optionalType, ok := semaType.(*sema.OptionalType)
+	if ok {
 		semaType = optionalType.Type
 
-		innerValue := interpreter.getReferenceValue(optionalValue.value, semaType)
+		// Because the boxing happens further down the code, it is possible
+		// to have a concrete value (non-some) for a place where optional is expected.
+		// Therefore, always unwrap the type, but only unwrap if the value is `SomeValue`.
+		//
+		// However, checker guarantees that the wise-versa doesn't happen.
+		// i.e: There will never be a `SomeValue`, with type being a non-optional.
+
+		if optionalValue, ok := value.(*SomeValue); ok {
+			value = optionalValue.value
+		}
+		innerValue := interpreter.getReferenceValue(value, semaType)
 		return NewSomeValueNonCopying(interpreter, innerValue)
 	}
 

@@ -799,7 +799,7 @@ func TestCheckMutationThroughInnerReference(t *testing.T) {
 			`
             pub fun main() {
                 let foo = Foo()
-                var arrayRef = &foo.ref.arr as &[String]
+                var arrayRef = foo.ref.arr
                 arrayRef[0] = "y"
               }
               

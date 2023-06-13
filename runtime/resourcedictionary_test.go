@@ -248,11 +248,12 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
      transaction {
 
          prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
+             let c <- signer.load<@Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
              let existing <- c.rs["b"] <- Test.createR(4)
              destroy existing
              log(c.rs["b"]?.value)
+             signer.save(<-c, to: /storage/c)
          }
      }
    `)
@@ -288,11 +289,12 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
      transaction {
 
          prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
+             let c <- signer.load<@Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
              let existing <- c.rs["b"] <- nil
              destroy existing
              log(c.rs["b"]?.value)
+             signer.save(<-c, to: /storage/c)
          }
      }
    `)
