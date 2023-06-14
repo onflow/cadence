@@ -2565,3 +2565,152 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
 
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
+
+func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            resource Inner {
+                let outer: &Outer
+
+                init(outer: &Outer) {
+                    self.outer = outer
+                }
+
+                destroy() {
+                    self.outer.reenter()
+                }
+            }
+
+            resource Outer {
+                var inner: @Inner?
+
+                init() {
+                    self.inner <-! create Inner(outer: &self as &Outer)
+                }
+
+                fun reenter() {
+                    let inner <- self.inner <- nil
+                    destroy inner
+                }
+
+                destroy() {
+                    destroy self.inner
+                }
+            }
+
+            fun test() {
+                let outer <- create Outer()
+
+                destroy outer
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+	})
+
+	t.Run("array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            resource Inner {
+                let outer: &Outer
+
+                init(outer: &Outer) {
+                    self.outer = outer
+                }
+
+                destroy() {
+                    self.outer.reenter()
+                }
+            }
+
+            resource Outer {
+                var inner: @[Inner]
+
+                init() {
+                    self.inner <- [<-create Inner(outer: &self as &Outer)]
+                }
+
+                fun reenter() {
+                    let inner <- self.inner <- []
+                    destroy inner
+                }
+
+                destroy() {
+                    destroy self.inner
+                }
+            }
+
+            fun test() {
+                let outer <- create Outer()
+
+                destroy outer
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            resource Inner {
+                let outer: &Outer
+
+                init(outer: &Outer) {
+                    self.outer = outer
+                }
+
+                destroy() {
+                    self.outer.reenter()
+                }
+            }
+
+            resource Outer {
+                var inner: @{Int: Inner}
+
+                init() {
+                    self.inner <- {0: <-create Inner(outer: &self as &Outer)}
+                }
+
+                fun reenter() {
+                    let inner <- self.inner <- {}
+                    destroy inner
+                }
+
+                destroy() {
+                    destroy self.inner
+                }
+            }
+
+            fun test() {
+                let outer <- create Outer()
+
+                destroy outer
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+	})
+}

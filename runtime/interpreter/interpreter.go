@@ -234,13 +234,13 @@ var _ ast.ExpressionVisitor[Value] = &Interpreter{}
 
 // BaseActivation is the activation which contains all base declarations.
 // It is reused across all interpreters.
-var BaseActivation = func() *VariableActivation {
-	// No need to meter since this is only created once
-	activation := activations.NewActivation[*Variable](nil, nil)
+var BaseActivation *VariableActivation
 
-	defineBaseFunctions(activation)
-	return activation
-}()
+func init() {
+	// No need to meter since this is only created once
+	BaseActivation = activations.NewActivation[*Variable](nil, nil)
+	defineBaseFunctions(BaseActivation)
+}
 
 func NewInterpreter(
 	program *Program,
@@ -4703,4 +4703,45 @@ func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
 	}
 
 	config.AccountLinkingAllowed = true
+}
+
+func (interpreter *Interpreter) validateMutation(storageID atree.StorageID, locationRange LocationRange) {
+	_, present := interpreter.SharedState.containerValueIteration[storageID]
+	if !present {
+		return
+	}
+	panic(ContainerMutatedDuringIterationError{
+		LocationRange: locationRange,
+	})
+}
+
+func (interpreter *Interpreter) withMutationPrevention(storageID atree.StorageID, f func()) {
+	oldIteration, present := interpreter.SharedState.containerValueIteration[storageID]
+	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
+
+	f()
+
+	if !present {
+		delete(interpreter.SharedState.containerValueIteration, storageID)
+	} else {
+		interpreter.SharedState.containerValueIteration[storageID] = oldIteration
+	}
+}
+
+func (interpreter *Interpreter) withResourceDestruction(
+	storageID atree.StorageID,
+	locationRange LocationRange,
+	f func(),
+) {
+	_, exists := interpreter.SharedState.resourceDestruction[storageID]
+	if exists {
+		panic(ReentrantResourceDestructionError{
+			LocationRange: locationRange,
+		})
+	}
+	interpreter.SharedState.resourceDestruction[storageID] = struct{}{}
+
+	f()
+
+	delete(interpreter.SharedState.resourceDestruction, storageID)
 }

@@ -1533,17 +1533,25 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *ArrayValue) Iterate(gauge common.MemoryGauge, f func(element Value) (resume bool)) {
-	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
-		// atree.Array iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
+func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
+	iterate := func() {
+		err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+			// atree.Array iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
 
-		resume = f(MustConvertStoredValue(gauge, element))
+			resume = f(MustConvertStoredValue(interpreter, element))
 
-		return resume, nil
-	})
-	if err != nil {
-		panic(errors.NewExternalError(err))
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
 	}
 }
 
@@ -1593,8 +1601,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -1610,9 +1616,17 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		}()
 	}
 
-	v.Walk(interpreter, func(element Value) {
-		maybeDestroy(interpreter, locationRange, element)
-	})
+	storageID := v.StorageID()
+
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			v.Walk(interpreter, func(element Value) {
+				maybeDestroy(interpreter, locationRange, element)
+			})
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -1767,6 +1781,8 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRang
 
 func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
 
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
 
@@ -1840,6 +1856,8 @@ func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReference
 
 func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRange, element Value) {
 
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
 		v.array.Count(),
@@ -1885,6 +1903,8 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -1938,6 +1958,8 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -14035,8 +14057,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		v.checkInvalidatedResourceUse(locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -14055,28 +14075,36 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		}()
 	}
 
-	interpreter = v.getInterpreter(interpreter)
+	storageID := v.StorageID()
 
-	// if composite was deserialized, dynamically link in the destructor
-	if v.Destructor == nil {
-		v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
-	}
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			interpreter = v.getInterpreter(interpreter)
 
-	destructor := v.Destructor
+			// if composite was deserialized, dynamically link in the destructor
+			if v.Destructor == nil {
+				v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+			}
 
-	if destructor != nil {
-		var self MemberAccessibleValue = v
-		invocation := NewInvocation(
-			interpreter,
-			&self,
-			nil,
-			nil,
-			nil,
-			locationRange,
-		)
+			destructor := v.Destructor
 
-		destructor.invoke(invocation)
-	}
+			if destructor != nil {
+				var self MemberAccessibleValue = v
+				invocation := NewInvocation(
+					interpreter,
+					&self,
+					nil,
+					nil,
+					nil,
+					locationRange,
+				)
+
+				destructor.invoke(invocation)
+			}
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -15203,20 +15231,27 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Value) (resume bool)) {
-	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
-		// atree.OrderedMap iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
+func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+	iterate := func() {
+		err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+			// atree.OrderedMap iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
 
-		resume = f(
-			MustConvertStoredValue(gauge, key),
-			MustConvertStoredValue(gauge, value),
-		)
+			resume = f(
+				MustConvertStoredValue(interpreter, key),
+				MustConvertStoredValue(interpreter, value),
+			)
 
-		return resume, nil
-	})
-	if err != nil {
-		panic(errors.NewExternalError(err))
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
 	}
 }
 
@@ -15271,8 +15306,6 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -15288,12 +15321,21 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
-	v.Iterate(interpreter, func(key, value Value) (resume bool) {
-		// Resources cannot be keys at the moment, so should theoretically not be needed
-		maybeDestroy(interpreter, locationRange, key)
-		maybeDestroy(interpreter, locationRange, value)
-		return true
-	})
+	storageID := v.StorageID()
+
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			v.Iterate(interpreter, func(key, value Value) (resume bool) {
+				// Resources cannot be keys at the moment, so should theoretically not be needed
+				maybeDestroy(interpreter, locationRange, key)
+				maybeDestroy(interpreter, locationRange, value)
+
+				return true
+			})
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -15338,21 +15380,29 @@ func (v *DictionaryValue) ForEachKey(
 		)
 	}
 
-	err := v.dictionary.IterateKeys(
-		func(item atree.Value) (bool, error) {
-			key := MustConvertStoredValue(interpreter, item)
+	iterate := func() {
+		err := v.dictionary.IterateKeys(
+			func(item atree.Value) (bool, error) {
+				key := MustConvertStoredValue(interpreter, item)
 
-			shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+				shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			return bool(shouldContinue), nil
-		},
-	)
+				return bool(shouldContinue), nil
+			},
+		)
 
-	if err != nil {
-		panic(errors.NewExternalError(err))
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
 	}
 }
 
@@ -15427,6 +15477,8 @@ func (v *DictionaryValue) SetKey(
 	keyValue Value,
 	value Value,
 ) {
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -15709,6 +15761,8 @@ func (v *DictionaryValue) Remove(
 	keyValue Value,
 ) OptionalValue {
 
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
@@ -15763,6 +15817,8 @@ func (v *DictionaryValue) Insert(
 	locationRange LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
+
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
@@ -16178,6 +16234,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 }
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
+
 	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
