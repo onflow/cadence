@@ -2786,4 +2786,35 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
+
+	t.Run("attachments", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            attachment A for R {
+                pub(set) var id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun test() {
+                let r <- create R()
+                let r2 <- attach A() to <-r
+
+                let a = r2[A]!
+                destroy r2
+
+                // Access attachment ref, after destroying the resource
+                a.id
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
 }
