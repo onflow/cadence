@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,9 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
@@ -2851,5 +2854,95 @@ func TestInterpretResourceFunctionValidity(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("main")
+	require.NoError(t, err)
+}
+
+func TestInterpretInnerResourceDestruction(t *testing.T) {
+
+	t.Parallel()
+
+	logFunction := stdlib.NewStandardLibraryFunction(
+		"log",
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.VoidType,
+			),
+		},
+		``,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			message := invocation.Arguments[0].String()
+			fmt.Println(message)
+			return interpreter.Void
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+        pub resource InnerResource {
+            pub var name: String
+            pub(set) var parent: &OuterResource?
+
+			init(_ name: String) {
+				self.name = name
+				self.parent = nil
+			}
+
+            destroy() {
+                log(self.name)
+                self.parent!.shenanigans()
+            }
+		}
+
+        pub resource OuterResource {
+            pub var inner1: @InnerResource
+            pub var inner2: @InnerResource
+
+			init() {
+                self.inner1 <- create InnerResource("inner1")
+                self.inner2 <- create InnerResource("inner2")
+
+                self.inner1.parent = &self as &OuterResource
+                self.inner2.parent = &self as &OuterResource
+			}
+
+            pub fun shenanigans() {
+                self.inner1 <-> self.inner2
+            }
+
+            destroy() {
+                destroy self.inner1
+                destroy self.inner2
+            }
+		}
+
+        pub fun main() {
+            let a <- create OuterResource()
+            destroy a
+        }`,
+
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				BaseActivation: baseActivation,
+			},
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
+			},
+		})
+
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
 	require.NoError(t, err)
 }
