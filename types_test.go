@@ -2165,7 +2165,7 @@ func TestDecodeFields(t *testing.T) {
 	}
 	for _, errCase := range errCases {
 		t.Run(errCase.Description, func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 			err := DecodeFields(simpleEvent, errCase.Struct)
 			assert.Equal(t, errCase.ExpectedErr, err.Error())
 		})
