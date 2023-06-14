@@ -170,9 +170,17 @@ func TestAccountAttachmentExportFailure(t *testing.T) {
 		import Test from 0x1
 		pub fun main(): &Test.A? { 
 			let r <- Test.makeRWithA()
-			let a = r[Test.A]
+			var a = r[Test.A]
+
+			// just to trick the checker
+			a = returnSameRef(a)
+
 			destroy r
 			return a
+		}
+
+		pub fun returnSameRef(_ ref: &Test.A?): &Test.A? {
+		    return ref
 		}
 	 `)
 

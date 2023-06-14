@@ -1578,7 +1578,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             fun test(): UInt8 {
                 let r <- create R()
                 let r2 <- attach A() to <-r
-                let a = r2[A]!
+                let a = returnSameRef(r2[A]!)
 
 
                 // Move the resource after taking a reference to the attachment.
@@ -1590,7 +1590,11 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
                 // Access the attachment filed from the previous reference.
                 return a.id
-            }`,
+            }
+
+		    pub fun returnSameRef(_ ref: &A): &A {
+		        return ref
+		    }`,
 			sema.Config{
 				AttachmentsEnabled: true,
 			},
@@ -1614,13 +1618,17 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             fun test() {
                 let r <- create R()
                 let r2 <- attach A() to <-r
-                let a = r2[A]!
+                let a = returnSameRef(r2[A]!)
                 destroy r2
                 let i = a.foo()
             }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
+
+		    pub fun returnSameRef(_ ref: &A): &A {
+		        return ref
+		    }`,
+			sema.Config{
+				AttachmentsEnabled: true,
+			},
 		)
 
 		_, err := inter.Invoke("test")
@@ -1652,7 +1660,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             }
             fun test(): UInt8 {
                 let r2 <- create R2(r: <-attach A() to <-create R())
-                let a = r2.r[A]!
+                let a = returnSameRef(r2.r[A]!)
 
                 // Move the resource after taking a reference to the attachment.
                 // Then update the field of the attachment.
@@ -1663,7 +1671,11 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
                 // Access the attachment filed from the previous reference.
                 return a.id
-            }`,
+            }
+
+		    pub fun returnSameRef(_ ref: &A): &A {
+		        return ref
+		    }`,
 			sema.Config{
 				AttachmentsEnabled: true,
 			},
@@ -1737,14 +1749,17 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             }
             fun test() {
                 let r2 <- create R2(r: <-attach A() to <-create R())
-                let a = r2.r[A]!
+                let a = returnSameRef(r2.r[A]!)
                 destroy r2
                 let i = a.foo()
             }
-        
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
+
+		    pub fun returnSameRef(_ ref: &A): &A {
+		        return ref
+		    }`,
+			sema.Config{
+				AttachmentsEnabled: true,
+			},
 		)
 
 		_, err := inter.Invoke("test")
