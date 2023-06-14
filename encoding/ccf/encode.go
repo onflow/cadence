@@ -284,7 +284,8 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 //	/ dict-value
 //	/ composite-value
 //	/ path-value
-//	/ capability-value
+//	/ path-capability-value
+//	/ id-capability-value
 //	/ function-value
 //	/ type-value
 //
@@ -321,6 +322,7 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 //	/ word16-value
 //	/ word32-value
 //	/ word64-value
+//	/ word128-value
 //	/ fix64-value
 //	/ ufix64-value
 //
@@ -446,6 +448,9 @@ func (e *Encoder) encodeValue(
 	case cadence.Word64:
 		return e.encodeWord64(v)
 
+	case cadence.Word128:
+		return e.encodeWord128(v)
+
 	case cadence.Fix64:
 		return e.encodeFix64(v)
 
@@ -488,8 +493,11 @@ func (e *Encoder) encodeValue(
 		// If x.StaticType is nil, type value is encoded as nil.
 		return e.encodeNullableTypeValue(v.StaticType, ccfTypeIDByCadenceType{})
 
-	case cadence.StorageCapability:
-		return e.encodeCapability(v)
+	case cadence.PathCapability:
+		return e.encodePathCapability(v)
+
+	case cadence.IDCapability:
+		return e.encodeIDCapability(v)
 
 	case cadence.Enum:
 		return e.encodeEnum(v, tids)
@@ -684,6 +692,13 @@ func (e *Encoder) encodeWord32(v cadence.Word32) error {
 // word64-value = uint .le 18446744073709551615
 func (e *Encoder) encodeWord64(v cadence.Word64) error {
 	return e.enc.EncodeUint64(uint64(v))
+}
+
+// encodeWord128 encodes cadence.Word128 as
+// language=CDDL
+// word128-value = uint .ge 0
+func (e *Encoder) encodeWord128(v cadence.Word128) error {
+	return e.enc.EncodeBigInt(v.Big())
 }
 
 // encodeFix64 encodes cadence.Fix64 as
@@ -969,15 +984,15 @@ func (e *Encoder) encodePath(x cadence.Path) error {
 	return e.enc.EncodeString(x.Identifier)
 }
 
-// encodeCapability encodes cadence.StorageCapability as
+// encodePathCapability encodes cadence.PathCapability as
 // language=CDDL
-// capability-value = [
+// path-capability-value = [
 //
 //	address: address-value,
 //	path: path-value
 //
 // ]
-func (e *Encoder) encodeCapability(capability cadence.StorageCapability) error {
+func (e *Encoder) encodePathCapability(capability cadence.PathCapability) error {
 	// Encode array head with length 2.
 	err := e.enc.EncodeRawBytes([]byte{
 		// array, 2 items follow
@@ -995,6 +1010,34 @@ func (e *Encoder) encodeCapability(capability cadence.StorageCapability) error {
 
 	// element 1: path
 	return e.encodePath(capability.Path)
+}
+
+// encodeIDCapability encodes cadence.IDCapability as
+// language=CDDL
+// id-capability-value = [
+//
+//	address: address-value,
+//	id: uint64-value
+//
+// ]
+func (e *Encoder) encodeIDCapability(capability cadence.IDCapability) error {
+	// Encode array head with length 2.
+	err := e.enc.EncodeRawBytes([]byte{
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	// element 0: address
+	err = e.encodeAddress(capability.Address)
+	if err != nil {
+		return err
+	}
+
+	// element 1: id
+	return e.encodeUInt64(capability.ID)
 }
 
 // encodeFunction encodes cadence.FunctionType as

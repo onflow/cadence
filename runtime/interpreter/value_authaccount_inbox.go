@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// AuthAccountInbox
+// AuthAccount.Inbox
 
 var authAccountInboxTypeID = sema.AuthAccountInboxType.ID()
 var authAccountInboxStaticType StaticType = PrimitiveStaticTypeAuthAccountInbox

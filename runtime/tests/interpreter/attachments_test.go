@@ -1964,7 +1964,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
             fun test(): Int {
                 var r <- attach C() to <- attach B() to <- attach A() to <- create R()
                 var i = 0
-                r.forEachAttachment(fun(attachment: &AnyResourceAttachment) {
+                r.forEachAttachment(fun(attachmentRef: &AnyResourceAttachment) {
                     i = i + 1
                 }) 
                 destroy r
@@ -1990,7 +1990,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
             fun test(): Int {
                 var s = attach C() to attach B() to attach A() to S()
                 var i = 0
-                s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                     i = i + 1
                 }) 
                 return i 
@@ -2021,12 +2021,12 @@ func TestInterpretForEachAttachment(t *testing.T) {
             fun test(): Int {
                 var s = attach C() to attach B() to attach A() to S()
                 var i = 0
-                s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
-                    if let a = attachment as? &A {
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    if let a = attachmentRef as? &A {
                         i = i + a.foo(1)
-                    } else if let b = attachment as? &B {
+                    } else if let b = attachmentRef as? &B {
                         i = i + b.foo()
-                    } else if let c = attachment as? &C {
+                    } else if let c = attachmentRef as? &C {
                         i = i + c.foo(1)
                     }
                 }) 
@@ -2072,12 +2072,12 @@ func TestInterpretForEachAttachment(t *testing.T) {
                 var s = attach C() to attach B() to attach A() to S()
                 let ref = &s as auth(E) &S
                 var i = 0
-                ref.forEachAttachment(fun(attachment: &AnyStructAttachment) {
-                    if let a = attachment as? auth(F) &A {
+                ref.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    if let a = attachmentRef as? auth(F) &A {
                         i = i + a.foo(1)
-                    } else if let b = attachment as? auth(Y) &B {
+                    } else if let b = attachmentRef as? auth(Y) &B {
                         i = i + b.foo()
-                    } else if let c = attachment as? auth(Y) &C {
+                    } else if let c = attachmentRef as? auth(Y) &C {
                         i = i + c.foo(1)
                     }
                 }) 
@@ -2126,10 +2126,10 @@ func TestInterpretForEachAttachment(t *testing.T) {
             fun test(): String {
                 var r <- attach C("World") to <- attach B() to <- attach A("Hello") to <- create R()
                 var text = ""
-                r.forEachAttachment(fun(attachment: &AnyResourceAttachment) {
-                    if let a = attachment as? &A {
+                r.forEachAttachment(fun(attachmentRef: &AnyResourceAttachment) {
+                    if let a = attachmentRef as? &A {
                         text = text.concat(a.r.name)
-                    } else if let a = attachment as? &C {
+                    } else if let a = attachmentRef as? &C {
                         text = text.concat(a.r.name)
                     } else {
                         text = text.concat(" ")
@@ -2161,7 +2161,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
             attachment B for S {}
             fun test() {
                 var s = attach A() to S()
-                s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                     s = attach B() to s
                 }) 
             }
@@ -2183,7 +2183,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
             attachment B for S {}
             fun test() {
                 var s = attach B() to attach A() to S()
-                s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                     remove A from s
                 }) 
             }
@@ -2206,7 +2206,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
             fun test() {
                 var s = attach A() to S()
                 var s2 = attach A() to S()
-                s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                     s = attach B() to s2
                 }) 
             }
@@ -2227,7 +2227,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
             fun test() {
                 var s = attach B() to attach A() to S()
                 var s2 = attach B() to attach A() to S()
-                s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                     remove A from s2
                 }) 
             }
@@ -2248,8 +2248,8 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
             fun test() {
                 var s = attach B() to attach A() to S()
                 var s2 = attach B() to attach A() to S()
-                s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
-                    s2.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    s2.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                         remove A from s2
                     })
                 }) 
@@ -2272,8 +2272,8 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
             attachment B for S {}
             fun test() {
                 var s = attach B() to attach A() to S()
-                s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
-                    s.forEachAttachment(fun(attachment: &AnyStructAttachment) {})
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {})
                     remove A from s
                 }) 
             }
@@ -2297,9 +2297,9 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
                 var s = attach B() to attach A() to S()
                 var s2 = attach B() to attach A() to S()
                 var i = 0
-                s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                     remove A from s2
-                    s2.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+                    s2.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                         i = i + 1
                     })
                 }) 
@@ -2325,8 +2325,8 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
                 var s = attach B() to attach A() to S()
                 var s2 = attach B() to attach A() to S()
                 var i = 0
-                s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
-                    s2.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    s2.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                         i = i + 1
                     })
                     remove A from s2

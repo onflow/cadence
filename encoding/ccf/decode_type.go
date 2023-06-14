@@ -176,6 +176,9 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 	case TypeWord64:
 		return cadence.TheWord64Type, nil
 
+	case TypeWord128:
+		return cadence.TheWord128Type, nil
+
 	case TypeFix64:
 		return cadence.TheFix64Type, nil
 

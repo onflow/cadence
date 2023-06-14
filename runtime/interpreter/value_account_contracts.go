@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// AuthAccountContractsValue
+// AuthAccount.Contracts
 
 var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
 var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts // unmetered
@@ -86,7 +86,7 @@ func NewAuthAccountContractsValue(
 	)
 }
 
-// PublicAccountContractsValue
+// PublicAccount.Contracts
 
 var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
 var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
