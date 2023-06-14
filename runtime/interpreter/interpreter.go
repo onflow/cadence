@@ -4733,15 +4733,21 @@ func (interpreter *Interpreter) withResourceDestruction(
 	locationRange LocationRange,
 	f func(),
 ) {
-	_, exists := interpreter.SharedState.resourceDestruction[storageID]
+	if interpreter.SharedState.destroyedResources == nil {
+		interpreter.SharedState.destroyedResources = map[atree.StorageID]struct{}{}
+		defer func() {
+			interpreter.SharedState.destroyedResources = nil
+		}()
+	}
+
+	_, exists := interpreter.SharedState.destroyedResources[storageID]
 	if exists {
-		panic(ReentrantResourceDestructionError{
+		panic(DestroyedResourceError{
 			LocationRange: locationRange,
 		})
 	}
-	interpreter.SharedState.resourceDestruction[storageID] = struct{}{}
+
+	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
 
 	f()
-
-	delete(interpreter.SharedState.resourceDestruction, storageID)
 }
