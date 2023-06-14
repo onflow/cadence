@@ -121,7 +121,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublicSettable,
+				ast.AccessAll,
 				ast.VariableKindVariable,
 				StorageCapabilityControllerTypeTagFieldName,
 				StorageCapabilityControllerTypeTagFieldType,
@@ -129,7 +129,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				StorageCapabilityControllerTypeBorrowTypeFieldName,
 				StorageCapabilityControllerTypeBorrowTypeFieldType,
@@ -137,7 +137,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				StorageCapabilityControllerTypeCapabilityIDFieldName,
 				StorageCapabilityControllerTypeCapabilityIDFieldType,
@@ -145,21 +145,21 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				StorageCapabilityControllerTypeDeleteFunctionName,
 				StorageCapabilityControllerTypeDeleteFunctionType,
 				StorageCapabilityControllerTypeDeleteFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				StorageCapabilityControllerTypeTargetFunctionName,
 				StorageCapabilityControllerTypeTargetFunctionType,
 				StorageCapabilityControllerTypeTargetFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				StorageCapabilityControllerTypeRetargetFunctionName,
 				StorageCapabilityControllerTypeRetargetFunctionType,
 				StorageCapabilityControllerTypeRetargetFunctionDocString,

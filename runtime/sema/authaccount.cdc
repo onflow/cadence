@@ -26,7 +26,7 @@ access(all) struct AuthAccount {
     access(all) let inbox: AuthAccount.Inbox
 
     /// The capabilities of the account.
-    pub let capabilities: AuthAccount.Capabilities
+    access(all) let capabilities: AuthAccount.Capabilities
 
     /// All public paths of this account.
     access(all) let publicPaths: [PublicPath]
@@ -310,36 +310,36 @@ access(all) struct AuthAccount {
         access(all) fun claim<T: &Any>(_ name: String, provider: Address): Capability<T>?
     }
 
-    pub struct Capabilities {
+    access(all) struct Capabilities {
 
         /// The storage capabilities of the account.
-        pub let storage: AuthAccount.StorageCapabilities
+        access(all) let storage: AuthAccount.StorageCapabilities
 
         /// The account capabilities of the account.
-        pub let account: AuthAccount.AccountCapabilities
+        access(all) let account: AuthAccount.AccountCapabilities
 
         /// Returns the capability at the given public path.
         /// Returns nil if the capability does not exist,
         /// or if the given type is not a supertype of the capability's borrow type.
-        pub fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+        access(all) fun get<T: &Any>(_ path: PublicPath): Capability<T>?
 
         /// Borrows the capability at the given public path.
         /// Returns nil if the capability does not exist, or cannot be borrowed using the given type.
         /// The function is equivalent to `get(path)?.borrow()`.
-        pub fun borrow<T: &Any>(_ path: PublicPath): T?
+        access(all) fun borrow<T: &Any>(_ path: PublicPath): T?
 
         /// Publish the capability at the given public path.
         ///
         /// If there is already a capability published under the given path, the program aborts.
         ///
         /// The path must be a public path, i.e., only the domain `public` is allowed.
-        pub fun publish(_ capability: Capability, at: PublicPath)
+        access(all) fun publish(_ capability: Capability, at: PublicPath)
 
         /// Unpublish the capability published at the given path.
         ///
         /// Returns the capability if one was published at the path.
         /// Returns nil if no capability was published at the path.
-        pub fun unpublish(_ path: PublicPath): Capability?
+        access(all) fun unpublish(_ path: PublicPath): Capability?
 
         /// **DEPRECATED**: This function only exists temporarily to aid in the migration of links.
         /// This function will not be part of the final Capability Controller API.
@@ -353,18 +353,18 @@ access(all) struct AuthAccount {
         ///
         /// Returns the ID of the issued capability controller, if any.
         /// Returns nil if migration fails.
-        pub fun migrateLink(_ newCapabilityPath: CapabilityPath): UInt64?
+        access(all) fun migrateLink(_ newCapabilityPath: CapabilityPath): UInt64?
     }
 
-    pub struct StorageCapabilities {
+    access(all) struct StorageCapabilities {
 
         /// Get the storage capability controller for the capability with the specified ID.
         ///
         /// Returns nil if the ID does not reference an existing storage capability.
-        pub fun getController(byCapabilityID: UInt64): &StorageCapabilityController?
+        access(all) fun getController(byCapabilityID: UInt64): &StorageCapabilityController?
 
         /// Get all storage capability controllers for capabilities that target this storage path
-        pub fun getControllers(forPath: StoragePath): [&StorageCapabilityController]
+        access(all) fun getControllers(forPath: StoragePath): [&StorageCapabilityController]
 
         /// Iterate over all storage capability controllers for capabilities that target this storage path,
         /// passing a reference to each controller to the provided callback function.
@@ -376,20 +376,20 @@ access(all) struct AuthAccount {
         /// or a storage capability controller is retargeted from or to the path,
         /// then the callback must stop iteration by returning false.
         /// Otherwise, iteration aborts.
-        pub fun forEachController(forPath: StoragePath, _ function: fun(&StorageCapabilityController): Bool)
+        access(all) fun forEachController(forPath: StoragePath, _ function: fun(&StorageCapabilityController): Bool)
 
         /// Issue/create a new storage capability.
-        pub fun issue<T: &Any>(_ path: StoragePath): Capability<T>
+        access(all) fun issue<T: &Any>(_ path: StoragePath): Capability<T>
     }
 
-    pub struct AccountCapabilities {
+    access(all) struct AccountCapabilities {
         /// Get capability controller for capability with the specified ID.
         ///
         /// Returns nil if the ID does not reference an existing account capability.
-        pub fun getController(byCapabilityID: UInt64): &AccountCapabilityController?
+        access(all) fun getController(byCapabilityID: UInt64): &AccountCapabilityController?
 
         /// Get all capability controllers for all account capabilities.
-        pub fun getControllers(): [&AccountCapabilityController]
+        access(all) fun getControllers(): [&AccountCapabilityController]
 
         /// Iterate over all account capability controllers for all account capabilities,
         /// passing a reference to each controller to the provided callback function.
@@ -400,9 +400,9 @@ access(all) struct AuthAccount {
         /// or an existing account capability controller for the account is deleted,
         /// then the callback must stop iteration by returning false.
         /// Otherwise, iteration aborts.
-        pub fun forEachController(_ function: fun(&AccountCapabilityController): Bool)
+        access(all) fun forEachController(_ function: fun(&AccountCapabilityController): Bool)
 
         /// Issue/create a new account capability.
-        pub fun issue<T: &AuthAccount{}>(): Capability<T>
+        access(all) fun issue<T: &AuthAccount{}>(): Capability<T>
     }
 }

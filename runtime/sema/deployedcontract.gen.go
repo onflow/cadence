@@ -91,7 +91,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				DeployedContractTypeAddressFieldName,
 				DeployedContractTypeAddressFieldType,
@@ -99,7 +99,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				DeployedContractTypeNameFieldName,
 				DeployedContractTypeNameFieldType,
@@ -107,7 +107,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				DeployedContractTypeCodeFieldName,
 				DeployedContractTypeCodeFieldType,
@@ -115,7 +115,7 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				DeployedContractTypePublicTypesFunctionName,
 				DeployedContractTypePublicTypesFunctionType,
 				DeployedContractTypePublicTypesFunctionDocString,

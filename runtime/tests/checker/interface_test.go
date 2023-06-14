@@ -3113,11 +3113,11 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface Foo {
-                access(account) var x: String
+                access(all) var x: String
             }
 
             struct interface Bar: Foo {
-                access(all) var x: String
+                access(account) var x: String
             }
         `)
 

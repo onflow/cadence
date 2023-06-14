@@ -593,7 +593,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 			fun test(): Bool {
 				account.save(3, to: /storage/foo)
-				let capX = account.getCapability<auth(X, Y) &Int>(/access(all)lic/foo)
+				let capX = account.getCapability<auth(X, Y) &Int>(/public/foo)
 				let upCap = capX as Capability<auth(X) &Int>
 				return upCap as? Capability<auth(X, Y) &Int> == nil
 			}
@@ -625,7 +625,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 			fun test(): Bool {
 				account.save(3, to: /storage/foo)
-				let capX = account.getCapability<auth(X) &Int>(/access(all)lic/foo)
+				let capX = account.getCapability<auth(X) &Int>(/public/foo)
 				let upCap = capX as Capability
 				return upCap as? Capability<auth(X) &Int> == nil
 			}
@@ -911,8 +911,8 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 			fun test(): &R {
 				let r <- create R()
 				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/access(all)lic/foo, target: /storage/foo)
-				let cap = account.getCapability(/access(all)lic/foo)
+				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
 				return cap.borrow<auth(X | Y) &R>()!
 			}
 			`,
@@ -938,8 +938,8 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 			fun test(): &R? {
 				let r <- create R()
 				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/access(all)lic/foo, target: /storage/foo)
-				let cap = account.getCapability(/access(all)lic/foo)
+				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
 				return cap.borrow<auth(X | Y) &R>()! as? auth(X, Y) &R
 			}
 			`,
@@ -972,8 +972,8 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 			fun test(): &R {
 				let r <- create R()
 				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/access(all)lic/foo, target: /storage/foo)
-				let cap = account.getCapability(/access(all)lic/foo)
+				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
 				cap.borrow<auth(X | Y) &R>()! as? auth(X, Y) &R
 				return cap.borrow<auth(X, Y) &R>()! as! auth(X, Y) &R
 			}
@@ -999,8 +999,8 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 			fun test(): Bool {
 				let s = S()
 				account.save(s, to: /storage/foo)
-				account.link<auth(X) &S>(/access(all)lic/foo, target: /storage/foo)
-				let cap: Capability<auth(X) &S> = account.getCapability<auth(X) &S>(/access(all)lic/foo)
+				account.link<auth(X) &S>(/public/foo, target: /storage/foo)
+				let cap: Capability<auth(X) &S> = account.getCapability<auth(X) &S>(/public/foo)
 				let runtimeType = cap.getType() 
 				let upcastCap = cap as Capability<&S> 
 				let upcastRuntimeType = upcastCap.getType() 
@@ -1034,8 +1034,8 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 			fun test(): Bool {
 				let s = S()
 				account.save(s, to: /storage/foo)
-				account.link<&S>(/access(all)lic/foo, target: /storage/foo)
-				let cap: Capability<&S> = account.getCapability<&S>(/access(all)lic/foo)
+				account.link<&S>(/public/foo, target: /storage/foo)
+				let cap: Capability<&S> = account.getCapability<&S>(/public/foo)
 				let runtimeType = cap.getType() 
 				let upcastCap = cap as Capability<&AnyStruct> 
 				let upcastRuntimeType = upcastCap.getType() 
@@ -1071,8 +1071,8 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 			fun test(): Bool {
 				let r <- create R()
 				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/access(all)lic/foo, target: /storage/foo)
-				let cap = account.getCapability(/access(all)lic/foo)
+				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
 				return cap.check<auth(X | Y) &R>()
 			}
 			`,
@@ -1105,8 +1105,8 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 			fun test(): &R {
 				let r <- create R()
 				account.save(<-r, to: /storage/foo)
-				account.link<auth(X) &R>(/access(all)lic/foo, target: /storage/foo)
-				let cap = account.getCapability(/access(all)lic/foo)
+				account.link<auth(X) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
 				return cap.borrow<auth(X, Y) &R>()!
 			}
 			`,
@@ -1134,8 +1134,8 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 			fun test(): Bool {
 				let r <- create R()
 				account.save(<-r, to: /storage/foo)
-				account.link<auth(X) &R>(/access(all)lic/foo, target: /storage/foo)
-				let cap = account.getCapability(/access(all)lic/foo)
+				account.link<auth(X) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
 				return cap.check<auth(X, Y) &R>()
 			}
 			`,

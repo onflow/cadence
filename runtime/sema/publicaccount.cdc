@@ -23,7 +23,7 @@ access(all) struct PublicAccount {
     access(all) let keys: PublicAccount.Keys
 
     /// The capabilities of the account.
-    pub let capabilities: PublicAccount.Capabilities
+    access(all) let capabilities: PublicAccount.Capabilities
 
     /// All public paths of this account.
     access(all) let publicPaths: [PublicPath]
@@ -87,14 +87,14 @@ access(all) struct PublicAccount {
         access(all) let count: UInt64
     }
 
-    pub struct Capabilities {
+    access(all) struct Capabilities {
         /// get returns the storage capability at the given path, if one was stored there.
-        pub fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+        access(all) fun get<T: &Any>(_ path: PublicPath): Capability<T>?
 
         /// borrow gets the storage capability at the given path, and borrows the capability if it exists.
         ///
         /// Returns nil if the capability does not exist or cannot be borrowed using the given type.
         /// The function is equivalent to `get(path)?.borrow()`.
-        pub fun borrow<T: &Any>(_ path: PublicPath): T?
+        access(all) fun borrow<T: &Any>(_ path: PublicPath): T?
     }
 }

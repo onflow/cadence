@@ -53,7 +53,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				CharacterTypeToStringFunctionName,
 				CharacterTypeToStringFunctionType,
 				CharacterTypeToStringFunctionDocString,
