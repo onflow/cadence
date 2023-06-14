@@ -1148,7 +1148,7 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 		if fieldValue.Kind() == reflect.Ptr {
 			cadenceFieldValuePtr, err := decodeOptional(fieldValue.Type(), cadenceField)
 			if err != nil {
-				return err
+				return fmt.Errorf("cannot decode optional field %s: %w", structField.Name, err)
 			}
 
 			// if optional is nil, skip and default the field to nil
@@ -1162,7 +1162,7 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 		if fieldValue.Kind() == reflect.Map {
 			cadenceFieldValuePtr, err := decodeDict(fieldValue.Type(), cadenceField)
 			if err != nil {
-				return err
+				return fmt.Errorf("cannot decode dictionary field %s: %w", structField.Name, err)
 			}
 			cadenceFieldValue = *cadenceFieldValuePtr
 		}
@@ -1170,7 +1170,7 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 		if fieldValue.Kind() == reflect.Slice {
 			cadenceFieldValuePtr, err := decodeSlice(fieldValue.Type(), cadenceField)
 			if err != nil {
-				return err
+				return fmt.Errorf("cannot decode slice field %s: %w", structField.Name, err)
 			}
 			cadenceFieldValue = *cadenceFieldValuePtr
 		}
@@ -1194,7 +1194,7 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 func decodeOptional(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
 	optional, ok := cadenceField.(Optional)
 	if !ok {
-		return nil, fmt.Errorf("field %s is not an optional", valueType.Name())
+		return nil, fmt.Errorf("field is not an optional")
 	}
 
 	// if optional is nil, skip and default the field to nil
@@ -1206,8 +1206,8 @@ func decodeOptional(valueType reflect.Type, cadenceField Value) (*reflect.Value,
 
 	// Check the type
 	if valueType.Elem() != optionalValue.Type() && valueType.Elem().Kind() != reflect.Interface {
-		return nil, fmt.Errorf("cannot set field %s: expected %v, got %v",
-			valueType.Name(), valueType.Elem(), optionalValue.Type())
+		return nil, fmt.Errorf("cannot set field: expected %v, got %v",
+			valueType.Elem(), optionalValue.Type())
 	}
 
 	if valueType.Elem().Kind() == reflect.Interface {
@@ -1227,7 +1227,7 @@ func decodeOptional(valueType reflect.Type, cadenceField Value) (*reflect.Value,
 func decodeDict(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
 	dict, ok := cadenceField.(Dictionary)
 	if !ok {
-		return nil, fmt.Errorf("field %s is not a dictionary", valueType.Name())
+		return nil, fmt.Errorf("field is not a dictionary")
 	}
 
 	mapKeyType := valueType.Key()
@@ -1247,7 +1247,7 @@ func decodeDict(valueType reflect.Type, cadenceField Value) (*reflect.Value, err
 			// If the map value is a pointer type, unwrap it from optional
 			valueOptional, err := decodeOptional(mapValueType, pair.Value)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("cannot decode optional map value for key %s: %w", pair.Key.String(), err)
 			}
 			if valueOptional == nil {
 				continue
@@ -1258,7 +1258,7 @@ func decodeDict(valueType reflect.Type, cadenceField Value) (*reflect.Value, err
 		}
 
 		if mapKeyType != key.Type() {
-			return nil, fmt.Errorf("map key type mismatch")
+			return nil, fmt.Errorf("map key type mismatch: expected %v, got %v", mapKeyType, key.Type())
 		}
 		if mapValueType != value.Type() && mapValueType.Kind() != reflect.Interface {
 			return nil, fmt.Errorf("map value type mismatch: expected %v, got %v", mapValueType, value.Type())
@@ -1274,17 +1274,17 @@ func decodeDict(valueType reflect.Type, cadenceField Value) (*reflect.Value, err
 func decodeSlice(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
 	array, ok := cadenceField.(Array)
 	if !ok {
-		return nil, fmt.Errorf("field %s is not an array", valueType.Name())
+		return nil, fmt.Errorf("field is not an array")
 	}
 
 	arrayValue := reflect.MakeSlice(valueType, 0, len(array.Values))
-	for _, value := range array.Values {
+	for i, value := range array.Values {
 		var elementValue reflect.Value
 		if valueType.Elem().Kind() == reflect.Ptr {
 			// If the array value is a pointer type, unwrap it from optional
 			valueOptional, err := decodeOptional(valueType.Elem(), value)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("error decoding array element optional: %w", err)
 			}
 			if valueOptional == nil {
 				elementValue = reflect.Zero(valueType.Elem())
@@ -1294,6 +1294,15 @@ func decodeSlice(valueType reflect.Type, cadenceField Value) (*reflect.Value, er
 		} else {
 			elementValue = reflect.ValueOf(value)
 		}
+		if elementValue.Type() != valueType.Elem() && elementValue.Kind() != reflect.Interface {
+			return nil, fmt.Errorf(
+				"array element type mismatch at index %d: expected %v, got %v",
+				i,
+				valueType.Elem(),
+				elementValue.Type(),
+			)
+		}
+
 		arrayValue = reflect.Append(arrayValue, elementValue)
 	}
 
