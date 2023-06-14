@@ -2617,7 +2617,8 @@ func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+		var destroyedResourceErr interpreter.DestroyedResourceError
+		require.ErrorAs(t, err, &destroyedResourceErr)
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -2665,7 +2666,8 @@ func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+		var destroyedResourceErr interpreter.DestroyedResourceError
+		require.ErrorAs(t, err, &destroyedResourceErr)
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -2713,7 +2715,8 @@ func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+		var destroyedResourceErr interpreter.DestroyedResourceError
+		require.ErrorAs(t, err, &destroyedResourceErr)
 	})
 }
 
@@ -2945,9 +2948,8 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")
-	require.NoError(t, err)
+	RequireError(t, err)
 
-	require.Len(t, logs, 2)
-	assert.Equal(t, "inner1", logs[0])
-	assert.Equal(t, "inner2", logs[1])
+	var destroyedResourceErr interpreter.DestroyedResourceError
+	require.ErrorAs(t, err, &destroyedResourceErr)
 }
