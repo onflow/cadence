@@ -1972,64 +1972,64 @@ func TestDecodeFields(t *testing.T) {
 		QualifiedIdentifier: "SimpleEvent",
 		Fields: []Field{
 			{
-				Identifier: "a",
+				Identifier: "intField",
 				Type:       IntType{},
 			},
 			{
-				Identifier: "b",
+				Identifier: "stringField",
 				Type:       StringType{},
 			},
 			{
-				Identifier: "nilO",
+				Identifier: "nilOptionalIntField",
 				Type:       &OptionalType{Type: IntType{}},
 			},
 			{
-				Identifier: "o",
+				Identifier: "optionalIntField",
 				Type:       &OptionalType{Type: IntType{}},
 			},
 			{
-				Identifier: "d",
+				Identifier: "dictField",
 				Type:       &DictionaryType{KeyType: StringType{}, ElementType: IntType{}},
 			},
 			{
-				Identifier: "dOptional",
+				Identifier: "dictOptionalField",
 				Type:       &OptionalType{Type: &DictionaryType{KeyType: StringType{}, ElementType: &OptionalType{Type: IntType{}}}},
 			},
 			{
-				Identifier: "s",
+				Identifier: "dictAnyStructField",
 				Type:       &DictionaryType{KeyType: StringType{}, ElementType: AnyStructType{}},
 			},
 			{
-				Identifier: "optionalAnyStruct",
+				Identifier: "optionalAnyStructField",
 				Type:       &OptionalType{Type: AnyStructType{}},
 			},
 			{
-				Identifier: "anyStruct",
+				Identifier: "anyStructField",
 				Type:       AnyStructType{},
 			},
 			{
-				Identifier: "variableArrayInt",
+				Identifier: "variableArrayIntField",
 				Type:       NewVariableSizedArrayType(IntType{}),
 			},
 			{
-				Identifier: "variableArrayOptionalInt",
+				Identifier: "variableArrayOptionalIntField",
 				Type:       NewVariableSizedArrayType(&OptionalType{Type: IntType{}}),
 			},
 		},
 	})
 
 	type eventStruct struct {
-		A                     Int                    `cadence:"a"`
-		B                     String                 `cadence:"b"`
-		NilO                  *Int                   `cadence:"nilO"`
-		O                     *Int                   `cadence:"o"`
-		S                     map[String]interface{} `cadence:"s"`
-		D                     map[String]Int         `cadence:"d"`
-		DOptional             map[String]*Int        `cadence:"dOptional"`
-		OptionalAnyStruct     *interface{}           `cadence:"optionalAnyStruct"`
-		AnyStruct             interface{}            `cadence:"anyStruct"`
-		Array                 []Int                  `cadence:"variableArrayInt"`
-		VariableArrayOptional []*Int                 `cadence:"variableArrayOptionalInt"`
+		Int                   Int                    `cadence:"intField"`
+		String                String                 `cadence:"stringField"`
+		NilOptionalInt        *Int                   `cadence:"nilOptionalIntField"`
+		OptionalInt           *Int                   `cadence:"optionalIntField"`
+		DictAnyStruct         map[String]interface{} `cadence:"dictAnyStructField"`
+		Dict                  map[String]Int         `cadence:"dictField"`
+		DictOptional          map[String]*Int        `cadence:"dictOptionalField"`
+		OptionalAnyStruct     *interface{}           `cadence:"optionalAnyStructField"`
+		AnyStructString       interface{}            `cadence:"anyStructField"`
+		ArrayInt              []Int                  `cadence:"variableArrayIntField"`
+		VariableArrayOptional []*Int                 `cadence:"variableArrayOptionalIntField"`
 		NonCadenceField       Int
 	}
 
@@ -2037,41 +2037,35 @@ func TestDecodeFields(t *testing.T) {
 	err := DecodeFields(simpleEvent, &evt)
 	require.NoError(t, err)
 
-	evtOptionalAnyStruct := evt.OptionalAnyStruct
-	require.NotNil(t, evtOptionalAnyStruct)
-
-	evt.OptionalAnyStruct = nil
-
 	int1 := NewInt(1)
 	int2 := NewInt(2)
-	//int4 := NewInt(4)
+	int4 := NewInt(4)
+
+	assert.Nil(t, evt.NilOptionalInt)
+
+	require.NotNil(t, evt.OptionalInt)
+	assert.EqualValues(t, int2, *evt.OptionalInt)
+
+	assert.Equal(t, Int{}, evt.NonCadenceField)
+
+	assert.EqualValues(t, map[String]Int{"k": NewInt(3)}, evt.Dict)
+
+	assert.EqualValues(t, map[String]*Int{"k": &int4}, evt.DictOptional)
+
+	assert.EqualValues(t, map[String]interface{}{
+		"k":  NewInt(3),
+		"k2": String("foo"),
+	}, evt.DictAnyStruct)
+
+	evtOptionalAnyStruct := evt.OptionalAnyStruct
+	require.NotNil(t, evtOptionalAnyStruct)
 	assert.EqualValues(t, int2, *evtOptionalAnyStruct)
 
-	assert.Equal(t, []Int{int1, int2}, evt.Array)
-	assert.EqualValues(t, []*Int{&int1, &int2}, evt.VariableArrayOptional)
-	//assert.EqualValues(t, eventStruct{
-	//	A:               NewInt(1),
-	//	B:               "foo",
-	//	NilO:            nil,
-	//	O:               &int2,
-	//	NonCadenceField: Int{},
-	//	D: map[String]Int{
-	//		"k": NewInt(3),
-	//	},
-	//	DOptional: map[String]*Int{
-	//		"k": &int4,
-	//	},
-	//	S: map[String]interface{}{
-	//		"k":  NewInt(3),
-	//		"k2": String("foo"),
-	//	},
-	//	OptionalAnyStruct: nil,
-	//	AnyStruct:         String("bar"),
-	//	Array:             []Int{NewInt(1), NewInt(2)},
-	//}, evt)
+	assert.Equal(t, String("bar"), evt.AnyStructString)
 
-	err = DecodeFields(simpleEvent, evt)
-	assert.Errorf(t, err, "should err when passing non-pointer")
+	assert.EqualValues(t, []Int{int1, int2}, evt.ArrayInt)
+
+	assert.EqualValues(t, []*Int{&int1, &int2}, evt.VariableArrayOptional)
 
 	type eventStructInvalidMapping struct {
 		A String `cadence:"a"`
