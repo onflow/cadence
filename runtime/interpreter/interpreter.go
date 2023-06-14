@@ -5405,6 +5405,7 @@ func (interpreter *Interpreter) withResourceDestruction(
 	locationRange LocationRange,
 	f func(),
 ) {
+	// If this is the top-most destruction, track all nested destructions
 	if interpreter.SharedState.destroyedResources == nil {
 		interpreter.SharedState.destroyedResources = map[atree.StorageID]struct{}{}
 		defer func() {
@@ -5419,6 +5420,9 @@ func (interpreter *Interpreter) withResourceDestruction(
 		})
 	}
 
+	// Track the destruction.
+	// The entry is "cleared" by the top-most destruction,
+	// which removes the whole map
 	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
 
 	f()
