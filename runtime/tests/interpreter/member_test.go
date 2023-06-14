@@ -678,6 +678,54 @@ func TestInterpretMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("resource reference, nested", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                var bar: @Bar
+                init() {
+                    self.bar <- create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                var baz: @Baz
+                init() {
+                    self.baz <- create Baz()
+                }
+                destroy() {
+                    destroy self.baz
+                }
+            }
+
+            resource Baz {
+                var x: &[Int]
+                init() {
+                    self.x = &[] as &[Int]
+                }
+            }
+
+            fun test() {
+                let foo <- create Foo()
+                let fooRef = &foo as &Foo
+
+                // Nested container fields must return references
+                var barRef: &Bar = fooRef.bar
+                var bazRef: &Baz = fooRef.bar.baz
+
+                // Reference typed field should return as is (no double reference must be created)
+                var x: &[Int] = fooRef.bar.baz.x
+
+                destroy foo
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
 	t.Run("array, element", func(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             fun test() {
