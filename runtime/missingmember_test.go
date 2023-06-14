@@ -3587,7 +3587,7 @@ pub contract AuctionDutch {
 
 
 			return AuctionDutchStatus(
-                status: status,
+			    status: status,
 			    currentPrice: currentPrice,
 			    totalItems: item.numberOfItems,
 			    acceptedBids: item.winningBids.length,

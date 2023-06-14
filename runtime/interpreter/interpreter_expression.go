@@ -221,6 +221,13 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 				}
 			}
 
+			// Return a reference, if the member is accessed via a reference.
+			//
+			// However, for attachments, `self` is always a reference.
+			// But we do not want to return a reference for `self.something`.
+			// Otherwise, things like `destroy self.something` would become invalid.
+			// Hence, special case `self`, and return a reference only if the member is not accessed via self.
+
 			accessingSelf := false
 			if identifierExpression, ok := memberExpression.Expression.(*ast.IdentifierExpression); ok {
 				accessingSelf = identifierExpression.Identifier.Identifier == sema.SelfIdentifier
@@ -242,11 +249,8 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 }
 
 func shouldReturnReference(parent, member Value) bool {
-	if _, parentIsReference := parent.(ReferenceValue); !parentIsReference {
-		return false
-	}
-
-	return isContainerValue(member)
+	_, parentIsReference := parent.(ReferenceValue)
+	return parentIsReference && isContainerValue(member)
 }
 
 func isContainerValue(value Value) bool {
@@ -263,7 +267,7 @@ func isContainerValue(value Value) bool {
 	}
 }
 
-// getReferenceType Returns a reference type to a given type.
+// getReferenceValue Returns a reference to a given value.
 // Reference to an optional should return an optional reference.
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
