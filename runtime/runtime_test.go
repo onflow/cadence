@@ -7854,9 +7854,6 @@ func TestInvalidatedResourceUse(t *testing.T) {
 			events = append(events, event)
 			return nil
 		},
-		log: func(s string) {
-			fmt.Println(s)
-		},
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -7917,12 +7914,7 @@ func TestInvalidatedResourceUse(t *testing.T) {
 
 			pub fun attack() {
 				var v1 <- VictimContract.faucet()
-				log("Balance at the beginning: ".concat(v1.balance.toString()))
-
 				var v2<- AttackerContract.doubleBalanceOfVault(<- v1)
-				// var v3 <- AttackerContract.doubleBalanceOfVault(<- v2)
-				log("Balance at the end: ".concat(v2.balance.toString()))
-
 				destroy v2
 		   }
 		}`,
@@ -8062,9 +8054,6 @@ func TestInvalidatedResourceUse2(t *testing.T) {
 			events = append(events, event)
 			return nil
 		},
-		log: func(s string) {
-			fmt.Println(s)
-		},
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -8140,9 +8129,7 @@ func TestInvalidatedResourceUse2(t *testing.T) {
 
             pub fun attack() {
                 var v1 <- VictimContract.faucet()
-                log("Balance at the beginning: ".concat(v1.balance.toString()))
                 var v2 <- AttackerContract.doubleBalanceOfVault(<- v1)
-                log("Balance at the end: ".concat(v2.balance.toString()))
                 destroy v2
            }
         }`,
