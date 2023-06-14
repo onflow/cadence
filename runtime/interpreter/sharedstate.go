@@ -64,7 +64,7 @@ func NewSharedState(config *Config) *SharedState {
 		CapabilityControllerIterations: map[AddressPath]int{},
 		containerValueIteration:        map[atree.StorageID]struct{}{},
 		// NOTE: *not* initializing destroyedResources, it's initialized on a per-destruction basis, not globally.
-		// See Interpreter.VisitDestroyExpression
+		// See Interpreter.withResourceDestruction
 	}
 }
 
