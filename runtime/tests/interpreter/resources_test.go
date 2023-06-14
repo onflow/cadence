@@ -26,9 +26,7 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
@@ -2863,37 +2861,7 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
 
 	t.Parallel()
 
-	var logs []string
-
-	logFunction := stdlib.NewStandardLibraryFunction(
-		"log",
-		&sema.FunctionType{
-			Parameters: []sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
-				},
-			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.VoidType,
-			),
-		},
-		``,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].(*interpreter.StringValue).Str
-			logs = append(logs, message)
-			return interpreter.Void
-		},
-	)
-
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(logFunction)
-
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, logFunction)
-
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+	inter := parseCheckAndInterpret(t, `
         pub resource InnerResource {
             pub var name: String
             pub(set) var parent: &OuterResource?
@@ -2904,7 +2872,6 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
             }
 
             destroy() {
-                log(self.name)
                 self.parent!.shenanigans()
             }
         }
@@ -2935,19 +2902,9 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
             let a <- create OuterResource()
             destroy a
         }`,
+	)
 
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
-			},
-			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-			},
-		})
-
-	require.NoError(t, err)
-
-	_, err = inter.Invoke("main")
+	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
 	var destroyedResourceErr interpreter.DestroyedResourceError
